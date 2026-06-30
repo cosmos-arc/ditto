@@ -103,6 +103,20 @@
 |---|---|---|
 | [agent-context-pack.md](agent-context-pack.md) | Active | Agent 快速参考：依赖图、边界规则、关键路径 |
 | [boundaries-and-abstraction-standards.md](boundaries-and-abstraction-standards.md) | Active | 分层、模块化、命名、抽象层级一致性与扩展方式规范 |
+| [capability-maturity.md](capability-maturity.md) | Active | 能力成熟度分级（initial-focus / experimental / infrastructure / debug）|
+| [public-api-and-guard-backlog.md](public-api-and-guard-backlog.md) | Active | Public API 收敛与架构门禁 backlog |
+| [public-api-maturity.md](public-api-maturity.md) | Active | Public API 成熟度登记（kernel/features/application stable/candidate/internal 三级） |
+| [2026-05-31-current-architecture-review.md](2026-05-31-current-architecture-review.md) | Active | 当前源码全局及分模块架构 review、评分、产品差距与逐模块攻克路线 |
+
+### ADR（架构决策记录）
+
+| 文档 | 主题 |
+|---|---|
+| [adr-eventname-vs-event-type.md](adr-eventname-vs-event-type.md) | EventName catalog vs 硬编码 event_type |
+| [adr-kernel-trading-types.md](adr-kernel-trading-types.md) | Kernel trading 域类型归属 |
+| [adr-reconciliation-recovery.md](adr-reconciliation-recovery.md) | 对账修复策略 |
+| [adr-research-artifact-manifest.md](adr-research-artifact-manifest.md) | 研究 artifact manifest 设计 |
+| [adr-runtime-spine.md](adr-runtime-spine.md) | 运行时 spine 架构 |
 
 ## 各包规范索引
 

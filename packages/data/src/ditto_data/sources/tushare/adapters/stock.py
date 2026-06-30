@@ -22,6 +22,16 @@ from ditto_data.sources.tushare.processors.mappings import (
 )
 from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
 
+_STOCK_BASIC_RAW_COLUMNS = (
+    "ts_code",
+    "symbol",
+    "name",
+    "exchange",
+    "list_date",
+    "delist_date",
+    "list_status",
+)
+
 
 class StockTushareAdapter(BaseTushareAdapter):
     """
@@ -85,7 +95,9 @@ class StockTushareAdapter(BaseTushareAdapter):
                     return self._empty_stock_basic_schema()
 
                 return TushareDataTransformer.transform(
-                    response, "stock_basic", STOCK_BASIC_MAPPING
+                    self._normalize_stock_basic_response(response),
+                    "stock_basic",
+                    STOCK_BASIC_MAPPING,
                 )
 
         # 批量模式：获取所有状态的股票
@@ -105,7 +117,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                     fields="ts_code,symbol,name,exchange,list_date,delist_date,list_status",
                 )
                 if len(response) > 0:
-                    all_dfs.append(response)
+                    all_dfs.append(self._normalize_stock_basic_response(response))
 
         if not all_dfs:
             return self._empty_stock_basic_schema()
@@ -115,6 +127,19 @@ class StockTushareAdapter(BaseTushareAdapter):
         return TushareDataTransformer.transform(
             combined, "stock_basic", STOCK_BASIC_MAPPING
         )
+
+    @staticmethod
+    def _normalize_stock_basic_response(response: pl.DataFrame) -> pl.DataFrame:
+        """Normalize raw stock_basic batches before status-level concat."""
+        expressions = [
+            (
+                pl.col(column).cast(pl.String)
+                if column in response.columns
+                else pl.lit(None, dtype=pl.String).alias(column)
+            )
+            for column in _STOCK_BASIC_RAW_COLUMNS
+        ]
+        return response.with_columns(expressions).select(_STOCK_BASIC_RAW_COLUMNS)
 
     @staticmethod
     def _empty_stock_basic_schema() -> pl.DataFrame:

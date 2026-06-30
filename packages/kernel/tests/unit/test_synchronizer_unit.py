@@ -52,6 +52,53 @@ class TestTimeSliceConstruction:
         ts = TimeSlice(time_context=tc, bars={})
         assert ts.bars == {}
 
+    def test_benchmark_close_defaults_to_none(self) -> None:
+        """benchmark_close 缺省为 None，保持现有调用兼容."""
+        tc = TimeContext(
+            decision_time=datetime(2024, 6, 15, 15, 0),
+            knowledge_date=date(2024, 6, 14),
+            trade_date="2024-06-15",
+        )
+        ts = TimeSlice(time_context=tc, bars={})
+        assert ts.benchmark_close is None
+
+    def test_benchmark_close_can_be_carried(self) -> None:
+        """TimeSlice 可携带同一 PIT 边界下的 benchmark close."""
+        tc = TimeContext(
+            decision_time=datetime(2024, 6, 15, 15, 0),
+            knowledge_date=date(2024, 6, 14),
+            trade_date="2024-06-15",
+        )
+        ts = TimeSlice(time_context=tc, bars={}, benchmark_close=3200.5)
+        assert ts.benchmark_close == 3200.5
+
+    def test_source_snapshot_ids_defaults_to_empty(self) -> None:
+        """source_snapshot_ids 缺省为空映射，保持现有调用兼容."""
+        tc = TimeContext(
+            decision_time=datetime(2024, 6, 15, 15, 0),
+            knowledge_date=date(2024, 6, 14),
+            trade_date="2024-06-15",
+        )
+        ts = TimeSlice(time_context=tc, bars={})
+        assert ts.source_snapshot_ids == {}
+
+    def test_source_snapshot_ids_can_be_carried(self) -> None:
+        """TimeSlice 可携带同一 PIT 边界下的数据源快照 ID."""
+        tc = TimeContext(
+            decision_time=datetime(2024, 6, 15, 15, 0),
+            knowledge_date=date(2024, 6, 14),
+            trade_date="2024-06-15",
+        )
+        snapshot_ids = {
+            InstrumentId(1): "snapshot:tushare:stock_daily:2024-06-15:abc",
+        }
+        ts = TimeSlice(
+            time_context=tc,
+            bars={},
+            source_snapshot_ids=snapshot_ids,
+        )
+        assert ts.source_snapshot_ids == snapshot_ids
+
 
 class TestTimeSliceFrozen:
     """TimeSlice frozen 语义测试."""

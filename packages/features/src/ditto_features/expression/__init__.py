@@ -11,6 +11,10 @@ from ditto_features.expression.contracts import (
     CompiledDerivedExpression,
     CompileIdentity,
 )
+from ditto_features.expression.hypothesis import (
+    Hypothesis,
+    hypothesis_to_expression,
+)
 
 __all__ = [
     "Analysis",
@@ -18,6 +22,8 @@ __all__ = [
     "CompileIdentity",
     "CompiledDerivedExpression",
     "ExpressionCompiler",
+    "Hypothesis",
     "compute_compile_cache_key",
     "detect_dependency_cycles",
+    "hypothesis_to_expression",
 ]

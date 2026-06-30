@@ -21,11 +21,14 @@ from ditto_backtest.engine import (
     EngineMode,
     EngineOptions,
 )
+from ditto_backtest.result import EngineResult
 from ditto_backtest.simulation import (
     BrokerageModel,
 )
 from ditto_backtest.synchronizer import BacktestSynchronizer
 from ditto_data.provider import BarQuery, InstrumentQuery
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -419,6 +422,7 @@ def build_snapshot_engine(
     _fee_model = fee_model or SimpleFeeModel()
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=OrderBook(journal=InMemoryOrderEventJournal()),
         model=BrokerageModel(fee_model=_fee_model),
     )
 
@@ -491,6 +495,26 @@ def assert_weight_sum_le_one(
     因此通过 NAV 不超过初始资金 + 涨跌收益来间接验证。
     """
     assert result.final_nav > 0, "NAV 应为正"
+
+
+def account_position_signature(
+    result: EngineResult,
+) -> tuple[tuple[int, int, int, float, float, float], ...]:
+    """Return a compact, deterministic final account-position signature."""
+    assert result.account_view is not None
+    return tuple(
+        sorted(
+            (
+                int(instrument_id),
+                position.quantity,
+                position.available_quantity,
+                round(position.average_cost, 6),
+                round(position.market_value, 6),
+                round(position.unrealized_pnl, 6),
+            )
+            for instrument_id, position in result.account_view.positions.items()
+        )
+    )
 
 
 def assert_non_rebalance_day_no_new_orders(

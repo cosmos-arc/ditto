@@ -23,6 +23,7 @@ class Order:
     quantity: int
     price: float | None = None
     stop_price: float | None = None
+    trade_date: str | None = None
 
     @property
     def order_id(self) -> str:

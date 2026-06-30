@@ -86,6 +86,7 @@ class TestStrategyStep:
         assert input_bundle.trade_date == "2026-03-01"
         assert input_bundle.strategy_id == "test-strategy"
         assert input_bundle.run_id == "run-1"
+        assert input_bundle.require_canonical_target_ids is True
 
     def test_satisfies_trading_step_protocol(self) -> None:
         """StrategyStep 满足 TradingStep Protocol。"""

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from ditto_execution.brokerage import Brokerage, ProcessInput
 from ditto_execution.events import OrderFilled
+from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 
@@ -33,6 +34,7 @@ class ExecutionStep:
         self._event_bus = event_bus
         self._clock = clock
 
+    @traced("backtest.step.execution")
     def execute(self, ctx: StepContext) -> StepResult:
         """处理成交。"""
         ctx.require_slice()

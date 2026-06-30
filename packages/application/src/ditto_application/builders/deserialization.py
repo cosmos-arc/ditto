@@ -265,7 +265,7 @@ def inject_template_constraints(spec: StrategySpec) -> StrategySpec:
     """为模板型策略补齐缺失的参数约束元数据。"""
     if spec.param_constraints:
         return spec
-    if spec.template == "stock_selection_trend":
+    if spec.template == "stock_selection":
         return replace(
             spec,
             param_constraints=get_stock_selection_param_constraints(),

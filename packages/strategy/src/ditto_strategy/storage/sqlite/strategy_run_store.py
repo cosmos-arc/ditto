@@ -13,9 +13,11 @@ from typing import Any
 from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_strategy._internal import utc_now
-from ditto_strategy.runs.models import StrategyRunRecord
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord, StrategyRunRecord
 
 __all__ = [
+    "SQLiteStrategyRunCheckpointReader",
+    "SQLiteStrategyRunCheckpointWriter",
     "SQLiteStrategyRunReader",
     "SQLiteStrategyRunWriter",
 ]
@@ -53,6 +55,39 @@ _CREATE_INDEX_PARENT_RUN_ID = (
     "ON strategy_run(parent_run_id);"
 )
 
+_CREATE_CHECKPOINT_TABLE = """
+CREATE TABLE IF NOT EXISTS strategy_run_checkpoint (
+    run_id               TEXT PRIMARY KEY,
+    strategy_id          TEXT NOT NULL,
+    strategy_version     TEXT NOT NULL DEFAULT '',
+    mode                 TEXT NOT NULL DEFAULT 'backtest',
+    completed_trade_date TEXT NOT NULL,
+    resume_from          TEXT,
+    completed_days       INTEGER NOT NULL DEFAULT 0,
+    total_days           INTEGER NOT NULL DEFAULT 0,
+    nav                  REAL NOT NULL DEFAULT 0.0,
+    order_count          INTEGER NOT NULL DEFAULT 0,
+    fill_count           INTEGER NOT NULL DEFAULT 0,
+    account_state_json   TEXT NOT NULL DEFAULT '',
+    account_state_hash   TEXT NOT NULL DEFAULT '',
+    settlement_state_json TEXT NOT NULL DEFAULT '',
+    settlement_state_hash TEXT NOT NULL DEFAULT '',
+    runtime_state_json   TEXT NOT NULL DEFAULT '',
+    runtime_state_hash   TEXT NOT NULL DEFAULT '',
+    updated_at           TEXT NOT NULL DEFAULT ''
+);
+"""
+
+_CREATE_CHECKPOINT_INDEX_STRATEGY_ID = (
+    "CREATE INDEX IF NOT EXISTS idx_strategy_run_checkpoint_strategy_id "
+    "ON strategy_run_checkpoint(strategy_id);"
+)
+
+_CREATE_CHECKPOINT_INDEX_COMPLETED_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_strategy_run_checkpoint_completed_trade_date "
+    "ON strategy_run_checkpoint(completed_trade_date);"
+)
+
 # ---------------------------------------------------------------------------
 # Incremental migration definitions
 # ---------------------------------------------------------------------------
@@ -85,6 +120,39 @@ _MIGRATIONS: list[tuple[str, str]] = [
     (
         "config_json",
         "ALTER TABLE strategy_run ADD COLUMN config_json TEXT NOT NULL DEFAULT ''",
+    ),
+]
+
+_CHECKPOINT_MIGRATIONS: list[tuple[str, str]] = [
+    (
+        "account_state_json",
+        "ALTER TABLE strategy_run_checkpoint ADD COLUMN "
+        + "account_state_json TEXT NOT NULL DEFAULT ''",
+    ),
+    (
+        "account_state_hash",
+        "ALTER TABLE strategy_run_checkpoint ADD COLUMN "
+        + "account_state_hash TEXT NOT NULL DEFAULT ''",
+    ),
+    (
+        "settlement_state_json",
+        "ALTER TABLE strategy_run_checkpoint ADD COLUMN "
+        + "settlement_state_json TEXT NOT NULL DEFAULT ''",
+    ),
+    (
+        "settlement_state_hash",
+        "ALTER TABLE strategy_run_checkpoint ADD COLUMN "
+        + "settlement_state_hash TEXT NOT NULL DEFAULT ''",
+    ),
+    (
+        "runtime_state_json",
+        "ALTER TABLE strategy_run_checkpoint ADD COLUMN "
+        + "runtime_state_json TEXT NOT NULL DEFAULT ''",
+    ),
+    (
+        "runtime_state_hash",
+        "ALTER TABLE strategy_run_checkpoint ADD COLUMN "
+        + "runtime_state_hash TEXT NOT NULL DEFAULT ''",
     ),
 ]
 
@@ -153,6 +221,37 @@ SET progress_pct = ?, current_step = ?, completed_days = ?, total_days = ?
 WHERE run_id = ?
 """
 
+_UPSERT_CHECKPOINT_SQL = """
+INSERT OR REPLACE INTO strategy_run_checkpoint (
+    run_id, strategy_id, strategy_version, mode,
+    completed_trade_date, resume_from, completed_days, total_days,
+    nav, order_count, fill_count, account_state_json, account_state_hash,
+    settlement_state_json, settlement_state_hash, runtime_state_json,
+    runtime_state_hash, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+_GET_LATEST_CHECKPOINT_SQL = """
+SELECT run_id, strategy_id, strategy_version, mode,
+       completed_trade_date, resume_from, completed_days, total_days,
+       nav, order_count, fill_count, account_state_json, account_state_hash,
+       settlement_state_json, settlement_state_hash, runtime_state_json,
+       runtime_state_hash, updated_at
+FROM strategy_run_checkpoint
+WHERE run_id = ?
+"""
+
+_LIST_CHECKPOINTS_BY_STRATEGY_SQL = """
+SELECT run_id, strategy_id, strategy_version, mode,
+       completed_trade_date, resume_from, completed_days, total_days,
+       nav, order_count, fill_count, account_state_json, account_state_hash,
+       settlement_state_json, settlement_state_hash, runtime_state_json,
+       runtime_state_hash, updated_at
+FROM strategy_run_checkpoint
+WHERE strategy_id = ?
+ORDER BY updated_at DESC, run_id DESC
+"""
+
 
 def _run_migrations(conn: sqlite3.Connection) -> None:
     """
@@ -174,6 +273,22 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
             )
 
 
+def _run_checkpoint_migrations(conn: sqlite3.Connection) -> None:
+    """Apply idempotent checkpoint-table migrations."""
+    existing = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(strategy_run_checkpoint)").fetchall()
+    }
+    for col_name, alter_sql in _CHECKPOINT_MIGRATIONS:
+        if col_name not in existing:
+            conn.execute(alter_sql)
+            logger.debug(
+                "Strategy run checkpoint migration applied",
+                event="strategy_run_checkpoint_migration_applied",
+                column=col_name,
+            )
+
+
 def _init_schema(pool: SQLitePool) -> None:
     """
     Create strategy_run table, run migrations, then create indexes (idempotent).
@@ -184,10 +299,15 @@ def _init_schema(pool: SQLitePool) -> None:
     3. CREATE INDEX IF NOT EXISTS — 在列存在后创建索引
     """
     conn = pool.get_connection()
-    conn.executescript(_CREATE_TABLE)
+    conn.executescript(_CREATE_TABLE + _CREATE_CHECKPOINT_TABLE)
     _run_migrations(conn)
+    _run_checkpoint_migrations(conn)
     conn.executescript(
-        _CREATE_INDEX_STRATEGY_ID + _CREATE_INDEX_STATUS + _CREATE_INDEX_PARENT_RUN_ID,
+        _CREATE_INDEX_STRATEGY_ID
+        + _CREATE_INDEX_STATUS
+        + _CREATE_INDEX_PARENT_RUN_ID
+        + _CREATE_CHECKPOINT_INDEX_STRATEGY_ID
+        + _CREATE_CHECKPOINT_INDEX_COMPLETED_DATE,
     )
     pool.commit()
     logger.debug(
@@ -214,6 +334,33 @@ def _row_to_record(row: sqlite3.Row) -> StrategyRunRecord:
         completed_days=int(data.get("completed_days", 0)),
         total_days=int(data.get("total_days", 0)),
         config_json=str(data.get("config_json", "")),
+    )
+
+
+def _row_to_checkpoint_record(row: sqlite3.Row) -> StrategyRunCheckpointRecord:
+    """Convert a sqlite3.Row-like object to StrategyRunCheckpointRecord."""
+    data: dict[str, Any] = dict(row)
+    raw_resume_from = data.get("resume_from")
+    resume_from = None if raw_resume_from in (None, "") else str(raw_resume_from)
+    return StrategyRunCheckpointRecord(
+        run_id=str(data["run_id"]),
+        strategy_id=str(data["strategy_id"]),
+        strategy_version=str(data.get("strategy_version", "")),
+        mode=str(data.get("mode", "backtest")),
+        completed_trade_date=str(data["completed_trade_date"]),
+        resume_from=resume_from,
+        completed_days=int(data.get("completed_days", 0)),
+        total_days=int(data.get("total_days", 0)),
+        nav=float(data.get("nav", 0.0)),
+        order_count=int(data.get("order_count", 0)),
+        fill_count=int(data.get("fill_count", 0)),
+        account_state_json=str(data.get("account_state_json", "")),
+        account_state_hash=str(data.get("account_state_hash", "")),
+        settlement_state_json=str(data.get("settlement_state_json", "")),
+        settlement_state_hash=str(data.get("settlement_state_hash", "")),
+        runtime_state_json=str(data.get("runtime_state_json", "")),
+        runtime_state_hash=str(data.get("runtime_state_hash", "")),
+        updated_at=str(data.get("updated_at", "")),
     )
 
 
@@ -323,6 +470,55 @@ class SQLiteStrategyRunWriter:
         return updated > 0
 
 
+class SQLiteStrategyRunCheckpointWriter:
+    """SQLite-backed writer for latest strategy-run checkpoints."""
+
+    def __init__(self, pool: SQLitePool) -> None:
+        self._pool = pool
+
+    @traced("store.strategy_run_checkpoint_writer.init_schema")
+    def init_schema(self) -> None:
+        """Create strategy_run checkpoint tables and indexes."""
+        _init_schema(self._pool)
+
+    @traced("store.strategy_run_checkpoint_writer.save")
+    def save_checkpoint(self, record: StrategyRunCheckpointRecord) -> None:
+        """UPSERT the latest checkpoint for a strategy run."""
+        updated_at = record.updated_at or utc_now()
+        conn = self._pool.get_connection()
+        conn.execute(
+            _UPSERT_CHECKPOINT_SQL,
+            (
+                record.run_id,
+                record.strategy_id,
+                record.strategy_version,
+                record.mode,
+                record.completed_trade_date,
+                record.resume_from,
+                record.completed_days,
+                record.total_days,
+                record.nav,
+                record.order_count,
+                record.fill_count,
+                record.account_state_json,
+                record.account_state_hash,
+                record.settlement_state_json,
+                record.settlement_state_hash,
+                record.runtime_state_json,
+                record.runtime_state_hash,
+                updated_at,
+            ),
+        )
+        self._pool.commit()
+        logger.debug(
+            "strategy_run checkpoint saved",
+            event="strategy_run_checkpoint_save",
+            run_id=record.run_id,
+            strategy_id=record.strategy_id,
+            completed_trade_date=record.completed_trade_date,
+        )
+
+
 class SQLiteStrategyRunReader:
     """SQLite-backed reader implementing StrategyRunReaderProtocol."""
 
@@ -399,3 +595,32 @@ class SQLiteStrategyRunReader:
         conn = self._pool.get_connection()
         rows = conn.execute(_LIST_BY_PARENT_SQL, (parent_run_id,)).fetchall()
         return [_row_to_record(row) for row in rows]
+
+
+class SQLiteStrategyRunCheckpointReader:
+    """SQLite-backed reader for latest strategy-run checkpoints."""
+
+    def __init__(self, pool: SQLitePool) -> None:
+        self._pool = pool
+
+    @traced("store.strategy_run_checkpoint_reader.get_latest")
+    def get_latest_checkpoint(self, run_id: str) -> StrategyRunCheckpointRecord | None:
+        """Get the latest checkpoint row for a strategy run."""
+        conn = self._pool.get_connection()
+        row = conn.execute(_GET_LATEST_CHECKPOINT_SQL, (run_id,)).fetchone()
+        if row is None:
+            return None
+        return _row_to_checkpoint_record(row)
+
+    @traced("store.strategy_run_checkpoint_reader.list_by_strategy")
+    def list_checkpoints_by_strategy(
+        self,
+        strategy_id: str,
+    ) -> list[StrategyRunCheckpointRecord]:
+        """List latest checkpoint rows for runs of a strategy."""
+        conn = self._pool.get_connection()
+        rows = conn.execute(
+            _LIST_CHECKPOINTS_BY_STRATEGY_SQL,
+            (strategy_id,),
+        ).fetchall()
+        return [_row_to_checkpoint_record(row) for row in rows]

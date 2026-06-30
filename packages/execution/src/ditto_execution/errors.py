@@ -7,10 +7,13 @@ from ditto_kernel.exceptions import DittoError
 __all__ = [
     "AuditError",
     "ExecutionError",
+    "FatalError",
     "FillProcessingError",
+    "InsufficientFundsError",
     "OrderStateError",
     "OrderSubmitError",
     "ReconciliationError",
+    "TemporaryError",
 ]
 
 
@@ -36,6 +39,18 @@ class FillProcessingError(ExecutionError):
 
 class ReconciliationError(ExecutionError):
     """对账失败."""
+
+
+class TemporaryError(ExecutionError):
+    """可重试错误 — 超时、网络抖动等暂时性故障."""
+
+
+class FatalError(ExecutionError):
+    """不可恢复错误 — 权限、配置等永久性故障."""
+
+
+class InsufficientFundsError(OrderSubmitError):
+    """资金不足 — 订单所需资金超过可用余额."""
 
 
 class AuditError(ExecutionError):

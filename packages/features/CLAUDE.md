@@ -14,6 +14,7 @@ Features 是**因子、表达式、衍生数据与发布安全能力平面**，�
 - 表达式、因子和物化计划保持纯计算；feature-owned 的运行时/存储适配位于 `storage/`，通过 contracts/Protocols 与服务交互
 - `expression` 不依赖 `materialization`（单向依赖）
 - 因子定义依赖表达式和 spec，不依赖上层编排
+- Publication safety `CompatibilityManifest` 必须记录 PIT policy/time column，并在上游请求提供时保留 `source_snapshot_id`，保证物化产物可追溯到时间语义和源快照。
 
 ## 允许依赖
 
@@ -72,7 +73,8 @@ ditto_features/
 ├── materialization/      # 物化计划
 │   ├── contracts.py      # 物化契约
 │   ├── models.py         # 物化模型
-│   └── planner.py        # 依赖推导与计划编排
+│   ├── dependency_registry.py  # 物化依赖 registry（持久化 refs + runtime 输入分组 + schema/time 契约）
+│   └── planner.py        # 计算窗口与分区计划
 ├── evaluation/           # 因子评估
 │   ├── evaluator.py      # 评估执行器
 │   ├── report.py         # 评估报告
@@ -90,6 +92,8 @@ ditto_features/
 │   ├── features.py       # Feature 模型
 │   ├── factors.py        # Factor 模型
 │   └── derived.py        # 衍生数据模型
+├── derived_types.py      # 衍生实体类型（role / materialization profile / unified spec）
+├── publication_safety_records.py  # 发布安全运行时记录（certification/shadow/DQ frozen dataclass）
 ├── services/             # 衍生数据服务
 │   ├── derived_catalog_service.py
 │   ├── derived_shadow_slot_service.py

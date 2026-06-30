@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
+from ditto_data.catalog.remediation import CatalogRemediationApprovalReader
+from ditto_data.lineage import DataLineageReader
 from ditto_execution.audit import ExecutionAuditService
 from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
@@ -17,11 +21,20 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 
 from ditto_application.queries.backtest import BacktestQueryFacade
 from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
+from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.comparison import ComparisonQueryFacade
+from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
+from ditto_application.queries.remediation import CatalogRemediationQueryFacade
+from ditto_application.queries.remediation_approval import (
+    CatalogRemediationApprovalQueryFacade,
+)
 from ditto_application.queries.run import RunReadModel
+from ditto_application.queries.source_fallback_policy_state import (
+    CatalogSourceFallbackPolicyQueryFacade,
+)
 from ditto_application.queries.strategy import StrategyQueryFacade
 
 __all__ = ["AppStrategyQueryProvider"]
@@ -85,9 +98,51 @@ class AppStrategyQueryProvider(Provider):
     def lineage_query_facade(
         self,
         run_service: StrategyRunLifecycleStore,
+        data_lineage_reader: DataLineageReader,
+        data_catalog_reader: DataCatalogReader,
+        catalog_query_facade: CatalogQueryFacade,
     ) -> LineageQueryFacade:
         """运行血统查询 facade — 提供 lineage chain 查询."""
-        return LineageQueryFacade(run_service=run_service)
+        return LineageQueryFacade(
+            run_service=run_service,
+            data_lineage_reader=data_lineage_reader,
+            data_catalog_reader=data_catalog_reader,
+            source_health_summary_query=catalog_query_facade,
+        )
+
+    @provide
+    def catalog_remediation_query_facade(
+        self,
+        catalog_query_facade: CatalogQueryFacade,
+        ingestion_status_query_facade: IngestionStatusQueryFacade,
+        lineage_query_facade: LineageQueryFacade,
+    ) -> CatalogRemediationQueryFacade:
+        """Catalog remediation backlog facade over backend reports and run lineage."""
+        return CatalogRemediationQueryFacade(
+            catalog_facade=catalog_query_facade,
+            ingestion_status_facade=ingestion_status_query_facade,
+            lineage_facade=lineage_query_facade,
+        )
+
+    @provide
+    def catalog_remediation_approval_query_facade(
+        self,
+        catalog_remediation_approval_reader: CatalogRemediationApprovalReader,
+    ) -> CatalogRemediationApprovalQueryFacade:
+        """Catalog remediation approval state facade."""
+        return CatalogRemediationApprovalQueryFacade(
+            approval_reader=catalog_remediation_approval_reader,
+        )
+
+    @provide
+    def catalog_source_fallback_policy_query_facade(
+        self,
+        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
+    ) -> CatalogSourceFallbackPolicyQueryFacade:
+        """Catalog source fallback policy state facade."""
+        return CatalogSourceFallbackPolicyQueryFacade(
+            policy_reader=catalog_source_fallback_policy_reader,
+        )
 
     @provide
     def comparison_query_facade(

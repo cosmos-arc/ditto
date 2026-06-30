@@ -184,7 +184,7 @@ contracts/models
 `analysis` 是纯研究平面。
 
 - `research` 负责研究数据集语义，不成为 Data catalog 的替代品。
-- `reports`、`diagnostics`、`experiments`、`screeners` 当前只是 reserved/future namespaces，不是现有 runtime API。
+- `experiments` 当前只是 reserved/future namespace，不是现有 runtime API。
 - 生产域包禁止依赖 analysis；application 仅 research query/facade/DI wiring 可使用 analysis；apps 仅 research jobs/api/registry composition 入口可使用 analysis。
 - 研究存储使用独立 SQLite。
 

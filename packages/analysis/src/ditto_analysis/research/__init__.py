@@ -13,12 +13,20 @@ from .domain import (
     SpineSnapshot,
     SpineSpec,
 )
+from .experience import (
+    DecisionLog,
+    ExperienceMemory,
+    MarkdownExperienceMemory,
+)
 
 __all__ = [
     "DatasetSnapshot",
+    "DecisionLog",
+    "ExperienceMemory",
     "KnownAtPolicy",
     "LateArrivalError",
     "LateArrivalPolicy",
+    "MarkdownExperienceMemory",
     "ResearchDatasetSnapshotRecord",
     "ResearchDatasetSpec",
     "ResearchDatasetSpecRecord",

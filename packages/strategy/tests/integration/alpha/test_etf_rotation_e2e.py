@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.templates.etf_rotation import (
@@ -18,6 +19,10 @@ from ditto_strategy.alpha.templates.etf_rotation import (
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+def _build_instrument_id_map(ids: list[str]) -> dict[str, InstrumentId]:
+    return {ticker: InstrumentId(index + 1) for index, ticker in enumerate(ids)}
 
 
 @pytest.fixture
@@ -65,6 +70,8 @@ def sample_bundle() -> StrategyInputBundle:
         instruments=instruments,
         market_data=market_data,
         signal_values=signal_values,
+        instrument_id_map=_build_instrument_id_map(ids),
+        require_canonical_target_ids=True,
     )
 
 
@@ -91,9 +98,10 @@ class TestETFRotationE2E:
         # Equal weight fallback (no AllocationStage): 1.0 / 5 = 0.2
         assert abs(sum(target.positions.values()) - 1.0) < 1e-9
         # ETF001-ETF005 should be selected (highest momentum)
-        assert "ETF001" in target.positions
-        assert "ETF005" in target.positions
-        assert "ETF006" not in target.positions
+        assert InstrumentId(1) in target.positions
+        assert InstrumentId(5) in target.positions
+        assert InstrumentId(6) not in target.positions
+        assert "ETF001" not in target.positions
 
     def test_risklock_filtering_in_pipeline(
         self,
@@ -109,10 +117,10 @@ class TestETFRotationE2E:
         pipeline = StrategyPipeline(stages)
         target = pipeline.run(context, sample_bundle)
 
-        assert "ETF001" not in target.positions
-        assert "ETF002" not in target.positions
+        assert InstrumentId(1) not in target.positions
+        assert InstrumentId(2) not in target.positions
         assert len(target.positions) == 5
-        assert "ETF003" in target.positions
+        assert InstrumentId(3) in target.positions
 
     def test_all_locked_returns_empty(
         self,
@@ -157,6 +165,8 @@ class TestETFRotationE2E:
             instruments=instruments,
             market_data=market_data,
             signal_values=signal_values,
+            instrument_id_map=_build_instrument_id_map(ids),
+            require_canonical_target_ids=True,
         )
 
         config = ETFRotationConfig(top_k=10)

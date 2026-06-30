@@ -17,14 +17,17 @@ from ditto_application.commands.backtest import (
     CancelRunCommand,
     CancelRunHandler,
     CostConfig,
+    ResumeRunCommand,
+    ResumeRunHandler,
     RetryRunCommand,
     RetryRunHandler,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_kernel.strategy import ImpactModel
-from ditto_strategy.runs.models import StrategyRunRecord
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord, StrategyRunRecord
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointStore,
     StrategyRunLifecycleStore,
 )
 
@@ -98,6 +101,48 @@ def _make_run_record(**overrides) -> StrategyRunRecord:
     return StrategyRunRecord(**defaults)
 
 
+def _make_checkpoint_record(**overrides) -> StrategyRunCheckpointRecord:
+    """Build a default StrategyRunCheckpointRecord with optional overrides."""
+    defaults = {
+        "run_id": "abc123",
+        "strategy_id": "momentum-etf",
+        "strategy_version": "1",
+        "mode": "backtest",
+        "completed_trade_date": "2025-01-31",
+        "resume_from": "2025-02-03",
+        "completed_days": 21,
+        "total_days": 60,
+        "nav": 1_020_000.0,
+        "order_count": 4,
+        "fill_count": 4,
+        "account_state_json": (
+            '{"cash_available":920000.0,"cash_settled":900000.0,'
+            '"cash_frozen":20000.0,"positions":[]}'
+        ),
+        "account_state_hash": "sha256:account-state",
+        "settlement_state_json": (
+            '{"frozen_quantities":[{"instrument_id":1,'
+            '"quantity":1000,"settle_date":"2026-03-03"}]}'
+        ),
+        "settlement_state_hash": "sha256:settlement-state",
+        "runtime_state_json": (
+            '{"delayed_signals":[{"cash_target":0.5,'
+            '"positions":[{"instrument_id":1,"target_weight":0.5}],'
+            '"queue_index":0,"run_id":"abc123","strategy_id":"momentum-etf",'
+            '"trade_date":"2025-01-31"}],'
+            '"pending_orders":[{"average_fill_price":null,'
+            '"client_order_id":"order-001","direction":"buy",'
+            '"filled_price":null,"filled_quantity":0,"instrument_id":1,'
+            '"leaves_quantity":300,"order_type":"market","price":null,'
+            '"quantity":300,"status":"submitted","stop_price":null,'
+            '"trade_date":"2025-01-31"}]}'
+        ),
+        "runtime_state_hash": "sha256:runtime-state",
+    }
+    defaults.update(overrides)
+    return StrategyRunCheckpointRecord(**defaults)
+
+
 class TestBacktestRunHandler:
     """Tests for BacktestRunHandler.handle()."""
 
@@ -125,6 +170,22 @@ class TestBacktestRunHandler:
         assert isinstance(result, BacktestRunResult)
         assert result.run_id
         assert result.status == "pending"
+
+    def test_run_config_records_experimental_data_opt_in(
+        self,
+        handler: BacktestRunHandler,
+        mock_run_service: Mock,
+    ) -> None:
+        """RunRecord config_json exposes the maturity opt-in for audit/retry."""
+        cmd = _make_command(allow_experimental_data=True)
+
+        handler.handle(cmd)
+
+        import orjson
+
+        call_kwargs = mock_run_service.create_run.call_args.kwargs
+        config_data = orjson.loads(call_kwargs["config_json"])
+        assert config_data["allow_experimental_data"] is True
 
     def test_strategy_not_found_raises(
         self,
@@ -257,6 +318,7 @@ class TestBacktestRunCommand:
         assert cmd.initial_cash == 1_000_000.0
         assert cmd.parameter_overrides == ()
         assert cmd.cost_config is None
+        assert cmd.allow_experimental_data is False
 
 
 class TestBacktestRunResultCostConfig:
@@ -416,3 +478,156 @@ class TestRetryRunHandler:
 
         call_kwargs = run_svc.create_run.call_args.kwargs
         assert call_kwargs["strategy_version"] == "2"
+
+
+class TestResumeRunHandler:
+    """Tests for ResumeRunHandler — checkpoint guard + resumed config."""
+
+    def test_resume_cancelled_run_from_checkpoint(self) -> None:
+        """可恢复 checkpoint 应创建 child run，并从 resume_from 继续提交。"""
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
+        checkpoint_svc = Mock(spec=StrategyRunCheckpointStore)
+        run_svc.get_run.return_value = _make_run_record(
+            status="cancelled",
+            config_json=(
+                '{"start_date":"2025-01-01","end_date":"2025-03-31",'
+                '"initial_cash":1000000.0,"parameter_overrides":["top_k=3"],'
+                '"allow_experimental_data":true}'
+            ),
+        )
+        checkpoint_svc.get_latest_checkpoint.return_value = _make_checkpoint_record()
+        handler = ResumeRunHandler(
+            run_service=run_svc,
+            checkpoint_reader=checkpoint_svc,
+        )
+
+        new_id = handler.handle(ResumeRunCommand(run_id="abc123"))
+
+        run_svc.create_run.assert_called_once()
+        call_kwargs = run_svc.create_run.call_args.kwargs
+        assert call_kwargs["strategy_id"] == "momentum-etf"
+        assert call_kwargs["strategy_version"] == "1"
+        assert call_kwargs["mode"] == "backtest"
+        assert call_kwargs["parent_run_id"] == "abc123"
+        assert new_id
+
+        import orjson
+
+        config = orjson.loads(call_kwargs["config_json"])
+        assert config["start_date"] == "2025-02-03"
+        assert config["end_date"] == "2025-03-31"
+        assert config["initial_cash"] == 1_000_000.0
+        assert config["parameter_overrides"] == ["top_k=3"]
+        assert config["allow_experimental_data"] is True
+        assert config["resume_from_run_id"] == "abc123"
+        assert config["resume_checkpoint_trade_date"] == "2025-01-31"
+        assert config["resume_checkpoint_completed_days"] == 21
+        assert config["resume_checkpoint_nav"] == 1_020_000.0
+        assert config["resume_account_state_json"] == (
+            '{"cash_available":920000.0,"cash_settled":900000.0,'
+            '"cash_frozen":20000.0,"positions":[]}'
+        )
+        assert config["resume_account_state_hash"] == "sha256:account-state"
+        assert config["resume_settlement_state_json"] == (
+            '{"frozen_quantities":[{"instrument_id":1,'
+            '"quantity":1000,"settle_date":"2026-03-03"}]}'
+        )
+        assert config["resume_settlement_state_hash"] == "sha256:settlement-state"
+        assert config["resume_runtime_state_json"] == (
+            '{"delayed_signals":[{"cash_target":0.5,'
+            '"positions":[{"instrument_id":1,"target_weight":0.5}],'
+            '"queue_index":0,"run_id":"abc123","strategy_id":"momentum-etf",'
+            '"trade_date":"2025-01-31"}],'
+            '"pending_orders":[{"average_fill_price":null,'
+            '"client_order_id":"order-001","direction":"buy",'
+            '"filled_price":null,"filled_quantity":0,"instrument_id":1,'
+            '"leaves_quantity":300,"order_type":"market","price":null,'
+            '"quantity":300,"status":"submitted","stop_price":null,'
+            '"trade_date":"2025-01-31"}]}'
+        )
+        assert config["resume_runtime_state_hash"] == "sha256:runtime-state"
+
+    def test_resume_failed_run_from_checkpoint(self) -> None:
+        """failed 状态也允许从 checkpoint 恢复。"""
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
+        checkpoint_svc = Mock(spec=StrategyRunCheckpointStore)
+        run_svc.get_run.return_value = _make_run_record(
+            status="failed",
+            config_json='{"start_date":"2025-01-01","end_date":"2025-03-31"}',
+        )
+        checkpoint_svc.get_latest_checkpoint.return_value = _make_checkpoint_record()
+        handler = ResumeRunHandler(
+            run_service=run_svc,
+            checkpoint_reader=checkpoint_svc,
+        )
+
+        new_id = handler.handle(ResumeRunCommand(run_id="abc123"))
+
+        assert new_id
+        run_svc.create_run.assert_called_once()
+
+    def test_resume_rejects_missing_checkpoint(self) -> None:
+        """没有 checkpoint 的运行不能伪装成 resume。"""
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
+        checkpoint_svc = Mock(spec=StrategyRunCheckpointStore)
+        run_svc.get_run.return_value = _make_run_record(
+            status="cancelled",
+            config_json='{"start_date":"2025-01-01","end_date":"2025-03-31"}',
+        )
+        checkpoint_svc.get_latest_checkpoint.return_value = None
+        handler = ResumeRunHandler(
+            run_service=run_svc,
+            checkpoint_reader=checkpoint_svc,
+        )
+
+        with pytest.raises(AppCommandError, match="No resumable checkpoint"):
+            handler.handle(ResumeRunCommand(run_id="abc123"))
+        run_svc.create_run.assert_not_called()
+
+    def test_resume_rejects_final_checkpoint(self) -> None:
+        """最终 checkpoint 没有 resume_from，不能再恢复。"""
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
+        checkpoint_svc = Mock(spec=StrategyRunCheckpointStore)
+        run_svc.get_run.return_value = _make_run_record(
+            status="cancelled",
+            config_json='{"start_date":"2025-01-01","end_date":"2025-03-31"}',
+        )
+        checkpoint_svc.get_latest_checkpoint.return_value = _make_checkpoint_record(
+            resume_from=None,
+        )
+        handler = ResumeRunHandler(
+            run_service=run_svc,
+            checkpoint_reader=checkpoint_svc,
+        )
+
+        with pytest.raises(AppCommandError, match="No resumable checkpoint"):
+            handler.handle(ResumeRunCommand(run_id="abc123"))
+        run_svc.create_run.assert_not_called()
+
+    def test_resume_pending_rejected(self) -> None:
+        """pending 状态不允许恢复。"""
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
+        checkpoint_svc = Mock(spec=StrategyRunCheckpointStore)
+        run_svc.get_run.return_value = _make_run_record(status="pending")
+        handler = ResumeRunHandler(
+            run_service=run_svc,
+            checkpoint_reader=checkpoint_svc,
+        )
+
+        with pytest.raises(AppCommandError, match="Cannot resume"):
+            handler.handle(ResumeRunCommand(run_id="abc123"))
+        checkpoint_svc.get_latest_checkpoint.assert_not_called()
+        run_svc.create_run.assert_not_called()
+
+    def test_resume_not_found(self) -> None:
+        """运行不存在抛 typed command error。"""
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
+        checkpoint_svc = Mock(spec=StrategyRunCheckpointStore)
+        run_svc.get_run.return_value = None
+        handler = ResumeRunHandler(
+            run_service=run_svc,
+            checkpoint_reader=checkpoint_svc,
+        )
+
+        with pytest.raises(AppCommandError, match="Run not found"):
+            handler.handle(ResumeRunCommand(run_id="missing"))

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from ditto_execution.trade_builder import TradeRecord
 from ditto_kernel.identity import InstrumentId
-from ditto_portfolio.accounting import FillEvent
+from ditto_portfolio.accounting import AccountView, FillEvent
 
 from ditto_backtest.audit import (
     PreTradeDecisionRecord,
@@ -195,6 +195,7 @@ class BacktestReport:
         fill_log: 成交记录
         risk_log: PostTrade 风控扫描记录
         pre_trade_log: PreTrade 订单校验决策记录
+        final_account_state: 最终账户状态快照，用于 replay 复现性证明
 
     """
 
@@ -211,3 +212,4 @@ class BacktestReport:
     fill_log: tuple[FillEvent, ...]
     risk_log: tuple[RiskScanRecord, ...] = ()
     pre_trade_log: tuple[PreTradeDecisionRecord, ...] = ()
+    final_account_state: AccountView | None = None

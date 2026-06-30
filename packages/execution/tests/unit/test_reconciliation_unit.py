@@ -7,6 +7,7 @@ from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.reconciliation import (
+    BrokerOrderLinkIndex,
     MismatchType,
     ReconciliationDiff,
     ReconciliationReport,
@@ -248,6 +249,7 @@ class TestReconcileExtraFill:
         assert len(report.diffs) == 1
         assert report.diffs[0].mismatch_type is MismatchType.EXTRA_FILL
         assert report.diffs[0].order_id == "ord-x"
+        assert report.diffs[0].client_order_id == "ord-x"
         assert report.diffs[0].fill_id == "fill-x"
 
 
@@ -268,6 +270,7 @@ class TestReconcileQtyMismatch:
         diff = report.diffs[0]
         assert diff.mismatch_type is MismatchType.QTY_MISMATCH
         assert diff.order_id == "ord-1"
+        assert diff.fill_id == "fill-1"
         assert diff.expected_quantity == 100
         assert diff.actual_quantity == 80
 
@@ -289,6 +292,7 @@ class TestReconcilePriceMismatch:
         assert len(report.diffs) == 1
         diff = report.diffs[0]
         assert diff.mismatch_type is MismatchType.PRICE_MISMATCH
+        assert diff.fill_id == "fill-1"
         assert diff.expected_price == 4.50
         assert diff.actual_price == 4.80
 
@@ -430,3 +434,136 @@ class TestReconcileDefaultPriceTolerance:
             actual=fills,
         )
         assert report.diffs == ()
+
+
+# ---------------------------------------------------------------------------
+# B1B-2: ReconciliationDiff audit link fields
+# ---------------------------------------------------------------------------
+
+
+class TestReconciliationDiffAuditLinks:
+    """ReconciliationDiff 应包含 client_order_id / broker_order_id 审计链接。"""
+
+    def test_diff_accepts_client_order_id(self) -> None:
+        diff = ReconciliationDiff(
+            mismatch_type=MismatchType.MISSING_FILL,
+            order_id="ord-1",
+            client_order_id="ditto-abc123",
+        )
+        assert diff.client_order_id == "ditto-abc123"
+
+    def test_diff_accepts_broker_order_id(self) -> None:
+        diff = ReconciliationDiff(
+            mismatch_type=MismatchType.EXTRA_FILL,
+            order_id="ord-x",
+            broker_order_id="broker-xyz",
+        )
+        assert diff.broker_order_id == "broker-xyz"
+
+    def test_diff_defaults_none(self) -> None:
+        diff = ReconciliationDiff(
+            mismatch_type=MismatchType.QTY_MISMATCH,
+            order_id="ord-2",
+        )
+        assert diff.client_order_id is None
+        assert diff.broker_order_id is None
+
+    def test_reconcile_populates_client_order_id(self) -> None:
+        ticket = _ticket("ord-1", 100, 100, 4.50)
+        fills: list[FillEvent] = []
+        report = reconcile(
+            report_id="r-audit",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[ticket],
+            actual=fills,
+        )
+        assert len(report.diffs) == 1
+        diff = report.diffs[0]
+        assert diff.mismatch_type is MismatchType.MISSING_FILL
+        assert diff.client_order_id == "ord-1"
+
+    def test_reconcile_populates_client_order_id_on_qty_mismatch(self) -> None:
+        tickets = [_ticket("ord-2", 100, 100, 4.50)]
+        fills = [_fill("fill-1", "ord-2", 80, 4.50)]
+        report = reconcile(
+            report_id="r-audit-qty",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=tickets,
+            actual=fills,
+        )
+        qty_diff = next(
+            d for d in report.diffs if d.mismatch_type is MismatchType.QTY_MISMATCH
+        )
+        assert qty_diff.client_order_id == "ord-2"
+
+    def test_report_trade_date_present(self) -> None:
+        report = reconcile(
+            report_id="r-trade-date",
+            account_id="acct-1",
+            trade_date="2026-05-25",
+            expected=[],
+            actual=[],
+        )
+        assert report.trade_date == "2026-05-25"
+
+    def test_reconcile_prefers_fill_level_broker_order_id_for_extra_fills(
+        self,
+    ) -> None:
+        fills = [
+            _fill("fill-alpha", "shared-order", 40, 4.50),
+            _fill("fill-beta", "shared-order", 60, 4.50),
+        ]
+        report = reconcile(
+            report_id="r-fill-link-extra",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[],
+            actual=fills,
+            broker_order_links=BrokerOrderLinkIndex(
+                by_order={"shared-order": "broker-order-level"},
+                by_fill={
+                    "fill-alpha": "broker-alpha-fill",
+                    "fill-beta": "broker-beta-fill",
+                },
+            ),
+        )
+
+        broker_order_ids_by_fill = {
+            diff.fill_id: diff.broker_order_id for diff in report.diffs
+        }
+        assert broker_order_ids_by_fill == {
+            "fill-alpha": "broker-alpha-fill",
+            "fill-beta": "broker-beta-fill",
+        }
+
+    def test_reconcile_prefers_order_scoped_fill_broker_order_id_for_extra_fills(
+        self,
+    ) -> None:
+        fills = [
+            _fill("broker-fill-001", "alpha-order", 40, 4.50),
+            _fill("broker-fill-001", "beta-order", 60, 4.50),
+        ]
+        report = reconcile(
+            report_id="r-order-fill-link-extra",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[],
+            actual=fills,
+            broker_order_links=BrokerOrderLinkIndex(
+                by_fill={"broker-fill-001": "ambiguous-fill-link"},
+                by_order_fill={
+                    ("alpha-order", "broker-fill-001"): "broker-alpha-order",
+                    ("beta-order", "broker-fill-001"): "broker-beta-order",
+                },
+            ),
+        )
+
+        broker_order_ids_by_order = {
+            diff.order_id: diff.broker_order_id for diff in report.diffs
+        }
+        assert broker_order_ids_by_order == {
+            "alpha-order": "broker-alpha-order",
+            "beta-order": "broker-beta-order",
+        }

@@ -85,6 +85,7 @@ class StepContext:
         time_context: 时间上下文（PIT 语义，由 Synchronizer 提供）
         is_rebalance_day: 是否为调仓日
         bars: 当日市场行情（由 Synchronizer 提供）
+        source_snapshot_ids: 当日输入行情的上游快照 ID（由 Synchronizer 提供）
         slice_: 当日数据切片（benchmark_close 等，由 EngineLoop 设置）
         account_view: 账户快照（由 DataFetchStep 设置）
         order_book: 订单簿只读视图（由 DataFetchStep 设置）
@@ -101,6 +102,7 @@ class StepContext:
     time_context: TimeContext
     is_rebalance_day: bool
     bars: dict[InstrumentId, MarketSnapshot]
+    source_snapshot_ids: dict[InstrumentId, str] = field(default_factory=dict)
 
     # -- Step outputs (set by steps, read by subsequent steps) --
     slice_: Slice | None = None

@@ -33,6 +33,7 @@ class FillEvent:
         event_time: 成交时间
         cumulative_quantity: 该订单累计已成交量
         leaves_quantity: 该订单剩余未成交量
+        correlation_id: 关联 ID（可追溯 order → fill → account）
 
     """
 
@@ -47,3 +48,4 @@ class FillEvent:
     event_time: datetime
     cumulative_quantity: int
     leaves_quantity: int
+    correlation_id: str | None = None

@@ -3,6 +3,7 @@
 > Date: 2026-05-08
 > Scope: `packages/apps`
 > Source plan: `docs/reviews/audit/2026-05-08-global-and-module-review-plan.md`
+> Update 2026-06-09: Apps review scope is backend only. Product UI belongs to the separate `ditto-app` frontend repository; this package owns FastAPI contracts, CLI/jobs as backend operational support and composition wiring. OpenAPI now exposes maturity metadata and tag-scoped stable `operationId` values for generated frontend clients.
 
 ## 1. 当前职责与边界
 
@@ -27,7 +28,7 @@ The boundary has meaningful guard coverage. The key remaining risks are end-to-e
 | ID | 严重度 | 证据 | 风险 | 建议 |
 |---|---|---|---|---|
 | APPS-P1-01 | P1 | E2E tests require local TDX samples and PIT snapshots; when missing they skip. | Full check can pass without proving the most important end-to-end data/runtime path. | Add a small committed synthetic golden dataset or CI artifact path for one complete E2E lane. |
-| APPS-P1-02 | P1 | API/CLI surface covers broad domains while maturity manifest marks many as experimental/reserved. | Users can infer current production readiness from endpoint/model presence alone. | Add maturity-aware docs/route metadata and forbid reserved capability wording in API/CLI help. |
+| APPS-P1-02 | P1 | API/CLI surface covers broad domains while maturity manifest marks many as experimental/reserved; OpenAPI maturity metadata and stable tag-scoped `operationId` values now reduce overclaiming and generated-client drift. | Users can still infer current production readiness from endpoint/model presence alone when richer report composition is absent. | Keep maturity-aware docs/route metadata guarded, forbid reserved capability wording in API/CLI help, and add remaining backend report contracts as FastAPI surfaces rather than product UI. |
 | APPS-P1-03 | P1 | `registry/infra/config.py` and registry contexts own broad infra/capability composition. | Composition root is correct but can accumulate business facts and become hard to audit. | Keep registry as composition only; move dataset/maturity/runtime facts to architecture manifests or application/data configs. |
 | APPS-P2-01 | P2 | Large route/job files mix request parsing, facade calls, response shaping, and status mapping. | Route changes become harder to review for thin-boundary compliance. | Split large routes/jobs by subresource or response mapping once behavior snapshots exist. |
 | APPS-P2-02 | P2 | Single DQ host-composition allowance exists in `jobs/context.py`. | Narrow exception can expand by copy/paste if not watched. | Keep exact allowance as the enforcement source and require owner/reason for any new exception. |
@@ -44,7 +45,8 @@ No P0 finding was confirmed. The boundary is guarded; E2E evidence and maturity-
 2. Maturity-aware API:
    - RED: test route/help text does not claim reserved/experimental capabilities as production-ready.
    - GREEN: expose maturity metadata or doc annotations sourced from the manifest.
-   - REFACTOR: centralize capability labels.
+   - DONE: OpenAPI operations now carry `x-ditto-maturity`, visible maturity notes and tag-scoped stable `operationId` values.
+   - REFACTOR: centralize capability labels and keep backend report contracts frontend-consumable.
 
 3. Registry budget:
    - RED: add guard for new registry capability imports without exact allowance owner/reason.

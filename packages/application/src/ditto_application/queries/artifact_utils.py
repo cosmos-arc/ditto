@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_strategy.models import StrategyArtifactRecord
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -30,10 +30,13 @@ def compute_total_return(*, initial_cash: float, final_nav: float) -> float:
 def find_artifact(
     artifact_service: StrategyArtifactService,
     run_id: str,
+    artifact_type: ArtifactKind | None = None,
 ) -> StrategyArtifactRecord | None:
-    """从产物列表中查找匹配 run_id 的第一条记录."""
+    """从产物列表中查找匹配 run_id 和可选类型的第一条记录."""
     artifacts = artifact_service.list_artifacts()
     for record in artifacts:
-        if record.run_id == run_id:
+        if record.run_id == run_id and (
+            artifact_type is None or record.artifact_type is artifact_type
+        ):
             return record
     return None

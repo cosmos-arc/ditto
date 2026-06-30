@@ -13,6 +13,32 @@ from ditto_platform.foundation import (
     SQLitePool,
 )
 
+from ditto_data.catalog.contracts import DataCatalogReader, DataCatalogWriter
+from ditto_data.catalog.fallback_policy import (
+    CatalogSourceFallbackPolicyReader,
+    CatalogSourceFallbackPolicyWriter,
+)
+from ditto_data.catalog.fallback_policy_store import (
+    SQLiteCatalogSourceFallbackPolicyStore,
+)
+from ditto_data.catalog.promotion import (
+    DatasetMaturityPromotionHistoryReader,
+    DatasetMaturityPromotionReader,
+    DatasetMaturityPromotionRevoker,
+    DatasetMaturityPromotionWriter,
+    DatasetPromotionEvidenceReader,
+    DatasetPromotionEvidenceWriter,
+)
+from ditto_data.catalog.promotion_store import (
+    SQLiteDatasetMaturityPromotionStore,
+    SQLiteDatasetPromotionEvidenceStore,
+)
+from ditto_data.catalog.remediation import (
+    CatalogRemediationApprovalReader,
+    CatalogRemediationApprovalWriter,
+)
+from ditto_data.catalog.remediation_store import SQLiteCatalogRemediationApprovalStore
+from ditto_data.catalog.sqlite_store import SQLiteDataCatalog
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.freeze_store import (
     FreezeStore,
@@ -26,6 +52,8 @@ from ditto_data.ingestion.ingestion_log_store import (
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
 )
+from ditto_data.lineage import DataLineageReader, DataLineageRecorder
+from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.runtime.freeze_manager import FreezeManager
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.runtime.sql_engine import SqlEngine
@@ -76,6 +104,160 @@ class RuntimeProvider(Provider):
     def sqlite_client(self, sqlite_pool: SQLitePool) -> SQLiteClient:
         """SQLite 客户端（基于全局连接池）."""
         return SQLiteClient(sqlite_pool)
+
+    @provide
+    def data_catalog_store(self, sqlite_client: SQLiteClient) -> SQLiteDataCatalog:
+        """SQLite 数据目录存储（应用级共享实例）."""
+        return SQLiteDataCatalog(sqlite_client)
+
+    @provide
+    def data_catalog_writer(
+        self,
+        data_catalog_store: SQLiteDataCatalog,
+    ) -> DataCatalogWriter:
+        """DataCatalog 写入端口."""
+        return data_catalog_store
+
+    @provide
+    def data_catalog_reader(
+        self,
+        data_catalog_store: SQLiteDataCatalog,
+    ) -> DataCatalogReader:
+        """DataCatalog 读取端口."""
+        return data_catalog_store
+
+    @provide
+    def dataset_promotion_evidence_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDatasetPromotionEvidenceStore:
+        """SQLite dataset promotion evidence store."""
+        return SQLiteDatasetPromotionEvidenceStore(sqlite_client)
+
+    @provide
+    def dataset_promotion_evidence_writer(
+        self,
+        dataset_promotion_evidence_store: SQLiteDatasetPromotionEvidenceStore,
+    ) -> DatasetPromotionEvidenceWriter:
+        """Dataset promotion evidence write port."""
+        return dataset_promotion_evidence_store
+
+    @provide
+    def dataset_promotion_evidence_reader(
+        self,
+        dataset_promotion_evidence_store: SQLiteDatasetPromotionEvidenceStore,
+    ) -> DatasetPromotionEvidenceReader:
+        """Dataset promotion evidence read port."""
+        return dataset_promotion_evidence_store
+
+    @provide
+    def dataset_maturity_promotion_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDatasetMaturityPromotionStore:
+        """SQLite dataset maturity promotion override store."""
+        return SQLiteDatasetMaturityPromotionStore(sqlite_client)
+
+    @provide
+    def dataset_maturity_promotion_writer(
+        self,
+        dataset_maturity_promotion_store: SQLiteDatasetMaturityPromotionStore,
+    ) -> DatasetMaturityPromotionWriter:
+        """Dataset maturity promotion write port."""
+        return dataset_maturity_promotion_store
+
+    @provide
+    def dataset_maturity_promotion_reader(
+        self,
+        dataset_maturity_promotion_store: SQLiteDatasetMaturityPromotionStore,
+    ) -> DatasetMaturityPromotionReader:
+        """Dataset maturity promotion read port."""
+        return dataset_maturity_promotion_store
+
+    @provide
+    def dataset_maturity_promotion_history_reader(
+        self,
+        dataset_maturity_promotion_store: SQLiteDatasetMaturityPromotionStore,
+    ) -> DatasetMaturityPromotionHistoryReader:
+        """Dataset maturity promotion history read port."""
+        return dataset_maturity_promotion_store
+
+    @provide
+    def dataset_maturity_promotion_revoker(
+        self,
+        dataset_maturity_promotion_store: SQLiteDatasetMaturityPromotionStore,
+    ) -> DatasetMaturityPromotionRevoker:
+        """Dataset maturity promotion revoke port."""
+        return dataset_maturity_promotion_store
+
+    @provide
+    def catalog_remediation_approval_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteCatalogRemediationApprovalStore:
+        """SQLite catalog remediation approval state store."""
+        return SQLiteCatalogRemediationApprovalStore(sqlite_client)
+
+    @provide
+    def catalog_remediation_approval_writer(
+        self,
+        catalog_remediation_approval_store: SQLiteCatalogRemediationApprovalStore,
+    ) -> CatalogRemediationApprovalWriter:
+        """Catalog remediation approval write port."""
+        return catalog_remediation_approval_store
+
+    @provide
+    def catalog_remediation_approval_reader(
+        self,
+        catalog_remediation_approval_store: SQLiteCatalogRemediationApprovalStore,
+    ) -> CatalogRemediationApprovalReader:
+        """Catalog remediation approval read port."""
+        return catalog_remediation_approval_store
+
+    @provide
+    def catalog_source_fallback_policy_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteCatalogSourceFallbackPolicyStore:
+        """SQLite catalog source fallback policy state store."""
+        return SQLiteCatalogSourceFallbackPolicyStore(sqlite_client)
+
+    @provide
+    def catalog_source_fallback_policy_writer(
+        self,
+        catalog_source_fallback_policy_store: SQLiteCatalogSourceFallbackPolicyStore,
+    ) -> CatalogSourceFallbackPolicyWriter:
+        """Catalog source fallback policy write port."""
+        return catalog_source_fallback_policy_store
+
+    @provide
+    def catalog_source_fallback_policy_reader(
+        self,
+        catalog_source_fallback_policy_store: SQLiteCatalogSourceFallbackPolicyStore,
+    ) -> CatalogSourceFallbackPolicyReader:
+        """Catalog source fallback policy read port."""
+        return catalog_source_fallback_policy_store
+
+    @provide
+    def data_lineage_store(self, sqlite_client: SQLiteClient) -> SQLiteDataLineage:
+        """SQLite 血缘存储（应用级共享实例）."""
+        return SQLiteDataLineage(sqlite_client)
+
+    @provide
+    def data_lineage_recorder(
+        self,
+        data_lineage_store: SQLiteDataLineage,
+    ) -> DataLineageRecorder:
+        """血缘写入端口."""
+        return data_lineage_store
+
+    @provide
+    def data_lineage_reader(
+        self,
+        data_lineage_store: SQLiteDataLineage,
+    ) -> DataLineageReader:
+        """血缘读取端口."""
+        return data_lineage_store
 
     @provide
     def instrument_id_allocator(self, sqlite_pool: SQLitePool) -> InstrumentIdAllocator:

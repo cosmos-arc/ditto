@@ -5,10 +5,17 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 import pytest
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.runtime.sql_engine import SqlEngine
 from ditto_platform.foundation import SQLitePool
 
-pytestmark = pytest.mark.skip(reason="SqlEngine API changed")
+pytestmark = pytest.mark.xfail(
+    strict=False,
+    reason=(
+        "pyarrow missing: duckdb .pl() needs pyarrow to bridge to polars; "
+        "declare pyarrow dep or use duckdb-native conversion (T10 task 4.2)."
+    ),
+)
 
 
 class TestSqlEngine:
@@ -36,7 +43,7 @@ class TestSqlEngine:
         self.pool.init_schema()
 
         # Create SqlEngine (no longer requires instrument_store or calendar_store)
-        self.engine = SqlEngine(data_root=self.data_root)
+        self.engine = SqlEngine(settings=DataStoreSettings(data_root=self.data_root))
 
     def teardown_method(self) -> None:
         """Clean up test environment."""

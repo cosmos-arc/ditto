@@ -120,6 +120,32 @@ class TestMarketServiceFindBars:
 class TestMarketServiceListBars:
     """测试 list_bars() 便利方法."""
 
+    def test_list_bars_accepts_query_object(
+        self,
+        market_service: MarketService,
+        mock_readers: dict[str, MagicMock],
+    ) -> None:
+        """list_bars() accepts the same query object as find_bars()."""
+        mock_df = pl.DataFrame(
+            {
+                "instrument_id": [1_000_001],
+                "trade_date": ["2024-01-01"],
+                "close": [10.5],
+            }
+        )
+        mock_readers["stock_bars"].read.return_value = mock_df
+
+        result = market_service.list_bars(
+            MarketBarsQuery(
+                instrument_ids=[1_000_001],
+                start="2024-01-01",
+                end="2024-01-05",
+            )
+        )
+
+        assert len(result) == 1
+        mock_readers["stock_bars"].read.assert_called_once()
+
     def test_list_bars(
         self,
         market_service: MarketService,

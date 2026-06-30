@@ -25,6 +25,9 @@ valid_identifier_strategy = text(
     min_size=1,
     max_size=10,
 ).filter(lambda x: x and re.match(r"^[a-zA-Z_]", x))
+safe_identifier_strategy = valid_identifier_strategy.filter(
+    lambda x: x.lower() != "trade_date"
+)
 
 
 # Sample from common valid identifiers for stability
@@ -89,7 +92,7 @@ class TestPitHelperProperties:
         assert date_str in result
 
     @given(
-        valid_identifier_strategy,
+        safe_identifier_strategy,
         valid_date_strategy,
     )
     @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
@@ -130,7 +133,7 @@ class TestPitHelperProperties:
 
     @given(
         common_identifiers,
-        sampled_from(["trade_date", "knowledge_date", "effective_date"]),
+        sampled_from(["knowledge_date", "effective_date"]),
         valid_dates,
     )
     @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
@@ -166,7 +169,7 @@ class TestPitHelperProperties:
         assert " AS " in result, "CTE should contain AS clause"
         assert f"SELECT * FROM {cte_name}" in result, f"Should select from {cte_name}"
 
-    @given(valid_identifier_strategy, valid_date_strategy)
+    @given(safe_identifier_strategy, valid_date_strategy)
     @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
     def test_get_safe_trade_date_format(
         self, base_column: str, knowledge_date: str
@@ -184,7 +187,7 @@ class TestPitHelperProperties:
         assert base_column in result, "Result should contain base column"
         assert knowledge_date in result, "Result should contain knowledge date"
 
-    @given(valid_identifier_strategy)
+    @given(safe_identifier_strategy)
     @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_get_safe_trade_date_placeholder_format(self, base_column: str) -> None:
         """Property: Placeholder ($asof) should not be quoted."""
@@ -194,7 +197,7 @@ class TestPitHelperProperties:
         assert "'$asof'" not in result, "Placeholder should not be quoted"
 
     @given(
-        valid_identifier_strategy,
+        safe_identifier_strategy,
         sampled_from(["2024-01-15", "2023-12-31", "2025-06-30"]),
     )
     @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])

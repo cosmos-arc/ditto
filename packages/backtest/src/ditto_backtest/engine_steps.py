@@ -14,6 +14,7 @@ from ditto_execution.brokerage import Brokerage
 from ditto_execution.orders.model import Order
 from ditto_execution.planner import ExecutionPlanner
 from ditto_execution.trade_builder import TradeBuilder
+from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
@@ -28,7 +29,11 @@ from loguru import logger
 from ditto_backtest.config import EngineConfig
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.manifest import RuleRefCollector, RunManifest
-from ditto_backtest.result import EngineResult
+from ditto_backtest.result import (
+    BacktestCheckpoint,
+    BacktestRuntimeStateSnapshot,
+    EngineResult,
+)
 from ditto_backtest.statistics import ExecutionAuditCollector
 from ditto_backtest.steps import (
     AuditStep,
@@ -44,6 +49,7 @@ from ditto_backtest.steps import (
 
 __all__ = [
     "EngineOptions",
+    "EngineResultAssemblyContext",
     "StepDeps",
     "assemble_engine_result",
     "build_steps",
@@ -69,6 +75,9 @@ class EngineOptions:
         random_seed: 随机种子（用于可复现性，默认 42）
         should_stop: 协作式取消回调 (None = 不支持取消)
         on_progress: 进度回调 (completed_days, total_days)
+        on_checkpoint: checkpoint 回调，供外层持久化恢复边界
+        restore_runtime_state: checkpoint runtime-state，用于恢复 engine 内部队列
+        on_step_complete: 单步完成回调 (step_name, duration_seconds, success)
 
     """
 
@@ -81,6 +90,9 @@ class EngineOptions:
     random_seed: int = 42
     should_stop: Callable[[], bool] | None = None
     on_progress: Callable[[int, int], None] | None = None
+    on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
+    restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
+    on_step_complete: Callable[[str, float, bool], None] | None = None
 
 
 @dataclass
@@ -102,36 +114,46 @@ class StepDeps:
     strategy_context: StrategyContext
     input_instruments: set[InstrumentId]
     bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]]
+    source_snapshot_ids: dict[InstrumentId, set[str]]
     rule_ref_collector: RuleRefCollector
     trade_builder: TradeBuilder
     recorded_trade_ids: set[str]
     build_input_bundle_fn: Callable[[str, Slice], StrategyInputBundle]
 
 
-def assemble_engine_result(  # noqa: PLR0913
-    *,
-    run_id: str,
-    start: str,
-    end: str,
-    account_view: AccountView,
-    manifest: RunManifest,
-    fills: list[FillEvent],
-    orders: list[Order],
-    skipped: list[str],
-    cancelled: bool,
+@dataclass(frozen=True)
+class EngineResultAssemblyContext:
+    """Final state required to assemble one immutable EngineResult."""
+
+    run_id: str
+    start: str
+    end: str
+    account_view: AccountView
+    manifest: RunManifest
+    fills: list[FillEvent]
+    orders: list[Order]
+    skipped: list[str]
+    cancelled: bool
+    last_checkpoint: BacktestCheckpoint | None = None
+
+
+@traced("backtest.assemble_result")
+def assemble_engine_result(
+    ctx: EngineResultAssemblyContext,
 ) -> EngineResult:
     """组装 EngineResult — 汇总账户、成交、订单等最终状态."""
     return EngineResult(
-        run_id=run_id,
-        period=(start, end),
-        final_nav=account_view.nav,
-        total_trades=len(fills),
-        orders=tuple(orders),
-        fills=tuple(fills),
-        account_view=account_view,
-        manifest=manifest,
-        skipped_dates=tuple(skipped),
-        cancelled=cancelled,
+        run_id=ctx.run_id,
+        period=(ctx.start, ctx.end),
+        final_nav=ctx.account_view.nav,
+        total_trades=len(ctx.fills),
+        orders=tuple(ctx.orders),
+        fills=tuple(ctx.fills),
+        account_view=ctx.account_view,
+        manifest=ctx.manifest,
+        skipped_dates=tuple(ctx.skipped),
+        last_checkpoint=ctx.last_checkpoint,
+        cancelled=ctx.cancelled,
     )
 
 
@@ -189,6 +211,7 @@ def _build_data_fetch_step(deps: StepDeps) -> DataFetchStep:
         strategy_context=deps.strategy_context,
         input_instruments=deps.input_instruments,
         bar_fingerprints=deps.bar_fingerprints,
+        source_snapshot_ids=deps.source_snapshot_ids,
     )
 
 

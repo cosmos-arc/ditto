@@ -3,27 +3,30 @@
 
 包含 BacktestService 及其配置类，负责编排完整回测流程：
 引擎运行 → 报告生成 → 审计日志持久化 → 策略产物持久化。
+
+审计持久化逻辑委托给 backtest_audit 模块，
+因子 bundle 构建委托给 factor_bridge 模块。
 """
 
 from __future__ import annotations
 
-import uuid
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from pathlib import Path
 
 import orjson
-import polars as pl
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.engine import (
     EngineLoop,
+    EngineLoopDeps,
     EngineOptions,
     EngineResult,
 )
 from ditto_backtest.manifest import RunManifest
+from ditto_backtest.result import BacktestCheckpoint, BacktestRuntimeStateSnapshot
 from ditto_backtest.simulation import SlippageModel
 from ditto_backtest.statistics import (
     BacktestReport,
@@ -31,31 +34,45 @@ from ditto_backtest.statistics import (
 )
 from ditto_backtest.steps import StepContext
 from ditto_backtest.synchronizer import BacktestSynchronizer
+from ditto_data.lineage.contracts import DataLineageRecorder
 from ditto_execution.audit import ExecutionAuditService
-from ditto_execution.audit.models import (
-    PreTradeDecisionPayload,
-    RiskScanPayload,
-)
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
 from ditto_risk.post_trade import PostTradeRiskGuard
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
-from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointWriterProtocol,
+)
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
-from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.backtest_audit import (
+    ArtifactPersistConfig,
+    ArtifactPersistContext,
+    persist_artifact,
+    persist_audit,
+    resolve_run_id,
+)
+from ditto_application.processes.execution.backtest_lineage import (
+    record_backtest_lineage,
+)
+from ditto_application.processes.execution.backtest_process_types import (
+    BacktestLineageConfig,
+)
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
+    build_factor_aware_bundle_builder,
 )
 from ditto_application.processes.execution.strategy_input import (
     write_backtest_artifacts,
@@ -64,6 +81,9 @@ from ditto_application.processes.execution.strategy_types import (
     RunLifecycleService,
     mark_run_failed,
 )
+
+# re-export for test monkeypatch compatibility
+_ = write_backtest_artifacts
 
 __all__ = [
     "BacktestService",
@@ -75,6 +95,10 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # BacktestServiceConfig
 # ---------------------------------------------------------------------------
+
+_ALLOWED_RECOMMENDATION_STATUSES = frozenset(
+    {"research", "candidate", "paper", "production"}
+)
 
 
 @dataclass(frozen=True)
@@ -95,6 +119,11 @@ class BacktestServiceConfig:
         engine_version: 引擎版本号
         parent_run_id: 父运行 ID（用于重试/衍生场景）
         execution_delay: 信号延迟执行天数
+        code_version: 策略代码版本或 git SHA（如可用）
+        data_catalog_identities: 补充数据目录身份（manifest 不可用时使用）
+        factor_report_refs: 因子评估报告引用
+        recommendation_status: 研究晋级建议状态
+        resume_*: checkpoint-backed resume state evidence
 
     """
 
@@ -110,6 +139,32 @@ class BacktestServiceConfig:
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
     execution_delay: int = 0
+    code_version: str = ""
+    data_catalog_identities: tuple[str, ...] = ()
+    factor_report_refs: tuple[str, ...] = ()
+    recommendation_status: str = "research"
+    resume_from_run_id: str = ""
+    resume_checkpoint_trade_date: str = ""
+    resume_checkpoint_completed_days: int = 0
+    resume_checkpoint_total_days: int = 0
+    resume_checkpoint_nav: float = 0.0
+    resume_checkpoint_order_count: int = 0
+    resume_checkpoint_fill_count: int = 0
+    resume_account_state_json: str = ""
+    resume_account_state_hash: str = ""
+    resume_settlement_state_json: str = ""
+    resume_settlement_state_hash: str = ""
+    resume_runtime_state_json: str = ""
+    resume_runtime_state_hash: str = ""
+
+    def __post_init__(self) -> None:
+        """Validate launch promotion recommendation status."""
+        if self.recommendation_status not in _ALLOWED_RECOMMENDATION_STATUSES:
+            msg = (
+                "recommendation_status must be one of "
+                f"{sorted(_ALLOWED_RECOMMENDATION_STATUSES)}"
+            )
+            raise AppProcessError(msg)
 
 
 @dataclass(frozen=True)
@@ -126,7 +181,11 @@ class BacktestServiceOptions:
         artifact_service: 策略产物持久化服务
         artifact_dir: 回测产物序列化输出目录 (None = 使用默认临时目录)
         run_service: 策略运行生命周期服务 (None = 跳过生命周期管理)
+        checkpoint_writer: 策略运行 checkpoint 写入端口 (None = 跳过恢复点持久化)
         compiled_expressions: 编译后的因子表达式 (None = 使用默认信号)
+        lineage_recorder: 数据血缘记录器 (None = 跳过 lineage 记录)
+        allow_experimental_data: 是否显式允许 experimental 数据集进入运行时
+        restore_runtime_state: 已解析的 checkpoint runtime-state
 
     """
 
@@ -139,7 +198,46 @@ class BacktestServiceOptions:
     artifact_dir: str | None = None
     display_map: dict[InstrumentId, str] | None = None
     run_service: RunLifecycleService | None = None
+    checkpoint_writer: StrategyRunCheckpointWriterProtocol | None = None
     compiled_expressions: CompiledExpressions | None = None
+    lineage_recorder: DataLineageRecorder | None = None
+    allow_experimental_data: bool = False
+    restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
+
+
+def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
+    """Validate optional checkpoint hash evidence when provided."""
+    if expected and expected != actual:
+        msg = f"{label} mismatch: expected {expected}, got {actual}"
+        raise AppProcessError(msg)
+
+
+def _build_step_metrics_callback() -> Callable[[str, float, bool], None] | None:
+    """Build optional Engine step metrics callback."""
+    try:
+        from ditto_platform.foundation import Metrics  # noqa: PLC0415
+    except Exception:
+        return None
+
+    def _on_step_complete(
+        step_name: str,
+        duration: float,
+        success: bool,
+    ) -> None:
+        try:
+            Metrics.backtest_step_duration.record(
+                duration,
+                {"step": step_name},
+            )
+            if not success:
+                Metrics.backtest_step_failures.add(
+                    1,
+                    {"step": step_name},
+                )
+        except AttributeError:
+            return
+
+    return _on_step_complete
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +314,47 @@ class BacktestService:
                         "parameter_overrides": list(self._config.parameter_overrides),
                         "rebalance_freq": self._config.rebalance_freq,
                         "execution_delay": self._config.execution_delay,
+                        "resume_from_run_id": self._config.resume_from_run_id,
+                        "resume_checkpoint_trade_date": (
+                            self._config.resume_checkpoint_trade_date
+                        ),
+                        "resume_checkpoint_completed_days": (
+                            self._config.resume_checkpoint_completed_days
+                        ),
+                        "resume_checkpoint_total_days": (
+                            self._config.resume_checkpoint_total_days
+                        ),
+                        "resume_checkpoint_nav": self._config.resume_checkpoint_nav,
+                        "resume_checkpoint_order_count": (
+                            self._config.resume_checkpoint_order_count
+                        ),
+                        "resume_checkpoint_fill_count": (
+                            self._config.resume_checkpoint_fill_count
+                        ),
+                        "resume_account_state_json": (
+                            self._config.resume_account_state_json
+                        ),
+                        "resume_account_state_hash": (
+                            self._config.resume_account_state_hash
+                        ),
+                        "resume_settlement_state_json": (
+                            self._config.resume_settlement_state_json
+                        ),
+                        "resume_settlement_state_hash": (
+                            self._config.resume_settlement_state_hash
+                        ),
+                        "resume_runtime_state_json": (
+                            self._config.resume_runtime_state_json
+                        ),
+                        "resume_runtime_state_hash": (
+                            self._config.resume_runtime_state_hash
+                        ),
+                        "allow_experimental_data": (
+                            self._options.allow_experimental_data
+                        ),
+                        "pit_policy": PIT_POLICY_FAIL_CLOSED,
+                        "pit_time_column": DEFAULT_PIT_TIME_COLUMN,
+                        "unsafe_time_policy": "",
                     },
                 ).decode()
                 run_svc.create_run(
@@ -249,15 +388,30 @@ class BacktestService:
         )
         engine_loop = EngineLoop(
             config=engine_config,
-            pipeline=self._pipeline,
-            planner=self._planner,
-            brokerage=self._brokerage,
-            pre_trade_check=self._pre_trade_check,
-            data_feed=self._data_feed,
-            synchronizer=synchronizer,
-            options=options,
+            deps=EngineLoopDeps(
+                pipeline=self._pipeline,
+                planner=self._planner,
+                brokerage=self._brokerage,
+                pre_trade_check=self._pre_trade_check,
+                data_feed=self._data_feed,
+                synchronizer=synchronizer,
+                options=options,
+            ),
         )
+        t0 = time.monotonic()
         engine_result = engine_loop.run()
+        elapsed = time.monotonic() - t0
+
+        # 回测指标记录（application 桥接 backtest → platform Metrics）
+        try:
+            from ditto_platform.foundation import Metrics as _Metrics  # noqa: PLC0415
+
+            _Metrics.backtest_duration.record(elapsed)
+            _Metrics.backtest_trading_days.add(
+                engine_result.total_trades + len(engine_result.skipped_dates)
+            )
+        except Exception:  # noqa: S110
+            pass  # 指标记录不阻断主流程
 
         # 构建 BacktestReport
         report = build_report(collector, run_id=run_id)
@@ -332,6 +486,36 @@ class BacktestService:
 
             on_progress = _report_progress
 
+        # checkpoint 持久化 — 引擎保持 storage-free，由 App 层写入运行控制面。
+        checkpoint_writer = self._options.checkpoint_writer
+        on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
+        if checkpoint_writer is not None:
+
+            def _save_checkpoint(checkpoint: BacktestCheckpoint) -> None:
+                checkpoint_writer.save_checkpoint(
+                    StrategyRunCheckpointRecord(
+                        run_id=run_id,
+                        strategy_id=self._config.strategy_id,
+                        strategy_version=self._config.strategy_version,
+                        mode=EngineMode.BACKTEST.value,
+                        completed_trade_date=checkpoint.completed_trade_date,
+                        resume_from=checkpoint.resume_from,
+                        completed_days=checkpoint.completed_days,
+                        total_days=checkpoint.total_days,
+                        nav=checkpoint.nav,
+                        order_count=checkpoint.order_count,
+                        fill_count=checkpoint.fill_count,
+                        account_state_json=checkpoint.account_state_json,
+                        account_state_hash=checkpoint.account_state_hash,
+                        settlement_state_json=checkpoint.settlement_state_json,
+                        settlement_state_hash=checkpoint.settlement_state_hash,
+                        runtime_state_json=checkpoint.runtime_state_json,
+                        runtime_state_hash=checkpoint.runtime_state_hash,
+                    )
+                )
+
+            on_checkpoint = _save_checkpoint
+
         return EngineOptions(
             event_bus=SimpleEventBus(),
             fee_model=self._options.fee_model,
@@ -341,7 +525,30 @@ class BacktestService:
             input_bundle_builder=input_bundle_builder,
             should_stop=should_stop,
             on_progress=on_progress,
+            on_checkpoint=on_checkpoint,
+            restore_runtime_state=self._restore_runtime_state(),
+            on_step_complete=_build_step_metrics_callback(),
         )
+
+    def _restore_runtime_state(self) -> BacktestRuntimeStateSnapshot | None:
+        """Load and verify checkpoint runtime-state evidence from config/options."""
+        if self._options.restore_runtime_state is not None:
+            return self._options.restore_runtime_state
+        if not self._config.resume_runtime_state_json:
+            return None
+        try:
+            snapshot = BacktestRuntimeStateSnapshot.from_json(
+                self._config.resume_runtime_state_json,
+            )
+        except ValueError as exc:
+            msg = "Invalid resume_runtime_state_json"
+            raise AppProcessError(msg) from exc
+        _assert_resume_hash(
+            label="resume_runtime_state_hash",
+            expected=self._config.resume_runtime_state_hash,
+            actual=snapshot.state_hash,
+        )
+        return snapshot
 
     def _post_process(
         self,
@@ -352,6 +559,7 @@ class BacktestService:
         """持久化审计/产物 + 更新运行状态。"""
         self._persist_audit(run_id, report)
         self._persist_artifact(run_id, report, manifest=engine_result.manifest)
+        self._record_lineage(run_id, manifest=engine_result.manifest)
 
         run_svc = self._options.run_service
         if run_svc is not None:
@@ -367,172 +575,51 @@ class BacktestService:
         run_id: str,
     ) -> Callable[[StepContext], StrategyInputBundle]:
         """
-        构建含因子信号注入的 input_bundle_builder.
-
-        当 data_feed 可用时，会在 market_data 中包含历史窗口，
-        使 ts_* 时间序列表达式（如 ts_mean, shift）能正确计算。
+        构建含因子信号注入的 input_bundle_builder。委托给 factor_bridge 模块。
 
         Args:
             compiled: 编译后的因子表达式。
             run_id: 由 run() 统一生成的运行标识，确保 bundle.run_id 与 run record 一致。
 
         """
-        strategy_id = self._config.strategy_id
-        bridge = FactorBridge()
-        data_feed = self._data_feed
-        lookback_days = max(
-            (expr.analysis.lookback for expr in compiled.expressions),
-            default=REGIME_DEFAULT_LOOKBACK,
-        )
-
-        def _build(ctx: StepContext) -> StrategyInputBundle:
-            return self._build_factor_bundle(
-                ctx=ctx,
-                strategy_id=strategy_id,
-                run_id=run_id,
-                bridge=bridge,
-                compiled=compiled,
-                data_feed=data_feed,
-                lookback_days=lookback_days,
-            )
-
-        return _build
-
-    @staticmethod
-    def _build_factor_bundle(
-        *,
-        ctx: StepContext,
-        strategy_id: str,
-        run_id: str,
-        bridge: FactorBridge,
-        compiled: CompiledExpressions,
-        data_feed: DataFeed,
-        lookback_days: int,
-    ) -> StrategyInputBundle:
-        """
-        构建单日因子感知的 StrategyInputBundle.
-
-        从 StepContext 提取当日行情，可选追加历史窗口数据，
-        通过 FactorBridge 计算信号值并组装完整的输入包。
-
-        Args:
-            ctx: 引擎步骤上下文（含 date 和 slice_）。
-            strategy_id: 策略标识。
-            run_id: 运行标识。
-            bridge: 因子桥接器。
-            compiled: 编译后的因子表达式。
-            data_feed: 市场数据源（需支持 get_history）。
-            lookback_days: 历史回溯天数。
-
-        """
-        slice_ = ctx.slice_
-        if slice_ is None:
-            msg = "slice_ required"
-            raise AppProcessError(msg)
-        bars = slice_.bars
-        instrument_ids = list(bars.keys())
-
-        instruments = pl.DataFrame({"instrument_id": instrument_ids})
-
-        # 构建当日 OHLCV
-        market_rows: list[dict[str, object]] = []
-        for iid, bar in bars.items():
-            market_rows.append(
-                {
-                    "instrument_id": int(iid),
-                    "open": bar.open,
-                    "high": bar.high,
-                    "low": bar.low,
-                    "close": bar.close,
-                    "volume": bar.volume,
-                    "trade_date": ctx.time_context.trade_date,
-                },
-            )
-
-        # 追加历史窗口 — 支持 ts_* 时间序列表达式
-        history_df = data_feed.get_history(
-            instrument_ids,
-            ctx.time_context.trade_date,
-            lookback_days,
-        )
-        if not history_df.is_empty():
-            hist_rows = history_df.select(
-                "instrument_id",
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "trade_date",
-            ).to_dicts()
-            for row in hist_rows:
-                market_rows.append(row)
-
-        market_data = pl.DataFrame(market_rows)
-        if "trade_date" in market_data.columns:
-            market_data = market_data.sort("trade_date")
-
-        signal_values = bridge.compute_signals(market_data, compiled)
-
-        return StrategyInputBundle(
-            trade_date=ctx.time_context.trade_date,
-            strategy_id=strategy_id,
+        return build_factor_aware_bundle_builder(
+            bridge=FactorBridge(),
+            compiled=compiled,
+            data_feed=self._data_feed,
+            strategy_id=self._config.strategy_id,
             run_id=run_id,
-            instruments=instruments,
-            market_data=market_data,
-            signal_values=signal_values,
-            benchmark_close=getattr(slice_, "benchmark_close", None),
+        )
+
+    def _record_lineage(
+        self,
+        run_id: str,
+        *,
+        manifest: RunManifest | None,
+    ) -> None:
+        """Record data lineage for a completed backtest run."""
+        record_backtest_lineage(
+            recorder=self._options.lineage_recorder,
+            run_id=run_id,
+            config=BacktestLineageConfig(
+                strategy_id=self._config.strategy_id,
+                strategy_version=self._config.strategy_version,
+                start_date=self._config.start_date,
+                end_date=self._config.end_date,
+            ),
+            manifest=manifest,
         )
 
     def _resolve_run_id(self) -> str:
         """在进入生命周期编排前固化 run_id。"""
-        configured_run_id = self._config.run_id
-        if configured_run_id:
-            return configured_run_id
-        return uuid.uuid4().hex[:8]
+        return resolve_run_id(self._config.run_id)
 
     # -- internal persistence ------------------------------------------------
 
     def _persist_audit(self, run_id: str, report: BacktestReport) -> None:
-        """
-        持久化审计日志到 ExecutionAuditService。
-
-        App 层负责将 Core record 转换为 Data 本地 DTO。
-        """
+        """持久化审计日志到 ExecutionAuditService。委托给 backtest_audit 模块。"""
         if self._options.audit_service is None:
             return
-        risk_payloads = tuple(
-            RiskScanPayload(
-                trade_date=r.trade_date,
-                rule_id=r.rule_id,
-                instrument_id=(
-                    int(r.instrument_id) if r.instrument_id is not None else None
-                ),
-                scope=r.scope,
-                severity=str(r.severity),
-                action_taken=str(r.action_taken),
-                detail=r.detail,
-                current_value=r.current_value,
-                threshold=r.threshold,
-            )
-            for r in report.risk_log
-        )
-        pre_trade_payloads = tuple(
-            PreTradeDecisionPayload(
-                trade_date=r.trade_date,
-                order_id=r.order_id,
-                instrument_id=int(r.instrument_id),
-                direction=r.direction,
-                original_quantity=r.original_quantity,
-                final_quantity=r.final_quantity,
-                decision=r.decision,
-                reason=r.reason,
-                check_sequence=r.check_sequence,
-            )
-            for r in report.pre_trade_log
-        )
-        self._options.audit_service.save_risk_log(run_id, risk_payloads)
-        self._options.audit_service.save_pre_trade_log(run_id, pre_trade_payloads)
+        persist_audit(run_id, report, self._options.audit_service)
 
     def _persist_artifact(
         self,
@@ -543,41 +630,56 @@ class BacktestService:
         """持久化回测报告到磁盘 + StrategyArtifactService。"""
         if self._options.artifact_service is None:
             return
-
-        # 始终将产物序列化到磁盘
-        output_dir: Path | None = None
-        if self._options.artifact_dir is not None:
-            output_dir = Path(self._options.artifact_dir) / run_id
-
-        artifacts_map = write_backtest_artifacts(
-            report,
-            output_dir=output_dir,
-            manifest=manifest,
-            display_map=self._options.display_map,
-            rebalance_freq=self._config.rebalance_freq,
+        persist_artifact(
+            ArtifactPersistContext(
+                run_id=run_id,
+                report=report,
+                manifest=manifest,
+                resume_provenance=_resume_provenance_from_config(self._config),
+            ),
+            ArtifactPersistConfig(
+                strategy_id=self._config.strategy_id,
+                strategy_version=self._config.strategy_version,
+                initial_cash=self._config.initial_cash,
+                rebalance_freq=self._config.rebalance_freq,
+                artifact_service=self._options.artifact_service,
+                write_fn=write_backtest_artifacts,
+                artifact_dir=self._options.artifact_dir,
+                display_map=self._options.display_map,
+                benchmark_id=self._config.benchmark_id,
+                parameter_overrides=self._config.parameter_overrides,
+                code_version=self._config.code_version,
+                data_catalog_identities=self._config.data_catalog_identities,
+                factor_report_refs=self._config.factor_report_refs,
+                recommendation_status=self._config.recommendation_status,
+                fee_model_name=_model_name(self._options.fee_model),
+                slippage_model_name=_model_name(self._options.slippage_model),
+            ),
         )
-        # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）
-        # 从返回值推导实际目录（artifact_dir=None 时内部解析到系统临时目录）
-        if not artifacts_map:
-            return
-        resolved_dir = next(iter(artifacts_map.values())).parent
-        file_path = str(resolved_dir)
 
-        artifact = StrategyArtifactRecord(
-            artifact_id=f"artifact-{run_id}",
-            strategy_id=self._config.strategy_id,
-            run_id=run_id,
-            artifact_type=ArtifactKind.BACKTEST_REPORT,
-            file_path=file_path,
-            metadata={
-                "initial_cash": self._config.initial_cash,
-                "final_nav": report.final_nav,
-                "total_trades": report.aggregated_trade_stats.total_trades,
-                "sharpe_ratio": report.alpha_stats.sharpe_ratio,
-                "max_drawdown": report.alpha_stats.max_drawdown,
-                "period_start": report.period[0],
-                "period_end": report.period[1],
-            },
-            created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        )
-        self._options.artifact_service.save_artifact(artifact)
+
+def _resume_provenance_from_config(
+    config: BacktestServiceConfig,
+) -> dict[str, object] | None:
+    """Build normalized checkpoint provenance for restored child-run artifacts."""
+    if not config.resume_from_run_id:
+        return None
+    return {
+        "from_run_id": config.resume_from_run_id,
+        "checkpoint_trade_date": config.resume_checkpoint_trade_date,
+        "checkpoint_completed_days": config.resume_checkpoint_completed_days,
+        "checkpoint_total_days": config.resume_checkpoint_total_days,
+        "checkpoint_nav": config.resume_checkpoint_nav,
+        "checkpoint_order_count": config.resume_checkpoint_order_count,
+        "checkpoint_fill_count": config.resume_checkpoint_fill_count,
+        "account_state_hash": config.resume_account_state_hash,
+        "settlement_state_hash": config.resume_settlement_state_hash,
+        "runtime_state_hash": config.resume_runtime_state_hash,
+    }
+
+
+def _model_name(model: object | None) -> str:
+    """Return a stable model class name for artifact metadata."""
+    if model is None:
+        return ""
+    return type(model).__name__

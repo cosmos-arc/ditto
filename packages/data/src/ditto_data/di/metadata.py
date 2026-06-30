@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import DataCache, SQLiteClient
 
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_data.services.metadata_service import MetadataService
+from ditto_data.services.metadata_service import MetadataService, MetadataServiceDeps
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.storage.capital.index_composition import IndexCompositionReader
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
@@ -32,6 +33,63 @@ from ditto_data.storage.metadata.universe import (
 )
 
 __all__ = ["MetadataProvider"]
+
+
+@dataclass(frozen=True)
+class MetadataInstrumentDependencies:
+    """Instrument store dependencies for metadata service composition."""
+
+    instrument_reader: InstrumentReader
+    instrument_writer: InstrumentWriter
+    name_history_reader: NameHistoryReader
+    name_history_writer: NameHistoryWriter
+
+
+@dataclass(frozen=True)
+class MetadataCalendarDependencies:
+    """Calendar store dependencies for metadata service composition."""
+
+    calendar_reader: CalendarReader
+    calendar_writer: CalendarWriter
+
+
+@dataclass(frozen=True)
+class MetadataIndustryDependencies:
+    """Industry store dependencies for metadata service composition."""
+
+    industry_reader: IndustryReader
+    industry_writer: IndustryWriter
+    industry_mapping_reader: IndustryMappingReader
+    industry_mapping_writer: IndustryMappingWriter
+
+
+@dataclass(frozen=True)
+class MetadataUniverseDependencies:
+    """Universe store dependencies for metadata service composition."""
+
+    universe_reader: UniverseReader
+    universe_writer: UniverseWriter
+    rebalance_reader: RebalanceReader
+    rebalance_writer: RebalanceWriter
+
+
+@dataclass(frozen=True)
+class MetadataDomainDependencies:
+    """Grouped metadata domain stores used by MetadataService."""
+
+    instrument: MetadataInstrumentDependencies
+    calendar: MetadataCalendarDependencies
+    industry: MetadataIndustryDependencies
+    universe: MetadataUniverseDependencies
+
+
+@dataclass(frozen=True)
+class MetadataRuntimeDependencies:
+    """Runtime collaborators used by MetadataService."""
+
+    instrument_id_allocator: InstrumentIdAllocator
+    index_composition_reader: IndexCompositionReader
+    exchange_transformers: ExchangeTransformers
 
 
 class MetadataProvider(Provider):
@@ -186,43 +244,120 @@ class MetadataProvider(Provider):
     # ========================================================================
 
     @provide
-    def metadata_service(  # noqa: PLR0913 — DI 基础设施代码，参数由容器注入
+    def metadata_instrument_dependencies(
         self,
         instrument_reader: InstrumentReader,
         instrument_writer: InstrumentWriter,
         name_history_reader: NameHistoryReader,
         name_history_writer: NameHistoryWriter,
-        calendar_reader: CalendarReader,
-        calendar_writer: CalendarWriter,
-        industry_reader: IndustryReader,
-        industry_writer: IndustryWriter,
-        industry_mapping_reader: IndustryMappingReader,
-        industry_mapping_writer: IndustryMappingWriter,
-        universe_reader: UniverseReader,
-        universe_writer: UniverseWriter,
-        rebalance_reader: RebalanceReader,
-        rebalance_writer: RebalanceWriter,
-        instrument_id_allocator: InstrumentIdAllocator,
-        index_composition_reader: IndexCompositionReader,
-        exchange_transformers: ExchangeTransformers,
-    ) -> MetadataService:
-        """Metadata 域统一查询服务."""
-        return MetadataService(
+    ) -> MetadataInstrumentDependencies:
+        """Metadata service instrument store bundle."""
+        return MetadataInstrumentDependencies(
             instrument_reader=instrument_reader,
             instrument_writer=instrument_writer,
             name_history_reader=name_history_reader,
             name_history_writer=name_history_writer,
+        )
+
+    @provide
+    def metadata_calendar_dependencies(
+        self,
+        calendar_reader: CalendarReader,
+        calendar_writer: CalendarWriter,
+    ) -> MetadataCalendarDependencies:
+        """Metadata service calendar store bundle."""
+        return MetadataCalendarDependencies(
             calendar_reader=calendar_reader,
             calendar_writer=calendar_writer,
+        )
+
+    @provide
+    def metadata_industry_dependencies(
+        self,
+        industry_reader: IndustryReader,
+        industry_writer: IndustryWriter,
+        industry_mapping_reader: IndustryMappingReader,
+        industry_mapping_writer: IndustryMappingWriter,
+    ) -> MetadataIndustryDependencies:
+        """Metadata service industry store bundle."""
+        return MetadataIndustryDependencies(
             industry_reader=industry_reader,
             industry_writer=industry_writer,
             industry_mapping_reader=industry_mapping_reader,
             industry_mapping_writer=industry_mapping_writer,
+        )
+
+    @provide
+    def metadata_universe_dependencies(
+        self,
+        universe_reader: UniverseReader,
+        universe_writer: UniverseWriter,
+        rebalance_reader: RebalanceReader,
+        rebalance_writer: RebalanceWriter,
+    ) -> MetadataUniverseDependencies:
+        """Metadata service universe store bundle."""
+        return MetadataUniverseDependencies(
             universe_reader=universe_reader,
             universe_writer=universe_writer,
             rebalance_reader=rebalance_reader,
             rebalance_writer=rebalance_writer,
+        )
+
+    @provide
+    def metadata_domain_dependencies(
+        self,
+        instrument: MetadataInstrumentDependencies,
+        calendar: MetadataCalendarDependencies,
+        industry: MetadataIndustryDependencies,
+        universe: MetadataUniverseDependencies,
+    ) -> MetadataDomainDependencies:
+        """Metadata service domain store bundle."""
+        return MetadataDomainDependencies(
+            instrument=instrument,
+            calendar=calendar,
+            industry=industry,
+            universe=universe,
+        )
+
+    @provide
+    def metadata_runtime_dependencies(
+        self,
+        instrument_id_allocator: InstrumentIdAllocator,
+        index_composition_reader: IndexCompositionReader,
+        exchange_transformers: ExchangeTransformers,
+    ) -> MetadataRuntimeDependencies:
+        """Metadata service runtime collaborator bundle."""
+        return MetadataRuntimeDependencies(
             instrument_id_allocator=instrument_id_allocator,
             index_composition_reader=index_composition_reader,
             exchange_transformers=exchange_transformers,
+        )
+
+    @provide
+    def metadata_service(
+        self,
+        domain: MetadataDomainDependencies,
+        runtime: MetadataRuntimeDependencies,
+    ) -> MetadataService:
+        """Metadata 域统一查询服务."""
+        return MetadataService(
+            MetadataServiceDeps(
+                instrument_reader=domain.instrument.instrument_reader,
+                instrument_writer=domain.instrument.instrument_writer,
+                name_history_reader=domain.instrument.name_history_reader,
+                name_history_writer=domain.instrument.name_history_writer,
+                calendar_reader=domain.calendar.calendar_reader,
+                calendar_writer=domain.calendar.calendar_writer,
+                industry_reader=domain.industry.industry_reader,
+                industry_writer=domain.industry.industry_writer,
+                industry_mapping_reader=domain.industry.industry_mapping_reader,
+                industry_mapping_writer=domain.industry.industry_mapping_writer,
+                universe_reader=domain.universe.universe_reader,
+                universe_writer=domain.universe.universe_writer,
+                rebalance_reader=domain.universe.rebalance_reader,
+                rebalance_writer=domain.universe.rebalance_writer,
+                instrument_id_allocator=runtime.instrument_id_allocator,
+                index_composition_reader=runtime.index_composition_reader,
+                exchange_transformers=runtime.exchange_transformers,
+            )
         )

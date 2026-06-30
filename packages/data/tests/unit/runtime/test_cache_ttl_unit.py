@@ -1,26 +1,24 @@
 """DataCache TTL 条目级别支持的测试."""
 
-import time
-
 import pytest
 from ditto_platform.foundation import DataCache
 
 
-def test_individual_ttl(frozen_time) -> None:
+def test_individual_ttl() -> None:
     """测试单条目 TTL 功能."""
-    cache = DataCache(ttl_seconds=300)
+    fake_time = [0.0]
+    cache = DataCache(ttl_seconds=300, time_source=lambda: fake_time[0])
 
-    cache.set("key1", "value1", ttl=0.05)  # 0.05 秒过期
+    cache.set("key1", "value1", ttl=5)
     cache.set("key2", "value2")  # 使用默认 TTL 300 秒
 
     # 验证初始状态
     assert cache.get("key1") == "value1"
     assert cache.get("key2") == "value2"
 
-    # 等待 0.1 秒（真实等待，但时间很短）
-    time.sleep(0.1)
+    fake_time[0] = 6.0
 
-    # key1 应该已过期（0.05 秒 TTL）
+    # key1 应该已过期（5 秒 TTL）
     assert cache.get("key1") is None
 
     # key2 仍然有效（300 秒 TTL）
@@ -45,34 +43,35 @@ def test_individual_ttl_with_negative():
         cache.set("key1", "value1", ttl=-1)
 
 
-def test_individual_ttl_none_value(frozen_time) -> None:
+def test_individual_ttl_none_value() -> None:
     """测试 ttl=None 时使用默认 TTL."""
-    cache = DataCache(ttl_seconds=300)
+    fake_time = [0.0]
+    cache = DataCache(ttl_seconds=300, time_source=lambda: fake_time[0])
 
     cache.set("key1", "value1")  # 使用默认 TTL (300 秒)
-    cache.set("key2", "value2", ttl=0.05)  # 0.05 秒过期
+    cache.set("key2", "value2", ttl=5)
 
     # 验证初始状态
     assert cache.get("key1") == "value1"
     assert cache.get("key2") == "value2"
 
-    # 等待 0.1 秒
-    time.sleep(0.1)
+    fake_time[0] = 6.0
 
     # key1 仍然有效(使用默认 TTL 300 秒)
     assert cache.get("key1") == "value1"
 
-    # key2 已过期(0.05 秒 TTL)
+    # key2 已过期(5 秒 TTL)
     assert cache.get("key2") is None
 
 
-def test_individual_ttl_get_stats(frozen_time) -> None:
+def test_individual_ttl_get_stats() -> None:
     """测试统计功能在 TTL 场景下的正确性."""
-    cache = DataCache(ttl_seconds=300)
+    fake_time = [0.0]
+    cache = DataCache(ttl_seconds=300, time_source=lambda: fake_time[0])
 
-    # 设置两个键，TTL 为 0.05 秒
-    cache.set("key1", "value1", ttl=0.05)
-    cache.set("key2", "value2", ttl=0.05)
+    # 设置两个键，TTL 为 5 秒
+    cache.set("key1", "value1", ttl=5)
+    cache.set("key2", "value2", ttl=5)
 
     # 初始读取应该命中
     assert cache.get("key1") == "value1"
@@ -83,8 +82,7 @@ def test_individual_ttl_get_stats(frozen_time) -> None:
     assert stats.hit_count >= 2
     assert stats.miss_count == 0
 
-    # 等待 0.1 秒
-    time.sleep(0.1)
+    fake_time[0] = 6.0
 
     # 键已过期，应该未命中
     assert cache.get("key1") is None

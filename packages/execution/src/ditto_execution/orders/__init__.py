@@ -6,6 +6,7 @@ from ditto_execution.orders.fsm import TRANSITIONS, transition
 from ditto_execution.orders.ids import BrokerOrderId, ClientOrderId
 from ditto_execution.orders.journal import InMemoryOrderEventJournal, OrderEventJournal
 from ditto_execution.orders.model import Order
+from ditto_execution.orders.sqlite_journal import SqliteOrderEventJournal
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.orders.trigger import OrderTrigger
@@ -23,5 +24,6 @@ __all__ = [
     "OrderStatus",
     "OrderTicket",
     "OrderTrigger",
+    "SqliteOrderEventJournal",
     "transition",
 ]

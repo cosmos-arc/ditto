@@ -115,6 +115,10 @@ class SourceDataQueryParams(BaseModel):
     instrument_id: int | None = Field(None, description="内部 ID")
     start_date: str = Field(..., description="开始日期 (YYYY-MM-DD)")
     end_date: str = Field(..., description="结束日期 (YYYY-MM-DD)")
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    )
 
     model_config = {"extra": "ignore"}
 
@@ -194,6 +198,7 @@ async def get_source_data(
             resolved_source_ticker,
             params.start_date,
             params.end_date,
+            allow_experimental_data=params.allow_experimental_data,
         )
     except (AppQueryError, ValueError) as exc:
         raise BadRequestError(str(exc)) from exc
@@ -222,6 +227,8 @@ def _fetch_source_data(
     source_ticker: str,
     start_date: str,
     end_date: str,
+    *,
+    allow_experimental_data: bool = False,
 ) -> pl.DataFrame:
     """同步获取 Source 数据."""
     return facade.fetch_source_data(
@@ -230,4 +237,5 @@ def _fetch_source_data(
         source_ticker=source_ticker,
         start_date=start_date,
         end_date=end_date,
+        allow_experimental_data=allow_experimental_data,
     )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 from unittest.mock import MagicMock
@@ -57,6 +58,18 @@ def _converter(df: pl.DataFrame) -> list[dict[str, Any]]:
 @pytest.mark.unit
 class TestHandleBarsPost:
     """Tests for the shared handle_bars_post function."""
+
+    @pytest.fixture(autouse=True)
+    def _inline_route_thread_bridge(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        async def run_inline(
+            func: Callable[..., object], /, *args: object, **kwargs: object
+        ) -> object:
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(
+            "ditto_apps.api.routes.shared_bars.asyncio.to_thread",
+            run_inline,
+        )
 
     async def test_empty_data_returns_empty_list(self):
         """Empty DataFrame from facade returns empty data list."""

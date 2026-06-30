@@ -60,3 +60,7 @@ class DataLineageReader(Protocol):
     def list_events_for_asset(self, asset: DataAssetRef) -> tuple[LineageEvent, ...]:
         """Return lineage events that mention an asset."""
         ...
+
+    def list_events_for_run(self, run_id: str) -> tuple[LineageEvent, ...]:
+        """Return lineage events recorded for one run."""
+        ...

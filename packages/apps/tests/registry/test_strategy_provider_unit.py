@@ -22,9 +22,11 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunService,
     StrategyRunServiceConfig,
 )
+from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_apps.registry import ConfigProvider
 from ditto_backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_data.di import RuntimeProvider
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.source import DataSources
@@ -73,6 +75,10 @@ def _strategy_runtime_deps_provider() -> Provider:
         @provide
         def derived_query_service(self) -> DerivedQueryService:
             return MagicMock(spec=DerivedQueryService)
+
+        @provide
+        def fundamental_query_facade(self) -> FundamentalQueryFacade:
+            return MagicMock(spec=FundamentalQueryFacade)
 
     return StrategyRuntimeDepsProvider()
 
@@ -210,6 +216,10 @@ class TestAppBuilderFactory:
         assert isinstance(
             backtest_service._options.run_service,
             DataStrategyRunLifecycleStore,
+        )
+        assert isinstance(
+            backtest_service._options.lineage_recorder,
+            DataLineageRecorder,
         )
         container.close()
 

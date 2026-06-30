@@ -253,9 +253,9 @@ class ConfigProvider(Provider):
         """派生文件存储路径配置。"""
         return FileStorageSettings(
             data_root=settings.data_root,
-            log_root=settings.logs_path,
-            backup_root=settings.backups_path,
-            temp_root=settings.temp_path,
+            log_root=settings.paths.utility.logs,
+            backup_root=settings.paths.utility.backups,
+            temp_root=settings.paths.utility.temp,
         )
 
     @provide

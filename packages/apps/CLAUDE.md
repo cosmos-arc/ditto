@@ -8,10 +8,14 @@ Apps 层是 **Application Boundary Layer（应用边界层）**，负责：
 - Prefect 任务调度（Flow/Task）
 - DI 容器组装（Composition Root）
 
+产品 UI、前端页面和交互工作流不属于本仓库范围；`ditto-app` 独立前端项目负责 UI。本包只暴露后端 FastAPI、CLI/jobs 编排、OpenAPI metadata、DTO 和 JSON/CLI report surfaces。
+
 **核心原则**：
 - 纯编排层，不包含业务逻辑
 - 通过 DI 容器获取依赖
 - 业务逻辑已迁入 `ditto_application` 包
+- 不实现产品 UI 或前端状态管理；只提供后端接口和可供前端消费的状态/证据 DTO
+- 回测 `/resume` API 只能提交 Application 已创建的 checkpoint-backed child run；不得在 Apps 层自行解释 checkpoint、account-state/settlement-state/runtime-state evidence 或恢复账户/订单/信号队列状态
 
 ## 内部目录职责
 
@@ -99,9 +103,68 @@ features → apps ❌
 | 文件 | 依赖 | 用途 |
 |------|------|------|
 | `registry/container.py` | `ditto_data.di` | DI 容器组装 |
-| `registry/contexts/ingestion.py` | 6 个 Data services | 构建 IngestionBundle |
+| `registry/contexts/ingestion.py` | Data services + runtime lineage recorder + runtime catalog writer/reader + source fallback policy reader + SourceRegistry | 构建 IngestionBundle |
 | `registry/contexts/bundle.py` | `ditto_data.sources` | ExchangeTransformers |
 | `registry/infra/config.py` | `ditto_data.config`, `quality.config` | 环境配置加载 |
+
+Registry/container wiring provides the data runtime lineage recorder/reader protocols consumed by application providers for materialization, ingestion, backtest services and lineage query facade, the runtime catalog writer/reader plus source fallback policy reader plus promotion evidence/maturity/history/revoker plus remediation approval reader/writer ports consumed by ingestion, catalog query facade, ingestion status facade, exact-date skip policy, retry repair prioritization and date/range-level plus instrument request-date `source=auto` selection, and the SourceRegistry consumed by ingestion coordinator construction for macro-only dynamic FRED routing. API routes consume application DTOs for asset-level lineage event, run-level lineage summary, asset graph, run-level lineage catalog-report status counts, freshness/SLA status counts, attention reason codes, reason counts, backend-owned attention severity counts and source-fallback-policy-effect-count DTOs, catalog freshness/storage/schema reads, source-health selected-source freshness status, source-selection status counts, active `source_fallback_policy_effect` evidence, namespace/default-source-aware attention items with selected-source evidence and blocker context, attention reason codes, summary-level reason counts and backend-owned attention severity counts, promotion history/reversal, promotion readiness source-fallback-policy-effect-count DTOs, status catalog freshness/SLA/maturity/warning/criteria/assessment overlay, maturity-governance criterion counts plus required/satisfied/missing/rejected drill-down, attention reason codes, reason counts, backend-owned attention severity counts and source-fallback-policy-effect-count DTOs, and catalog remediation backlog/detail item/source/reason/severity/action/source-selection blocker/source-fallback-policy-effect/source-fallback-policy-effect-count/evidence-requirement/approval-intent DTOs plus remediation approval-state request/decision/get/list/event-read/execution DTOs, not data-layer lineage/catalog/promotion/remediation DTOs.
+
+Source-health FastAPI response models must faithfully expose application-level `selected_source_health`, `source_selection_status` and `source_selection_blockers` for single reports, summary report details and summary attention items, plus summary-level `source_selection_status_counts`. Apps routes must not infer blocked/ready state by rescanning source arrays, duplicate source-selection policy, implement product UI behavior, or create real source/broker adapters.
+
+Catalog remediation FastAPI response models must faithfully expose application-level `source_selection_status`, `source_selection_blockers` and `source_fallback_policy_effect` on backlog/detail items, plus report-level `source_fallback_policy_effect_counts` on backlog responses. Apps routes must not re-add executable remediation actions for blocked selected sources, infer fallback policy, implement product UI behavior, or create real source/broker adapters.
+
+Catalog source-health, promotion readiness, maturity governance, lineage catalog-report and remediation API mapping must pass through application-owned `source_fallback_policy_effect` DTOs/counts without inferring active policy effects in apps. Catalog source-fallback policy routes may expose backend draft/lifecycle/current-state/audit-event contracts only. Apps composition may wire `CatalogSourceFallbackPolicyReader` into ingestion coordinator construction and catalog query facade construction so application-owned `source=auto`, source-health reports, source-context promotion readiness, maturity governance and lineage catalog reports can consume active exact-date policy effects. Apps routes must not duplicate source-selection policy, mutate default source metadata, trigger ingestion from policy lifecycle endpoints, implement product UI behavior, or create real source/broker adapters.
+
+OpenAPI schema generation is maturity-aware through `ditto_apps.api.maturity`.
+Every documented path operation must include `x-ditto-maturity` and a visible
+`Capability maturity: ...` description note. New route prefixes must be added
+to `ROUTE_MATURITY_BY_PREFIX` and the route maturity table in
+`docs/architecture/capability-maturity.md` together; the apps architecture
+test suite parses the manifest table and fails on drift.
+
+`/ingestion/status` and `ditto ops status --json` expose a
+`maturity_summary` report grouped by data-owned dataset maturity, plus
+per-dataset maturity warning, promotion criteria, promotion assessment and
+rejected promotion criteria fields. Apps may map the application summary/status
+DTOs to API/CLI response shapes, but must not duplicate freshness, maturity,
+promotion criteria or promotion evidence policy.
+
+`POST /ingestion/catalog/promotion/evidence` and
+`ditto ops promotion-review` are the public reviewer evidence write paths.
+They must delegate to `ReviewDatasetPromotionEvidenceHandler`; apps must not
+write `DatasetPromotionEvidenceWriter` directly or decide whether a dataset is
+promotion-ready. Apps may expose `metadata_promoted` and maturity before/after
+fields returned by the handler, but must not write or interpret
+`DatasetMaturityPromotionWriter` directly.
+
+`GET /ingestion/catalog/promotion/history`,
+`POST /ingestion/catalog/promotion/revoke`, `ditto ops promotion-history` and
+`ditto ops promotion-revoke` are the public promotion governance history and
+reversal paths. They must delegate to `CatalogQueryFacade` or
+`RevokeDatasetMaturityPromotionHandler`; apps must not directly read promotion
+event stores, delete active overrides, or synthesize revoke history.
+
+Backtest API, strategy CLI, and market/source/fundamental/capital/macro query APIs may expose
+experimental data use only through explicit default-off controls named
+`allow_experimental_data` or `--allow-experimental-data`. These controls must
+pass through application options/commands/facades and must not bypass the
+catalog-backed maturity gate.
+
+`/market/bars` may expose `asset_class`, `instrument_ids` and default-off
+`allow_experimental_data`, but apps must only pass these values to
+`MarketQueryFacade`; dataset maturity, instrument-ID inference, promotion
+overrides and fail-closed policy belong in application/data-owned catalog
+helpers, not route handlers.
+
+`/source/{source}/{dataset}` may expose default-off `allow_experimental_data`,
+but apps must only pass it to `SourceQueryFacade`; supported raw-data dataset
+maturity and promotion policy belong in the same application/data-owned catalog
+helpers.
+
+`/fundamental`, `/capital`, and `/macro` routes and matching `ditto query`
+commands may expose default-off experimental data controls, but apps must only
+pass them to the relevant query facade; explicit dataset maturity and promotion
+policy stay in application/data-owned catalog helpers.
 
 **非 registry 代码禁止直接访问 Data services/models**。
 
@@ -144,19 +207,19 @@ features → apps ❌
 | Prefix | Tag | 模块 | 说明 | 成熟度 |
 |--------|-----|------|------|--------|
 | `/backtests` | backtests | `api/routes/backtest.py` | 回测运行/报告/重放 | initial-focus |
-| `/capital` | capital | `api/routes/capital.py` | Capital 域查询 | experimental |
+| `/capital` | capital | `api/routes/capital.py` | Capital 域查询；显式 experimental dataset 必须透传 application maturity gate | experimental |
 | `/commodity` | commodity | `api/routes/commodity.py` | 商品数据查询（POST 复用 `shared_bars.py`） | experimental |
-| `/fundamental` | fundamental | `api/routes/fundamental.py` | 基本面数据查询 | experimental |
+| `/fundamental` | fundamental | `api/routes/fundamental.py` | 基本面数据查询；显式 experimental dataset 必须透传 application maturity gate | experimental |
 | `/fx` | fx | `api/routes/fx.py` | 外汇数据查询（POST 复用 `shared_bars.py`） | experimental |
-| `/ingestion` | ingestion | `api/routes/ingestion.py` | 数据摄取状态 | infrastructure |
-| `/macro` | macro | `api/routes/macro.py` | 宏观经济数据查询 | experimental |
-| `/market` | market | `api/routes/market.py` | 行情数据查询 | initial-focus |
+| `/ingestion` | ingestion | `api/routes/ingestion.py` | 数据摄取状态 + catalog freshness/storage/schema/maturity/warning/criteria/assessment 查询/status overlay | infrastructure |
+| `/macro` | macro | `api/routes/macro.py` | 宏观经济数据查询；显式 experimental dataset 必须透传 application maturity gate | experimental |
+| `/market` | market | `api/routes/market.py` | 行情数据查询；显式 experimental asset_class 和可识别 instrument_id 必须透传 application maturity gate | initial-focus |
 | `/metadata` | metadata | `api/routes/metadata.py` | 元数据查询 | initial-focus |
-| `/source` | source | `api/routes/source.py` | Source 数据查询 | infrastructure |
+| `/source` | source | `api/routes/source.py` | Source 数据查询；显式 experimental dataset 必须透传 application maturity gate | infrastructure |
 | `/strategies` | strategies | `api/routes/strategy.py` | 策略 CRUD + 发布 | initial-focus |
 | `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） | experimental |
 | `/universes` | universes | `api/routes/universe.py` | Universe 管理 | initial-focus |
-| `/api/v1` | debug | `api/routes/debug.py` | 调试端点（仅非生产环境） | debug |
+| `/api/v1/logs` | debug | `api/routes/debug.py` | 调试端点（仅非生产环境） | debug |
 
 成熟度定义见 `docs/architecture/capability-maturity.md`。非 initial-focus 路由的模块 docstring 必须包含 `maturity:` 标注。
 

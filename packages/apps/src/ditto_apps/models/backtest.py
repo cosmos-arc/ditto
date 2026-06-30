@@ -188,6 +188,10 @@ class CreateBacktestRunRequest(BaseModel):
         default=None,
         description="成本模型配置",
     )
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态回测运行",
+    )
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -213,6 +217,16 @@ class CancelRunResponse(BaseModel):
 
 class RetryRunResponse(BaseModel):
     """重试运行响应."""
+
+    run_id: str
+    parent_run_id: str
+    status: str = "pending"
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class ResumeRunResponse(BaseModel):
+    """checkpoint 恢复运行响应."""
 
     run_id: str
     parent_run_id: str

@@ -67,6 +67,7 @@ ditto_kernel/
 ├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog
 ├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
 ├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider / InstrumentRules / RulesGetter 等）
+├── runtime.py             # 运行时生命周期 FSM（RuntimeLifecycle / RuntimeSnapshot / BaseRuntimeKernel / TradingRuntimeKernel Protocol）
 ├── exceptions.py          # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
 └── math.py                # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
@@ -86,7 +87,7 @@ instrument / order / market / identity: 无子域间依赖
 | `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
 | `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Execution |
-| `OrderType` | order.py | `StrEnum`（MARKET/LIMIT/STOP_MARKET/MARKET_ON_CLOSE） | Execution, Risk, Portfolio, Backtest |
+| `OrderType` | order.py | `StrEnum`（7 成员：MARKET/LIMIT/STOP_MARKET/MARKET_ON_CLOSE/FAK/FAB/GTD） | Execution, Risk, Portfolio, Backtest |
 | `CalendarId` | market.py | `Literal["cn_stock"]` | Analysis |
 | `GrainId` | market.py | `Literal["1d", "1m"]` | Analysis |
 | `GRAIN_TO_TIME_KEYS` | market.py | `dict[GrainId, tuple[str, ...]]` 常量 | Data, Analysis |
@@ -118,6 +119,11 @@ instrument / order / market / identity: 无子域间依赖
 | `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | Apps |
 | `AmbiguousTickerError` | exceptions.py | `IdentifierError` | Apps |
 | `pearson_correlation` | math.py | 纯函数 | Backtest, App |
+| `RuntimeLifecycle` | runtime.py | `StrEnum`（8 稳态 + 7 过渡态） | Backtest, Execution |
+| `RuntimeSnapshot` | runtime.py | frozen dataclass（state / mode / started_at / error） | Backtest, Execution |
+| `BaseRuntimeKernel` | runtime.py | 薄实现（lifecycle FSM + transition + snapshot） | Backtest, Execution |
+| `TradingRuntimeKernel` | runtime.py | `Protocol`（Clock + EventBus + Lifecycle + State） | Backtest, Execution |
+| `validate_transition` | runtime.py | 纯函数（FSM 转换合法性校验） | Backtest, Execution |
 
 ## 导入规范
 

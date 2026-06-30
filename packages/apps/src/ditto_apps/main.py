@@ -36,8 +36,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from ditto_apps.api.maturity import OPENAPI_TAGS, build_maturity_openapi_schema
 from ditto_apps.api.routes import (
     backtest,
     capital,
@@ -75,6 +77,12 @@ def _load_app_version() -> str:
         return importlib.metadata.version("ditto-apps")
     except importlib.metadata.PackageNotFoundError:
         return "0+unknown"
+
+
+def _generate_stable_operation_id(route: APIRoute) -> str:
+    """Generate tag-scoped OpenAPI operation IDs for frontend clients."""
+    tag = str(route.tags[0]) if route.tags else "system"
+    return f"{tag.replace('-', '_')}_{route.name}"
 
 
 ditto_version = _load_app_version()
@@ -188,9 +196,13 @@ app = FastAPI(
     version=ditto_version,
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
+    generate_unique_id_function=_generate_stable_operation_id,
     default_response_class=ORJSONResponse,  # 使用 orjson 提升性能
 )
+
+app.openapi = lambda: build_maturity_openapi_schema(app)
 
 # 在应用启动前设置 dishka（必须在 lifespan 之外）
 # 这样中间件可以在应用启动前添加

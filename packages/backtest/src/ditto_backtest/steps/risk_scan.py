@@ -10,6 +10,7 @@ RiskScanStep -- PostTrade 风控扫描 + 锁管理.
 
 from __future__ import annotations
 
+from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.strategy import RiskScope
@@ -44,6 +45,7 @@ class RiskScanStep:
         self._strategy_context = strategy_context
         self._clock = clock
 
+    @traced("backtest.step.risk_scan")
     def execute(self, ctx: StepContext) -> StepResult:
         """执行风控扫描。"""
         if self._post_trade_guard is None:

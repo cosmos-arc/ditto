@@ -207,8 +207,47 @@ class TestSqlEngine:
 
         # Verify execute was called with asof parameter
         mock_execute.assert_called_once()
+        called_query = mock_execute.call_args.args[0]
+        assert "knowledge_date <= '2024-01-15'" in called_query
         call_kwargs = mock_execute.call_args[1]
         assert call_kwargs["asof"] == "2024-01-15"
+
+    def test_pit_query_trade_date_requires_unsafe_policy(
+        self, mocker: MockerFixture
+    ) -> None:
+        """trade_date fallback must be explicit at the SqlEngine boundary."""
+        settings = _make_settings(data_root=Path("/test"))
+        engine = SqlEngine(settings=settings)
+        mock_execute = mocker.patch.object(engine, "execute")
+
+        with pytest.raises(ValueError, match="trade_date fallback"):
+            engine.pit_query(
+                query="SELECT * FROM stock_daily",
+                knowledge_date="2024-01-15",
+                date_column="trade_date",
+            )
+
+        mock_execute.assert_not_called()
+
+    def test_pit_query_trade_date_with_unsafe_policy(
+        self, mocker: MockerFixture
+    ) -> None:
+        """Explicit research policy is propagated to PitHelper."""
+        settings = _make_settings(data_root=Path("/test"))
+        engine = SqlEngine(settings=settings)
+        mock_execute = mocker.patch.object(engine, "execute")
+        mock_execute.return_value = pl.DataFrame()
+
+        engine.pit_query(
+            query="SELECT * FROM stock_daily",
+            knowledge_date="2024-01-15",
+            date_column="trade_date",
+            unsafe_time_policy="allow_trade_date_fallback",
+        )
+
+        mock_execute.assert_called_once()
+        called_query = mock_execute.call_args.args[0]
+        assert "trade_date <= '2024-01-15'" in called_query
 
     def test_pit_query_with_custom_date_column(self, mocker: MockerFixture) -> None:
         """Test pit_query with custom date column."""

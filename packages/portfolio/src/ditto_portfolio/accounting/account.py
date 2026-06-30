@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from types import MappingProxyType
 
@@ -29,7 +29,7 @@ class AccountView:
         positions: 持仓映射 (instrument_id -> Position)，只读代理
         cash: 现金账本快照
         total_value: 总资产 = cash.total + exposure
-        nav: 净资产值 = cash.total + sum(market_value + unrealized_pnl)
+        nav: 净资产值 = cash.total + sum(market_value)
         exposure: 持仓总市值 = sum(market_value)
 
     """
@@ -117,10 +117,22 @@ class Account:
             positions=MappingProxyType(dict(self._positions)),
             cash=self.cash,
             total_value=self.cash.total + exposure,
-            nav=self.cash.total
-            + sum(p.market_value + p.unrealized_pnl for p in self._positions.values()),
+            nav=self.cash.total + exposure,
             exposure=exposure,
         )
+
+    def mark_to_market(self, prices: Mapping[InstrumentId, float]) -> None:
+        """按最新价格重估已有持仓市值和未实现盈亏。"""
+        for iid, position in list(self._positions.items()):
+            price = prices.get(iid)
+            if price is None:
+                continue
+            market_value = price * position.quantity
+            self._positions[iid] = replace(
+                position,
+                market_value=market_value,
+                unrealized_pnl=(price - position.average_cost) * position.quantity,
+            )
 
     # -- fill application ----------------------------------------------------
 

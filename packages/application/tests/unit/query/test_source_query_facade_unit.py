@@ -8,16 +8,33 @@ import polars as pl
 import pytest
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.source import SourceDataPort, SourceQueryFacade
+from ditto_data.catalog.promotion import DatasetMaturityPromotion
+
+
+class _MaturityPromotionReader:
+    def __init__(
+        self,
+        promotions_by_dataset: dict[str, DatasetMaturityPromotion] | None = None,
+    ) -> None:
+        self._promotions_by_dataset = promotions_by_dataset or {}
+
+    def get_dataset_maturity_promotion(
+        self,
+        dataset_id: str,
+    ) -> DatasetMaturityPromotion | None:
+        return self._promotions_by_dataset.get(dataset_id)
 
 
 def _make_facade(
     source_data: SourceDataPort | None = None,
     metadata_service: MagicMock | None = None,
+    maturity_promotion_reader: _MaturityPromotionReader | None = None,
 ) -> SourceQueryFacade:
     """Helper to create a SourceQueryFacade with mock dependencies."""
     return SourceQueryFacade(
         source_data=source_data or MagicMock(spec=SourceDataPort),
         metadata_service=metadata_service or MagicMock(),
+        maturity_promotion_reader=maturity_promotion_reader,
     )
 
 
@@ -86,6 +103,7 @@ class TestSourceQueryFacadeFetchSourceData:
             source_ticker="000001.SZ",
             start_date="2026-01-01",
             end_date="2026-01-31",
+            allow_experimental_data=True,
         )
 
         assert result is expected
@@ -94,6 +112,50 @@ class TestSourceQueryFacadeFetchSourceData:
             start_date="2026-01-01",
             end_date="2026-01-31",
         )
+
+    def test_stock_daily_requires_explicit_research_opt_in(self) -> None:
+        mock_source = MagicMock(spec=SourceDataPort)
+        facade = _make_facade(source_data=mock_source)
+
+        with pytest.raises(AppQueryError, match="allow_experimental_data=True"):
+            facade.fetch_source_data(
+                source="tushare",
+                dataset="stock_daily",
+                source_ticker="000001.SZ",
+                start_date="2026-01-01",
+                end_date="2026-01-31",
+            )
+
+        mock_source.fetch_stock_daily.assert_not_called()
+
+    def test_promoted_stock_daily_does_not_need_research_opt_in(self) -> None:
+        expected = pl.DataFrame({"trade_date": ["2026-01-05"], "close": [10.0]})
+        mock_source = MagicMock(spec=SourceDataPort)
+        mock_source.fetch_stock_daily.return_value = expected
+        facade = _make_facade(
+            source_data=mock_source,
+            maturity_promotion_reader=_MaturityPromotionReader(
+                {
+                    "stock_daily": DatasetMaturityPromotion(
+                        dataset_id="stock_daily",
+                        previous_maturity="experimental",
+                        promoted_maturity="initial-focus",
+                        promoted_by="architecture-review",
+                    )
+                }
+            ),
+        )
+
+        result = facade.fetch_source_data(
+            source="tushare",
+            dataset="stock_daily",
+            source_ticker="000001.SZ",
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+        )
+
+        assert result is expected
+        mock_source.fetch_stock_daily.assert_called_once()
 
     def test_unsupported_source_raises_value_error(self) -> None:
         facade = _make_facade()

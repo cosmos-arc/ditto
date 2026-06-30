@@ -16,6 +16,7 @@ from ditto_features.derived_types import (
     DerivedRole,
     MaterializationProfile,
 )
+from ditto_features.factors.spec import FactorSpec
 
 # ===========================================================================
 # build_signal_spec
@@ -359,3 +360,66 @@ class TestComputeSignals:
         result_ids = set(result["instrument_id"].to_list())
         expected_ids = set(sample_df["instrument_id"].to_list())
         assert result_ids == expected_ids
+
+
+# ===========================================================================
+# FactorBridge 因子 ID → 表达式解析
+# ===========================================================================
+
+
+class TestFactorIdResolution:
+    """signal_expressions 存因子 ID（如 quality_roe）时的 ID→表达式解析层.
+
+    背景：seed 的 signal_expressions 用因子 ID 而非表达式字符串。
+    若不加解析层，FactorBridge 会把 "quality_roe" 当列名编译成 pl.col("quality_roe")，
+    回测时因 market_data 无此列而 ColumnNotFoundError。
+    """
+
+    def test_known_factor_id_resolves_to_expression(self) -> None:
+        """已知因子 ID 解析为 ALL_FACTOR_SPECS 中的真实表达式."""
+        bridge = FactorBridge()
+        assert bridge._resolve_expression("quality_roe") == "roe"
+        assert bridge._resolve_expression("value_pe") == "-pe_ratio"
+
+    def test_momentum_factor_id_resolves_to_ts_expression(self) -> None:
+        """momentum_1m 解析为时序表达式（纯市场数据，无需基本面列）."""
+        bridge = FactorBridge()
+        resolved = bridge._resolve_expression("momentum_1m")
+        assert resolved == "ts_pct_change(market.close, 20)"
+
+    def test_unknown_id_passes_through_unchanged(self) -> None:
+        """未知 ID（直接表达式字符串或裸列名）原样返回，向后兼容."""
+        bridge = FactorBridge()
+        assert bridge._resolve_expression("close") == "close"
+        assert bridge._resolve_expression("nonexistent_xyz") == "nonexistent_xyz"
+
+    def test_compile_seed_signal_expressions_resolves_ids(self) -> None:
+        """seed 三因子 ID 编译后引用正确的底层列（不再引用不存在的 quality_roe 列）."""
+        bridge = FactorBridge()
+        result = bridge.compile_and_validate(
+            expressions=("quality_roe", "value_pe", "momentum_1m"),
+            weights=(0.4, 0.3, 0.3),
+        )
+        assert len(result.expressions) == 3
+        # quality_roe → "roe" → dependencies 含 roe 列
+        assert "roe" in result.expressions[0].analysis.dependencies
+        # value_pe → "-pe_ratio" → dependencies 含 pe_ratio 列
+        assert "pe_ratio" in result.expressions[1].analysis.dependencies
+        # momentum_1m → ts_pct_change(market.close, 20) → dependencies 含 market.close
+        assert "market.close" in result.expressions[2].analysis.dependencies
+
+    def test_custom_registry_injection(self) -> None:
+        """注入自定义 registry 时，ID 按自定义映射解析；未命中项原样返回."""
+        custom = {
+            "my_factor": FactorSpec(id="my_factor", expression="close * 2"),
+        }
+        bridge = FactorBridge(factor_registry=custom)
+        assert bridge._resolve_expression("my_factor") == "close * 2"
+        # 自定义 registry 不含 quality_roe → 原样返回（不被默认 registry 覆盖）
+        assert bridge._resolve_expression("quality_roe") == "quality_roe"
+
+    def test_empty_registry_treats_all_as_raw_expression(self) -> None:
+        """空 registry 时所有字符串都当表达式原样返回."""
+        bridge = FactorBridge(factor_registry={})
+        assert bridge._resolve_expression("quality_roe") == "quality_roe"
+        assert bridge._resolve_expression("close") == "close"

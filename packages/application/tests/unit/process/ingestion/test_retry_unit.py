@@ -1,7 +1,15 @@
 """Tests for RetryManager."""
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from ditto_application.processes.ingestion.retry_manager import RetryManager
+from ditto_data.catalog import (
+    DataAssetRef,
+    DataCatalogEntry,
+    DataSchemaFingerprint,
+    InMemoryDataCatalog,
+)
 from ditto_data.models.ingestion import IngestionResult, RetryResult
 from ditto_platform.foundation import (
     Environment,
@@ -183,6 +191,57 @@ class TestGetFailedDates:
         mock_ingestion_log_store.list_failed_dates.assert_called_once_with(
             dataset="stock_daily", source="tushare", limit=10, max_attempts=2
         )
+
+    def test_get_failed_dates_prioritizes_missing_and_stale_catalog_assets(
+        self,
+        mock_coordinator,
+        mock_ingestion_log_store,
+    ) -> None:
+        """优先重试 catalog 缺失或超过 SLA 的失败日期。"""
+        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="stock_daily",
+                    namespace="market",
+                    partition_keys=("trade_date=2024-12-25",),
+                ),
+                storage_uri="sqlite:///market/stock_daily/2024-12-25",
+                schema=DataSchemaFingerprint(schema_hash="fresh", row_count=10),
+                source="tushare",
+                freshness_at=now - timedelta(hours=1),
+            )
+        )
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="stock_daily",
+                    namespace="market",
+                    partition_keys=("trade_date=2024-12-27",),
+                ),
+                storage_uri="sqlite:///market/stock_daily/2024-12-27",
+                schema=DataSchemaFingerprint(schema_hash="stale", row_count=10),
+                source="tushare",
+                freshness_at=now - timedelta(hours=60),
+            )
+        )
+        mock_ingestion_log_store.list_failed_dates.return_value = [
+            "2024-12-25",
+            "2024-12-26",
+            "2024-12-27",
+        ]
+        retry_manager = RetryManager(
+            coordinator=mock_coordinator,
+            ingestion_log_store=mock_ingestion_log_store,
+            source="tushare",
+            data_catalog_reader=catalog,
+            now=lambda: now,
+        )
+
+        dates = retry_manager.get_failed_dates(dataset="stock_daily")
+
+        assert dates == ["2024-12-26", "2024-12-27", "2024-12-25"]
 
 
 @pytest.mark.unit

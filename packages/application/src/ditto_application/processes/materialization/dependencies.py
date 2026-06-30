@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-
 import polars as pl
+from ditto_features.materialization.dependency_registry import (
+    DependencyContract,
+    missing_contract_columns,
+)
+from ditto_features.materialization.dependency_registry import (
+    classify_dependencies as _classify_dependencies,
+)
+
+from ditto_application.processes.materialization.types import MissingDependencyError
 
 __all__ = [
     "apply_cs_amplification",
@@ -55,45 +62,6 @@ def apply_cs_amplification(
 
 
 # ===========================================================================
-# Dataset column registries
-# ===========================================================================
-
-
-_MARKET_DATASET_COLUMNS: dict[str, frozenset[str]] = {
-    "market.stock_daily": frozenset(
-        {
-            "open",
-            "high",
-            "low",
-            "close",
-            "pre_close",
-            "volume",
-            "amount",
-        }
-    ),
-    "market.adj_factor": frozenset({"adj_factor"}),
-    "market.stock_status": frozenset(
-        {"is_suspended", "suspend_timing", "is_st", "st_type", "list_status"}
-    ),
-}
-
-_ETF_DATASET_COLUMNS: dict[str, frozenset[str]] = {
-    "etf.daily": frozenset(
-        {
-            "open",
-            "high",
-            "low",
-            "close",
-            "pre_close",
-            "volume",
-            "amount",
-            "pct_change",
-        }
-    ),
-}
-
-
-# ===========================================================================
 # Dependency classification & resolution
 # ===========================================================================
 
@@ -106,28 +74,11 @@ def classify_dependencies(
     list[str],
 ]:
     """Separate dependencies into market, ETF, and derived namespaces."""
-    market_dependencies: dict[str, set[str]] = defaultdict(set)
-    etf_dependencies: dict[str, set[str]] = defaultdict(set)
-    derived_dependencies: list[str] = []
-
-    for dependency in dependencies:
-        if dependency.startswith("etf."):
-            dataset_ref, column = _resolve_etf_dependency(dependency)
-            etf_dependencies[dataset_ref].add(column)
-        elif dependency.startswith("market."):
-            dataset_ref, column = _resolve_market_dependency(dependency)
-            market_dependencies[dataset_ref].add(column)
-        elif "." in dependency:
-            derived_dependencies.append(dependency)
-        else:
-            raise NotImplementedError(
-                f"Unsupported dependency={dependency} (market.*, etf.*, @derived only)"
-            )
-
+    groups = _classify_dependencies(dependencies)
     return (
-        dict(market_dependencies),
-        dict(etf_dependencies),
-        derived_dependencies,
+        {key: set(value) for key, value in groups.market.items()},
+        {key: set(value) for key, value in groups.etf.items()},
+        list(groups.derived),
     )
 
 
@@ -137,37 +88,31 @@ def resolve_adj_type(spec: object) -> str:
     return ep.adj_type if ep else "none"
 
 
-def _resolve_market_dependency(dependency: str) -> tuple[str, str]:
-    """Resolve a 'market.*' dependency to (dataset_ref, column_name)."""
-    column_name = dependency.removeprefix("market.")
-    for dataset_ref, columns in _MARKET_DATASET_COLUMNS.items():
-        if column_name in columns:
-            return (dataset_ref, column_name)
-    raise NotImplementedError(f"Unsupported market dependency={dependency}")
-
-
-def _resolve_etf_dependency(dependency: str) -> tuple[str, str]:
-    """Resolve an 'etf.*' dependency to (dataset_ref, column_name)."""
-    column_name = dependency.removeprefix("etf.")
-    for dataset_ref, columns in _ETF_DATASET_COLUMNS.items():
-        if column_name in columns:
-            return (dataset_ref, column_name)
-    raise NotImplementedError(f"Unsupported ETF dependency={dependency}")
-
-
 def prepare_market_frame(
     frame: pl.DataFrame,
     *,
     join_keys: list[str],
     value_columns: set[str],
     availability_column: str,
+    contract: DependencyContract | None = None,
 ) -> pl.DataFrame:
     """Select join keys + value columns and alias availability time."""
-    selected_columns = [*join_keys, *sorted(value_columns)]
-    existing_columns = [
-        column for column in selected_columns if column in frame.columns
-    ]
-    prepared = frame.select(existing_columns)
+    missing = _missing_market_frame_columns(
+        frame=frame,
+        join_keys=join_keys,
+        value_columns=value_columns,
+        availability_column=availability_column,
+        contract=contract,
+    )
+    if missing:
+        raise MissingDependencyError(
+            missing=list(missing), available=list(frame.columns)
+        )
+
+    selected_columns = _dedupe_columns(
+        (*join_keys, availability_column, *sorted(value_columns))
+    )
+    prepared = frame.select(selected_columns)
     return prepared.with_columns(
         pl.col(availability_column).alias("availability_time__0")
     )
@@ -216,3 +161,36 @@ def join_frames(
             *(pl.col(column) for column in availability_columns),
         ).alias("availability_time"),
     ).drop(availability_columns)
+
+
+def _missing_market_frame_columns(
+    *,
+    frame: pl.DataFrame,
+    join_keys: list[str],
+    value_columns: set[str],
+    availability_column: str,
+    contract: DependencyContract | None,
+) -> tuple[str, ...]:
+    """Return source-frame columns required by runtime dependency loading."""
+    missing = list(
+        missing_contract_columns(contract, tuple(frame.columns)) if contract else ()
+    )
+    fallback_required = _dedupe_columns(
+        (*join_keys, availability_column, *sorted(value_columns))
+    )
+    for column in fallback_required:
+        if column not in frame.columns and column not in missing:
+            missing.append(column)
+    return tuple(missing)
+
+
+def _dedupe_columns(columns: tuple[str, ...]) -> tuple[str, ...]:
+    """Dedupe columns while preserving the caller's semantic order."""
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for column in columns:
+        if column in seen:
+            continue
+        deduped.append(column)
+        seen.add(column)
+    return tuple(deduped)

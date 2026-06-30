@@ -87,7 +87,7 @@ class TestGetStockStatus:
         mock_dependencies["instrument_reader"].get_by_instrument_id.return_value = None
         mock_dependencies["instrument_reader"].get_stock_extension.return_value = None
 
-        result = service.get_stock_status(1000001, "2024-01-15")
+        result = service.instrument.get_stock_status(1000001, "2024-01-15")
 
         assert result == {
             "is_st": False,
@@ -108,7 +108,7 @@ class TestGetStockStatus:
         }
         mock_dependencies["instrument_reader"].get_stock_extension.return_value = None
 
-        result = service.get_stock_status(1000001, "2024-01-15")
+        result = service.instrument.get_stock_status(1000001, "2024-01-15")
 
         assert result["is_st"] is True
         assert result["list_status"] == "L"
@@ -131,7 +131,7 @@ class TestGetStockStatus:
             "industry_id": "ind_001",
         }
 
-        result = service.get_stock_status(1000001, "2024-01-15")
+        result = service.instrument.get_stock_status(1000001, "2024-01-15")
 
         assert result["is_st"] is True
         assert result["list_status"] == "P"
@@ -229,7 +229,7 @@ class TestGetFilteredUniverse:
             "universe_reader"
         ].get_constituent_instrument_ids.return_value = [1, 2, 3, 4, 5]
 
-        result = service.get_filtered_universe("csi300")
+        result = service.universe.get_filtered_universe("csi300")
 
         assert result == [1, 2, 3, 4, 5]
         mock_dependencies[
@@ -246,7 +246,7 @@ class TestGetFilteredUniverse:
             "universe_reader"
         ].get_constituent_instrument_ids.return_value = [1, 2, 3]
 
-        result = service.get_filtered_universe("csi300", asof="2024-01-15")
+        result = service.universe.get_filtered_universe("csi300", asof="2024-01-15")
 
         assert result == [1, 2, 3]
         mock_dependencies[
@@ -265,7 +265,7 @@ class TestGetFilteredUniverse:
 
         volume_map = {1: 1000000, 2: 500000, 3: 100000, 4: 50000, 5: 10}
 
-        result = service.get_filtered_universe(
+        result = service.universe.get_filtered_universe(
             "csi300",
             asof="2024-01-15",
             volume_map=volume_map,
@@ -287,7 +287,7 @@ class TestGetFilteredUniverse:
 
         volume_map = {1: 1000000}  # 2, 3 不在 map 中
 
-        result = service.get_filtered_universe(
+        result = service.universe.get_filtered_universe(
             "csi300",
             volume_map=volume_map,
             min_avg_volume=200000,
@@ -305,7 +305,7 @@ class TestGetFilteredUniverse:
             "universe_reader"
         ].get_constituent_instrument_ids.return_value = [1, 2, 3]
 
-        result = service.get_filtered_universe(
+        result = service.universe.get_filtered_universe(
             "csi300",
             volume_map={1: 10, 2: 20},
         )
@@ -329,7 +329,7 @@ class TestGetFilteredUniverseMinListDays:
             "universe_reader"
         ].get_constituent_instrument_ids.return_value = [1, 2, 3]
 
-        result = service.get_filtered_universe("csi300")
+        result = service.universe.get_filtered_universe("csi300")
 
         assert result == [1, 2, 3]
         mock_dependencies["instrument_reader"].find_securities.assert_not_called()
@@ -357,7 +357,7 @@ class TestGetFilteredUniverseMinListDays:
             }
         ).with_columns(pl.col("list_date").cast(pl.Date))
 
-        result = service.get_filtered_universe(
+        result = service.universe.get_filtered_universe(
             "csi300",
             asof="2024-07-15",
             min_list_days=60,
@@ -388,7 +388,7 @@ class TestGetFilteredUniverseMinListDays:
             }
         ).with_columns(pl.col("list_date").cast(pl.Date))
 
-        result = service.get_filtered_universe(
+        result = service.universe.get_filtered_universe(
             "csi300",
             asof="2024-06-15",
             min_list_days=30,
@@ -402,7 +402,7 @@ class TestGetFilteredUniverseMinListDays:
     ) -> None:
         """min_list_days > 0 但未提供 asof 时应抛出 ValueError."""
         with pytest.raises(ValueError, match="min_list_days > 0 时必须提供 asof 日期"):
-            service.get_filtered_universe("csi300", min_list_days=60)
+            service.universe.get_filtered_universe("csi300", min_list_days=60)
 
     def test_min_list_days_empty_universe(
         self,
@@ -414,7 +414,7 @@ class TestGetFilteredUniverseMinListDays:
             "universe_reader"
         ].get_constituent_instrument_ids.return_value = []
 
-        result = service.get_filtered_universe(
+        result = service.universe.get_filtered_universe(
             "csi300",
             asof="2024-06-15",
             min_list_days=60,
@@ -449,7 +449,7 @@ class TestGetFilteredUniverseMinListDays:
 
         volume_map = {1: 1000000, 2: 50000}  # 2 fails volume
 
-        result = service.get_filtered_universe(
+        result = service.universe.get_filtered_universe(
             "csi300",
             asof="2024-07-15",
             volume_map=volume_map,
@@ -593,7 +593,7 @@ class TestUniverseSetOperations:
             "b": [3, 4, 5, 6],
         }[uid]
 
-        result = service.universe_intersection("a", "b")
+        result = service.universe.universe_intersection("a", "b")
 
         assert sorted(result) == [3, 4]
 
@@ -609,7 +609,7 @@ class TestUniverseSetOperations:
             "b": [3, 4, 5],
         }[uid]
 
-        result = service.universe_union("a", "b")
+        result = service.universe.universe_union("a", "b")
 
         assert sorted(result) == [1, 2, 3, 4, 5]
 
@@ -625,7 +625,7 @@ class TestUniverseSetOperations:
             "b": [3, 4, 5, 6],
         }[uid]
 
-        result = service.universe_subtract("a", "b")
+        result = service.universe.universe_subtract("a", "b")
 
         assert sorted(result) == [1, 2]
 
@@ -641,7 +641,7 @@ class TestUniverseSetOperations:
             "b": [3, 4],
         }[uid]
 
-        result = service.universe_intersection("a", "b")
+        result = service.universe.universe_intersection("a", "b")
 
         assert result == []
 
@@ -654,7 +654,7 @@ class TestUniverseSetOperations:
         mock_deps = mock_dependencies["universe_reader"]
         mock_deps.get_constituent_instrument_ids.return_value = [1, 2, 3]
 
-        service.universe_intersection("a", "b", asof="2024-01-15")
+        service.universe.universe_intersection("a", "b", asof="2024-01-15")
 
         assert mock_deps.get_constituent_instrument_ids.call_count == 2
         for c in mock_deps.get_constituent_instrument_ids.call_args_list:
@@ -686,7 +686,7 @@ class TestSyncIndexUniverse:
         )
         mock_dependencies["universe_writer"].replace_constituents.return_value = 3
 
-        result = service.sync_index_universe("399300.XSHE", date(2024, 6, 15))
+        result = service.universe.sync_index_universe("399300.XSHE", date(2024, 6, 15))
 
         assert result == 3
         mock_ic.get.assert_called_once_with("399300.XSHE", date(2024, 6, 15))
@@ -705,7 +705,7 @@ class TestSyncIndexUniverse:
         mock_ic = mock_dependencies["index_composition_reader"]
         mock_ic.get.return_value = pl.DataFrame()
 
-        result = service.sync_index_universe("399300.XSHE", date(2024, 6, 15))
+        result = service.universe.sync_index_universe("399300.XSHE", date(2024, 6, 15))
 
         assert result == 0
         mock_dependencies["universe_writer"].replace_constituents.assert_not_called()

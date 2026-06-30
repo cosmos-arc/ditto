@@ -94,18 +94,10 @@ unfixable = []
 [tool.ruff.lint.per-file-ignores]
 # SignalDelivery - 环境变量名（非实际密钥）是 Bandit S105 已知误报
 "packages/apps/src/ditto_apps/registry/infra/signal_delivery.py" = ["S105"]
-# MetadataService.__init__ - 构造器注入 16 个依赖，参数数量不可避免
-"packages/data/src/ditto_data/services/metadata_service.py" = ["PLR0913"]
-# DerivedArtifactReader.read_frame - @overload 模式下无法拆分参数
-"packages/features/src/ditto_features/services/derived/artifact_reader.py" = ["PLR0913"]
-# MarketService.list_bars - 便利方法，参数透传到 MarketBarsQuery
-"packages/data/src/ditto_data/services/market_service.py" = ["PLR0913"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "packages/apps/src/ditto_apps/services/derived/research.py" = ["S608"]
 # ResearchQuery.export() - 表名来自内部枚举，非用户输入
 "packages/application/src/ditto_application/queries/research.py" = ["S608"]
-# EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
-"packages/backtest/src/ditto_backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/portfolio/src/ditto_portfolio/rebalancing/report_views.py" = ["D102"]
 # Protocol 接口方法用 ``...`` 省略体是标准惯例，D102 不适用
@@ -333,7 +325,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=xml",
     "--cov-branch",
-    "--cov-fail-under=80",
+    "--cov-fail-under=85",
     "--durations=10",       # 报告最慢的 10 个测试
 ]
 

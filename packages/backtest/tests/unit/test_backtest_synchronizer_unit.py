@@ -47,9 +47,17 @@ def _step_time(day: str) -> datetime:
 def _make_slice(
     day: str,
     bars: dict[InstrumentId, MarketSnapshot] | None = None,
+    benchmark_close: float | None = None,
+    source_snapshot_ids: dict[InstrumentId, str] | None = None,
 ) -> Slice:
     bars = bars or {IID_1: _make_snapshot(IID_1, trade_date=day)}
-    return Slice(trade_date=day, step_time=_step_time(day), bars=bars)
+    return Slice(
+        trade_date=day,
+        step_time=_step_time(day),
+        bars=bars,
+        benchmark_close=benchmark_close,
+        source_snapshot_ids=source_snapshot_ids or {},
+    )
 
 
 def _make_feed(
@@ -139,6 +147,49 @@ class TestStreamProducesTimeSlices:
         assert len(ts.bars) == 2
         assert ts.bars[IID_1].close == 10.0
         assert ts.bars[IID_2].close == 20.0
+
+    def test_benchmark_close_preserved(self):
+        """benchmark_close 与 bars 使用同一个 Slice PIT 边界."""
+        slices = {
+            "2026-03-01": _make_slice(
+                "2026-03-01",
+                benchmark_close=3025.0,
+            ),
+        }
+        feed = _make_feed(["2026-03-01"], slices)
+        clock = SimulatedClock(datetime(2026, 1, 1, tzinfo=UTC))
+
+        sync = BacktestSynchronizer(
+            data_feed=feed,
+            clock=clock,
+            start_date="2026-03-01",
+        )
+        ts = next(sync.stream())
+
+        assert ts.benchmark_close == 3025.0
+
+    def test_source_snapshot_ids_preserved(self):
+        """source_snapshot_ids 与 bars 使用同一个 Slice PIT 边界."""
+        source_snapshot_ids = {
+            IID_1: "snapshot:tushare:stock_daily:2026-03-01:abc",
+        }
+        slices = {
+            "2026-03-01": _make_slice(
+                "2026-03-01",
+                source_snapshot_ids=source_snapshot_ids,
+            ),
+        }
+        feed = _make_feed(["2026-03-01"], slices)
+        clock = SimulatedClock(datetime(2026, 1, 1, tzinfo=UTC))
+
+        sync = BacktestSynchronizer(
+            data_feed=feed,
+            clock=clock,
+            start_date="2026-03-01",
+        )
+        ts = next(sync.stream())
+
+        assert ts.source_snapshot_ids == source_snapshot_ids
 
 
 class TestKnowledgeDate:

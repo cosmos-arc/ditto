@@ -35,6 +35,8 @@ async def post_bars(
             - start_date: 开始日期 (可选)
             - end_date: 结束日期 (可选)
             - adjustment: 复权类型 (none/qfq/hfq)
+            - asset_class: 资产类别过滤 (可选)
+            - allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
             - limit: 返回数量限制 (1-10000)
         facade: MarketQueryFacade 依赖注入
 
@@ -49,6 +51,8 @@ async def post_bars(
         start=query.start_date.isoformat() if query.start_date else None,
         end=query.end_date.isoformat() if query.end_date else None,
         adj=query.adjustment.value,
+        asset_class=query.asset_class,
+        allow_experimental_data=query.allow_experimental_data,
     )
 
     # 转换为模型列表

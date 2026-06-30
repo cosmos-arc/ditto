@@ -51,7 +51,12 @@ class BacktestSynchronizer:
                 - timedelta(days=self._knowledge_lag_days),
                 trade_date=slice_.trade_date,
             )
-            yield TimeSlice(time_context=tc, bars=slice_.bars)
+            yield TimeSlice(
+                time_context=tc,
+                bars=slice_.bars,
+                benchmark_close=slice_.benchmark_close,
+                source_snapshot_ids=slice_.source_snapshot_ids,
+            )
 
     def clock(self) -> Clock:
         """返回与此同步器关联的时钟."""

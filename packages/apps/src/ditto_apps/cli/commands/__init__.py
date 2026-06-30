@@ -1,3 +1,5 @@
+"""CLI 命令."""
+
 from __future__ import annotations
 
-"""CLI 命令."""
+__all__: list[str] = []

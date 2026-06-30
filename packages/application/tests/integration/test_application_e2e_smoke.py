@@ -11,6 +11,7 @@ from unittest.mock import Mock
 import polars as pl
 import pytest
 from ditto_application.commands.backtest import BacktestRunCommand, BacktestRunHandler
+from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
@@ -196,7 +197,7 @@ class TestBacktestRunHandlerEndToEnd:
         mock_run_service: Mock,
         factor_bridge: FactorBridge,
     ) -> None:
-        """策略不存在时 ValueError."""
+        """策略不存在时抛出 typed application command error."""
         mock_catalog_service.get_spec.return_value = None
         handler = BacktestRunHandler(
             catalog_service=mock_catalog_service,
@@ -210,7 +211,7 @@ class TestBacktestRunHandlerEndToEnd:
             end_date="2025-01-31",
         )
 
-        with pytest.raises(ValueError, match="Strategy not found"):
+        with pytest.raises(AppCommandError, match="Strategy not found"):
             handler.handle(command)
 
 

@@ -12,6 +12,7 @@ from ditto_application.exceptions import AppQueryError
 from ditto_apps.api.errors import APIError, BadRequestError
 from ditto_apps.api.routes.source import (
     SourceDataQueryParams,
+    _fetch_source_data,
     _infer_asset_class,
     _resolve_source_ticker,
 )
@@ -66,6 +67,30 @@ def query_params() -> SourceDataQueryParams:
         start_date="2024-01-01",
         end_date="2024-01-31",
     )
+
+
+@pytest.mark.unit
+class TestSourceDataQueryParams:
+    """Test source data query request params."""
+
+    def test_default_maturity_opt_in_is_false(self) -> None:
+        params = SourceDataQueryParams(
+            ticker="000001",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
+
+        assert params.allow_experimental_data is False
+
+    def test_accepts_explicit_maturity_opt_in(self) -> None:
+        params = SourceDataQueryParams(
+            ticker="000001",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            allow_experimental_data=True,
+        )
+
+        assert params.allow_experimental_data is True
 
 
 @pytest.mark.unit
@@ -165,3 +190,33 @@ class TestResolveSourceTicker:
             mock_logger.exception.assert_called_once_with(
                 "Unexpected error resolving ticker"
             )
+
+
+@pytest.mark.unit
+class TestFetchSourceData:
+    """Test route-local source fetch adapter."""
+
+    def test_passes_maturity_opt_in_to_application_facade(self) -> None:
+        mock_facade = MagicMock()
+        expected = object()
+        mock_facade.fetch_source_data.return_value = expected
+
+        result = _fetch_source_data(
+            mock_facade,
+            "tushare",
+            "stock_daily",
+            "000001.SZ",
+            "2024-01-01",
+            "2024-01-31",
+            allow_experimental_data=True,
+        )
+
+        assert result is expected
+        mock_facade.fetch_source_data.assert_called_once_with(
+            source="tushare",
+            dataset="stock_daily",
+            source_ticker="000001.SZ",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            allow_experimental_data=True,
+        )

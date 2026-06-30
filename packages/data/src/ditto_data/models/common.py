@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from enum import Enum, StrEnum
 from typing import Literal, NamedTuple
 
@@ -95,15 +96,8 @@ class Dataset(StrEnum):
     # Index 域（参考类数据）
     INDEX_WEIGHT = "index_weight"
 
-    @property
-    def asset_class(self) -> AssetClass | None:
-        """
-        获取数据集对应的资产类型。
-
-        Returns:
-            资产类型枚举，如果数据集不关联特定资产类型则返回 None。
-
-        """
+    def _legacy_asset_class(self) -> AssetClass | None:
+        """Return legacy Dataset-owned asset-class mapping without warnings."""
         # Stock 数据集
         if self in (
             Dataset.STOCK_DAILY,
@@ -125,6 +119,23 @@ class Dataset(StrEnum):
         if self in (Dataset.INDEX_DAILY, Dataset.INDEX_WEIGHT):
             return AssetClass.INDEX
         return None
+
+    @property
+    def asset_class(self) -> AssetClass | None:
+        """
+        获取数据集对应的资产类型。
+
+        Returns:
+            资产类型枚举，如果数据集不关联特定资产类型则返回 None。
+
+        """
+        warnings.warn(
+            "Dataset.asset_class is a deprecated compatibility helper; use "
+            + "DatasetMetadata.asset_class or an application catalog boundary instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._legacy_asset_class()
 
     @classmethod
     def all_datasets(cls) -> list[str]:
@@ -159,14 +170,20 @@ class Dataset(StrEnum):
             资产类别: "stock" | "etf" | "index" | "other"
 
         Note:
-            此方法为兼容性方法，推荐使用 ``dataset.asset_class`` 属性。
+            此方法为兼容性方法，推荐使用 ``DatasetMetadata.asset_class``。
 
         """
+        warnings.warn(
+            "Dataset.get_asset_class is a deprecated compatibility helper; use "
+            + "DatasetMetadata.asset_class or an application catalog boundary instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # 转换为 Dataset 枚举
         dataset_enum = dataset if isinstance(dataset, Dataset) else cls(dataset)
 
         # 使用 asset_class 属性获取类型
-        asset_class = dataset_enum.asset_class
+        asset_class = dataset_enum._legacy_asset_class()
 
         # 转换为字符串字面量（保持向后兼容）
         if asset_class is None:
@@ -207,6 +224,18 @@ class Source(StrEnum):
     FRED = "fred"  # Federal Reserve Economic Data (美国宏观数据)
 
 
+_RANGES: dict[AssetClassType, tuple[int, int]] = {
+    "stock": (1_000_000, 1_999_999),
+    "etf": (2_000_000, 2_999_999),
+    "index": (3_000_000, 3_999_999),
+    "fx": (4_000_000, 4_999_999),
+    "commodity": (5_000_000, 5_999_999),
+    "bond": (6_000_000, 6_999_999),
+    "futures": (7_000_000, 7_999_999),
+    "option": (8_000_000, 8_999_999),
+}
+
+
 class InstrumentIdRange(NamedTuple):
     """
     Instrument ID range definition.
@@ -234,21 +263,11 @@ class InstrumentIdRange(NamedTuple):
     @classmethod
     def get_range(cls, asset_class: str) -> InstrumentIdRange:
         """Get ID range for asset class."""
-        ranges = {
-            "stock": cls(1_000_000, 1_999_999),
-            "etf": cls(2_000_000, 2_999_999),
-            "index": cls(3_000_000, 3_999_999),
-            "fx": cls(4_000_000, 4_999_999),
-            "commodity": cls(5_000_000, 5_999_999),
-            "bond": cls(6_000_000, 6_999_999),
-            "futures": cls(7_000_000, 7_999_999),
-            "option": cls(8_000_000, 8_999_999),
-        }
-
-        if asset_class not in ranges:
+        if asset_class not in _RANGES:
             raise ValueError(f"Unknown asset class: {asset_class}")
 
-        return ranges[asset_class]
+        lo, hi = _RANGES[asset_class]
+        return cls(lo, hi)
 
     @classmethod
     def detect_asset_class(cls, ids: list[int]) -> AssetClassType:
@@ -275,35 +294,13 @@ class InstrumentIdRange(NamedTuple):
         if not ids:
             raise ValueError("无法推断空 instrument_id 列表的资产类别")
 
-        # 定义所有资产类别范围（与 AssetClassType 保持一致）
-        asset_classes: list[AssetClassType] = [
-            "stock",
-            "etf",
-            "index",
-            "fx",
-            "commodity",
-            "bond",
-            "futures",
-            "option",
-        ]
-        ranges: list[tuple[AssetClassType, int, int]] = [
-            ("stock", 1_000_000, 1_999_999),
-            ("etf", 2_000_000, 2_999_999),
-            ("index", 3_000_000, 3_999_999),
-            ("fx", 4_000_000, 4_999_999),
-            ("commodity", 5_000_000, 5_999_999),
-            ("bond", 6_000_000, 6_999_999),
-            ("futures", 7_000_000, 7_999_999),
-            ("option", 8_000_000, 8_999_999),
-        ]
-
         # 统计各范围命中次数
-        hits: dict[AssetClassType, int] = dict.fromkeys(asset_classes, 0)
+        hits: dict[AssetClassType, int] = dict.fromkeys(_RANGES, 0)
         unknown_ids: list[int] = []
 
         for instrument_id in ids:
             matched = False
-            for ac, lo, hi in ranges:
+            for ac, (lo, hi) in _RANGES.items():
                 if lo <= instrument_id <= hi:
                     hits[ac] += 1
                     matched = True

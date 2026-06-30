@@ -1,6 +1,6 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.14.0 | **更新**: 2026-04-15 | **状态**: V1 RC Closeout 完成
+**版本**: v0.15.0 | **更新**: 2026-05-31 | **状态**: V2 架构整改完成
 
 ## 概要
 
@@ -13,7 +13,7 @@
 - **执行层** — ExecutionPlanner + BacktestBrokerage + TradeBuilder + Reality Model（佣金/滑点/结算）
 - **组合构建** — WeightAllocator（等权/评分/波动率倒数）+ ConstraintChecker
 - **Expression DSL** — Pratt Parser 编译器，44 算子，Polars 向量化执行
-- **因子评估** — IC / ICIR / Fama-MacBeth / Regime IC / Performance Attribution
+- **因子评估** — IC / ICIR / Fama-MacBeth / Regime IC / Performance Attribution（`ditto ops factor-ic` 诊断 CLI）
 - **数据质量** — 多源校验、PIT 安全、L1-L4 检查器
 - **衍生数据** — 物化编排 + 发布安全（Shadow Diff / Certification）
 - **任务调度** — Prefect 3（摄取/回填/修补/物化/发布）
@@ -90,106 +90,146 @@ ditto/
 ├── packages/
 │   ├── apps/                    # 应用入口（API / CLI / Jobs + DI）
 │   │   └── src/ditto_apps/
-│   │       ├── api/                 # FastAPI 路由
-│   │       ├── cli/                 # Typer CLI
-│   │       ├── jobs/                # Prefect 任务编排
+│   │       ├── api/                 # FastAPI 路由（routes/ + utils/）
+│   │       ├── cli/                 # Typer CLI（commands/ + utils/）
+│   │       ├── jobs/                # Prefect 任务编排（flows/ + tasks/）
 │   │       ├── models/              # API 模型
-│   │       ├── registry/            # Dishka DI 容器
-│   │       ├── config/              # 接口层配置
-│   │       └── main.py              # 启动入口
+│   │       ├── registry/            # Dishka DI 容器（contexts/ + infra/）
+│   │       └── config/              # 接口层配置
 │   ├── application/             # 应用编排层（CQRS）
 │   │   └── src/ditto_application/
 │   │       ├── queries/         # 查询编排（27 Facade）
-│   │       ├── processes/       # 流程编排（ingestion/execution/materialization/quality/strategy）
+│   │       ├── processes/       # 流程编排（execution/ingestion/materialization/quality）
 │   │       ├── commands/        # 命令编排（9 Handler）
 │   │       ├── builders/        # DI builders
-│   │       ├── providers.py     # Provider 注册（基础）
-│   │       ├── providers_market.py    # 行情 Provider
-│   │       ├── providers_strategy.py # 策略 Provider
-│   │       ├── providers_portfolio.py # 组合 Provider
-│   │       ├── settings.py     # 交易配置
+│   │       ├── runtime/         # 运行时编排
+│   │       ├── config.py        # 应用配置
 │   │       ├── contracts.py     # 共享契约类型
 │   │       ├── execution_dto.py # 执行层 DTO
-│   │       └── config.py
+│   │       ├── providers_builder.py   # Builder Provider
+│   │       ├── providers_command.py   # Command Provider
+│   │       ├── providers_market.py    # 行情 Provider
+│   │       ├── providers_portfolio.py # 组合 Provider
+│   │       ├── providers_process.py   # Process Provider
+│   │       ├── providers_strategy.py  # 策略 Provider
+│   │       ├── providers.py     # Provider 注册（基础）
+│   │       ├── catalog_freshness.py  # 目录新鲜度
+│   │       ├── catalog_maturity.py   # 目录成熟度
+│   │       └── settings.py      # 交易配置
 │   ├── strategy/                # 策略定义与信号生成
 │   │   └── src/ditto_strategy/
 │   │       ├── alpha/           # Alpha 信号（Pipeline + 8 Stage + 4 模板）
+│   │       │   ├── builtins/        # 内置 Stage
+│   │       │   └── templates/       # 策略模板
+│   │       ├── audit/           # 策略审计
+│   │       ├── di/              # DI 注册
+│   │       ├── observability/   # 可观测性
+│   │       ├── runs/            # 策略运行管理
 │   │       ├── signals/         # 信号存储
-│   │       ├── storage/         # 策略 artifact/run/spec 存储
+│   │       ├── storage/         # 策略 artifact/run/spec 存储（sqlite/）
 │   │       └── events.py
 │   ├── portfolio/               # 组合构建与管理
 │   │   └── src/ditto_portfolio/
 │   │       ├── accounting/      # 会计核算（Account/BuyingPower/Cash/Position）
-│   │       └── rebalancing/     # 调仓（Allocation/Constraints/Comparison）
+│   │       ├── holdings/        # 持仓管理
+│   │       ├── observability/   # 可观测性
+│   │       ├── positions/       # 持仓计算
+│   │       ├── rebalancing/     # 调仓（Allocation/Constraints/Comparison）
+│   │       ├── target_portfolios/ # 目标组合
+│   │       └── projection.py    # 组合投影
 │   ├── risk/                    # 风险管理
 │   │   └── src/ditto_risk/
 │   │       ├── constraints/     # 预交易约束
 │   │       ├── drawdown/        # 回撤规则
-│   │       └── exposure/        # 暴露分析
+│   │       ├── exposure/        # 暴露分析
+│   │       ├── observability/   # 可观测性
+│   │       ├── kill_switch.py   # 熔断开关
+│   │       ├── post_trade.py    # 盘后风控
+│   │       └── pre_trade.py     # 盘前风控
 │   ├── execution/               # 交易执行
 │   │   └── src/ditto_execution/
 │   │       ├── audit/           # 执行审计
+│   │       ├── broker/          # 券商网关（gateways/）
+│   │       ├── di/              # DI 注册
 │   │       ├── fills/           # 成交管理
+│   │       ├── observability/   # 可观测性
 │   │       ├── orders/          # 订单管理
 │   │       ├── reality/         # 费用模型
-│   │       └── storage/         # 交易 SQLite 存储
+│   │       ├── reconciliation/  # 对账
+│   │       └── storage/         # 交易 SQLite 存储（sqlite/）
 │   ├── backtest/                # 回测引擎
 │   │   └── src/ditto_backtest/
-│   │       ├── engine.py        # EngineLoop + Steps + Audit
-│   │       └── ...
+│   │       ├── audit/           # 回测审计
+│   │       ├── observability/   # 可观测性
+│   │       ├── simulation/      # 模拟执行
+│   │       ├── steps/           # EngineLoop Steps
+│   │       └── engine.py        # EngineLoop + Audit
 │   ├── features/                # 因子与表达式计算
 │   │   └── src/ditto_features/
+│   │       ├── config/          # 特征配置
+│   │       ├── di/              # DI 注册
+│   │       ├── evaluation/      # 因子评估（evaluator/ + metrics/）
 │   │       ├── expression/      # Expression DSL（lexer/parser/ast/codegen/compiler）
 │   │       ├── factors/         # 因子库（15 类因子）
 │   │       ├── materialization/ # 物化编排
-│   │       ├── services/        # 衍生数据与发布安全服务
-│   │       ├── storage/         # 因子/特征/衍生/发布安全存储适配
 │   │       ├── models/          # Feature/Factor/Derived 模型
-│   │       ├── di/              # Features Provider 注册
-│   │       ├── publication_safety.py # 发布安全门禁模型
-│   │       └── compile_cache.py
+│   │       ├── observability/   # 可观测性
+│   │       ├── services/        # 衍生数据服务（derived/）
+│   │       ├── storage/         # 存储适配（parquet/ + runtime/ + sqlite/）
+│   │       ├── compile_cache.py
+│   │       └── derived_types.py
 │   ├── analysis/                # research control-plane（非生产路径）
 │   │   └── src/ditto_analysis/
+│   │       ├── di/              # DI 注册
 │   │       ├── research/        # 研究数据集控制面
-│   │       └── storage/         # 研究 SQLite 存储
-│   │       # reports/diagnostics/experiments/screeners/ — reserved/future
+│   │       └── storage/         # 研究 SQLite 存储（sqlite/）
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
-│   │       ├── services/        # 域服务（market/metadata/fundamental/macro/capital/source）
-│   │       ├── sources/         # 数据源（Tushare/FRED/TDX + adapters/schemas）
-│   │       ├── models/          # 数据模型（市场/元数据/宏观/摄入/存储）
-│   │       ├── storage/         # 存储引擎（Reader/Writer CQRS，按域分目录）
-│   │       ├── runtime/         # 运行时（SQL/Freeze/ID 分配）
-│   │       ├── quality/         # 数据质量（L1-L4 检查器 + golden specs）
-│   │       ├── helpers/         # 辅助工具（PIT/复权调整）
-│   │       ├── ingestion/       # 摄取服务（游标/冻结/晚到数据/质量记录）
-│   │       ├── providers/       # DataProvider 实现
 │   │       ├── catalog/         # 数据目录契约
-│   │       ├── lineage/         # 数据血缘契约
-│   │       ├── observability/   # 数据可观测性指标
 │   │       ├── config/          # 数据层配置
-│   │       └── di/              # DI 注册
+│   │       ├── di/              # DI 注册
+│   │       ├── errors/          # 数据层错误类型
+│   │       ├── helpers/         # 辅助工具（pit/ — PIT 安全）
+│   │       ├── ingestion/       # 摄取服务（游标/冻结/晚到数据/质量记录）
+│   │       ├── lineage/         # 数据血缘契约
+│   │       ├── models/          # 数据模型（市场/元数据/宏观/摄入/存储）
+│   │       ├── observability/   # 数据可观测性指标
+│   │       ├── quality/         # 数据质量（L1-L4 checkers/ + golden specs）
+│   │       ├── runtime/         # 运行时（SQL/Freeze/ID 分配）
+│   │       ├── scripts/         # 数据脚本
+│   │       ├── services/        # 域服务（market/metadata/fundamental/macro/capital/source）
+│   │       ├── sources/         # 数据源（tushare/fred/tdx/ + schemas/）
+│   │       ├── storage/         # 存储引擎（Reader/Writer CQRS，按域分目录）
+│   │       │   ├── base/            # 存储基类
+│   │       │   ├── capital/         # 资金存储
+│   │       │   ├── fundamental/     # 基本面存储
+│   │       │   ├── macro/           # 宏观存储
+│   │       │   ├── market/          # 行情存储
+│   │       │   ├── metadata/        # 元数据存储
+│   │       │   ├── runtime/         # 运行时存储
+│   │       │   └── schemas/         # 存储模式定义
+│   │       └── utils/           # 数据工具函数
 │   ├── kernel/                  # 共享内核（零依赖）
 │   │   └── src/ditto_kernel/
+│   │       ├── clock.py         # 时钟抽象
+│   │       ├── events.py        # 事件类型
+│   │       ├── exceptions.py    # 共享异常
 │   │       ├── identity.py      # 标识类型（InstrumentId）
 │   │       ├── instrument.py    # 工具注册参数
 │   │       ├── market.py        # 市场数据类型
+│   │       ├── math.py          # 数学工具函数
 │   │       ├── order.py         # 订单类型
+│   │       ├── runtime.py       # 运行时内核
 │   │       ├── strategy.py      # 策略规格类型
-│   │       ├── clock.py         # 时钟
-│   │       ├── events.py        # 事件
-│   │       ├── quality.py       # 数据质量值对象
-│   │       ├── research.py      # 研究数据集类型
-│   │       ├── publication_safety.py  # 发布安全类型
-│   │       ├── json_types.py    # JSON 序列化类型
+│   │       ├── synchronizer.py  # 同步器
+│   │       ├── time_context.py  # 时间上下文
+│   │       ├── time_semantics.py # 时间语义
 │   │       ├── tracing.py       # 追踪类型
-│   │       ├── trading.py       # 交易类型
-│   │       ├── exceptions.py    # 共享异常
-│   │       └── math.py          # 数学工具函数
+│   │       └── trading.py       # 交易类型
 │   └── platform/                # 基础设施
 │       └── src/ditto_platform/
-│           ├── foundation/      # cache/checksum/concurrency/config/db/observability/util
-│           └── services/        # notification（Telegram/Email/Webhook）
+│           ├── foundation/      # 基础能力（cache/checksum/concurrency/config/db/observability/storage/util）
+│           └── services/        # 服务（notification — Telegram/Email/Webhook）
 ├── config/                      # 环境配置
 │   ├── default/
 │   ├── development/
@@ -312,6 +352,45 @@ pixi run -e dev arch-check       # 分层依赖检查
 - [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md) — Apps 层规范
 
 ## 变更记录
+
+### v0.15.0 (2026-05-31)
+**V2 架构整改 — 项目最大规模重构**
+
+**V2 架构整改路线图 46/46 任务完成（2026-04 ~ 2026-05）**
+- 全模块治理：932 生产文件 / 106K LOC / 721 测试文件 / 173K 测试 LOC
+- 37 个 import-linter 架构合约全绿
+- `# type: ignore` 清零（from 200+ → 0）
+- BaseRuntimeKernel 统一运行时核心
+- `data_store` API 清理（Reader/Writer CQRS 标准化）
+- `@cache` 替换 mutable globals（thread-safety）
+- 可维护性拆分：策略 runs/audit、组合 holdings/positions、风控 pre_trade/post_trade/kill_switch
+- Application 层 CQRS 互斥矩阵（query↔process↔command 硬隔离）
+
+**Batch 1-6 能力包治理**
+- Catalog：数据目录契约（catalog/ 新增）
+- PIT：Point-in-Time 安全机制强化
+- Lineage：数据血缘契约（lineage/ 新增）
+- Replay：可复现性验证框架
+- Quality：L1-L4 检查器 + golden specs
+- Observability：全包 observability/ 子目录新增
+
+**PR#65 Batch 1 架构整改（173 files changed）**
+- type:ignore 清零
+- RiskGate daily_scan 类型修复
+- regime 子包提取
+- PaperBrokerGateway get_account snapshot
+
+**PR#66 22 项 Review Fix**
+- BaseRuntimeKernel 统一
+- data_store API 清理
+- @cache 替换 mutable globals
+- 可维护性拆分
+- 质量/规约/文档修复
+- 7594 测试全绿
+
+**其他**
+- 质量评估 Skill 上线（6 维度并行评估）
+- Batch 6 AI-Ready 基础：Hypothesis 桥接点、CompositeDecisionStage、Experience Memory
 
 ### v0.14.0 (2026-04-15)
 **Sprint 5 交易 API 增强 + V1 RC Closeout**

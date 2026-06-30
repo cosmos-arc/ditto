@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import polars as pl
@@ -21,16 +22,29 @@ from ditto_data.storage.metadata.instrument import (
 )
 
 
-def resolve_instrument_identifier(  # noqa: PLR0913 — 提取自类方法，依赖通过参数注入
-    instrument_reader: InstrumentReader,
-    exchange_transformers: ExchangeTransformers,
-    *,
-    instrument_id: int | None = None,
-    standard_ticker: str | None = None,
-    ticker: str | None = None,
-    asset_class: str | None = None,
-    source: str = "tushare",
-    asof: str | None = None,
+@dataclass(frozen=True)
+class IdentityResolverContext:
+    """Dependencies required by metadata identity resolution helpers."""
+
+    instrument_reader: InstrumentReader
+    exchange_transformers: ExchangeTransformers
+
+
+@dataclass(frozen=True)
+class IdentityResolutionRequest:
+    """Identifier input for one metadata identity resolution request."""
+
+    instrument_id: int | None = None
+    standard_ticker: str | None = None
+    ticker: str | None = None
+    asset_class: str | None = None
+    source: str = "tushare"
+    asof: str | None = None
+
+
+def resolve_instrument_identifier(
+    ctx: IdentityResolverContext,
+    request: IdentityResolutionRequest,
 ) -> InstrumentId | None:
     """
     统一标识符解析入口.
@@ -41,14 +55,8 @@ def resolve_instrument_identifier(  # noqa: PLR0913 — 提取自类方法，依
     优先级: instrument_id > standard_ticker > ticker
 
     Args:
-        instrument_reader: 证券元数据读取器.
-        exchange_transformers: 交易所转换器.
-        instrument_id: 内部 ID（如 1000001）.
-        standard_ticker: Ditto 标准格式（如 "000001.XSHE"）.
-        ticker: 裸代码（如 "000001"）.
-        asset_class: 资产类型（stock | etf | index），ticker 解析时必需.
-        source: 数据源名称（如 "tushare"）.
-        asof: 时间点日期 (YYYY-MM-DD).
+        ctx: 解析依赖.
+        request: 标识符解析输入.
 
     Returns:
         InstrumentId 类型安全的证券标识符，查不到返回 None.
@@ -58,15 +66,15 @@ def resolve_instrument_identifier(  # noqa: PLR0913 — 提取自类方法，依
         AmbiguousTickerError: ticker 不唯一.
 
     """
-    if instrument_id is not None:
+    if request.instrument_id is not None:
         # 查询存在性，不存在返回 None
-        record = instrument_reader.get_by_instrument_id(instrument_id)
+        record = ctx.instrument_reader.get_by_instrument_id(request.instrument_id)
         if record is None:
             return None
-        return InstrumentId(instrument_id)
+        return InstrumentId(request.instrument_id)
 
     # 至少需要一个非 instrument_id 标识符
-    if standard_ticker is None and ticker is None:
+    if request.standard_ticker is None and request.ticker is None:
         raise NoIdentifierProvidedError(
             "未提供任何标识符 (instrument_id / standard_ticker / ticker)"
         )
@@ -74,33 +82,25 @@ def resolve_instrument_identifier(  # noqa: PLR0913 — 提取自类方法，依
     # 复用 resolve_source_ticker 得到 source_ticker，再解析为 instrument_id
     try:
         source_ticker = resolve_source_ticker(
-            instrument_reader,
-            exchange_transformers,
-            ticker=ticker,
-            standard_ticker=standard_ticker,
-            asset_class=asset_class or "stock",
-            source=source,
-            asof=asof,
+            ctx,
+            request,
         )
     except IdentifierNotFoundError:
         return None
 
-    resolved_id = instrument_reader.resolve_instrument_id(source_ticker, source, asof)
+    resolved_id = ctx.instrument_reader.resolve_instrument_id(
+        source_ticker,
+        request.source,
+        request.asof,
+    )
     if resolved_id is None:
         return None
     return InstrumentId(resolved_id)
 
 
-def resolve_source_ticker(  # noqa: PLR0913 — 提取自类方法，依赖通过参数注入
-    instrument_reader: InstrumentReader,
-    exchange_transformers: ExchangeTransformers,
-    *,
-    ticker: str | None = None,
-    standard_ticker: str | None = None,
-    instrument_id: int | None = None,
-    asset_class: str = "stock",
-    source: str = "tushare",
-    asof: str | None = None,
+def resolve_source_ticker(
+    ctx: IdentityResolverContext,
+    request: IdentityResolutionRequest,
 ) -> str:
     """
     将任意标识符解析为 source_ticker.
@@ -108,14 +108,8 @@ def resolve_source_ticker(  # noqa: PLR0913 — 提取自类方法，依赖通�
     优先级: instrument_id > standard_ticker > ticker
 
     Args:
-        instrument_reader: 证券元数据读取器.
-        exchange_transformers: 交易所转换器.
-        ticker: 裸代码（如 "000001"）
-        standard_ticker: Ditto 标准格式（如 "000001.XSHE"）
-        instrument_id: 内部 ID（如 1000001）
-        asset_class: 资产类型（stock | etf | index）
-        source: 数据源名称（如 "tushare"）
-        asof: Point-in-Time 日期，None 表示当前
+        ctx: 解析依赖.
+        request: 标识符解析输入.
 
     Returns:
         source_ticker 字符串
@@ -127,25 +121,35 @@ def resolve_source_ticker(  # noqa: PLR0913 — 提取自类方法，依赖通�
 
     """
     # 优先级 1: instrument_id
-    if instrument_id is not None:
-        result = instrument_reader.get_source_ticker(instrument_id, source, asof)
+    if request.instrument_id is not None:
+        result = ctx.instrument_reader.get_source_ticker(
+            request.instrument_id,
+            request.source,
+            request.asof,
+        )
         if result is None:
             raise IdentifierNotFoundError(
-                identifier=str(instrument_id),
+                identifier=str(request.instrument_id),
                 identifier_type="instrument_id",
             )
         return result
 
     # 优先级 2: standard_ticker
-    if standard_ticker is not None:
+    if request.standard_ticker is not None:
         return _resolve_from_standard_ticker(
-            exchange_transformers, standard_ticker, source
+            ctx.exchange_transformers,
+            request.standard_ticker,
+            request.source,
         )
 
     # 优先级 3: ticker
-    if ticker is not None:
+    if request.ticker is not None:
         return _resolve_from_ticker(
-            instrument_reader, ticker, asset_class, source, asof
+            ctx.instrument_reader,
+            request.ticker,
+            request.asset_class or "stock",
+            request.source,
+            request.asof,
         )
 
     raise ValueError("必须指定 ticker / standard_ticker / instrument_id 之一")

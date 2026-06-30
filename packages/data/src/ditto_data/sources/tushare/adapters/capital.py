@@ -1,25 +1,22 @@
-"""Capital domain Tushare adapter — facade."""
+"""Capital domain Tushare adapter -- facade."""
 
 from __future__ import annotations
 
 import polars as pl
+from ditto_platform.foundation import logger
 
+from ditto_data.config import DataSourceSettings
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.adapters.capital_corporate import (
-    fetch_corporate_actions,
-    fetch_rights_issue,
-    fetch_share_buyback,
+    CapitalCorporateTushareAdapter,
 )
 from ditto_data.sources.tushare.adapters.capital_index import (
-    fetch_index_composition,
-    fetch_index_weight,
+    CapitalIndexTushareAdapter,
 )
 from ditto_data.sources.tushare.adapters.capital_market import (
-    fetch_dividend,
-    fetch_margin_trading,
-    fetch_pledge_ratio,
-    fetch_valuation_metrics,
+    CapitalMarketTushareAdapter,
 )
+from ditto_data.sources.tushare.client import TushareClient
 
 
 class CapitalTushareAdapter(BaseTushareAdapter):
@@ -36,7 +33,28 @@ class CapitalTushareAdapter(BaseTushareAdapter):
     - 限售解禁
     - 配股
 
+    通过组合三个子适配器实现：
+    - CapitalMarketTushareAdapter: 估值/分红/融资融券/质押
+    - CapitalIndexTushareAdapter: 指数成分/权重
+    - CapitalCorporateTushareAdapter: 公司行为/限售解禁/配股
+
     """
+
+    def __init__(
+        self,
+        token: str | None = None,
+        settings: DataSourceSettings | None = None,
+        *,
+        _client: TushareClient | None = None,
+    ) -> None:
+        super().__init__(token=token, settings=settings, _client=_client)
+        self._market = CapitalMarketTushareAdapter(_client=self._client)
+        self._index = CapitalIndexTushareAdapter(_client=self._client)
+        self._corporate = CapitalCorporateTushareAdapter(_client=self._client)
+        logger.debug(
+            f"{self.__class__.__name__} sub-adapters initialized",
+            event="tushare_capital_facade_init",
+        )
 
     # --- market: valuation / dividend / margin / pledge ---
 
@@ -48,8 +66,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取估值指标 (PE/PB/PS)."""
-        return fetch_valuation_metrics(
-            self._client,
+        return self._market.fetch_valuation_metrics(
             ts_code=ts_code,
             trade_date=trade_date,
             start_date=start_date,
@@ -64,8 +81,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取股息分红数据."""
-        return fetch_dividend(
-            self._client,
+        return self._market.fetch_dividend(
             ts_code=ts_code,
             ex_date=ex_date,
             start_date=start_date,
@@ -80,8 +96,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取融资融券数据."""
-        return fetch_margin_trading(
-            self._client,
+        return self._market.fetch_margin_trading(
             ts_code=ts_code,
             trade_date=trade_date,
             start_date=start_date,
@@ -96,8 +111,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取股权质押数据."""
-        return fetch_pledge_ratio(
-            self._client,
+        return self._market.fetch_pledge_ratio(
             ts_code=ts_code,
             report_date=report_date,
             start_date=start_date,
@@ -112,7 +126,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         trade_date: str | None = None,
     ) -> pl.DataFrame:
         """获取指数权重数据."""
-        return fetch_index_weight(self._client, index_code, trade_date=trade_date)
+        return self._index.fetch_index_weight(index_code, trade_date=trade_date)
 
     def fetch_index_composition(
         self,
@@ -121,8 +135,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         with_weight: bool = False,
     ) -> pl.DataFrame:
         """获取指数成分股."""
-        return fetch_index_composition(
-            self._client,
+        return self._index.fetch_index_composition(
             index_code,
             asof_date=asof_date,
             with_weight=with_weight,
@@ -137,8 +150,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取公司行为数据."""
-        return fetch_corporate_actions(
-            self._client,
+        return self._corporate.fetch_corporate_actions(
             ts_code=ts_code,
             start_date=start_date,
             end_date=end_date,
@@ -151,8 +163,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取限售解禁数据."""
-        return fetch_share_buyback(
-            self._client,
+        return self._corporate.fetch_share_buyback(
             ts_code=ts_code,
             start_date=start_date,
             end_date=end_date,
@@ -165,8 +176,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取配股数据."""
-        return fetch_rights_issue(
-            self._client,
+        return self._corporate.fetch_rights_issue(
             ts_code=ts_code,
             start_date=start_date,
             end_date=end_date,

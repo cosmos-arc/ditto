@@ -1,6 +1,6 @@
 # Alpha 决策模块 (alpha/)
 
-**最后更新**: 2026-03-25
+**最后更新**: 2026-06-01
 **状态**: 核心功能已完成，Port 控制面入口已接通
 
 ## 概要
@@ -13,7 +13,7 @@ Alpha 决策层，基于 Pipeline + Stage 架构提供可组合的策略信号�
 
 ```
 alpha/
-├── pipeline.py          # StrategyPipeline — Stage 编排器
+├── pipeline.py          # StrategyPipeline — Stage 编排器 + 边界校验
 ├── specs.py             # StrategySpec — 策略完整语义契约
 ├── context.py           # StrategyContext — 策略运行时上下文
 ├── models.py            # Signal / DecisionFrame / MarketState
@@ -38,20 +38,21 @@ alpha/
 - **StrategySpec**: 策略的完整定义（ID、参数、Stages 配置）
 - **StrategyPipeline**: 顺序编排 DecisionStage 列表
 - **DecisionStage**: Protocol，每个 Stage 接收 DecisionFrame 输出 DecisionFrame
-- **DecisionFrame**: 通过列名约定流转数据的 polars DataFrame（`instrument_id` 列类型为 `InstrumentId(int)`）
+- **DecisionFrame**: 通过列名约定流转数据的 polars DataFrame，`instrument_id` 为 identifier dtype（生产路径优先 `InstrumentId(int)`；实验模板仍保留字符串标识符兼容），由 `validate_frame()` 在 pipeline 边界校验必需列和已知语义列 dtype
 
 ## Identity Model
 
 策略层统一使用 `InstrumentId = NewType("InstrumentId", int)`（定义在 `ditto_kernel.identity`）：
-- DecisionFrame 的 `instrument_id` 列为 int 类型
+- 生产路径 DecisionFrame 的 `instrument_id` 列优先为 int 类型；实验模板测试仍允许字符串标识符，晋级前必须通过 `StrategyInputBundle.instrument_id_map` 在 `TargetPortfolio` 边界映射到 canonical `InstrumentId`，并启用 `require_canonical_target_ids=True` 证明未映射字符串会 fail closed
 - TargetPortfolio.positions 的 key 为 `InstrumentId`
 - SignalSnapshot.signals / RebalancePlan.target_weights 的 key 为 `InstrumentId`
 - Engine 层不持有任何展示信息（ticker/symbol），展示映射由 Port 层负责
 
 ## 依赖
 
-- 上游: `ditto_data` (数据访问)
-- 下游: 被 `ditto_portfolio.rebalancing`、`ditto_execution` 和 App 层消费
+- 允许: `ditto_kernel`；SQLite 策略存储可通过 package 规范使用 `ditto_platform`
+- 禁止: 直接依赖 `ditto_data` / `ditto_features` / `ditto_portfolio` / `ditto_risk` / `ditto_execution` / `ditto_backtest` / `ditto_application` / `ditto_apps`
+- 市场数据由 application/backtest 通过 `StrategyInputBundle` 注入；组合、风控和执行由外层编排
 
 ## Port 侧入口
 

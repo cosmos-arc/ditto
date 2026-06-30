@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from ditto_kernel import traced
+
 from ditto_backtest._statistics_types import AlphaStatistics
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.statistics_returns import (
@@ -42,6 +44,7 @@ class BenchmarkRelative:
     alpha: float | None
 
 
+@traced("backtest.statistics.alpha")
 def compute_alpha_statistics(
     collector: ExecutionAuditCollector,
     benchmark_navs: tuple[float, ...] | None = None,

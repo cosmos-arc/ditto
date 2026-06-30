@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ditto_kernel.tracing import traced
+
 from ditto_execution.orders.event import OrderEvent
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.journal import OrderEventJournal
@@ -43,6 +45,7 @@ class OrderBook:
         """获取所有未终结订单。"""
         return tuple(t for t in self._tickets.values() if not t.status.is_terminal)
 
+    @traced("execution.order.submit")
     def submit(self, order: Order) -> OrderTicket:
         """提交新订单，返回 SUBMITTED 状态的 ticket。"""
         ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
@@ -56,12 +59,18 @@ class OrderBook:
         )
         return ticket
 
+    @traced("execution.order.update")
     def update(self, ticket: OrderTicket, event: OrderEvent | None = None) -> None:
         """更新订单票据，可选地追加事件到 journal。"""
         self._tickets[ticket.order.client_id.value] = ticket
         if event is not None:
             self._journal.append(event)
 
+    def restore_ticket(self, ticket: OrderTicket) -> None:
+        """从 checkpoint 恢复订单票据，不追加新的 journal 事件。"""
+        self._tickets[ticket.order.client_id.value] = ticket
+
+    @traced("execution.order.cancel")
     def cancel(self, client_id: ClientOrderId) -> None:
         """撤销订单。终态订单静默忽略（no-op）。"""
         ticket = self._tickets.get(client_id.value)

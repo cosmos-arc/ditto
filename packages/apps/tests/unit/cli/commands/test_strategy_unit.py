@@ -49,6 +49,11 @@ class TestStrategyCommandHelp:
         assert result.exit_code == 0
         assert "backtest" in result.output
 
+    def test_strategy_publish_signals_help_exists(self, runner: CliRunner) -> None:
+        result = runner.invoke(app, ["strategy", "publish-signals", "--help"])
+        assert result.exit_code == 0
+        assert "publish-signals" in result.output
+
 
 @pytest.mark.unit
 class TestStrategyCommandIntegration:
@@ -83,6 +88,34 @@ class TestStrategyCommandIntegration:
         assert kwargs["source"] == "tushare"
         assert "run-research-1" in result.output
 
+    def test_strategy_research_allows_experimental_data_when_explicit(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """research 命令显式传递 experimental 数据 opt-in。"""
+        mock_facade = MagicMock()
+        mock_facade.run_strategy_for_date_from_catalog.return_value = Mock(
+            run_id="run-research-exp"
+        )
+        mock_create_bundle = mocker.patch(CREATE_BUNDLE_PATH)
+        mock_create_bundle.return_value.__enter__.return_value = Mock(
+            strategy_facade=mock_facade
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "strategy",
+                "research",
+                "stock.strategy",
+                "2024-01-02",
+                "--allow-experimental-data",
+            ],
+        )
+
+        assert result.exit_code == 0
+        kwargs = mock_facade.run_strategy_for_date_from_catalog.call_args.kwargs
+        assert kwargs["allow_experimental_data"] is True
+
     def test_strategy_recommend_delegates_to_facade(
         self, runner: CliRunner, mocker: MockerFixture
     ) -> None:
@@ -111,6 +144,65 @@ class TestStrategyCommandIntegration:
         assert kwargs["version"] is None
         assert kwargs["source"] == "tushare"
         assert "run-recommend-1" in result.output
+
+    def test_strategy_publish_signals_runs_recommendation_and_persists_package(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        from ditto_kernel.identity import InstrumentId
+        from ditto_strategy.alpha.models import TargetPortfolio
+
+        target = TargetPortfolio(
+            trade_date="2026-01-30",
+            strategy_id="stock-selection",
+            run_id="run-publish-1",
+            positions={InstrumentId(1): 0.3},
+            cash_target=0.7,
+        )
+        mock_facade = MagicMock()
+        mock_facade.run_strategy_for_date_from_catalog.return_value = Mock(
+            run_id="run-publish-1",
+            strategy_id="stock-selection",
+            trade_date="2026-01-30",
+            target=target,
+        )
+        mock_publisher = MagicMock()
+        mock_publisher.publish.return_value = Mock(
+            run_id="run-publish-1",
+            strategy_id="stock-selection",
+            signal_date="2026-01-30",
+            intents=(Mock(), Mock()),
+            checksum="sha256:abc",
+        )
+        mock_create_bundle = mocker.patch(CREATE_BUNDLE_PATH)
+        mock_create_bundle.return_value.__enter__.return_value = Mock(
+            strategy_facade=mock_facade,
+            signal_package_publisher=mock_publisher,
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "strategy",
+                "publish-signals",
+                "stock-selection",
+                "2026-01-30",
+                "--dataset-snapshot",
+                "stock_daily=sha256:stock",
+                "--factor",
+                "quality_roe",
+            ],
+        )
+
+        assert result.exit_code == 0
+        kwargs = mock_facade.run_strategy_for_date_from_catalog.call_args.kwargs
+        assert kwargs["config"].mode == StrategyRunMode.RECOMMENDATION
+        mock_publisher.publish.assert_called_once()
+        publish_kwargs = mock_publisher.publish.call_args.kwargs
+        assert publish_kwargs["target"] is target
+        assert publish_kwargs["dataset_snapshot_ids"] == {"stock_daily": "sha256:stock"}
+        assert publish_kwargs["factor_ids"] == ("quality_roe",)
+        assert "intents=2" in result.output
+        assert "checksum=sha256:abc" in result.output
 
     def test_strategy_backtest_delegates_to_facade(
         self, runner: CliRunner, mocker: MockerFixture
@@ -152,3 +244,35 @@ class TestStrategyCommandIntegration:
         assert kwargs["source"] == "tushare"
         assert "run-backtest-1" in result.output
         assert "1050000.0" in result.output
+
+    def test_strategy_backtest_allows_experimental_data_when_explicit(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """backtest 命令通过 BacktestServiceOptions 显式传递 maturity opt-in。"""
+        mock_facade = MagicMock()
+        mock_facade.run_backtest_from_catalog.return_value = Mock(
+            run_id="run-backtest-exp",
+            final_nav=1_010_000.0,
+            period=("2024-01-02", "2024-01-31"),
+        )
+        mock_create_bundle = mocker.patch(CREATE_BUNDLE_PATH)
+        mock_create_bundle.return_value.__enter__.return_value = Mock(
+            strategy_facade=mock_facade
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "strategy",
+                "backtest",
+                "stock.strategy",
+                "2024-01-02",
+                "2024-01-31",
+                "--allow-experimental-data",
+            ],
+        )
+
+        assert result.exit_code == 0
+        kwargs = mock_facade.run_backtest_from_catalog.call_args.kwargs
+        options = kwargs["options"]
+        assert options.allow_experimental_data is True

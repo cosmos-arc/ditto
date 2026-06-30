@@ -10,6 +10,7 @@ from ditto_application.processes.ingestion.dataset_registry import (
     WriteKind,
     default_dataset_registry,
 )
+from ditto_data.catalog import default_dataset_metadata
 from ditto_data.models import Dataset, DateScheduleType
 
 
@@ -155,6 +156,21 @@ class TestDatasetRegistryConformance:
         assert registration.daily_fetch_factory is None
         assert registration.instrument_fetch_factory is None
         assert registration.write_kind is WriteKind.UNSUPPORTED
+
+    def test_registrations_match_catalog_source_capabilities(self) -> None:
+        registry = default_dataset_registry()
+        metadata = default_dataset_metadata()
+
+        for registration in registry.registrations():
+            capability = metadata[registration.dataset.value]
+
+            assert registration.date_schedule.value == capability.schedule
+            assert (
+                registration.daily_fetch_factory is not None
+            ) == capability.supports_date_ingestion
+            assert (
+                registration.instrument_fetch_factory is not None
+            ) == capability.supports_instrument_ingestion
 
 
 @pytest.mark.unit

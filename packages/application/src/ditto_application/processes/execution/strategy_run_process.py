@@ -295,6 +295,7 @@ class _StrategySliceBuilderProto(Protocol):
         trade_date: str,
         version: int | None = None,
         source: str = "tushare",
+        allow_experimental_data: bool = False,
     ) -> Slice: ...
 
 
@@ -332,6 +333,7 @@ class StrategyFacade:
         trade_date: str,
         version: int | None = None,
         source: str = "tushare",
+        allow_experimental_data: bool = False,
     ) -> StrategyRunResult:
         """从 published catalog 自动组装单日 Slice 并执行 research/recommendation。"""
         if self._slice_builder is None:
@@ -342,6 +344,7 @@ class StrategyFacade:
             trade_date=trade_date,
             version=version,
             source=source,
+            allow_experimental_data=allow_experimental_data,
         )
         return self.run_strategy_from_catalog(
             config=config,

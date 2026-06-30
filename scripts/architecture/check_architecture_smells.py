@@ -20,6 +20,7 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 15. Active architecture docs must not imply reserved analysis capabilities exist
 16. Application providers must not read environment variables directly
 17. Generic helpers/utils source paths must have owned architecture allowances
+18. Every src __init__.py must declare an explicit __all__
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -275,9 +276,12 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="packages/apps/src/ditto_apps/registry/contexts/ingestion.py",
         allowed_modules=frozenset(
             {
+                "ditto_data.catalog",
+                "ditto_data.catalog.fallback_policy",
                 "ditto_data.ingestion.freeze_store",
                 "ditto_data.ingestion.ingestion_cursor_store",
                 "ditto_data.ingestion.ingestion_log_store",
+                "ditto_data.lineage",
                 "ditto_data.services.capital_store",
                 "ditto_data.services.fundamental_store",
                 "ditto_data.services.macro_service",
@@ -286,12 +290,13 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.services.metadata_service",
                 "ditto_data.services.source_accessor",
                 "ditto_data.sources.exchange_transformers",
+                "ditto_data.sources.registry",
             }
         ),
         owner="apps ingestion registry context",
         reason=(
-            "Ingestion registry context owns data service wiring for application "
-            "ingestion handlers."
+            "Ingestion registry context owns data service and runtime policy "
+            "Protocol wiring for application ingestion handlers."
         ),
     ),
     CompositionImportAllowance(
@@ -365,8 +370,10 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="packages/apps/src/ditto_apps/registry/infra/observability.py",
         allowed_modules=frozenset(
             {
+                "ditto_backtest.observability.metrics",
                 "ditto_data.config.data_store",
                 "ditto_data.observability.metrics",
+                "ditto_execution.observability.metrics",
                 "ditto_features.observability.metrics",
                 "ditto_portfolio.observability",
                 "ditto_risk.observability.metrics",
@@ -631,10 +638,7 @@ STALE_SOURCE_ARCHITECTURE_TERMS = (
 )
 
 ANALYSIS_PLACEHOLDER_INIT_PATHS = (
-    "packages/analysis/src/ditto_analysis/reports/__init__.py",
-    "packages/analysis/src/ditto_analysis/diagnostics/__init__.py",
     "packages/analysis/src/ditto_analysis/experiments/__init__.py",
-    "packages/analysis/src/ditto_analysis/screeners/__init__.py",
 )
 
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
@@ -672,10 +676,7 @@ ANALYSIS_DOC_CONTEXT_ANCHORS = (
 
 ANALYSIS_DOC_RESERVED_NAMESPACE_CLAIMS = (
     "evaluation/",
-    "reports/",
-    "diagnostics/",
     "experiments/",
-    "screeners/",
 )
 
 ANALYSIS_DOC_RESERVED_CONTEXT_MARKERS = (
@@ -778,6 +779,29 @@ def check_missing_init_py() -> list[str]:
                         errors.append(
                             f"{py_dir.relative_to(ROOT)}: missing __init__.py"
                         )
+    return errors
+
+
+def check_missing_dunder_all(root: Path = ROOT) -> list[str]:
+    """Check that every src ``__init__.py`` declares an explicit ``__all__``.
+
+    Forces package surface to be explicit (CLAUDE.md: consumers must import from
+    leaf modules; an ``__init__.py`` must not mix re-export with inline
+    definitions). Both ``__all__ = [...]`` and ``__all__: list[str] = [...]``
+    satisfy this check.
+    """
+    errors: list[str] = []
+    for src_dir in (root / "packages").glob("**/src"):
+        for init_file in src_dir.rglob("__init__.py"):
+            try:
+                tree = ast.parse(init_file.read_text(encoding="utf-8"))
+            except SyntaxError:
+                errors.append(f"{init_file.relative_to(root)}: cannot parse module")
+                continue
+            if not any(_is_all_assignment(node) for node in tree.body):
+                errors.append(
+                    f"{init_file.relative_to(root)}: missing __all__ declaration"
+                )
     return errors
 
 
@@ -2046,6 +2070,14 @@ def main() -> int:
         errors,
         check_missing_init_py(),
         "[OK] All package directories have __init__.py",
+        args.verbose,
+    )
+
+    # Check 2: src __init__.py must declare an explicit __all__
+    _collect(
+        errors,
+        check_missing_dunder_all(ROOT),
+        "[OK] All src __init__.py declare an explicit __all__",
         args.verbose,
     )
 

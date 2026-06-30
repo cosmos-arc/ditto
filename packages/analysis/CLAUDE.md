@@ -15,14 +15,14 @@ root package barrel（`from ditto_analysis import ...`）只重导出 `AnalysisE
 - `ditto_analysis.di`
 - `ditto_analysis.storage.sqlite.research`
 
-`reports`、`diagnostics`、`experiments`、`screeners` 是 reserved/future product namespaces；当前无 public runtime API。不得将它们视为已实现能力，也不得作为运行时行为依赖使用。
+`experiments` 是 reserved/future product namespace；当前无 public runtime API。不得将其视为已实现能力，也不得作为运行时行为依赖使用。
 
 **核心原则**：
 - Analysis 自身不依赖 application/apps/生产域包
 - 生产域包 data/features/strategy/portfolio/risk/execution/backtest 禁止导入 analysis
 - application 只有 research query/facade/DI wiring 可以使用 analysis
 - apps 只有 research jobs/api/registry composition 入口可以使用 analysis
-- application/apps 不得把 `reports`、`diagnostics`、`experiments`、`screeners` 当行为依赖
+- application/apps 不得把 `experiments` 当行为依赖
 - 研究存储使用独立 SQLite，不与生产存储混合
 
 ## 允许依赖
@@ -61,7 +61,7 @@ ditto_analysis → ditto_apps ❌
 其中 production→analysis wiring 豁免以 `PRODUCTION_ANALYSIS_WIRING_ALLOWANCES` 作为 enforcement source；当前只覆盖 application provider/research query 路径，并且每条必须带 owner/reason。
 
 架构策略：
-- application/apps 不得把 `reports`、`diagnostics`、`experiments`、`screeners` 当行为依赖
+- application/apps 不得把 `experiments` 当行为依赖
 - 当前没有专门扫描这些 reserved namespace 的 use-site checker；治理依赖 placeholder honesty checker 保持命名空间诚实，并依赖上述导入边界限制 capability 直连范围
 
 ## 内部目录职责
@@ -77,10 +77,7 @@ ditto_analysis/
 │   ├── domain.py         # 研究领域模型
 │   ├── catalog_service.py    # 研究目录服务
 │   └── artifact_service.py   # 研究产物服务
-├── reports/              # reserved/future product namespace；当前无 public runtime API
-├── diagnostics/          # reserved/future product namespace；当前无 public runtime API
 ├── experiments/          # reserved/future product namespace；当前无 public runtime API
-├── screeners/            # reserved/future product namespace；当前无 public runtime API
 └── storage/
     └── sqlite/
         └── research/     # 研究 SQLite 存储
@@ -108,7 +105,7 @@ from ditto_analysis.contracts import ResearchCatalogReaderProtocol
 from ditto_analysis.di import get_analysis_providers
 
 # 保留命名空间不得作为现有能力或运行时行为依赖
-# from ditto_analysis import reports, diagnostics, experiments, screeners
+# from ditto_analysis import experiments
 ```
 
 ## 常用验证命令

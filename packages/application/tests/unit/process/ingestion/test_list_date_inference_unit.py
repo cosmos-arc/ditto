@@ -40,8 +40,10 @@ def mock_metadata_service(mocker):
     """创建 Mock MetadataService。"""
     service = mocker.Mock()
     empty_df = pl.DataFrame()
-    service.find_instruments_without_list_date = mocker.Mock(return_value=empty_df)
-    service.update_list_date = mocker.Mock()
+    service.instrument.find_instruments_without_list_date = mocker.Mock(
+        return_value=empty_df
+    )
+    service.instrument.update_list_date = mocker.Mock()
     return service
 
 
@@ -84,16 +86,15 @@ class TestListDateInferenceService:
     ) -> None:
         """当没有 list_date 为 NULL 的证券时，返回 0。"""
         # Arrange
-        mock_metadata_service.find_instruments_without_list_date.return_value = (
-            pl.DataFrame()
-        )
+        mock_instr = mock_metadata_service.instrument
+        mock_instr.find_instruments_without_list_date.return_value = pl.DataFrame()
 
         # Act
         result = inference_service.infer_for_asset_class("stock")
 
         # Assert
         assert result == 0
-        mock_metadata_service.find_instruments_without_list_date.assert_called_once_with(
+        mock_instr.find_instruments_without_list_date.assert_called_once_with(
             asset_class="stock"
         )
 
@@ -111,7 +112,8 @@ class TestListDateInferenceService:
                 "source_ticker": ["000001.SZ"],
             }
         )
-        mock_metadata_service.find_instruments_without_list_date.return_value = (
+        mock_instr = mock_metadata_service.instrument
+        mock_instr.find_instruments_without_list_date.return_value = (
             instruments_without_list_date
         )
 
@@ -132,7 +134,7 @@ class TestListDateInferenceService:
 
         # Assert
         assert result == 1
-        mock_metadata_service.update_list_date.assert_called_once_with(
+        mock_metadata_service.instrument.update_list_date.assert_called_once_with(
             1, date(2020, 1, 15)
         )
 
@@ -150,7 +152,8 @@ class TestListDateInferenceService:
                 "source_ticker": ["000001.SZ"],
             }
         )
-        mock_metadata_service.find_instruments_without_list_date.return_value = (
+        mock_instr = mock_metadata_service.instrument
+        mock_instr.find_instruments_without_list_date.return_value = (
             instruments_without_list_date
         )
 
@@ -167,7 +170,7 @@ class TestListDateInferenceService:
 
         # Assert
         assert result == 1
-        mock_metadata_service.update_list_date.assert_called_once_with(
+        mock_metadata_service.instrument.update_list_date.assert_called_once_with(
             1, date(2010, 1, 4)
         )
 
@@ -185,7 +188,8 @@ class TestListDateInferenceService:
                 "source_ticker": ["000001.SZ", "000002.SZ"],
             }
         )
-        mock_metadata_service.find_instruments_without_list_date.return_value = (
+        mock_instr = mock_metadata_service.instrument
+        mock_instr.find_instruments_without_list_date.return_value = (
             instruments_without_list_date
         )
 
@@ -212,7 +216,7 @@ class TestListDateInferenceService:
         # Assert
         assert result == 1  # 只有第二个成功
         # 只更新了第二个证券
-        mock_metadata_service.update_list_date.assert_called_once_with(
+        mock_metadata_service.instrument.update_list_date.assert_called_once_with(
             2, date(2021, 3, 10)
         )
 
@@ -230,7 +234,8 @@ class TestListDateInferenceService:
                 "source_ticker": ["000001.SZ"],
             }
         )
-        mock_metadata_service.find_instruments_without_list_date.return_value = (
+        mock_instr = mock_metadata_service.instrument
+        mock_instr.find_instruments_without_list_date.return_value = (
             instruments_without_list_date
         )
 
@@ -242,7 +247,7 @@ class TestListDateInferenceService:
 
         # Assert
         assert result == 0
-        mock_metadata_service.update_list_date.assert_not_called()
+        mock_metadata_service.instrument.update_list_date.assert_not_called()
 
     def test_infer_for_asset_class_uses_correct_fetch_method(
         self,
@@ -258,7 +263,8 @@ class TestListDateInferenceService:
                 "source_ticker": ["000001.SZ"],
             }
         )
-        mock_metadata_service.find_instruments_without_list_date.return_value = (
+        mock_instr = mock_metadata_service.instrument
+        mock_instr.find_instruments_without_list_date.return_value = (
             instruments_without_list_date
         )
 

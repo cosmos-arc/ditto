@@ -11,6 +11,18 @@ _MAX_SQL_LOG_LENGTH = 100
 
 # Valid SQL identifier: letter/underscore start, alphanumeric + underscore body
 _VALID_IDENTIFIER = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+_WHERE_CONDITION_PATTERN = (
+    r"^(?P<column>[a-zA-Z_][a-zA-Z0-9_]*)\s+"
+    + r"(?:(?:=|!=|<>|<=|>=|<|>|LIKE)\s+\?|IS\s+(?:NOT\s+)?NULL)$"
+)
+_FORBIDDEN_WHERE_FRAGMENT_PATTERN = (
+    r";|--|/\*|\*/|'|\"|`|\[|\]|\b("
+    + r"OR|UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|PRAGMA|"
+    + r"ATTACH|DETACH|REPLACE|WITH|FROM|WHERE|GROUP|ORDER|LIMIT|HAVING|RETURNING"
+    + r")\b"
+)
+_WHERE_CONDITION = re.compile(_WHERE_CONDITION_PATTERN, re.IGNORECASE)
+_FORBIDDEN_WHERE_FRAGMENT = re.compile(_FORBIDDEN_WHERE_FRAGMENT_PATTERN, re.IGNORECASE)
 
 
 def validate_identifier(identifier: str) -> None:
@@ -23,6 +35,41 @@ def validate_identifier(identifier: str) -> None:
     """
     if not _VALID_IDENTIFIER.match(identifier):
         raise ValueError(f"Invalid SQL identifier: {identifier!r}")
+
+
+def _validate_where_clause(
+    where: str, params: list[Any] | tuple[Any, ...] | None
+) -> None:
+    """
+    Validate SQLiteClient.count WHERE fragments against a small safe grammar.
+
+    Supported shape:
+    - ``column <operator> ?``
+    - ``column IS NULL`` / ``column IS NOT NULL``
+    - multiple predicates joined by ``AND``
+    """
+    if params is None:
+        raise ValueError("'params' required when 'where' is specified")
+
+    normalized = where.strip()
+    if not normalized:
+        raise ValueError("Invalid SQL WHERE clause: empty clause")
+    if _FORBIDDEN_WHERE_FRAGMENT.search(normalized):
+        raise ValueError(f"Invalid SQL WHERE clause: {where!r}")
+
+    placeholder_count = normalized.count("?")
+    if placeholder_count != len(params):
+        raise ValueError(
+            "Invalid SQL WHERE placeholder count: "
+            + f"expected {placeholder_count}, got {len(params)}"
+        )
+
+    conditions = re.split(r"\s+AND\s+", normalized, flags=re.IGNORECASE)
+    for condition in conditions:
+        match = _WHERE_CONDITION.fullmatch(condition.strip())
+        if match is None:
+            raise ValueError(f"Invalid SQL WHERE clause: {where!r}")
+        validate_identifier(match.group("column"))
 
 
 class SQLiteClient:
@@ -265,14 +312,13 @@ class SQLiteClient:
             Record count.
 
         Raises:
-            ValueError: If table name is not a valid SQL identifier.
+            ValueError: If table name or WHERE fragment is not valid.
 
         """
         validate_identifier(table)
-        if where and params is None:
-            raise ValueError("'params' required when 'where' is specified")
         sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608
         if where:
+            _validate_where_clause(where, params)
             sql += f" WHERE {where}"
 
         result = self.fetchval(sql, params)

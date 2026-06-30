@@ -1,31 +1,31 @@
-"""Operator tables and Polars expression builders for code generation."""
+"""Operator tables, rolling window builder, and main dispatch for code generation."""
 
 from __future__ import annotations
 
-import math
 from collections.abc import Callable
 
 import polars as pl
 
-from ditto_features.expression.ast import ExpressionNode, NumberNode, StringNode
+from ditto_features.expression.ast import ExpressionNode
+from ditto_features.expression.codegen._cs_operators import (
+    compile_cross_section,
+    compile_grouped_cross_section,
+)
+from ditto_features.expression.codegen._helpers import (
+    read_int_literal,
+    require_positive,
+)
+from ditto_features.expression.codegen._scalar_operators import compile_scalar
+from ditto_features.expression.codegen._ts_operators import compile_time_series_special
 from ditto_features.expression.diagnostics import Span, make_compile_error
 from ditto_features.expression.registry import suggest_operator_names
 
-
-def _max_horizontal(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    return pl.max_horizontal(left, right)
-
-
-def _min_horizontal(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    return pl.min_horizontal(left, right)
-
-
-def _power(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    return left.pow(right)
-
-
 type BinaryOperation = Callable[[pl.Expr, pl.Expr], pl.Expr]
 type RollingBuilder = Callable[[pl.Expr, int], pl.Expr]
+
+# ---------------------------------------------------------------------------
+# Rolling window operator tables
+# ---------------------------------------------------------------------------
 
 _WINDOW_KIND_BY_NAME = {
     "ts_count": "count",
@@ -38,24 +38,9 @@ _WINDOW_KIND_BY_NAME = {
     "ts_var": "var",
 }
 
-_SCALAR_UNARY_OPERATORS: dict[str, Callable[[pl.Expr], pl.Expr]] = {
-    "abs": lambda expr: expr.abs(),
-    "ceil": lambda expr: expr.ceil(),
-    "exp": lambda expr: expr.exp(),
-    "floor": lambda expr: expr.floor(),
-    "log": lambda expr: expr.log(),
-    "log10": lambda expr: expr.log10(),
-    "log2": lambda expr: expr.log(base=2),
-    "sign": lambda expr: expr.sign(),
-    "sqrt": lambda expr: expr.sqrt(),
-}
-
-_SCALAR_BINARY_OPERATORS: dict[str, BinaryOperation] = {
-    "max2": _max_horizontal,
-    "min2": _min_horizontal,
-    "power": _power,
-}
-
+# PIT safety: Polars Expr-level .rolling_*() methods do NOT expose a
+# ``closed`` parameter (unlike DataFrame.rolling()).  The caller (_rolling)
+# therefore pre-shifts by 1 so the window only sees [T-window, T-1].
 _ROLLING_BUILDERS: dict[str, RollingBuilder] = {
     "count": lambda expr, window: (
         expr.is_not_null()
@@ -94,379 +79,6 @@ _ROLLING_BUILDERS: dict[str, RollingBuilder] = {
 
 
 # ---------------------------------------------------------------------------
-# Shared validation helpers (used by ts_* and rolling builders)
-# ---------------------------------------------------------------------------
-
-
-def _read_int_literal(
-    arguments: tuple[ExpressionNode, ...],
-    index: int,
-    *,
-    source: str,
-) -> int:
-    argument = arguments[index]
-    if not isinstance(argument, NumberNode):
-        raise make_compile_error(
-            source=source,
-            message="window size must be an integer",
-            error_code="E031_TYPE_MISMATCH",
-            span=argument.span,
-        )
-    return math.floor(argument.value)
-
-
-def _read_float_literal(
-    arguments: tuple[ExpressionNode, ...],
-    index: int,
-    *,
-    source: str,
-) -> float:
-    """Read and validate a float literal from raw arguments at *index*."""
-    argument = arguments[index]
-    if not isinstance(argument, NumberNode):
-        raise make_compile_error(
-            source=source,
-            message="quantile value must be a number",
-            error_code="E031_TYPE_MISMATCH",
-            span=argument.span,
-        )
-    return float(argument.value)
-
-
-def _require_positive(value: int, span: Span, *, source: str) -> None:
-    """Raise a compile error if *value* is not positive."""
-    if value <= 0:
-        raise make_compile_error(
-            source=source,
-            message=f"window size must be positive, got {value}",
-            error_code="E033_INVALID_PARAMETER",
-            span=span,
-        )
-
-
-def _read_window_at(
-    raw_arguments: tuple[ExpressionNode, ...],
-    index: int,
-    *,
-    source: str,
-) -> int:
-    """Read and validate a positive window from raw arguments at *index*."""
-    window = _read_int_literal(raw_arguments, index, source=source)
-    _require_positive(window, raw_arguments[index].span, source=source)
-    return window
-
-
-# ---------------------------------------------------------------------------
-# Time-series special operators
-# ---------------------------------------------------------------------------
-
-
-def _ts_delay(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    period = _read_window_at(raw_arguments, 1, source=source)
-    return arguments[0].shift(period).over(entity_keys)
-
-
-def _ts_delta(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    period = _read_window_at(raw_arguments, 1, source=source)
-    return arguments[0] - arguments[0].shift(period).over(entity_keys)
-
-
-def _ts_pct_change(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    period = _read_window_at(raw_arguments, 1, source=source)
-    shifted = arguments[0].shift(period).over(entity_keys)
-    return pl.when(shifted == 0).then(0.0).otherwise((arguments[0] / shifted) - 1)
-
-
-def _ts_rank(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    window = _read_window_at(raw_arguments, 1, source=source)
-    shifted = arguments[0].shift(1)
-    return (
-        shifted.rolling_rank(window_size=window, min_samples=window)
-        .cast(pl.Float64)
-        .over(entity_keys)
-        / window
-    )
-
-
-def _ts_argmax(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    window = _read_window_at(raw_arguments, 1, source=source)
-    shifted = arguments[0].shift(1)
-
-    def _rolling_argmax(s: pl.Series) -> int:
-        idx = s.arg_max()
-        return idx if idx is not None else -1
-
-    return shifted.rolling_map(
-        _rolling_argmax,
-        window_size=window,
-        min_samples=window,
-    ).over(entity_keys)
-
-
-def _ts_argmin(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    window = _read_window_at(raw_arguments, 1, source=source)
-    shifted = arguments[0].shift(1)
-
-    def _rolling_argmin(s: pl.Series) -> int:
-        idx = s.arg_min()
-        return idx if idx is not None else -1
-
-    return shifted.rolling_map(
-        _rolling_argmin,
-        window_size=window,
-        min_samples=window,
-    ).over(entity_keys)
-
-
-def _ts_corr(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    window = _read_window_at(raw_arguments, 2, source=source)
-    shifted_x = arguments[0].shift(1)
-    shifted_y = arguments[1].shift(1)
-    return pl.rolling_corr(
-        shifted_x,
-        shifted_y,
-        window_size=window,
-        min_samples=window,
-    ).over(entity_keys)
-
-
-def _ts_cov(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    window = _read_window_at(raw_arguments, 2, source=source)
-    shifted_x = arguments[0].shift(1)
-    shifted_y = arguments[1].shift(1)
-    return pl.rolling_cov(
-        shifted_x,
-        shifted_y,
-        window_size=window,
-        min_samples=window,
-    ).over(entity_keys)
-
-
-def _ts_ema(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    window = _read_window_at(raw_arguments, 1, source=source)
-    shifted = arguments[0].shift(1)
-    return shifted.ewm_mean(span=window, min_samples=1).over(
-        entity_keys,
-    )
-
-
-def _ts_decay_linear(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr:
-    window = _read_window_at(raw_arguments, 1, source=source)
-    shifted = arguments[0].shift(1)
-
-    def _wma(s: pl.Series) -> float:
-        valid = s.drop_nulls()
-        if valid.is_empty():
-            return float("nan")
-        n = len(valid)
-        weights = list(range(1, n + 1))
-        total_weight = n * (n + 1) // 2
-        return (
-            sum(w * v for w, v in zip(weights, valid.to_list(), strict=True))
-            / total_weight
-        )
-
-    return shifted.rolling_map(
-        _wma,
-        window_size=window,
-        min_samples=window,
-    ).over(entity_keys)
-
-
-type _TsSpecialFn = Callable[
-    [tuple[pl.Expr, ...], tuple[ExpressionNode, ...], list[str], str],
-    pl.Expr,
-]
-
-_TS_SPECIAL_DISPATCH: dict[str, _TsSpecialFn] = {
-    "ts_delay": _ts_delay,
-    "ts_delta": _ts_delta,
-    "ts_pct_change": _ts_pct_change,
-    "ts_rank": _ts_rank,
-    "ts_argmax": _ts_argmax,
-    "ts_argmin": _ts_argmin,
-    "ts_corr": _ts_corr,
-    "ts_cov": _ts_cov,
-    "ts_ema": _ts_ema,
-    "ts_decay_linear": _ts_decay_linear,
-}
-
-
-def _compile_time_series_special(
-    *,
-    name: str,
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    entity_keys: list[str],
-    source: str,
-) -> pl.Expr | None:
-    handler = _TS_SPECIAL_DISPATCH.get(name)
-    if handler is None:
-        return None
-    return handler(arguments, raw_arguments, entity_keys, source)
-
-
-# ---------------------------------------------------------------------------
-# Cross-section operators
-# ---------------------------------------------------------------------------
-
-
-def _compile_cross_section(
-    *,
-    name: str,
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    source: str,
-    time_keys: list[str],
-) -> pl.Expr | None:
-    if name == "cs_rank":
-        return arguments[0].rank(method="ordinal").cast(pl.Float64) / pl.len().cast(
-            pl.Float64
-        )
-    if name == "cs_scale":
-        denominator = arguments[0].abs().sum().over(time_keys)
-        return pl.when(denominator == 0).then(0.0).otherwise(arguments[0] / denominator)
-    if name == "cs_zscore":
-        mean = arguments[0].mean().over(time_keys)
-        std = arguments[0].std().over(time_keys)
-        return pl.when(std == 0).then(0.0).otherwise((arguments[0] - mean) / std)
-    if name == "cs_demean":
-        return arguments[0] - arguments[0].mean().over(time_keys)
-    if name == "cs_winsorize":
-        return _compile_cs_winsorize(arguments, raw_arguments, source, time_keys)
-    return None
-
-
-def _compile_cs_winsorize(
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    source: str,
-    time_keys: list[str],
-) -> pl.Expr:
-    """Compile cs_winsorize with sigma or quantile mode."""
-    _first, *remaining = raw_arguments
-    if remaining and isinstance(remaining[0], StringNode):
-        method_node = remaining[0]
-        if method_node.value == "quantile":
-            lower = _read_float_literal(raw_arguments, 2, source=source)
-            upper = _read_float_literal(raw_arguments, 3, source=source)
-            q_lo = arguments[0].quantile(lower).over(time_keys)
-            q_hi = arguments[0].quantile(upper).over(time_keys)
-            return arguments[0].clip(q_lo, q_hi)
-    # Sigma mode (default)
-    mean = arguments[0].mean().over(time_keys)
-    std = arguments[0].std().over(time_keys)
-    n_sigma = 3  # default
-    if remaining:
-        n_sigma = _read_int_literal(raw_arguments, 1, source=source)
-    return arguments[0].clip(mean - n_sigma * std, mean + n_sigma * std)
-
-
-# ---------------------------------------------------------------------------
-# Grouped cross-section operators
-# ---------------------------------------------------------------------------
-
-
-def _compile_grouped_cross_section(
-    *,
-    name: str,
-    arguments: tuple[pl.Expr, ...],
-) -> pl.Expr | None:
-    if name == "group_rank":
-        group_size = pl.len().over(arguments[1]).cast(pl.Float64)
-        return (
-            arguments[0].rank(method="ordinal").over(arguments[1]).cast(pl.Float64)
-            / group_size
-        )
-    if name == "group_zscore":
-        mean = arguments[0].mean().over(arguments[1])
-        std = arguments[0].std().over(arguments[1])
-        return pl.when(std == 0).then(0.0).otherwise((arguments[0] - mean) / std)
-    return None
-
-
-# ---------------------------------------------------------------------------
-# Scalar operators
-# ---------------------------------------------------------------------------
-
-
-def _compile_scalar(
-    *,
-    name: str,
-    arguments: tuple[pl.Expr, ...],
-    raw_arguments: tuple[ExpressionNode, ...],
-    source: str,
-) -> pl.Expr | None:
-    unary_operation = _SCALAR_UNARY_OPERATORS.get(name)
-    if unary_operation is not None:
-        return unary_operation(arguments[0])
-
-    if name == "round":
-        decimals = _read_int_literal(raw_arguments, 1, source=source)
-        return arguments[0].round(decimals=decimals)
-
-    binary_operation = _SCALAR_BINARY_OPERATORS.get(name)
-    if binary_operation is not None:
-        return binary_operation(arguments[0], arguments[1])
-
-    if name == "clip":
-        return arguments[0].clip(arguments[1], arguments[2])
-    if name == "if_else":
-        return pl.when(arguments[0]).then(arguments[1]).otherwise(arguments[2])
-    return pl.coalesce(*arguments) if name == "coalesce" else None
-
-
-# ---------------------------------------------------------------------------
 # Rolling window builder
 # ---------------------------------------------------------------------------
 
@@ -492,11 +104,14 @@ def _rolling(
 
     This is equivalent to ``rolling(window, closed="left")`` — both
     approaches yield the same number of data points and neither leaks
-    future information.  The ``shift(1)`` strategy is preferred here
-    because it composes cleanly with polars' ``.over()`` partitioning.
+    future information.  The ``shift(1)`` strategy is required here
+    because Polars Expr-level ``.rolling_*()`` methods do not expose a
+    ``closed`` parameter (only ``DataFrame.rolling()`` does).  ``shift(1)``
+    also composes cleanly with polars' ``.over()`` partitioning.
     """
-    window = _read_int_literal(raw_arguments, index, source=source)
-    _require_positive(window, raw_arguments[index].span, source=source)
+    window = read_int_literal(raw_arguments, index, source=source)
+
+    require_positive(window, raw_arguments[index].span, source=source)
     shifted = argument.shift(1)
     builder = _ROLLING_BUILDERS.get(kind)
     if builder is None:
@@ -524,7 +139,30 @@ def compile_call(
     source: str,
     span: Span,
 ) -> pl.Expr:
-    ts_special = _compile_time_series_special(
+    """
+    表达式算子编译主调度入口。
+
+    按优先级依次尝试：特殊时序算子 → 滚动窗口算子 → 截面算子 →
+    分组截面算子 → 标量算子。若均不匹配则抛出
+    ``E021_UNKNOWN_OPERATOR`` 编译错误。
+
+    Args:
+        name: 算子名称（如 ``"ts_mean"``、``"cs_rank"``）。
+        arguments: 已编译的 Polars 表达式参数列表。
+        raw_arguments: 原始 AST 节点参数列表（用于提取字面量）。
+        entity_keys: 实体分组键（如 ``["instrument_id"]``）。
+        time_keys: 时间分组键（如 ``["trade_date"]``）。
+        source: 源表达式文本（用于错误信息）。
+        span: 当前调用在源文本中的位置范围。
+
+    Returns:
+        编译后的 Polars 表达式。
+
+    Raises:
+        CompileError: 算子未知或参数不合法时。
+
+    """
+    ts_special = compile_time_series_special(
         name=name,
         arguments=arguments,
         raw_arguments=raw_arguments,
@@ -545,7 +183,7 @@ def compile_call(
             source=source,
         )
 
-    cross_section = _compile_cross_section(
+    cross_section = compile_cross_section(
         name=name,
         arguments=arguments,
         raw_arguments=raw_arguments,
@@ -555,11 +193,11 @@ def compile_call(
     if cross_section is not None:
         return cross_section
 
-    grouped = _compile_grouped_cross_section(name=name, arguments=arguments)
+    grouped = compile_grouped_cross_section(name=name, arguments=arguments)
     if grouped is not None:
         return grouped
 
-    scalar = _compile_scalar(
+    scalar = compile_scalar(
         name=name,
         arguments=arguments,
         raw_arguments=raw_arguments,

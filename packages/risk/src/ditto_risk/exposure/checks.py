@@ -9,15 +9,11 @@ from ditto_risk.constraints.context import (
     Decision,
     OrderCheckResult,
     PreTradeContext,
+    accept_order,
 )
 from ditto_risk.contracts import PreTradeOrder
 
 __all__ = ["ConcentrationPreCheck"]
-
-
-def _accept(order_id: str) -> OrderCheckResult:
-    """构建 accept 结果的简写。"""
-    return OrderCheckResult(decision=Decision.ACCEPT, order_id=order_id)
 
 
 class ConcentrationPreCheck:
@@ -34,15 +30,15 @@ class ConcentrationPreCheck:
     ) -> OrderCheckResult:
         """检查单标的持仓占比是否超限。"""
         if order.direction == OrderSide.SELL:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         nav = context.account_view.nav
         if nav <= 0:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         price = context.price_for(order.instrument_id)
         if price is None:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         position = context.account_view.positions.get(order.instrument_id)
         current_value = position.market_value if position else 0.0
@@ -59,4 +55,4 @@ class ConcentrationPreCheck:
                 triggered_checks=("concentration",),
             )
 
-        return _accept(order.order_id)
+        return accept_order(order.order_id)

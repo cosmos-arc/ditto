@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from ditto_kernel import traced
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 
@@ -40,6 +41,7 @@ class StrategyStep:
         self._strategy_run_id = strategy_run_id
         self._input_bundle_builder = input_bundle_builder
 
+    @traced("backtest.step.strategy")
     def execute(self, ctx: StepContext) -> StepResult:
         """运行策略 Pipeline。"""
         if not ctx.is_rebalance_day:

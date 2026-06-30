@@ -70,7 +70,7 @@ class TestFilterBaselineByAsof:
         assert result["adj_factor"].to_list() == [1.0, 1.1, 1.0, 1.05]
 
     def test_filter_without_knowledge_date(self) -> None:
-        """Test filtering without knowledge_date column (fallback to trade_date)."""
+        """Missing knowledge_date should fail closed by default."""
         adj_df = pl.DataFrame(
             {
                 "instrument_id": [1, 1, 1, 2, 2],
@@ -85,7 +85,32 @@ class TestFilterBaselineByAsof:
             }
         )
 
-        result = filter_by_knowledge_date(adj_df, date(2024, 1, 2))
+        with pytest.raises(ValueError, match="requires 'knowledge_date'"):
+            filter_by_knowledge_date(adj_df, date(2024, 1, 2))
+
+    def test_filter_without_knowledge_date_allows_explicit_research_fallback(
+        self,
+    ) -> None:
+        """Research callers must explicitly opt into trade_date fallback."""
+        adj_df = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 1, 2, 2],
+                "trade_date": [
+                    date(2024, 1, 1),
+                    date(2024, 1, 2),
+                    date(2024, 1, 3),
+                    date(2024, 1, 1),
+                    date(2024, 1, 2),
+                ],
+                "adj_factor": [1.0, 1.1, 1.2, 1.0, 1.05],
+            }
+        )
+
+        result = filter_by_knowledge_date(
+            adj_df,
+            date(2024, 1, 2),
+            unsafe_time_policy="allow_trade_date_fallback",
+        )
 
         # Should include rows with trade_date <= 2024-01-02
         assert len(result) == 4

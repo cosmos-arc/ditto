@@ -40,13 +40,14 @@ def _make_run_summary(
 def _make_artifact_record(
     run_id: str = "run-001",
     file_path: str = "/data/artifacts/run-001",
+    artifact_type: ArtifactKind = ArtifactKind.BACKTEST_REPORT,
 ) -> StrategyArtifactRecord:
     """构造测试用 StrategyArtifactRecord."""
     return StrategyArtifactRecord(
         artifact_id=f"art-{run_id}",
         strategy_id="strat-001",
         run_id=run_id,
-        artifact_type=ArtifactKind.BACKTEST_REPORT,
+        artifact_type=artifact_type,
         file_path=file_path,
     )
 
@@ -390,6 +391,220 @@ class TestBacktestQueryFacadeGetReport:
         result = facade.get_report("run-001")
 
         assert result is None
+
+    def test_get_report_prefers_backtest_report_artifact_type(self) -> None:
+        """同一 run 有 replay proof 时仍读取 backtest_report 产物目录."""
+        report_data = _sample_report_json()
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = _make_run_record("run-001")
+
+        proof_record = _make_artifact_record(
+            run_id="run-001",
+            file_path="/data/artifacts/run-001-proof",
+            artifact_type=ArtifactKind.REPLAY_PROOF,
+        )
+        report_record = _make_artifact_record(
+            run_id="run-001",
+            file_path="/data/artifacts/run-001-report",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+        )
+        artifact_service = MagicMock(spec=["list_artifacts"])
+        artifact_service.list_artifacts.return_value = [proof_record, report_record]
+
+        artifact_reader = MagicMock(spec=["read_json", "read_parquet", "exists"])
+        artifact_reader.read_json.return_value = report_data
+
+        facade = _make_facade(
+            run_model=run_model,
+            artifact_service=artifact_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = facade.get_report("run-001")
+
+        assert result == report_data
+        artifact_reader.read_json.assert_called_once_with(
+            "/data/artifacts/run-001-report/backtest_report.json",
+        )
+
+
+# =====================================================================
+# get_replay_proof — 通过 BacktestArtifactReader 读取 replay_proof.json
+# =====================================================================
+
+
+class TestBacktestQueryFacadeGetReplayProof:
+    """BacktestQueryFacade.get_replay_proof -- 读取 replay proof JSON."""
+
+    def test_get_replay_proof_found(self) -> None:
+        """运行和 replay proof artifact 存在时返回 proof 内容."""
+        proof_data = {
+            "proof_version": 1,
+            "original_run_id": "run-original",
+            "replay_run_id": "run-replay",
+            "is_reproducible": True,
+            "nav_correlation": 1.0,
+            "max_nav_diff_bps": 0.0,
+            "input_data_match": True,
+            "manifest_diff": {"has_diff": False},
+            "fill_match": None,
+            "account_state_match": None,
+        }
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = _make_run_record("run-replay")
+        proof_record = _make_artifact_record(
+            run_id="run-replay",
+            file_path="/data/artifacts/run-replay",
+            artifact_type=ArtifactKind.REPLAY_PROOF,
+        )
+        artifact_service = MagicMock(spec=["list_artifacts"])
+        artifact_service.list_artifacts.return_value = [proof_record]
+        artifact_reader = MagicMock(spec=["read_json", "read_parquet", "exists"])
+        artifact_reader.read_json.return_value = proof_data
+
+        facade = _make_facade(
+            run_model=run_model,
+            artifact_service=artifact_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = facade.get_replay_proof("run-replay")
+
+        assert result == proof_data
+        artifact_reader.read_json.assert_called_once_with(
+            "/data/artifacts/run-replay/replay_proof.json",
+        )
+
+    def test_get_replay_proof_missing_run_returns_none(self) -> None:
+        """run_id 不存在时返回 None."""
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = None
+        facade = _make_facade(run_model=run_model)
+
+        result = facade.get_replay_proof("missing")
+
+        assert result is None
+
+    def test_get_replay_proof_missing_artifact_returns_none(self) -> None:
+        """运行存在但无 replay proof artifact 时返回 None."""
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = _make_run_record("run-replay")
+        artifact_service = MagicMock(spec=["list_artifacts"])
+        artifact_service.list_artifacts.return_value = [
+            _make_artifact_record(
+                run_id="run-replay",
+                artifact_type=ArtifactKind.BACKTEST_REPORT,
+            ),
+        ]
+        facade = _make_facade(
+            run_model=run_model,
+            artifact_service=artifact_service,
+        )
+
+        result = facade.get_replay_proof("run-replay")
+
+        assert result is None
+
+
+# =====================================================================
+# get_replay_evidence_summary — 组合 restored report + replay proof
+# =====================================================================
+
+
+class TestBacktestQueryFacadeGetReplayEvidenceSummary:
+    """BacktestQueryFacade.get_replay_evidence_summary -- 恢复/重放证据摘要."""
+
+    def test_composes_restored_report_and_replay_proof(self) -> None:
+        """summary 应组合原始 restored-run report 与 replay proof 证据."""
+        resume_provenance = {
+            "from_run_id": "run-root",
+            "checkpoint_trade_date": "2026-01-31",
+            "checkpoint_completed_days": 21,
+            "checkpoint_total_days": 60,
+            "checkpoint_nav": 1_020_000.0,
+            "account_state_hash": "sha256:account",
+            "runtime_state_hash": "sha256:runtime",
+        }
+        report_data = {
+            **_sample_report_json(),
+            "run_id": "run-restored",
+            "resume_provenance": resume_provenance,
+        }
+        proof_data = {
+            "proof_version": 1,
+            "original_run_id": "run-restored",
+            "replay_run_id": "run-replay",
+            "is_reproducible": True,
+            "nav_correlation": 1.0,
+            "max_nav_diff_bps": 0.0,
+            "input_data_match": True,
+            "manifest_diff": {"has_diff": False},
+            "fill_match": True,
+            "account_state_match": True,
+            "original_resume_provenance": resume_provenance,
+        }
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+
+        def _get_run(run_id: str) -> StrategyRunRecord:
+            return _make_run_record(run_id)
+
+        run_model.get_run.side_effect = _get_run
+
+        report_record = _make_artifact_record(
+            run_id="run-restored",
+            file_path="/data/artifacts/run-restored",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+        )
+        proof_record = _make_artifact_record(
+            run_id="run-replay",
+            file_path="/data/artifacts/run-replay",
+            artifact_type=ArtifactKind.REPLAY_PROOF,
+        )
+        artifact_service = MagicMock(spec=["list_artifacts"])
+        artifact_service.list_artifacts.return_value = [proof_record, report_record]
+
+        artifact_reader = MagicMock(spec=["read_json", "read_parquet", "exists"])
+
+        def _read_json(path: str) -> dict[str, object] | None:
+            if path.endswith("/run-restored/backtest_report.json"):
+                return report_data
+            if path.endswith("/run-replay/replay_proof.json"):
+                return proof_data
+            return None
+
+        artifact_reader.read_json.side_effect = _read_json
+        facade = _make_facade(
+            run_model=run_model,
+            artifact_service=artifact_service,
+            artifact_reader=artifact_reader,
+        )
+
+        summary = facade.get_replay_evidence_summary("run-replay")
+
+        assert summary is not None
+        assert summary.run_id == "run-replay"
+        assert summary.original_run_id == "run-restored"
+        assert summary.replay_run_id == "run-replay"
+        assert summary.is_reproducible is True
+        assert summary.fill_match is True
+        assert summary.account_state_match is True
+        assert summary.report_resume_provenance == resume_provenance
+        assert summary.proof_resume_provenance == resume_provenance
+        assert summary.resume_provenance_match is True
+        assert summary.missing_sections == ()
+
+    def test_missing_replay_proof_returns_none(self) -> None:
+        """没有 replay proof artifact 时 summary 返回 None."""
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = _make_run_record("run-replay")
+        artifact_service = MagicMock(spec=["list_artifacts"])
+        artifact_service.list_artifacts.return_value = []
+        facade = _make_facade(
+            run_model=run_model,
+            artifact_service=artifact_service,
+        )
+
+        assert facade.get_replay_evidence_summary("run-replay") is None
 
 
 # =====================================================================

@@ -3,6 +3,7 @@
 > Date: 2026-05-08
 > Scope: `packages/kernel`
 > Source plan: `docs/reviews/audit/2026-05-08-global-and-module-review-plan.md`
+> Update 2026-06-09: Root public API table now exists in `docs/architecture/public-api.md` and is guarded by `test_root_public_api_manifest_matches_package_all`; kernel remains at the root stable export budget ceiling, so new low-frequency primitives should start leaf-only.
 
 ## 1. 当前职责与边界
 
@@ -44,7 +45,7 @@ Kernel 是共享内核：零外部依赖、零 I/O、零业务流程，只放跨
 | KERNEL-P1-01 | P1 | `events.py` defines `DomainEvent(event_type: str, payload: dict[str, Any])`; backtest publishes string events like `order_submitted`, `order_filled`, `risk_guard_triggered`. | Runtime replay/audit depends on string names and untyped payloads; schema drift will not be caught by type checks. | Keep `EventBus` as transport, but require domain-owned typed event records plus an event-name catalog before OMS/runtime work. |
 | KERNEL-P1-02 | P1 | `clock.py` only exposes `now/today/advance_to`; no `TimeContext` symbol; PIT terms are scattered across data/features/backtest/apps. | PIT safety relies on local naming conventions rather than one runtime/query context. | Add `TimeContext` to runtime ADR as a candidate kernel value object; implement only after at least two consumers are ready. |
 | KERNEL-P1-03 | P1 | `trading.py` contains A-share defaults and `default_price_limit_pct` lifecycle/board logic; consumers span execution/backtest/risk. | Kernel can become the market-reference rules package, violating “shared minimal language”. | Freeze current DTOs as transitional shared language; move market-specific rule semantics toward reference/market_reference provider. |
-| KERNEL-P2-01 | P2 | Root `__all__` is exactly 30 entries and includes trading constants plus clocks/events. | The public API budget is at its limit; future symbols may be added without a stable/internal decision. | Maintain a kernel public API table and keep lower-frequency concepts leaf-module only. |
+| KERNEL-P2-01 | P2 | Root `__all__` is exactly 30 entries and includes trading constants plus clocks/events; the root public API table is now drift-guarded in `docs/architecture/public-api.md`. | The public API budget remains at its limit, but future root changes now require reviewer-visible manifest updates. | Keep lower-frequency concepts leaf-module only and add candidate/internal symbol tables before promoting more kernel root exports. |
 | KERNEL-P2-02 | P2 | `exceptions.py` owns `Derived*` exceptions used by data/features; package type table does not list them. | Derived-domain ownership is implicit; future agents may add more domain-specific errors to kernel. | Document `Derived*` as a deliberate shared derived boundary or migrate later to consumer-owned ports. |
 
 No P0 finding was confirmed in this pass. The hard import boundary is guarded and currently passes the existing architecture gate.
@@ -84,8 +85,8 @@ Move or constrain:
 
 4. Public API:
    - RED: add architecture test for root `__all__` budget and stable public symbols.
-   - GREEN: document stable/candidate/internal kernel symbols.
-   - REFACTOR: move low-frequency imports to leaf modules.
+   - DONE: document root stable symbols in `docs/architecture/public-api.md` and guard them against `__all__` drift.
+   - REFACTOR: move low-frequency imports to leaf modules and add leaf-level candidate/internal tables before further root growth.
 
 ## 6. 验收命令
 

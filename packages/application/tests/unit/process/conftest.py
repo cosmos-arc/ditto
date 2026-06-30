@@ -37,5 +37,5 @@ def mock_market_service() -> MagicMock:
 def mock_metadata_service() -> MagicMock:
     """Mock MetadataService."""
     service = MagicMock()
-    service.list_calendar_range.return_value = pl.DataFrame()
+    service.calendar.list_calendar_range.return_value = pl.DataFrame()
     return service

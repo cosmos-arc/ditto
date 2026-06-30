@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
 from typing import NamedTuple
 
 import polars as pl
-from ditto_data.models import Dataset, DateScheduleType
+from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionResult
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
@@ -32,8 +31,13 @@ from ditto_application.processes.ingestion.data_writer import IngestionDataWrite
 from ditto_application.processes.ingestion.dataset_registry import (
     default_dataset_registry,
 )
+from ditto_application.processes.ingestion.date_range import list_ingestion_dates
 from ditto_application.processes.ingestion.fetch_handlers import (
     build_daily_fetch_handlers,
+)
+from ditto_application.processes.ingestion.instrument_ingestion import (
+    InstrumentBackfillContext,
+    InstrumentIngestContext,
 )
 from ditto_application.processes.ingestion.instrument_ingestion import (
     backfill_adj_factor as _backfill_adj_factor_impl,
@@ -46,6 +50,10 @@ from ditto_application.processes.ingestion.list_date_inference import (
 )
 from ditto_application.processes.ingestion.metadata_manager import MetadataManager
 from ditto_application.processes.ingestion.post_ingest import (
+    DataWriteContext,
+    PostIngestContext,
+)
+from ditto_application.processes.ingestion.post_ingest import (
     handle_fetch_error as _handle_fetch_error,
 )
 from ditto_application.processes.ingestion.post_ingest import (
@@ -55,6 +63,9 @@ from ditto_application.processes.ingestion.post_ingest import (
     write_data_safe as _write_data_safe,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
+from ditto_application.processes.ingestion.source_capability import (
+    ensure_source_supported,
+)
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
@@ -75,18 +86,6 @@ def _validate_dataset(dataset: str) -> Dataset:
             field="dataset",
             value=dataset,
         ) from e
-
-
-def _list_natural_days(start_date: str, end_date: str) -> list[str]:
-    """生成自然日列表 [start_date, end_date]。"""
-    start = date.fromisoformat(start_date)
-    end = date.fromisoformat(end_date)
-    days: list[str] = []
-    current = start
-    while current <= end:
-        days.append(current.isoformat())
-        current += timedelta(days=1)
-    return days
 
 
 class MarketServices(NamedTuple):
@@ -133,8 +132,14 @@ class IngestionCoordinator:
         self._ingestion_cursor_store = cfg.ingestion_cursor_store
         self._quality_checker = cfg.quality_checker
         self._freeze_store = cfg.freeze_store
+        self._lineage_recorder = cfg.lineage_recorder
+        self._catalog_reader = cfg.catalog_reader
+        self._catalog_writer = cfg.catalog_writer
 
-        self._metadata_manager = MetadataManager(cfg.ingestion_log_store)
+        self._metadata_manager = MetadataManager(
+            cfg.ingestion_log_store,
+            data_catalog_reader=cfg.catalog_reader,
+        )
         self._result_handler = IngestionResultHandler(
             cfg.ingestion_log_store, cfg.source_name
         )
@@ -201,7 +206,8 @@ class IngestionCoordinator:
             force=force,
         )
 
-        _validate_dataset(dataset)
+        dataset_enum = _validate_dataset(dataset)
+        ensure_source_supported(dataset_enum, self._source_name)
 
         if skip_result := self._check_should_skip(dataset, trade_date, force):
             return skip_result
@@ -275,13 +281,17 @@ class IngestionCoordinator:
             dataset,
             trade_date,
             force,
-            result_handler=self._result_handler,
-            data_writer=self._data_writer,
-            quality_checker=self._quality_checker,
-            list_date_inference=self._list_date_inference,
-            cursor_store=self._ingestion_cursor_store,
-            freeze_store=self._freeze_store,
-            source_name=self._source_name,
+            ctx=PostIngestContext(
+                result_handler=self._result_handler,
+                data_writer=self._data_writer,
+                quality_checker=self._quality_checker,
+                list_date_inference=self._list_date_inference,
+                cursor_store=self._ingestion_cursor_store,
+                freeze_store=self._freeze_store,
+                lineage_recorder=self._lineage_recorder,
+                catalog_writer=self._catalog_writer,
+                source_name=self._source_name,
+            ),
         )
 
     def _try_fetch_data(
@@ -313,14 +323,16 @@ class IngestionCoordinator:
     ) -> WriteResult | IngestionResult:
         """安全写入数据，统一异常处理。委托至 post_ingest.write_data_safe。"""
         return _write_data_safe(
-            dataset,
-            df,
-            trade_date,
-            on_duplicate,
+            DataWriteContext(
+                dataset=dataset,
+                df=df,
+                trade_date=trade_date,
+                on_duplicate=on_duplicate,
+                source_ticker=source_ticker,
+                event_suffix=event_suffix,
+            ),
             result_handler=self._result_handler,
             data_writer=self._data_writer,
-            source_ticker=source_ticker,
-            event_suffix=event_suffix,
         )
 
     def _handle_fetch_error(
@@ -355,23 +367,13 @@ class IngestionCoordinator:
         force: bool = False,
     ) -> list[IngestionResult]:
         """摄取日期范围数据，根据 date_schedule 类型选择日期序列。"""
-        try:
-            dataset_enum = Dataset(dataset)
-            registration = self._registry.require(dataset_enum)
-        except (ValueError, AppProcessError):
-            registration = None
-
-        schedule_type = (
-            registration.date_schedule
-            if registration
-            else DateScheduleType.TRADING_DAYS
+        dates = list_ingestion_dates(
+            dataset,
+            start_date,
+            end_date,
+            metadata_service=self._metadata_service,
+            registry=self._registry,
         )
-
-        match schedule_type:
-            case DateScheduleType.TRADING_DAYS:
-                dates = self._metadata_service.list_trading_days(start_date, end_date)
-            case DateScheduleType.NATURAL_DAYS | DateScheduleType.SOURCE_DEFINED:
-                dates = _list_natural_days(start_date, end_date)
 
         if not dates:
             return []
@@ -397,11 +399,15 @@ class IngestionCoordinator:
             dataset,
             params,
             force,
-            fetchers=self._fetchers,
-            metadata_service=self._metadata_service,
-            source_name=self._source_name,
-            result_handler=self._result_handler,
-            data_writer=self._data_writer,
+            ctx=InstrumentIngestContext(
+                fetchers=self._fetchers,
+                metadata_service=self._metadata_service,
+                source_name=self._source_name,
+                result_handler=self._result_handler,
+                data_writer=self._data_writer,
+                lineage_recorder=self._lineage_recorder,
+                catalog_writer=self._catalog_writer,
+            ),
         )
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
@@ -435,9 +441,12 @@ class IngestionCoordinator:
             instrument_id=instrument_id,
             start=start,
             end=end,
-            metadata_service=self._metadata_service,
-            market_service=self._market_service,
-            fetchers=self._fetchers,
-            source_name=self._source_name,
-            data_writer=self._data_writer,
+            ctx=InstrumentBackfillContext(
+                metadata_service=self._metadata_service,
+                market_service=self._market_service,
+                fetchers=self._fetchers,
+                source_name=self._source_name,
+                data_writer=self._data_writer,
+                lineage_recorder=self._lineage_recorder,
+            ),
         )

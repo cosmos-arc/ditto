@@ -98,9 +98,9 @@
 - PL-9 metrics.py 534 行：未拆分，仍在可接受范围
 
 **新发现**：
-- [P1] `SQLiteClient.count()` 的 `where` 参数直接拼接 SQL（`table` 已校验但 `where` 未校验）
+- [P1] `SQLiteClient.count()` 的 `where` 参数直接拼接 SQL（`table` 已校验但 `where` 未校验）— 2026-06-08 已修复：`count()` 现校验表名与受约束参数化 WHERE 片段
 
-**建议**：`where` 参数安全性是唯一 P1，其余均为 P2 可延后。
+**建议**：`where` 参数安全性曾是唯一 P1，2026-06-08 修复后剩余项均为 P2 可延后。
 
 ---
 
@@ -319,7 +319,7 @@
 | checks.py 拆分 + _accept 提取 | risk | **P1** | 未修复 |
 | _DEFAULT_SLIPPAGE_BPS 不一致 | application runtime_builder | **P0** | 新发现 |
 | Service 后缀语义收敛 | 全局 | P2 | 未修复 |
-| `__all__` / barrel 统一 | execution(空) + portfolio(空) | P2 | 未修复 |
+| `__all__` / barrel 统一 | 全部 root 包 | P2 | 已修复：2026-06-08 root `__all__` 覆盖达到 12/12 并新增 guard；稳定符号表/命名消歧表另见 public API backlog |
 | CLAUDE.md 过时 | execution + strategy | P2 | 未修复 |
 
 ### 3.2 架构级治理（中长期）

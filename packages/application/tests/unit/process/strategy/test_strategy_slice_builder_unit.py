@@ -6,10 +6,13 @@ from dataclasses import asdict
 from unittest.mock import MagicMock
 
 import polars as pl
+import pytest
 from ditto_application.builders import (
     PublishedStrategyRuntime,
     StrategySliceBuilder,
 )
+from ditto_application.exceptions import AppBuilderError
+from ditto_data.catalog.promotion import DatasetMaturityPromotion
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_strategy.alpha.pipeline import StrategyPipeline
@@ -17,16 +20,23 @@ from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 
 
-def _make_strategy_spec() -> StrategySpec:
+def _make_strategy_spec(
+    *,
+    strategy_id: str = "momentum-etf",
+    name: str = "Momentum ETF",
+    template: str = "etf_rotation",
+    universe: str = "cn_etf",
+    asset_class: str = "etf",
+) -> StrategySpec:
     return StrategySpec(
-        strategy_id="momentum-etf",
-        name="Momentum ETF",
-        template="etf_rotation",
-        universe="cn_etf",
-        asset_class="etf",
+        strategy_id=strategy_id,
+        name=name,
+        template=template,
+        universe=universe,
+        asset_class=asset_class,
         benchmark="000300.SH",
         params={"top_k": 3},
-        tags=("momentum", "etf"),
+        tags=("momentum", asset_class),
     )
 
 
@@ -39,7 +49,7 @@ def _make_metadata_service() -> MagicMock:
         2_000_002: {"ticker": "159919", "exchange": "XSHE", "asset_class": "etf"},
         3_000_001: {"ticker": "000300", "exchange": "XSHG", "asset_class": "index"},
     }
-    service.get_instrument.side_effect = _instrument_map.get
+    service.instrument.get_instrument.side_effect = _instrument_map.get
     return service
 
 
@@ -80,6 +90,24 @@ def _make_data_provider() -> MagicMock:
     return provider
 
 
+class _MaturityPromotionReader:
+    def __init__(self, promoted_dataset_ids: set[str]) -> None:
+        self._promoted_dataset_ids = promoted_dataset_ids
+
+    def get_dataset_maturity_promotion(
+        self,
+        dataset_id: str,
+    ) -> DatasetMaturityPromotion | None:
+        if dataset_id not in self._promoted_dataset_ids:
+            return None
+        return DatasetMaturityPromotion(
+            dataset_id=dataset_id,
+            previous_maturity="experimental",
+            promoted_maturity="initial-focus",
+            promoted_by="architecture-review",
+        )
+
+
 class TestStrategySliceBuilder:
     """catalog-backed 单日 Slice 组装测试。"""
 
@@ -118,3 +146,117 @@ class TestStrategySliceBuilder:
             "momentum-etf",
             2,
         )
+
+    def test_rejects_experimental_stock_data_by_default(self) -> None:
+        """单日 strategy slice 默认不得静默使用 experimental 股票数据集。"""
+        spec = _make_strategy_spec(
+            strategy_id="stock-alpha",
+            name="Stock Alpha",
+            template="stock_selection",
+            universe="cn_stock",
+            asset_class="stock",
+        )
+        runtime_builder = MagicMock()
+        runtime_builder.build_published_runtime.return_value = PublishedStrategyRuntime(
+            record=StrategySpecRecord(
+                strategy_id=spec.strategy_id,
+                name=spec.name,
+                spec_json=asdict(spec),
+                version=1,
+                status="published",
+                tags=spec.tags,
+            ),
+            spec=spec,
+            pipeline=MagicMock(spec=StrategyPipeline),
+        )
+        data_provider = _make_data_provider()
+        builder = StrategySliceBuilder(
+            strategy_runtime_builder=runtime_builder,
+            metadata_service=_make_metadata_service(),
+            data_provider=data_provider,
+        )
+
+        with pytest.raises(AppBuilderError, match="experimental dataset"):
+            builder.build_published_slice(
+                "stock-alpha",
+                trade_date="2026-01-13",
+                version=1,
+            )
+
+        data_provider.get_bars.assert_not_called()
+
+    def test_allows_experimental_stock_data_when_explicit(self) -> None:
+        """研究场景可显式 opt in 构造股票数据 slice。"""
+        spec = _make_strategy_spec(
+            strategy_id="stock-alpha",
+            name="Stock Alpha",
+            template="stock_selection",
+            universe="cn_stock",
+            asset_class="stock",
+        )
+        runtime_builder = MagicMock()
+        runtime_builder.build_published_runtime.return_value = PublishedStrategyRuntime(
+            record=StrategySpecRecord(
+                strategy_id=spec.strategy_id,
+                name=spec.name,
+                spec_json=asdict(spec),
+                version=1,
+                status="published",
+                tags=spec.tags,
+            ),
+            spec=spec,
+            pipeline=MagicMock(spec=StrategyPipeline),
+        )
+        builder = StrategySliceBuilder(
+            strategy_runtime_builder=runtime_builder,
+            metadata_service=_make_metadata_service(),
+            data_provider=_make_data_provider(),
+        )
+
+        slice_ = builder.build_published_slice(
+            "stock-alpha",
+            trade_date="2026-01-13",
+            version=1,
+            allow_experimental_data=True,
+        )
+
+        assert slice_.trade_date == "2026-01-13"
+
+    def test_allows_promoted_stock_data_without_research_opt_in(self) -> None:
+        """已完成 metadata promotion 的股票数据可进入默认运行时。"""
+        spec = _make_strategy_spec(
+            strategy_id="stock-alpha",
+            name="Stock Alpha",
+            template="stock_selection",
+            universe="cn_stock",
+            asset_class="stock",
+        )
+        runtime_builder = MagicMock()
+        runtime_builder.build_published_runtime.return_value = PublishedStrategyRuntime(
+            record=StrategySpecRecord(
+                strategy_id=spec.strategy_id,
+                name=spec.name,
+                spec_json=asdict(spec),
+                version=1,
+                status="published",
+                tags=spec.tags,
+            ),
+            spec=spec,
+            pipeline=MagicMock(spec=StrategyPipeline),
+        )
+        builder = StrategySliceBuilder(
+            strategy_runtime_builder=runtime_builder,
+            metadata_service=_make_metadata_service(),
+            data_provider=_make_data_provider(),
+            maturity_promotion_reader=_MaturityPromotionReader(
+                {"stock_daily", "stock_basic"}
+            ),
+        )
+
+        slice_ = builder.build_published_slice(
+            "stock-alpha",
+            trade_date="2026-01-13",
+            version=1,
+        )
+
+        assert slice_.trade_date == "2026-01-13"

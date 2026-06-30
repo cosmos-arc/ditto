@@ -20,6 +20,8 @@ class AuditRecordType(StrEnum):
     RISK_SCAN = "risk_scan"
     PRE_TRADE_DECISION = "pre_trade_decision"
     TRADE_FILL = "trade_fill"
+    RISK_DECISION = "risk_decision"
+    REPAIR_EXECUTION = "repair_execution"
 
 
 @dataclass(frozen=True)
@@ -95,6 +97,7 @@ class TradeFillPayload:
         fill_price: 成交价格
         fee: 手续费
         slippage: 滑点
+        correlation_id: 关联 ID（可追溯 order → fill → account）
 
     """
 
@@ -107,11 +110,82 @@ class TradeFillPayload:
     fill_price: float
     fee: float
     slippage: float
+    correlation_id: str | None = None
+
+
+@dataclass(frozen=True)
+class RiskDecisionPayload:
+    """
+    风控决策审计记录 — accept/reject/modify 决策链.
+
+    Attributes:
+        trade_date: 交易日期 (YYYY-MM-DD)
+        order_id: 关联订单 ID
+        instrument_id: 标的 ID
+        decision: 决策结果 (accepted/rejected/modified)
+        reason: 决策原因
+        original_quantity: 原始数量
+        final_quantity: 最终数量
+        rule_id: 触发的风控规则 ID
+
+    """
+
+    trade_date: str
+    order_id: str
+    instrument_id: int
+    decision: str
+    reason: str
+    original_quantity: int
+    final_quantity: int
+    rule_id: str = ""
+
+
+@dataclass(frozen=True)
+class RepairExecutionPayload:
+    """
+    Reconciliation repair execution audit record.
+
+    Captures the repair action result in the same audit table used by risk,
+    pre-trade and trade-fill records.
+    """
+
+    trade_date: str
+    report_id: str
+    action_id: str
+    action_type: str
+    order_id: str
+    status: str
+    message: str
+    effect_count: int
+    fill_id: str | None = None
+    correlation_id: str | None = None
+    client_order_id: str | None = None
+    broker_order_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ExecutionTimelineEntry:
+    """Normalized audit entry with top-level execution correlation keys."""
+
+    id: int
+    run_id: str
+    trade_date: str
+    record_type: str
+    instrument_id: int | None
+    instrument_scope: str
+    order_id: str | None
+    fill_id: str | None
+    correlation_id: str | None
+    payload: dict[str, object]
+    created_at: str
 
 
 __all__ = [
     "AuditRecordType",
+    "ExecutionTimelineEntry",
     "PreTradeDecisionPayload",
+    "RepairExecutionPayload",
+    "RiskDecisionPayload",
     "RiskScanPayload",
     "TradeFillPayload",
 ]

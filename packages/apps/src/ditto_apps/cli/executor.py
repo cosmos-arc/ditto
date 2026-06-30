@@ -14,7 +14,9 @@ from __future__ import annotations
 from typing import Any
 
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
-from ditto_application.processes.ingestion.coordinator import IngestionCoordinator
+from ditto_application.processes.ingestion.source_selection import (
+    IngestionCoordinatorLike,
+)
 from ditto_kernel import InstrumentIngestParams
 
 
@@ -23,14 +25,14 @@ class CLIExecutor:
 
     def __init__(
         self,
-        coordinator: IngestionCoordinator,
+        coordinator: IngestionCoordinatorLike,
         backfill_manager: BackfillManager,
     ) -> None:
         """
         初始化 CLIExecutor.
 
         Args:
-            coordinator: IngestionCoordinator 实例
+            coordinator: 摄取协调器端口
             backfill_manager: BackfillManager 实例
 
         """
@@ -38,7 +40,7 @@ class CLIExecutor:
         self._backfill_manager = backfill_manager
 
     @property
-    def coordinator(self) -> IngestionCoordinator:
+    def coordinator(self) -> IngestionCoordinatorLike:
         """获取 coordinator."""
         return self._coordinator
 

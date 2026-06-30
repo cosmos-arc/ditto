@@ -251,6 +251,63 @@ class UniverseService:
             index_code, records, str(asof_date)
         )
 
+    # ============ Universe CRUD ============
+
+    @traced("metadata.universe.create_universe")
+    def create_universe(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+        universe_type: str = "custom",
+        source_ref: str | None = None,
+    ) -> None:
+        """创建新的证券域."""
+        self._universe_writer.create_universe(
+            universe_id=universe_id,
+            name=name,
+            description=description,
+            universe_type=universe_type,
+            source_ref=source_ref,
+        )
+
+    @traced("metadata.universe.delete_universe")
+    def delete_universe(self, universe_id: str) -> None:
+        """删除证券域及其所有成分股."""
+        self._universe_writer.delete_universe(universe_id)
+
+    @traced("metadata.universe.update_universe")
+    def update_universe(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+    ) -> bool:
+        """更新证券域元数据。返回是否成功更新."""
+        return self._universe_writer.update_metadata(universe_id, name, description)
+
+    @traced("metadata.universe.replace_constituents")
+    def replace_constituents(
+        self,
+        universe_id: str,
+        records: list[dict[str, Any]],
+        effective_date: str,
+    ) -> int:
+        """原子替换证券域所有当前成分股。返回新增成分数量。"""
+        return self._universe_writer.replace_constituents(
+            universe_id, records, effective_date
+        )
+
+    @traced("metadata.universe.get_universe_detail")
+    def get_universe_detail(self, universe_id: str) -> dict[str, Any] | None:
+        """获取证券域定义。不存在时返回 None."""
+        return self._universe_reader.get_universe(universe_id)
+
+    @traced("metadata.universe.list_universes_df")
+    def list_universes_df(self, universe_type: str | None = None) -> pl.DataFrame:
+        """列出所有证券域。可选按类型过滤."""
+        return self._universe_reader.list_universes(universe_type)
+
     # ============ 标的池调仓日程 ============
 
     @traced("metadata.universe.get_next_rebalance")

@@ -127,7 +127,7 @@ class SQLiteDerivedCatalogReader:
                    created_at, started_at, finished_at
             FROM derived_run
             WHERE derived_id = ? AND version = ?
-            ORDER BY created_at DESC, run_id DESC
+            ORDER BY created_at DESC, rowid DESC
             LIMIT 1
             """,
             (derived_id, version),

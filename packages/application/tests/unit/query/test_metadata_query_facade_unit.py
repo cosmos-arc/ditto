@@ -9,21 +9,24 @@ from ditto_application.queries.metadata import MetadataQueryFacade
 
 
 class TestMetadataQueryFacadeGetInstrument:
-    """MetadataQueryFacade.get_instrument — 委托到 MetadataService."""
+    """MetadataQueryFacade.get_instrument — 委托到 MetadataService.instrument."""
 
     def test_returns_dict_when_found(self) -> None:
-        service = MagicMock(spec=["get_instrument"])
-        service.get_instrument.return_value = {"instrument_id": 1, "ticker": "000001"}
+        service = MagicMock()
+        service.instrument.get_instrument.return_value = {
+            "instrument_id": 1,
+            "ticker": "000001",
+        }
         facade = MetadataQueryFacade(metadata_service=service)
 
         result = facade.get_instrument(1)
 
         assert result == {"instrument_id": 1, "ticker": "000001"}
-        service.get_instrument.assert_called_once_with(1)
+        service.instrument.get_instrument.assert_called_once_with(1)
 
     def test_returns_none_when_not_found(self) -> None:
-        service = MagicMock(spec=["get_instrument"])
-        service.get_instrument.return_value = None
+        service = MagicMock()
+        service.instrument.get_instrument.return_value = None
         facade = MetadataQueryFacade(metadata_service=service)
 
         result = facade.get_instrument(999)
@@ -73,9 +76,9 @@ class TestMetadataQueryFacadeResolveInstrumentIdentifier:
     """MetadataQueryFacade.resolve_instrument_identifier — 返回 int | None."""
 
     def test_returns_int_when_found(self) -> None:
-        service = MagicMock(spec=["resolve_instrument_identifier"])
-        # Service returns InstrumentId (NewType of int)
-        service.resolve_instrument_identifier.return_value = 42
+        service = MagicMock()
+        # Service.instrument returns InstrumentId (NewType of int)
+        service.instrument.resolve_instrument_identifier.return_value = 42
         facade = MetadataQueryFacade(metadata_service=service)
 
         result = facade.resolve_instrument_identifier(
@@ -87,8 +90,8 @@ class TestMetadataQueryFacadeResolveInstrumentIdentifier:
         assert isinstance(result, int)
 
     def test_returns_none_when_not_found(self) -> None:
-        service = MagicMock(spec=["resolve_instrument_identifier"])
-        service.resolve_instrument_identifier.return_value = None
+        service = MagicMock()
+        service.instrument.resolve_instrument_identifier.return_value = None
         facade = MetadataQueryFacade(metadata_service=service)
 
         result = facade.resolve_instrument_identifier(
@@ -100,11 +103,11 @@ class TestMetadataQueryFacadeResolveInstrumentIdentifier:
 
 
 class TestMetadataQueryFacadeResolveSourceTicker:
-    """MetadataQueryFacade.resolve_source_ticker — 委托到 MetadataService."""
+    """MetadataQueryFacade.resolve_source_ticker — 委托到 MetadataService.instrument."""
 
     def test_delegates_to_service(self) -> None:
-        service = MagicMock(spec=["resolve_source_ticker"])
-        service.resolve_source_ticker.return_value = "000001.SZ"
+        service = MagicMock()
+        service.instrument.resolve_source_ticker.return_value = "000001.SZ"
         facade = MetadataQueryFacade(metadata_service=service)
 
         result = facade.resolve_source_ticker(
@@ -114,7 +117,7 @@ class TestMetadataQueryFacadeResolveSourceTicker:
         )
 
         assert result == "000001.SZ"
-        service.resolve_source_ticker.assert_called_once_with(
+        service.instrument.resolve_source_ticker.assert_called_once_with(
             ticker="000001",
             standard_ticker=None,
             instrument_id=None,

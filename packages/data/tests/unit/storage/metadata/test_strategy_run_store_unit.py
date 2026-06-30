@@ -6,8 +6,10 @@ from pathlib import Path
 
 from ditto_kernel.strategy import RunStatus
 from ditto_platform.foundation import SQLitePool
-from ditto_strategy.runs.models import StrategyRunRecord
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord, StrategyRunRecord
 from ditto_strategy.storage.sqlite.strategy_run_store import (
+    SQLiteStrategyRunCheckpointReader,
+    SQLiteStrategyRunCheckpointWriter,
     SQLiteStrategyRunReader,
     SQLiteStrategyRunWriter,
 )
@@ -37,6 +39,64 @@ def _make_record(
 
 def _make_pool(tmp_path: Path) -> SQLitePool:
     return SQLitePool(str(tmp_path / "strategy-run.db"))
+
+
+def _make_checkpoint_record(
+    run_id: str = "run-001",
+    strategy_id: str = "momentum-etf",
+    strategy_version: str = "2026.03",
+    completed_trade_date: str = "2026-03-01",
+    resume_from: str | None = "2026-03-02",
+    completed_days: int = 42,
+    total_days: int = 60,
+    nav: float = 1_050_000.0,
+    order_count: int = 7,
+    fill_count: int = 6,
+    account_state_json: str = (
+        '{"cash_available":920000.0,"cash_settled":900000.0,'
+        '"cash_frozen":20000.0,"positions":[]}'
+    ),
+    account_state_hash: str = "sha256:account-state",
+    settlement_state_json: str = (
+        '{"frozen_quantities":[{"instrument_id":1,'
+        '"quantity":1000,"settle_date":"2026-03-03"}]}'
+    ),
+    settlement_state_hash: str = "sha256:settlement-state",
+    runtime_state_json: str = (
+        '{"delayed_signals":[{"cash_target":0.5,'
+        '"positions":[{"instrument_id":1,"target_weight":0.5}],'
+        '"queue_index":0,"run_id":"run-001","strategy_id":"momentum-etf",'
+        '"trade_date":"2026-03-01"}],'
+        '"pending_orders":[{"average_fill_price":null,'
+        '"client_order_id":"order-001","direction":"buy",'
+        '"filled_price":null,"filled_quantity":0,"instrument_id":1,'
+        '"leaves_quantity":300,"order_type":"market","price":null,'
+        '"quantity":300,"status":"submitted","stop_price":null,'
+        '"trade_date":"2026-03-01"}]}'
+    ),
+    runtime_state_hash: str = "sha256:runtime-state",
+    updated_at: str = "2026-03-01T16:00:00Z",
+) -> StrategyRunCheckpointRecord:
+    return StrategyRunCheckpointRecord(
+        run_id=run_id,
+        strategy_id=strategy_id,
+        strategy_version=strategy_version,
+        mode="backtest",
+        completed_trade_date=completed_trade_date,
+        resume_from=resume_from,
+        completed_days=completed_days,
+        total_days=total_days,
+        nav=nav,
+        order_count=order_count,
+        fill_count=fill_count,
+        account_state_json=account_state_json,
+        account_state_hash=account_state_hash,
+        settlement_state_json=settlement_state_json,
+        settlement_state_hash=settlement_state_hash,
+        runtime_state_json=runtime_state_json,
+        runtime_state_hash=runtime_state_hash,
+        updated_at=updated_at,
+    )
 
 
 class TestSQLiteStrategyRunStore:
@@ -347,5 +407,74 @@ class TestSchemaMigration:
             children = reader.list_by_parent("legacy-run")
             assert len(children) == 1
             assert children[0].run_id == "child-run"
+        finally:
+            pool.close()
+
+
+class TestSQLiteStrategyRunCheckpointStore:
+    """Tests for latest strategy-run checkpoint persistence."""
+
+    def test_save_and_get_latest_checkpoint_roundtrip(self, tmp_path: Path) -> None:
+        """Latest checkpoint is durable and can be read back by run_id."""
+        pool = _make_pool(tmp_path)
+        try:
+            writer = SQLiteStrategyRunCheckpointWriter(pool)
+            reader = SQLiteStrategyRunCheckpointReader(pool)
+            writer.init_schema()
+
+            record = _make_checkpoint_record()
+            writer.save_checkpoint(record)
+
+            result = reader.get_latest_checkpoint("run-001")
+            assert result == record
+            assert result is not None
+            assert result.can_resume is True
+        finally:
+            pool.close()
+
+    def test_save_checkpoint_upserts_latest_state(self, tmp_path: Path) -> None:
+        """Saving a later checkpoint replaces the run's previous latest row."""
+        pool = _make_pool(tmp_path)
+        try:
+            writer = SQLiteStrategyRunCheckpointWriter(pool)
+            reader = SQLiteStrategyRunCheckpointReader(pool)
+            writer.init_schema()
+
+            writer.save_checkpoint(_make_checkpoint_record(nav=1_010_000.0))
+            final_record = _make_checkpoint_record(
+                completed_trade_date="2026-03-31",
+                resume_from=None,
+                completed_days=60,
+                nav=1_120_000.0,
+                order_count=9,
+                fill_count=9,
+                updated_at="2026-03-31T16:00:00Z",
+            )
+            writer.save_checkpoint(final_record)
+
+            result = reader.get_latest_checkpoint("run-001")
+            assert result == final_record
+            assert result is not None
+            assert result.can_resume is False
+        finally:
+            pool.close()
+
+    def test_run_schema_init_also_creates_checkpoint_table(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The normal run schema initializer should include checkpoint storage."""
+        pool = _make_pool(tmp_path)
+        try:
+            run_writer = SQLiteStrategyRunWriter(pool)
+            checkpoint_writer = SQLiteStrategyRunCheckpointWriter(pool)
+            checkpoint_reader = SQLiteStrategyRunCheckpointReader(pool)
+            run_writer.init_schema()
+
+            record = _make_checkpoint_record(run_id="run-from-run-init")
+            checkpoint_writer.save_checkpoint(record)
+
+            result = checkpoint_reader.get_latest_checkpoint("run-from-run-init")
+            assert result == record
         finally:
             pool.close()

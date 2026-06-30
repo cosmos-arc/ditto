@@ -4,3 +4,5 @@ Data 脚本文件.
 此目录包含 Data 项目的 SQL 脚本、Shell 脚本等项目脚本文件，
 与 Python 代码模块分离。
 """
+
+__all__: list[str] = []

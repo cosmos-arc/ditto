@@ -6,85 +6,13 @@
 
 共享内核层（Shared Kernel）— Ditto 依赖图的最底层。提供跨层共享的领域原语：枚举、NewType、值对象、Protocol 和薄实现。零业务行为、零外部依赖、零 I/O。
 
-## 模块结构
+## 详细规范
 
-按业务子域组织（2026-04-18 Phase 1 重组），每个子域文件包含相关枚举、值对象、Protocol。
-
-```
-ditto_kernel/
-├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
-├── order.py               # Order 子域 — OrderSide / OrderType
-├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
-├── strategy.py            # Strategy 子域 — ExecutionPolicy / ImpactModel / RiskScope / RunStatus
-├── identity.py            # 共享身份类型（NewType）
-├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
-├── time_context.py        # TimeContext 值对象 — PIT 语义统一入口
-├── synchronizer.py        # Synchronizer Protocol + TimeSlice 值对象 — 回测/实盘切换 seam
-├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog
-├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
-├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
-├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
-├── exceptions.py          # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
-└── math.py                # 共享数学工具（pearson_correlation 等纯计算函数）
-```
-
-### 子域间依赖
-
-```
-strategy → market（单向依赖，策略规格引用市场时间语义）
-instrument / order / market / identity: 无子域间依赖
-```
-
-## 类型清单
-
-| 类型 | 模块 | 格式 | 消费者 |
-|------|------|------|--------|
-| `AssetClass` | instrument.py | `StrEnum`（6 成员） | Data, Apps |
-| `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
-| `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
-| `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Execution |
-| `CalendarId` | market.py | `Literal["cn_stock"]` | Analysis |
-| `GrainId` | market.py | `Literal["1d", "1m"]` | Analysis |
-| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
-| `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, Apps |
-| `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, Apps |
-| `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
-| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
-| `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution |
-| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
-| `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
-| `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
-| `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
-| `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
-| `EventName` | events.py | `StrEnum` catalog（领域事件类型常量） | Backtest, Application |
-| `TimeContext` | time_context.py | frozen dataclass（含 `pit_cutoff` property） | Backtest, Application |
-| `TimeSlice` | synchronizer.py | frozen dataclass | Backtest, Application |
-| `Synchronizer` | synchronizer.py | `Protocol`（回测/实盘切换 seam） | Backtest, Application |
-| `MarketSnapshot` | trading.py | frozen dataclass | Execution, Backtest |
-| `InstrumentDefinition` | trading.py | frozen dataclass | Execution, Backtest |
-| `TradingRuleSet` | trading.py | frozen dataclass | Execution, Backtest |
-| `FeeSchedule` | trading.py | frozen dataclass | Execution, Backtest |
-| `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
-| `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
-| `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
-| `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
-| `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
-| `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
-| `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
-| `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
-| `pearson_correlation` | math.py | 纯函数 | Engine, App |
-
-## 架构定位
-
-```
-apps → kernel ✅           application → kernel ✅
-strategy/backtest → kernel ✅  analysis → kernel ✅
-data → kernel ✅           platform → kernel ❌（importlinter 禁止）
-
-kernel → any_other_ditto_package ❌
-```
-
-Kernel 零依赖其他 ditto 包，被所有业务包依赖。
+- 目录结构详见 [CLAUDE.md](CLAUDE.md)
+- 依赖规则详见 [CLAUDE.md](CLAUDE.md)
+- 类型清单详见 [CLAUDE.md](CLAUDE.md)
+- 架构规则和依赖约束详见 [CLAUDE.md](CLAUDE.md)
+- 导入规范详见 [CLAUDE.md](CLAUDE.md)
 
 ## 三原则
 
@@ -93,24 +21,6 @@ Kernel 零依赖其他 ditto 包，被所有业务包依赖。
 | 零业务行为 | 纯类型 / Protocol / 薄实现，不含领域逻辑 |
 | 零外部依赖 | 仅依赖 Python 标准库 |
 | 零 I/O | 不进行文件、网络、数据库操作 |
-
-## 使用方式
-
-```python
-# 从 barrel 导入（仅高频符号）
-from ditto_kernel import AssetClass, OrderSide, InstrumentId, DittoError
-
-# 从叶模块导入（低频或子域内聚符号）
-from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
-from ditto_kernel.strategy import ExecutionPolicy, ImpactModel, RiskScope, RunStatus
-from ditto_kernel.identity import InstrumentId
-
-# StrEnum 直接支持字符串比较
-assert AssetClass.STOCK == "stock"
-
-# NewType 编译期类型安全，运行时零开销
-instrument_id: InstrumentId = InstrumentId(1_000_001)
-```
 
 ## 测试
 

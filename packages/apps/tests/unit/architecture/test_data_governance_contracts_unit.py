@@ -8,6 +8,17 @@ CONTRACT_MODULES = (
     "packages/data/src/ditto_data/lineage/contracts.py",
 )
 
+PRODUCTION_CODE_DIRS = (
+    Path("packages/application/src"),
+    Path("packages/apps/src"),
+)
+
+FORBIDDEN_DATASET_ENUM_ROUTE_METADATA_FRAGMENTS = (
+    ".get_asset_class(",
+    "dataset_enum.asset_class",
+    "ds.asset_class",
+)
+
 FORBIDDEN_IMPORT_PREFIXES = (
     "ditto_analysis",
     "ditto_application",
@@ -52,10 +63,14 @@ LOCAL_CONTRACT_EXPORTS = {
         "DataCatalogReader",
         "DataCatalogWriter",
         "DataSchemaFingerprint",
+        "DatasetMetadata",
+        "InMemoryDataCatalog",
+        "default_dataset_metadata",
     },
     "packages/data/src/ditto_data/lineage/__init__.py": {
         "DataLineageReader",
         "DataLineageRecorder",
+        "InMemoryDataLineage",
         "LineageEvent",
         "LineageInputRef",
         "LineageOutputRef",
@@ -65,9 +80,12 @@ LOCAL_CONTRACT_EXPORTS = {
 LOCAL_CONTRACT_IMPORTS = {
     "packages/data/src/ditto_data/catalog/__init__.py": {
         "ditto_data.catalog.contracts",
+        "ditto_data.catalog.metadata",
+        "ditto_data.catalog.store",
     },
     "packages/data/src/ditto_data/lineage/__init__.py": {
         "ditto_data.lineage.contracts",
+        "ditto_data.lineage.store",
     },
 }
 
@@ -151,6 +169,17 @@ def _exported_names(path: Path) -> set[str]:
     return exported_names
 
 
+def _python_files(paths: tuple[Path, ...]) -> tuple[Path, ...]:
+    return tuple(
+        sorted(
+            file_path
+            for root in paths
+            for file_path in root.rglob("*.py")
+            if "__pycache__" not in file_path.parts
+        )
+    )
+
+
 def test_relative_imports_are_normalized_before_forbidden_scan(
     tmp_path: Path,
 ) -> None:
@@ -211,6 +240,21 @@ def test_data_root_does_not_reexport_governance_contracts() -> None:
     root = Path("packages/data/src/ditto_data/__init__.py")
 
     assert _exported_names(root).isdisjoint(GOVERNANCE_CONTRACT_NAMES)
+
+
+def test_application_and_apps_do_not_read_route_metadata_from_dataset_enum() -> None:
+    offenders: dict[str, list[str]] = {}
+    for file_path in _python_files(PRODUCTION_CODE_DIRS):
+        text = file_path.read_text(encoding="utf-8")
+        fragments = [
+            fragment
+            for fragment in FORBIDDEN_DATASET_ENUM_ROUTE_METADATA_FRAGMENTS
+            if fragment in text
+        ]
+        if fragments:
+            offenders[str(file_path)] = fragments
+
+    assert offenders == {}
 
 
 def test_data_governance_subpackages_reexport_only_local_contracts() -> None:

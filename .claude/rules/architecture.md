@@ -5,6 +5,9 @@ paths:
 
 # 架构设计规范
 
+> 本文档是 Agent 架构速查卡。各包详细职责、放置规则和命名词典见
+> [boundaries-and-abstraction-standards.md](../../docs/architecture/boundaries-and-abstraction-standards.md)。
+
 ## 分层架构原则
 
 ### 层级依赖规则
@@ -13,23 +16,23 @@ paths:
 ┌─────────────────────────────────────────────────────────────────┐
 │                       apps (应用入口和 Composition Root)              │
 │                              │                                  │
-│                              ├──→ packages/application (应用编排层)     │
+│                              ├──→ packages/application (应用编排平面)   │
 │                              │         │                        │
-│                              │         ├──→ packages/features (因子计算层) │
+│                              │         ├──→ packages/features (因子计算平面) │
 │                              │         │                        │
-│                              │         ├──→ packages/strategy (策略层)   │
+│                              │         ├──→ packages/strategy (策略平面)   │
 │                              │         │                        │
-│                              │         ├──→ packages/portfolio (组合层)  │
+│                              │         ├──→ packages/portfolio (组合平面)  │
 │                              │         │                        │
-│                              │         ├──→ packages/risk (风控层)       │
+│                              │         ├──→ packages/risk (风控平面)       │
 │                              │         │                        │
-│                              │         ├──→ packages/execution (执行层)  │
+│                              │         ├──→ packages/execution (执行平面)  │
 │                              │         │                        │
-│                              │         ├──→ packages/backtest (回测层)   │
+│                              │         ├──→ packages/backtest (回测平面)   │
 │                              │         │                        │
-│                              │         ├──→ packages/analysis (研究分析层)│
+│                              │         ├──→ packages/analysis (研究分析平面)│
 │                              │         │                        │
-│                              │         └──→ packages/data (数据服务层)    │
+│                              │         └──→ packages/data (数据服务平面)    │
 │                              │                   │                │
 │                              │                   └──→ ditto_kernel     │
 │                              │                   └──> packages/platform │
@@ -43,22 +46,7 @@ paths:
      (共享内核 — 领域原语，零逻辑,零外部依赖)
 ```
 
-**各层定位**：
-
-| 层 | 包 | 职责 | 类比 |
-|----|-----|------|------|
-| **共享内核** | `ditto_kernel` | 领域原语：枚举、值对象、NewType | DDD Shared Kernel |
-| **因子计算层** | `ditto_features` | 因子表达式编译、物化计划、因子计算、评估 | Analysis Layer |
-| **策略层** | `ditto_strategy` | 策略定义、Alpha Pipeline、信号生成 | Domain Service |
-| **组合层** | `ditto_portfolio` | 持仓、目标组合、调仓、会计 | Domain Service |
-| **风控层** | `ditto_risk` | 盘前/盘后风控、约束、暴露、审计 | Domain Service |
-| **执行层** | `ditto_execution` | 订单、成交、OMS、券商网关、对账 | Domain Service |
-| **回测层** | `ditto_backtest` | 回测运行时、模拟 broker、绩效 | Domain Service |
-| **研究分析层** | `ditto_analysis` | 研究数据集 control-plane；产品分析命名空间保留/未来 | Analysis Layer |
-| **数据服务层** | `ditto_data` | 市场事实数据：存储、数据源、质量 | DDD Rich Repository |
-| **应用编排层** | `ditto_application` | CQRS 编排（commands/queries/processes/builders） | Application Layer |
-| **应用入口层** | `ditto_apps` | HTTP API/CLI/Jobs/DI Composition Root | Application Boundary |
-| **基础设施层** | `ditto_platform` | 技术设施:配置、日志、缓存、数据库连接池 | Technical Infrastructure |
+各包定位详见 [boundaries doc Section 3](../../docs/architecture/boundaries-and-abstraction-standards.md#31-各平面定位)。
 
 **详细分层规范**：
 - Kernel → [packages/kernel/CLAUDE.md](../../packages/kernel/CLAUDE.md)
@@ -156,9 +144,33 @@ from ditto_kernel.instrument import AssetClass
 
 ---
 
-## 层级职责边界
+## 包放置与硬性禁令
 
-### 核心判断原则：业务决策 vs 数据服务
+### 包放置决策
+
+新代码放置决策树详见 [boundaries doc Section 7](../../docs/architecture/boundaries-and-abstraction-standards.md#7-新代码放置决策树)。
+
+### 硬性禁令摘要
+
+| 包 | 禁止依赖 | 原因 |
+|---|---|---|
+| `kernel` | 所有其他业务包 | 零依赖共享内核 |
+| `platform` | 所有业务包 | 通用技术能力，无业务知识 |
+| `data` | features/strategy/portfolio/risk/execution/backtest/analysis/application/apps | 数据平面，不决策 |
+| `features` | strategy/portfolio/risk/execution/backtest/analysis/application/apps | 因子计算平面 |
+| `strategy` | data/features/portfolio/risk/execution/backtest | 策略不直接执行/不查数据 |
+| `portfolio` | risk/execution/backtest/data/features | 组合不直接执行 |
+| `risk` | execution/backtest/data/features/strategy | 风控不依赖执行 |
+| `execution` | risk/strategy/backtest/data/features | 执行不依赖回测 |
+| `backtest` | 真实券商网关 | 模拟与生产隔离 |
+| 所有生产包 | `analysis` | 研究层隔离 |
+| `apps`(非 registry) | storage/runtime/services/models/errors/config | 传输适配不直接访问存储 |
+
+各包详细 can/cannot 规则详见 [boundaries doc Section 4](../../docs/architecture/boundaries-and-abstraction-standards.md#4-包级职责标准)。
+
+---
+
+## 核心判断原则
 
 架构中最重要的区分不是"有没有领域知识"，而是"代码在做业务决策还是数据服务":
 
@@ -169,253 +181,6 @@ from ditto_kernel.instrument import AssetClass
 | DDD 类比 | Domain Service | Rich Repository |
 | 可否包含领域知识 | 必须包含（这是它的职责） | 可以包含（服务于"提供领域合适的数据视图"） |
 | 可否做 I/O | 不可以 | 可以（这是它的职责） |
-
-### 包放置决策树
-
-```
-市场事实、PIT、数据质量、外部数据源？ → ditto_data
-因子、指标、表达式、物化、因子评估？ → ditto_features
-策略定义、策略版本、信号、alpha pipeline？ → ditto_strategy
-持仓、目标组合、调仓、会计？ → ditto_portfolio
-盘前/盘后风控、约束、暴露、审计？ → ditto_risk
-订单、成交、OMS、券商网关、对账？ → ditto_execution
-回测运行时、模拟 broker、绩效？ → ditto_backtest
-研究数据集构建、导出、control-plane？ → ditto_analysis
-command/query/process 编排？ → ditto_application
-API/CLI/worker/web/DI composition root？ → ditto_apps
-配置、日志、metrics、trace、存储连接、锁、缓存？ → ditto_platform
-跨模块稳定值对象和错误根？ → ditto_kernel
-```
-
-### 各层职责详述
-
-#### ditto_kernel（共享内核）
-
-**做什么**：跨层共享的领域原语 — 枚举、值对象、NewType。
-
-**准入标准**（5 条，全部满足才可进入）：
-1. **跨层使用**：至少被 2 个业务包直接导入
-2. **零业务行为**：纯值对象 / 枚举 / NewType，不含方法或 I/O
-3. **稳定性高**：不会随某个子域的迭代频繁变更
-4. **无外部依赖**：只依赖 Python 标准库
-5. **纯值语义**：不含序列化、持久化关注点
-
-**红线**：
-- 不设硬性数量上限（每个新增类型须在 PR 中说明理由）
-- 不允许 `import polars` / `import orjson` 等第三方库
-- pyproject.toml 不声明运行时依赖
-
-#### ditto_features（因子计算层）
-
-**做什么**：因子表达式编译、物化计划、因子计算、评估指标。
-
-**可以做的**：
-- 表达式编译（词法 → AST → 代码生成 → 编译缓存）
-- 因子计算（技术/基本面/Alpha 因子）
-- 评估指标（IC、因子分析、组合分析、尾部风险）
-- 物化计划与缓存
-
-**不可以做的**：
-- 依赖 strategy/portfolio/risk/execution/backtest/analysis
-- 业务决策（交易决策、风险判断）
-- I/O 操作（存储由 data 层提供）
-
-#### ditto_strategy（策略层）
-
-**做什么**：策略定义、Alpha Pipeline、信号生成。
-
-**可以做的**：
-- Alpha Pipeline（策略评估、信号生成、模板）
-- 策略模型与版本管理
-- 信号存储接口（Protocol）
-- 纯领域算法
-
-**不可以做的**：
-- 依赖 ditto_execution（策略不直接执行交易）
-- 数据查询和存储（这是 Data 的职责）
-- I/O 操作
-
-#### ditto_portfolio（组合层）
-
-**做什么**：持仓管理、目标组合构建、调仓逻辑、会计核算。
-
-**可以做的**：
-- 组合优化与约束
-- 持仓与会计核算
-- 调仓算法
-
-**不可以做的**：
-- 依赖 ditto_execution（组合不直接执行）
-- 数据查询和存储
-- I/O 操作
-
-#### ditto_risk（风控层）
-
-**做什么**：盘前/盘后风控检查、约束计算、暴露分析。
-
-**可以做的**：
-- 风控规则引擎（PreTrade/PostTrade）
-- 约束计算
-- 暴露分析与审计
-
-**不可以做的**：
-- 依赖 ditto_execution（风控不直接执行）
-- 依赖 ditto_backtest
-- I/O 操作
-
-#### ditto_execution（执行层）
-
-**做什么**：订单管理、成交处理、OMS、券商网关适配。
-
-**可以做的**：
-- 订单生命周期管理
-- 成交处理与对账
-- 券商网关协议（Protocol）
-
-**不可以做的**：
-- 依赖 ditto_backtest（执行不依赖回测）
-- 依赖 ditto_analysis
-- 策略逻辑
-
-#### ditto_backtest（回测层）
-
-**做什么**：回测运行时、模拟 broker、绩效分析。
-
-**可以做的**：
-- 回测引擎与事件循环
-- 模拟撮合
-- 绩效计算
-
-**不可以做的**：
-- 导入真实券商网关
-- I/O 操作（除回测结果持久化）
-
-#### ditto_analysis（研究 control-plane 层 — 非生产路径）
-
-**做什么**：研究数据集 control-plane 与 analysis-owned artifact I/O。
-
-**可以做的**：
-- 研究数据集构建元数据
-- 研究 artifact 读取与导出
-- analysis-owned storage wiring
-
-**保留/未来**：
-- 报告/诊断/实验/筛选产品命名空间当前不是 runtime API
-
-**不可以做的**：
-- 被生产包依赖
-- 直接执行交易或策略
-
-#### ditto_data（数据服务层 — Rich Data Service）
-
-**做什么**：市场事实数据的统一查询、存储、数据源接入，以及**领域感知的数据编排**。
-
-**可以做的**：
-- 统一查询入口（`MarketService.get_bars()`, `MetadataService.get_trading_days()`）
-- 数据转换（复权、PIT 过滤、基准对齐）
-- 衍生数据计算（前向收益率、移动平均）
-- 领域感知的过滤（流动性过滤、上市天数过滤、Universe 筛选）
-- 数据编排（多源合并、缺失值处理、标识符解析）
-- 数据质量策略（晚到数据检测、入库校验）
-- DI Provider 注册（`ditto_data.di.get_data_providers`）
-
-**不可以做的**：
-- 业务决策（是否交易、风险敞口判断、策略信号生成）
-- 策略评估（打分、排序、选择）
-- 交易执行（下单、撮合、组合优化）
-- 依赖 capability packages（strategy/portfolio/risk/execution/backtest）
-- 工作流决策（何时重算、何时告警）
-
-**设计依据**：Data 是 Rich Repository 模式的实现。Eric Evans 定义 Repository 为"mediates between the domain and data mapping layers, acting like an in-memory domain object collection" — 明确允许 Repository 包含查找逻辑和数据转换。
-
-#### ditto_application（应用编排层 — CQRS）
-
-**做什么**：Use Case 编排，协调 Capability Packages（领域计算）+ Data（数据服务）。
-
-**核心职责**：
-- 从 Data 获取数据 → 交给 Capability Package 做业务计算 → 结果写回 Data
-- CQRS 分离： queries（只读）、processes（编排）、commands（写入）、builders（DI 构造）
-- DTO ↔ Domain Model 的显式映射
-
-**不可以做的**：
-- 业务计算（应委托给 Capability Package）
-- 数据查询编排（应委托给 Data Service）
-- 直接访问 Store/Source（通过 Data DI）
-
-#### ditto_apps（应用入口层）
-
-**做什么**：HTTP API、CLI 命令、Prefect 任务调度、DI Composition Root。
-
-**核心职责**：
-- HTTP 路由（FastAPI）
-- CLI 命令入口
-- Prefect Flow/Task 编排
-- DI 容器组装（Composition Root）
-- **纯编排层，不包含业务逻辑**
-
-**不可以做的**：
-- 业务计算（应委托给 Application/Capability Package）
-- 直接数据访问（应通过 Application 层或 registry DI）
-
----
-
-## 判断决策树
-
-```
-问题：这个组件属于哪一层？
-
-1. 是跨层共享的纯类型（枚举/值对象/NewType）？
-   YES → ditto_kernel
-   检查 5 条准入标准
-
-2. 是市场事实数据、PIT、数据质量、外部数据源？
-   YES → ditto_data
-
-3. 是因子、指标、表达式编译、物化、因子评估？
-   YES → ditto_features
-
-4. 是策略定义、信号生成、Alpha Pipeline？
-   YES → ditto_strategy
-
-5. 是持仓、目标组合、调仓、会计？
-   YES → ditto_portfolio
-
-6. 是风控检查、约束、暴露分析？
-   YES → ditto_risk
-
-7. 是订单、成交、券商网关、对账？
-   YES → ditto_execution
-
-8. 是回测运行时、模拟 broker、绩效？
-   YES → ditto_backtest
-
-9. 是研究数据集构建、导出、control-plane？
-   YES → ditto_analysis
-
-10. 是应用编排或工作流协调？
-    （CQRS: commands/queries/processes/builders）
-    YES → ditto_application
-
-11. 是应用入口（API/CLI/Jobs/DI 装配）？
-    YES → ditto_apps
-
-12. 是技术基础设施？
-    （日志、配置、缓存、数据库连接池）
-    YES → ditto_platform
-```
-
----
-
-## 单一职责原则（SRP）
-
-### 禁止混合职责
-
-| ❌ 违反 SRP | ✅ 正确 |
-|------------|--------|
-| Protocol + Factory 混在同一文件 | `base.py`（接口）+ `factory.py`（工厂） |
-| 使用 `importlib` 绕过"循环依赖" | 顶层导入 + 字典映射 |
-
-**识别信号**：注释解释"为什么用复杂方案" → 可能是架构问题
 
 ---
 
@@ -559,31 +324,6 @@ def get_source(name: str) -> DataSource:
 | **Execution** | `packages/execution/src/ditto_execution/` | 执行计划、撮合模型、交易规则 |
 | **Application** | `packages/application/src/ditto_application/processes/` | 执行编排（注入到回测流程） |
 | **Backtest** | `packages/backtest/src/ditto_backtest/` | 模拟撮合 |
-
-### 实施检查清单
-
-在添加新组件时，使用以下问题判断其归属：
-
-| 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
-|------|----------------|---------------|
-| 是跨层共享的纯类型？ | ditto_kernel（检查准入标准） | 继续下一个问题 |
-| 是市场事实数据？ | ditto_data | 继续下一个问题 |
-| 是因子/表达式/评估？ | ditto_features | 继续下一个问题 |
-| 是策略/信号/Alpha？ | ditto_strategy | 继续下一个问题 |
-| 是持仓/调仓/会计？ | ditto_portfolio | 继续下一个问题 |
-| 是风控/约束/暴露？ | ditto_risk | 继续下一个问题 |
-| 是订单/成交/网关？ | ditto_execution | 继续下一个问题 |
-| 是回测/模拟/绩效？ | ditto_backtest | 继续下一个问题 |
-| 是研究数据集 control-plane？ | ditto_analysis | 继续下一个问题 |
-| 是应用编排或工作流？ | ditto_application | 继续下一个问题 |
-| 是应用入口（API/CLI/Jobs/DI）？ | ditto_apps | 继续下一个问题 |
-| 是技术基础设施？ | ditto_platform | 重新审视设计 |
-
-**禁止重复实现**：
-- ❌ Application Layer 重复实现 Capability Package 已有的业务逻辑
-- ❌ Capability Package 直接访问存储（应通过 Data Service）
-- ❌ Data 包含业务决策逻辑（应委托给 Capability Package）
-- ❌ 多个地方重复实现相同的业务规则
 
 ---
 

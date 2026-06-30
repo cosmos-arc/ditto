@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from ditto_application.catalog_maturity import catalog_dataset_asset_class
 from ditto_application.config import get_all_datasets
 from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.queries.market import MarketQueryFacade
@@ -42,10 +43,7 @@ def _asset_class_or_none(dataset: str) -> _AssetClass | None:
         if registered_dataset.value != dataset:
             continue
 
-        asset_class = registered_dataset.get_asset_class(dataset)
-        if asset_class == "other":
-            return None
-        return asset_class
+        return catalog_dataset_asset_class(dataset)
     return None
 
 
@@ -87,6 +85,7 @@ async def dq_batch_check(
     with create_prefect_host() as container:
         l3_service = container.get(QualityPatrolService)
         metadata_service = container.get(MetadataQueryFacade)
+        alert_manager = container.get(AlertManager)
         resolved_date = _resolve_trade_date(trade_date, metadata_service)
         resolved_datasets = datasets or list(_DEFAULT_DATASETS)
 
@@ -95,7 +94,11 @@ async def dq_batch_check(
         )
 
         summary = _build_batch_summary(
-            resolved_date, resolved_datasets, all_issues, results_by_dataset
+            resolved_date,
+            resolved_datasets,
+            all_issues,
+            results_by_dataset,
+            alert_manager=alert_manager,
         )
 
         return summary
@@ -249,20 +252,10 @@ def _build_batch_summary(
     datasets: list[str],
     all_issues: list[DQIssue],
     results_by_dataset: dict[str, dict[str, Any]],
+    *,
+    alert_manager: AlertManager,
 ) -> dict[str, Any]:
-    """
-    构建批量检查摘要，发送告警并记录指标.
-
-    Args:
-        trade_date: 交易日期字符串.
-        datasets: 已检查的数据集名称列表.
-        all_issues: 跨数据集收集的所有问题.
-        results_by_dataset: 按数据集分组的结果.
-
-    Returns:
-        摘要字典.
-
-    """
+    """构建批量检查摘要，发送告警并记录指标."""
     alert_count = sum(1 for i in all_issues if i.severity.value == "alert")
 
     summary = {
@@ -280,7 +273,7 @@ def _build_batch_summary(
     )
 
     if alert_count > 0:
-        _send_dq_alert(trade_date, all_issues)
+        _send_dq_alert(trade_date, all_issues, alert_manager=alert_manager)
 
     Metrics.dq_batch_checks.add(1.0, {"trade_date": trade_date})
     Metrics.dq_batch_issues.add(float(len(all_issues)), {"trade_date": trade_date})
@@ -289,17 +282,13 @@ def _build_batch_summary(
     return summary
 
 
-def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
-    """
-    发送 DQ 告警通知.
-
-    通过 AlertManager 发送多渠道告警；获取失败时退化为日志记录。
-
-    Args:
-        trade_date: 交易日期
-        issues: 问题列表
-
-    """
+def _send_dq_alert(
+    trade_date: str,
+    issues: list[Any],
+    *,
+    alert_manager: AlertManager,
+) -> None:
+    """发送 DQ 告警通知（通过注入的 AlertManager）."""
     logger.warning(
         "DQ alert notification",
         event="dq_alert",
@@ -307,20 +296,18 @@ def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
         issue_count=len(issues),
     )
     try:
-        with create_prefect_host() as container:
-            manager = container.get(AlertManager)
-            failed_rules = [i.rule_name for i in issues]
-            level = NotificationLevel.ERROR if issues else NotificationLevel.WARNING
-            manager.send_alert(
-                template="dq_failure",
-                context={
-                    "dataset": "batch",
-                    "trade_date": trade_date,
-                    "failed_rules": failed_rules,
-                    "error_count": len(issues),
-                },
-                level=level,
-            )
+        failed_rules = [i.rule_name for i in issues]
+        level = NotificationLevel.ERROR if issues else NotificationLevel.WARNING
+        alert_manager.send_alert(
+            template="dq_failure",
+            context={
+                "dataset": "batch",
+                "trade_date": trade_date,
+                "failed_rules": failed_rules,
+                "error_count": len(issues),
+            },
+            level=level,
+        )
     except Exception as exc:
         logger.exception(
             "Failed to send DQ alert via AlertManager",

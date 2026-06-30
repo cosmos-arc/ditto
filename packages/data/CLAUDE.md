@@ -24,6 +24,19 @@ ditto_data/
 │   └── runtime.py       # 运行时 Provider
 ├── errors.py            # DataError 异常层级
 ├── events.py            # 数据事件定义
+├── catalog/             # DataCatalog 运行时（Protocol contracts / metadata / in-memory/SQLite store）
+│   ├── contracts.py     # DataCatalog Protocol
+│   ├── metadata.py      # 目录元数据
+│   ├── fallback_policy.py # source fallback policy current-state/audit Protocol
+│   ├── fallback_policy_store.py # SQLite source fallback policy state store
+│   ├── promotion.py     # 数据集晋级 evidence/assessment policy
+│   ├── promotion_store.py # SQLite promotion evidence store
+│   ├── store.py         # in-memory 目录存储
+│   └── sqlite_store.py  # SQLite 目录存储
+├── lineage/             # 数据血缘（Protocol contracts + in-memory/SQLite runtime）
+│   ├── contracts.py     # 血缘 Protocol contracts
+│   ├── store.py         # append-only in-memory lineage store
+│   └── sqlite_store.py  # append-only SQLite lineage store
 ├── helpers/             # 辅助工具（复权调整/PIT 策略与 DataFrame）
 │   ├── adjustment.py    # 复权调整辅助
 │   └── pit/             # PIT（Point-in-Time）辅助
@@ -55,6 +68,8 @@ ditto_data/
 │   ├── freeze_manager.py         # 冻结管理器
 │   ├── instrument_id_allocator.py # 工具 ID 分配器
 │   └── sql_engine.py             # SQL 引擎
+├── observability/       # 可观测性
+│   └── metrics.py       # 数据层指标
 ├── scripts/             # 工具脚本
 ├── services/            # 域服务/存储（market/metadata/fundamental/macro/capital/source + metadata 子目录）
 │   ├── deps.py          # 服务依赖聚合（DI 参数分组）
@@ -174,6 +189,13 @@ ditto_data/
 | `*Service` | 有非平凡业务/应用内编排 | 只有 1-line pass-through |
 | `*Accessor` | 外部资源查找/访问 | 承担业务编排 |
 
+## PIT 时间语义
+
+- PIT 过滤默认时间列必须是 `knowledge_date`，不得把 `trade_date` 当作安全默认值。
+- `filter_by_knowledge_date(...)` 在缺少 `knowledge_date` 时必须 fail closed；只有研究迁移路径可显式传 `UnsafeResearchTimePolicy.ALLOW_TRADE_DATE_FALLBACK` 允许 `trade_date` fallback。
+- `PitHelper` SQL 辅助函数（`add_pit_filter` / `add_pit_join` / `wrap_pit_cte` / `get_safe_trade_date`）和 `SqlEngine.pit_query(...)` 必须复用同一 unsafe policy gate；任何 `trade_date` 谓词都必须是显式 research-only opt-in。
+- backtest/materialization manifest、backtest report、run config 与 artifact metadata 必须记录实际 PIT policy，避免 unsafe fallback 脱离审计；上游可提供 `source_snapshot_id` 时必须向 manifest/input refs 传递，当前 backtest `DataFeed` 未暴露时使用空字符串，不得伪造。
+
 ## 层级访问规则（2026-02-10 更新）
 
 ### Interfaces 层访问规则
@@ -265,7 +287,7 @@ reader = InstrumentReader(...)  # ❌
 | 宏观指标 | experimental | FRED/Tushare 适配器存在，非当前生产范围 |
 | FX 外汇 | experimental | Tushare FX 适配器存在，非当前生产范围 |
 | 商品（WTI/Brent/Gold/Silver） | experimental | FRED/Tushare 适配器存在，非当前生产范围 |
-| DataCatalog runtime | experimental | Protocol contracts 存在，无具体实现 |
-| Lineage | reserved | contracts 仅占位 |
+| DataCatalog runtime | experimental | Protocol contracts + InMemoryDataCatalog + SQLiteDataCatalog + DatasetMetadata 已实现，data runtime DI 已提供 catalog reader/writer、promotion evidence reader/writer、maturity promotion reader/writer/history-reader/revoker 与 lineage reader/recorder 端口，date-level/instrument-level ingestion 已写入 storage URI/schema/source/freshness，DatasetMetadata 已声明 runtime source capability、auxiliary source、date/instrument granularity、freshness SLA、maturity 与 experimental promotion criteria 并驱动 application ingestion source guard/status read model；`catalog.promotion` 已提供 evidence/assessment/metadata-promotion/event/revoke policy，`catalog.promotion_store` 已提供 SQLite 持久 evidence store、maturity promotion override store 与 append-only governance event history，未知/重复 criteria evidence 会失败，缺失 evidence 的 experimental 数据集评估为 blocked，all-passing evidence 可通过 data-owned promotion override 晋级 metadata maturity，current override 可通过 revoker 端口撤销并记录 history；application/API/CLI 已提供 reviewer evidence、promotion history 与 revoke 路径；`macro_indicators` 已声明 Tushare/FRED runtime sources，`source=fred` 可通过 SourceRegistry 驱动 FRED macro fetcher；application/API 已可查询 catalog storage/schema/freshness，ingestion status 已展示 catalog freshness/SLA status、dataset maturity overlay、experimental warning、promotion criteria、blocked/ready assessment 与 rejected criteria，并应用 persisted maturity promotion override，exact-date ingestion skip decision 已可 fallback 到 catalog，retry repair 已可按 missing/stale/fresh catalog 状态排序，date/range-level `source=auto` 已可按 catalog freshness/SLA 委派到 source-consistent coordinator，并复用普通 ingestion date schedule，instrument-level `source=auto` 已可按请求 `end_date` / `start_date` 的 catalog freshness/SLA 选择 source-consistent coordinator，source-health report/API 已顶层暴露 selected-source freshness status、attention reason codes 与 summary-level reason counts；catalog-backed strategy/backtest runtime 已按 DatasetMetadata maturity 默认 fail-closed，API/CLI 已提供 default-off research opt-in，并可通过 persisted maturity promotion override 准入已晋级数据集；仍需成为 storage/schema version policy、richer promotion report/revocation policy 与 broader multi-source routing 主干 |
+| Lineage | experimental | Protocol contracts + InMemoryDataLineage + SQLiteDataLineage append-only runtime 已实现，data runtime DI 已提供 reader/recorder 端口，materialization、date-level/instrument-level/backfill ingestion 与 backtest-run 写路径已接入；application/API 已暴露 asset-level lineage events、run-level lineage summary 与 upstream/downstream asset graph 查询；仍需 report/UI integration 与 catalog source-of-truth |
 
-成熟度定义见 `docs/architecture/capability-maturity.md`。API/CLI/文档不得将 experimental 数据集描述为生产就绪。
+成熟度定义见 `docs/architecture/capability-maturity.md`。API/CLI/文档不得将 experimental 数据集描述为生产就绪。默认 `default_dataset_metadata()` 中的 experimental 数据集必须提供非空 `promotion_criteria`；initial-focus 数据集应保持空 criteria，避免把已准入能力误报为待晋级。晋级证据必须通过 `ditto_data.catalog.promotion.assess_dataset_promotion(...)` 按 criteria 精确匹配评估，并通过 `DatasetPromotionEvidenceReader` / `DatasetPromotionEvidenceWriter` 端口持久化或读取，不得由 application/apps 层自造通过条件。晋级 history/reversal 必须通过 `DatasetMaturityPromotionHistoryReader` / `DatasetMaturityPromotionRevoker` 端口读取或撤销，并记录 `DatasetMaturityPromotionEvent`，不得直接删除 current override 或绕过 append-only governance history。

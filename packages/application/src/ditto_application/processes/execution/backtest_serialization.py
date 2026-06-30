@@ -9,9 +9,12 @@ BacktestReportSerializer — 将 BacktestReport 序列化为 JSON + Parquet.
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Mapping
 
 import orjson
 import polars as pl
+from ditto_backtest.manifest import RunManifest
+from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_backtest.statistics import BacktestReport
 
 __all__ = ["serialize_report"]
@@ -21,6 +24,10 @@ def serialize_report(
     report: BacktestReport,
     *,
     rebalance_freq: str = "daily",
+    manifest: RunManifest | None = None,
+    resume_provenance: Mapping[str, object] | None = None,
+    strategy_promotion: Mapping[str, object] | None = None,
+    risk_report: Mapping[str, object] | None = None,
 ) -> tuple[bytes, dict[str, pl.DataFrame]]:
     """
     将 BacktestReport 序列化为 JSON bytes + Parquet DataFrame 字典.
@@ -29,6 +36,10 @@ def serialize_report(
         report: 回测报告.
         rebalance_freq: 调仓频率 (daily / weekly / monthly).
             写入 JSON 供 replay 反序列化时恢复配置，默认 "daily".
+        manifest: 可选运行清单，用于将 PIT policy 等审计字段写入报告 JSON。
+        resume_provenance: 可选 checkpoint 恢复来源证据。
+        strategy_promotion: 可选策略晋级证据 block，写入报告 JSON。
+        risk_report: 可选最小 launch risk report block，写入报告 JSON。
 
     Returns:
         (json_bytes, parquet_tables) 二元组.
@@ -50,6 +61,25 @@ def serialize_report(
             [v for _, v in report.nav_series] if report.nav_series else None
         ),
     }
+    if manifest is not None:
+        json_data["pit_policy"] = {
+            "time_column": manifest.pit_time_column,
+            "policy": manifest.pit_policy,
+            "unsafe_time_policy": manifest.unsafe_time_policy,
+            "knowledge_lag_days": manifest.knowledge_lag_days,
+        }
+    if resume_provenance is not None:
+        json_data["resume_provenance"] = dict(resume_provenance)
+    if strategy_promotion is not None:
+        json_data["strategy_promotion"] = dict(strategy_promotion)
+    if risk_report is not None:
+        json_data["risk_report"] = dict(risk_report)
+    if report.final_account_state is not None:
+        json_data["final_account_state"] = (
+            BacktestAccountStateSnapshot.from_account_view(
+                report.final_account_state,
+            ).to_payload()
+        )
     json_bytes = orjson.dumps(json_data, option=orjson.OPT_INDENT_2)
 
     # 2. Parquet 表

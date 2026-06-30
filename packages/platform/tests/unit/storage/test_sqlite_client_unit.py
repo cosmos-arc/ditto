@@ -111,3 +111,32 @@ class TestCountIdentifierValidation:
 
     def test_count_accepts_where_with_params(self, client: SQLiteClient) -> None:
         assert client.count("valid_table", "id = ?", [1]) == 1
+
+    def test_count_accepts_and_joined_parameterized_filters(
+        self, client: SQLiteClient
+    ) -> None:
+        assert client.count("valid_table", "id >= ? AND id <= ?", [1, 2]) == 1
+
+    def test_count_rejects_where_literal_even_with_params(
+        self, client: SQLiteClient
+    ) -> None:
+        with pytest.raises(ValueError, match="Invalid SQL WHERE clause"):
+            client.count("valid_table", "id = 1", [])
+
+    def test_count_rejects_where_or_tautology_with_params(
+        self, client: SQLiteClient
+    ) -> None:
+        with pytest.raises(ValueError, match="Invalid SQL WHERE clause"):
+            client.count("valid_table", "id = ? OR 1 = 1", [1])
+
+    def test_count_rejects_statement_separator_in_where(
+        self, client: SQLiteClient
+    ) -> None:
+        with pytest.raises(ValueError, match="Invalid SQL WHERE clause"):
+            client.count("valid_table", "id = ?; DROP TABLE valid_table", [1])
+
+    def test_count_rejects_where_placeholder_count_mismatch(
+        self, client: SQLiteClient
+    ) -> None:
+        with pytest.raises(ValueError, match="placeholder"):
+            client.count("valid_table", "id = ? AND name = ?", [1])

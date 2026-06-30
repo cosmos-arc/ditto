@@ -49,6 +49,8 @@ class FredSource:
         self,
         trade_date: str,
         codes: list[str] | None = None,
+        *,
+        realtime_end: str | None = None,
     ) -> pl.DataFrame:
         """
         Fetch macro indicators from FRED.
@@ -57,6 +59,8 @@ class FredSource:
             trade_date: 交易日期 (YYYY-MM-DD)。
             codes: 指标代码列表 (如 ["US_CPI_YOY", "US_GDP_QOQ"])。
                 如果为 None，获取所有可用指标。
+            realtime_end: 可选 ALFRED PIT 锚点 (YYYY-MM-DD). 对 need_pit
+                指标启用真正 point-in-time 查询.
 
         Returns:
             DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA columns。
@@ -68,6 +72,13 @@ class FredSource:
         if codes is None:
             codes = ALL_FRED_CODES
 
+        if realtime_end is not None:
+            return self._macro.fetch_indicators(
+                codes=codes,
+                start_date=trade_date,
+                end_date=trade_date,
+                realtime_end=realtime_end,
+            )
         return self._macro.fetch_indicators(
             codes=codes,
             start_date=trade_date,
@@ -79,6 +90,9 @@ class FredSource:
         codes: list[str],
         start_date: str,
         end_date: str,
+        *,
+        realtime_start: str | None = None,
+        realtime_end: str | None = None,
     ) -> pl.DataFrame:
         """
         Fetch macro indicators for a date range from FRED.
@@ -87,6 +101,8 @@ class FredSource:
             codes: 指标代码列表 (如 ["US_CPI_YOY", "US_GDP_QOY"])。
             start_date: 开始日期 (YYYY-MM-DD)。
             end_date: 结束日期 (YYYY-MM-DD)。
+            realtime_start: 可选 ALFRED realtime 窗口起点 (YYYY-MM-DD).
+            realtime_end: 可选 ALFRED PIT 锚点 (YYYY-MM-DD).
 
         Returns:
             DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA columns。
@@ -95,6 +111,14 @@ class FredSource:
             SourceFetchError: If fetch fails。
 
         """
+        if realtime_end is not None:
+            return self._macro.fetch_indicators(
+                codes=codes,
+                start_date=start_date,
+                end_date=end_date,
+                realtime_start=realtime_start,
+                realtime_end=realtime_end,
+            )
         return self._macro.fetch_indicators(
             codes=codes,
             start_date=start_date,

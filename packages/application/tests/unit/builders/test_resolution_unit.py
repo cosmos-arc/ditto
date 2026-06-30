@@ -16,7 +16,7 @@ class TestResolveInstrumentDisplay:
 
     def test_normal_case(self) -> None:
         metadata = MagicMock()
-        metadata.get_instrument.side_effect = [
+        metadata.instrument.get_instrument.side_effect = [
             {"ticker": "510300", "exchange": "SH"},
             {"ticker": "159919", "exchange": "SZ"},
         ]
@@ -40,7 +40,7 @@ class TestResolveInstrumentDisplay:
 
     def test_no_instrument(self) -> None:
         metadata = MagicMock()
-        metadata.get_instrument.return_value = None
+        metadata.instrument.get_instrument.return_value = None
         result = resolve_instrument_display([42], metadata)
         assert result.tickers == ("42",)
         assert result.id_map == {"42": InstrumentId(42)}
@@ -48,11 +48,38 @@ class TestResolveInstrumentDisplay:
 
     def test_no_exchange(self) -> None:
         metadata = MagicMock()
-        metadata.get_instrument.return_value = {"ticker": "510300", "exchange": ""}
+        metadata.instrument.get_instrument.return_value = {
+            "ticker": "510300",
+            "exchange": "",
+        }
         result = resolve_instrument_display([1], metadata)
         assert result.tickers == ("1",)
         assert result.id_map == {"1": InstrumentId(1)}
         assert result.display_map == {InstrumentId(1): "1"}
+
+    def test_source_ticker_preferred_when_source_context_provided(self) -> None:
+        metadata = MagicMock()
+        metadata.instrument.get_instrument.return_value = {
+            "ticker": "000001",
+            "exchange": "SZSE",
+        }
+        metadata.instrument.get_source_ticker.return_value = "000001.SZ"
+
+        result = resolve_instrument_display(
+            [1],
+            metadata,
+            source="tushare",
+            as_of="2024-03-29",
+        )
+
+        assert result.tickers == ("000001.SZ",)
+        assert result.id_map == {"000001.SZ": InstrumentId(1)}
+        assert result.display_map == {InstrumentId(1): "000001.SZSE"}
+        metadata.instrument.get_source_ticker.assert_called_once_with(
+            1,
+            "tushare",
+            "2024-03-29",
+        )
 
 
 class TestResolveBenchmark:

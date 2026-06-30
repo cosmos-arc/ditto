@@ -72,6 +72,80 @@ class TestFastAPIEndpoints:
 
 
 @pytest.mark.unit
+class TestOpenAPIMaturity:
+    """OpenAPI should expose capability maturity honestly."""
+
+    def test_openapi_operations_include_maturity_extension(self):
+        """Every documented operation carries x-ditto-maturity."""
+        app.openapi_schema = None
+
+        schema = app.openapi()
+        missing: list[str] = []
+        for path, methods in schema["paths"].items():
+            for method, operation in methods.items():
+                if method == "parameters":
+                    continue
+                if "x-ditto-maturity" not in operation:
+                    missing.append(f"{method.upper()} {path}")
+
+        assert missing == []
+
+    def test_openapi_maturity_matches_route_scope(self):
+        """Route maturity distinguishes initial-focus, experimental, infra and debug."""
+        app.openapi_schema = None
+
+        schema = app.openapi()
+
+        assert (
+            schema["paths"]["/api/v1/market/bars"]["post"]["x-ditto-maturity"]
+            == "initial-focus"
+        )
+        assert (
+            schema["paths"]["/api/v1/macro/indicators"]["post"]["x-ditto-maturity"]
+            == "experimental"
+        )
+        assert (
+            "Capability maturity: `experimental`"
+            in schema["paths"]["/api/v1/macro/indicators"]["post"]["description"]
+        )
+        assert (
+            schema["paths"]["/api/v1/ingestion/status"]["get"]["x-ditto-maturity"]
+            == "infrastructure"
+        )
+        assert (
+            schema["paths"]["/api/v1/logs/test"]["get"]["x-ditto-maturity"] == "debug"
+        )
+
+    def test_openapi_operation_ids_are_frontend_contract_stable(self):
+        """Generated clients should see stable tag-scoped method names."""
+        app.openapi_schema = None
+
+        schema = app.openapi()
+
+        assert (
+            schema["paths"]["/api/v1/backtests/runs"]["post"]["operationId"]
+            == "backtests_trigger_backtest"
+        )
+        assert (
+            schema["paths"]["/api/v1/market/bars"]["post"]["operationId"]
+            == "market_post_bars"
+        )
+        assert (
+            schema["paths"]["/api/v1/fx/bars"]["post"]["operationId"] == "fx_post_bars"
+        )
+        assert schema["paths"]["/"]["get"]["operationId"] == "system_root"
+
+        operation_ids = [
+            operation["operationId"]
+            for methods in schema["paths"].values()
+            for method, operation in methods.items()
+            if method != "parameters"
+        ]
+        assert len(operation_ids) == len(set(operation_ids))
+        assert not any("_api_v1_" in operation_id for operation_id in operation_ids)
+
+
+@pytest.mark.unit
 class TestTestLogsEndpoint:
     """Tests for test logs endpoint."""
 

@@ -217,7 +217,9 @@ class TestExceptionChainPreservation:
         )
         # 模拟 register_instruments_batch 抛出数据库错误
         db_error = RuntimeError("Database connection failed")
-        mock_metadata_service.register_instruments_batch.side_effect = db_error
+        mock_metadata_service.instrument.register_instruments_batch.side_effect = (
+            db_error
+        )
 
         # Act & Assert
         with pytest.raises(IdentifierNotFoundError) as exc_info:

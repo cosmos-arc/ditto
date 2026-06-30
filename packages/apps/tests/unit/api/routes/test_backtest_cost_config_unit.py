@@ -7,31 +7,33 @@ Tests:
 3. CostConfigRequest parameter validation
 4. CreateBacktestRunRequest with optional cost_config
 5. Body → Command cost_config mapping
-6. TestClient end-to-end: POST /runs cost_config → handler receives CostConfig
+6. Direct route call: POST /runs cost_config model → handler receives CostConfig
 """
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
-from dishka import Provider, Scope, make_async_container, provide
-from dishka.integrations.fastapi import setup_dishka
 from ditto_application.commands.backtest import (
     BacktestRunCommand,
     BacktestRunHandler,
     CostConfig,
 )
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
-from ditto_apps.api.routes.backtest import router
+from ditto_apps.api.routes.backtest_run_routes import trigger_backtest
 from ditto_apps.models.backtest import (
+    BacktestRunTriggerResponse,
     CostConfigRequest,
     CreateBacktestRunRequest,
 )
+from ditto_apps.models.common import APIResponse
 from ditto_kernel.strategy import ImpactModel
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from pydantic import ValidationError
+
+_TriggerRoute = Callable[..., Awaitable[APIResponse[BacktestRunTriggerResponse]]]
 
 # ---------------------------------------------------------------------------
 # Model-level tests
@@ -236,7 +238,7 @@ class TestCostConfigMapping:
 
 
 # ---------------------------------------------------------------------------
-# TestClient end-to-end: POST /runs with cost_config
+# Direct route call: POST /runs with cost_config
 # ---------------------------------------------------------------------------
 
 
@@ -250,43 +252,42 @@ def mock_run_service() -> MagicMock:
     return MagicMock(spec=RunLifecycleService)
 
 
-@pytest.fixture
-def app(
-    mock_run_handler: MagicMock,
-    mock_run_service: MagicMock,
-) -> FastAPI:
-    """构建测试 FastAPI 应用，注入 mock DI 容器."""
-    app = FastAPI()
+@pytest.fixture(autouse=True)
+def _inline_backtest_route_thread_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def run_inline(
+        func: Callable[..., object], /, *args: object, **kwargs: object
+    ) -> object:
+        return func(*args, **kwargs)
 
-    class TestProvider(Provider):
-        scope = Scope.APP
-
-        @provide
-        def run_handler(self) -> BacktestRunHandler:
-            return mock_run_handler
-
-        @provide
-        def run_lifecycle_service(self) -> RunLifecycleService:
-            return mock_run_service
-
-    container = make_async_container(TestProvider())
-    setup_dishka(container=container, app=app)
-    app.include_router(router, prefix="/api/v1")
-    return app
+    monkeypatch.setattr(
+        "ditto_apps.api.routes.backtest_run_routes.run_blocking", run_inline
+    )
+    monkeypatch.setattr(
+        "ditto_apps.api.routes.backtest_run_routes.submit_backtest_flow",
+        lambda *, flow_params, on_failure: None,
+    )
 
 
-@pytest.fixture
-def client(app: FastAPI) -> TestClient:
-    return TestClient(app)
+async def _call_trigger(
+    body: CreateBacktestRunRequest,
+    handler: BacktestRunHandler,
+    run_service: RunLifecycleService,
+) -> APIResponse[BacktestRunTriggerResponse]:
+    route = cast(
+        _TriggerRoute,
+        getattr(trigger_backtest, "__dishka_orig_func__", trigger_backtest),
+    )
+    return await route(body=body, handler=handler, run_service=run_service)
 
 
 class TestTriggerBacktestCostConfigRoute:
-    """TestClient 端到端测试: POST /api/v1/backtests/runs cost_config 映射."""
+    """直接调用路由处理器: cost_config 映射到 backtest run command."""
 
-    def test_trigger_without_cost_config_handler_receives_none(
+    @pytest.mark.asyncio
+    async def test_trigger_without_cost_config_handler_receives_none(
         self,
-        client: TestClient,
         mock_run_handler: MagicMock,
+        mock_run_service: MagicMock,
     ) -> None:
         """无 cost_config 时 handler 收到 cost_config=None 的 command."""
         mock_run_handler.handle.return_value = MagicMock(
@@ -295,25 +296,56 @@ class TestTriggerBacktestCostConfigRoute:
             status="pending",
             cost_config=None,
         )
-        resp = client.post(
-            "/api/v1/backtests/runs",
-            json={
-                "strategy_id": "test",
-                "start_date": "2025-01-01",
-                "end_date": "2025-01-31",
-            },
+        response = await _call_trigger(
+            CreateBacktestRunRequest(
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+            ),
+            mock_run_handler,
+            mock_run_service,
         )
-        assert resp.status_code == 202
+        assert response.data.run_id == "run-001"
 
         # 验证 handler.handle 被调用，且 command.cost_config 为 None
         mock_run_handler.handle.assert_called_once()
         command = mock_run_handler.handle.call_args.args[0]
         assert command.cost_config is None
+        assert command.allow_experimental_data is False
 
-    def test_trigger_with_custom_cost_config_handler_receives_values(
+    @pytest.mark.asyncio
+    async def test_trigger_with_experimental_data_opt_in_handler_receives_flag(
         self,
-        client: TestClient,
         mock_run_handler: MagicMock,
+        mock_run_service: MagicMock,
+    ) -> None:
+        """显式 maturity opt-in 透传到 backtest run command."""
+        mock_run_handler.handle.return_value = MagicMock(
+            run_id="run-exp",
+            strategy_id="stock-research",
+            status="pending",
+            cost_config=None,
+        )
+        response = await _call_trigger(
+            CreateBacktestRunRequest(
+                strategy_id="stock-research",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+                allow_experimental_data=True,
+            ),
+            mock_run_handler,
+            mock_run_service,
+        )
+
+        assert response.data.run_id == "run-exp"
+        command = mock_run_handler.handle.call_args.args[0]
+        assert command.allow_experimental_data is True
+
+    @pytest.mark.asyncio
+    async def test_trigger_with_custom_cost_config_handler_receives_values(
+        self,
+        mock_run_handler: MagicMock,
+        mock_run_service: MagicMock,
     ) -> None:
         """自定义 cost_config 正确透传到 handler command."""
         mock_run_handler.handle.return_value = MagicMock(
@@ -328,22 +360,23 @@ class TestTriggerBacktestCostConfigRoute:
                 impact_model=ImpactModel.VOLUME_SHARE,
             ),
         )
-        resp = client.post(
-            "/api/v1/backtests/runs",
-            json={
-                "strategy_id": "test",
-                "start_date": "2025-01-01",
-                "end_date": "2025-01-31",
-                "cost_config": {
-                    "commission_rate": 0.0005,
-                    "commission_min": 10.0,
-                    "stamp_duty_rate": 0.002,
-                    "slippage_bps": 3.0,
-                    "impact_model": "volume_share",
-                },
-            },
+        response = await _call_trigger(
+            CreateBacktestRunRequest(
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+                cost_config=CostConfigRequest(
+                    commission_rate=0.0005,
+                    commission_min=10.0,
+                    stamp_duty_rate=0.002,
+                    slippage_bps=3.0,
+                    impact_model=ImpactModel.VOLUME_SHARE,
+                ),
+            ),
+            mock_run_handler,
+            mock_run_service,
         )
-        assert resp.status_code == 202
+        assert response.data.run_id == "run-002"
 
         # 验证 handler 收到正确的 CostConfig
         mock_run_handler.handle.assert_called_once()
@@ -355,10 +388,11 @@ class TestTriggerBacktestCostConfigRoute:
         assert command.cost_config.slippage_bps == 3.0
         assert command.cost_config.impact_model == ImpactModel.VOLUME_SHARE
 
-    def test_trigger_with_default_cost_config_object_handler_receives_defaults(
+    @pytest.mark.asyncio
+    async def test_trigger_with_default_cost_config_object_handler_receives_defaults(
         self,
-        client: TestClient,
         mock_run_handler: MagicMock,
+        mock_run_service: MagicMock,
     ) -> None:
         """显式传入默认 cost_config 对象，handler 收到 A 股标准费率."""
         mock_run_handler.handle.return_value = MagicMock(
@@ -367,16 +401,17 @@ class TestTriggerBacktestCostConfigRoute:
             status="pending",
             cost_config=CostConfig(),
         )
-        resp = client.post(
-            "/api/v1/backtests/runs",
-            json={
-                "strategy_id": "test",
-                "start_date": "2025-01-01",
-                "end_date": "2025-01-31",
-                "cost_config": {},
-            },
+        response = await _call_trigger(
+            CreateBacktestRunRequest(
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+                cost_config=CostConfigRequest(),
+            ),
+            mock_run_handler,
+            mock_run_service,
         )
-        assert resp.status_code == 202
+        assert response.data.run_id == "run-003"
 
         mock_run_handler.handle.assert_called_once()
         command = mock_run_handler.handle.call_args.args[0]
@@ -387,10 +422,11 @@ class TestTriggerBacktestCostConfigRoute:
         assert command.cost_config.slippage_bps == 1.0
         assert command.cost_config.impact_model == "none"
 
-    def test_trigger_with_partial_cost_config(
+    @pytest.mark.asyncio
+    async def test_trigger_with_partial_cost_config(
         self,
-        client: TestClient,
         mock_run_handler: MagicMock,
+        mock_run_service: MagicMock,
     ) -> None:
         """部分覆盖 cost_config，其余字段保持默认."""
         mock_run_handler.handle.return_value = MagicMock(
@@ -399,18 +435,17 @@ class TestTriggerBacktestCostConfigRoute:
             status="pending",
             cost_config=CostConfig(slippage_bps=5.0),
         )
-        resp = client.post(
-            "/api/v1/backtests/runs",
-            json={
-                "strategy_id": "test",
-                "start_date": "2025-01-01",
-                "end_date": "2025-01-31",
-                "cost_config": {
-                    "slippage_bps": 5.0,
-                },
-            },
+        response = await _call_trigger(
+            CreateBacktestRunRequest(
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+                cost_config=CostConfigRequest(slippage_bps=5.0),
+            ),
+            mock_run_handler,
+            mock_run_service,
         )
-        assert resp.status_code == 202
+        assert response.data.run_id == "run-004"
 
         mock_run_handler.handle.assert_called_once()
         command = mock_run_handler.handle.call_args.args[0]
@@ -421,10 +456,11 @@ class TestTriggerBacktestCostConfigRoute:
         assert command.cost_config.commission_min == 5.0
         assert command.cost_config.stamp_duty_rate == 0.001
 
-    def test_trigger_with_zero_cost_config(
+    @pytest.mark.asyncio
+    async def test_trigger_with_zero_cost_config(
         self,
-        client: TestClient,
         mock_run_handler: MagicMock,
+        mock_run_service: MagicMock,
     ) -> None:
         """零值 cost_config 合法，handler 收到零费率."""
         mock_run_handler.handle.return_value = MagicMock(
@@ -438,21 +474,22 @@ class TestTriggerBacktestCostConfigRoute:
                 slippage_bps=0.0,
             ),
         )
-        resp = client.post(
-            "/api/v1/backtests/runs",
-            json={
-                "strategy_id": "test",
-                "start_date": "2025-01-01",
-                "end_date": "2025-01-31",
-                "cost_config": {
-                    "commission_rate": 0.0,
-                    "commission_min": 0.0,
-                    "stamp_duty_rate": 0.0,
-                    "slippage_bps": 0.0,
-                },
-            },
+        response = await _call_trigger(
+            CreateBacktestRunRequest(
+                strategy_id="test",
+                start_date="2025-01-01",
+                end_date="2025-01-31",
+                cost_config=CostConfigRequest(
+                    commission_rate=0.0,
+                    commission_min=0.0,
+                    stamp_duty_rate=0.0,
+                    slippage_bps=0.0,
+                ),
+            ),
+            mock_run_handler,
+            mock_run_service,
         )
-        assert resp.status_code == 202
+        assert response.data.run_id == "run-005"
 
         mock_run_handler.handle.assert_called_once()
         command = mock_run_handler.handle.call_args.args[0]

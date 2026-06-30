@@ -19,6 +19,7 @@ from ditto_data.helpers.pit.policy import (
     DEFAULT_ROLLING_WINDOW_CLOSED,
     KNOWLEDGE_DATE_LAG_DAYS,
     RollingWindowClosed,
+    UnsafeResearchTimePolicy,
     is_pit_safe_closed,
 )
 from ditto_data.helpers.pit.sql import PitHelper
@@ -29,6 +30,7 @@ __all__ = [
     "PIT_QUERY_OPERATOR",
     "PitHelper",
     "RollingWindowClosed",
+    "UnsafeResearchTimePolicy",
     "filter_by_knowledge_date",
     "get_pit_filter_expr",
     "is_pit_safe_closed",

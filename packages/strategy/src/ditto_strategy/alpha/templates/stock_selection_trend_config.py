@@ -61,6 +61,11 @@ class StockSelectionTrendConfig:
         cash_target: 目标现金比例。
         trend_threshold: 趋势过滤阈值。
         rebalance_freq: 调仓频率 (``"daily"`` / ``"weekly"`` / ``"monthly"``)。
+        winsorize_sigma: 因子去极值 sigma 倍数(正值);``None`` 关闭预处理。
+        zscore: 是否对因子列做 zscore 标准化。
+        neutralize_by: 中性化分组列名(如 ``"industry"``);``None`` 关闭。
+        fusion: 多因子融合模式(``"simple"`` 单 stage rank 加权 / ``"composite"``
+            CompositeDecisionStage 子 stage 融合,产 ``score`` 列)。
         regime_config: Regime 评分配置（None = 不使用 regime 缩放）。
 
     """
@@ -74,6 +79,10 @@ class StockSelectionTrendConfig:
     cash_target: float = 0.0
     trend_threshold: float = 0.0
     rebalance_freq: str = "daily"
+    winsorize_sigma: float | None = None
+    zscore: bool = False
+    neutralize_by: str | None = None
+    fusion: str = "simple"
     regime_config: RegimeConfig | None = None
 
 
@@ -152,6 +161,39 @@ def validate_config(config: StockSelectionTrendConfig) -> None:
             reason="invalid_enum",
             actual_value=config.rebalance_freq,
             allowed_values=valid_freqs,
+        )
+
+    if config.winsorize_sigma is not None and config.winsorize_sigma <= 0:
+        msg = f"winsorize_sigma must be > 0, got {config.winsorize_sigma}"
+        _raise_config_error(
+            msg,
+            field_name="winsorize_sigma",
+            reason="out_of_range",
+            actual_value=config.winsorize_sigma,
+            min_value=0,
+        )
+
+    if config.neutralize_by is not None and not config.neutralize_by.strip():
+        msg = (
+            f"neutralize_by must be a non-empty column name, "
+            f"got {config.neutralize_by!r}"
+        )
+        _raise_config_error(
+            msg,
+            field_name="neutralize_by",
+            reason="empty_value",
+            actual_value=config.neutralize_by,
+        )
+
+    valid_fusions = ("simple", "composite")
+    if config.fusion not in valid_fusions:
+        msg = f"fusion must be one of {valid_fusions}, got '{config.fusion}'"
+        _raise_config_error(
+            msg,
+            field_name="fusion",
+            reason="invalid_enum",
+            actual_value=config.fusion,
+            allowed_values=valid_fusions,
         )
 
 

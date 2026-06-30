@@ -52,6 +52,7 @@ ditto_risk/
 ├── observability/        # 可观测性
 │   └── metrics.py        # 风控指标采集
 ├── models.py             # 风险模型
+├── kill_switch.py        # KillSwitch（紧急熔断）
 ├── contracts.py          # 风控契约
 ├── errors.py             # 错误定义
 └── events.py             # 领域事件

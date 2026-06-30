@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import polars as pl
+from ditto_data.catalog import DataCatalogWriter
+from ditto_data.catalog.metadata import dataset_asset_class
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionResult
 from ditto_data.services.market_service import MarketService
@@ -28,28 +33,70 @@ from ditto_application.processes.ingestion.fetch_handlers import (
     build_instrument_fetch_handlers,
 )
 from ditto_application.processes.ingestion.post_ingest import (
+    CatalogWriteContext,
+    DataWriteContext,
     handle_fetch_error,
+    record_data_catalog_entry,
+    record_ingestion_lineage,
     write_data_safe,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
+from ditto_application.processes.ingestion.source_capability import (
+    ensure_source_supported,
+)
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
+    "InstrumentBackfillContext",
+    "InstrumentIngestContext",
+    "InstrumentPostIngestContext",
     "backfill_adj_factor",
     "ingest_by_instrument",
 ]
 
 
-def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入的 fetchers/metadata/result_handler/data_writer
+@dataclass(frozen=True)
+class InstrumentBackfillContext:
+    """Runtime dependencies for instrument backfill orchestration."""
+
+    metadata_service: MetadataService
+    market_service: MarketService
+    fetchers: SourceFetchers
+    source_name: str
+    data_writer: IngestionDataWriter
+    lineage_recorder: DataLineageRecorder | None = None
+
+
+@dataclass(frozen=True)
+class InstrumentIngestContext:
+    """Runtime dependencies for instrument-range ingestion."""
+
+    fetchers: SourceFetchers
+    metadata_service: MetadataService
+    source_name: str
+    result_handler: IngestionResultHandler
+    data_writer: IngestionDataWriter
+    lineage_recorder: DataLineageRecorder | None = None
+    catalog_writer: DataCatalogWriter | None = None
+
+
+@dataclass(frozen=True)
+class InstrumentPostIngestContext:
+    """Runtime dependencies for instrument-range post-ingest processing."""
+
+    result_handler: IngestionResultHandler
+    data_writer: IngestionDataWriter
+    source_name: str
+    lineage_recorder: DataLineageRecorder | None = None
+    catalog_writer: DataCatalogWriter | None = None
+
+
+def ingest_by_instrument(
     dataset: str,
     params: InstrumentIngestParams,
     force: bool,
     *,
-    fetchers: SourceFetchers,
-    metadata_service: MetadataService,
-    source_name: str,
-    result_handler: IngestionResultHandler,
-    data_writer: IngestionDataWriter,
+    ctx: InstrumentIngestContext,
 ) -> IngestionResult:
     """按标的 + 日期范围摄取数据."""
     try:
@@ -60,6 +107,7 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
             field="dataset",
             value=dataset,
         ) from e
+    ensure_source_supported(dataset_enum, ctx.source_name)
 
     if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
         raise AppProcessError(
@@ -68,7 +116,7 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
             value=dataset,
         )
 
-    asset_class = dataset_enum.asset_class
+    asset_class = dataset_asset_class(dataset)
     if asset_class is None:
         raise AppProcessError(
             f"数据集 {dataset} 缺少 asset_class 定义",
@@ -80,9 +128,9 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
         params,
         asset_class,
         dataset,
-        metadata_service=metadata_service,
-        source=fetchers.metadata,
-        source_name=source_name,
+        metadata_service=ctx.metadata_service,
+        source=ctx.fetchers.metadata,
+        source_name=ctx.source_name,
     )
 
     logger.info(
@@ -101,23 +149,17 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
         dataset_enum,
         source_ticker,
         params,
-        fetchers=fetchers,
-        result_handler=result_handler,
-        data_writer=data_writer,
-        source_name=source_name,
+        ctx=ctx,
     )
 
 
-def _fetch_and_ingest_by_instrument(  # noqa: PLR0913 — 内部编排：透传 DI 服务 + dataset 上下文
+def _fetch_and_ingest_by_instrument(
     dataset: str,
     dataset_enum: Dataset,
     source_ticker: str,
     params: InstrumentIngestParams,
     *,
-    fetchers: SourceFetchers,
-    result_handler: IngestionResultHandler,
-    data_writer: IngestionDataWriter,
-    source_name: str,
+    ctx: InstrumentIngestContext,
 ) -> IngestionResult:
     """按标的获取数据并执行摄取（统一错误处理）。"""
     df_or_result = _try_fetch_data_by_instrument(
@@ -125,9 +167,9 @@ def _fetch_and_ingest_by_instrument(  # noqa: PLR0913 — 内部编排：透传 
         dataset_enum,
         source_ticker,
         params,
-        fetchers=fetchers,
-        result_handler=result_handler,
-        source_name=source_name,
+        fetchers=ctx.fetchers,
+        result_handler=ctx.result_handler,
+        source_name=ctx.source_name,
     )
 
     if isinstance(df_or_result, IngestionResult):
@@ -138,8 +180,13 @@ def _fetch_and_ingest_by_instrument(  # noqa: PLR0913 — 内部编排：透传 
         dataset,
         source_ticker,
         params,
-        result_handler=result_handler,
-        data_writer=data_writer,
+        ctx=InstrumentPostIngestContext(
+            result_handler=ctx.result_handler,
+            data_writer=ctx.data_writer,
+            source_name=ctx.source_name,
+            lineage_recorder=ctx.lineage_recorder,
+            catalog_writer=ctx.catalog_writer,
+        ),
     )
 
 
@@ -174,33 +221,58 @@ def _process_fetched_data_by_instrument(
     source_ticker: str,
     params: InstrumentIngestParams,
     *,
-    result_handler: IngestionResultHandler,
-    data_writer: IngestionDataWriter,
+    ctx: InstrumentPostIngestContext,
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
-        return result_handler.handle_empty_data(dataset, params.start_date)
+        return ctx.result_handler.handle_empty_data(dataset, params.start_date)
 
     on_duplicate = OnDuplicate.KEEP_LAST
 
     write_result = write_data_safe(
-        dataset,
-        df,
-        params.start_date,
-        on_duplicate,
-        result_handler=result_handler,
-        data_writer=data_writer,
-        source_ticker=source_ticker,
-        event_suffix="_by_instrument",
+        DataWriteContext(
+            dataset=dataset,
+            df=df,
+            trade_date=params.start_date,
+            on_duplicate=on_duplicate,
+            source_ticker=source_ticker,
+            event_suffix="_by_instrument",
+        ),
+        result_handler=ctx.result_handler,
+        data_writer=ctx.data_writer,
     )
     if isinstance(write_result, IngestionResult):
         return write_result
 
     if write_result.blocked:
-        return result_handler.handle_dq_blocked(
+        return ctx.result_handler.handle_dq_blocked(
             dataset, params.start_date, write_result
         )
-    return result_handler.handle_success(dataset, params.start_date, df, write_result)
+    result = ctx.result_handler.handle_success(
+        dataset, params.start_date, df, write_result
+    )
+    record_ingestion_lineage(
+        dataset,
+        params.start_date,
+        source_name=ctx.source_name,
+        lineage_recorder=ctx.lineage_recorder,
+        write_result=write_result,
+        source_ticker=source_ticker,
+        end_date=params.end_date,
+    )
+    record_data_catalog_entry(
+        CatalogWriteContext(
+            dataset=dataset,
+            trade_date=params.start_date,
+            source_name=ctx.source_name,
+            write_result=write_result,
+            df=df,
+            source_ticker=source_ticker,
+            end_date=params.end_date,
+        ),
+        catalog_writer=ctx.catalog_writer,
+    )
+    return result
 
 
 def _fetch_by_dataset(
@@ -226,16 +298,12 @@ def _fetch_by_dataset(
     return handlers[dataset_enum]()
 
 
-def backfill_adj_factor(  # noqa: PLR0913 — 回补入口：DI 服务 + BackfillContext 构造，参数已收敛至 BackfillContext
+def backfill_adj_factor(
     instrument_id: int,
     start: str,
     end: str,
     *,
-    metadata_service: MetadataService,
-    market_service: MarketService,
-    fetchers: SourceFetchers,
-    source_name: str,
-    data_writer: IngestionDataWriter,
+    ctx: InstrumentBackfillContext,
 ) -> dict[str, object]:
     """按标的智能回补复权因子空洞，委托至 backfill_handler。"""
     return _backfill_adj_factor(
@@ -243,10 +311,11 @@ def backfill_adj_factor(  # noqa: PLR0913 — 回补入口：DI 服务 + Backfil
         start=start,
         end=end,
         ctx=BackfillContext(
-            metadata_service=metadata_service,
-            market_service=market_service,
-            source=fetchers.market,
-            source_name=source_name,
-            data_writer=data_writer,
+            metadata_service=ctx.metadata_service,
+            market_service=ctx.market_service,
+            source=ctx.fetchers.market,
+            source_name=ctx.source_name,
+            data_writer=ctx.data_writer,
+            lineage_recorder=ctx.lineage_recorder,
         ),
     )

@@ -104,5 +104,35 @@ class TestStrategyFacade:
             trade_date="2026-03-24",
             version=3,
             source="tushare",
+            allow_experimental_data=False,
         )
         run_service.run.assert_called_once_with("2026-03-24", slice_)
+
+    def test_run_strategy_for_date_from_catalog_forwards_experimental_opt_in(
+        self,
+    ) -> None:
+        """facade 应把 experimental data opt-in 传给 slice builder。"""
+        run_service = MagicMock()
+        run_service.run.return_value = MagicMock(spec=StrategyRunResult)
+        factory = MagicMock(spec=StrategyServiceFactory)
+        factory.build_strategy_run_service_from_catalog.return_value = run_service
+        slice_builder = MagicMock(spec=StrategySliceBuilder)
+        slice_builder.build_published_slice.return_value = MagicMock(spec=Slice)
+        facade = StrategyFacade(factory=factory, slice_builder=slice_builder)
+
+        facade.run_strategy_for_date_from_catalog(
+            config=StrategyRunServiceConfig(
+                strategy_id="stock-alpha",
+                mode=StrategyRunMode.RESEARCH,
+            ),
+            trade_date="2026-03-24",
+            version=1,
+            allow_experimental_data=True,
+        )
+
+        assert (
+            slice_builder.build_published_slice.call_args.kwargs[
+                "allow_experimental_data"
+            ]
+            is True
+        )

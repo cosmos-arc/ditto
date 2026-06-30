@@ -36,14 +36,28 @@ def test_catalog_entry_carries_storage_implementation_free_locator_metadata() ->
         schema=schema,
         source="fixture",
         freshness_at=timestamp,
+        source_snapshot_id="snapshot:fixture:bars:2026-05-06:abc",
     )
 
     assert entry.asset is asset
     assert entry.storage_uri == "lake://market/bars"
     assert entry.schema is schema
+    assert entry.source_snapshot_id == "snapshot:fixture:bars:2026-05-06:abc"
     assert entry.freshness_at == timestamp
     with pytest.raises(FrozenInstanceError):
         entry.source = "other"  # type: ignore[misc]
+
+
+def test_schema_fingerprint_carries_contract_columns_and_version() -> None:
+    schema = DataSchemaFingerprint(
+        schema_hash="sha256:abc",
+        row_count=3,
+        schema_version="market.stock_daily.v1",
+        columns=("instrument_id", "trade_date", "close"),
+    )
+
+    assert schema.schema_version == "market.stock_daily.v1"
+    assert schema.columns == ("instrument_id", "trade_date", "close")
 
 
 def test_catalog_protocols_accept_structural_in_memory_fake() -> None:

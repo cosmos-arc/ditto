@@ -40,7 +40,7 @@ class TestAdjFactorIngestion:
 
         # Mock return values
         mock_market_write_service.save_adj_factor.return_value = 2
-        mock_metadata_service.resolve_instrument_ids_batch.return_value = {
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
             "000001.SZ": 1_000_001,
             "000002.SZ": 1_000_002,
         }
@@ -100,8 +100,8 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_metadata_service.resolve_instrument_ids_batch.assert_called_once()
-        call = mock_metadata_service.resolve_instrument_ids_batch.call_args
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.assert_called_once()
+        call = mock_metadata_service.instrument.resolve_instrument_ids_batch.call_args
         assert set(call.kwargs["identifiers"]) == {"000001.SZ", "000002.SZ"}
         assert call.kwargs["source"] == "tushare"
 
@@ -135,7 +135,7 @@ class TestAdjFactorIngestion:
 
         # Mock return values
         mock_market_write_service.save_adj_factor.return_value = 2
-        mock_metadata_service.resolve_instrument_ids_batch.return_value = {
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
             "510300.SH": 2_000_001,
             "510500.SH": 2_000_002,
         }
@@ -195,7 +195,7 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_metadata_service.resolve_instrument_ids_batch.assert_called_once()
-        call = mock_metadata_service.resolve_instrument_ids_batch.call_args
+        mock_metadata_service.instrument.resolve_instrument_ids_batch.assert_called_once()
+        call = mock_metadata_service.instrument.resolve_instrument_ids_batch.call_args
         assert set(call.kwargs["identifiers"]) == {"510300.SH", "510500.SH"}
         assert call.kwargs["source"] == "tushare"

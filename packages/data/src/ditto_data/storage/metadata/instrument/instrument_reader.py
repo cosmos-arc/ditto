@@ -155,7 +155,7 @@ class InstrumentReader:
         )
 
         # 尝试从 DataCache 获取
-        if self._cache:
+        if self._cache is not None:
             cache_key = f"instrument_id:{source_ticker}:{source}:{asof or 'current'}"
             cached = self._cache.get(cache_key)
             if cached is not None:
@@ -165,7 +165,7 @@ class InstrumentReader:
         result = self._resolve_from_db(source_ticker, source, asof)
 
         # 缓存结果（使用 -1 表示 None）
-        if self._cache:
+        if self._cache is not None:
             cache_key = f"instrument_id:{source_ticker}:{source}:{asof or 'current'}"
             self._cache.set(cache_key, result if result is not None else -1)
 
@@ -438,7 +438,7 @@ class InstrumentReader:
 
         """
         # 尝试从 DataCache 获取
-        if self._cache and instrument_ids:
+        if self._cache is not None and instrument_ids:
             # 使用排序后的 tuple 作为缓存键
             cache_key = (
                 f"instrument_id_ticker_map:{','.join(map(str, sorted(instrument_ids)))}"
@@ -462,7 +462,7 @@ class InstrumentReader:
         result = {cast(int, r["instrument_id"]): cast(str, r["ticker"]) for r in rows}
 
         # 缓存结果
-        if self._cache and instrument_ids:
+        if self._cache is not None and instrument_ids:
             cache_key = (
                 f"instrument_id_ticker_map:{','.join(map(str, sorted(instrument_ids)))}"
             )
@@ -626,16 +626,23 @@ class InstrumentReader:
 
         """
         # 构建动态 SQL（根据 asset_class 决定 JOIN 哪个扩展表）
+        extension_select = ""
         extension_join = ""
         if asset_class == "stock":
+            extension_select = ", ext.list_status, ext.industry_id"
             extension_join = """
                 LEFT JOIN instrument_stock ext ON s.instrument_id = ext.instrument_id
             """
         elif asset_class == "etf":
+            extension_select = (
+                ", ext.fund_type, ext.fund_manager, "
+                "ext.establish_date, ext.tracking_index"
+            )
             extension_join = """
                 LEFT JOIN instrument_etf ext ON s.instrument_id = ext.instrument_id
             """
         elif asset_class == "index":
+            extension_select = ", ext.base_date, ext.base_point, ext.num_constituents"
             extension_join = """
                 LEFT JOIN instrument_index ext ON s.instrument_id = ext.instrument_id
             """
@@ -644,7 +651,7 @@ class InstrumentReader:
             extension_join = ""
 
         sql = f"""
-            SELECT s.*, m.source, m.source_ticker
+            SELECT s.*, m.source, m.source_ticker{extension_select}
             FROM instrument s
             LEFT JOIN instrument_mapping m ON s.instrument_id = m.instrument_id
             {extension_join}

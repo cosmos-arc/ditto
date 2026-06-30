@@ -185,6 +185,28 @@ jobs:
           path: junit-unit.xml
 
   # ============================================================
+  # Stage 3b: Golden E2E 回归（合成数据全链路，进 PR 门禁）
+  # ============================================================
+  golden-e2e:
+    name: golden-e2e
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
+          environments: dev
+
+      - name: Golden E2E
+        run: pixi run -e dev pytest packages/apps/tests/integration/test_golden_e2e.py packages/apps/tests/integration/test_stock_selection_golden_e2e.py -v
+
+  # ============================================================
   # Stage 4: 构建验证（仅 main 分支）
   # ============================================================
   build:
@@ -225,13 +247,13 @@ jobs:
   # ============================================================
   ci-success:
     name: ci-success
-    needs: [audit, lint, type-check, test-unit]
+    needs: [audit, lint, type-check, test-unit, golden-e2e]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check required jobs
         run: |
-          results=("${{ needs.audit.result }}" "${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}")
+          results=("${{ needs.audit.result }}" "${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}" "${{ needs.golden-e2e.result }}")
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" ]]; then
               echo "::error::One or more required CI checks failed"

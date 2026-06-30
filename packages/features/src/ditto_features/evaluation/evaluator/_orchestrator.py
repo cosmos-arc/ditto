@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from dataclasses import dataclass
 
 import polars as pl
 from ditto_kernel.tracing import traced
@@ -21,9 +20,15 @@ from ditto_features.evaluation.evaluator._helpers import (
     prepare_data,
     resolve_period,
 )
+from ditto_features.evaluation.evaluator._report_builder import (
+    EvaluationConfig,
+    ICMetricsData,
+    OptionalAnalysisData,
+    QuantileMetricsData,
+    assemble_report,
+    compute_optional_analysis,
+)
 from ditto_features.evaluation.metrics import (
-    factor_exposure,
-    fama_macbeth,
     grinold_kahn_ir,
     ic_autocorrelation,
     ic_summary,
@@ -31,21 +36,13 @@ from ditto_features.evaluation.metrics import (
     net_returns,
     orthogonalize,
     pearson_ic,
-    performance_attribution,
     quantile_returns,
     rank_ic,
-    regime_adjusted_ic,
     sub_period_ic,
     turnover_adjusted_ir,
 )
 from ditto_features.evaluation.report import (
     FactorEvaluationReport,
-    FactorExposureResult,
-    FamaMacBethResult,
-    ICSummary,
-    LongShortResult,
-    PerformanceAttributionResult,
-    RegimeICResult,
 )
 
 __all__ = [
@@ -58,68 +55,12 @@ DEFAULT_PERIODS_PER_YEAR = 244
 
 
 @dataclass(frozen=True)
-class EvaluationConfig:
-    """Configuration parameters for factor evaluation."""
-
-    asset_class: str = "stock"
-    adj: str = "none"
-    holding_period: int = 5
-    n_quantiles: int = 5
-    ic_lags: list[int] | None = field(default=None)
-    ic_autocorr_max_lag: int = 10
-    risk_free_rate: float = 0.0
-    cost_bps: float = 20.0
-    rebalance_freq: int = 5
-    periods_per_year: int = 244
-    run_fama_macbeth: bool = False
-    run_exposure_analysis: bool = False
-    run_regime_ic: bool = False
-    run_performance_attribution: bool = False
-
-
-@dataclass(frozen=True)
 class _PreparedData:
     """清洗后的输入数据 + 元信息。"""
 
     factor_df: pl.DataFrame
     return_df: pl.DataFrame
     n_dates: int
-
-
-@dataclass(frozen=True)
-class _ICMetrics:
-    """IC 分析中间结果。"""
-
-    rank_ic_df: pl.DataFrame
-    rank_ic_summary: ICSummary
-    pearson_ic_summary: ICSummary
-    ic_decay: list[tuple[int, float]]
-    ic_half_life: float | None
-    ic_autocorrelation: list[tuple[int, float]]
-    turnover_adjusted_ir: float
-    grinold_kahn_ir: float
-    sub_period_ic: dict[str, ICSummary]
-
-
-@dataclass(frozen=True)
-class _QuantileMetrics:
-    """分位收益中间结果。"""
-
-    q_ret_df: pl.DataFrame
-    long_short: LongShortResult
-    quantile_annual_returns: dict[int, float]
-    avg_turnover: float
-    net_return_after_cost: float
-
-
-@dataclass(frozen=True)
-class _OptionalAnalysis:
-    """可选分析中间结果。"""
-
-    fama_macbeth: FamaMacBethResult | None
-    factor_exposure: FactorExposureResult | None
-    regime_ic: RegimeICResult | None
-    performance_attribution: PerformanceAttributionResult | None
 
 
 class FactorEvaluator:
@@ -265,7 +206,7 @@ class FactorEvaluator:
         effective_start: str,
         effective_end: str,
         ppw: int,
-    ) -> _ICMetrics:
+    ) -> ICMetricsData:
         """IR Layer 1: IC 分析 + IR Layer 3: Turnover IR / GK IR."""
         effective_lags = config.ic_lags or DEFAULT_IC_LAGS
         rank_ic_df = rank_ic(data.factor_df, data.return_df)
@@ -300,7 +241,7 @@ class FactorEvaluator:
             periods_per_year=ppw,
         )
 
-        return _ICMetrics(
+        return ICMetricsData(
             rank_ic_df=rank_ic_df,
             rank_ic_summary=rank_ic_summary,
             pearson_ic_summary=pearson_ic_summary,
@@ -334,7 +275,7 @@ class FactorEvaluator:
         *,
         config: EvaluationConfig,
         ppw: int,
-    ) -> _QuantileMetrics:
+    ) -> QuantileMetricsData:
         """IR Layer 2: 分位收益 + Long-Short + 换手率 + 净收益."""
         q_ret_df = quantile_returns(
             data.factor_df,
@@ -355,7 +296,7 @@ class FactorEvaluator:
         gross_return = ls_result.annual_return / 100.0
         net_ret = net_returns(gross_return, avg_turnover, config.cost_bps)
 
-        return _QuantileMetrics(
+        return QuantileMetricsData(
             q_ret_df=q_ret_df,
             long_short=ls_result,
             quantile_annual_returns=quantile_annual,
@@ -373,44 +314,16 @@ class FactorEvaluator:
         effective_start: str,
         effective_end: str,
         ppw: int,
-    ) -> _OptionalAnalysis:
+    ) -> OptionalAnalysisData:
         """可选分析: Fama-MacBeth / 因子暴露 / 情景 IC / 绩效归因."""
-        # Fama-MacBeth 回归和因子暴露分析
-        fm_result: FamaMacBethResult | None = None
-        fe_result: FactorExposureResult | None = None
-        risk_dfs = self._resolve_risk_dfs(config, effective_start, effective_end)
-        if risk_dfs:
-            if config.run_fama_macbeth:
-                fm_result = fama_macbeth(
-                    data.factor_df,
-                    data.return_df,
-                    risk_factors=risk_dfs,
-                )
-            if config.run_exposure_analysis:
-                fe_result = factor_exposure(
-                    data.factor_df,
-                    risk_dfs,
-                    return_df=data.return_df,
-                )
-
-        # 情景调整 IC
-        regime_ic_result: RegimeICResult | None = None
-        if config.run_regime_ic:
-            regime_ic_result = regime_adjusted_ic(rank_ic_df)
-
-        # 绩效归因
-        pa_result: PerformanceAttributionResult | None = None
-        if config.run_performance_attribution:
-            pa_result = performance_attribution(
-                q_ret_df,
-                periods_per_year=ppw,
-            )
-
-        return _OptionalAnalysis(
-            fama_macbeth=fm_result,
-            factor_exposure=fe_result,
-            regime_ic=regime_ic_result,
-            performance_attribution=pa_result,
+        return compute_optional_analysis(
+            factor_df=data.factor_df,
+            return_df=data.return_df,
+            rank_ic_df=rank_ic_df,
+            q_ret_df=q_ret_df,
+            config=config,
+            risk_dfs=self._resolve_risk_dfs(config, effective_start, effective_end),
+            ppw=ppw,
         )
 
     def _assemble_report(
@@ -420,36 +333,19 @@ class FactorEvaluator:
         period: tuple[str, str],
         n_dates: int,
         n_observations: int,
-        ic_data: _ICMetrics,
-        q_data: _QuantileMetrics,
-        opt_data: _OptionalAnalysis,
+        ic_data: ICMetricsData,
+        q_data: QuantileMetricsData,
+        opt_data: OptionalAnalysisData,
     ) -> FactorEvaluationReport:
         """组装 FactorEvaluationReport."""
-        return FactorEvaluationReport(
-            factor_id="unknown",
-            factor_version=1,
-            evaluation_period=period,
-            holding_period=config.holding_period,
-            n_quantiles=config.n_quantiles,
-            rank_ic_summary=ic_data.rank_ic_summary,
-            pearson_ic_summary=ic_data.pearson_ic_summary,
-            ic_decay=ic_data.ic_decay,
-            ic_half_life=ic_data.ic_half_life,
-            ic_autocorrelation=ic_data.ic_autocorrelation,
-            quantile_annual_returns=q_data.quantile_annual_returns,
-            long_short=q_data.long_short,
-            avg_turnover=q_data.avg_turnover,
-            net_return_after_cost=q_data.net_return_after_cost,
-            turnover_adjusted_ir=ic_data.turnover_adjusted_ir,
-            grinold_kahn_ir=ic_data.grinold_kahn_ir,
-            sub_period_ic=ic_data.sub_period_ic,
-            fama_macbeth=opt_data.fama_macbeth,
-            factor_exposure=opt_data.factor_exposure,
-            regime_ic=opt_data.regime_ic,
-            performance_attribution=opt_data.performance_attribution,
-            n_observations=n_observations,
+        return assemble_report(
+            config=config,
+            period=period,
             n_dates=n_dates,
-            computed_at=datetime.now(UTC).isoformat(),
+            n_observations=n_observations,
+            ic_data=ic_data,
+            q_data=q_data,
+            opt_data=opt_data,
         )
 
     def _resolve_risk_dfs(

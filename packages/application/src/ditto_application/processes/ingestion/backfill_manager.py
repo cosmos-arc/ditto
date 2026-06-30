@@ -12,8 +12,10 @@ from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_data.services.metadata_service import MetadataService
 from ditto_platform.foundation import logger
 
-from ditto_application.processes.ingestion.coordinator import IngestionCoordinator
 from ditto_application.processes.ingestion.result_handler import count_results
+from ditto_application.processes.ingestion.source_selection import (
+    IngestionCoordinatorLike,
+)
 
 
 class BackfillManager:
@@ -21,7 +23,7 @@ class BackfillManager:
 
     def __init__(
         self,
-        coordinator: IngestionCoordinator,
+        coordinator: IngestionCoordinatorLike,
         metadata_service: MetadataService,
         ingestion_log_store: IngestionLogStore,
     ) -> None:
@@ -29,7 +31,7 @@ class BackfillManager:
         初始化 BackfillManager。
 
         Args:
-            coordinator: IngestionCoordinator 实例。
+            coordinator: 摄取协调器端口。
             metadata_service: MetadataService 实例。
             ingestion_log_store: IngestionLogStore 实例。
 
@@ -117,7 +119,7 @@ class BackfillManager:
             parallel=parallel,
         )
 
-        first_date = self._metadata_service.get_first_trading_day()
+        first_date = self._metadata_service.calendar.get_first_trading_day()
         last_date = self._metadata_service.get_last_trading_day()
         if not first_date or not last_date:
             return BackfillResult(

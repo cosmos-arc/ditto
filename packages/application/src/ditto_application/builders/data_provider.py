@@ -41,7 +41,7 @@ class ServiceBackedDataProvider:
         自动将 string ticker 解析为 int instrument_id，
         然后委托给 MarketService.find_bars。
         """
-        ticker_to_id = self._metadata.resolve_instrument_ids_batch(
+        ticker_to_id = self._metadata.instrument.resolve_instrument_ids_batch(
             identifiers=list(query.instruments),
             source="tushare",
             asof=query.asof,
@@ -73,7 +73,7 @@ class ServiceBackedDataProvider:
 
     def get_schedule(self, start: str, end: str) -> pl.DataFrame:
         """获取交易日历."""
-        return self._metadata.list_calendar_range(start, end, only_open=True)
+        return self._metadata.calendar.list_calendar_range(start, end, only_open=True)
 
     def get_factor(
         self,
@@ -84,7 +84,7 @@ class ServiceBackedDataProvider:
         asof: str | None = None,
     ) -> pl.DataFrame:
         """获取因子数据."""
-        ticker_to_id = self._metadata.resolve_instrument_ids_batch(
+        ticker_to_id = self._metadata.instrument.resolve_instrument_ids_batch(
             identifiers=list(instruments),
             source="tushare",
             asof=asof,

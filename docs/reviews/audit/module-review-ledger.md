@@ -1,7 +1,8 @@
 # Ditto Module Review Ledger
 
-> Date: 2026-05-08
+> Date: 2026-05-25
 > Source plan: `docs/reviews/audit/2026-05-08-global-and-module-review-plan.md`
+> V2 Baseline: `docs/reviews/audit/2026-05-21-comprehensive-architecture-evaluation-v2.md`
 > Scope: global baseline plus 12 package reviews.
 
 ## Status Legend
@@ -17,6 +18,25 @@
 | rejected | Evidence showed the suspected issue is not a problem. |
 
 ## Module Progress
+
+### V2 Scorecard（2026-05-21 baseline）
+
+| Module | V2 Score | Open Findings | Last Review | Remediation Batch |
+|--------|----------|---------------|-------------|-------------------|
+| kernel | 8.6 | 4 (K-1 ~ K-4) | 2026-05-21 | B1C |
+| platform | 7.9 | 4 (P-1 ~ P-4) | 2026-05-21 | B5 |
+| data | 7.2 | 7 (D-1 ~ D-7) | 2026-05-21 | B2 |
+| features | 8.5 | 5 (F-1 ~ F-5) | 2026-05-21 | B5, B6 |
+| strategy | 8.8 | 3 (S-1 ~ S-3) | 2026-05-21 | B6 |
+| portfolio | 7.8 | 4 (PF-1 ~ PF-4) | 2026-05-21 | B4 |
+| risk | 8.0 | 3 (R-1 ~ R-3) | 2026-05-21 | B4 |
+| execution | 7.8 | 6 (EX-1 ~ EX-6) | 2026-05-21 | B0, B1A, B1B, B1C, B4 |
+| backtest | 8.8 | 3 (BT-1 ~ BT-3) | 2026-05-21 | B1C |
+| analysis | 7.5 | 5 (AN-1 ~ AN-5) | 2026-05-21 | B5, B6 |
+| application | 7.8 | 4 (AP-1 ~ AP-4) | 2026-05-21 | B3 |
+| apps | 8.2 | 4 (A-1 ~ A-4) | 2026-05-21 | B3 |
+
+### W1-W4 Detail Progress
 
 | Module | Wave | Review Status | P0 | P1 | P2 | Current Artifact | Notes |
 |---|---|---:|---:|---:|---:|---|---|
@@ -34,6 +54,65 @@
 | platform | W0-W4 | reviewed | 0 | 1 | 3 | `docs/reviews/audit/modules/2026-05-08-platform-review.md` | SQL helper and infrastructure surface findings confirmed. |
 
 ## Findings
+
+### V2 Findings（2026-05-21 baseline）
+
+| ID | Module | Severity | Status | Description | Batch |
+|---|---|---|---|---|---|
+| K-1 | kernel | 低 | open | `tracing.py` 全局可变状态 `_trace_handler`，非线程安全 | B1C |
+| K-2 | kernel | 低 | open | `SimpleEventBus.subscribe` 无线程安全，并发注册可能竞态 | B1C |
+| K-3 | kernel | 观察 | open | `trading.py` 182 LOC 占 kernel ~20%，MarketSnapshot 等仅 Execution/Backtest 使用 | — |
+| K-4 | kernel | 观察 | open | `EventName` 与 `DomainEvent.event_type: str` 类型边界未完全统一 | — |
+| P-1 | platform | 中 | open | `config/paths.py` 484 LOC，`PathResolver` + `XDGPaths` 双类重复职责 | B5-5 |
+| P-2 | platform | 低 | open | `XDGPaths` 属性 getter 有 I/O 副作用（`mkdir`） | B5-5 |
+| P-3 | platform | 低 | open | `observability/metrics/_binding.py` 5 条配置路径，配置复杂度高 | — |
+| P-4 | platform | 低 | open | `foundation/util/checksum.py` 和 `foundation/checksum/file.py` 重复命名 | — |
+| D-1 | data | 高 | open | Dataset metadata（maturity/capability/schedule）分散在 enum + config + application，应由 data 拥有 catalog store | B2-2 |
+| D-2 | data | 高 | open | 4 个 500+ LOC 文件混合职责（sqlite_store 5 职责、tushare/stock/fundamental 重复模式） | B2-3, B2-6, B2-7 |
+| D-3 | data | 中 | open | `capital_market.py` 用函数式而非类（与所有其他 adapter 不一致） | B2-4 |
+| D-4 | data | 中 | open | `fundamental.py` VIP 方法 ~150 LOC 近乎复制粘贴 | B2-5 |
+| D-5 | data | 中 | open | `InstrumentIdRange.detect_asset_class()` 与 `get_range()` 范围表重复 | B2-9 |
+| D-6 | data | 中 | open | `catalog/` 和 `lineage/` 仅 contract-only，无 runtime 实现 | B2-1 |
+| D-7 | data | 低 | open | `sqlite_store.py` 同时包含 read + write，违反 CQRS 分离 | B2-3 |
+| F-1 | features | 中 | open | `expression/codegen/_builders.py` 577 行（已拆，builder 仍偏大） | B5-1 |
+| F-2 | features | 中 | open | `evaluation/evaluator/_orchestrator.py` 509 行（已拆，orchestrator 仍偏大） | B5-2 |
+| F-3 | features | 中 | open | `evaluation/metrics/ic.py` 622 行，指标维度过宽 | B5-3 |
+| F-4 | features | 低 | open | 测试比 0.59:1 — 全仓最低，需补测试 | B5-6 |
+| F-5 | features | 低 | open | `FeaturesError` 与 `DerivedError` 错误根并列，捕获语义不顺 | — |
+| S-1 | strategy | 低 | open | `signals/store.py` Protocol 非 `@runtime_checkable` | — |
+| S-2 | strategy | 低 | open | `StrategyInputBundle.parameters: dict[str, object]` — object 类型 | — |
+| S-3 | strategy | 观察 | open | `alpha/builtins/` 下仍有 regime_allocation.py / regime_scoring.py 未迁入 regime/ 子包 | — |
+| PF-1 | portfolio | 中 | open | `AllocationStage.process()` 和 `ConstraintStage.process()` 参数 `context: object` | B4-2 |
+| PF-2 | portfolio | 低 | open | sell path `market_value` 用 fill_price，buy path 用 avg_cost — 不对称但功能安全 | — |
+| PF-3 | portfolio | 低 | open | `target_portfolios/` 仍是 reserved 空壳 | — |
+| PF-4 | portfolio | 低 | open | `holdings/` 和 `positions/` 仅 minimal Protocol + dataclass | — |
+| R-1 | risk | 中 | open | `RiskGate.daily_scan()` 返回 `list[object]` — 应改为 `list[RiskAction]` | B4-1 |
+| R-2 | risk | 低 | open | `_accept()` helper 在 constraints/checks.py 和 exposure/checks.py 重复 | B4-3 |
+| R-3 | risk | 低 | open | `models.py` 仍为 reserved 空壳 | — |
+| EX-1 | execution | 高 | open | PaperBrokerGateway.get_account() 每次返回初始状态，不反映 fills | B1A-1 |
+| EX-2 | execution | 高 | open | 市价单 fill_price=0.0（最小实现简化） | B1A-1 |
+| EX-3 | execution | 中 | open | 缺少 Order amend/replace 能力 | — |
+| EX-4 | execution | 中 | open | 12 个 `Any` 在 storage/sqlite/trade/ 和 audit/（row 反序列化边界） | — |
+| EX-5 | execution | 中 | open | `RiskGate` 已定义但未挂入 submit 路径 | B1B-3 |
+| EX-6 | execution | 低 | open | root `__init__.py` 空导出 | — |
+| BT-1 | backtest | 低 | open | `compute_portfolio_statistics` 内联日收益计算，未复用 `daily_returns_from_navs` | — |
+| BT-2 | backtest | 低 | open | StepContext 无 write-once 保护，后写 step 可覆盖前值 | — |
+| BT-3 | backtest | 观察 | open | 测试覆盖文档（CLAUDE.md）与实际文件不一致 | — |
+| AN-1 | analysis | 中 | open | `domain.py` 465 LOC 混合 3 种职责：领域模型 + 行反序列化 + 迟到检测 | B5-4 |
+| AN-2 | analysis | 中 | open | 4 个 reserved namespace（diagnostics/screeners/reports/experiments）占位 | B6-4 |
+| AN-3 | analysis | 低 | open | `from_row()` 非主键字段未做 null 防御 | — |
+| AN-4 | analysis | 低 | open | `storage/__init__.py` 0 字节空文件 | — |
+| AN-5 | analysis | 低 | open | ArtifactService 依赖 filesystem glob 约定而非 manifest/index | — |
+| AP-1 | application | 高 | open | `backtest_process.py` 583 LOC，BacktestService 5 职责 | B3-1 |
+| AP-2 | application | 中 | open | `DatasetRegistry` 每次 write_data() 重建实例 | B3-2 |
+| AP-3 | application | 中 | open | 5 个 500+ LOC 文件 | — |
+| AP-4 | application | 低 | open | `default_dataset_registry()` 265 行重复注册可表驱动 | B3-3 |
+| A-1 | apps | 中 | open | `dq_batch.py` 创建 2 个独立 DI container | B3-5 |
+| A-2 | apps | 中 | open | `create_dq_and_metadata_context()` 已 deprecated 但仍存在 | B3-6 |
+| A-3 | apps | 低 | open | `trade.py` barrel 模糊 CQRS 边界 | — |
+| A-4 | apps | 低 | open | `source.py` 233 LOC 可拆分 | — |
+
+### W1-W4 Detail Findings
 
 | ID | Module | Severity | Status | Evidence | Risk | Target Direction |
 |---|---|---|---|---|---|---|
@@ -62,7 +141,7 @@
 | BACKTEST-P1-03 | backtest | P1 | accepted | Replay compares manifest/NAV but not OMS journal, risk state, account restore, or fill idempotency. | Deterministic NAV can hide state recovery defects. | Extend replay proof after OMS/risk snapshot work. |
 | BACKTEST-P2-01 | backtest | P2 | accepted | `statistics.py`, `engine.py`, `manifest.py`, `brokerage.py`, and `data_feed.py` are large mixed-concern files. | Runtime/reporting changes cost more to audit. | Decompose by runtime, simulation, manifest, and reporting under tests. |
 | BACKTEST-P2-02 | backtest | P2 | accepted | Manifest `RunMode` includes live-like vocabulary while live is reserved. | Artifacts can imply live readiness. | Tie mode language to maturity manifest. |
-| PLAT-P1-01 | platform | P1 | accepted | `SQLiteClient.count(table, where)` interpolates table/where strings with caller-validation comment. | Shared helper can become a SQL injection footgun. | Add identifier validation or constrained query builder. |
+| PLAT-P1-01 | platform | P1 | resolved 2026-06-08 | `SQLiteClient.count(table, where, params)` validates table identifiers and a constrained parameterized WHERE grammar before SQL execution. | Residual risk is intentionally unsupported complex predicates; callers needing them should use a dedicated query builder. | Keep the helper narrow and add focused APIs for real broader predicates. |
 | PLAT-P2-01 | platform | P2 | accepted | `ParquetStore` is 768 lines across path/read/write/merge/metadata/checksum concerns. | Storage behavior is harder to audit. | Split read/write/metadata/path helpers. |
 | PLAT-P2-02 | platform | P2 | accepted | Platform storage docs/examples use dataset/instrument terminology. | Domain semantics may leak into platform. | Reword to collection/key language; keep market examples in data docs. |
 | PLAT-P2-03 | platform | P2 | accepted | Runtime correlation/journal ids are not first-class observability guidance yet. | Logs/audit can lack common join keys. | Add correlation guidance after OMS identity is chosen. |

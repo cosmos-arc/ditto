@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
 
 __all__ = [
     "InputRef",
@@ -39,6 +40,7 @@ class InputRef:
         data_hash: 数据内容哈希（格式: "sha256:<hex>"）
         date_range: 数据覆盖日期范围 (start, end)
         source: 数据来源描述（如文件路径或数据源标识）
+        source_snapshot_id: 数据源快照/版本 ID（空字符串表示当前来源未提供）
 
     """
 
@@ -46,6 +48,7 @@ class InputRef:
     data_hash: str
     date_range: tuple[str, str]
     source: str
+    source_snapshot_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -93,6 +96,10 @@ class RunManifest:
         spec_hash: 策略规格哈希
         dependency_versions: 依赖版本列表
         random_seed: 随机种子（None 表示未指定）
+        pit_time_column: PIT 安全时间列
+        pit_policy: PIT 时间策略
+        unsafe_time_policy: 显式 unsafe 研究时间策略（空字符串表示未启用）
+        knowledge_lag_days: 决策知识延迟天数
         created_at: 创建时间 (RFC3339 UTC)
 
     """
@@ -114,3 +121,7 @@ class RunManifest:
     spec_hash: str = ""
     dependency_versions: tuple[str, ...] = ()
     random_seed: int | None = None
+    pit_time_column: str = DEFAULT_PIT_TIME_COLUMN
+    pit_policy: str = PIT_POLICY_FAIL_CLOSED
+    unsafe_time_policy: str = ""
+    knowledge_lag_days: int = 1

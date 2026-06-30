@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from pathlib import Path
+from typing import NamedTuple
 from uuid import uuid4
 
 import polars as pl
@@ -54,6 +55,15 @@ __all__ = ["ResearchDatasetFacade"]
 
 _BUILD_REPORT_FILENAME = "build_report.json"
 _VALID_TABLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+class _ResolvedDerivedInputs(NamedTuple):
+    """derived inputs 解析结果 — 提供精确类型以通过 pyright strict 检查."""
+
+    frame: pl.DataFrame
+    versions: dict[str, int]
+    inputs: tuple[dict[str, str | int], ...]
+    source_ids: tuple[str, ...]
 
 
 def _sanitize_table_name(dataset_id: str) -> str:
@@ -104,7 +114,6 @@ class ResearchDatasetFacade:
             self._require_spine_spec_record(dataset_spec.spine_id),
         )
         spine_spec.validate_spec()
-
         spine_snapshot = self._build_spine_snapshot(
             spine_spec=spine_spec,
             start=start,
@@ -120,18 +129,57 @@ class ResearchDatasetFacade:
             frame=spine_frame,
             known_at_policy=known_at_policy,
             explicit_cutoff=explicit_cutoff,
-        )
-        dataset_frame = dataset_frame.with_row_index("sample_row_id")
-
+        ).with_row_index("sample_row_id")
         universe_ids = tuple(
-            int(instrument_id)
-            for instrument_id in dataset_frame["instrument_id"].unique().to_list()
+            int(i) for i in dataset_frame["instrument_id"].unique().to_list()
         )
+        resolved = self._resolve_derived_inputs(
+            derived_ids=dataset_spec.derived_ids,
+            universe_ids=universe_ids,
+            end=end,
+            overrides=version_overrides or {},
+            dataset_frame=dataset_frame,
+        )
+        dataset_frame = resolved.frame.drop("sample_row_id").sort(
+            ["instrument_id", "trade_date"]
+        )
+        snapshot_contract = _DatasetSnapshotContract(
+            known_at_policy=known_at_policy,
+            effective_cutoff=explicit_cutoff,
+            resolved_versions=resolved.versions,
+            resolved_inputs=resolved.inputs,
+            source_snapshot_ids=resolved.source_ids,
+        )
+        build_report = _build_dataset_report(
+            dataset_frame=dataset_frame,
+            derived_ids=dataset_spec.derived_ids,
+            spine_row_count=spine_snapshot.row_count,
+            snapshot_contract=snapshot_contract,
+        )
+        return self._write_dataset_snapshot(
+            dataset_id=dataset_id,
+            spine_snapshot=spine_snapshot,
+            dataset_spec_version=dataset_spec.version,
+            spine_spec_version=spine_spec.version,
+            dataset_frame=dataset_frame,
+            snapshot_contract=snapshot_contract,
+            build_report=build_report,
+        )
+
+    def _resolve_derived_inputs(
+        self,
+        *,
+        derived_ids: tuple[str, ...],
+        universe_ids: tuple[int, ...],
+        end: str,
+        overrides: dict[str, int],
+        dataset_frame: pl.DataFrame,
+    ) -> _ResolvedDerivedInputs:
+        """解析 derived inputs，依次 PIT join 到 dataset_frame."""
         resolved_versions: dict[str, int] = {}
         resolved_inputs: list[dict[str, str | int]] = []
         source_snapshot_ids: set[str] = set()
-        overrides = version_overrides or {}
-        for derived_id in dataset_spec.derived_ids:
+        for derived_id in derived_ids:
             resolved_version = overrides.get(derived_id)
             if resolved_version is None:
                 resolved_version = self._artifact_reader.resolve_serving_version(
@@ -168,33 +216,12 @@ class ResearchDatasetFacade:
                 source_frame=source_frame,
                 derived_id=derived_id,
             )
-
-        dataset_frame = dataset_frame.drop("sample_row_id").sort(
-            ["instrument_id", "trade_date"]
+        return _ResolvedDerivedInputs(
+            frame=dataset_frame,
+            versions=resolved_versions,
+            inputs=tuple(resolved_inputs),
+            source_ids=tuple(sorted(source_snapshot_ids)),
         )
-        snapshot_contract = _DatasetSnapshotContract(
-            known_at_policy=known_at_policy,
-            effective_cutoff=explicit_cutoff,
-            resolved_versions=resolved_versions,
-            resolved_inputs=tuple(resolved_inputs),
-            source_snapshot_ids=tuple(sorted(source_snapshot_ids)),
-        )
-        build_report = _build_dataset_report(
-            dataset_frame=dataset_frame,
-            derived_ids=dataset_spec.derived_ids,
-            spine_row_count=spine_snapshot.row_count,
-            snapshot_contract=snapshot_contract,
-        )
-        snapshot = self._write_dataset_snapshot(
-            dataset_id=dataset_id,
-            spine_snapshot=spine_snapshot,
-            dataset_spec_version=dataset_spec.version,
-            spine_spec_version=spine_spec.version,
-            dataset_frame=dataset_frame,
-            snapshot_contract=snapshot_contract,
-            build_report=build_report,
-        )
-        return snapshot
 
     def load_build_report(self, snapshot: DatasetSnapshot) -> dict[str, object]:
         """Load the persisted build report for one dataset snapshot."""
@@ -252,6 +279,30 @@ class ResearchDatasetFacade:
             conn.commit()
         conn.close()
 
+    def _persist_artifact_snapshot(
+        self,
+        *,
+        frame: pl.DataFrame,
+        relative_path: str,
+        metadata: dict[str, object],
+        extra_json_files: dict[str, dict[str, object]] | None = None,
+    ) -> str:
+        """写入 parquet + metadata JSON（含 manifest_hash），返回 manifest_hash."""
+        self._artifact_service.write_parquet(relative_path, frame)
+        snapshot_dir = relative_path.rsplit("/", 1)[0]
+        manifest_hash = _manifest_hash(metadata)
+        self._artifact_service.write_json(
+            f"{snapshot_dir}/metadata.json",
+            {**metadata, "manifest_hash": manifest_hash},
+        )
+        if extra_json_files:
+            for filename, content in extra_json_files.items():
+                self._artifact_service.write_json(
+                    f"{snapshot_dir}/{filename}",
+                    content,
+                )
+        return manifest_hash
+
     def _build_spine_snapshot(
         self,
         *,
@@ -259,7 +310,7 @@ class ResearchDatasetFacade:
         start: str,
         end: str,
     ) -> SpineSnapshot:
-        calendar_frame = self._metadata_service.list_calendar_range(
+        calendar_frame = self._metadata_service.calendar.list_calendar_range(
             start=start,
             end=end,
             only_open=True,
@@ -292,8 +343,6 @@ class ResearchDatasetFacade:
             f"derived/research/spines/{spine_spec.spine_id}"
             f"/snapshots/{snapshot_id}/data.parquet"
         )
-        self._artifact_service.write_parquet(relative_path, spine_frame)
-        snapshot_dir = relative_path.rsplit("/", 1)[0]
         metadata: dict[str, object] = {
             "spine_snapshot_id": snapshot_id,
             "spine_id": spine_spec.spine_id,
@@ -304,10 +353,10 @@ class ResearchDatasetFacade:
             "data_path": relative_path,
             "created_at": created_at,
         }
-        manifest_hash = _manifest_hash(metadata)
-        self._artifact_service.write_json(
-            f"{snapshot_dir}/metadata.json",
-            {**metadata, "manifest_hash": manifest_hash},
+        manifest_hash = self._persist_artifact_snapshot(
+            frame=spine_frame,
+            relative_path=relative_path,
+            metadata=metadata,
         )
         record = ResearchSpineSnapshotRecord(
             spine_snapshot_id=snapshot_id,
@@ -350,8 +399,6 @@ class ResearchDatasetFacade:
             f"derived/research/datasets/{dataset_id}"
             f"/snapshots/{snapshot_id}/data.parquet"
         )
-        self._artifact_service.write_parquet(relative_path, dataset_frame)
-        snapshot_dir = relative_path.rsplit("/", 1)[0]
         metadata: dict[str, object] = {
             "snapshot_id": snapshot_id,
             "dataset_id": dataset_id,
@@ -370,14 +417,11 @@ class ResearchDatasetFacade:
             "builder_version": snapshot_contract.builder_version,
             "created_at": created_at,
         }
-        manifest_hash = _manifest_hash(metadata)
-        self._artifact_service.write_json(
-            f"{snapshot_dir}/metadata.json",
-            {**metadata, "manifest_hash": manifest_hash},
-        )
-        self._artifact_service.write_json(
-            f"{snapshot_dir}/{_BUILD_REPORT_FILENAME}",
-            build_report,
+        manifest_hash = self._persist_artifact_snapshot(
+            frame=dataset_frame,
+            relative_path=relative_path,
+            metadata=metadata,
+            extra_json_files={_BUILD_REPORT_FILENAME: build_report},
         )
         record = ResearchDatasetSnapshotRecord(
             snapshot_id=snapshot_id,

@@ -17,6 +17,7 @@ from ditto_application.processes.execution.backtest_process import (
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import DataFeed
+from ditto_data.lineage import InMemoryDataLineage
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
@@ -136,6 +137,34 @@ class TestStrategyServiceFactory:
         result = factory._build_backtest_options(options)
         assert result.compiled_expressions is compiled
 
+    def test_build_backtest_options_injects_lineage_recorder(self) -> None:
+        """factory 应把预接的 lineage recorder 注入回测服务选项。"""
+        lineage = InMemoryDataLineage()
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+            lineage_recorder=lineage,
+        )
+
+        result = factory._build_backtest_options(None)
+
+        assert result.lineage_recorder is lineage
+
+    def test_build_backtest_options_injects_checkpoint_writer(self) -> None:
+        """factory 应把预接的 checkpoint writer 注入回测服务选项。"""
+        checkpoint_writer = MagicMock()
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+            checkpoint_writer=checkpoint_writer,
+        )
+
+        result = factory._build_backtest_options(None)
+
+        assert result.checkpoint_writer is checkpoint_writer
+
     def test_build_backtest_service_from_catalog_injects_display_map(self) -> None:
         """catalog-backed 路径自动从 runtime.display_map 注入 display_map。"""
         from dataclasses import replace
@@ -165,6 +194,38 @@ class TestStrategyServiceFactory:
         )
 
         assert service._options.display_map == test_display_map
+
+    def test_build_backtest_service_from_catalog_passes_experimental_override(
+        self,
+    ) -> None:
+        """factory 应把 experimental data opt-in 传给 runtime builder。"""
+        runtime = _make_runtime()
+        runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)
+        runtime_builder.build_published_runtime.return_value = runtime
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+            backtest_runtime_builder=runtime_builder,
+        )
+
+        factory.build_backtest_service_from_catalog(
+            config=BacktestServiceConfig(
+                strategy_id="momentum-etf",
+                start_date="2026-01-01",
+                end_date="2026-03-01",
+                initial_cash=1_000_000.0,
+            ),
+            version=4,
+            options=BacktestServiceOptions(allow_experimental_data=True),
+        )
+
+        assert (
+            runtime_builder.build_published_runtime.call_args.kwargs[
+                "allow_experimental_data"
+            ]
+            is True
+        )
 
     def test_build_backtest_options_preserves_slippage_model(self) -> None:
         """_build_backtest_options 保留调用方传入的 slippage_model (R6)."""

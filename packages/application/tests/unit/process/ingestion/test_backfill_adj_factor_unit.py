@@ -5,12 +5,15 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator import (
     IngestionCoordinator,
     IngestionServices,
     MarketServices,
     SourceFetchers,
 )
+from ditto_data.catalog import DataAssetRef
+from ditto_data.lineage import InMemoryDataLineage
 from ditto_platform.foundation import (
     Environment,
     ObservabilityConfig,
@@ -49,7 +52,7 @@ def mock_metadata_service():
     service.list_trading_days.return_value = []
     service.resolve_source_ticker.return_value = "000001.SZ"
     # IngestionDataWriter._write_adj_factor 需要 resolve_instrument_ids_batch
-    service.resolve_instrument_ids_batch.return_value = {
+    service.instrument.resolve_instrument_ids_batch.return_value = {
         "000001.SZ": 1,
     }
     return service
@@ -217,6 +220,100 @@ class TestBackfillAdjFactor:
             start_date="20240103",
             end_date="20240103",
         )
+
+    def test_backfill_records_data_lineage(
+        self,
+        mock_metadata_service: MagicMock,
+        mock_market_service: MagicMock,
+        mock_fundamental_store: MagicMock,
+        mock_capital_store: MagicMock,
+        mock_macro_service: MagicMock,
+        mock_source: MagicMock,
+    ) -> None:
+        """回补复权因子成功后记录 source range 到 adj_factor range 的 lineage."""
+        # Arrange
+        instrument_id = 1
+        start = "2024-01-02"
+        end = "2024-01-04"
+        lineage = InMemoryDataLineage()
+        market_write_service = MagicMock()
+        market_write_service.save_adj_factor.return_value = 2
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_service,
+                    write=market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=mock_source,
+            ),
+            config=IngestionCoordinatorConfig(lineage_recorder=lineage),
+        )
+
+        mock_metadata_service.list_trading_days.return_value = [
+            "2024-01-02",
+            "2024-01-03",
+            "2024-01-04",
+        ]
+        mock_market_service.get_adj_factors.return_value = pl.DataFrame(
+            {
+                "instrument_id": [instrument_id],
+                "trade_date": [date(2024, 1, 2)],
+                "adj_factor": [1.0],
+            }
+        )
+        mock_source.fetch_adj_factor_by_ticker.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ", "000001.SZ"],
+                "trade_date": [date(2024, 1, 3), date(2024, 1, 4)],
+                "adj_factor": [1.01, 1.02],
+            }
+        )
+
+        # Act
+        result = coordinator.backfill_adj_factor(instrument_id, start, end)
+
+        # Assert
+        assert result["status"] == "ok"
+        assert result["gap_count"] == 1
+        assert result["filled_dates"] == 2
+        source_asset = DataAssetRef(
+            dataset_id="adj_factor",
+            namespace="source",
+            partition_keys=(
+                "source=tushare",
+                "source_ticker=000001.SZ",
+                "start_date=2024-01-03",
+                "end_date=2024-01-04",
+            ),
+        )
+        output_asset = DataAssetRef(
+            dataset_id="adj_factor",
+            namespace="market",
+            partition_keys=(
+                "source_ticker=000001.SZ",
+                "start_date=2024-01-03",
+                "end_date=2024-01-04",
+            ),
+        )
+        events = lineage.list_events_for_asset(output_asset)
+        assert len(events) == 1
+        event = events[0]
+        assert event.operation == "ingest"
+        assert event.run_id.startswith(
+            "ingest:tushare:adj_factor:000001.SZ:2024-01-03:2024-01-04:"
+        )
+        assert tuple(ref.asset for ref in event.inputs) == (source_asset,)
+        assert tuple(ref.asset for ref in event.outputs) == (output_asset,)
 
     def test_multiple_gaps_fetches_all_missing_ranges(
         self,

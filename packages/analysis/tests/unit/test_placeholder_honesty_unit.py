@@ -7,12 +7,7 @@ from types import ModuleType
 
 import pytest
 
-PLACEHOLDER_MODULE_NAMES = (
-    "ditto_analysis.reports",
-    "ditto_analysis.diagnostics",
-    "ditto_analysis.experiments",
-    "ditto_analysis.screeners",
-)
+PLACEHOLDER_MODULE_NAMES = ("ditto_analysis.experiments",)
 
 MISLEADING_AVAILABILITY_PHRASES = (
     "提供",

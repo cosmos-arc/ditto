@@ -1,8 +1,8 @@
 """
 PaperTradingRuntime — 纸上交易运行时编排器.
 
-纯编排层：委托 BrokerGateway 执行订单，委托 Account 应用成交。
-不包含任何撮合/成交逻辑。
+纯编排层：委托 BrokerGateway 执行订单，并从 BrokerGateway 读取账户状态。
+不包含任何撮合、成交或账户记账逻辑。
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 from ditto_execution.broker.contracts import BrokerGateway
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.ticket import OrderTicket
-from ditto_portfolio.accounting.account import Account
+from ditto_portfolio.accounting.account import AccountView
 
 __all__ = ["PaperTradingRuntime"]
 
@@ -21,19 +21,18 @@ class PaperTradingRuntime:
 
     职责仅限于：
     1. 提交订单到 BrokerGateway
-    2. 获取 gateway 产出的成交
-    3. 将成交应用到 Account
+    2. 返回 gateway 产出的订单状态
+    3. 从 gateway 读取账户快照
 
     不实现任何撮合、定价或风控逻辑。
     """
 
-    def __init__(self, gateway: BrokerGateway, account: Account) -> None:
+    def __init__(self, gateway: BrokerGateway) -> None:
         self._gateway = gateway
-        self._account = account
 
     def execute_order(self, order: Order) -> OrderTicket:
         """
-        执行订单：提交到 gateway -> 获取成交 -> 应用到账户.
+        执行订单：提交到 gateway，并由 gateway 拥有账户记账状态.
 
         Args:
             order: 待执行订单
@@ -43,8 +42,8 @@ class PaperTradingRuntime:
 
         """
         ticket = self._gateway.submit_order(order)
-        fills = self._gateway.query_fills(order.order_id)
-        for fill in fills:
-            settle_date = fill.event_time.strftime("%Y-%m-%d")
-            self._account.apply_fill(fill, settle_date=settle_date)
         return ticket
+
+    def get_account(self) -> AccountView:
+        """返回 gateway 拥有的当前账户快照."""
+        return self._gateway.get_account()

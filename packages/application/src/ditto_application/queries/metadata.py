@@ -32,7 +32,7 @@ class MetadataQueryFacade:
             证券信息字典，不存在返回 None
 
         """
-        return self._service.get_instrument(instrument_id)
+        return self._service.instrument.get_instrument(instrument_id)
 
     def find_securities(
         self,
@@ -87,7 +87,7 @@ class MetadataQueryFacade:
             instrument_id 或 None
 
         """
-        result = self._service.resolve_instrument_identifier(
+        result = self._service.instrument.resolve_instrument_identifier(
             instrument_id=instrument_id,
             standard_ticker=standard_ticker,
             ticker=ticker,
@@ -122,7 +122,7 @@ class MetadataQueryFacade:
             source ticker 字符串
 
         """
-        return self._service.resolve_source_ticker(
+        return self._service.instrument.resolve_source_ticker(
             ticker=ticker,
             standard_ticker=standard_ticker,
             instrument_id=instrument_id,
@@ -173,7 +173,7 @@ class MetadataQueryFacade:
             日历 DataFrame
 
         """
-        return self._service.list_calendar_range(
+        return self._service.calendar.list_calendar_range(
             start=start,
             end=end,
             only_open=only_open,

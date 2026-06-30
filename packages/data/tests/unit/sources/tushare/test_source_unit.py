@@ -414,6 +414,109 @@ class TestTushareSourceStockBasic:
             },
         ]
 
+    def test_fetch_stock_basic_normalizes_mixed_delist_date_types(
+        self,
+        respx_mock,
+    ) -> None:
+        """Mixed null/string delist dates from status batches should concat cleanly."""
+        responses = [
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                            "delist_date",
+                            "list_status",
+                        ],
+                        "items": [
+                            [
+                                "000001.SZ",
+                                "000001",
+                                "平安银行",
+                                "SZSE",
+                                "19910403",
+                                None,
+                                "L",
+                            ]
+                        ],
+                    },
+                },
+            ),
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                            "delist_date",
+                            "list_status",
+                        ],
+                        "items": [
+                            [
+                                "000002.SZ",
+                                "000002",
+                                "万科A",
+                                "SZSE",
+                                "19910129",
+                                "20240101",
+                                "D",
+                            ]
+                        ],
+                    },
+                },
+            ),
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                            "delist_date",
+                            "list_status",
+                        ],
+                        "items": [],
+                    },
+                },
+            ),
+        ]
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=responses)
+
+        source = TushareSource(settings=_settings())
+        result = source.fetch_stock_basic()
+
+        assert dict(result.schema) == {
+            "source_ticker": pl.String,
+            "ticker": pl.String,
+            "name": pl.String,
+            "exchange": pl.String,
+            "list_date": pl.Date,
+            "delist_date": pl.Date,
+            "list_status": pl.String,
+        }
+        assert result.select("source_ticker", "delist_date").to_dicts() == [
+            {"source_ticker": "000001.SZ", "delist_date": None},
+            {"source_ticker": "000002.SZ", "delist_date": date(2024, 1, 1)},
+        ]
+
     def test_fetch_stock_basic_empty_response(self, respx_mock) -> None:
         """Test fetch_stock_basic handles empty response."""
 
@@ -818,3 +921,85 @@ class TestTushareSourceMacroIndicators:
 
         result = source.fetch_macro_indicators("2024-01-02")
         assert result.equals(expected)
+
+
+class TestTushareSourceFacadeProperties:
+    """Tests for TushareSource facade property 分组入口."""
+
+    def test_stock_facade_property_returns_facade(self) -> None:
+        """source.stock 返回 _StockFacade 实例."""
+        source = TushareSource(settings=_settings())
+        facade = source.stock
+        assert facade is not None
+        assert hasattr(facade, "fetch_calendar")
+        assert hasattr(facade, "fetch_stock_basic")
+        assert hasattr(facade, "fetch_stock_daily")
+        assert hasattr(facade, "fetch_adj_factor")
+        assert hasattr(facade, "fetch_adj_factor_by_ticker")
+        assert hasattr(facade, "fetch_stock_limit")
+        assert hasattr(facade, "fetch_stock_status")
+        assert hasattr(facade, "fetch_st_history")
+
+    def test_etf_index_facade_property_returns_facade(self) -> None:
+        """source.etf_index 返回 _EtfIndexFacade 实例."""
+        source = TushareSource(settings=_settings())
+        facade = source.etf_index
+        assert facade is not None
+        assert hasattr(facade, "fetch_etf_basic")
+        assert hasattr(facade, "fetch_etf_daily")
+        assert hasattr(facade, "fetch_fund_adj")
+        assert hasattr(facade, "fetch_index_basic")
+        assert hasattr(facade, "fetch_index_daily")
+        assert hasattr(facade, "fetch_sw_industry")
+
+    def test_fundamental_facade_property_returns_facade(self) -> None:
+        """source.fundamental 返回 _FundamentalFacade 实例."""
+        source = TushareSource(settings=_settings())
+        facade = source.fundamental
+        assert facade is not None
+        assert hasattr(facade, "fetch_balance_sheet")
+        assert hasattr(facade, "fetch_income_statement")
+        assert hasattr(facade, "fetch_cash_flow")
+        assert hasattr(facade, "fetch_dividend")
+        assert hasattr(facade, "fetch_valuation_metrics")
+        assert hasattr(facade, "fetch_margin_trading")
+        assert hasattr(facade, "fetch_pledge_ratio")
+        assert hasattr(facade, "fetch_corporate_actions")
+
+    def test_macro_facade_property_returns_facade(self) -> None:
+        """source.macro 返回 _MacroFacade 实例."""
+        source = TushareSource(settings=_settings())
+        facade = source.macro
+        assert facade is not None
+        assert hasattr(facade, "fetch_macro_indicators")
+        assert hasattr(facade, "fetch_fx_daily")
+        assert hasattr(facade, "fetch_metal_daily")
+        assert hasattr(facade, "fetch_commodities")
+
+    def test_facade_delegates_same_as_source(self, respx_mock) -> None:
+        """facade 调用结果与 source 直接调用一致."""
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["cal_date", "is_open"],
+                        "items": [["20240101", 0]],
+                    },
+                },
+            )
+        )
+        source = TushareSource(settings=_settings())
+        direct = source.fetch_calendar("2024-01-01", "2024-01-01")
+        via_facade = source.stock.fetch_calendar("2024-01-01", "2024-01-01")
+        assert direct.equals(via_facade)
+
+    def test_facade_properties_are_idempotent(self) -> None:
+        """多次访问同一 property 返回同一对象."""
+        source = TushareSource(settings=_settings())
+        assert source.stock is source.stock
+        assert source.etf_index is source.etf_index
+        assert source.fundamental is source.fundamental
+        assert source.macro is source.macro

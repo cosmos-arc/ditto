@@ -54,14 +54,14 @@ class CreateCustomUniverseHandler:
 
     def handle(self, command: CreateCustomUniverseCommand) -> dict[str, str | None]:
         """创建自定义 universe 并返回详情."""
-        self._service.create_universe(
+        self._service.universe.create_universe(
             universe_id=command.universe_id,
             name=command.name,
             description=command.description,
             universe_type="custom",
             source_ref=None,
         )
-        detail = self._service.get_universe_detail(command.universe_id)
+        detail = self._service.universe.get_universe_detail(command.universe_id)
         return (
             detail
             if detail is not None
@@ -80,7 +80,7 @@ class UpdateCustomUniverseHandler:
 
     def handle(self, command: UpdateCustomUniverseCommand) -> dict[str, str | None]:
         """更新自定义 universe 元数据（预设 universe 不可修改）。"""
-        existing = self._service.get_universe_detail(command.universe_id)
+        existing = self._service.universe.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
             raise AppCommandError(
@@ -101,7 +101,7 @@ class UpdateCustomUniverseHandler:
                 universe_type=universe_type,
                 operation="update",
             )
-        self._service.update_universe(
+        self._service.universe.update_universe(
             command.universe_id,
             command.name,
             command.description,
@@ -128,12 +128,14 @@ class UpdateCustomUniverseHandler:
                 records.append(
                     {"instrument_id": instrument_id, "effective_from": eff_date}
                 )
-            self._service.replace_constituents(
+            self._service.universe.replace_constituents(
                 command.universe_id,
                 records,
                 command.effective_date or "",
             )
-        return self._service.get_universe_detail(command.universe_id) or existing
+        return (
+            self._service.universe.get_universe_detail(command.universe_id) or existing
+        )
 
 
 class DeleteCustomUniverseHandler:
@@ -144,7 +146,7 @@ class DeleteCustomUniverseHandler:
 
     def handle(self, command: DeleteCustomUniverseCommand) -> bool:
         """删除自定义 universe（预设 universe 不可删除）."""
-        existing = self._service.get_universe_detail(command.universe_id)
+        existing = self._service.universe.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
             raise AppCommandError(
@@ -165,5 +167,5 @@ class DeleteCustomUniverseHandler:
                 universe_type=universe_type,
                 operation="delete",
             )
-        self._service.delete_universe(command.universe_id)
+        self._service.universe.delete_universe(command.universe_id)
         return True

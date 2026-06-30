@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from ditto_kernel import traced
+
 from ditto_backtest._statistics_types import BacktestReport
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.statistics_alpha import compute_alpha_statistics
@@ -18,6 +20,7 @@ from ditto_backtest.statistics_trades import (
 __all__ = ["build_report"]
 
 
+@traced("backtest.statistics.report")
 def build_report(
     collector: ExecutionAuditCollector,
     run_id: str = "",
@@ -55,6 +58,7 @@ def build_report(
 
     initial_cash = snapshots[0][1].nav if snapshots else 0.0
     final_nav = snapshots[-1][1].nav if snapshots else 0.0
+    final_account_state = snapshots[-1][1] if snapshots else None
 
     closed_trades = collector.get_closed_trades()
     fills = collector.get_fills()
@@ -73,4 +77,5 @@ def build_report(
         fill_log=tuple(fills),
         risk_log=collector.get_risk_log(),
         pre_trade_log=collector.get_pre_trade_log(),
+        final_account_state=final_account_state,
     )

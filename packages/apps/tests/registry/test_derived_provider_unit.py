@@ -6,6 +6,9 @@ from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
 from ditto_analysis.di import AnalysisStorageProvider
+from ditto_application.commands.catalog_remediation import (
+    CatalogRemediationIngestDatePort,
+)
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
@@ -25,6 +28,8 @@ from ditto_data.di import (
     QualityProvider,
     RuntimeProvider,
 )
+from ditto_data.lineage import DataLineageRecorder
+from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
@@ -99,6 +104,12 @@ class _ProtocolAdapterProvider(Provider):
     @provide
     def source_data_port(self) -> SourceDataPort:
         return MagicMock(spec=SourceDataPort)
+
+    @provide
+    def catalog_remediation_ingest_date_port(
+        self,
+    ) -> CatalogRemediationIngestDatePort:
+        return MagicMock()
 
 
 def _make_full_container():
@@ -254,4 +265,21 @@ class TestAppProviderDerivedWiring:
 
         orchestrator = container.get(DerivedMaterializationOrchestrator)
         assert orchestrator._universe_provider is not None
+        container.close()
+
+    def test_materialization_orchestrator_receives_persistent_lineage_recorder(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """DerivedMaterializationOrchestrator should persist lineage via DI."""
+        monkeypatch.setenv("ENVIRONMENT", "testing")
+        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        container = _make_full_container()
+
+        lineage_recorder = container.get(DataLineageRecorder)
+        orchestrator = container.get(DerivedMaterializationOrchestrator)
+
+        assert isinstance(lineage_recorder, SQLiteDataLineage)
+        assert orchestrator._lineage_recorder is lineage_recorder
         container.close()

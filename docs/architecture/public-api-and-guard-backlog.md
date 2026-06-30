@@ -19,10 +19,10 @@ This backlog records the guard and public API work that should follow the review
 
 | Guard | Trigger Findings | Enforcement Source |
 |---|---|---|
-| Public `__all__` budget and stable symbol table | `KERNEL-P2-01`, `FEAT-P2-02` | Package `CLAUDE.md` or generated `docs/architecture/public-api.md`. |
+| Public `__all__` budget and stable symbol table | `KERNEL-P2-01`, `FEAT-P2-02` | Root `__all__` coverage is guarded for 12/12 packages as of 2026-06-08; `docs/architecture/public-api.md` now records the 12-package root stable export table and is drift-guarded against each root `__all__`. Remaining work is leaf-level candidate/internal symbol tables for high-churn packages. |
 | Dataset enum budget and maturity requirement | `DATA-P1-02`, `APP-P1-03`, `APPS-P1-02` | `capability-maturity.md` until a YAML derivative exists. |
 | DataCatalog/Lineage runtime honesty | `DATA-P1-01`, `FEAT-P1-01` | DataCatalog runtime marker plus maturity manifest. |
-| SQL/noqa budget | `PLAT-P1-01`, `DATA-P2-02`, `FEAT-P2-02` | `scripts/architecture/check_architecture_smells.py` plus per-helper allowlist. |
+| SQL/noqa budget | `DATA-P2-02`, `FEAT-P2-02`; `PLAT-P1-01` resolved by `SQLiteClient.count()` identifier/WHERE validation | `scripts/architecture/check_architecture_smells.py` plus per-helper allowlist. |
 | Consumer-owned data/research ports | `DATA-P1-03`, `APP-P1-04`, `ANALYSIS-P1-01` | Import smell check for data provider and analysis concrete service imports. |
 | Apps maturity-aware route/help text | `APPS-P1-02` | Route/model/help text scanner against maturity manifest. |
 | Golden E2E proof lane | `APPS-P1-01` | CI-required synthetic fixture lane separate from optional TDX/Tushare tests. |

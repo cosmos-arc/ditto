@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable
 
 import pytest
 from fastapi import FastAPI, Request, Response
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture
@@ -28,7 +28,8 @@ def test_app() -> FastAPI:
     return app
 
 
-def test_request_id_stored_in_state(test_app: FastAPI) -> None:
+@pytest.mark.asyncio
+async def test_request_id_stored_in_state(test_app: FastAPI) -> None:
     """middleware 应将 request_id 存储到 request.state."""
     captured_request_id: list[str] = []
 
@@ -47,15 +48,18 @@ def test_request_id_stored_in_state(test_app: FastAPI) -> None:
         response.headers["X-Request-ID"] = request_id
         return response
 
-    client = TestClient(test_app)
-    response = client.get("/test-endpoint")
+    async with AsyncClient(
+        transport=ASGITransport(app=test_app), base_url="http://test"
+    ) as client:
+        response = await client.get("/test-endpoint")
 
     assert response.status_code == 200
     # 验证 request.state 中存储了 request_id
     assert response.json()["request_id"] == captured_request_id[0]
 
 
-def test_request_id_in_response_header(test_app: FastAPI) -> None:
+@pytest.mark.asyncio
+async def test_request_id_in_response_header(test_app: FastAPI) -> None:
     """middleware 应在响应头中返回 X-Request-ID."""
     captured_request_id: list[str] = []
 
@@ -73,8 +77,10 @@ def test_request_id_in_response_header(test_app: FastAPI) -> None:
         response.headers["X-Request-ID"] = request_id
         return response
 
-    client = TestClient(test_app)
-    response = client.get("/test-endpoint")
+    async with AsyncClient(
+        transport=ASGITransport(app=test_app), base_url="http://test"
+    ) as client:
+        response = await client.get("/test-endpoint")
 
     assert "X-Request-ID" in response.headers
     request_id = response.headers["X-Request-ID"]
@@ -82,7 +88,8 @@ def test_request_id_in_response_header(test_app: FastAPI) -> None:
     assert request_id == captured_request_id[0]
 
 
-def test_exception_handler_can_access_request_id(test_app: FastAPI) -> None:
+@pytest.mark.asyncio
+async def test_exception_handler_can_access_request_id(test_app: FastAPI) -> None:
     """异常处理器应能从 request.state 获取 request_id."""
     captured_request_id: list[str] = []
     exception_request_id: list[str] = []
@@ -113,8 +120,10 @@ def test_exception_handler_can_access_request_id(test_app: FastAPI) -> None:
             headers={"X-Request-ID": req_id or "unknown"},
         )
 
-    client = TestClient(test_app)
-    response = client.get("/error-endpoint")
+    async with AsyncClient(
+        transport=ASGITransport(app=test_app), base_url="http://test"
+    ) as client:
+        response = await client.get("/error-endpoint")
 
     assert response.status_code == 500
     # 验证异常处理器能获取 request_id

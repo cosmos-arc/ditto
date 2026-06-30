@@ -13,6 +13,8 @@ from ditto_application.processes.ingestion.coordinator import (
     MarketServices,
     SourceFetchers,
 )
+from ditto_data.catalog import DataAssetRef
+from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import (
@@ -51,9 +53,9 @@ def mock_metadata_service():
     service.get_securities.return_value = pl.DataFrame()
 
     # Instrument 相关方法
-    service.register_instruments_batch = MagicMock()
-    service.resolve_or_create_instruments_batch = MagicMock()
-    service.resolve_instrument_ids_batch = MagicMock()
+    service.instrument.register_instruments_batch = MagicMock()
+    service.instrument.resolve_or_create_instruments_batch = MagicMock()
+    service.instrument.resolve_instrument_ids_batch = MagicMock()
 
     # 设置 resolve_or_create_instruments_batch 的 side_effect
     stock_counter = [1_000_000]
@@ -76,8 +78,12 @@ def mock_metadata_service():
             result[ticker] = 1_000_000 + i
         return result
 
-    service.resolve_or_create_instruments_batch.side_effect = resolve_side_effect
-    service.resolve_instrument_ids_batch.side_effect = resolve_ids_side_effect
+    service.instrument.resolve_or_create_instruments_batch.side_effect = (
+        resolve_side_effect
+    )
+    service.instrument.resolve_instrument_ids_batch.side_effect = (
+        resolve_ids_side_effect
+    )
 
     # resolve_source_ticker 默认返回测试值
     service.resolve_source_ticker.return_value = "000001.SZ"
@@ -239,6 +245,100 @@ class TestIngestByInstrument:
             end_date="2024-01-31",
         )
 
+    def test_ingest_by_instrument_records_data_lineage(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_source,
+    ) -> None:
+        """按标的摄取成功后记录 source range 到落库 range 的 lineage."""
+        # Arrange
+        lineage = InMemoryDataLineage()
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_write_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=mock_source,
+            ),
+            config=IngestionCoordinatorConfig(
+                ingestion_log_store=mock_ingestion_log_store,
+                lineage_recorder=lineage,
+            ),
+        )
+        params = InstrumentIngestParams(
+            ticker="000001",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
+        source_df = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"] * 2,
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+                "open": [10.0, 10.5],
+                "high": [10.5, 10.8],
+                "low": [9.8, 10.2],
+                "close": [10.2, 10.6],
+                "pre_close": [10.0, 10.2],
+                "volume": [1000000, 1200000],
+                "amount": [10200000, 12720000],
+                "pct_change": [2.0, 3.9],
+            }
+        )
+        mock_source.fetch_stock_daily.return_value = source_df
+        mock_market_write_service.save_bars.return_value = 2
+
+        # Act
+        result = coordinator.ingest_by_instrument("stock_daily", params)
+
+        # Assert
+        assert result.status == "success"
+        source_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="source",
+            partition_keys=(
+                "source=tushare",
+                "source_ticker=000001.SZ",
+                "start_date=2024-01-01",
+                "end_date=2024-01-31",
+            ),
+        )
+        output_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=(
+                "source_ticker=000001.SZ",
+                "start_date=2024-01-01",
+                "end_date=2024-01-31",
+            ),
+        )
+        events = lineage.list_events_for_asset(output_asset)
+        assert len(events) == 1
+        event = events[0]
+        assert event.operation == "ingest"
+        assert event.run_id.startswith(
+            "ingest:tushare:stock_daily:000001.SZ:2024-01-01:2024-01-31:"
+        )
+        assert tuple(ref.asset for ref in event.inputs) == (source_asset,)
+        assert tuple(ref.role for ref in event.inputs) == ("source",)
+        assert tuple(ref.asset for ref in event.outputs) == (output_asset,)
+        assert tuple(ref.role for ref in event.outputs) == ("dataset",)
+
     def test_ingest_by_instrument_with_instrument_id(
         self,
         coordinator,
@@ -375,6 +475,52 @@ class TestIngestByInstrument:
         # Act & Assert
         with pytest.raises(AppProcessError, match="不支持按标的摄取"):
             coordinator.ingest_by_instrument("calendar", params)
+
+    def test_ingest_by_instrument_rejects_source_not_declared_by_catalog_metadata(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_source,
+    ) -> None:
+        """按标的摄取也必须遵守 catalog metadata source capability。"""
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_write_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=mock_source,
+            ),
+            config=IngestionCoordinatorConfig(
+                source_name="fred",
+                ingestion_log_store=mock_ingestion_log_store,
+            ),
+        )
+        params = InstrumentIngestParams(
+            ticker="000001",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
+
+        with pytest.raises(AppProcessError, match="does not support dataset"):
+            coordinator.ingest_by_instrument("stock_daily", params)
+
+        mock_metadata_service.resolve_source_ticker.assert_not_called()
+        mock_source.fetch_stock_daily.assert_not_called()
 
     def test_ingest_by_instrument_fetch_error(
         self, coordinator, mock_source, mock_ingestion_log_store

@@ -5,7 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 from types import MappingProxyType
 
-from ditto_backtest.replay import AccountStateComparison, FillComparison, ReplayProof
+from ditto_backtest.manifest import RunManifest, RunMode
+from ditto_backtest.replay import (
+    AccountStateComparison,
+    FillComparison,
+    ReplayProof,
+    ReplayStateProof,
+    ReplayValidator,
+)
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import CashBook
@@ -53,6 +60,18 @@ def _account_view(
         total_value=nav,
         nav=nav,
         exposure=0.0,
+    )
+
+
+def _make_manifest(run_id: str = "run-001") -> RunManifest:
+    return RunManifest(
+        run_id=run_id,
+        strategy_id="state-proof",
+        strategy_version="1.0",
+        mode=RunMode.BACKTEST,
+        created_at="2026-04-11T00:00:00Z",
+        config_hash="config",
+        engine_version="engine",
     )
 
 
@@ -224,3 +243,86 @@ class TestAccountStateComparison:
         )
         result = ReplayProof.compare_account_state(original, replay)
         assert result.identical is False
+
+
+class TestReplayValidatorStateProof:
+    """ReplayValidator.validate includes fill and account state proof."""
+
+    def test_fill_mismatch_makes_replay_not_reproducible(self) -> None:
+        """相同 manifest/NAV 下，fill drift 也应让 replay 失败。"""
+        manifest = _make_manifest()
+        nav = [100_000.0, 100_100.0]
+        original_fill = _make_fill(fill_id="f1", fee=5.0)
+        replay_fill = _make_fill(fill_id="f1", fee=50.0)
+
+        result = ReplayValidator.validate(
+            manifest,
+            manifest,
+            nav,
+            nav,
+            state_proof=ReplayStateProof(
+                original_fills=(original_fill,),
+                replay_fills=(replay_fill,),
+            ),
+        )
+
+        assert result.is_reproducible is False
+        assert result.fill_match is False
+        assert result.fill_comparison is not None
+        assert result.fill_comparison.mismatch_count == 1
+
+    def test_account_state_mismatch_makes_replay_not_reproducible(self) -> None:
+        """相同 manifest/NAV/fills 下，最终账户状态 drift 也应让 replay 失败。"""
+        manifest = _make_manifest()
+        nav = [100_000.0, 100_100.0]
+        fill = _make_fill()
+        original_account = _account_view(
+            nav=100_100.0,
+            cash=CashBook(available=99_000.0, settled=99_000.0, frozen=0.0),
+        )
+        replay_account = _account_view(
+            nav=100_100.0,
+            cash=CashBook(available=98_000.0, settled=99_000.0, frozen=0.0),
+        )
+
+        result = ReplayValidator.validate(
+            manifest,
+            manifest,
+            nav,
+            nav,
+            state_proof=ReplayStateProof(
+                original_fills=(fill,),
+                replay_fills=(fill,),
+                original_account=original_account,
+                replay_account=replay_account,
+            ),
+        )
+
+        assert result.is_reproducible is False
+        assert result.account_state_match is False
+        assert result.account_state_comparison is not None
+        assert result.account_state_comparison.available_cash_diff == 1000.0
+
+    def test_matching_state_sets_state_match_evidence(self) -> None:
+        """fill/account 都一致时，结果显式暴露 state proof 通过。"""
+        manifest = _make_manifest()
+        nav = [100_000.0, 100_100.0]
+        fill = _make_fill()
+        account = _account_view(nav=100_100.0)
+
+        result = ReplayValidator.validate(
+            manifest,
+            manifest,
+            nav,
+            nav,
+            state_proof=ReplayStateProof(
+                original_fills=(fill,),
+                replay_fills=(fill,),
+                original_account=account,
+                replay_account=account,
+            ),
+        )
+
+        assert result.is_reproducible is True
+        assert result.fill_match is True
+        assert result.account_state_match is True

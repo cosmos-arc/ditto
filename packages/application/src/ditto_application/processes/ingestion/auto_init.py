@@ -193,7 +193,7 @@ def _fetch_and_register_stock(
         raise original_error
 
     try:
-        metadata_service.register_instruments_batch(
+        metadata_service.instrument.register_instruments_batch(
             df=basic_df,
             source=source_name,
             asset_class="stock",

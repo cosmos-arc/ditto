@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.frame import validate_frame
 
 __all__ = [
     "FinalStockFilterStage",
@@ -24,6 +25,25 @@ __all__ = [
     "SectorSignalStage",
     "SectorWeightStage",
 ]
+
+_STAGE_INPUT_BOUNDARY = "stock_sector_rotation.stage_input"
+
+
+def _validate_stage_columns(
+    frame: pl.DataFrame,
+    required_columns: tuple[str, ...],
+    *,
+    stage_name: str,
+) -> None:
+    """Validate non-empty stock-sector structural columns before Polars ops."""
+    if frame.is_empty():
+        return
+    validate_frame(
+        frame,
+        required_columns,
+        boundary=_STAGE_INPUT_BOUNDARY,
+        stage_name=stage_name,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -62,6 +82,12 @@ class SectorSignalStage:
         - 空 frame → 返回空 frame + sector_signal 列
         - signal_column 不存在 → sector_signal 全 null
         """
+        _validate_stage_columns(
+            frame,
+            (self.is_sector_column,),
+            stage_name=self.__class__.__name__,
+        )
+
         if frame.is_empty():
             return frame.with_columns(
                 pl.lit(None, dtype=pl.Float64).alias(self.output_column),
@@ -122,6 +148,12 @@ class SectorScoreAndSelectStage:
         - 空 frame / 无行业 ETF 行 → selected_sector 全 False
         - top_k >= 行业数量 → 全部选中
         """
+        _validate_stage_columns(
+            frame,
+            (self.is_sector_column, self.sector_column),
+            stage_name=self.__class__.__name__,
+        )
+
         if frame.is_empty():
             return frame.with_columns(
                 pl.lit(False).alias("selected_sector"),
@@ -198,6 +230,12 @@ class IntraSectorSelectStage:
         - 空 frame → intra_selected 全 False
         - signal_column 不存在 → intra_selected 全 False
         """
+        _validate_stage_columns(
+            frame,
+            (self.is_sector_column, self.sector_column, "selected_sector"),
+            stage_name=self.__class__.__name__,
+        )
+
         if frame.is_empty() or self.signal_column not in frame.columns:
             result = frame.with_columns(pl.lit(False).alias("intra_selected"))
             return result
@@ -271,6 +309,12 @@ class SectorWeightStage:
         - 无选中个股 → weight 全 0.0
         - cash_target >= 1.0 → weight 全 0.0
         """
+        _validate_stage_columns(
+            frame,
+            (self.is_sector_column, self.sector_column, "intra_selected"),
+            stage_name=self.__class__.__name__,
+        )
+
         if frame.is_empty():
             return frame.with_columns(pl.lit(0.0).alias("weight"))
 
@@ -344,14 +388,16 @@ class FinalStockFilterStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """过滤掉行业 ETF 行和零权重行。"""
+        _validate_stage_columns(
+            frame,
+            (self.is_sector_column,),
+            stage_name=self.__class__.__name__,
+        )
+
         if frame.is_empty():
             return frame
 
-        # Filter out sector ETF rows (if column exists)
-        if self.is_sector_column in frame.columns:
-            result = frame.filter(~pl.col(self.is_sector_column))
-        else:
-            result = frame
+        result = frame.filter(~pl.col(self.is_sector_column))
 
         # Filter out zero-weight rows
         if "weight" in result.columns:

@@ -1,3 +1,7 @@
+---
+last_synced: 2026-06-04
+---
+
 # Analysis Agent 指南
 
 ## 定位

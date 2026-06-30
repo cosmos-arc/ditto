@@ -2449,10 +2449,11 @@ packages:
 - pypi: ./packages/apps
   name: ditto-apps
   version: 0.1.0
-  sha256: 8f69b041a22dc50a8258fcc660d5e44762bf3c3d1fa5f69a5f9bbd2aeca234c0
+  sha256: 6a13e53781e454a6f1a769f7530a6768a9820d2319883490ea98f43c6e425406
   requires_dist:
   - ditto-analysis
   - ditto-application
+  - ditto-backtest
   - ditto-data
   - ditto-execution
   - ditto-features

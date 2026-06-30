@@ -9,7 +9,9 @@ from ditto_data.models.ingestion import IngestionResult
 
 from ditto_application.contracts import IngestDateCommand
 from ditto_application.exceptions import AppCommandError, AppProcessError
-from ditto_application.processes.ingestion.coordinator import IngestionCoordinator
+from ditto_application.processes.ingestion.source_selection import (
+    IngestionCoordinatorLike,
+)
 
 __all__ = [
     "BackfillRangeCommand",
@@ -47,7 +49,7 @@ class IngestDateHandler:
     负责 date → ISO string 的类型转换。
     """
 
-    def __init__(self, coordinator: IngestionCoordinator) -> None:
+    def __init__(self, coordinator: IngestionCoordinatorLike) -> None:
         self._coordinator = coordinator
 
     def handle(self, command: IngestDateCommand) -> IngestionResult:
@@ -59,9 +61,16 @@ class IngestDateHandler:
                 force=command.force,
             )
         except (AppProcessError, ValueError) as exc:
+            details = dict(getattr(exc, "details", {}))
+            details.update(
+                {
+                    "command": "ingest_date",
+                    "dataset": command.dataset,
+                    "trade_date": command.trade_date.isoformat(),
+                    "force": command.force,
+                }
+            )
             raise AppCommandError(
                 str(exc),
-                command="ingest_date",
-                dataset=command.dataset,
-                trade_date=command.trade_date.isoformat(),
+                details=details,
             ) from exc

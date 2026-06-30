@@ -19,3 +19,6 @@ class OrderType(StrEnum):
     LIMIT = "limit"
     STOP_MARKET = "stop_market"
     MARKET_ON_CLOSE = "market_on_close"
+    FAK = "fak"
+    FAB = "fab"
+    GTD = "gtd"

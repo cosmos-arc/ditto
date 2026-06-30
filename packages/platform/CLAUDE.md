@@ -22,6 +22,7 @@ ditto_platform/
 │   ├── db/                       # 数据库连接（SQLitePool）
 │   ├── observability/            # 可观测性（日志、追踪、指标、生命周期）
 │   │   ├── metrics/              # 指标子包（SafeCounter / SafeGauge / SafeHistogram + 注册表 + 绑定）
+│   ├── json_types.py             # 共享 JSON 类型别名与字段验证器
 │   └── storage/                  # 通用存储基础设施（ParquetStore、SQLiteClient、分区策略、存储类型）
 │   └── util/                     # 通用工具（日期、IO、校验和、Ticker）
 └── services/                     # 基础服务
@@ -55,7 +56,7 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 | `config` | 配置加载、环境管理、XDG 路径 | 读取业务配置或数据源特定校验 |
 | `db` | SQLite 连接池、查询构建辅助（含 `validate_identifier()` 标识符校验） | 包含 SQL 业务逻辑 |
 | `observability` | 日志、追踪、指标 | - |
-| `storage` | 通用存储基础设施（ParquetStore、SQLiteClient、分区策略、OnDuplicate、WriteStoreResult）；`SQLiteClient.count` 内置 `validate_identifier()` 标识符校验 | 包含业务逻辑或领域概念 |
+| `storage` | 通用存储基础设施（ParquetStore、SQLiteClient、分区策略、OnDuplicate、WriteStoreResult）；`SQLiteClient.count` 内置表名 `validate_identifier()` 与受约束 WHERE 片段校验 | 包含业务逻辑或领域概念 |
 | `util` | 通用工具函数 | 领域特定工具 |
 | `notification` | 通知发送 | 包含业务逻辑 |
 

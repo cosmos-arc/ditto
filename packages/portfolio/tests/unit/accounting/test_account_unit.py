@@ -165,6 +165,59 @@ class TestAccountView:
                 total_fees=0.0,
             )
 
+    def test_view_nav_does_not_double_count_unrealized_pnl(self) -> None:
+        """AccountView NAV uses current market_value, not market_value + pnl."""
+        account = Account(
+            cash=CashBook(available=1000.0, settled=1000.0, frozen=0.0),
+            positions={
+                _INSTRUMENT: Position(
+                    instrument_id=_INSTRUMENT,
+                    quantity=100,
+                    available_quantity=100,
+                    average_cost=10.0,
+                    market_value=1200.0,
+                    unrealized_pnl=200.0,
+                    realized_pnl=0.0,
+                    total_fees=0.0,
+                ),
+            },
+        )
+
+        view = account.get_view()
+
+        assert view.exposure == pytest.approx(1200.0)
+        assert view.nav == pytest.approx(2200.0)
+        assert view.total_value == pytest.approx(2200.0)
+
+
+class TestAccountMarkToMarket:
+    """mark_to_market updates current exposure without cash mutation."""
+
+    def test_mark_to_market_updates_market_value_and_unrealized_pnl(self) -> None:
+        account = Account(
+            cash=CashBook(available=1000.0, settled=1000.0, frozen=0.0),
+            positions={
+                _INSTRUMENT: Position(
+                    instrument_id=_INSTRUMENT,
+                    quantity=100,
+                    available_quantity=100,
+                    average_cost=10.0,
+                    market_value=1000.0,
+                    unrealized_pnl=0.0,
+                    realized_pnl=0.0,
+                    total_fees=0.0,
+                ),
+            },
+        )
+
+        account.mark_to_market({_INSTRUMENT: 12.0})
+
+        pos = account.positions[_INSTRUMENT]
+        assert pos.market_value == pytest.approx(1200.0)
+        assert pos.unrealized_pnl == pytest.approx(200.0)
+        assert account.cash.available == pytest.approx(1000.0)
+        assert account.get_view().nav == pytest.approx(2200.0)
+
 
 # ---------------------------------------------------------------------------
 # TestAccountApplyFill

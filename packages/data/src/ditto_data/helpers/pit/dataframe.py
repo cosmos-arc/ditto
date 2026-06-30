@@ -11,7 +11,11 @@ from datetime import date
 import polars as pl
 from ditto_platform.foundation import logger
 
-from ditto_data.helpers.pit.policy import PIT_QUERY_OPERATOR
+from ditto_data.helpers.pit.policy import (
+    PIT_QUERY_OPERATOR,
+    UnsafeResearchTimePolicy,
+    is_trade_date_fallback_allowed,
+)
 
 
 def parse_asof_date(asof: date | str) -> date:
@@ -34,6 +38,7 @@ def filter_by_knowledge_date(
     df: pl.DataFrame,
     pit_dt: date,
     date_column: str = "knowledge_date",
+    unsafe_time_policy: UnsafeResearchTimePolicy | str | None = None,
 ) -> pl.DataFrame:
     """
     根据 PIT 日期过滤数据（优先使用 knowledge_date）.
@@ -44,6 +49,7 @@ def filter_by_knowledge_date(
         df: 输入 DataFrame。
         pit_dt: Point-in-Time 日期。
         date_column: 日期列名，默认 knowledge_date。
+        unsafe_time_policy: 显式研究模式 unsafe 时间策略。
 
     Returns:
         过滤后的 DataFrame。
@@ -52,15 +58,30 @@ def filter_by_knowledge_date(
     if date_column in df.columns:
         return df.filter(pl.col(date_column) <= pit_dt)
 
-    # Fallback to trade_date (会记录警告)
     if "trade_date" in df.columns:
+        if not is_trade_date_fallback_allowed(unsafe_time_policy):
+            msg = " ".join(
+                (
+                    f"PIT filter requires '{date_column}' column;",
+                    "trade_date fallback is research-only.",
+                    "Pass unsafe_time_policy=UnsafeResearchTimePolicy."
+                    + "ALLOW_TRADE_DATE_FALLBACK to opt in.",
+                )
+            )
+            raise ValueError(msg)
         logger.warning(
             f"Data missing {date_column}, using trade_date (not PIT-safe)",
             event="pit_missing_knowledge_date",
         )
         return df.filter(pl.col("trade_date") <= pit_dt)
 
-    return df
+    msg = " ".join(
+        (
+            f"PIT filter requires '{date_column}' column;",
+            "no safe PIT date column is available.",
+        )
+    )
+    raise ValueError(msg)
 
 
 def get_pit_filter_expr(

@@ -20,6 +20,7 @@ from ditto_features.publication_safety_records import (
 )
 from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
+    ArtifactMetadataUpdateParams,
 )
 
 
@@ -246,7 +247,7 @@ class TestServiceDelegatesUpdateArtifactMetadata:
         manifest_record = _make_manifest_record()
         minimal_dq_record = _make_minimal_dq_record()
 
-        service.update_artifact_metadata(
+        params = ArtifactMetadataUpdateParams(
             spec=spec_record,
             run_id="drv-update-001",
             compile_identity=compile_identity,
@@ -256,12 +257,29 @@ class TestServiceDelegatesUpdateArtifactMetadata:
             minimal_dq_record=minimal_dq_record,
         )
 
-        mock_writer.update_artifact_metadata.assert_called_once_with(
-            spec=spec_record,
-            run_id="drv-update-001",
-            compile_identity=compile_identity,
-            partitions=partitions,
-            source_snapshot_id="snap-001",
-            manifest_record=manifest_record,
-            minimal_dq_record=minimal_dq_record,
+        service.update_artifact_metadata(params)
+
+        mock_writer.update_artifact_metadata.assert_called_once_with(params)
+
+    def test_service_update_artifact_metadata_accepts_params_object(self) -> None:
+        """Should delegate one update params object to the underlying writer."""
+        from ditto_features.services import ArtifactPersistenceService
+
+        mock_writer = MagicMock()
+        service = ArtifactPersistenceService(
+            artifact_root=Path("/tmp/data"),
+            _writer=mock_writer,
         )
+        params = ArtifactMetadataUpdateParams(
+            spec=_make_spec_record(),
+            run_id="drv-update-params",
+            compile_identity=_make_compile_identity_dict(),
+            partitions=_make_partitions(),
+            source_snapshot_id="snap-params",
+            manifest_record=_make_manifest_record(),
+            minimal_dq_record=_make_minimal_dq_record(),
+        )
+
+        service.update_artifact_metadata(params)
+
+        mock_writer.update_artifact_metadata.assert_called_once_with(params)

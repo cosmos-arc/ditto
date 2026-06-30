@@ -53,6 +53,8 @@ class TestBarsQuery:
         assert query.end_date is None
         assert query.adjustment == Adjustment.NONE
         assert query.limit == 1000
+        assert query.asset_class is None
+        assert query.allow_experimental_data is False
 
     def test_custom_values(self) -> None:
         """验证自定义查询参数."""
@@ -64,12 +66,16 @@ class TestBarsQuery:
             end_date=date(2024, 1, 31),
             adjustment=Adjustment.QFQ,
             limit=500,
+            asset_class="stock",
+            allow_experimental_data=True,
         )
         assert query.instrument_ids == [1, 2, 3]
         assert query.start_date == date(2024, 1, 1)
         assert query.end_date == date(2024, 1, 31)
         assert query.adjustment == Adjustment.QFQ
         assert query.limit == 500
+        assert query.asset_class == "stock"
+        assert query.allow_experimental_data is True
 
     def test_date_range_validation_success(self) -> None:
         """验证日期范围校验成功: start_date <= end_date."""

@@ -76,6 +76,7 @@ class TushareDataTransformer:
         """
         # 1. 应用列重命名
         result = df.rename(mapping.rename)
+        result = TushareDataTransformer._add_missing_declared_columns(result, mapping)
 
         # 2. 应用类型转换
         transforms: list[pl.Expr] = []
@@ -101,6 +102,21 @@ class TushareDataTransformer:
             result = result.select(mapping.output_columns)
 
         return result
+
+    @staticmethod
+    def _add_missing_declared_columns(
+        df: pl.DataFrame,
+        mapping: ColumnMapping,
+    ) -> pl.DataFrame:
+        column_types = TushareDataTransformer._build_column_type_map(mapping)
+        expressions = [
+            pl.lit(None, dtype=dtype).alias(column)
+            for column, dtype in column_types.items()
+            if column not in df.columns
+        ]
+        if not expressions:
+            return df
+        return df.with_columns(expressions)
 
     @staticmethod
     def transform_daily_ohlcv(

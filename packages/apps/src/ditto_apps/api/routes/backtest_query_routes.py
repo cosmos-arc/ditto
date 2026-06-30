@@ -8,7 +8,13 @@
 - GET    /backtests/runs/{id}/audit          审计记录
 - GET    /backtests/runs/{id}/report         回测报告
 - GET    /backtests/runs/{id}/lineage        运行血统
+- GET    /backtests/runs/{id}/lineage/data   运行级数据血缘
+- GET    /backtests/runs/{id}/lineage/catalog-report 运行级数据血缘 + Catalog 证据
+- GET    /backtests/lineage/events           数据血缘事件查询
+- GET    /backtests/lineage/graph            数据血缘图查询
 - POST   /backtests/runs/{id}/replay         重放验证
+- GET    /backtests/runs/{id}/replay/proof   重放 proof 证据
+- GET    /backtests/runs/{id}/replay/evidence 恢复/重放证据摘要
 - GET    /backtests/runs/{id}/nav            NAV 序列
 - GET    /backtests/runs/{id}/benchmark      基准 NAV
 """
@@ -16,15 +22,36 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.exceptions import AppError
 from ditto_application.processes.execution.replay_process import ReplayProcess
-from ditto_application.queries.backtest import BacktestQueryFacade, RunSummary
+from ditto_application.queries.backtest import (
+    BacktestQueryFacade,
+    ReplayEvidenceSummary,
+    RunSummary,
+)
 from ditto_application.queries.backtest_trade import TradeRecord
-from ditto_application.queries.lineage import LineageQueryFacade
+from ditto_application.queries.lineage import (
+    DataLineageAsset,
+    DataLineageCatalogAsset,
+    DataLineageCatalogAttentionAsset,
+    DataLineageCatalogAttentionReasonCount,
+    DataLineageCatalogAttentionSeverityCount,
+    DataLineageCatalogFreshnessStatusCount,
+    DataLineageCatalogRunReport,
+    DataLineageCatalogSourceFallbackPolicyEffectCount,
+    DataLineageCatalogStatusCount,
+    DataLineageEvent,
+    DataLineageGraph,
+    DataLineageGraphEdge,
+    DataLineageRef,
+    DataLineageRunSummary,
+    LineageQueryFacade,
+)
 from fastapi import APIRouter, Depends, Query
 
 from ditto_apps.api.deps import paginate, pagination_params
@@ -43,12 +70,35 @@ from ditto_apps.models.common import (
     PaginationRequest,
 )
 from ditto_apps.models.lineage import (
+    DataLineageAssetResponse,
+    DataLineageCatalogAssetResponse,
+    DataLineageCatalogAttentionAssetResponse,
+    DataLineageCatalogAttentionReasonCountResponse,
+    DataLineageCatalogAttentionSeverityCountResponse,
+    DataLineageCatalogFreshnessStatusCountResponse,
+    DataLineageCatalogRunReportResponse,
+    DataLineageCatalogSourceFallbackPolicyEffectCountResponse,
+    DataLineageCatalogStatusCountResponse,
+    DataLineageEventResponse,
+    DataLineageGraphEdgeResponse,
+    DataLineageGraphResponse,
+    DataLineageRefResponse,
+    DataLineageRunResponse,
     LineageResponse,
     ManifestDiffResponse,
+    ReplayEvidenceSummaryResponse,
+    ReplayProofResponse,
     ReplayResponse,
 )
 
 router = APIRouter()
+
+
+async def run_blocking[**P, R](
+    func: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs
+) -> R:
+    """Run blocking application work off the event loop."""
+    return await asyncio.to_thread(func, *args, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +140,227 @@ def to_trade_response(record: TradeRecord) -> TradeResponse:
     )
 
 
+def to_data_lineage_asset_response(
+    asset: DataLineageAsset,
+) -> DataLineageAssetResponse:
+    """将 DataLineageAsset 转为 API 响应."""
+    return DataLineageAssetResponse(
+        dataset_id=asset.dataset_id,
+        namespace=asset.namespace,
+        partition_keys=list(asset.partition_keys),
+    )
+
+
+def to_data_lineage_ref_response(ref: DataLineageRef) -> DataLineageRefResponse:
+    """将 DataLineageRef 转为 API 响应."""
+    return DataLineageRefResponse(
+        asset=to_data_lineage_asset_response(ref.asset),
+        role=ref.role,
+    )
+
+
+def to_data_lineage_event_response(
+    event: DataLineageEvent,
+) -> DataLineageEventResponse:
+    """将 DataLineageEvent 转为 API 响应."""
+    return DataLineageEventResponse(
+        run_id=event.run_id,
+        operation=event.operation,
+        timestamp=event.timestamp.isoformat(),
+        inputs=[to_data_lineage_ref_response(ref) for ref in event.inputs],
+        outputs=[to_data_lineage_ref_response(ref) for ref in event.outputs],
+    )
+
+
+def to_data_lineage_run_response(
+    summary: DataLineageRunSummary,
+) -> DataLineageRunResponse:
+    """将 DataLineageRunSummary 转为 API 响应."""
+    return DataLineageRunResponse(
+        run_id=summary.run_id,
+        events=[to_data_lineage_event_response(event) for event in summary.events],
+        input_assets=[
+            to_data_lineage_asset_response(asset) for asset in summary.input_assets
+        ],
+        output_assets=[
+            to_data_lineage_asset_response(asset) for asset in summary.output_assets
+        ],
+    )
+
+
+def to_data_lineage_catalog_asset_response(
+    asset: DataLineageCatalogAsset,
+) -> DataLineageCatalogAssetResponse:
+    """将 DataLineageCatalogAsset 转为 API 响应."""
+    return DataLineageCatalogAssetResponse(
+        asset=to_data_lineage_asset_response(asset.asset),
+        catalog_status=asset.catalog_status,
+        storage_uri=asset.storage_uri,
+        source=asset.source,
+        schema_hash=asset.schema_hash,
+        row_count=asset.row_count,
+        schema_created_at=(
+            asset.schema_created_at.isoformat()
+            if asset.schema_created_at is not None
+            else None
+        ),
+        freshness_at=(
+            asset.freshness_at.isoformat() if asset.freshness_at is not None else None
+        ),
+        freshness_status=asset.freshness_status,
+        freshness_sla_hours=asset.freshness_sla_hours,
+    )
+
+
+def to_data_lineage_catalog_status_count_response(
+    item: DataLineageCatalogStatusCount,
+) -> DataLineageCatalogStatusCountResponse:
+    """将 DataLineageCatalogStatusCount 转为 API 响应."""
+    return DataLineageCatalogStatusCountResponse(
+        status=item.status,
+        count=item.count,
+    )
+
+
+def to_data_lineage_catalog_freshness_status_count_response(
+    item: DataLineageCatalogFreshnessStatusCount,
+) -> DataLineageCatalogFreshnessStatusCountResponse:
+    """将 DataLineageCatalogFreshnessStatusCount 转为 API 响应."""
+    return DataLineageCatalogFreshnessStatusCountResponse(
+        status=item.status,
+        count=item.count,
+    )
+
+
+def to_data_lineage_catalog_attention_asset_response(
+    item: DataLineageCatalogAttentionAsset,
+) -> DataLineageCatalogAttentionAssetResponse:
+    """将 DataLineageCatalogAttentionAsset 转为 API 响应."""
+    return DataLineageCatalogAttentionAssetResponse(
+        side=item.side,
+        attention_reasons=list(item.attention_reasons),
+        attention_severity=item.attention_severity,
+        asset=to_data_lineage_catalog_asset_response(item.asset),
+    )
+
+
+def to_data_lineage_catalog_attention_reason_count_response(
+    item: DataLineageCatalogAttentionReasonCount,
+) -> DataLineageCatalogAttentionReasonCountResponse:
+    """将 lineage catalog attention reason count 转为 API 响应."""
+    return DataLineageCatalogAttentionReasonCountResponse(
+        reason=item.reason,
+        count=item.count,
+    )
+
+
+def to_data_lineage_catalog_attention_severity_count_response(
+    item: DataLineageCatalogAttentionSeverityCount,
+) -> DataLineageCatalogAttentionSeverityCountResponse:
+    """将 lineage catalog attention severity count 转为 API 响应."""
+    return DataLineageCatalogAttentionSeverityCountResponse(
+        severity=item.severity,
+        count=item.count,
+    )
+
+
+def to_data_lineage_catalog_source_fallback_policy_effect_count_response(
+    item: DataLineageCatalogSourceFallbackPolicyEffectCount,
+) -> DataLineageCatalogSourceFallbackPolicyEffectCountResponse:
+    """将 lineage source fallback policy effect count 转为 API 响应."""
+    return DataLineageCatalogSourceFallbackPolicyEffectCountResponse(
+        policy_id=item.policy_id,
+        policy_status=item.policy_status,
+        catalog_selected_source=item.catalog_selected_source,
+        effective_selected_source=item.effective_selected_source,
+        count=item.count,
+    )
+
+
+def to_data_lineage_catalog_run_report_response(
+    report: DataLineageCatalogRunReport,
+) -> DataLineageCatalogRunReportResponse:
+    """将 DataLineageCatalogRunReport 转为 API 响应."""
+    return DataLineageCatalogRunReportResponse(
+        run_id=report.run_id,
+        events=[to_data_lineage_event_response(event) for event in report.events],
+        input_assets=[
+            to_data_lineage_catalog_asset_response(asset)
+            for asset in report.input_assets
+        ],
+        output_assets=[
+            to_data_lineage_catalog_asset_response(asset)
+            for asset in report.output_assets
+        ],
+        catalog_status_counts=[
+            to_data_lineage_catalog_status_count_response(item)
+            for item in report.catalog_status_counts
+        ],
+        freshness_status_counts=[
+            to_data_lineage_catalog_freshness_status_count_response(item)
+            for item in report.freshness_status_counts
+        ],
+        attention_required=[
+            to_data_lineage_catalog_attention_asset_response(item)
+            for item in report.attention_required
+        ],
+        attention_reason_counts=[
+            to_data_lineage_catalog_attention_reason_count_response(item)
+            for item in report.attention_reason_counts
+        ],
+        attention_severity_counts=[
+            to_data_lineage_catalog_attention_severity_count_response(item)
+            for item in report.attention_severity_counts
+        ],
+        source_fallback_policy_effect_counts=[
+            to_data_lineage_catalog_source_fallback_policy_effect_count_response(item)
+            for item in report.source_fallback_policy_effect_counts
+        ],
+    )
+
+
+def to_data_lineage_graph_edge_response(
+    edge: DataLineageGraphEdge,
+) -> DataLineageGraphEdgeResponse:
+    """将 DataLineageGraphEdge 转为 API 响应."""
+    return DataLineageGraphEdgeResponse(
+        source=to_data_lineage_asset_response(edge.source),
+        target=to_data_lineage_asset_response(edge.target),
+        event=to_data_lineage_event_response(edge.event),
+    )
+
+
+def to_data_lineage_graph_response(graph: DataLineageGraph) -> DataLineageGraphResponse:
+    """将 DataLineageGraph 转为 API 响应."""
+    return DataLineageGraphResponse(
+        root=to_data_lineage_asset_response(graph.root),
+        direction=graph.direction,
+        max_depth=graph.max_depth,
+        assets=[to_data_lineage_asset_response(asset) for asset in graph.assets],
+        events=[to_data_lineage_event_response(event) for event in graph.events],
+        edges=[to_data_lineage_graph_edge_response(edge) for edge in graph.edges],
+    )
+
+
+def to_replay_evidence_summary_response(
+    summary: ReplayEvidenceSummary,
+) -> ReplayEvidenceSummaryResponse:
+    """将 App replay evidence summary 转为 API 响应."""
+    return ReplayEvidenceSummaryResponse(
+        run_id=summary.run_id,
+        original_run_id=summary.original_run_id,
+        replay_run_id=summary.replay_run_id,
+        is_reproducible=summary.is_reproducible,
+        input_data_match=summary.input_data_match,
+        fill_match=summary.fill_match,
+        account_state_match=summary.account_state_match,
+        report_resume_provenance=summary.report_resume_provenance,
+        proof_resume_provenance=summary.proof_resume_provenance,
+        resume_provenance_match=summary.resume_provenance_match,
+        missing_sections=list(summary.missing_sections),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Query
 # ---------------------------------------------------------------------------
@@ -106,7 +377,7 @@ async def list_runs(
     pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[RunResponse]]:
     """列出回测运行记录."""
-    summaries = await asyncio.to_thread(
+    summaries = await run_blocking(
         facade.list_runs,
         strategy_id=strategy_id,
         status=status,
@@ -123,7 +394,7 @@ async def get_run(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
 ) -> APIResponse[RunResponse]:
     """获取回测运行详情."""
-    summary = await asyncio.to_thread(facade.get_run, run_id)
+    summary = await run_blocking(facade.get_run, run_id)
     if summary is None:
         raise NotFoundError(f"Run not found: {run_id}")
     return APIResponse(data=to_run_response(summary))
@@ -139,7 +410,7 @@ async def get_trades(
     pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[TradeResponse]]:
     """获取回测成交明细."""
-    records = await asyncio.to_thread(
+    records = await run_blocking(
         facade.get_trades,
         run_id=run_id,
         start_date=start_date,
@@ -161,7 +432,7 @@ async def get_audit(
     end_date: str | None = Query(None, description="结束日期(含)"),
 ) -> APIResponse[list[AuditRecordResponse]]:
     """获取回测审计记录."""
-    rows = await asyncio.to_thread(
+    rows = await run_blocking(
         facade.get_audit,
         run_id,
         record_type=record_type,
@@ -182,7 +453,7 @@ async def get_report(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
 ) -> APIResponse[BacktestReportResponse]:
     """获取回测报告 (backtest_report.json 元数据)."""
-    report = await asyncio.to_thread(facade.get_report, run_id)
+    report = await run_blocking(facade.get_report, run_id)
     if report is None:
         raise NotFoundError(f"Report not found for run: {run_id}")
     return APIResponse(data=BacktestReportResponse.model_validate(report))
@@ -200,11 +471,119 @@ async def get_lineage(
     lineage_facade: Annotated[LineageQueryFacade, FromComponent()],
 ) -> APIResponse[LineageResponse]:
     """查询运行血统链 — 从当前运行追溯到原始运行."""
-    chain = await asyncio.to_thread(lineage_facade.get_lineage, run_id)
+    chain = await run_blocking(lineage_facade.get_lineage, run_id)
     if chain is None:
         raise NotFoundError(f"Run not found: {run_id}")
     runs = [to_run_response(s) for s in chain.runs]
     return APIResponse(data=LineageResponse(runs=runs, depth=chain.depth))
+
+
+@router.get(
+    "/lineage/events",
+    response_model=APIResponse[list[DataLineageEventResponse]],
+)
+@inject
+async def get_data_lineage_events(
+    lineage_facade: Annotated[LineageQueryFacade, FromComponent()],
+    namespace: str = Query(..., description="资产命名空间"),
+    dataset_id: str = Query(..., description="数据集 ID"),
+    partition_keys: list[str] | None = Query(None, description="资产分区键"),
+    pagination: PaginationRequest = Depends(pagination_params),
+) -> APIResponse[list[DataLineageEventResponse]]:
+    """查询某个数据资产关联的 lineage 事件."""
+    events = await run_blocking(
+        lineage_facade.list_data_events_for_asset,
+        namespace=namespace,
+        dataset_id=dataset_id,
+        partition_keys=tuple(partition_keys or ()),
+    )
+    return paginate(
+        [to_data_lineage_event_response(event) for event in events],
+        pagination,
+    )
+
+
+@router.get(
+    "/lineage/graph",
+    response_model=APIResponse[DataLineageGraphResponse],
+)
+@inject
+async def get_data_lineage_graph(
+    lineage_facade: Annotated[LineageQueryFacade, FromComponent()],
+    namespace: str = Query(..., description="资产命名空间"),
+    dataset_id: str = Query(..., description="数据集 ID"),
+    partition_keys: list[str] | None = Query(None, description="资产分区键"),
+    direction: str = Query(
+        "both",
+        description="遍历方向: upstream / downstream / both",
+        pattern="^(upstream|downstream|both)$",
+    ),
+    max_depth: int = Query(3, ge=0, le=20, description="最大遍历深度"),
+) -> APIResponse[DataLineageGraphResponse]:
+    """查询某个数据资产的 upstream/downstream lineage 图."""
+    graph = await run_blocking(
+        lineage_facade.get_data_lineage_graph_for_asset,
+        namespace=namespace,
+        dataset_id=dataset_id,
+        partition_keys=tuple(partition_keys or ()),
+        direction=direction,
+        max_depth=max_depth,
+    )
+    return APIResponse(data=to_data_lineage_graph_response(graph))
+
+
+@router.get(
+    "/runs/{run_id}/lineage/data",
+    response_model=APIResponse[DataLineageRunResponse],
+)
+@inject
+async def get_run_data_lineage(
+    run_id: str,
+    lineage_facade: Annotated[LineageQueryFacade, FromComponent()],
+) -> APIResponse[DataLineageRunResponse]:
+    """查询某个运行关联的数据血缘摘要."""
+    summary = await run_blocking(lineage_facade.get_data_lineage_for_run, run_id)
+    return APIResponse(data=to_data_lineage_run_response(summary))
+
+
+@router.get(
+    "/runs/{run_id}/lineage/catalog-report",
+    response_model=APIResponse[DataLineageCatalogRunReportResponse],
+)
+@inject
+async def get_run_data_lineage_catalog_report(
+    run_id: str,
+    lineage_facade: Annotated[LineageQueryFacade, FromComponent()],
+    trade_dates: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "可选交易日期列表; 与 available_sources 一起用于 policy effect 聚合"
+            ),
+        ),
+    ] = None,
+    available_sources: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合"
+            ),
+        ),
+    ] = None,
+) -> APIResponse[DataLineageCatalogRunReportResponse]:
+    """查询某个运行的数据血缘和精确 DataCatalog 证据报告."""
+    report_kwargs: dict[str, tuple[str, ...]] = {}
+    if trade_dates is not None or available_sources is not None:
+        report_kwargs = {
+            "trade_dates": tuple(trade_dates or ()),
+            "available_sources": tuple(available_sources or ()),
+        }
+    report = await run_blocking(
+        lineage_facade.get_data_lineage_catalog_report_for_run,
+        run_id,
+        **report_kwargs,
+    )
+    return APIResponse(data=to_data_lineage_catalog_run_report_response(report))
 
 
 @router.post("/runs/{run_id}/replay", response_model=APIResponse[ReplayResponse])
@@ -215,7 +594,7 @@ async def replay_run(
 ) -> APIResponse[ReplayResponse]:
     """基于原始 manifest 重放回测并验证复现性."""
     try:
-        result = await asyncio.to_thread(replay_process.replay, run_id)
+        result = await run_blocking(replay_process.replay, run_id)
     except FileNotFoundError as exc:
         raise NotFoundError(str(exc)) from exc
     except (AppError, ValueError) as exc:
@@ -240,6 +619,38 @@ async def replay_run(
     )
 
 
+@router.get(
+    "/runs/{run_id}/replay/proof",
+    response_model=APIResponse[ReplayProofResponse],
+)
+@inject
+async def get_replay_proof(
+    run_id: str,
+    facade: Annotated[BacktestQueryFacade, FromComponent()],
+) -> APIResponse[ReplayProofResponse]:
+    """获取 replay proof 证据 JSON."""
+    proof = await run_blocking(facade.get_replay_proof, run_id)
+    if proof is None:
+        raise NotFoundError(f"Replay proof not found for run: {run_id}")
+    return APIResponse(data=ReplayProofResponse.model_validate(proof))
+
+
+@router.get(
+    "/runs/{run_id}/replay/evidence",
+    response_model=APIResponse[ReplayEvidenceSummaryResponse],
+)
+@inject
+async def get_replay_evidence_summary(
+    run_id: str,
+    facade: Annotated[BacktestQueryFacade, FromComponent()],
+) -> APIResponse[ReplayEvidenceSummaryResponse]:
+    """获取 restored-run report 与 replay proof 的组合证据摘要."""
+    summary = await run_blocking(facade.get_replay_evidence_summary, run_id)
+    if summary is None:
+        raise NotFoundError(f"Replay evidence not found for run: {run_id}")
+    return APIResponse(data=to_replay_evidence_summary_response(summary))
+
+
 # ---------------------------------------------------------------------------
 # NAV
 # ---------------------------------------------------------------------------
@@ -252,7 +663,7 @@ async def get_nav_series(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
 ) -> APIResponse[list[NavPointResponse]]:
     """获取回测 NAV 序列."""
-    nav_series = await asyncio.to_thread(facade.get_nav_series, run_id)
+    nav_series = await run_blocking(facade.get_nav_series, run_id)
     return APIResponse(
         data=[NavPointResponse.model_validate(item) for item in nav_series]
     )
@@ -273,8 +684,8 @@ async def get_benchmark(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
 ) -> _RESP_BENCHMARK:
     """获取回测基准 NAV 序列与基准收益率."""
-    nav_series = await asyncio.to_thread(facade.get_benchmark_nav_series, run_id)
-    benchmark_return = await asyncio.to_thread(facade.get_benchmark_return, run_id)
+    nav_series = await run_blocking(facade.get_benchmark_nav_series, run_id)
+    benchmark_return = await run_blocking(facade.get_benchmark_return, run_id)
 
     if nav_series is None and benchmark_return is None:
         raise NotFoundError(f"No benchmark data for run: {run_id}")

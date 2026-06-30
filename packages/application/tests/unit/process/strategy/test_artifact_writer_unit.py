@@ -9,12 +9,18 @@ import orjson
 import polars as pl
 import pytest
 from ditto_application.processes.execution.strategy_input import (
+    BacktestArtifactWriteOptions,
     enrich_record_with_symbol,
     write_backtest_artifacts,
 )
 from ditto_backtest.audit import RiskScanRecord
 from ditto_backtest.manifest import RunManifest, RunMode
-from ditto_backtest.statistics import PreTradeDecisionRecord
+from ditto_backtest.statistics import (
+    AggregatedTradeStatistics,
+    AlphaStatistics,
+    BacktestReport,
+    PreTradeDecisionRecord,
+)
 from ditto_kernel.identity import InstrumentId
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
@@ -101,6 +107,58 @@ def _mock_serialize_report(
     return _FAKE_JSON_BYTES, tables
 
 
+def _make_report(run_id: str = "run-001") -> BacktestReport:
+    """Build a minimal real BacktestReport for serialization tests."""
+    return BacktestReport(
+        run_id=run_id,
+        period=("2026-01-01", "2026-01-31"),
+        initial_cash=1_000_000.0,
+        final_nav=1_010_000.0,
+        trade_stats=(),
+        portfolio_stats=(),
+        aggregated_trade_stats=AggregatedTradeStatistics(
+            total_trades=0,
+            long_trades=0,
+            short_trades=0,
+            win_trades=0,
+            loss_trades=0,
+            win_rate=0.0,
+            profit_factor=0.0,
+            avg_win=0.0,
+            avg_loss=0.0,
+            avg_win_loss_ratio=0.0,
+            max_consecutive_wins=0,
+            max_consecutive_losses=0,
+            avg_holding_days=0.0,
+            median_holding_days=0.0,
+            best_trade=0.0,
+            worst_trade=0.0,
+            avg_trade_return_pct=0.0,
+        ),
+        alpha_stats=AlphaStatistics(
+            annualized_return=0.0,
+            annualized_volatility=0.0,
+            sharpe_ratio=0.0,
+            sortino_ratio=0.0,
+            max_drawdown=0.0,
+            max_drawdown_duration_days=0,
+            calmar_ratio=0.0,
+            information_ratio=None,
+            tracking_error=None,
+            beta=None,
+            alpha_annualized=None,
+            total_turnover=0.0,
+            avg_turnover_per_rebalance=0.0,
+            total_fees=0.0,
+            net_return_after_cost=0.0,
+            cost_drag=0.0,
+        ),
+        nav_series=(),
+        trade_log=(),
+        fill_log=(),
+    )
+
+
 class TestWriteBacktestArtifacts:
     """测试 write_backtest_artifacts 函数。"""
 
@@ -135,6 +193,25 @@ class TestWriteBacktestArtifacts:
 
         assert "backtest_report" in result
         assert result["backtest_report"].name == "backtest_report.json"
+
+    @patch("ditto_application.processes.execution.strategy_input.serialize_report")
+    def test_passes_risk_report_to_serializer(
+        self,
+        mock_serialize_report: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """risk_report block is forwarded into the report JSON serializer."""
+        report = _make_report()
+        risk_report = {"concentration": {"max_weight": 0.4}}
+        mock_serialize_report.return_value = _mock_serialize_report()
+
+        write_backtest_artifacts(
+            report,
+            output_dir=tmp_path / "run-001",
+            options=BacktestArtifactWriteOptions(risk_report=risk_report),
+        )
+
+        assert mock_serialize_report.call_args.kwargs["risk_report"] == risk_report
 
     @patch("ditto_application.processes.execution.strategy_input.serialize_report")
     def test_creates_output_dir_when_specified(
@@ -228,8 +305,31 @@ class TestWriteBacktestArtifacts:
         assert result["manifest"] == manifest_path
         parsed = orjson.loads(manifest_path.read_bytes())
         assert parsed["strategy_version"] == "2026.03"
+        assert parsed["pit_policy"] == "knowledge_date_fail_closed"
         assert parsed["parameter_overrides"] == ["top_k=3"]
         assert "manifest.json" in parsed["artifacts"]
+
+    def test_writes_report_json_with_pit_policy_from_manifest(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """backtest_report.json mirrors manifest PIT policy for operators."""
+        report = _make_report(run_id="run-001")
+        out_dir = tmp_path / "run-001"
+
+        write_backtest_artifacts(
+            report,
+            output_dir=out_dir,
+            manifest=self._make_manifest(),
+        )
+
+        parsed = orjson.loads((out_dir / "backtest_report.json").read_bytes())
+        assert parsed["pit_policy"] == {
+            "time_column": "knowledge_date",
+            "policy": "knowledge_date_fail_closed",
+            "unsafe_time_policy": "",
+            "knowledge_lag_days": 1,
+        }
 
     @patch("ditto_application.processes.execution.strategy_input.serialize_report")
     def test_display_map_injects_instrument_symbol_into_risk_log(

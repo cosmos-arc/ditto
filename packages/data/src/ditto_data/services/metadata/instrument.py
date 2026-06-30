@@ -22,6 +22,10 @@ from ditto_data.models.metadata import (
 )
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.metadata._identity import (
+    IdentityResolutionRequest,
+    IdentityResolverContext,
+)
+from ditto_data.services.metadata._identity import (
     resolve_instrument_identifier as _resolve_instrument_identifier,
 )
 from ditto_data.services.metadata._identity import (
@@ -570,14 +574,18 @@ class InstrumentService:
     ) -> InstrumentId | None:
         """统一标识符解析入口（委托给 _identity 模块）."""
         return _resolve_instrument_identifier(
-            self._instrument_reader,
-            self._exchange_transformers,
-            instrument_id=instrument_id,
-            standard_ticker=standard_ticker,
-            ticker=ticker,
-            asset_class=asset_class,
-            source=source,
-            asof=asof,
+            IdentityResolverContext(
+                instrument_reader=self._instrument_reader,
+                exchange_transformers=self._exchange_transformers,
+            ),
+            IdentityResolutionRequest(
+                instrument_id=instrument_id,
+                standard_ticker=standard_ticker,
+                ticker=ticker,
+                asset_class=asset_class,
+                source=source,
+                asof=asof,
+            ),
         )
 
     @traced("metadata.identity.resolve_source_ticker")
@@ -592,14 +600,18 @@ class InstrumentService:
     ) -> str:
         """将任意标识符解析为 source_ticker（委托给 _identity 模块）."""
         return _resolve_source_ticker(
-            self._instrument_reader,
-            self._exchange_transformers,
-            ticker=ticker,
-            standard_ticker=standard_ticker,
-            instrument_id=instrument_id,
-            asset_class=asset_class,
-            source=source,
-            asof=asof,
+            IdentityResolverContext(
+                instrument_reader=self._instrument_reader,
+                exchange_transformers=self._exchange_transformers,
+            ),
+            IdentityResolutionRequest(
+                ticker=ticker,
+                standard_ticker=standard_ticker,
+                instrument_id=instrument_id,
+                asset_class=asset_class,
+                source=source,
+                asof=asof,
+            ),
         )
 
     # ============ list_date 更新 ============

@@ -3,6 +3,7 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
+from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
@@ -26,6 +27,7 @@ def create_strategy_bundle() -> Generator[StrategyBundle]:
             catalog_service=container.get(StrategyCatalogService),
             run_service=container.get(StrategyRunLifecycleStore),
             run_writer=container.get(StrategyRunWriterProtocol),
+            signal_package_publisher=container.get(SignalPackagePublisher),
         )
     finally:
         container.close()

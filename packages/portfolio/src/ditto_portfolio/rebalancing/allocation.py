@@ -210,5 +210,10 @@ class AllocationStage:
     allocator: WeightAllocator
 
     def process(self, frame: pl.DataFrame, context: object) -> pl.DataFrame:
-        """委托给 allocator.allocate，context 由 Pipeline 传入但不使用。"""
+        """
+        委托给 allocator.allocate.
+
+        context: 接收 DecisionStage Protocol 的 StrategyContext，
+        但本 stage 不使用。类型为 object 因 portfolio 禁止依赖 strategy。
+        """
         return self.allocator.allocate(frame)

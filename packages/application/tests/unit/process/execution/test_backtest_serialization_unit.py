@@ -9,12 +9,21 @@ BacktestReportSerializer 单元测试 — JSON 输出格式兼容 replay 反序�
 
 from __future__ import annotations
 
+from types import MappingProxyType
+
 import orjson
+from ditto_backtest.manifest import RunManifest, RunMode
 from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
     BacktestReport,
 )
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.time_semantics import (
+    DEFAULT_PIT_TIME_COLUMN,
+    PIT_POLICY_FAIL_CLOSED,
+)
+from ditto_portfolio.accounting import AccountView, CashBook, Position
 
 # ---------------------------------------------------------------------------
 # 辅助函数
@@ -32,6 +41,7 @@ def _make_report(
         ("2026-01-02", 1_005_000.0),
         ("2026-01-03", 1_050_000.0),
     ),
+    final_account_state: AccountView | None = None,
 ) -> BacktestReport:
     """构建真实 BacktestReport 实例（仅填充必要字段）."""
     return BacktestReport(
@@ -81,6 +91,29 @@ def _make_report(
         nav_series=nav_series,
         trade_log=(),
         fill_log=(),
+        final_account_state=final_account_state,
+    )
+
+
+def _make_account_view() -> AccountView:
+    """构建可序列化的最终账户状态样本."""
+    instrument_id = InstrumentId(510300)
+    position = Position(
+        instrument_id=instrument_id,
+        quantity=1000,
+        available_quantity=1000,
+        average_cost=3.5,
+        market_value=3500.0,
+        unrealized_pnl=0.0,
+        realized_pnl=125.0,
+        total_fees=8.0,
+    )
+    return AccountView(
+        positions=MappingProxyType({instrument_id: position}),
+        cash=CashBook(available=1_046_500.0, settled=1_046_500.0, frozen=0.0),
+        total_value=1_050_000.0,
+        nav=1_050_000.0,
+        exposure=3500.0,
     )
 
 
@@ -154,6 +187,107 @@ class TestRebalanceFreq:
         data = orjson.loads(json_bytes)
 
         assert data["rebalance_freq"] == "daily"
+
+
+class TestPitPolicyReporting:
+    """backtest_report.json should expose PIT policy for audit/replay."""
+
+    def test_report_includes_pit_policy_from_manifest(self) -> None:
+        """When a manifest is available, report JSON mirrors its PIT policy."""
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        manifest = RunManifest(
+            run_id="run-pit-report",
+            strategy_id="momentum-etf",
+            strategy_version="2026.01",
+            mode=RunMode.BACKTEST,
+            created_at="2026-01-31T00:00:00Z",
+            knowledge_lag_days=2,
+        )
+
+        json_bytes, _ = serialize_report(_make_report(), manifest=manifest)
+        data = orjson.loads(json_bytes)
+
+        assert data["pit_policy"] == {
+            "time_column": DEFAULT_PIT_TIME_COLUMN,
+            "policy": PIT_POLICY_FAIL_CLOSED,
+            "unsafe_time_policy": "",
+            "knowledge_lag_days": 2,
+        }
+
+
+class TestFinalAccountStateReporting:
+    """backtest_report.json should include final account state proof source."""
+
+    def test_report_includes_final_account_state_payload(self) -> None:
+        """When report has final account state, JSON contains stable payload."""
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        account_view = _make_account_view()
+        json_bytes, _ = serialize_report(
+            _make_report(final_account_state=account_view),
+        )
+        data = orjson.loads(json_bytes)
+
+        account_state = data["final_account_state"]
+        assert account_state["nav"] == 1_050_000.0
+        assert account_state["cash_available"] == 1_046_500.0
+        assert account_state["positions"] == [
+            {
+                "instrument_id": 510300,
+                "quantity": 1000,
+                "available_quantity": 1000,
+                "average_cost": 3.5,
+                "market_value": 3500.0,
+                "unrealized_pnl": 0.0,
+                "realized_pnl": 125.0,
+                "total_fees": 8.0,
+            },
+        ]
+
+
+class TestResumeProvenanceReporting:
+    """backtest_report.json should expose restored-run provenance."""
+
+    def test_report_includes_resume_provenance_when_provided(self) -> None:
+        """Resume child reports should say which checkpoint restored them."""
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        json_bytes, _ = serialize_report(
+            _make_report(),
+            resume_provenance={
+                "from_run_id": "run-original",
+                "checkpoint_trade_date": "2025-01-31",
+                "checkpoint_completed_days": 21,
+                "checkpoint_total_days": 60,
+                "checkpoint_nav": 1_020_000.0,
+                "checkpoint_order_count": 4,
+                "checkpoint_fill_count": 4,
+                "account_state_hash": "sha256:account",
+                "settlement_state_hash": "sha256:settlement",
+                "runtime_state_hash": "sha256:runtime",
+            },
+        )
+        data = orjson.loads(json_bytes)
+
+        assert data["resume_provenance"] == {
+            "from_run_id": "run-original",
+            "checkpoint_trade_date": "2025-01-31",
+            "checkpoint_completed_days": 21,
+            "checkpoint_total_days": 60,
+            "checkpoint_nav": 1_020_000.0,
+            "checkpoint_order_count": 4,
+            "checkpoint_fill_count": 4,
+            "account_state_hash": "sha256:account",
+            "settlement_state_hash": "sha256:settlement",
+            "runtime_state_hash": "sha256:runtime",
+        }
 
 
 # ---------------------------------------------------------------------------

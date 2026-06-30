@@ -69,7 +69,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             instrument_id=1000001,
             source="tushare",
         )
@@ -91,7 +91,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             instrument_id=9999999,
             source="tushare",
         )
@@ -110,7 +110,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             standard_ticker="000001.XSHE",
             source="tushare",
         )
@@ -144,7 +144,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             ticker="600519",
             source="tushare",
             asset_class="stock",
@@ -168,7 +168,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             instrument_id=1000001,
             ticker="600519",
             source="tushare",
@@ -188,7 +188,7 @@ class TestResolveInstrumentIdentifier:
         service = _make_service(mock_dependencies, exchange_transformers)
 
         with pytest.raises(NoIdentifierProvidedError):
-            service.resolve_instrument_identifier(
+            service.instrument.resolve_instrument_identifier(
                 source="tushare",
             )
 
@@ -204,7 +204,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             ticker="999999",
             source="tushare",
             asset_class="stock",
@@ -222,7 +222,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             standard_ticker="000001.XSHE",
             source="tushare",
         )
@@ -241,7 +241,7 @@ class TestResolveInstrumentIdentifier:
 
         service = _make_service(mock_dependencies, exchange_transformers)
 
-        result = service.resolve_instrument_identifier(
+        result = service.instrument.resolve_instrument_identifier(
             standard_ticker="000001.XSHE",
             source="tushare",
             asof="2024-01-01",

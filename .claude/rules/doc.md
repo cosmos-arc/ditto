@@ -179,3 +179,22 @@ docs/adr/0004-dq-three-tier-architecture.md
 | 新增公开类型 | 是 — 添加到类型表 |
 | 修改依赖关系 | 是 — 更新允许/禁止依赖表 |
 | 新增命令/路由 | 是 — 更新 API/CLI 表格 |
+
+---
+
+## 6. README.md vs CLAUDE.md 分工
+
+| 维度 | README.md | CLAUDE.md |
+|------|-----------|-----------|
+| 受众 | 人类（浏览者/新成员） | AI Agent（Claude Code） |
+| 定位 | 项目/包的公开名片 | Agent 的操作手册 |
+| 包含 | 版本号、changelog、快速开始、数据源表、人类叙述、架构图 | 架构规则、导入模式、约束红线、放置决策、测试位置 |
+| 不含 | 模块树（→链接 CLAUDE.md）、架构约束 | 版本号、changelog |
+| 重叠率上限 | <30% | — |
+
+## 7. AGENTS.md 定位
+
+- root AGENTS.md = 纯入口索引（≤15 行），链接到 agent-context-pack.md 和 CLAUDE.md
+- per-package AGENTS.md = 包级轻量摘要卡（35-50 行），是 CLAUDE.md 的有意子集
+- AGENTS.md 不含独有信息，所有内容在 CLAUDE.md 中有更详细版本
+- 更新 CLAUDE.md 时须检查对应 AGENTS.md 是否需要同步
