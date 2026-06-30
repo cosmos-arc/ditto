@@ -25,6 +25,11 @@ from ditto_application.execution_dto import (
 )
 from ditto_application.queries.comparison import ComparisonQueryFacade
 from ditto_application.queries.comparison_math import ComparisonMetrics
+from ditto_application.queries.daily_decision import (
+    DailyDecisionQueryFacade,
+    DailyDecisionReport,
+)
+from ditto_application.queries.deviation import SignalDeviationReport
 from ditto_application.queries.portfolio_actual import (
     PnlSummary,
     PortfolioActualQueryFacade,
@@ -41,6 +46,8 @@ from ditto_apps.models.common import (
 )
 from ditto_apps.models.trade import (
     ComparisonMetricsResponse,
+    DailyDecisionReadinessResponse,
+    DailyDecisionReportResponse,
     DeviationResponse,
     FillResponse,
     PnlSummaryResponse,
@@ -118,6 +125,50 @@ def to_comparison_response(metrics: ComparisonMetrics) -> ComparisonMetricsRespo
     )
 
 
+def to_deviation_response(report: SignalDeviationReport) -> DeviationResponse:
+    """将 SignalDeviationReport 转为 API 响应."""
+    return DeviationResponse(
+        strategy_id=report.strategy_id,
+        signal_date=report.signal_date,
+        total_signals=report.total_signals,
+        filled=report.filled,
+        unfilled=report.unfilled,
+        items=[
+            SignalDeviationItem(
+                instrument_id=item.instrument_id,
+                signal_action=item.signal_action,
+                signal_weight=item.signal_weight,
+                actual_weight=item.actual_weight,
+                deviation_bps=item.deviation_bps,
+                fill_status=item.fill_status,
+            )
+            for item in report.items
+        ],
+    )
+
+
+def to_daily_decision_response(
+    report: DailyDecisionReport,
+) -> DailyDecisionReportResponse:
+    """将 DailyDecisionReport 转为 API 响应."""
+    return DailyDecisionReportResponse(
+        strategy_id=report.strategy_id,
+        trade_date=report.trade_date,
+        readiness=DailyDecisionReadinessResponse(
+            status=report.readiness_status,
+            reasons=list(report.readiness_reasons),
+        ),
+        signal_intents=[to_intent_response(intent) for intent in report.signal_intents],
+        positions=[to_position_response(position) for position in report.positions],
+        deviation=(
+            to_deviation_response(report.deviation)
+            if report.deviation is not None
+            else None
+        ),
+        pnl=to_pnl_response(report.pnl) if report.pnl is not None else None,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Re-export fill mapper from command routes (shared between command & query)
 # ---------------------------------------------------------------------------
@@ -125,6 +176,30 @@ def to_comparison_response(metrics: ComparisonMetrics) -> ComparisonMetricsRespo
 from ditto_apps.api.routes.trade_command_routes import (  # noqa: E402
     to_fill_response,
 )
+
+# ---------------------------------------------------------------------------
+# Daily Decision
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/daily-decision",
+    response_model=APIResponse[DailyDecisionReportResponse],
+)
+@inject
+async def get_daily_decision(
+    facade: Annotated[DailyDecisionQueryFacade, FromComponent()],
+    strategy_id: str = Query(..., description="策略 ID"),
+    trade_date: str | None = Query(None, description="交易/信号日期"),
+) -> APIResponse[DailyDecisionReportResponse]:
+    """获取每日决策驾驶舱报告."""
+    report = await asyncio.to_thread(
+        facade.get_report,
+        strategy_id=strategy_id,
+        trade_date=trade_date,
+    )
+    return APIResponse(data=to_daily_decision_response(report))
+
 
 # ---------------------------------------------------------------------------
 # Trade Intents

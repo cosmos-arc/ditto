@@ -293,9 +293,11 @@ class TestAppProviderStructure:
         provider = AppPortfolioQueryProvider()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
+            "daily_decision_query_facade",
             "trade_query_facade",
             "portfolio_actual_query_facade",
             "signal_query_facade",
+            "signal_deviation_query_facade",
         }
         assert expected.issubset(method_names)
 
