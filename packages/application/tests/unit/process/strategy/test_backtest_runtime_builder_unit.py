@@ -22,6 +22,7 @@ from ditto_backtest.result import (
     BacktestRuntimeStateSnapshot,
     BacktestSettlementStateSnapshot,
 )
+from ditto_backtest.simulation.fill import AShareFillModel
 from ditto_data.catalog.promotion import DatasetMaturityPromotion
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
@@ -131,10 +132,61 @@ class TestBacktestRuntimeBuilder:
         assert isinstance(runtime.pre_trade_check, CompositePreTradeCheck)
         assert isinstance(runtime.fee_model, AShareFeeModel)
         assert runtime.brokerage.get_account().cash.available == 2_000_000.0
+        fill_model = runtime.brokerage._model.fill_model
+        assert isinstance(fill_model, AShareFillModel)
+        assert fill_model.participation_rate == pytest.approx(0.05)
         strategy_runtime_builder.build_published_runtime.assert_called_once_with(
             "momentum-etf",
             2,
         )
+
+    def test_all_or_nothing_fill_mode_disables_participation_cap(self) -> None:
+        """fill_mode=all_or_nothing 应保留旧的不限流成交行为。"""
+        spec = _make_strategy_spec()
+        strategy_runtime_builder = MagicMock()
+        strategy_runtime_builder.build_published_runtime.return_value = (
+            PublishedStrategyRuntime(
+                record=StrategySpecRecord(
+                    strategy_id=spec.strategy_id,
+                    name=spec.name,
+                    spec_json=asdict(spec),
+                    version=2,
+                    status="published",
+                    tags=spec.tags,
+                ),
+                spec=spec,
+                pipeline=MagicMock(spec=StrategyPipeline),
+            )
+        )
+        metadata_service = MagicMock(spec=MetadataService)
+        metadata_service.resolve_instrument_id.return_value = 3_000_001
+        metadata_service.get_universe.return_value = [2_000_001, 2_000_002]
+        metadata_service.instrument.get_instrument.return_value = {
+            "ticker": "510300",
+            "exchange": "XSHG",
+        }
+        data_provider = MagicMock(spec=DataProvider)
+        builder = BacktestRuntimeBuilder(
+            strategy_runtime_builder=strategy_runtime_builder,
+            metadata_service=metadata_service,
+            data_provider=data_provider,
+        )
+
+        runtime = builder.build_published_runtime(
+            config=BacktestServiceConfig(
+                strategy_id="momentum-etf",
+                start_date="2026-01-10",
+                end_date="2026-01-13",
+                initial_cash=2_000_000.0,
+                participation_rate=0.25,
+                fill_mode="all_or_nothing",
+            ),
+            version=2,
+        )
+
+        fill_model = runtime.brokerage._model.fill_model
+        assert isinstance(fill_model, AShareFillModel)
+        assert fill_model.participation_rate == pytest.approx(0.0)
 
     def test_build_published_runtime_restores_checkpoint_state(self) -> None:
         """resume config 应恢复账户、结算冻结队列和 pending OMS orders。"""

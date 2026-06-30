@@ -16,6 +16,7 @@ from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.processes.execution.backtest_process import (
     BacktestServiceConfig,
     BacktestServiceOptions,
+    FillMode,
 )
 from ditto_application.processes.execution.fee_override import (
     build_fee_model,
@@ -39,6 +40,8 @@ class BacktestFlowRequest:
     initial_cash: float = DEFAULT_INITIAL_CASH
     parameter_overrides: tuple[str, ...] = ()
     cost_config: dict[str, object] | None = None
+    participation_rate: float = 0.05
+    fill_mode: FillMode = "partial"
     allow_experimental_data: bool = False
     parent_run_id: str = ""
     resume_from_run_id: str = ""
@@ -66,6 +69,11 @@ class BacktestFlowRequest:
             initial_cash=_float_param(params, "initial_cash", DEFAULT_INITIAL_CASH),
             parameter_overrides=_tuple_str_param(params.get("parameter_overrides")),
             cost_config=_cost_config_param(params.get("cost_config")),
+            participation_rate=_float_param(params, "participation_rate", 0.05),
+            fill_mode=cast(
+                FillMode,
+                _str_param(params, "fill_mode", "partial"),
+            ),
             allow_experimental_data=_bool_param(
                 params,
                 "allow_experimental_data",
@@ -158,6 +166,8 @@ def run_backtest_flow(
         initial_cash=flow_request.initial_cash,
         parameter_overrides=flow_request.parameter_overrides,
         parent_run_id=flow_request.parent_run_id,
+        participation_rate=flow_request.participation_rate,
+        fill_mode=flow_request.fill_mode,
         resume_from_run_id=flow_request.resume_from_run_id,
         resume_checkpoint_trade_date=flow_request.resume_checkpoint_trade_date,
         resume_checkpoint_completed_days=flow_request.resume_checkpoint_completed_days,

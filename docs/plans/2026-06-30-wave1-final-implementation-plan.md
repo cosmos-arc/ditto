@@ -463,6 +463,24 @@ Defer risk parity, Black-Litterman, and broad industry constraints unless V1b re
 - Reproducibility tests remain stable.
 - Golden updates include before/after evidence.
 
+**Implementation Evidence (2026-07-01):**
+
+- Added partial-fill support in `BacktestBrokerage._build_fill_event`; fill events now use the fill model's actual `filled_quantity` and reject only non-positive/over-leaves quantities.
+- Added continuous-auction participation cap in `AShareFillModel`; `participation_rate=0` remains the unlimited-volume compatibility path.
+- Wired `BacktestServiceConfig.participation_rate` and `fill_mode` through the backtest flow and published-runtime builder; `fill_mode="all_or_nothing"` injects `participation_rate=0`.
+- RED observed:
+  - `pixi run -e dev pytest packages/backtest/tests/unit/simulation/test_brokerage_unit.py -k partial -q --no-cov` failed on the old all-or-nothing guard.
+  - `pixi run -e dev pytest packages/backtest/tests/unit/simulation/test_fill_model_unit.py -k 'participation_rate or participation_cap or zero_volume or auction_volume_cap' -q --no-cov` failed because `AShareFillModel` had no participation-rate parameter.
+  - Config/runtime/flow tests failed on missing config fields and SimpleFillModel runtime injection.
+- GREEN verification:
+  - `pixi run -e dev pytest packages/backtest/tests/unit/simulation/test_fill_model_unit.py packages/backtest/tests/unit/simulation/test_brokerage_unit.py packages/application/tests/unit/process/strategy/test_backtest_service_unit.py packages/application/tests/unit/process/strategy/test_backtest_runtime_builder_unit.py packages/apps/tests/unit/jobs/flows/test_backtest_flow_unit.py -q --no-cov` -> 159 passed.
+  - `pixi run -e dev type packages/backtest/src packages/application/src packages/apps/src` -> 0 errors.
+  - `pixi run -e dev pytest packages/backtest/tests/integration/test_golden_baseline.py packages/backtest/tests/integration/test_reproducibility.py -q --no-cov` -> 17 passed after snapshot review.
+- Golden deltas reviewed before re-record:
+  - 3-day ETF rotation final NAV `999954.2841199999 -> 998136.3701199999`; annualized return `3.2494 -> -15.8138`; aggregated trades `3 -> 2`.
+  - 5-day ETF rotation final NAV `1001160.0580472726 -> 1040636.1681199998`; annualized return `9.6266 -> 1169.0820`; aggregated trades `8 -> 5`.
+  - 3-day trend swing final NAV unchanged at `992355.3246009998`; annualized return `-60.5127 -> -59.5067`; max drawdown `-0.7347 -> -1.6824`.
+
 ### Task 9: B3b Full RC1 Promotion
 
 **Detailed Reference:** full `docs/plans/2026-06-24-wave1-b3-real-data-promotion.md`

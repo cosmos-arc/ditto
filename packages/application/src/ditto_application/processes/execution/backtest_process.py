@@ -14,6 +14,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from typing import Literal
 
 import orjson
 from ditto_backtest.audit import ExecutionAuditCollector
@@ -89,6 +90,7 @@ __all__ = [
     "BacktestService",
     "BacktestServiceConfig",
     "BacktestServiceOptions",
+    "FillMode",
 ]
 
 
@@ -99,6 +101,9 @@ __all__ = [
 _ALLOWED_RECOMMENDATION_STATUSES = frozenset(
     {"research", "candidate", "paper", "production"}
 )
+_ALLOWED_FILL_MODES = frozenset({"partial", "all_or_nothing"})
+
+type FillMode = Literal["partial", "all_or_nothing"]
 
 
 @dataclass(frozen=True)
@@ -123,6 +128,8 @@ class BacktestServiceConfig:
         data_catalog_identities: 补充数据目录身份（manifest 不可用时使用）
         factor_report_refs: 因子评估报告引用
         recommendation_status: 研究晋级建议状态
+        participation_rate: 连续竞价参与率上限，0 表示不限流
+        fill_mode: partial 默认保留未成交余量；all_or_nothing 保留旧不限流行为
         resume_*: checkpoint-backed resume state evidence
 
     """
@@ -143,6 +150,8 @@ class BacktestServiceConfig:
     data_catalog_identities: tuple[str, ...] = ()
     factor_report_refs: tuple[str, ...] = ()
     recommendation_status: str = "research"
+    participation_rate: float = 0.05
+    fill_mode: FillMode = "partial"
     resume_from_run_id: str = ""
     resume_checkpoint_trade_date: str = ""
     resume_checkpoint_completed_days: int = 0
@@ -164,6 +173,12 @@ class BacktestServiceConfig:
                 "recommendation_status must be one of "
                 f"{sorted(_ALLOWED_RECOMMENDATION_STATUSES)}"
             )
+            raise AppProcessError(msg)
+        if not 0.0 <= self.participation_rate <= 1.0:
+            msg = "participation_rate must be between 0.0 and 1.0"
+            raise AppProcessError(msg)
+        if self.fill_mode not in _ALLOWED_FILL_MODES:
+            msg = f"fill_mode must be one of {sorted(_ALLOWED_FILL_MODES)}"
             raise AppProcessError(msg)
 
 

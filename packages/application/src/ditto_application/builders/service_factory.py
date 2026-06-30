@@ -18,6 +18,7 @@ from ditto_backtest.result import (
     BacktestSettlementStateSnapshot,
 )
 from ditto_backtest.simulation import BrokerageModel
+from ditto_backtest.simulation.fill import AShareFillModel
 from ditto_backtest.simulation.slippage import FixedBpsSlippage, SlippageModel
 from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.lineage import DataLineageRecorder
@@ -186,6 +187,14 @@ def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
         raise AppBuilderError(msg)
 
 
+def _build_fill_model(config: BacktestServiceConfig) -> AShareFillModel:
+    """Build the configured A-share fill model for backtests."""
+    participation_rate = (
+        0.0 if config.fill_mode == "all_or_nothing" else config.participation_rate
+    )
+    return AShareFillModel(participation_rate=participation_rate)
+
+
 def _build_account(
     *,
     initial_cash: float,
@@ -334,6 +343,7 @@ class BacktestRuntimeBuilder:
             ),
             order_book=_build_order_book(runtime_state),
             model=BrokerageModel(
+                fill_model=_build_fill_model(config),
                 fee_model=resolved_fee_model,
                 slippage_model=resolved_slippage,
             ),

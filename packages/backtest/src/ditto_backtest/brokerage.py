@@ -324,26 +324,30 @@ class BacktestBrokerage:
         fee_schedule: FeeSchedule,
     ) -> FillEvent:
         """构建 FillEvent，补全所有字段。"""
-        self._fill_counter += 1
         order = ticket.order
 
-        fill_qty = ticket.leaves_quantity
-
-        # 防御性检查：V1 fill model 合约为 all-or-nothing，
-        # filled.fill_event.filled_quantity 应等于 leaves_quantity。
-        # 如 V2 引入部分成交模型，需重构 fill model contract。
         model_qty = filled.fill_event.filled_quantity
-        if model_qty != fill_qty:
+        if model_qty <= 0:
             raise FillProcessingError(
-                f"Fill model returned qty {model_qty} != leaves qty {fill_qty} "
-                + f"for order {order.order_id}. V1 fill model is all-or-nothing; "
-                + "partial fills require fill model contract refactoring.",
+                f"Fill model returned non-positive qty {model_qty} "
+                + f"for order {order.order_id}. Fill models must return NoFill "
+                + "when no quantity can be executed.",
                 order_id=order.order_id,
                 model_quantity=model_qty,
-                leaves_quantity=fill_qty,
+                leaves_quantity=ticket.leaves_quantity,
             )
+        if model_qty > ticket.leaves_quantity:
+            raise FillProcessingError(
+                f"Fill model returned qty {model_qty} > leaves qty "
+                + f"{ticket.leaves_quantity} for order {order.order_id}.",
+                order_id=order.order_id,
+                model_quantity=model_qty,
+                leaves_quantity=ticket.leaves_quantity,
+            )
+        fill_qty = model_qty
         cumulative = ticket.filled_quantity + fill_qty
         leaves = order.quantity - cumulative
+        self._fill_counter += 1
 
         # 基准成交价 (FillModel 返回) + 滑点
         base_price = filled.fill_event.fill_price

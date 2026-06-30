@@ -130,12 +130,12 @@ class TestGoldenBaseline:
         result = engine.run()
         report = build_report(audit, run_id=result.run_id)
 
-        assert result.final_nav == snapshot(999954.2841199999)
+        assert result.final_nav == snapshot(998136.3701199999)
         assert result.total_trades == snapshot(7)
-        assert report.alpha_stats.annualized_return == snapshot(3.249402928305334)
-        assert report.alpha_stats.max_drawdown == snapshot(-8.0203602269124e-05)
-        assert report.alpha_stats.sharpe_ratio == snapshot(11.333292780046666)
-        assert report.aggregated_trade_stats.total_trades == snapshot(3)
+        assert report.alpha_stats.annualized_return == snapshot(-15.813802428690893)
+        assert report.alpha_stats.max_drawdown == snapshot(-1.1245120206538581)
+        assert report.alpha_stats.sharpe_ratio == snapshot(-0.6633620945414491)
+        assert report.aggregated_trade_stats.total_trades == snapshot(2)
         assert report.aggregated_trade_stats.win_rate == snapshot(100.0)
 
     def test_5day_etf_rotation_baseline(
@@ -160,12 +160,12 @@ class TestGoldenBaseline:
         result = engine.run()
         report = build_report(audit, run_id=result.run_id)
 
-        assert result.final_nav == snapshot(1001160.0580472726)
+        assert result.final_nav == snapshot(1040636.1681199998)
         assert result.total_trades == snapshot(13)
-        assert report.alpha_stats.annualized_return == snapshot(9.626625991102312)
-        assert report.alpha_stats.max_drawdown == snapshot(-8.0203602269124e-05)
-        assert report.alpha_stats.sharpe_ratio == snapshot(20.634343104906)
-        assert report.aggregated_trade_stats.total_trades == snapshot(8)
+        assert report.alpha_stats.annualized_return == snapshot(1169.0819710283006)
+        assert report.alpha_stats.max_drawdown == snapshot(-1.1245120206538581)
+        assert report.alpha_stats.sharpe_ratio == snapshot(40.76240257266437)
+        assert report.aggregated_trade_stats.total_trades == snapshot(5)
         assert report.aggregated_trade_stats.win_rate == snapshot(100.0)
 
     def test_3day_etf_trend_swing_baseline(
@@ -192,8 +192,8 @@ class TestGoldenBaseline:
 
         assert result.final_nav == snapshot(992355.3246009998)
         assert result.total_trades == snapshot(6)
-        assert report.alpha_stats.annualized_return == snapshot(-60.51274261034244)
-        assert report.alpha_stats.max_drawdown == snapshot(-0.7347415775246444)
-        assert report.alpha_stats.sharpe_ratio == snapshot(-209.4552847593765)
+        assert report.alpha_stats.annualized_return == snapshot(-59.50665387311345)
+        assert report.alpha_stats.max_drawdown == snapshot(-1.682421395002831)
+        assert report.alpha_stats.sharpe_ratio == snapshot(-1.9881165936696805)
         assert report.aggregated_trade_stats.total_trades == snapshot(3)
         assert report.aggregated_trade_stats.win_rate == snapshot(33.33333333333333)
