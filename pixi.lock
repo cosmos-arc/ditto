@@ -2564,9 +2564,10 @@ packages:
 - pypi: ./packages/portfolio
   name: ditto-portfolio
   version: 0.1.0
-  sha256: da7b83616f32be0407a2e77bba51f75c278cdb40d48a03cb8d743cf28e183681
+  sha256: 6eaca2dde2d07e437963bc90670a87757e764341a3f682e30f562ae68502a738
   requires_dist:
   - ditto-kernel
+  - numpy
   - polars
   requires_python: '>=3.13'
 - pypi: ./packages/risk
