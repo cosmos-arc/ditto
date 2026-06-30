@@ -110,9 +110,9 @@ Allowed fallback:
 Update this section with:
 
 ```markdown
-Baseline decision: <main-after-dev-merge | dev-integration-branch>
-Decision date: YYYY-MM-DD
-Reason:
+Baseline decision: main-after-dev-merge
+Decision date: 2026-07-01
+Reason: `main` is up to date with `origin/main` and contains PR #66 (`refactor: V2 架构整改 Batch 2-6 — 全模块治理`). The Wave 1 dependency `packages/application/src/ditto_application/processes/execution/signal_package.py` exists on both `main` and `dev/architecture-remediation-batch2-6` with the same blob, so Wave 1 backend implementation will branch directly from current `main`.
 ```
 
 Commit:
