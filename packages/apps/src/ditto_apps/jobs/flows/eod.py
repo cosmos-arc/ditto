@@ -88,6 +88,7 @@ def _run_strategies(
     with create_strategy_bundle() as bundle:
         catalog = bundle.catalog_service
         facade = bundle.strategy_facade
+        publisher = bundle.signal_package_publisher
 
         if catalog is None:
             return [], True
@@ -108,18 +109,37 @@ def _run_strategies(
                     config=StrategyRunServiceConfig(
                         strategy_id=spec.strategy_id,
                         strategy_version=str(spec.version),
-                        mode=StrategyRunMode.RESEARCH,
+                        mode=StrategyRunMode.RECOMMENDATION,
                     ),
                     trade_date=trade_date,
                     version=spec.version,
                 )
-                results.append(
-                    {
-                        "strategy_id": spec.strategy_id,
-                        "run_id": run_result.run_id,
-                        "status": "success",
+                strategy_result: dict[str, Any] = {
+                    "strategy_id": spec.strategy_id,
+                    "run_id": run_result.run_id,
+                    "status": "success",
+                }
+                if publisher is None:
+                    logger.warning(
+                        "SignalPackagePublisher 未配置, 跳过信号发布",
+                        strategy_id=spec.strategy_id,
+                        trade_date=trade_date,
+                    )
+                    strategy_result["signals"] = {
+                        "intent_count": 0,
+                        "checksum": None,
                     }
-                )
+                    all_success = False
+                else:
+                    package = publisher.publish(
+                        target=run_result.target,
+                        threshold=0.01,
+                    )
+                    strategy_result["signals"] = {
+                        "intent_count": len(package.intents),
+                        "checksum": package.checksum,
+                    }
+                results.append(strategy_result)
             except Exception as exc:
                 logger.exception(
                     "策略运行失败",

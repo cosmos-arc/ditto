@@ -43,6 +43,7 @@ def _mock_strategy_bundle(
     mocker: MockerFixture,
     catalog: Any = None,
     facade: Any = None,
+    signal_package_publisher: Any = None,
 ) -> Any:
     """构造 create_strategy_bundle 的 mock，返回 StrategyBundle 上下文管理器。"""
     from ditto_apps.registry.contexts.bundle import StrategyBundle
@@ -50,6 +51,7 @@ def _mock_strategy_bundle(
     bundle = StrategyBundle(
         strategy_facade=facade or mocker.MagicMock(),
         catalog_service=catalog or mocker.MagicMock(),
+        signal_package_publisher=signal_package_publisher,
     )
     cm = mocker.MagicMock()
     cm.__enter__ = mocker.Mock(return_value=bundle)
@@ -220,11 +222,22 @@ class TestEodFlowHappyPath:
                 mode="research",
             ),
         ]
+        mock_publisher = mocker.MagicMock()
+        mock_publisher.publish.side_effect = [
+            mocker.Mock(intents=(mocker.Mock(),), checksum="sha256:first"),
+            mocker.Mock(
+                intents=(mocker.Mock(), mocker.Mock()),
+                checksum="sha256:second",
+            ),
+        ]
 
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(
-                mocker, catalog=mock_catalog, facade=mock_facade
+                mocker,
+                catalog=mock_catalog,
+                facade=mock_facade,
+                signal_package_publisher=mock_publisher,
             ),
         )
 
@@ -242,6 +255,90 @@ class TestEodFlowHappyPath:
 
         # 只应运行 published 策略（排除 draft）
         assert mock_facade.run_strategy_for_date_from_catalog.call_count == 2
+        assert mock_publisher.publish.call_count == 2
+
+    def test_publishes_signal_package_for_successful_strategy(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """成功运行的 published 策略应发布交易信号包并返回发布元数据。"""
+        mocker.patch(f"{EOD_MODULE}.check_trading_day", return_value=True)
+        mocker.patch(
+            f"{EOD_MODULE}.daily_ingestion_flow",
+            return_value={
+                "trade_date": "2026-04-15",
+                "skipped": False,
+                "summary": {"success_count": 5, "failed_count": 0, "skipped_count": 0},
+            },
+        )
+        mocker.patch(
+            f"{EOD_MODULE}.daily_materialization_flow",
+            return_value={
+                "trade_date": "2026-04-15",
+                "results": [],
+                "summary": {"materialized_count": 2},
+            },
+        )
+
+        from ditto_application.processes.execution.strategy_run_process import (
+            StrategyRunMode,
+            StrategyRunResult,
+        )
+        from ditto_strategy.models import StrategySpecRecord
+
+        spec = StrategySpecRecord(
+            strategy_id="alpha_momentum",
+            name="Alpha Momentum",
+            spec_json={},
+            version=1,
+            status="published",
+        )
+        target = self._make_target_portfolio("alpha_momentum", "run-001")
+        mock_catalog = mocker.MagicMock()
+        mock_catalog.list_specs.return_value = [spec]
+        mock_facade = mocker.MagicMock()
+        mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
+            run_id="run-001",
+            trade_date="2026-04-15",
+            strategy_id="alpha_momentum",
+            target=target,
+            mode="recommendation",
+        )
+        mock_publisher = mocker.MagicMock()
+        mock_publisher.publish.return_value = mocker.Mock(
+            intents=(mocker.Mock(), mocker.Mock()),
+            checksum="sha256:eod-signals",
+        )
+
+        mocker.patch(
+            f"{EOD_MODULE}.create_strategy_bundle",
+            return_value=_mock_strategy_bundle(
+                mocker,
+                catalog=mock_catalog,
+                facade=mock_facade,
+                signal_package_publisher=mock_publisher,
+            ),
+        )
+
+        from ditto_apps.jobs.flows.eod import eod_flow
+
+        runner = _prefect_runner(eod_flow)
+        result = runner(trade_date="2026-04-15")
+
+        kwargs = mock_facade.run_strategy_for_date_from_catalog.call_args.kwargs
+        assert kwargs["config"].mode == StrategyRunMode.RECOMMENDATION
+        mock_publisher.publish.assert_called_once_with(target=target, threshold=0.01)
+        assert result["strategies"] == [
+            {
+                "strategy_id": "alpha_momentum",
+                "run_id": "run-001",
+                "status": "success",
+                "signals": {
+                    "intent_count": 2,
+                    "checksum": "sha256:eod-signals",
+                },
+            }
+        ]
 
     def test_no_strategies_to_run(self, mocker: MockerFixture) -> None:
         """无已发布策略时 strategies 列表为空。"""
@@ -396,6 +493,82 @@ class TestEodFlowIngestionFailure:
 class TestEodFlowStrategyPartialFailure:
     """策略运行部分失败时不应影响其他策略。"""
 
+    def test_missing_publisher_marks_signal_publish_skipped(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """publisher 未配置时不阻断策略运行，但整体状态降级为 partial。"""
+        mocker.patch(f"{EOD_MODULE}.check_trading_day", return_value=True)
+        mocker.patch(
+            f"{EOD_MODULE}.daily_ingestion_flow",
+            return_value={
+                "trade_date": "2026-04-15",
+                "skipped": False,
+                "summary": {"success_count": 5, "failed_count": 0, "skipped_count": 0},
+            },
+        )
+        mocker.patch(
+            f"{EOD_MODULE}.daily_materialization_flow",
+            return_value={
+                "trade_date": "2026-04-15",
+                "results": [],
+                "summary": {"materialized_count": 2},
+            },
+        )
+
+        from ditto_application.processes.execution.strategy_run_process import (
+            StrategyRunResult,
+        )
+        from ditto_strategy.models import StrategySpecRecord
+
+        spec = StrategySpecRecord(
+            strategy_id="alpha_no_publisher",
+            name="Alpha No Publisher",
+            spec_json={},
+            version=1,
+            status="published",
+        )
+        mock_catalog = mocker.MagicMock()
+        mock_catalog.list_specs.return_value = [spec]
+        mock_facade = mocker.MagicMock()
+        mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
+            run_id="run-no-publisher",
+            trade_date="2026-04-15",
+            strategy_id="alpha_no_publisher",
+            target=self._make_target_portfolio(
+                "alpha_no_publisher",
+                "run-no-publisher",
+            ),
+            mode="recommendation",
+        )
+        mocker.patch(
+            f"{EOD_MODULE}.create_strategy_bundle",
+            return_value=_mock_strategy_bundle(
+                mocker,
+                catalog=mock_catalog,
+                facade=mock_facade,
+                signal_package_publisher=None,
+            ),
+        )
+
+        from ditto_apps.jobs.flows.eod import eod_flow
+
+        runner = _prefect_runner(eod_flow)
+        result = runner(trade_date="2026-04-15")
+
+        assert result["overall_status"] == "partial"
+        assert result["strategies"] == [
+            {
+                "strategy_id": "alpha_no_publisher",
+                "run_id": "run-no-publisher",
+                "status": "success",
+                "signals": {
+                    "intent_count": 0,
+                    "checksum": None,
+                },
+            }
+        ]
+
     def test_strategy_failure_does_not_block_others(
         self,
         mocker: MockerFixture,
@@ -488,6 +661,120 @@ class TestEodFlowStrategyPartialFailure:
 
         # 两个策略都应被调用
         assert mock_facade.run_strategy_for_date_from_catalog.call_count == 2
+
+    def test_publish_failure_does_not_block_other_strategies(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """单个策略 publish 失败时其他策略仍可发布成功。"""
+        mocker.patch(f"{EOD_MODULE}.check_trading_day", return_value=True)
+        mocker.patch(
+            f"{EOD_MODULE}.daily_ingestion_flow",
+            return_value={
+                "trade_date": "2026-04-15",
+                "skipped": False,
+                "summary": {"success_count": 5, "failed_count": 0, "skipped_count": 0},
+            },
+        )
+        mocker.patch(
+            f"{EOD_MODULE}.daily_materialization_flow",
+            return_value={
+                "trade_date": "2026-04-15",
+                "results": [],
+                "summary": {"materialized_count": 2},
+            },
+        )
+
+        from ditto_application.processes.execution.strategy_run_process import (
+            StrategyRunResult,
+        )
+        from ditto_strategy.models import StrategySpecRecord
+
+        spec_bad = StrategySpecRecord(
+            strategy_id="alpha_bad_publish",
+            name="Alpha Bad Publish",
+            spec_json={},
+            version=1,
+            status="published",
+        )
+        spec_good = StrategySpecRecord(
+            strategy_id="alpha_good_publish",
+            name="Alpha Good Publish",
+            spec_json={},
+            version=1,
+            status="published",
+        )
+        target_bad = self._make_target_portfolio("alpha_bad_publish", "run-bad")
+        target_good = self._make_target_portfolio("alpha_good_publish", "run-good")
+        mock_catalog = mocker.MagicMock()
+        mock_catalog.list_specs.return_value = [spec_bad, spec_good]
+        mock_facade = mocker.MagicMock()
+        mock_facade.run_strategy_for_date_from_catalog.side_effect = [
+            StrategyRunResult(
+                run_id="run-bad",
+                trade_date="2026-04-15",
+                strategy_id="alpha_bad_publish",
+                target=target_bad,
+                mode="recommendation",
+            ),
+            StrategyRunResult(
+                run_id="run-good",
+                trade_date="2026-04-15",
+                strategy_id="alpha_good_publish",
+                target=target_good,
+                mode="recommendation",
+            ),
+        ]
+        mock_publisher = mocker.MagicMock()
+        mock_publisher.publish.side_effect = [
+            RuntimeError("intent store unavailable"),
+            mocker.Mock(intents=(mocker.Mock(),), checksum="sha256:good"),
+        ]
+        mocker.patch(
+            f"{EOD_MODULE}.create_strategy_bundle",
+            return_value=_mock_strategy_bundle(
+                mocker,
+                catalog=mock_catalog,
+                facade=mock_facade,
+                signal_package_publisher=mock_publisher,
+            ),
+        )
+
+        from ditto_apps.jobs.flows.eod import eod_flow
+
+        runner = _prefect_runner(eod_flow)
+        result = runner(trade_date="2026-04-15")
+
+        assert result["overall_status"] == "partial"
+        assert result["strategies"][0]["strategy_id"] == "alpha_bad_publish"
+        assert result["strategies"][0]["status"] == "failed"
+        assert "RuntimeError" in result["strategies"][0]["error"]
+        assert result["strategies"][1] == {
+            "strategy_id": "alpha_good_publish",
+            "run_id": "run-good",
+            "status": "success",
+            "signals": {
+                "intent_count": 1,
+                "checksum": "sha256:good",
+            },
+        }
+        assert mock_publisher.publish.call_count == 2
+
+    @staticmethod
+    def _make_target_portfolio(
+        strategy_id: str = "test",
+        run_id: str = "run-001",
+    ) -> Any:
+        """构造 TargetPortfolio 实例。"""
+        from ditto_strategy.alpha.models import TargetPortfolio
+
+        return TargetPortfolio(
+            trade_date="2026-04-15",
+            strategy_id=strategy_id,
+            run_id=run_id,
+            positions={},
+            cash_target=1.0,
+        )
 
 
 # ===========================================================================
