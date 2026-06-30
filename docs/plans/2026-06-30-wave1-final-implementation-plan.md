@@ -176,6 +176,21 @@ Create a short table in this plan before execution with the exact V1a dataset li
 
 Do not use the full 14-dataset RC1 list as a V1a blocker unless the selected ETF workflow genuinely needs all 14.
 
+**V1a launch dataset decision (recorded 2026-07-01):**
+
+| Dataset / Store | Why V1a Needs It | V1a Blocking? | Notes |
+|---|---|---|---|
+| `calendar` | trading-day and T+1/manual-loop date semantics | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `etf_basic` | ETF instrument metadata for the selected ETF workflow | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `etf_daily` | selected ETF strategy daily market inputs | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `index_basic` | benchmark/index metadata | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `index_daily` | benchmark/index daily market inputs | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `fund_adj` | ETF/fund adjustment factors for adjusted ETF signals | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `adj_factor` | stock/index-adj compatibility for shared market paths | review | Included as conservative shared-market dependency; can be demoted if the chosen ETF workflow proves it is unused. |
+| trade intent / fill / position runtime stores | manual execution loop state | yes | Not catalog datasets; readiness is verified through trade APIs and execution store tests rather than promotion review. |
+
+Full stock/fundamental/macro launch datasets from `scripts/acceptance/rc1_requirements.py` remain Wave 1c RC1 blockers, not V1a blockers.
+
 **Step 2: Collect readiness evidence**
 
 Run real-environment status commands:
