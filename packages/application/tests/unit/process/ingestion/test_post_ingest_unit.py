@@ -162,6 +162,65 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
     assert list_date_inference.asset_classes == []
 
 
+def test_process_fetched_data_marks_sparse_fundamental_empty_as_success() -> None:
+    write_result = WriteResult(
+        file_path="balance_sheet/2025",
+        checksum="checksum123",
+        rows_written=1,
+        rows_total=1,
+        blocked=False,
+    )
+    writer = _WriteDataRecorder(write_result)
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(),
+        "balance_sheet",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "success"
+    assert result.row_count == 0
+    assert result.message == "无新数据"
+    assert writer.calls == []
+
+
+def test_process_fetched_data_marks_market_empty_as_failed() -> None:
+    write_result = WriteResult(
+        file_path="stock_daily/2025",
+        checksum="checksum123",
+        rows_written=1,
+        rows_total=1,
+        blocked=False,
+    )
+    writer = _WriteDataRecorder(write_result)
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(),
+        "stock_daily",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "EMPTY_DATA"
+    assert writer.calls == []
+
+
 def test_basic_catalog_is_recorded_before_list_date_inference() -> None:
     write_result = WriteResult(
         file_path="instrument_reader:index_basic",

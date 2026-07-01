@@ -77,6 +77,8 @@ def _cli_env(data_root: Path, token: str) -> dict[str, str]:
     env.update(
         {
             "DITTO_DATA_ROOT": data_root.as_posix(),
+            "SQLITE_PATH": (data_root / "metadata" / "metadata.sqlite").as_posix(),
+            "DUCKDB_PATH": (data_root / "db" / "ditto.duckdb").as_posix(),
             "ENVIRONMENT": "testing",
             "PYTHONUNBUFFERED": "1",
             "TUSHARE_TOKEN": token,
@@ -119,7 +121,13 @@ def _run_cli(
 
 @contextmanager
 def _app_env(data_root: Path, token: str) -> Iterator[None]:
-    keys = ("DITTO_DATA_ROOT", "ENVIRONMENT", "TUSHARE_TOKEN")
+    keys = (
+        "DITTO_DATA_ROOT",
+        "SQLITE_PATH",
+        "DUCKDB_PATH",
+        "ENVIRONMENT",
+        "TUSHARE_TOKEN",
+    )
     old_values = {key: os.environ.get(key) for key in keys}
     os.environ.update(_cli_env(data_root, token))
     try:

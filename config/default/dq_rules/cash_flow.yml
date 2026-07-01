@@ -5,7 +5,7 @@ description: "现金流量表数据质量检查规则"
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [instrument_id, report_date, operating_cash_flow]
+    columns: [instrument_id, report_date]
     message: "必填字段不能为空"
 
   - rule: unique

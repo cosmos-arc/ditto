@@ -101,6 +101,18 @@ class PostIngestContext:
     catalog_writer: DataCatalogWriter | None = None
 
 
+_SPARSE_EMPTY_SUCCESS_DATASETS: frozenset[str] = frozenset(
+    {
+        "balance_sheet",
+        "income_statement",
+        "cash_flow",
+        "dividend",
+        "corporate_actions",
+        "index_weight",
+    }
+)
+
+
 def run_list_date_inference(
     list_date_inference: ListDateInferenceService,
     dataset: str,
@@ -172,6 +184,8 @@ def process_fetched_data(
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
     if df.is_empty():
+        if dataset in _SPARSE_EMPTY_SUCCESS_DATASETS:
+            return ctx.result_handler.handle_empty_success(dataset, trade_date)
         return ctx.result_handler.handle_empty_data(dataset, trade_date)
 
     if ctx.quality_checker is not None:
