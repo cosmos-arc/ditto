@@ -123,7 +123,7 @@
 
 **Test:** 扩展 `test_real_data_stock_selection_pipeline.py` 的 catalog 校验断言到 7 个 V1a 数据集（`catalog_row_count > 0`）。
 
-**Implementation Evidence:** [待实施后填写]
+**Implementation Evidence:** 完成。calendar/etf_basic/index_basic 用 `ingest`（路径修正，见 readiness Phase 1 Notes：`backfill metadata calendar/basic` 死循环/浪费），etf_daily/fund_adj 全年 backfill（359/359 success），index_daily/adj_factor 因写瓶颈（SQLite 写锁，parallel 无效）改近期 2 月（39/39 success）。7 数据集 catalog evidence 齐全（fresh/storage/schema/rows>0）。
 
 ---
 
@@ -158,7 +158,7 @@
 
 **Test:** e2e 真实数据测试（`-m e2e`）在本地 env 跑通；新增 `test_real_data_rc1_backfill_e2e.py` 覆盖 8 数据集 catalog 断言。
 
-**Implementation Evidence:** [待实施后填写]
+**Implementation Evidence:** 完成。stock_basic 用 `ingest` 单次；stock_daily/stock_status/valuation_metrics 近期 2 月 backfill（39/39，写瓶颈全年不可行）；balance_sheet/income_statement/cash_flow 扩到 2025-08~2026-06（含中报+年报披露日，近期 2 月无披露 rows=0）；macro_indicators backfill。8 数据集 catalog evidence 齐全。`test_real_data_rc1_backfill_e2e.py` 未单独新增——复用 `scripts/acceptance/test_wave1_catalog_check_unit.py` 的 e2e 用例覆盖 14 数据集 catalog 断言（RED 72→GREEN 0）。
 
 ---
 
@@ -217,7 +217,7 @@
 
 **Test:** 集成测试 `test_promotion_governance_integration.py` 已存在（golden governance 闭环），复跑通过。
 
-**Implementation Evidence:** [待实施后填写]
+**Implementation Evidence:** 完成。8 数据集逐个 `promotion-collect`（客观证据 markdown）→ `promotion-review` × 3 criteria（criterion 1 evidence=collect md replay coverage measured；2=`docs/architecture/capability-maturity.md` freshness_sla/failover 文档；3=`test_golden_e2e.py` 9 测试通过）→ `assess_dataset_promotion` 自动写 experimental→initial-focus override。`promotion-history` audit event 可查（actor=wave1-acceptance）。governance 红线遵守：evidence_uri 全真实材料，逐条 review 未批过，绝不自造通过。14 数据集 `validate_maturity_status` failures=0。
 
 ---
 
