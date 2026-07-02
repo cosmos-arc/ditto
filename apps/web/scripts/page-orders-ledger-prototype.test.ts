@@ -55,7 +55,7 @@ describe("page-orders-ledger prototype", () => {
 		async () => {
 			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 				for (const tabId of ["orders-done", "orders-pending", "orders-submitted", "orders-partial", "orders-failed"]) {
-					await page.locator(`label[for="${tabId}"]`).click();
+					await checkRadio(page, tabId);
 
 					const layout = await page.evaluate((activeTabId) => {
 						const panel = document.querySelector<HTMLElement>(`[data-panel="${activeTabId}"]`);

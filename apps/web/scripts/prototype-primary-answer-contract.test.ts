@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const sharedLayoutComponentsCss = join(prototypesDir, "shared/layout-components.css");
 
 const activePrototypeFiles = readdirSync(prototypesDir).filter(
 	(file) => /^page-.*\.html$/.test(file),
@@ -15,6 +16,32 @@ function loadDocument(file: string): Document {
 }
 
 describe("prototype primary answer contract", () => {
+	it("defines one shared visual weight grammar for primary answers", () => {
+		const css = readFileSync(sharedLayoutComponentsCss, "utf8");
+		const grammarSelectors = [
+			{ label: "dominant-region", pattern: /\[data-primary-weight="dominant"\]/ },
+			{ label: "judgment", pattern: /\[data-answer-judgment\]/ },
+			{ label: "metric", pattern: /\[data-answer-metric\]/ },
+			{ label: "evidence", pattern: /\[data-answer-evidence\]/ },
+			{ label: "action", pattern: /\[data-answer-action\]/ },
+		];
+		const domainFocusSelectors = ["home", "markets", "research", "trading", "platform"].map((domain) => ({
+			label: `domain-${domain}`,
+			pattern: new RegExp(`\\[data-domain="${domain}"\\][\\s\\S]*--primary-answer-focus`),
+		}));
+		const missingSelectors = [...grammarSelectors, ...domainFocusSelectors]
+			.filter(({ pattern }) => !pattern.test(css))
+			.map(({ label }) => label);
+		const missingVariables = [
+			"--primary-answer-judgment-scale",
+			"--primary-answer-evidence-scale",
+			"--primary-answer-action-scale",
+		].filter((token) => !css.includes(token));
+
+		expect(missingSelectors).toEqual([]);
+		expect(missingVariables).toEqual([]);
+	});
+
 	it("gives every active route exactly one dominant primary answer region", () => {
 		const failures: string[] = [];
 

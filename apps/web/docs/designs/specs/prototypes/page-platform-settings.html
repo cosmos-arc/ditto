@@ -1254,12 +1254,12 @@
 
     <div class="overlay-backdrop" data-overlay="overlay-save-config">
       <label class="overlay-dismiss" for="overlay-save-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存配置确认" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存配置确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="data-source-switch">
         <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 保存配置确认</span><label for="overlay-save-config" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
           <p data-risk-object>对象：prod-cn-a 配置草稿 r18</p>
           <div class="risk-confirmation-grid">
-            <div data-impact-summary class="risk-confirmation-block">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">保存后会影响数据源、交易通道或 Agent 运行环境；正在运行任务不会自动重启，需由 Platform Ops 确认是否滚动刷新。</p>
             </div>
@@ -1267,8 +1267,8 @@
               <div class="risk-confirmation-title">操作前后</div>
               <p class="risk-confirmation-copy">保存草稿会更新配置草稿版本；保存数据源、连接或通用配置会生成待生效 diff，验证通过后成为新的配置版本。</p>
             </div>
-            <div data-evidence-chain class="risk-confirmation-block">
-              <div class="risk-confirmation-title">证据链</div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">保留配置 diff、schema 校验、连接测试结果、密钥指纹和变更备注。</p>
             </div>
             <div data-audit-record class="risk-confirmation-block">
@@ -1290,12 +1290,12 @@
 
     <div class="overlay-backdrop" data-overlay="overlay-reset-config">
       <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重置配置确认" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重置配置确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="config-reset">
         <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 重置配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
           <p data-risk-object>对象：prod-cn-a 当前表单草稿 r18 默认值重置</p>
           <div class="risk-confirmation-grid">
-            <div data-impact-summary class="risk-confirmation-block">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">重置会覆盖当前未保存表单草稿，恢复平台默认参数；不会保存数据源、券商连接或密钥配置，也不会重启正在运行任务。</p>
             </div>
@@ -1303,8 +1303,8 @@
               <div class="risk-confirmation-title">操作前后</div>
               <p class="risk-confirmation-copy">重置前保留 r18 草稿字段摘要；重置后表单值回到默认配置，并生成一条默认值重置 diff 供复核。</p>
             </div>
-            <div data-evidence-chain class="risk-confirmation-block">
-              <div class="risk-confirmation-title">证据链</div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">保留重置前快照、默认值模板版本、字段级 diff、密钥指纹和重置原因。</p>
             </div>
             <div data-audit-record class="risk-confirmation-block">

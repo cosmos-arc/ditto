@@ -1065,27 +1065,33 @@
 
       <div class="overlay-backdrop" data-overlay="overlay-bulk-delete">
         <label class="overlay-dismiss" for="overlay-bulk-delete" aria-label="关闭"></label>
-        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量删除确认" data-danger-confirmation>
+        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量删除确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete">
           <div class="overlay-header">
-            <span class="overlay-title">确认批量删除</span>
+            <span class="overlay-title"><span data-danger-marker>!</span> 确认批量删除</span>
             <label for="overlay-bulk-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
-            <p data-impact-summary><span data-danger-marker>!</span> 确定要从观察列表中移除以下 3 只标的吗？此操作不可撤销，但不会影响 Instrument Hub 历史记录。</p>
-            <p data-recovery-hint>恢复提示：可从 Instrument Hub 历史记录重新加入观察列表。</p>
-
-            <div class="sv-pad-section">
-              <div class="overlay-field">
-                <span class="overlay-field-label">600519</span>
-                <span class="overlay-field-value">贵州茅台</span>
+            <p data-risk-object>对象：A 股核心观察列表中已选 3 只标的。</p>
+            <div class="risk-confirmation-grid">
+              <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+                <div class="risk-confirmation-title">影响预览</div>
+                <p class="risk-confirmation-copy">删除后 3 只标的从当前观察列表移除，不影响 Instrument Hub 历史、订单和持仓记录。</p>
               </div>
-              <div class="overlay-field">
-                <span class="overlay-field-label">000858</span>
-                <span class="overlay-field-value">五粮液</span>
+              <div class="risk-confirmation-block" data-before-after>
+                <div class="risk-confirmation-title">操作前后</div>
+                <p class="risk-confirmation-copy">当前列表 18 只 → 15 只；相关提醒规则会进入未绑定状态。</p>
               </div>
-              <div class="overlay-field">
-                <span class="overlay-field-label">300750</span>
-                <span class="overlay-field-value">宁德时代</span>
+              <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                <div class="risk-confirmation-title">对象清单</div>
+                <p class="risk-confirmation-copy">600519 贵州茅台、000858 五粮液、300750 宁德时代。</p>
+              </div>
+              <div class="risk-confirmation-block" data-audit-record>
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录操作人、观察列表 id、删除标的代码、关联提醒和确认时间。</p>
+              </div>
+              <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">可从 Instrument Hub 历史记录重新加入观察列表；提醒规则需重新绑定后生效。</p>
               </div>
             </div>
 

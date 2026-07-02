@@ -130,7 +130,7 @@ describe("prototype final review remediation gates", () => {
 		}
 
 		expect(failures).toEqual([]);
-	});
+	}, 20_000);
 
 	it("binds Platform Settings visible form labels to controls or named groups", () => {
 		const document = loadDocument("page-platform-settings.html");

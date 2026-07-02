@@ -742,11 +742,11 @@
 
     <div class="overlay-backdrop" data-overlay="overlay-enable-signal">
       <label class="overlay-dismiss" for="overlay-enable-signal" aria-label="关闭启用信号确认"></label>
-      <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="确认启用信号" data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="确认启用信号" data-high-risk-confirmation data-high-risk-kind="signal-enable">
         <div class="overlay-header"><span class="overlay-title">确认启用信号</span><label for="overlay-enable-signal" class="overlay-close" aria-label="关闭">&#10005;</label></div>
         <div class="overlay-body">
           <div class="risk-confirmation-grid">
-            <div class="risk-confirmation-block" data-impact-summary>
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">启用后该回测结果可进入 Signals Inbox 作为候选信号来源，不会自动下单。</p>
             </div>
@@ -754,8 +754,8 @@
               <div class="risk-confirmation-title">启用前后</div>
               <p class="risk-confirmation-copy">回测结果 → 候选信号来源；交易员仍需在 Signals Inbox 二次确认。</p>
             </div>
-            <div class="risk-confirmation-block" data-evidence-chain>
-              <div class="risk-confirmation-title">证据链</div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">Sharpe 1.82、年化收益 18.2%、最大回撤 -12.3%，均来自当前回测结果。</p>
             </div>
             <div class="risk-confirmation-block" data-audit-record>
@@ -844,13 +844,13 @@
         <div class="gallery-card" data-overlay-ref="overlay-enable-signal">
           <div class="gallery-card__label">启用信号确认 (Modal)</div>
           <div class="gallery-card__preview gallery-card__preview--overlay">
-            <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="确认启用信号" data-high-risk-confirmation>
+            <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="确认启用信号" data-high-risk-confirmation data-high-risk-kind="signal-enable">
               <div class="overlay-header">
                 <span class="overlay-title">确认启用信号</span>
               </div>
               <div class="overlay-body">
                 <div class="risk-confirmation-grid">
-                  <div class="risk-confirmation-block" data-impact-summary>
+                  <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
                     <div class="risk-confirmation-title">影响范围</div>
                     <p class="risk-confirmation-copy">启用后该回测结果可进入 Signals Inbox 作为候选信号来源，不会自动下单。</p>
                   </div>
@@ -858,8 +858,8 @@
                     <div class="risk-confirmation-title">启用前后</div>
                     <p class="risk-confirmation-copy">回测结果 → 候选信号来源；交易员仍需在 Signals Inbox 二次确认。</p>
                   </div>
-                  <div class="risk-confirmation-block" data-evidence-chain>
-                    <div class="risk-confirmation-title">证据链</div>
+                  <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                    <div class="risk-confirmation-title">对象清单</div>
                     <p class="risk-confirmation-copy">Sharpe 1.82、年化收益 18.2%、最大回撤 -12.3%，均来自当前回测结果。</p>
                   </div>
                   <div class="risk-confirmation-block" data-audit-record>

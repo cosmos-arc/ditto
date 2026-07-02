@@ -959,7 +959,7 @@
     <div class="overlays">
       <div class="overlay-backdrop" data-overlay="overlay-universe-edit">
         <label class="overlay-dismiss" for="overlay-universe-edit" aria-label="关闭"></label>
-        <div class="overlay-surface overlay-surface--drawer danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="创建或编辑股票池" data-danger-confirmation data-high-risk-confirmation>
+        <div class="overlay-surface overlay-surface--drawer danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="创建或编辑股票池" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="universe-edit">
           <div class="overlay-header">
             <span class="overlay-title"><span data-danger-marker>!</span> 创建/编辑股票池</span>
             <label for="overlay-universe-edit" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -986,7 +986,7 @@
             </div>
 
             <div class="risk-confirmation-grid">
-              <div data-impact-summary class="risk-confirmation-block">
+              <div data-impact-summary data-impact-preview class="risk-confirmation-block">
                 <div class="risk-confirmation-title">影响范围</div>
                 <p class="risk-confirmation-copy">修改股票池会影响引用它的策略、回测和筛选预设，不会自动重跑历史结果。</p>
               </div>
@@ -994,8 +994,8 @@
                 <div class="risk-confirmation-title">操作前后</div>
                 <p class="risk-confirmation-copy">保存后生成新的股票池版本，后续引用会读取新成分快照。</p>
               </div>
-              <div data-evidence-chain class="risk-confirmation-block">
-                <div class="risk-confirmation-title">证据链</div>
+              <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+                <div class="risk-confirmation-title">对象清单</div>
                 <p class="risk-confirmation-copy">保留成分 diff、筛选规则、来源快照和引用清单。</p>
               </div>
               <div data-audit-record class="risk-confirmation-block">
@@ -1018,7 +1018,7 @@
 
       <div class="overlay-backdrop" data-overlay="overlay-universe-delete">
         <label class="overlay-dismiss" for="overlay-universe-delete" aria-label="关闭"></label>
-        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="删除股票池确认" data-danger-confirmation data-high-risk-confirmation>
+        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="删除股票池确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete">
           <div class="overlay-header">
             <span class="overlay-title"><span data-danger-marker>!</span> 确认删除股票池</span>
             <label for="overlay-universe-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -1026,7 +1026,7 @@
           <div class="overlay-body">
             <p data-risk-object>对象：沪深300成分股股票池</p>
             <div class="risk-confirmation-grid">
-              <div data-impact-summary class="risk-confirmation-block">
+              <div data-impact-summary data-impact-preview class="risk-confirmation-block">
                 <div class="risk-confirmation-title">影响范围</div>
                 <p class="risk-confirmation-copy">删除后股票池会从当前列表和新建引用选择器中移除；已绑定策略、回测和筛选预设不会自动改绑或重跑。</p>
               </div>
@@ -1034,8 +1034,8 @@
                 <div class="risk-confirmation-title">操作前后</div>
                 <p class="risk-confirmation-copy">删除前保留当前成分和引用清单；删除后引用对象继续读取最后一次成分快照，并标记为已删除来源。</p>
               </div>
-              <div data-evidence-chain class="risk-confirmation-block">
-                <div class="risk-confirmation-title">证据链</div>
+              <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+                <div class="risk-confirmation-title">对象清单</div>
                 <p class="risk-confirmation-copy">保留删除前成分、筛选规则、来源快照、引用清单和删除原因，便于后续恢复或替换引用。</p>
               </div>
               <div data-audit-record class="risk-confirmation-block">

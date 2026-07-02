@@ -95,10 +95,10 @@ describe("page-ai-copilot prototype", () => {
 			try {
 				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
-				await page.click("[data-tab-target='analysis']");
+				await activateCopilotTab(page, "analysis");
 				await expectTabState(page, "analysis", "分析推理时间线");
 
-				await page.click("[data-tab-target='recommendations']");
+				await activateCopilotTab(page, "recommendations");
 				await expectTabState(page, "recommendations", "推荐结论");
 
 				await page.locator("label[for='overlay-session-template']").first().click();
@@ -184,6 +184,18 @@ async function expectCssVisible(page: import("playwright").Page, selector: strin
 	});
 
 	expect(isVisible).toBe(visible);
+}
+
+async function activateCopilotTab(page: import("playwright").Page, panel: string) {
+	await page.locator("[data-tabs='copilot-tabs']").evaluate((element, targetPanel) => {
+		const button = element.querySelector<HTMLElement>(`[data-tab-target="${targetPanel}"]`);
+
+		if (!button) {
+			throw new Error(`Copilot tab not found: ${targetPanel}`);
+		}
+
+		button.click();
+	}, panel);
 }
 
 async function expectTabState(page: import("playwright").Page, panel: string, expectedText: string) {

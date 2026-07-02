@@ -3006,40 +3006,39 @@
     <!-- Overlay 1: 策略保存 — Modal -->
     <div class="overlay-backdrop" data-overlay="overlay-save-strategy">
       <label class="overlay-dismiss" for="overlay-save-strategy" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存策略">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存策略" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="strategy-publish">
         <div class="overlay-header">
-          <span class="overlay-title">保存策略</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 保存并发布策略版本</span>
           <label for="overlay-save-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h2>策略信息</h2>
-          <div class="overlay-field">
-            <span class="overlay-field-label">策略名称</span>
-            <span class="overlay-field-value">多因子动量策略 v2.3</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">策略类型</span>
-            <span class="overlay-field-value">多因子选股</span>
-          </div>
-
-          <h2>版本备注</h2>
-          <div class="overlay-textarea-full">
-            <textarea class="form-textarea" rows="2" placeholder="描述本次修改内容（可选）"></textarea>
-          </div>
-
-          <h2>保存类型</h2>
-          <div class="overlay-radio-group">
-            <label class="overlay-radio-label overlay-radio-label--primary">
-              <input type="radio" name="save-type" checked> 新版本
-            </label>
-            <label class="overlay-radio-label overlay-radio-label--secondary">
-              <input type="radio" name="save-type"> 覆盖当前版本
-            </label>
+          <p data-risk-object>对象：多因子动量策略 v2.3，新版本发布草稿。</p>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+              <div class="risk-confirmation-title">影响预览</div>
+              <p class="risk-confirmation-copy">发布后新版本可被回测、信号生成和策略列表引用；不会自动提交实盘订单。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">当前编辑草稿 → v2.4 候选版本；覆盖当前版本时会保留旧版本快照。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">策略配置、启用因子、股票池、回测参数、版本备注和校验结果。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录发布人、策略 id、版本号、配置 diff、校验摘要和发布时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从版本时间线回滚上一版；回滚会创建新的版本记录并重新触发校验。</p>
+            </div>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-secondary">取消</label>
-            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-primary">确认保存</label>
+            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-secondary" data-cancel-control data-action-tier="context">取消，继续编辑</label>
+            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action data-action-tier="primary">确认发布版本</label>
           </div>
         </div>
       </div>
@@ -3178,29 +3177,39 @@
     <!-- Overlay 5: 确认策略删除 — Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-delete-strategy">
       <label class="overlay-dismiss" for="overlay-delete-strategy" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-modal="true" aria-label="确认删除策略">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="alertdialog" aria-modal="true" aria-label="确认删除策略" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete">
         <div class="overlay-header">
-          <span class="overlay-title">确认删除策略</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 确认删除策略</span>
           <label for="overlay-delete-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <div class="delete-confirm-body">
-            <div class="delete-confirm-icon">
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--risk-critical-fg)" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+          <p data-risk-object>对象：多因子动量策略 v2.3，包含当前草稿和历史版本引用。</p>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+              <div class="risk-confirmation-title">影响预览</div>
+              <p class="risk-confirmation-copy">删除会停止新回测和信号生成，历史回测、订单和审计记录保留为只读。</p>
             </div>
-            <div>
-              <div class="delete-confirm-title">
-                确认删除策略「多因子动量策略 v2.3」及其所有版本？
-              </div>
-              <div class="delete-confirm-desc">
-                此操作不可撤销。删除后策略的所有配置、回测结果和历史版本将被永久移除。
-              </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">策略从 Studio 可编辑状态移入归档；列表和选择器不再显示该策略。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">策略配置、3 个历史版本、12 次回测、86 条关联信号和删除原因。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作者、策略 id、版本号、依赖清单、删除原因和确认时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从策略归档克隆最近版本恢复；恢复后需重新校验并发布。</p>
             </div>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-secondary">取消</label>
-            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-danger">确认删除</label>
+            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-secondary" data-cancel-control data-action-tier="context">取消，保留策略</label>
+            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action data-action-tier="primary">确认删除</label>
           </div>
         </div>
       </div>

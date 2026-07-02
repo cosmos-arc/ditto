@@ -2295,14 +2295,14 @@
     <!-- Overlay A: Stress Test Config (Sheet 居中) -->
     <div class="overlay-backdrop" data-overlay="overlay-stress-config">
       <label class="overlay-dismiss" for="overlay-stress-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation data-high-risk-kind="risk-simulation">
         <div class="overlay-header">
           <span class="overlay-title">压力测试配置</span>
           <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <div class="risk-confirmation-grid">
-            <div class="risk-confirmation-block" data-impact-summary>
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">运行压力测试会生成新的风险快照，不会改变实盘订单或风险阈值。</p>
             </div>
@@ -2310,8 +2310,8 @@
               <div class="risk-confirmation-title">测试前后</div>
               <p class="risk-confirmation-copy">当前场景为标准风控，测试后新增一条压力测试记录并刷新 Breaches 面板。</p>
             </div>
-            <div class="risk-confirmation-block" data-evidence-chain>
-              <div class="risk-confirmation-title">输入证据</div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">组合、场景、VaR、最大回撤和行业集中度使用当前风险快照。</p>
             </div>
             <div class="risk-confirmation-block" data-audit-record>
@@ -2413,14 +2413,14 @@
     <!-- Overlay C: Rule Editor (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-rule-editor">
       <label class="overlay-dismiss" for="overlay-rule-editor" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true" data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true" data-high-risk-confirmation data-high-risk-kind="risk-rule-change">
         <div class="overlay-header">
           <span class="overlay-title">调整风控规则</span>
           <label for="overlay-rule-editor" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <div class="risk-confirmation-grid">
-            <div class="risk-confirmation-block" data-impact-summary>
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">保存后会改变后续风险告警阈值，不会回写历史事件。</p>
             </div>
@@ -2428,8 +2428,8 @@
               <div class="risk-confirmation-title">规则前后</div>
               <p class="risk-confirmation-copy">行业集中度阈值 40% → 新阈值；所有新告警按新规则计算。</p>
             </div>
-            <div class="risk-confirmation-block" data-evidence-chain>
-              <div class="risk-confirmation-title">证据链</div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">最近 6 次压力测试和当前行业暴露用于解释本次调整。</p>
             </div>
             <div class="risk-confirmation-block" data-audit-record>
@@ -2794,13 +2794,13 @@
     <div class="gallery-card" data-overlay-ref="overlay-stress-config">
       <div class="gallery-card__label">压力测试配置 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation>
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation data-high-risk-kind="risk-simulation">
           <div class="overlay-header">
             <span class="overlay-title">压力测试配置</span>
           </div>
           <div class="overlay-body">
             <div class="risk-confirmation-grid">
-              <div class="risk-confirmation-block" data-impact-summary>
+              <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
                 <div class="risk-confirmation-title">影响范围</div>
                 <p class="risk-confirmation-copy">运行压力测试会生成新的风险快照，不会改变实盘订单或风险阈值。</p>
               </div>
@@ -2808,8 +2808,8 @@
                 <div class="risk-confirmation-title">测试前后</div>
                 <p class="risk-confirmation-copy">当前场景为标准风控，测试后新增一条压力测试记录并刷新 Breaches 面板。</p>
               </div>
-              <div class="risk-confirmation-block" data-evidence-chain>
-                <div class="risk-confirmation-title">输入证据</div>
+              <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                <div class="risk-confirmation-title">对象清单</div>
                 <p class="risk-confirmation-copy">组合、场景、VaR、最大回撤和行业集中度使用当前风险快照。</p>
               </div>
               <div class="risk-confirmation-block" data-audit-record>
@@ -2912,13 +2912,13 @@
     <div class="gallery-card" data-overlay-ref="overlay-rule-editor">
       <div class="gallery-card__label">调整风控规则 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true" data-high-risk-confirmation>
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true" data-high-risk-confirmation data-high-risk-kind="risk-rule-change">
           <div class="overlay-header">
             <span class="overlay-title">调整风控规则</span>
           </div>
           <div class="overlay-body">
             <div class="risk-confirmation-grid">
-              <div class="risk-confirmation-block" data-impact-summary>
+              <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
                 <div class="risk-confirmation-title">影响范围</div>
                 <p class="risk-confirmation-copy">保存后会改变后续风险告警阈值，不会回写历史事件。</p>
               </div>
@@ -2926,8 +2926,8 @@
                 <div class="risk-confirmation-title">规则前后</div>
                 <p class="risk-confirmation-copy">行业集中度阈值 40% → 新阈值；所有新告警按新规则计算。</p>
               </div>
-              <div class="risk-confirmation-block" data-evidence-chain>
-                <div class="risk-confirmation-title">证据链</div>
+              <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                <div class="risk-confirmation-title">对象清单</div>
                 <p class="risk-confirmation-copy">最近 6 次压力测试和当前行业暴露用于解释本次调整。</p>
               </div>
               <div class="risk-confirmation-block" data-audit-record>

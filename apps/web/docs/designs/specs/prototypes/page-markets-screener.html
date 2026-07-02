@@ -1982,14 +1982,17 @@
         <span class="header-subtitle">Markets · Screener</span>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-btn-group-left">
-        <label for="overlay-save-preset" class="btn ov-label-btn" data-action-tier="context">保存视图</label>
-        <button class="btn btn-primary" data-filter-action="apply" data-action-tier="primary">执行筛选</button>
-      </div>
-      <div class="header-btn-group-right">
-        <button class="btn btn-ghost" data-action-tier="overflow">重置</button>
-        <label for="overlay-export" class="btn btn-ghost ov-label-btn" data-action-tier="overflow">导出</label>
-
+      <div class="header-btn-group-left" data-decision-cluster aria-label="筛选器首屏动作">
+        <label for="overlay-save-preset" class="btn ov-label-btn" data-decision-option data-action-tier="context">保存视图</label>
+        <label for="overlay-column-manage" class="btn ov-label-btn" data-decision-option data-action-tier="context">列管理</label>
+        <button class="btn btn-primary" data-filter-action="apply" data-decision-option data-action-tier="primary">执行筛选</button>
+        <details class="action-overflow">
+          <summary class="btn btn-ghost" data-decision-overflow data-action-tier="overflow" aria-haspopup="menu" aria-label="更多筛选器操作" title="更多">...</summary>
+          <div class="action-overflow-menu" role="menu" aria-label="更多筛选器操作">
+            <button class="action-overflow-item" type="button" role="menuitem" data-filter-action="reset" data-action-tier="overflow">重置条件</button>
+            <label for="overlay-export" class="action-overflow-item ov-label-btn" role="menuitem" tabindex="0" data-action-tier="overflow">导出结果</label>
+          </div>
+        </details>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
@@ -2120,7 +2123,7 @@
             <span class="condition-control"><span class="condition-control-label">关系</span><span data-condition-operator>&lt;</span></span>
             <span class="condition-control"><span class="condition-control-label">阈值</span><span data-condition-value>20</span></span>
             <button class="btn btn-ghost" data-filter-action="add-condition">添加条件</button>
-            <button class="btn btn-primary" data-filter-action="apply" data-action-tier="context">应用筛选</button>
+            <button class="btn" data-filter-action="apply" data-action-tier="context">预览匹配</button>
           </div>
         </div>
         <div class="filter-workbench-section">
@@ -2594,8 +2597,14 @@
         </div>
         <div class="detail-actions-body">
           <button class="btn" data-action-tier="context">加入观察</button>
-          <label for="overlay-generate-pool" class="btn btn-primary ov-label-btn" data-action-tier="primary">加入标的池</label>
-          <button class="btn btn-ghost" data-action-tier="overflow">发送到研究</button>
+          <label for="overlay-generate-pool" class="btn ov-label-btn" data-action-tier="context">加入标的池</label>
+          <details class="action-overflow">
+            <summary class="btn btn-ghost" data-decision-overflow data-action-tier="overflow" aria-haspopup="menu" aria-label="更多结果去向" title="更多">...</summary>
+            <div class="action-overflow-menu" role="menu" aria-label="更多结果去向">
+              <button class="action-overflow-item" type="button" role="menuitem" data-action-tier="overflow">发送到研究</button>
+              <label for="overlay-compare" class="action-overflow-item ov-label-btn" role="menuitem" tabindex="0" data-action-tier="overflow">加入对比篮</label>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -2709,7 +2718,7 @@
               <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际" data-action-tier="overflow">&times;</span>
             </div>
           </div>
-          <label for="overlay-compare" class="btn btn-primary compare-cta ov-label-btn" data-action-tier="primary">开始对比 &rarr;</label>
+          <label for="overlay-compare" class="btn compare-cta ov-label-btn" data-action-tier="context">开始对比 &rarr;</label>
         </div>
       </details>
     </div>

@@ -1907,10 +1907,10 @@
       </div>
 
       <div class="scope-status" role="status" aria-label="影响范围：信号收件箱复核状态与组合 Beta" data-secondary-context>
-        <label for="overlay-batch-confirm" class="scope-status-item" role="button" tabindex="0" aria-label="批准、拒绝或查看贵州茅台信号证据" data-answer-judgment data-answer-action data-action-tier="primary">
+        <div class="scope-status-item" role="status" aria-label="优先信号：贵州茅台买入信号" data-answer-judgment data-answer-evidence>
           <span class="scope-status-dot warn"></span>
-          优先处理贵州茅台买入信号：置信度 <span data-answer-metric>82%</span>，若批准后组合 Beta 0.94 · 批准 / 拒绝 / 查看证据
-        </label>
+          优先信号：贵州茅台买入，置信度 <span data-answer-metric>82%</span>，若采纳后组合 Beta 0.94
+        </div>
         <div class="scope-status-item" data-answer-evidence>
           <span class="scope-status-dot pass"></span>
           T+1 今日已买入
@@ -2201,8 +2201,13 @@
           <span>已选 <span class="batch-bar-count">3</span> 条信号</span>
           <div class="batch-bar-actions">
             <label for="overlay-batch-confirm" class="batch-btn primary" data-action-tier="context">批量确认</label>
-            <label for="overlay-batch-confirm" class="batch-btn" data-action-tier="overflow">批量忽略</label>
             <label for="overlay-ai-read" class="batch-btn" data-action-tier="context">AI 分析</label>
+            <details class="action-overflow">
+              <summary class="batch-btn" data-decision-overflow data-action-tier="overflow" aria-haspopup="menu" aria-label="更多批量动作" title="更多">...</summary>
+              <div class="action-overflow-menu" role="menu" aria-label="更多批量动作">
+                <label for="overlay-batch-confirm" class="action-overflow-item" role="menuitem" tabindex="0" data-action-tier="overflow">批量忽略</label>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -2650,40 +2655,31 @@
         </div>
 
         <!-- Actions -->
-        <div class="detail-actions">
+        <div class="detail-actions" data-decision-cluster aria-label="信号详情首屏动作">
           <!-- Overlay trigger: 确认信号 → 弹出订单复核面板 -->
-          <label for="overlay-order-confirm" class="detail-action primary" role="button" tabindex="0" aria-label="确认转入订单复核" data-answer-action data-action-tier="primary">
+          <label for="overlay-order-confirm" class="detail-action primary" role="button" tabindex="0" aria-label="确认转入订单复核" data-answer-action data-decision-option data-action-tier="primary">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
             确认转入订单复核
           </label>
-          <!-- Overlay trigger: 确认信号→生成订单复核 → 弹出信号确认 Modal -->
-          <label for="overlay-signal-confirm-to-order" class="detail-action secondary" tabindex="0" aria-label="确认生成订单复核" data-action-tier="overflow">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
-            确认生成订单复核
-          </label>
-          <!-- Overlay trigger: 生成订单复核 → 弹出订单复核面板 -->
-          <label for="overlay-order-confirm" class="detail-action secondary" tabindex="0" aria-label="生成订单复核" data-action-tier="overflow">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
-            生成订单复核
-          </label>
-          <!-- Overlay trigger: AI 分析信号 → 弹出 AI 解读 Modal -->
-          <label for="overlay-ai-read" class="detail-action secondary" tabindex="0" aria-label="AI 分析信号" data-action-tier="overflow">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l2 4.5L15 7.5l-3.5 3.5.8 5L8 13.5 3.7 16l.8-5L1 7.5l5-1L8 2z"/></svg>
-            AI 分析信号
-          </label>
-          <button class="detail-action ghost" tabindex="0" aria-label="查看来源回测" data-action-tier="context">
+          <button class="detail-action ghost" tabindex="0" aria-label="查看来源回测" data-decision-option data-action-tier="context">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 2 5-6"/><circle cx="14" cy="4" r="1.5" fill="currentColor"/></svg>
             查看策略回测
           </button>
-          <button class="detail-action ghost" tabindex="0" aria-label="查看来源策略" data-action-tier="context">
+          <button class="detail-action ghost" tabindex="0" aria-label="查看来源策略" data-decision-option data-action-tier="context">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M6 3v10"/></svg>
             查看策略详情
           </button>
-          <label for="overlay-batch-confirm" class="detail-action ghost" tabindex="0" aria-label="驳回信号" data-action-tier="overflow">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
-            驳回信号
-          </label>
+          <details class="action-overflow detail-action-overflow">
+            <summary class="detail-action ghost" data-decision-overflow data-action-tier="overflow" aria-haspopup="menu" aria-label="更多信号动作" title="更多信号动作">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h.01M8 8h.01M13 8h.01"/></svg>
+              更多
+            </summary>
+            <div class="action-overflow-menu" role="menu" aria-label="更多信号动作">
+              <label for="overlay-ai-read" class="action-overflow-item" role="menuitem" tabindex="0" data-action-tier="overflow">AI 分析信号</label>
+              <label for="overlay-signal-confirm-to-order" class="action-overflow-item" role="menuitem" tabindex="0" data-action-tier="overflow">确认并生成订单复核</label>
+              <label for="overlay-batch-confirm" class="action-overflow-item" role="menuitem" tabindex="0" data-action-tier="overflow">驳回信号</label>
+            </div>
+          </details>
         </div>
       </div>
     </aside>
@@ -2695,7 +2691,7 @@
     <!-- Overlay A: 订单复核面板 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-order-confirm">
       <label class="overlay-dismiss" for="overlay-order-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="订单复核确认" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="订单复核确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="order-submit">
         <div class="overlay-header">
           <span class="overlay-title"><span data-danger-marker>!</span> 订单复核确认</span>
           <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
@@ -2767,7 +2763,7 @@
           </div>
 
           <div class="risk-confirmation-grid">
-            <div data-impact-summary class="risk-confirmation-block">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
             </div>
@@ -2775,8 +2771,8 @@
               <div class="risk-confirmation-title">操作前后</div>
               <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
             </div>
-            <div data-evidence-chain class="risk-confirmation-block">
-              <div class="risk-confirmation-title">证据链</div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
             </div>
             <div data-audit-record class="risk-confirmation-block">
@@ -2800,7 +2796,7 @@
     <!-- Overlay B: AI 解读信号 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-ai-read">
       <label class="overlay-dismiss" for="overlay-ai-read" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="AI 解读信号" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="AI 解读信号" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="signal-review">
         <div class="overlay-header">
           <span class="overlay-title"><span data-danger-marker>!</span> AI 解读信号</span>
           <label for="overlay-ai-read" class="overlay-close" aria-label="关闭">✕</label>
@@ -2842,7 +2838,7 @@
           </div>
 
           <div class="risk-confirmation-grid">
-            <div data-impact-summary class="risk-confirmation-block">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
             </div>
@@ -2850,8 +2846,8 @@
               <div class="risk-confirmation-title">操作前后</div>
               <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
             </div>
-            <div data-evidence-chain class="risk-confirmation-block">
-              <div class="risk-confirmation-title">证据链</div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
             </div>
             <div data-audit-record class="risk-confirmation-block">
@@ -2875,7 +2871,7 @@
     <!-- Overlay C: 批量确认/驳回 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-batch-confirm">
       <label class="overlay-dismiss" for="overlay-batch-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量确认信号" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量确认信号" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="batch-approval">
         <div class="overlay-header">
           <span class="overlay-title"><span data-danger-marker>!</span> 信号复核确认</span>
           <label for="overlay-batch-confirm" class="overlay-close" aria-label="关闭">✕</label>
@@ -2905,7 +2901,7 @@
           </div>
 
           <div class="risk-confirmation-grid">
-            <div data-impact-summary class="risk-confirmation-block">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
             </div>
@@ -2913,8 +2909,8 @@
               <div class="risk-confirmation-title">操作前后</div>
               <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
             </div>
-            <div data-evidence-chain class="risk-confirmation-block">
-              <div class="risk-confirmation-title">证据链</div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
             </div>
             <div data-audit-record class="risk-confirmation-block">
@@ -2950,7 +2946,7 @@
     <!-- Overlay D: 信号确认→生成订单复核 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-signal-confirm-to-order">
       <label class="overlay-dismiss" for="overlay-signal-confirm-to-order" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="信号确认" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="信号确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="signal-review">
         <div class="overlay-header">
           <span class="overlay-title"><span data-danger-marker>!</span> 确认信号并生成订单复核</span>
           <label for="overlay-signal-confirm-to-order" class="overlay-close" aria-label="关闭">✕</label>
@@ -2985,7 +2981,7 @@
             <span class="overlay-field-value">白酒板块占比将升至 37.2%</span>
           </div>
           <div class="risk-confirmation-grid">
-            <div data-impact-summary class="risk-confirmation-block">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
             </div>
@@ -2993,8 +2989,8 @@
               <div class="risk-confirmation-title">操作前后</div>
               <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
             </div>
-            <div data-evidence-chain class="risk-confirmation-block">
-              <div class="risk-confirmation-title">证据链</div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
             </div>
             <div data-audit-record class="risk-confirmation-block">

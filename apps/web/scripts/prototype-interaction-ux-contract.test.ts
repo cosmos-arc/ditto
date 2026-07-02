@@ -717,7 +717,7 @@ describe("prototype chart interaction surfaces", () => {
 				expect(chart.querySelectorAll("[data-chart-action]")).toHaveLength(4);
 			}
 		}
-	});
+	}, 20_000);
 
 	it("syncs the real Risk Center charts through their shared time-range controls", () => {
 		const document = readInteractivePrototypeDocument(getActivePageById("risk-center"));

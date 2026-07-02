@@ -2864,7 +2864,7 @@
     <!-- Overlay A: 暂停交易确认 (Modal 破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-pause-trading">
       <label class="overlay-dismiss" for="overlay-pause-trading" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="暂停交易确认" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="暂停交易确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="pause-trading">
         <div class="overlay-header">
           <span class="overlay-title text-danger">确认暂停交易</span>
           <label for="overlay-pause-trading" class="overlay-close" aria-label="关闭">✕</label>
@@ -2877,7 +2877,7 @@
             </div>
           </div>
           <div class="risk-confirmation-grid">
-            <div class="risk-confirmation-block" data-impact-summary>
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
               <div class="risk-confirmation-title">影响范围</div>
               <p class="risk-confirmation-copy">暂停后阻止所有新订单提交，已提交订单继续接收券商回报。当前 3 笔待成交订单不自动撤销。</p>
             </div>
@@ -2889,8 +2889,8 @@
                 <div class="risk-confirmation-item"><span>恢复方式</span><span class="risk-confirmation-value">手动恢复</span></div>
               </div>
             </div>
-            <div class="risk-confirmation-block" data-evidence-chain>
-              <div class="risk-confirmation-title">触发证据</div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
               <p class="risk-confirmation-copy">风险预算 52.9%，券商连接正常，暂停原因将写入交易审计流。</p>
             </div>
             <div class="risk-confirmation-block" data-audit-record>
@@ -3622,7 +3622,7 @@
     <div class="gallery-card" data-overlay-ref="overlay-pause-trading">
       <div class="gallery-card__label">暂停交易确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认" data-high-risk-confirmation>
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认" data-high-risk-confirmation data-high-risk-kind="pause-trading">
           <div class="overlay-header">
             <span class="overlay-title text-danger">确认暂停交易</span>
           </div>
@@ -3634,7 +3634,7 @@
               </div>
             </div>
             <div class="risk-confirmation-grid">
-              <div class="risk-confirmation-block" data-impact-summary>
+              <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
                 <div class="risk-confirmation-title">影响范围</div>
                 <p class="risk-confirmation-copy">暂停后阻止所有新订单提交，已提交订单继续接收券商回报。当前 3 笔待成交订单不自动撤销。</p>
               </div>
@@ -3646,8 +3646,8 @@
                   <div class="risk-confirmation-item"><span>恢复方式</span><span class="risk-confirmation-value">手动恢复</span></div>
                 </div>
               </div>
-              <div class="risk-confirmation-block" data-evidence-chain>
-                <div class="risk-confirmation-title">触发证据</div>
+              <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                <div class="risk-confirmation-title">对象清单</div>
                 <p class="risk-confirmation-copy">风险预算 52.9%，券商连接正常，暂停原因将写入交易审计流。</p>
               </div>
               <div class="risk-confirmation-block" data-audit-record>

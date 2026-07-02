@@ -3062,32 +3062,39 @@
     <!-- Overlay D: 删除标注确认 (Sheet — centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-delete-confirm">
       <label class="overlay-dismiss" for="overlay-delete-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="删除标注确认">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="删除标注确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete">
         <div class="overlay-header">
-          <span class="overlay-title">删除标注</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 删除标注</span>
           <label for="overlay-delete-confirm" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <p class="text-secondary text-body-sm">
-            确认删除此情报标注？删除后相关笔记和关联将被移除，此操作不可撤销。
-          </p>
-
-          <div class="overlay-field">
-            <span class="overlay-field-label">标注标题</span>
-            <span class="overlay-field-value">PMI超预期回升 — 重点关注</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">创建时间</span>
-            <span class="overlay-field-value">2026-04-02 09:46</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">关联笔记</span>
-            <span class="overlay-field-value">3 条</span>
+          <p data-risk-object>对象：PMI 超预期回升标注，创建于 2026-04-02 09:46。</p>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+              <div class="risk-confirmation-title">影响预览</div>
+              <p class="risk-confirmation-copy">删除后标注会从情报列表、筛选条件和关联笔记入口移除，不影响原始新闻或市场数据。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">情报标注从活跃库移入删除记录；相关笔记保留但解除标注关联。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">标注标题、创建时间、3 条关联笔记、宏观事件引用和删除原因。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、标注 id、关联笔记数量、删除原因和确认时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从情报审计历史恢复标注；恢复后需重新确认关联笔记是否仍有效。</p>
+            </div>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer">取消</label>
-            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-danger overlay-action-label cursor-pointer">确认删除</label>
+            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-secondary overlay-action-label cursor-pointer" data-cancel-control>取消，保留标注</label>
+            <label for="overlay-delete-confirm" class="overlay-btn overlay-btn-danger overlay-action-label cursor-pointer" data-confirm-control data-danger-action>确认删除</label>
           </div>
         </div>
       </div>

@@ -3493,10 +3493,110 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   font-variant-numeric: tabular-nums;
 }
 
-/* Final-review primary answer hierarchy */
+/* Primary answer visual grammar */
+:is([data-primary-answer], [data-primary-answer-equivalent]) {
+  --primary-answer-focus: balanced;
+  --primary-answer-judgment-scale: 1;
+  --primary-answer-metric-scale: 1;
+  --primary-answer-evidence-scale: 1;
+  --primary-answer-action-scale: 1;
+  --primary-answer-judgment-weight: var(--font-weight-semibold);
+  --primary-answer-evidence-weight: var(--font-weight-regular);
+  --primary-answer-action-weight: var(--font-weight-medium);
+  --primary-answer-judgment-fg: var(--text-primary);
+  --primary-answer-metric-fg: var(--text-primary);
+  --primary-answer-evidence-fg: var(--text-secondary);
+  --primary-answer-action-fg: var(--brand-signature-fg);
+  --primary-answer-action-ring: color-mix(in oklch, var(--brand-signature-fg) 42%, var(--border-subtle));
+  --primary-answer-action-bg: color-mix(in oklch, var(--brand-signature-fg) 8%, transparent);
+}
+
+html[data-domain="home"] :is([data-primary-answer], [data-primary-answer-equivalent]) {
+  --primary-answer-focus: judgment;
+  --primary-answer-judgment-scale: 1.06;
+  --primary-answer-evidence-scale: 0.96;
+  --primary-answer-action-scale: 1.02;
+  --primary-answer-judgment-weight: var(--font-weight-semibold);
+}
+
+html[data-domain="markets"] :is([data-primary-answer], [data-primary-answer-equivalent]) {
+  --primary-answer-focus: evidence;
+  --primary-answer-metric-scale: 1.04;
+  --primary-answer-evidence-scale: 1.05;
+  --primary-answer-action-scale: 0.96;
+  --primary-answer-evidence-weight: var(--font-weight-medium);
+  --primary-answer-evidence-fg: color-mix(in oklch, var(--text-primary) 22%, var(--text-secondary));
+}
+
+html[data-domain="research"] :is([data-primary-answer], [data-primary-answer-equivalent]) {
+  --primary-answer-focus: evidence;
+  --primary-answer-judgment-scale: 1.03;
+  --primary-answer-metric-scale: 1.02;
+  --primary-answer-evidence-scale: 1.06;
+  --primary-answer-action-scale: 0.96;
+  --primary-answer-evidence-weight: var(--font-weight-medium);
+  --primary-answer-evidence-fg: color-mix(in oklch, var(--brand-signature-fg) 16%, var(--text-secondary));
+}
+
+html[data-domain="trading"] :is([data-primary-answer], [data-primary-answer-equivalent]) {
+  --primary-answer-focus: next-step;
+  --primary-answer-judgment-scale: 1.02;
+  --primary-answer-metric-scale: 1.04;
+  --primary-answer-evidence-scale: 0.96;
+  --primary-answer-action-scale: 1.08;
+  --primary-answer-action-weight: var(--font-weight-semibold);
+  --primary-answer-action-ring: color-mix(in oklch, var(--brand-signature-fg) 58%, var(--border-subtle));
+}
+
+html[data-domain="platform"] :is([data-primary-answer], [data-primary-answer-equivalent]) {
+  --primary-answer-focus: next-step;
+  --primary-answer-judgment-scale: 1.02;
+  --primary-answer-evidence-scale: 1.04;
+  --primary-answer-action-scale: 1.05;
+  --primary-answer-evidence-weight: var(--font-weight-medium);
+  --primary-answer-action-weight: var(--font-weight-semibold);
+  --primary-answer-action-ring: color-mix(in oklch, var(--brand-signature-fg) 54%, var(--border-subtle));
+}
+
 [data-primary-weight="dominant"] {
   border-color: color-mix(in oklch, var(--brand-signature-fg) 28%, var(--border-subtle));
   background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base));
+}
+
+:where([data-primary-answer], [data-primary-answer-equivalent]) :where([data-answer-evidence], .answer-evidence) {
+  color: var(--primary-answer-evidence-fg);
+  font-weight: var(--primary-answer-evidence-weight);
+  line-height: 1.35;
+}
+
+:where([data-primary-answer], [data-primary-answer-equivalent]) :where([data-answer-judgment], .answer-judgment) {
+  color: var(--primary-answer-judgment-fg);
+  font-weight: var(--primary-answer-judgment-weight);
+  line-height: 1.35;
+}
+
+:where([data-primary-answer], [data-primary-answer-equivalent]) :where([data-answer-metric], .answer-metric) {
+  color: var(--primary-answer-metric-fg);
+  font-family: var(--font-family-numeric);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0;
+}
+
+:where([data-primary-answer], [data-primary-answer-equivalent]) :where([data-answer-action], .answer-action) {
+  color: var(--primary-answer-action-fg);
+  font-weight: var(--primary-answer-action-weight);
+}
+
+:where([data-primary-answer], [data-primary-answer-equivalent])
+  :where([data-answer-action], .answer-action):where(button, a, label, [role="button"]) {
+  border-color: var(--primary-answer-action-ring);
+  box-shadow: inset 0 0 0 1px var(--primary-answer-action-ring);
+}
+
+:where([data-primary-answer], [data-primary-answer-equivalent])
+  :where([data-answer-action], .answer-action):where(button, a, label, [role="button"]):hover {
+  background: var(--primary-answer-action-bg);
 }
 
 [data-secondary-context] :is(.panel-title, .section-title, .card-title) {

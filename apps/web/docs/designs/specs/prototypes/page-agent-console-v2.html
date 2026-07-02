@@ -1530,13 +1530,13 @@
           <div class="gallery-card" data-overlay-ref="overlay-approval-confirm">
             <div class="gallery-card__label">审批确认 · 弹窗</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-surface" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation>
+              <div class="overlay-surface" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation data-high-risk-kind="agent-approval batch-approval">
                 <div class="overlay-header">
                   <span class="overlay-title">确认采纳此发现？</span>
                 </div>
                 <div class="overlay-body">
                   <div class="risk-confirmation-grid">
-                    <div class="risk-confirmation-block" data-impact-summary>
+                    <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
                       <div class="risk-confirmation-title">影响范围</div>
                       <p class="risk-confirmation-copy">通过后自动生成信号至待复核队列，不直接下单。信号会绑定候选因子、证据快照和审批人。</p>
                     </div>
@@ -1544,8 +1544,8 @@
                       <div class="risk-confirmation-title">审批前后</div>
                       <p class="risk-confirmation-copy">候选发现 → 待复核信号；交易员仍需在 Signals Inbox 二次确认。</p>
                     </div>
-                    <div class="risk-confirmation-block" data-evidence-chain>
-                      <div class="risk-confirmation-title">证据链</div>
+                    <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                      <div class="risk-confirmation-title">对象清单</div>
                       <p class="risk-confirmation-copy">IC 0.047、证据 91.2、内部模型来源、工具输出 af-4421。</p>
                     </div>
                     <div class="risk-confirmation-block" data-audit-record>
@@ -1576,14 +1576,14 @@
 
   <div class="overlay-backdrop" data-overlay="overlay-approval-confirm">
     <label class="overlay-dismiss" for="overlay-approval-confirm" aria-label="关闭审批确认"></label>
-    <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation>
+    <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation data-high-risk-kind="agent-approval batch-approval">
       <div class="overlay-header">
         <span class="overlay-title">确认采纳此发现？</span>
         <label for="overlay-approval-confirm" class="overlay-close" aria-label="关闭">✕</label>
       </div>
       <div class="overlay-body">
         <div class="risk-confirmation-grid">
-          <div class="risk-confirmation-block" data-impact-summary>
+          <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
             <div class="risk-confirmation-title">影响范围</div>
             <p class="risk-confirmation-copy">通过后自动生成信号至待复核队列，不直接下单。信号会绑定候选因子、证据快照和审批人。</p>
           </div>
@@ -1591,8 +1591,8 @@
             <div class="risk-confirmation-title">审批前后</div>
             <p class="risk-confirmation-copy">候选发现 → 待复核信号；交易员仍需在 Signals Inbox 二次确认。</p>
           </div>
-          <div class="risk-confirmation-block" data-evidence-chain>
-            <div class="risk-confirmation-title">证据链</div>
+          <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+            <div class="risk-confirmation-title">对象清单</div>
             <p class="risk-confirmation-copy">IC 0.047、证据 91.2、内部模型来源、工具输出 af-4421。</p>
           </div>
           <div class="risk-confirmation-block" data-audit-record>

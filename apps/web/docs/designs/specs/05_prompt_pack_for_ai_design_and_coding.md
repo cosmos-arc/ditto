@@ -76,6 +76,7 @@ Ditto 的基本原则：
 - 重要状态不能只靠颜色
 - critical 反馈不能只用 toast
 - 每页主 CTA 不超过 1 个强 primary
+- 首屏动作簇必须收束为 `1 primary + 2 context + overflow`，禁止把保存 / 导出 / 重置 / AI / 生成等动作平铺成按钮墙
 
 ### 工程约束
 

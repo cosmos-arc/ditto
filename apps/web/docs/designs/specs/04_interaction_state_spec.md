@@ -40,6 +40,7 @@ Primary Answer = 一句话判断 + 1 个关键数字 + 2-3 个证据 + 1 个主�
 - 主答案不是 toast、装饰标题或普通说明文；它必须是页面当前业务状态的第一判断。
 - 页面存在 critical / warning / stale 状态时，主答案必须把影响范围说清楚，不允许只靠颜色表达。
 - 对已有成熟主区域，优先补充 `data-answer-judgment`、`data-answer-metric`、`data-answer-evidence`、`data-answer-action`、`data-answer-scope`，避免新增卡片墙。
+- 首屏动作预算固定为 `1 primary + 2 context + overflow`。保存、导出、重置、AI 解读、生成衍生对象等低频或派生动作必须进入 overflow、命令面板或行上下文菜单。
 - Queue / Ops / Agent / Studio 主答案必须暴露动作链：输入来源、当前输出、目标去向和审批状态；不能只显示进度百分比或总数。
 - 交易执行和配置类页面的主动作必须说清是重试、撤单、重新授权、查看 Diff 还是提交到下一结果页。
 

@@ -1866,17 +1866,37 @@
       </div>
     </div>
 
-    <section class="danger-confirmation-summary" data-danger-confirmation aria-label="高风险操作确认">
+    <section class="danger-confirmation-summary" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete" aria-label="高风险操作确认">
       <div class="overlay-header">
         <span class="overlay-title"><span data-danger-marker aria-hidden="true">!</span> 删除策略复核</span>
       </div>
       <p data-risk-object>对象：动量因子增强策略 v3.2</p>
-      <p data-impact-summary>影响范围：删除后会停止新回测、保留历史回测和信号审计，不影响已成交订单。</p>
+      <div class="risk-confirmation-grid">
+        <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+          <div class="risk-confirmation-title">影响预览</div>
+          <p class="risk-confirmation-copy">删除后会停止新回测、保留历史回测和信号审计，不影响已成交订单。</p>
+        </div>
+        <div class="risk-confirmation-block" data-before-after>
+          <div class="risk-confirmation-title">操作前后</div>
+          <p class="risk-confirmation-copy">策略详情从可编辑状态移入删除记录，后续信号不会再引用该策略。</p>
+        </div>
+        <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+          <div class="risk-confirmation-title">对象清单</div>
+          <p class="risk-confirmation-copy">策略 v3.2、最近版本快照、关联回测、信号审计和删除原因。</p>
+        </div>
+        <div class="risk-confirmation-block" data-audit-record>
+          <div class="risk-confirmation-title">审计记录</div>
+          <p class="risk-confirmation-copy">记录操作人、策略 id、版本号、依赖清单、删除原因和确认时间。</p>
+        </div>
+        <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+          <div class="risk-confirmation-title">恢复路径</div>
+          <p class="risk-confirmation-copy">删除记录进入审计日志，可从最近版本克隆恢复；恢复后需重新校验发布。</p>
+        </div>
+      </div>
       <div class="overlay-actions">
         <button type="button" class="overlay-btn sd-btn-danger" data-confirm-control data-danger-action aria-label="确认删除策略">确认删除策略</button>
         <button type="button" class="overlay-btn overlay-btn-secondary" data-cancel-control aria-label="取消并保留策略">取消，保留策略</button>
       </div>
-      <p data-recovery-hint>恢复路径：删除记录进入审计日志，可从最近版本克隆恢复。</p>
     </section>
 
   </div><!-- /shell-hub -->

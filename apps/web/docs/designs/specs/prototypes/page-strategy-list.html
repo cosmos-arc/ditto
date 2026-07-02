@@ -706,7 +706,7 @@
 
       <div class="overlay-backdrop" data-overlay="overlay-strategy-delete">
         <label class="overlay-dismiss" for="overlay-strategy-delete" aria-label="关闭"></label>
-        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="策略删除确认" data-danger-confirmation data-high-risk-confirmation>
+        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="策略删除确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete">
           <div class="overlay-header">
             <span class="overlay-title"><span data-danger-marker>!</span> 确认删除策略</span>
             <label for="overlay-strategy-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -714,7 +714,7 @@
           <div class="overlay-body">
             <p data-risk-object>对象：Alpha-Momentum-v3 策略 / 已选择策略草稿</p>
             <div class="risk-confirmation-grid">
-              <div data-impact-summary class="risk-confirmation-block">
+              <div data-impact-summary data-impact-preview class="risk-confirmation-block">
                 <div class="risk-confirmation-title">影响范围</div>
                 <p class="risk-confirmation-copy">删除会移除策略草稿和本地配置，不删除历史回测、订单、审计记录。</p>
               </div>
@@ -722,8 +722,8 @@
                 <div class="risk-confirmation-title">操作前后</div>
                 <p class="risk-confirmation-copy">单个或批量选中的策略会从当前列表移至归档，后续信号和新回测不再自动生成。</p>
               </div>
-              <div data-evidence-chain class="risk-confirmation-block">
-                <div class="risk-confirmation-title">证据链</div>
+              <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+                <div class="risk-confirmation-title">对象清单</div>
                 <p class="risk-confirmation-copy">保留策略版本、参数快照、关联回测和删除前依赖清单。</p>
               </div>
               <div data-audit-record class="risk-confirmation-block">

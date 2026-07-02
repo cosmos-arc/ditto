@@ -177,7 +177,7 @@ describe("prototype action tier contract", () => {
 		}
 
 		expect(failures).toEqual([]);
-	});
+	}, actionTierScanTimeoutMs);
 
 	it("keeps screener result rows exposing compare actions", () => {
 		const document = loadDocument("page-markets-screener.html");

@@ -78,6 +78,19 @@
       -webkit-backdrop-filter: blur(12px);
     }
     .shell-analytical .shell-body { display: contents; }
+    @media (min-width: 1024px) {
+      .shell-analytical {
+        --density-cell-padding-x: var(--space-6);
+        --density-gutter: var(--space-12);
+        --shell-activity-width: clamp(16.25rem, 20vw, 17.75rem);
+        grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) var(--shell-activity-width);
+      }
+    }
+    .shell-analytical .main-content,
+    .shell-analytical .activity-stack,
+    .shell-analytical .analysis-band {
+      min-width: 0;
+    }
 
     .shell-analytical .rail-logo {
       width: var(--rail-logo-size);
@@ -165,6 +178,73 @@
     .data-table thead { position: sticky; top: 0; z-index: 1; }
     .data-table tr { cursor: pointer; transition: background 0.1s; }
     .data-table tbody tr:hover { background: var(--interaction-hover-subtle-bg); }
+    .portfolio-table-scroll {
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      background: var(--surface-app);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+    }
+    .portfolio-table-scroll .data-table {
+      width: 100%;
+      min-width: 0;
+      table-layout: fixed;
+    }
+    .portfolio-table-scroll .data-table th,
+    .portfolio-table-scroll .data-table td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .portfolio-table-scroll .row-trigger {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .portfolio-col-target { width: 12%; }
+    .portfolio-col-code { width: 9%; }
+    .portfolio-col-side { width: 5%; }
+    .portfolio-col-qty { width: 6.5%; }
+    .portfolio-col-available { width: 8.5%; }
+    .portfolio-col-price { width: 8.5%; }
+    .portfolio-col-last { width: 8.75%; }
+    .portfolio-col-value { width: 10.5%; }
+    .portfolio-col-pnl { width: 11.75%; }
+    .portfolio-col-pct { width: 8.25%; }
+    .portfolio-col-day-pnl { width: 11.25%; }
+    .portfolio-col-time { width: 11%; }
+    .portfolio-col-trade-target { width: 15%; }
+    .portfolio-col-trade-side { width: 8%; }
+    .portfolio-col-trade-qty { width: 9%; }
+    .portfolio-col-trade-price { width: 11%; }
+    .portfolio-col-trade-amount { width: 14%; }
+    .portfolio-col-status { width: 13%; }
+    .portfolio-col-source { width: 13%; }
+    .portfolio-col-slippage { width: 6%; }
+    .positions-table-scroll .data-table th:nth-child(n+4),
+    .positions-table-scroll .data-table td:nth-child(n+4),
+    .trades-table-scroll .data-table th:nth-child(4),
+    .trades-table-scroll .data-table td:nth-child(4),
+    .trades-table-scroll .data-table th:nth-child(5),
+    .trades-table-scroll .data-table td:nth-child(5),
+    .trades-table-scroll .data-table th:nth-child(6),
+    .trades-table-scroll .data-table td:nth-child(6),
+    .trades-table-scroll .data-table th:nth-child(9),
+    .trades-table-scroll .data-table td:nth-child(9) {
+      text-align: right;
+    }
+    .positions-table-scroll .data-table td:nth-child(2),
+    .positions-table-scroll .data-table td:nth-child(n+4),
+    .trades-table-scroll .data-table td:nth-child(1),
+    .trades-table-scroll .data-table td:nth-child(4),
+    .trades-table-scroll .data-table td:nth-child(5),
+    .trades-table-scroll .data-table td:nth-child(6),
+    .trades-table-scroll .data-table td:nth-child(9) {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums;
+    }
     .row-trigger {
       display: inline-flex;
       align-items: center;
@@ -555,16 +635,6 @@
     :root:has(#exposure-pharma:checked) [data-exposure-drawer="pharma"] {
       display: block;
     }
-    .data-table th:nth-child(1),
-    .data-table td:nth-child(1) { min-width: 5.75rem; }
-    .data-table th:nth-child(2),
-    .data-table td:nth-child(2) { min-width: 5.75rem; }
-    .data-table th:nth-child(8),
-    .data-table td:nth-child(8),
-    .data-table th:nth-child(9),
-    .data-table td:nth-child(9),
-    .data-table th:nth-child(11),
-    .data-table td:nth-child(11) { min-width: 6.5rem; }
   </style>
 </head>
 <body>
@@ -711,23 +781,37 @@
 
             <!-- ═══ Tab: 持仓 ═══ -->
             <div class="tab-panel" id="panel-positions" data-panel="tab-positions" role="tabpanel" aria-labelledby="tab-control-positions" aria-hidden="false">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>标的</th>
-                    <th>代码</th>
-                    <th>方向</th>
-                    <th>数量</th>
-                    <th>可用</th>
-                    <th>成本价</th>
-                    <th>现价</th>
-                    <th>市值</th>
-                    <th>PnL</th>
-                    <th>PnL%</th>
-                    <th>当日盈亏</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <div class="portfolio-table-scroll positions-table-scroll">
+                <table class="data-table">
+                  <colgroup>
+                    <col class="portfolio-col-target">
+                    <col class="portfolio-col-code">
+                    <col class="portfolio-col-side">
+                    <col class="portfolio-col-qty">
+                    <col class="portfolio-col-available">
+                    <col class="portfolio-col-price">
+                    <col class="portfolio-col-last">
+                    <col class="portfolio-col-value">
+                    <col class="portfolio-col-pnl">
+                    <col class="portfolio-col-pct">
+                    <col class="portfolio-col-day-pnl">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>标的</th>
+                      <th>代码</th>
+                      <th>方向</th>
+                      <th>数量</th>
+                      <th>可用</th>
+                      <th>成本价</th>
+                      <th>现价</th>
+                      <th>市值</th>
+                      <th>PnL</th>
+                      <th>PnL%</th>
+                      <th>当日盈亏</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                   <tr>
                     <td class="name-cell"><label for="overlay-position-detail" class="row-trigger">贵州茅台</label></td>
                     <td class="code-cell">600519.SH</td>
@@ -832,8 +916,9 @@
                     <td class="text-down dir-down">-4.15%</td>
                     <td class="text-down dir-down">-260.00</td>
                   </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <!-- ═══ Tab: 交易 ═══ -->
@@ -858,21 +943,33 @@
                   <option>策略执行</option>
                 </select>
               </div>
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>时间</th>
-                    <th>标的</th>
-                    <th>方向</th>
-                    <th>数量</th>
-                    <th>价格</th>
-                    <th>金额</th>
-                    <th>状态</th>
-                    <th>策略来源</th>
-                    <th>滑点</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <div class="portfolio-table-scroll trades-table-scroll">
+                <table class="data-table">
+                  <colgroup>
+                    <col class="portfolio-col-time">
+                    <col class="portfolio-col-trade-target">
+                    <col class="portfolio-col-trade-side">
+                    <col class="portfolio-col-trade-qty">
+                    <col class="portfolio-col-trade-price">
+                    <col class="portfolio-col-trade-amount">
+                    <col class="portfolio-col-status">
+                    <col class="portfolio-col-source">
+                    <col class="portfolio-col-slippage">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>时间</th>
+                      <th>标的</th>
+                      <th>方向</th>
+                      <th>数量</th>
+                      <th>价格</th>
+                      <th>金额</th>
+                      <th>状态</th>
+                      <th>策略来源</th>
+                      <th>滑点</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                   <tr>
                     <td>14:52:30</td>
                     <td class="name-cell"><label for="overlay-trade-detail" class="row-trigger">贵州茅台</label></td>
@@ -939,8 +1036,9 @@
                     <td>策略执行</td>
                     <td>0.01%</td>
                   </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <!-- ═══ Tab: 归因 ═══ -->
@@ -1264,24 +1362,38 @@
     <!-- ═══ Overlay: Confirm Close All (Modal) ═══ -->
     <div class="overlay-backdrop" data-overlay="overlay-confirm-close-all">
       <label class="overlay-dismiss" for="overlay-confirm-close-all" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="确认全部平仓">
+      <div class="overlay-surface overlay-surface--modal danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="确认全部平仓" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="order-submit">
         <div class="overlay-header">
-          <span class="overlay-title">确认全部平仓</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 确认全部平仓</span>
           <label for="overlay-confirm-close-all" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <p class="risk-semantic">确认平仓所有持仓？此操作将市价卖出全部 8 只持仓标的。</p>
-          <div class="drawer-field mt-12">
-            <span class="drawer-field-label">当前持仓总市值</span>
-            <span class="drawer-field-value highlight-value">2,691,090.50</span>
-          </div>
-          <div class="drawer-field">
-            <span class="drawer-field-label">预计手续费</span>
-            <span class="drawer-field-value">~2,691.09</span>
+          <p data-risk-object>对象：8 只当前持仓，市值 2,691,090.50，预计手续费约 2,691.09。</p>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+              <div class="risk-confirmation-title">影响预览</div>
+              <p class="risk-confirmation-copy">确认后会按市价卖出全部可用持仓，生成 8 笔卖出订单；已提交订单结果以券商回报为准。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">持仓组合从当前暴露 100% 降至待成交状态；成交前仍在风险面板显示未结订单。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">贵州茅台、宁德时代、美的集团等 8 只持仓，按可用数量逐笔提交。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、组合快照、订单参数、风险校验结果和确认时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">未成交部分可在 Orders Ledger 发起撤单；已成交部分只能通过新的买入订单重建仓位。</p>
+            </div>
           </div>
           <div class="overlay-actions">
-            <label for="overlay-confirm-close-all" class="overlay-btn overlay-btn-secondary">取消</label>
-            <label for="overlay-confirm-close-all" class="overlay-btn overlay-btn-danger">确认平仓</label>
+            <label for="overlay-confirm-close-all" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留持仓</label>
+            <label for="overlay-confirm-close-all" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认平仓</label>
           </div>
         </div>
       </div>
