@@ -1,4 +1,5 @@
 export { useTradingSession } from "./use-trading-session";
+export { useDailyDecision } from "./use-daily-decision";
 export { useEquity } from "./use-equity";
 export { usePositions } from "./use-positions";
 export { useRiskSummary } from "./use-risk-summary";
@@ -12,3 +13,7 @@ export { useRiskVar } from "./use-risk-var";
 export { useRiskDrawdown } from "./use-risk-drawdown";
 export { useRiskExposure } from "./use-risk-exposure";
 export { useRiskBreaches } from "./use-risk-breaches";
+export { useRecordFill } from "./use-record-fill";
+export { useUpdateIntentStatus } from "./use-update-intent-status";
+export { useFillLedger } from "./use-fill-ledger";
+export { useComparisonAttribution } from "./use-comparison-attribution";

@@ -224,6 +224,16 @@ export type GetAttributionResponse = {
 	readonly factors: readonly AttributionFactor[];
 };
 
+export type ComparisonAttributionRow = {
+	readonly label: string;
+	readonly value: string;
+	readonly detail: string;
+};
+
+export type GetComparisonAttributionResponse = {
+	readonly rows: readonly ComparisonAttributionRow[];
+};
+
 /** 健康检查 */
 export type HealthCheckItem = {
 	readonly name: string;
@@ -273,11 +283,22 @@ export type SignalAction = {
 	readonly enabled: boolean;
 };
 
+export type SignalExecutionIntent = {
+	readonly intentId: string;
+	readonly strategyId: string;
+	readonly tradeDate: string;
+	readonly instrumentId: number;
+	readonly direction: "buy" | "sell";
+	readonly quantity: number;
+	readonly status: string;
+};
+
 export type GetSignalDetailResponse = {
 	readonly explanation: string;
 	readonly riskChecks: readonly RiskCheck[];
 	readonly portfolioImpact: PortfolioImpact;
 	readonly actions: readonly SignalAction[];
+	readonly execution?: SignalExecutionIntent;
 };
 
 /** 信号确认响应 */
@@ -329,6 +350,23 @@ export type Order = {
 };
 
 export type GetOrdersResponse = PaginatedResponse<Order>;
+
+export type FillLedgerEntry = {
+	readonly id: string;
+	readonly intentId: string;
+	readonly tradeDate: string;
+	readonly instrument: string;
+	readonly direction: OrderSide;
+	readonly quantity: number;
+	readonly fillPrice: number;
+	readonly fee: number;
+	readonly slippage: number;
+	readonly notes: string;
+};
+
+export type GetFillLedgerResponse = {
+	readonly fills: readonly FillLedgerEntry[];
+};
 
 /** 订单追踪 */
 export type OrderTrace = {

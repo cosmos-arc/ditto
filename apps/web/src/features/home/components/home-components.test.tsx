@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -108,6 +108,14 @@ describe("BannerSection", () => {
 });
 
 describe("HomePage", () => {
+	it("live 模式显示 prototype only 空态", () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("prototype only")).toBeInTheDocument();
+		expect(screen.getByText("prototype only，请切 VITE_USE_MOCK=true 查看原型数据。")).toBeInTheDocument();
+	});
+
 	it("暴露 Home 主区和次级区审计目标并移除猜测高度", async () => {
 		render(<HomePage />, { wrapper: createWrapper() });
 

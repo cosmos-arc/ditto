@@ -1,5 +1,7 @@
+import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
 import { AnalyticalLayout } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
+import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
 import { ResearchPulseStrip } from "./research-pulse-strip";
 import { FactorTable } from "./factor-table";
 import { RecentRuns } from "./recent-runs";
@@ -7,6 +9,10 @@ import { ExperimentQueue } from "./experiment-queue";
 import { AnalysisBand } from "./analysis-band";
 
 export function ResearchPage() {
+	if (!shouldUsePrototypeMocks()) {
+		return <PrototypeOnlyEmpty domain="Research" />;
+	}
+
 	return (
 		<AnalyticalLayout
 			strip={<div data-info-level="l1" data-info-unit="research-pulse-strip"><ResearchPulseStrip /></div>}

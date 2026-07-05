@@ -1,5 +1,7 @@
+import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
 import { RadarLayout, StatusBar } from "@/features/shell";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
+import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
 import { useMarketContext } from "../hooks";
 import { MarketCardGrid } from "./market-card-grid";
 import { MacroDriversBar } from "./macro-drivers-bar";
@@ -225,6 +227,15 @@ function MarketRightRail() {
 /* ── Page ── */
 
 export function MarketsPage() {
+	if (!shouldUsePrototypeMocks()) {
+		return (
+			<>
+				<PrototypeOnlyEmpty domain="Markets" />
+				<StatusBar />
+			</>
+		);
+	}
+
 	return (
 		<>
 		<RadarLayout

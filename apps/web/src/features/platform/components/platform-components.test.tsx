@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -34,6 +34,14 @@ beforeEach(() => {
 });
 
 describe("Platform route page contract handoffs", () => {
+	it("live 模式显示 prototype only 空态", () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		render(<PlatformPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("prototype only")).toBeInTheDocument();
+		expect(screen.getByText("prototype only，请切 VITE_USE_MOCK=true 查看原型数据。")).toBeInTheDocument();
+	});
+
 	it("covers PlatformPage route composition", async () => {
 		render(<PlatformPage />, { wrapper: createWrapper() });
 

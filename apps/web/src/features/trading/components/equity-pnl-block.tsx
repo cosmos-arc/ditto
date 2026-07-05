@@ -1,17 +1,26 @@
+import { StatusBadge } from "@/components/status";
 import { useEquity } from "../hooks";
 import { ContextSection } from "@/components/domain/context-section";
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { shouldUsePrototypeMocks } from "../api/runtime";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function EquityPnlBlock() {
-	const { data, isLoading, refetch } = useEquity();
+	const usePrototypeMocks = shouldUsePrototypeMocks();
+	const { data, isLoading, refetch } = useEquity({ enabled: usePrototypeMocks });
 
 	return (
 		<ContextSection title="权益 & 盈亏" data-info-level="l1" data-info-unit="equity-pnl">
+			{!usePrototypeMocks && (
+				<div className="flex flex-col gap-2 py-2">
+					<StatusBadge label="V1a 未接 live" variant="idle" size="sm" />
+					<span className="text-sm text-(--color-foreground-secondary)">Equity 曲线待后端补齐</span>
+				</div>
+			)}
 			{isLoading && <LoadingSkeleton variant="chart" />}
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-				{data && (
+				{usePrototypeMocks && data && (
 					<div className="flex flex-col gap-3">
 						<div className="flex gap-4">
 							{data.series.length > 0 && (() => {

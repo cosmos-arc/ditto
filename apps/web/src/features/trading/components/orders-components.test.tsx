@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -129,6 +129,17 @@ describe("OrderDetailPanel", () => {
 // ── OrdersPage — OpsConsoleLayout 集成 ──────────────────────────
 
 describe("OrdersPage", () => {
+	it("live 模式呈现 manual execution fill ledger", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		render(<OrdersPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("手工执行流水")).resolves.toBeInTheDocument();
+		expect(screen.getByText("Signal-to-Order Pipeline")).toBeInTheDocument();
+		expect(screen.getByText("manual / paper")).toBeInTheDocument();
+		await expect(screen.findByText("fill-159915-001")).resolves.toBeInTheDocument();
+		expect(screen.getByText("intent-159915")).toBeInTheDocument();
+	});
+
 	it("渲染健康条（health slot）", async () => {
 		render(<OrdersPage />, { wrapper: createWrapper() });
 

@@ -6,13 +6,29 @@ import {
 	useOverlayController,
 } from "@/features/shell";
 import { Drawer } from "@/components/indicator/overlay/drawer";
+import { shouldUsePrototypeMocks } from "../api/runtime";
+import { FillLedgerList } from "./fill-ledger-list";
 import { OrdersHealthStrip } from "./orders-health-strip";
 import { OrdersList } from "./orders-list";
 import { OrderDetailPanel } from "./order-detail-panel";
+import { SignalToOrderPipelineStrip } from "./signal-to-order-pipeline-strip";
 
 const ORDER_DETAIL_OVERLAY_ID = "orders.detail";
 
 export function OrdersPage() {
+	if (!shouldUsePrototypeMocks()) {
+		return (
+			<>
+				<OpsConsoleLayout
+					className="pb-(--height-status-bar)"
+					health={<SignalToOrderPipelineStrip />}
+					main={<FillLedgerList />}
+				/>
+				<StatusBar />
+			</>
+		);
+	}
+
 	return (
 		<OverlayProvider>
 			<OrdersPageContent />

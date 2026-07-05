@@ -60,8 +60,10 @@ describe("SignalsPage info-level annotations", () => {
 	});
 
 	it("annotates 1 L3 information unit", async () => {
+		const user = userEvent.setup();
 		render(<SignalsPage />, { wrapper: createWrapper() });
 
+		await user.click(await screen.findByRole("button", { name: /000001\.SZ.*动量突破/ }));
 		await screen.findByText("涨跌停检查");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");

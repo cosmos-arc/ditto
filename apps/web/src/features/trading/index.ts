@@ -1,4 +1,5 @@
 export { useTradingSession } from "./hooks/use-trading-session";
+export { useDailyDecision } from "./hooks/use-daily-decision";
 export { useEquity } from "./hooks/use-equity";
 export { usePositions } from "./hooks/use-positions";
 export { useRiskSummary } from "./hooks/use-risk-summary";
@@ -12,6 +13,10 @@ export { useRiskVar } from "./hooks/use-risk-var";
 export { useRiskDrawdown } from "./hooks/use-risk-drawdown";
 export { useRiskExposure } from "./hooks/use-risk-exposure";
 export { useRiskBreaches } from "./hooks/use-risk-breaches";
+export { useRecordFill } from "./hooks/use-record-fill";
+export { useUpdateIntentStatus } from "./hooks/use-update-intent-status";
+export { useFillLedger } from "./hooks/use-fill-ledger";
+export { useComparisonAttribution } from "./hooks/use-comparison-attribution";
 
 export { TradingPage } from "./components/trading-page";
 export { PortfolioPage } from "./components/portfolio-page";
@@ -30,3 +35,7 @@ export { SignalsHealthStrip } from "./components/signals-health-strip";
 export { SignalDetailPanel } from "./components/signal-detail-panel";
 export { OrdersHealthStrip } from "./components/orders-health-strip";
 export { OrderDetailPanel } from "./components/order-detail-panel";
+export { SignalToOrderPipelineStrip } from "./components/signal-to-order-pipeline-strip";
+export { FillLedgerList } from "./components/fill-ledger-list";
+export { TradingOverviewOrdersPanel } from "./components/trading-overview-orders-panel";
+export { TradingOverviewSignalsPanel } from "./components/trading-overview-signals-panel";

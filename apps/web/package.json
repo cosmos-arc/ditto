@@ -14,6 +14,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "gen:api": "bash scripts/gen-api.sh",
     "visual:audit": "bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs",
     "prototype:gates": "bun scripts/run-prototype-gates.ts",
     "prototype:interaction": "vitest run scripts/prototype-interaction-ux-contract.test.ts",

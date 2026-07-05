@@ -17,7 +17,11 @@ const STATUS_VARIANT: Record<string, "healthy" | "warning" | "default" | "degrad
 	ordered: "degraded",
 };
 
-export function SignalsList() {
+interface SignalsListProps {
+	readonly onSelectSignal?: (signalId: string) => void;
+}
+
+export function SignalsList({ onSelectSignal }: SignalsListProps) {
 	const { data, isLoading, refetch } = useSignals({ tab: "pending" });
 
 	return (
@@ -27,9 +31,11 @@ export function SignalsList() {
 				{data && (
 					<div className="space-y-1">
 						{data.items.map((signal) => (
-							<div
+							<button
 								key={signal.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+								type="button"
+								className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+								onClick={onSelectSignal ? () => onSelectSignal(signal.id) : undefined}
 							>
 								<div className="flex items-center gap-3">
 									<StatusBadge
@@ -49,7 +55,7 @@ export function SignalsList() {
 									<span>权重 {signal.weight.toFixed(2)}</span>
 									<span className="font-medium">{(signal.confidence * 100).toFixed(0)}%</span>
 								</div>
-							</div>
+							</button>
 						))}
 					</div>
 				)}

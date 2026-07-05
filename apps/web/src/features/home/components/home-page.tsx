@@ -1,3 +1,5 @@
+import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
+import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
 import { CommandCenterLayout } from "@/features/shell";
 import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
@@ -23,6 +25,10 @@ import { HomeCollapsedSidebar } from "./home-collapsed-sidebar";
  */
 export function HomePage() {
 	const { sidebarCollapsed, toggleSidebarCollapsed } = useUIPreferences();
+
+	if (!shouldUsePrototypeMocks()) {
+		return <PrototypeOnlyEmpty domain="Home" />;
+	}
 
 	return (
 		<CommandCenterLayout

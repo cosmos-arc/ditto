@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach, beforeAll, afterAll, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, afterAll, vi } from "vitest";
 import { server } from "@/mocks/server";
 
 /* ── IntersectionObserver stub (jsdom lacks native support) ── */
@@ -25,6 +25,10 @@ class StubIntersectionObserver implements IntersectionObserver {
 
 beforeAll(() => {
 	vi.stubGlobal("IntersectionObserver", StubIntersectionObserver);
+});
+
+beforeEach(() => {
+	vi.stubEnv("VITE_USE_MOCK", "true");
 });
 
 /* ── MSW + cleanup ── */

@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
@@ -132,6 +133,51 @@ describe("SignalDetailPanel", () => {
 		expect(screen.getByText("忽略信号")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "AI 解读" })).toBeInTheDocument();
 	});
+
+	it("live 模式可录入 manual paper 手工成交", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		const user = userEvent.setup();
+		render(<SignalDetailPanel signalId="intent-510300" />, {
+			wrapper: createWrapper(),
+		});
+
+		await expect(screen.findByText(/#510300 BUY 信号/)).resolves.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "录入手工成交" }));
+
+		await expect(screen.findByRole("dialog", { name: "订单确认" })).resolves.toBeInTheDocument();
+		expect(screen.getByDisplayValue("1000")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "提交手工成交" }));
+		expect(screen.getByText("成交价格必须大于 0")).toBeInTheDocument();
+
+		await user.type(screen.getByLabelText("成交价格"), "4.32");
+		await user.click(screen.getByRole("button", { name: "提交手工成交" }));
+
+		await expect(screen.findByText("手工成交已录入")).resolves.toBeInTheDocument();
+	});
+
+	it("live 模式通过高风险确认链路更新意图状态", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		const user = userEvent.setup();
+		render(<SignalDetailPanel signalId="intent-510300" />, {
+			wrapper: createWrapper(),
+		});
+
+		await expect(screen.findByText(/#510300 BUY 信号/)).resolves.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "更新意图状态" }));
+
+		await expect(screen.findByRole("dialog", { name: "高风险状态确认" })).resolves.toBeInTheDocument();
+		expect(document.querySelector("[data-impact-summary]")).toBeInTheDocument();
+		expect(document.querySelector("[data-confirm-control]")).toBeInTheDocument();
+		expect(document.querySelector("[data-cancel-control]")).toBeInTheDocument();
+		expect(document.querySelector("[data-recovery-hint]")).toBeInTheDocument();
+		expect(document.querySelector("[data-danger-marker='intent-status-transition']")).toBeInTheDocument();
+
+		await user.selectOptions(screen.getByRole("combobox", { name: "目标状态" }), "partially_filled");
+		await user.click(screen.getByRole("button", { name: "确认状态变更" }));
+
+		await expect(screen.findByText("状态已更新为部分成交")).resolves.toBeInTheDocument();
+	});
 });
 
 // ── SignalsPage — OpsConsoleLayout 集成 ─────────────────────────
@@ -153,11 +199,14 @@ describe("SignalsPage", () => {
 		).resolves.toBeInTheDocument();
 	});
 
-	it("渲染信号详情面板（detail slot）", async () => {
+	it("点击信号后打开所选信号详情 Drawer", async () => {
 		render(<SignalsPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("涨跌停检查"),
-		).resolves.toBeInTheDocument();
+		expect(screen.queryByText("信号详情")).not.toBeInTheDocument();
+
+		fireEvent.click(await screen.findByRole("button", { name: /000001\.SZ.*动量突破/ }));
+
+		await expect(screen.findAllByText("信号详情")).resolves.toHaveLength(2);
+		await expect(screen.findByText(/动量突破信号/)).resolves.toBeInTheDocument();
 	});
 });

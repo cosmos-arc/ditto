@@ -1,6 +1,8 @@
+import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
 import { OpsConsoleLayout, StatusBar } from "@/features/shell";
 import { ConfidenceBar } from "@/components/indicator";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
+import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
 import { HealthStrip } from "./health-strip";
 import { ProviderTable } from "./provider-table";
 import { PipelineTable } from "./pipeline-table";
@@ -28,6 +30,15 @@ const MOCK_EVENTS = [
 ];
 
 export function PlatformPage() {
+	if (!shouldUsePrototypeMocks()) {
+		return (
+			<>
+				<PrototypeOnlyEmpty domain="Platform" />
+				<StatusBar />
+			</>
+		);
+	}
+
 	return (
 		<>
 		<OpsConsoleLayout

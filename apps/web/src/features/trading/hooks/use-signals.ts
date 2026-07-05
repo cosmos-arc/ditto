@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type { GetSignalsRequest, GetSignalsResponse } from "@/types";
+import { mapDailyDecisionToSignalsResponse } from "../api/mappers";
+import { shouldUsePrototypeMocks } from "../api/runtime";
+import { DEFAULT_STRATEGY_ID, tradingKeys } from "../api/query-keys";
+import { useDailyDecision } from "./use-daily-decision";
 
 function buildSignalsQuery(params?: GetSignalsRequest): string {
 	if (!params) return "/trading/signals";
@@ -16,8 +20,17 @@ function buildSignalsQuery(params?: GetSignalsRequest): string {
 }
 
 export function useSignals(params?: GetSignalsRequest) {
-	return useQuery({
-		queryKey: ["trading", "signals", params],
+	const usePrototypeMocks = shouldUsePrototypeMocks();
+	const liveQuery = useDailyDecision(
+		{ strategyId: DEFAULT_STRATEGY_ID },
+		(report) => mapDailyDecisionToSignalsResponse(report, params),
+		{ enabled: !usePrototypeMocks },
+	);
+	const mockQuery = useQuery({
+		queryKey: tradingKeys.signals(DEFAULT_STRATEGY_ID, params?.tab),
 		queryFn: () => apiClient.get<GetSignalsResponse>(buildSignalsQuery(params)),
+		enabled: usePrototypeMocks,
 	});
+
+	return usePrototypeMocks ? mockQuery : liveQuery;
 }

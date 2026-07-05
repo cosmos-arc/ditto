@@ -1,10 +1,22 @@
+import { StatusBadge } from "@/components/status";
 import { useTradingSession } from "../hooks";
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { shouldUsePrototypeMocks } from "../api/runtime";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function TradingSessionStrip() {
-	const { data, isLoading, refetch } = useTradingSession();
+	const usePrototypeMocks = shouldUsePrototypeMocks();
+	const { data, isLoading, refetch } = useTradingSession({ enabled: usePrototypeMocks });
+
+	if (!usePrototypeMocks) {
+		return (
+			<div data-info-level="l2" data-info-unit="session-strip" className="flex gap-3 px-4 py-2">
+				<StatusBadge label="V1a 未接 live" variant="idle" size="sm" />
+				<span className="text-sm text-(--color-foreground-secondary)">Session 数据待后端补齐</span>
+			</div>
+		);
+	}
 
 	if (isLoading) {
 		return (

@@ -102,6 +102,14 @@ describe("RiskScopeStrip", () => {
 });
 
 describe("RiskPage", () => {
+	it("live 模式显示 Risk prototype only 空态", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		render(<RiskPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("prototype only")).resolves.toBeInTheDocument();
+		expect(screen.getByText("V1a 未接 live，数据待后端补齐")).toBeInTheDocument();
+	});
+
 	it("渲染风控中心布局", async () => {
 		render(<RiskPage />, { wrapper: createWrapper() });
 		await expect(screen.findByText("敞口概览")).resolves.toBeInTheDocument();
