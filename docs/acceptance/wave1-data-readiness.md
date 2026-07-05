@@ -1,12 +1,14 @@
 # Wave 1 Data Readiness Evidence
 
-> Date: 2026-07-02 (Phase 1 完成)
+> Date: 2026-07-02 (Phase 1 + Phase 2 完成, RC1 门禁通过)
 > Scope: backend data readiness for Wave 1a and full RC1 promotion tracking.
 > Branch: feat/wave1-backend-capabilities
 
 ## Summary
 
-Phase 1 (Task 1.1-1.5) 全部完成：14 launch 数据集 catalog evidence 齐全 + 8 experimental 数据集经 governance 闭环提级到 initial-focus。`validate_maturity_status` 校验 `ok=True failures=0`（从 RED 阶段 72 failures 收敛）。
+Phase 1 (Task 1.1-1.5) 全部完成：14 launch 数据集 catalog evidence 齐全 + 8 experimental 数据集经 governance 闭环提级到 initial-focus，`validate_maturity_status` 校验 `ok=True failures=0`（从 RED 阶段 72 failures 收敛）。
+
+Phase 2 (Task 2.1-2.2) 完成：RC1 release acceptance `--real-data --require-promoted` 一次通过，`passed==true && business_failures==[]`，5 命令（check / targeted-golden / promotion-evidence-stock-daily / real-data-e2e / maturity-status）全 rc=0。**RC1 发布门禁达成。**
 
 ## Command Evidence
 
@@ -67,9 +69,33 @@ Full RC1 required datasets are defined by `scripts/acceptance/rc1_requirements.p
 
 `validate_maturity_status` 对 14 launch 数据集全过: catalog storage/schema/row_count/freshness 齐全 + `dataset_maturity=initial-focus` + promotion 合规。
 
+### RC1 Release Acceptance（2026-07-02, Phase 2 Task 2.1）
+
+最终命令:
+
+```
+pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py \
+  --real-data --require-promoted \
+  --output artifacts/acceptance/rc1-report.json
+```
+
+运行 env: `source scripts/acceptance/wave1_env.sh`（`DITTO_DATA_ROOT=.tmp/ditto-rc1`、`ENVIRONMENT=testing`），真实 Tushare (`tushare/token`) + FRED (`fred/api_key`) 凭证。
+
+报告 `artifacts/acceptance/rc1-report.json`（`generated_at=2026-07-02T08:48:39Z`）:
+
+| 命令 | 结果 |
+|---|---|
+| `check`（lint + fmt + type + test --fast） | ✅ rc=0 |
+| `targeted-golden`（4 golden e2e） | ✅ rc=0 |
+| `promotion-evidence-stock-daily` | ✅ rc=0 |
+| `real-data-e2e`（2 真实数据测试） | ✅ rc=0 |
+| `maturity-status`（ops status → validate_maturity_status） | ✅ rc=0 |
+
+**`passed == true`、`business_failures == []`。RC1 发布门禁达成。**
+
 ## Required Next Actions
 
-Phase 1 (Task 1.1-1.5) 全部完成。下一步:
+Phase 1 (Task 1.1-1.5) + Phase 2 (Task 2.1-2.2) 全部完成，**RC1 发布门禁已达成**。后端 Wave 1c DoD 的「Full RC1 promotion 证据」项已满足。下一步:
 
-1. Phase 2 (Task 2.1): 重跑 `pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py --real-data --require-promoted --output artifacts/acceptance/rc1-report.json`，确认 `passed==true && business_failures==[]`。
-2. Phase 3-4: ditto-app 前端接线 (独立分支 `feat/wave1-backend-wiring`)。
+1. Phase 3 (Task 3.1-3.4): ditto-app 前端只读接线（独立分支 `feat/wave1-backend-wiring`，V1a 北极星：MSW 关闭时从真实后端呈现 daily decision cockpit）。
+2. Phase 4 (Task 4.1-4.3): ditto-app 前端写路径（V1b：手工 fill + intent status，遵守 Kill Switch 仅 manual/paper）。
