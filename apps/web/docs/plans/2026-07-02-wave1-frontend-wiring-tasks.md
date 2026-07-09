@@ -79,7 +79,7 @@ commit generated snapshot 作基线；后端 experimental 变更时重跑刷新�
 - [x] **3.3** Overview + Signals live：`DecisionBanner` 换源、Signals 队列、`SignalDetailPanel`（+deviation 第 5 项 riskCheck）、**selected→overlay 联动修复**（复用 `orders-page.tsx` 模式）、状态矩阵硬底线
 - [x] **3.4** Portfolio + Positions live：`PositionsSummary`、**Portfolio 归因 tab**（comparison）、**Signal-to-Order Pipeline Strip**（intents status）、pnl
 - [x] **3.5** Risk/Session/Equity 降级空态 + 非 Trading 域空态 + MSW 双轨 handler
-- [~] **3.6** V1a smoke + 证据（`ditto/docs/acceptance/wave1a-first-real-use.md`；证据文件已创建，真实后端 smoke 因本地 API server 不可用保持 blocked）
+- [x] **3.6** V1a smoke + 证据（2026-07-05 执行：ditto server + ditto-app `VITE_USE_MOCK=false`，playwright 截图 `ditto/docs/acceptance/wave1a-trading-live.png` + 证据 `wave1a-first-real-use.md`；live 接通验证通过——daily-decision 真实响应、契约 `{data,pagination?}` 零漂移、`LIVE 已连接`、结构化 blocked 空态、0 JS error；readiness=ready 待策略定义 publish 到 catalog，独立 follow-up）
 
 ### Phase 4 — 写路径（Kill Switch manual/paper）
 
@@ -138,3 +138,4 @@ pixi run -e dev check
 
 - 2026-07-02 / working tree / 完成 Phase 3-4 前端接线：live trade adapter、daily-decision 派生、manual/paper fill 与 intent status 写路径、fill ledger、Pipeline Strip、降级空态与 MSW 双轨。`bun run check` 通过（156 files / 1826 tests）。V1a live smoke 证据文件已新增到 ditto 仓库；当前环境后端 API server 不可用，文件内记录 exact blocker，未伪装真实联调成功。
 - 2026-07-03 / working tree / 处理三方核查反馈：Overview live 信号队列改为 `useSignals`/daily-decision 派生，Overview 订单区改为 manual/paper fill ledger，5 个 live 派生 hook 消除条件调用 hook 模式，补 comparison adapter/hook 与 Portfolio `comparisonRunId` 数据路径。3.6 保持 partial/blocked，等待真实后端 first-use smoke。
+- 2026-07-05 / ditto commit `1ff98089` / Task 3.6 live smoke 执行并验证：起 ditto server（**关键 gap**：`wave1_env.sh` 缺 `TUSHARE_TOKEN` export，server 启动 `data_source_validation` 失败，需从 keyring 取 token export）+ ditto-app `VITE_USE_MOCK=false`，playwright 截图 `/trading`。验证通过：daily-decision 真实响应（`{data,pagination?}` 契约零漂移）、`LIVE 已连接 12ms`、结构化 blocked 空态（Signals/Positions/Orders live 空态、Risk/Session/Equity 降级）、0 JS error。`readiness=ready` 仍 blocked，因 `strategy publish-signals` 缺策略定义 publish 前置（CLI 无 publish-strategy-definition 命令，入口在 `/strategies` API，超 wave1）。Task 3.6 标记完成（first real-use 路径证据达成），readiness=ready 作为独立 follow-up。
