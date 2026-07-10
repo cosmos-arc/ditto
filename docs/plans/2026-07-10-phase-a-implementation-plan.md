@@ -8,7 +8,32 @@
 
 **Tech Stack:** polars / numpy / cvxpy(新增) / sqlite / FastAPI / Typer / pytest / basedpyright / ruff / pixi
 
-**背景文档:** `docs/plans/2026-07-10-capability-benchmark-design.md`（能力评级与路线图）
+**背景文档:** `docs/plans/2026-07-10-capability-benchmark-design.md`（能力评级与路线图）；`docs/superpowers/specs/2026-07-10-ditto-development-roadmap-design.md`（产品母版路线图）
+
+> # ⚠️ 本文档已降级为「候选任务池」（2026-07-10 纠偏）
+>
+> 经产品视角纠偏，原「阶段 A = A1-A6 单批」**范围过大**（违反产品闭环优先），已按 R1-R4 重新切分。**实际施工请用 [`2026-07-10-r1-implementation-plan.md`](2026-07-10-r1-implementation-plan.md)**（窄 R1）。本文保留为 R1-R4 候选任务素材，各 task 归属见下表，**勿作为单一第一批开工**。
+>
+> | Task | 归属 | 修正方向 |
+> |---|---|---|
+> | A6-1 wave1_env TUSHARE_TOKEN | **R1** 小修 | 修 typo + 重设计测试（见下「已知问题」）+ 空 token fail-fast |
+> | A6-2 策略定义 publish | **R1** 核心 | 合并进 R1「seed 策略发布 + 生命周期最小闭环」task |
+> | A2 手数取整 | **R1** 并行小修 | 涨跌停已有，仅手数；修测试设计 + 零股语义（见下） |
+> | A5 前端 production | **R1** | **解除对 A3/A4 伪依赖**：先展示基础风险/基础归因，不等完整优化器/连续风控 |
+> | A1 数据 promotion | **R2**（拆分） | promotion(治理) ≠ 历史扩容；R1 只需让数据可研究，历史深度/写入瓶颈是 R2 |
+> | A3 cvxpy 组合优化 | **R4** | 完整风险平价/有效前沿属组合优化工作台 |
+> | A4 风控连续性 | **R4** | R1 只需 Daily Decision 日频风险摘要 + 可解释阻塞 |
+>
+> **R1 明确移出**：cvxpy 优化器、连续风控、fx/commodity promotion、AI 基建（B0/B1）、分钟级。
+>
+> ### 已知施工图问题（候选池使用前必读，已在 R1 plan 修正）
+>
+> - **A6-1 shell 测试 typo**：`#!/usrovy/env bash` → `#!/usr/bin/env bash`。
+> - **A6-1 失败测试设计不成立**：shell `source` 默认保留外部 `TUSHARE_TOKEN`，故「保留透传」测试无法证明问题。正确验证 = **无 env 但 keyring 有 token 时 server `data_source_validation` 能通过**。
+> - **A6-1 不应静默 export 空 token**：keyring 也无 token 时应 **warning 或 live smoke fail-fast**，不静默 `export ""`。
+> - **A2 测试只测私有 helper 不够**：至少要有一个 planning/order 级别测试，验证 target_weight→quantity→board_lot 全链路。
+> - **A2 零股语义凭直觉写死**：A 股「卖出零股仅限清仓」需明确规则来源（上交所/深交所交易规则），不能靠直觉；任意卖出是否允许 odd lot 须先确认规则再实现。
+> - **A5 伪依赖 A3/A4**：Trading production MVP 可先展示基础风险摘要 + 基础归因，不必等完整 cvxpy 优化器与连续风控状态机。
 
 ---
 

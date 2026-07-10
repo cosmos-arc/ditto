@@ -25,15 +25,15 @@
 
 | # | 能力维度 | ditto | 业界 5★ 标杆 | 证据 / 缺口 |
 |---|---|:---:|---|---|
-| ① | 数据覆盖与接入 | 3.0★ | LEAN(多资产) / Nautilus(盘中) | 日级 ETF initial-focus 扎实；stock/macro/fx/commodity 全 experimental 未晋级；**无分钟级/tick** |
+| ① | 数据覆盖与接入 | 3.0★ | LEAN(多资产) / Nautilus(盘中) | 日级 ETF initial-focus 扎实；stock/macro/fx/commodity **默认 registry 仍 experimental 分类**（RC1 已对含 stock/macro 的 8 个数据集 promotion override）；真问题：**历史深度浅 / 默认环境可迁移性 / fx·commodity 弱**；无分钟级/tick |
 | ② | 数据治理(PIT/质量/promotion) | **4.5★** | 多数开源标杆不如 ditto 严格 | 🔥**最强项**：knowledge_date fail-closed + promotion evidence 闭环（绝不自造通过）+ source-health/fallback + lineage，机构级严谨 |
 | ③ | 因子/特征工程 | 3.5★ | QLib(alpha 库) / WorldQuant | 表达式编译/物化/IC 诊断 CLI 扎实；缺丰富因子库 + alpha 挖掘 |
 | ④ | 策略与研究 | 2.5★ | LEAN(模板+Alpha Streams) / 聚宽 | pipeline 严谨 + DecisionFrame 可解释；仅 2 ETF + 2 stock 模板，无配置化策略框架/策略市场/AI 辅助 |
-| ⑤ | 回测引擎 | 3.5★ | LEAN / Nautilus / QLib | 引擎严谨 + checkpoint/resume + replay proof + PIT 安全 TimeSlice；佣金/印花税/滑点/**T+1 交收**完整；**缺涨跌停 + 手数取整 + 归因深度** |
+| ⑤ | 回测引擎 | 3.5★ | LEAN / Nautilus / QLib | 引擎严谨 + checkpoint/resume + replay proof + PIT 安全 TimeSlice；佣金/印花税/滑点/**T+1 交收**完整；**涨跌停矩阵已实现**（`AShareFillModel`）；**缺口：手数规整 + 可成交量/流动性解释 + 订单 round 后 cash/remainder 解释 + 归因深度** |
 | ⑥ | 组合构建与优化 | 2.5★ | LEAN(PC+优化器) / PyPortfolioOpt | `MeanVarianceAllocator` + `CovarianceProvider` + `EqualWeightAllocator` 框架在；**缺风险平价/Black-Litterman/数值求解器/有效前沿** |
 | ⑦ | 风险管理 | 2.5★ | LEAN / 机构风控引擎 | 规则齐全（集中度/最大回撤/单笔止损/市场异常/**kill_switch**）+ `RiskGate` Protocol；**缺连续状态/审计持久化/崩溃恢复** |
 | ⑧ | 执行与对接(OMS/券商) | 3.0★ | LEAN(broker built-in) / Nautilus | 🔥OMS FSM(7 态 5 触发) + 对账(5 mismatch) + 修复(workflow/claim/audit)工业级严谨；**无真实券商 adapter**(reserved，人工交易目标下够用) |
-| ⑨ | AI/ML 与 AI Agent | **0★** | QLib / OpenBB Copilot / TradingAgents / FinRobot | 💀**完全空白**：0 LLM 集成，`analysis.experiments` 是空命名空间 |
+| ⑨ | AI/ML 与 AI Agent | **0★** runtime / **1★** adjacent | QLib / OpenBB Copilot / TradingAgents / FinRobot | **AI runtime 0★**（无 LLM/Agent SDK 集成，`analysis.experiments` 空命名空间）；**AI-adjacent 1★**（hypothesis 桥接点 + 前端 AI Review 原型 + Experience Memory 已有，但无正式 runtime） |
 | ⑩ | 平台与体验 | 3.5★ | LEAN(IDE+cloud) / OpenBB(终端) / 聚宽 | 后端 API/OpenAPI maturity/CLI(jobs)/可观测/架构分层(37 合约)扎实；前端 prototype；**部署/认证/多租户缺失** |
 
 **综合功能完整度 ≈ 2.9★**。
@@ -44,9 +44,9 @@
 
 ## 三、四个深坑剖析
 
-### 深坑一：AI / AI Agent（0★）— 最大、最确定、却最容易补
+### 深坑一：AI / AI Agent（runtime 0★ / adjacent 1★）— 最大、最确定、却最容易补
 
-- **现状**：全 SRC 0 个 LLM 导入，`analysis.experiments` 是 `__all__=[]` 空命名空间。
+- **现状（runtime 0★）**：全 SRC 0 个 LLM/Agent SDK 导入，`analysis.experiments` 是 `__all__=[]` 空命名空间。**AI-adjacent 1★**：hypothesis 桥接点 + 前端 AI Review 原型 + Experience Memory 已存在，但无正式 runtime。
 - **业界标杆**：TradingAgents（80k★，多 agent debate）、FinRobot（多 agent 平台）、OpenBB Copilot（AI 分析师嵌入终端）、QLib（AI 量化研究天花板）。
 - **关键认知**：AI 是「接入」不是「自研」。ditto 的 daily-decision 信号 + 因子 IC + 宏观数据 + PIT 严格数据是绝佳的 agent grounding 工具集。最优解 = LLM API + 借鉴 TradingAgents 多 agent 架构 + ditto 数据/信号作为 tool。
 - **补齐路径**（详见第四章 AI 目标体系）。
@@ -141,9 +141,11 @@ L3 自主 Agent（主动，终极形态）
 
 ### 当前基线
 
-综合功能完整度 **2.9★**。日级 A 股 ETF 闭环已跑通并经 live smoke 验证；数据治理/执行协议世界级；AI(0★)/分钟级(0★)/组合优化(2.5★)/风控(2.5★) 是结构性短板。
+综合功能完整度 **2.9★**。当前处于「**内部日频人工交易 Beta 前夜**」——live smoke 已证明 daily-decision 后端接通 + 结构化 blocked 空态（**非真实信号 ready**，受策略定义未发布阻塞）；数据治理/执行协议世界级；AI runtime(0★)/分钟级(0★)/组合优化(2.5★)/风控(2.5★) 是结构性短板。
 
 ### 阶段 A：日级人工交易闭环深化 ｜ 2.9★ → 3.5★ ｜ 对标聚宽/米筐日级
+
+> ⚠️ **范围修订（2026-07-10 纠偏）**：阶段 A 已按「产品闭环优先」重新切分为 **R1-R4**（详见 `docs/superpowers/specs/2026-07-10-ditto-development-roadmap-design.md` + `docs/plans/2026-07-10-r1-implementation-plan.md`）。下表 A1-A6 现为**候选任务池**，不再作为单一第一批：R1 只取「策略发布 + EOD 闭环 + Daily Decision V2 + 前端真实态 + 手工复盘」；A3 组合优化 / A4 连续风控推 **R4**；fx/commodity promotion 推 **R2**；AI 基建推 **R5**。原 `phase-a-implementation-plan.md` 已降级为候选任务池。
 
 | 工作项 | 内容 | 维度 |
 |---|---|---|
@@ -154,7 +156,7 @@ L3 自主 Agent（主动，终极形态）
 | A5 | 前端 production：ditto-app trading 域从 Wave1a 接线做到可用 | ⑩ |
 | A6 | 修 Wave1a 两个后端 gap：`wave1_env.sh` 补 TUSHARE_TOKEN export + 策略定义 publish 流程 | — |
 
-**里程碑 ①：可商用的日级 A 股全品类人工交易平台。**
+**里程碑 ①（修订）：内部日频人工交易 Beta** —— 每天可生成并复核真实 A 股信号、目标仓位、建议操作、风险提示，人工记录成交与偏差（**非「可商用」**，可商用是 R7 之后）。
 
 ### 阶段 B：AI 能力注入 ｜ ⑨ 0★ → 3.5★ ｜ 对标 OpenBB Copilot + TradingAgents
 
@@ -185,10 +187,10 @@ A 完成后 ──────────────────────�
                                                               └─→ D【北极星】
 ```
 
-### 两个关键洞察
+### 两个关键洞察（R1 边界修订后）
 
-1. **情绪因子可提前到阶段 A 后期**：本质是「新增一类因子」，直接增强日级信号质量，AI 投入产出比最高。用 AI 增强阶段 A，而非干等阶段 B。
-2. **A3 组合优化 / A4 风控 与 B0-B1 可并行**：前者独立补全，后者依赖 A1/A5 的 API 稳定，可双线推进。
+1. **~~情绪因子提前到阶段 A 后期~~（已撤回）**：R1 严格不做 AI/情绪因子——AI 需依赖稳定的 Daily Decision + 报告 artifacts，否则变空心助手。情绪因子属 **R2/R3** 研究扩展期，届时作为 AI 投入产出比最高的桥接点。
+2. **A3 组合优化 / A4 连续风控 推到 R4**：R1 只需 Daily Decision 里的日频风险摘要 + 可解释阻塞原因；完整 cvxpy 优化器 + 连续风控状态机属 R4。R1 **不并行启动 AI 基建（B0/B1）**。
 
 ### 离产品的差距（星级阶梯）
 
