@@ -61,6 +61,21 @@ Ditto 当前已经具备强工程底座、严格数据治理、日频 A 股 ETF/
 | R6 | 分钟级和盘中信号 Beta | 盘中观察、提醒和因子快照 | 6-10 周 |
 | R7 | 全球全品类扩展 | 多资产平台化 | 长期 |
 
+### 业界对标锚点（2026-07-10 补充，来自 capability-benchmark）
+
+每个阶段的「业界 5★ 天花板」对标：
+
+| 阶段 | 主对标系统 | 对标维度 |
+|---|---|---|
+| R0-R2 | 聚宽 / 米筐 | A 股日频人工交易/研究平台（当前阶段同梯队） |
+| R3 | QLib（微软） | AI 量化研究 / 策略管理 / 因子库 |
+| R4 | LEAN PortfolioConstruction + PyPortfolioOpt | 组合优化 / 风险 / 归因 |
+| R5 | OpenBB Copilot + TradingAgents + FinRobot | AI 投研 copilot / 多 agent / 金融 LLM |
+| R6 | NautilusTrader | 分钟级/盘中 event-driven（Rust 内核天花板） |
+| R7 | QuantConnect LEAN | 全球多资产全功能平台（北极星） |
+
+**护城河认知**：完整对标 LEAN(5★) 是十几年积累，ditto 终态约 4.5-4.7★，永远追赶。差异化护城河在 **AI 原生 + A 股本土 + 数据治理严谨度**（非 LEAN 强项的多资产广度/社区生态），不必在 LEAN 强项硬拼。
+
 和已有 A-D 阶段的关系：
 
 - R1-R4 对应当前 `阶段 A：日级人工交易闭环深化` 的产品化展开。
@@ -84,6 +99,17 @@ Ditto 当前已经具备强工程底座、严格数据治理、日频 A 股 ETF/
 | 前端 | Trading 域 live 接通，其他域多为 prototype-only |
 | AI/Agent | 占位和原型为主，无正式 runtime |
 | 分钟级/盘中 | 尚未进入体系化实现 |
+
+### 代码探索佐证（2026-07-10，基于源码 grep + LOC + Read，非文档声明）
+
+> 修正若干「文档声明 vs 代码实际」偏差，供各 R 阶段施工参考，避免返工。
+
+- **回测涨跌停已实现**：`AShareFillModel`（`backtest/simulation/fill.py:123-204`）有完整涨跌停/停牌/收盘竞价规则矩阵。真实缺口是 **手数规整 + 可成交量/流动性解释 + 订单 round 后 cash/remainder 解释**（R1 A2 小修），非涨跌停。
+- **组合优化是伪均值方差**：`MeanVarianceAllocator`（`portfolio/rebalancing/optimization.py`）注释明说「deliberately avoids a solver dependency」——对角协方差反方差 + water filling，**非真均值方差**。R4 引 `cvxpy` 做真优化（风险平价/带约束均值方差/有效前沿）。
+- **数据 promotion ≠ 默认 maturity**：默认 registry 仍 experimental 分类；RC1 已对含 stock/macro 的 8 个数据集 promotion override。真问题是 **历史深度浅（近期 2 月）/ 默认环境可迁移性 / fx·commodity 弱**（R2），非「全未晋级」。
+- **AI runtime 0★ / adjacent 1★**：无 LLM/Agent SDK 集成（`analysis.experiments` 空命名空间），但有 hypothesis 桥接点 + 前端 AI Review 原型 + Experience Memory。R5 是「接入」非「自研」。
+- **R1 多数 primitives 已存在**：`daily-decision` API + readiness(ready/review/blocked)（`apps/api/routes/trade_query_routes.py:186`）、手工 fill + intent status + `SignalDeviationQueryFacade`（`application/commands/trade.py` + `queries/deviation.py`）、策略 draft/published + version + sqlite store（`strategy/storage/sqlite/strategy_spec_store.py`）。**R1 本质是集成 + 产品化，非建新模块**；唯一真阻塞是 seed 策略未 publish 到 store。
+- **分钟级架构级空白**：所有 `Bar` 是日级 OHLC；`Synchronizer`/`TimeSlice`/`EngineLoop` 全日级 step；无频率枚举。R6 须先确保抽象留扩展点。
 
 当前最适合的产品定位：
 
@@ -235,6 +261,19 @@ L0 基础设施：
 - Tool registry，把 ditto API、reports、artifacts 包装为可审计工具。
 - Permission 和 audit。
 - Tracing 和 eval。
+
+**技术选型（2026-07-10 决策）：Agent runtime 用 [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)（`openai-agents`，不自研 LLM）。** 其原语与 ditto 架构天然映射，最大化复用现有强项：
+
+| OpenAI Agents SDK 原语 | ditto 映射（复用而非新建） |
+|---|---|
+| Tools（function tools） | 包装 ditto API/报告/artifacts 为 LLM 可调工具 |
+| Handoffs（多 agent 委托） | analyst/researcher/trader/risk/ops 分工（L3） |
+| Guardrails（输入/输出校验） | **复用 `RiskGate` pre/post-trade check 作为 agent 输出 guardrail** |
+| Sessions/Memory | **复用 ditto `Experience Memory`** |
+| Tracing（自动全链路） | 接入 OpenTelemetry 可观测 |
+| Resumable Approval（可恢复审批） | 契合「人工交易」：agent 产建议 → 人工审批 → 执行 |
+
+> 依赖 `openai-agents` 已授权（与 `cvxpy` 同批）。AI 是「接入」非「自研」——ditto 的 daily-decision 信号 + 因子 IC + PIT 严格数据是 agent 的 grounding 底座，正是 OpenBB Copilot/TradingAgents 缺的「可信数据层」。
 
 L1 只读 Copilot：
 
