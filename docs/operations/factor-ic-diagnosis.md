@@ -1,6 +1,6 @@
 # 因子 IC 诊断操作手册
 
-> 对应路线图 [F1-#6](../plans/2026-06-14-production-launch-roadmap.md)(Phase 3 首个任务)
+> 对应路线图 [F1-#6](../plans/archive/2026-06-14-production-launch-roadmap.md)(Phase 3 首个任务)
 
 ## 概述
 
@@ -90,7 +90,7 @@ pixi run -e dev ditto ops factor-ic value_pe \
 
 ## 相关
 
-- 路线图 [F1-#6](../plans/2026-06-14-production-launch-roadmap.md)
+- 路线图 [F1-#6](../plans/archive/2026-06-14-production-launch-roadmap.md)
 - 评估门面 [evaluation.py](../../packages/application/src/ditto_application/queries/evaluation.py)
 - 渲染模块 [factor_ic_report.py](../../packages/application/src/ditto_application/queries/factor_ic_report.py)
 - IC 算法 [features/evaluation/metrics/](../../packages/features/src/ditto_features/evaluation/metrics/)

@@ -299,7 +299,7 @@ grep 全 portfolio 包零命中 `mean_variance` / `risk_parity` / `Black-Litterm
 
 详细的分阶段修复方案、选股能力深化设计、端到端验证计划见配套文档:
 
-→ [docs/plans/2026-06-14-production-launch-roadmap.md](../plans/2026-06-14-production-launch-roadmap.md)
+→ [docs/plans/2026-06-14-production-launch-roadmap.md](../plans/archive/2026-06-14-production-launch-roadmap.md)
 
 ---
 

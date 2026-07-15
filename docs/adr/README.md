@@ -110,5 +110,5 @@ git commit -m "docs(adr): 添加新决策记录 - 决策标题"
 ## 相关文档
 
 - [设计文档](../design/README.md) - 系统架构设计
-- [Sprint 规划](../sprints/README.md) - 迭代计划
+- [计划文档](../plans/README.md) - 实施计划
 - [ADR 最佳实践](https://adr.github.io/) - 官方 ADR 规范参考
