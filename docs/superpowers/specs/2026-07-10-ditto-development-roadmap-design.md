@@ -1,473 +1,450 @@
 # Ditto 后续发展规划与分阶段开发设计
 
-> Date: 2026-07-10
-> Status: strategic roadmap design
-> Scope: 从当前 RC1/Wave1a 基线出发，规划 Ditto 向「全球全品类 AI 量化系统」演进的分阶段产品与工程路线。
+> **首次创建**：2026-07-10<br>
+> **最近复核**：2026-07-15<br>
+> **状态**：母路线图（Roadmap Source of Truth）<br>
+> **北极星**：全球全品类、AI 原生、以证据驱动人工决策的量化平台；十个能力维度最终全部达到 10/10。
 
-## 1. 背景与目标
+## 1. 路线图职责
 
-Ditto 当前已经具备强工程底座、严格数据治理、日频 A 股 ETF/个股研究 primitives、回测与交易意图/手工成交骨架，并且 ditto-app Trading 域已经完成 live-connected smoke。上一轮评估给出的核心判断是：
+本文决定“做什么、按什么顺序、通过什么 Gate”。它不替代能力事实和 release 施工图。
 
-- 工程架构成熟度高，12 包边界、lint/type/test/import-linter 合约已通过。
-- A 股日频后端能力基本成型，但真实每日人工交易产品闭环尚未完全 ready。
-- 全球全品类、分钟级、AI-Agent 化仍处于早期或规划阶段。
-- 当前最关键缺口不是再堆新模块，而是把「真实数据 -> 策略 -> 信号 -> 决策 -> 人工成交 -> 复盘」打成每天可用的产品闭环。
-
-长期目标仍然是全球全品类 AI 量化系统，但阶段优先级必须服从产品可用性：
-
-1. 优先支持 A 股 ETF、个股、指数、宏观和商品大宗日频数据。
-2. 优先完成日级别投研、回测、信号、仓位建议和人工交易复核。
-3. 后续扩展分钟级数据、盘中信号和盘中因子计算。
-4. 不把全自动交易作为近期目标；AI 和 Agent 必须先服务投研、解释、建议和人工审批。
-
-## 2. 文档关系
-
-本文是后续发展的母版路线图。相关文档分工如下：
-
-| 文档 | 角色 |
+| 文档 | 职责 |
 |---|---|
-| `docs/plans/2026-07-10-capability-benchmark-design.md` | 当前功能能力评级、业界对标、A-D 大阶段方向 |
-| `docs/plans/2026-07-10-phase-a-implementation-plan.md` | 阶段 A 的候选实施计划，面向具体开发执行 |
-| `docs/acceptance/wave1-data-readiness.md` | RC1 真实数据与 promotion 验收证据 |
-| `docs/acceptance/wave1a-first-real-use.md` | ditto-app Trading live smoke 与剩余阻塞 |
-| 本文 | 产品路线、阶段边界、依赖关系、验收门槛、后续计划生成入口 |
+| `docs/plans/2026-07-10-capability-benchmark-design.md` | 当前能力、评分、对标、缺口和 10 分完成定义 |
+| 本文 | R0-R7 顺序、依赖、横向工程、发布 Gate 和投资重点 |
+| `docs/plans/2026-07-10-r1-implementation-plan.md` | 当前唯一可执行的逐 task 施工图 |
+| `docs/plans/2026-07-10-phase-a-implementation-plan.md` | 已废弃施工属性的历史迁移索引 |
 
-后续每个阶段进入开发前，应从本文抽取一份单独 implementation plan，而不是直接把所有阶段并行开工。
+事实冲突时，以验收证据、当前源码/OpenAPI/CLI、能力基准、母路线图、release 计划的顺序判定。
 
-## 3. 路线选择
+## 2. 产品原则
 
-比较三种路线：
+1. **日频先成产品**：先让 A 股日级人工决策每天可靠运行，再扩分钟和全球资产。
+2. **人工审批是正式架构**：建议、证据、风险、审批、成交和复盘是主流程，不把人工看成临时占位。
+3. **PIT 与 provenance 不妥协**：无 `knowledge_date`、snapshot、lineage 或质量证据的数据不得进入决策。
+4. **研究与决策一致**：同一策略定义、市场规则、特征和风险契约贯穿研究、回测和信号。
+5. **Gate 优先于平均分**：安全、数据、恢复、合规任一失败都阻止发布。
+6. **复用现有领域能力**：新 release 先做源码审计，不重复实现已有 handler、port、planner 或 storage。
+7. **渐进式实时化**：先抽象 frequency/clock/state，再引入 minute/event，不把日频系统一次性推翻。
+8. **AI 必须可评测**：AI 只基于受控 tools 和可追溯证据；建议必须结构化、受 guardrail 约束并由人审批。
+9. **全球化是领域扩展**：日历、时区、货币、税费、交收、公司行动和合约规则必须显式建模。
+10. **10 分靠持续证据**：release 完成只提供提分资格，不自动把能力分改成目标值。
 
-| 路线 | 优点 | 风险 | 结论 |
+## 3. 当前基线
+
+### 3.1 能力定位
+
+- 能力广度：**5.7/10**。
+- R1 日频人工交易就绪度：**5.8/10，G1 未通过**。
+- 最强项：PIT、promotion evidence、数据血缘、回测严谨性、OMS/对账协议和工程边界。
+- 最大空白：正式 AI runtime、分钟/盘中、全球资产统一模型。
+- 最大产品缺口：真实 daily workflow 尚未闭环，前端 live 路径不完整。
+
+### 3.2 R1 前的五个硬阻塞
+
+1. 活动 published 策略版本会被较新 draft 遮蔽，seed 初始化缺运营入口。
+2. 完整 signal package 未持久化，零调仓与未运行/失败无法区分。
+3. EOD 同日重跑的 run/intent 幂等与冲突策略不完整。
+4. 账户基线、建议数量、多笔部分成交与追加式更正未闭环。
+5. Daily Decision 与 `ditto-app` 尚不能在 live 模式完成复核、成交和复盘。
+
+### 3.3 明确不重复建设的能力
+
+- strategy create/publish handler 与 API。
+- `AccountSnapshotRecord`、position/fill/intents SQLite storage。
+- execution target diff、T+1、手数与涨跌停基础。
+- Prefect EOD flow、StrategyArtifactService 和 Daily Decision V1。
+- 配置 provider 的 env > keyring > config 凭证优先级。
+
+## 4. 阶段与 Release 总览
+
+| 宏观阶段 | Release | 目标结果 | 状态 | 估算投入* |
+|---|---|---|---|---:|
+| I 日频闭环 | R0 产品边界固化 | 目标、评分、文档职责和架构边界稳定 | 已完成，持续维护 | 1-2 人周/次复核 |
+| I 日频闭环 | R1 日频人工交易 MVP | 单操作者本机 Beta，从 EOD 到成交复盘闭环 | 下一步 | 8-12 人周 |
+| I 日频闭环 | R2 A 股日频数据与研究升级 | ETF/个股/宏观/商品日频数据可靠、可研究 | 未开始 | 8-14 人周 |
+| II 研究产品化 | R3 回测、选股、策略管理 | 可复现研究工作台与基础策略治理 | 未开始 | 12-18 人周 |
+| II 研究产品化 | R4 组合、风险与复盘 | 组合优化、风险与执行后复盘产品化 | 未开始 | 12-18 人周 |
+| III AI 与盘中 | R5 AI Copilot / Agent v1 | grounded、可评测、HITL 的 AI 投研与建议 | 未开始 | 14-22 人周 |
+| III AI 与盘中 | R6 分钟级与盘中 Beta | 分钟数据、增量因子和盘中信号 | 未开始 | 24-36 人周 |
+| IV 全球机构化 | R7 全球全品类扩展 | 多市场、多资产、多账户与机构运营 | 未开始 | 40+ 人周，滚动规划 |
+
+\* 人周是范围估算，不是日期承诺；不含数据采购、法务审批、供应商等待和多人并行收益。每个 release 在上一 Gate 通过后重新估算。
+
+## 5. 十维到 10 分的闭环路径
+
+| 能力维度 | 第一次产品闭环 | 深化节点 | 10/10 最终证据 |
 |---|---|---|---|
-| 平台优先 | 架构最完整，长期扩展好 | 继续停留在工程系统，产品感弱 | 不作为主线 |
-| AI 优先 | 体验有想象力，容易展示 | 底层数据/信号未闭环时 AI 容易空转 | 作为中期增强 |
-| 产品闭环优先 | 最快进入真实日用，能暴露高价值缺口 | 需要强约束范围 | 作为主线 |
+| 数据覆盖与接入 | R2 A 股日频 | R6 分钟；R7 全球 | 多资产/多频率、日历/时区/FX/合约/公司行动与供应商切换验收 |
+| 数据治理与 PIT | R2 全部日频核心集 | R6 盘中 lineage | 全球数据集质量、许可、回补、降级、SLO 和恢复证据 |
+| 因子与特征 | R3 日频研究生产一致 | R5 AI 辅助；R6 增量 | 跨资产/频率因子库、诊断、复现、版本和在线一致性 |
+| 策略与研究 | R3 基础生命周期 | R5 AI 辅助；R7 多市场 | 实验、审批、发布、回滚、监控、复现和用户价值证据 |
+| 回测与仿真 | R3 日频产品化 | R6 event-driven | 全球市场规则、容量/冲击、研究/决策一致和确定性回放 |
+| 组合构建与优化 | R4 | R7 跨资产 | 多目标多约束、成本/税费/风险预算、稳定求解和解释证据 |
+| 风险管理 | R4 日频 | R6 盘中；R7 机构 | 事前/事中/事后、压力测试、恢复、告警、人工处置和审计 |
+| 执行、OMS 与账户 | R1 人工单账户 | R4 多 sleeve；R7 多账户 | 完整账本、对账恢复、可选券商、多市场交收和运营证据 |
+| AI、ML 与 Agent | R5 v1 | R7 机构治理 | eval、grounding、HITL、模型风险、成本、安全和持续质量证据 |
+| 平台、体验与运营 | R1 本机工作台 | 每个 release 横向推进 | RBAC、多租户、SLO、灾备、API 兼容、安全供应链和支持体系 |
 
-推荐路线：产品闭环优先。先把 A 股日频人工交易信号产品打穿，再扩研究深度、回测实验、组合优化、AI Copilot、分钟级和全球多资产。
-
-## 4. 阶段命名与总览
-
-为避免和历史 Wave1 文档混淆，本文把未来路线定义为 R0-R7 release roadmap：
-
-| 阶段 | 名称 | 目标产品状态 | 预计节奏 |
-|---|---|---|---|
-| R0 | 产品边界固化 | 统一目标、验收和里程碑口径 | 约 1 周 |
-| R1 | 日频人工交易 MVP | 每天可生成并复核真实 A 股信号 | 2-3 周 |
-| R2 | A 股日频数据与研究升级 | 可支撑多策略研究和较长历史回测 | 3-5 周 |
-| R3 | 回测、选股、策略管理产品化 | 策略研发工作台 Beta | 4-6 周 |
-| R4 | 组合优化、风险、复盘工作台 | 投资决策工作台 Beta | 4-6 周 |
-| R5 | AI Copilot / Agent v1 | 只读和审批式智能助手 | 4-8 周 |
-| R6 | 分钟级和盘中信号 Beta | 盘中观察、提醒和因子快照 | 6-10 周 |
-| R7 | 全球全品类扩展 | 多资产平台化 | 长期 |
-
-### 业界对标锚点（2026-07-10 补充，来自 capability-benchmark）
-
-每个阶段的「业界 5★ 天花板」对标：
-
-| 阶段 | 主对标系统 | 对标维度 |
-|---|---|---|
-| R0-R2 | 聚宽 / 米筐 | A 股日频人工交易/研究平台（当前阶段同梯队） |
-| R3 | QLib（微软） | AI 量化研究 / 策略管理 / 因子库 |
-| R4 | LEAN PortfolioConstruction + PyPortfolioOpt | 组合优化 / 风险 / 归因 |
-| R5 | OpenBB Copilot + TradingAgents + FinRobot | AI 投研 copilot / 多 agent / 金融 LLM |
-| R6 | NautilusTrader | 分钟级/盘中 event-driven（Rust 内核天花板） |
-| R7 | QuantConnect LEAN | 全球多资产全功能平台（北极星） |
-
-**护城河认知**：完整对标 LEAN(5★) 是十几年积累，ditto 终态约 4.5-4.7★，永远追赶。差异化护城河在 **AI 原生 + A 股本土 + 数据治理严谨度**（非 LEAN 强项的多资产广度/社区生态），不必在 LEAN 强项硬拼。
-
-和已有 A-D 阶段的关系：
-
-- R1-R4 对应当前 `阶段 A：日级人工交易闭环深化` 的产品化展开。
-- R5 对应 `阶段 B：AI 能力注入`。
-- R6 对应 `阶段 C：分钟级/盘中架构演进`。
-- R7 对应 `阶段 D：全球化/机构化`。
-
-## 5. 当前基线
-
-当前系统状态按产品闭环口径从严评估：
-
-| 能力 | 状态 |
-|---|---|
-| 工程架构 | 强。12 包边界和质量门禁成熟 |
-| 数据治理 | 强。PIT、catalog、promotion、source-health、lineage 体系完整 |
-| A 股 ETF/个股日频数据 | 可用但历史覆盖和写入性能仍需增强 |
-| 策略与信号 | primitives 具备，但真实 daily-decision ready 链路还受策略定义发布阻塞 |
-| 回测 | 日频严谨性较好，缺实验管理、参数扫描、walk-forward |
-| 仓位与优化 | v1 可用，行业级优化能力不足 |
-| 风险与复盘 | 规则和报告雏形具备，连续状态、审计和产品展示不足 |
-| 前端 | Trading 域 live 接通，其他域多为 prototype-only |
-| AI/Agent | 占位和原型为主，无正式 runtime |
-| 分钟级/盘中 | 尚未进入体系化实现 |
-
-### 代码探索佐证（2026-07-10，基于源码 grep + LOC + Read，非文档声明）
-
-> 修正若干「文档声明 vs 代码实际」偏差，供各 R 阶段施工参考，避免返工。
-
-- **回测涨跌停已实现**：`AShareFillModel`（`backtest/simulation/fill.py:123-204`）有完整涨跌停/停牌/收盘竞价规则矩阵。真实缺口是 **手数规整 + 可成交量/流动性解释 + 订单 round 后 cash/remainder 解释**（R1 A2 小修），非涨跌停。
-- **组合优化是伪均值方差**：`MeanVarianceAllocator`（`portfolio/rebalancing/optimization.py`）注释明说「deliberately avoids a solver dependency」——对角协方差反方差 + water filling，**非真均值方差**。R4 引 `cvxpy` 做真优化（风险平价/带约束均值方差/有效前沿）。
-- **数据 promotion ≠ 默认 maturity**：默认 registry 仍 experimental 分类；RC1 已对含 stock/macro 的 8 个数据集 promotion override。真问题是 **历史深度浅（近期 2 月）/ 默认环境可迁移性 / fx·commodity 弱**（R2），非「全未晋级」。
-- **AI runtime 0★ / adjacent 1★**：无 LLM/Agent SDK 集成（`analysis.experiments` 空命名空间），但有 hypothesis 桥接点 + 前端 AI Review 原型 + Experience Memory。R5 是「接入」非「自研」。
-- **R1 多数 primitives 已存在**：`daily-decision` API + readiness(ready/review/blocked)（`apps/api/routes/trade_query_routes.py:186`）、手工 fill + intent status + `SignalDeviationQueryFacade`（`application/commands/trade.py` + `queries/deviation.py`）、策略 draft/published + version + sqlite store（`strategy/storage/sqlite/strategy_spec_store.py`）。**R1 本质是集成 + 产品化，非建新模块**；唯一真阻塞是 seed 策略未 publish 到 store。
-- **分钟级架构级空白**：所有 `Bar` 是日级 OHLC；`Synchronizer`/`TimeSlice`/`EngineLoop` 全日级 step；无频率枚举。R6 须先确保抽象留扩展点。
-
-当前最适合的产品定位：
-
-> A 股 ETF/个股日频量化研究与人工交易决策系统的内部 Beta 前夜。
+每一行的最终证据全部通过后，该维度才能标记 10/10。
 
 ## 6. R0：产品边界固化
 
 ### 目标
 
-把 Ditto v1 从「能力集合」收敛为「日频人工交易信号产品」，并为后续阶段建立统一验收语言。
+让团队在每次迭代前明确产品是谁、近期不做什么、能力事实来自哪里。
 
-### 范围
+### 已交付
 
-必须完成：
+- 全球全品类北极星与 A 股日频优先路径。
+- 10 维能力基准、证据等级和 release gate。
+- R0-R7 命名和本文档职责。
+- 阶段 A 旧计划降级，R1 成为唯一施工图。
 
-- 定义 v1 产品主流程：数据更新 -> 策略运行 -> 信号生成 -> 决策复核 -> 手工成交录入 -> 偏差/复盘。
-- 明确近期不做全自动交易、不做真实 broker adapter、不做分钟级交易执行。
-- 建立产品级能力 maturity 表，区分 backend primitive、API contract、frontend product、daily operation 四种状态。
-- 确认 R1 只以 A 股日频 ETF/个股为主线，宏观/商品作为辅助研究数据。
+### 持续任务
 
-不做：
-
-- 不引入新数据源大扩张。
-- 不启动 AI-Agent runtime。
-- 不重构回测引擎。
-
-### 验收
-
-- 有一份产品能力清单，所有能力标注 `ready / partial / experimental / reserved`。
-- 有一份 R1 验收清单，包含 API、前端、数据和真实运行证据。
+- 每个 release 后重跑能力审计。
+- 记录 ADR、OpenAPI 兼容策略和 schema migration 清单。
+- 删除过期命令、动态社区数据和未经证据支持的营销结论。
 
 ## 7. R1：日频人工交易 MVP
 
 ### 目标
 
-每天打开系统，可以看到真实信号、目标仓位、建议操作、风险提示，并能人工记录成交和复盘偏差。
+完成单操作者、单账户、单执行 sleeve、本机使用的 A 股日频人工决策闭环，通过 G1。
 
 ### 核心工作包
 
-1. 策略定义发布链路
+1. latest-published 策略语义与 seed bootstrap。
+2. 账户/持仓 baseline 和稳定 sleeve identity。
+3. 复用 execution planner 生成 A 股建议数量。
+4. 持久化完整 signal package，区分零调仓、失败与缺失。
+5. deterministic EOD batch、同日重跑幂等和冲突处理。
+6. 多笔部分成交、append-only 更正和 effective-fill read model。
+7. Daily Decision V2 readiness 真值表与 API。
+8. `ditto-app` Trading live 工作台。
+9. runbook、备份恢复、真实数据 evidence 和 loopback-only 验收。
 
-   当前 first-real-use evidence 已说明 `publish-signals` 会因 strategy definition 未入 catalog 而阻塞。R1 必须补齐 seed 策略定义发布流程，让至少一个 ETF 策略和一个个股/行业策略能稳定进入 catalog。
-
-2. EOD 信号闭环
-
-   EOD pipeline 应在真实数据下完成 ingestion、materialization、strategy run、signal package publish，并产出可查询的 trade intents。
-
-3. Daily Decision V2
-
-   当前 Daily Decision 主要聚合 signal intents、positions、deviation、pnl。R1 需要升级为真实交易决策报告，至少包含：
-
-   - 数据健康和 freshness。
-   - 策略运行状态。
-   - 信号摘要和个券明细。
-   - 当前仓位、目标仓位和建议买卖。
-   - 基础风险提示。
-   - 成交偏差和 PnL。
-   - readiness status 和阻塞原因。
-
-4. Trading 前端真实态
-
-   ditto-app `/trading`、`/trading/signals`、`/trading/portfolio`、`/trading/orders` 从 live empty state 升级为真实可复核工作台。
-
-5. 手工交易与复盘
-
-   保留 manual/paper 口径：用户复核信号后，系统只记录 intent status、manual fill、actual position、deviation 和 post-trade notes。
+逐 task 文件、测试和命令以 `docs/plans/2026-07-10-r1-implementation-plan.md` 为准。
 
 ### 验收
 
-- 真实环境下 `GET /api/v1/trade/daily-decision` 对至少一个 seed strategy 返回 `ready` 或明确可人工复核的 `review`，不能停留在 `no signal intents available`。
-- EOD 运行后可查询最新 signal package 和 trade intents。
-- 前端展示真实信号、仓位、建议操作和成交录入，而不是 mock 或 blocked 空态。
-- 手工 fill 录入后，偏差报告能反映实际成交状态。
-- R1 evidence 写入 `docs/acceptance/`。
+- 有交易与零调仓两个交易日都可完整解释。
+- 相同输入重跑不重复，输入变化和已有成交时 fail closed。
+- 一个 intent 支持同日多笔成交和可追溯更正。
+- `VITE_USE_MOCK=false` 下完成 ready/review/blocked、成交和复盘。
+- 默认测试确定性通过，另有一次显式真实数据验收。
+- 无认证时只监听 loopback，数据库可备份和恢复。
 
 ## 8. R2：A 股日频数据与研究升级
 
 ### 目标
 
-让 A 股日频研究不再只依赖 RC1 小样本，形成可支撑策略开发和回测的较长历史数据层。
+把 A 股 ETF、个股、宏观和商品日级数据从“能接入”提升到“可长期研究和决策”。
+
+### 数据范围
+
+- ETF/stock daily、复权因子、指数成分/权重、证券状态、交易日历。
+- 财务三表、估值、分红、拆并股、停复牌和退市等公司行动。
+- 国内外宏观指标的发布日、修订版本和 `knowledge_date`。
+- 商品指数/现货/主力连续的第一批明确数据产品；期货合约级留 R7。
 
 ### 核心工作包
 
-- 解决 market backfill 写入瓶颈，降低逐日 SQLite 写锁争用。
-- ETF、指数、个股日线历史扩展到至少 3-5 年，优先覆盖 2018 年以来。
-- 完善复权、停牌、涨跌停、ST/退市、行业分类、指数成分。
-- 将宏观数据扩为可研究集合：利率、社融、PMI、CPI/PPI、汇率、商品价格。
-- 商品大宗先作为日频观察与宏观因子数据，不作为交易执行品种。
+1. 数据集逐一建立 owner、schema、source、历史深度、freshness、DQ、PIT 与许可记录。
+2. survivorship-bias-safe universe 和公司行动调整。
+3. source fallback 与 provider 差异对账，不因接入数量提升 maturity。
+4. 日级因子基础库、物化、IC/衰减/换手/稳定性诊断。
+5. 数据工作台展示覆盖、滞后、失败、修复和 promotion evidence。
 
 ### 验收
 
-- 核心 A 股日频数据集有长期历史、freshness、schema、row count、source snapshot 证据。
-- stock + macro 从 experimental 转为可默认研究使用，promotion evidence 完整。
-- 至少 3 个策略模板可基于扩展数据运行回测。
+- 每个 promoted 数据集都有独立 evidence，不做批量口头提级。
+- 任意研究样本可还原当时可知数据、universe 和 source snapshot。
+- 供应商缺失/限流/修订可降级或阻塞，并有 runbook。
+- 数据使用权和再分发边界已记录；不明确的数据不得进入外部 Beta。
 
-## 9. R3：回测、选股、策略管理产品化
+## 9. R3：回测、选股与策略管理产品化
 
 ### 目标
 
-让用户可以创建、运行、比较、晋级策略，而不是只通过后端 primitives 和 CLI 手工拼流程。
+让研究员无需修改系统内部代码即可创建、比较、复现、发布和回滚日频策略。
 
 ### 核心工作包
 
-- 回测 API 暴露关键参数：`participation_rate`、`fill_mode`、成本模型、执行延迟、benchmark。
-- 增加批量回测、参数扫描、walk-forward、策略对比和实验记录。
-- 建立策略生命周期：`draft -> research -> candidate -> paper -> production`。
-- 选股工作流产品化：universe、过滤条件、因子打分、组合构建、结果解释。
-- 增加基础策略模板：ETF 轮动、低波红利、质量价值、动量反转、宏观择时。
+1. 统一 StrategySpec、参数 schema、universe、factor set、allocator、risk 和 execution assumptions。
+2. 批量回测、walk-forward、滚动训练/验证和 baseline comparison。
+3. 收益、风险、换手、容量、交易成本、行业/因子/个股归因。
+4. 选股结果解释、候选池、排除原因和历史稳定性。
+5. 策略 draft/review/published/deprecated 生命周期、审批、版本、diff 和 rollback。
+6. 研究工作台接真实 API，支持实验列表、比较、报告、artifact 和 lineage。
+7. 防数据窥探、过拟合与多重检验的研究门禁。
 
 ### 验收
 
-- 一个策略可以从 draft 创建到 research 回测，再晋级为 candidate/paper。
-- 每个策略有回测报告、因子报告、风险报告、晋级建议。
-- 参数实验可以被比较和复现。
-- 发布后的策略能进入 R1 的 EOD 信号链路。
+- 同一 commit、spec、snapshot 和 seed 可复现同一报告。
+- 研究结果能一键形成候选 published version，但发布必须人工审批。
+- 选股、回测与 R1 signal 的策略/数据语义一致。
+- G2 日频研究 Beta 的 API、备份、数据许可和复现 Gate 通过。
 
-## 10. R4：组合优化、风险、复盘工作台
+## 10. R4：组合优化、风险与复盘工作台
 
 ### 目标
 
-让系统不仅回答「买什么」，还能解释「买多少、为什么、风险在哪里、执行后偏差如何」。
+把“有信号”提升为“仓位可解释、风险可控、执行后可复盘”的日频决策产品。
 
 ### 核心工作包
 
-- 引入约束优化器，支持最大权重、现金比例、换手约束、行业/风格暴露、交易成本和流动性约束。
-- 在现有 mean-variance v1 基础上引入更完整 optimizer：constrained mean-variance、risk parity、HRP 或 Black-Litterman 可分阶段推进。
-- 完善风险：集中度、回撤、波动、VaR、行业/风格暴露、压力测试。
-- 建立 post-trade 复盘：信号 vs 实际成交、回测 vs 实盘、成本拖累、贡献归因。
-- 在 Daily Decision 中解释目标仓位来源和风险约束。
+1. 受约束均值方差、风险平价、风险预算、Black-Litterman 和可行域/有效前沿。
+2. 交易成本、税费、换手、流动性、行业、个股、风格和现金约束。
+3. 组合/因子风险、压力测试、情景分析、drawdown budget 与 risk attribution。
+4. `RiskGate` 状态持久化、崩溃恢复、typed audit 和风险事件流。
+5. 多 sleeve 账户归因、成交/持仓/资金对账与偏差根因。
+6. 决策前比较 target/optimized/executable，决策后比较 signal/order/fill/position。
 
 ### 验收
 
-- 每个目标仓位都有 optimizer input、constraint、risk/cost explanation。
-- Daily Decision 能说明建议交易的风险和成本影响。
-- 周度/月度复盘报告可自动生成。
+- 求解不可行、数值失败或数据缺失时有确定性降级，不输出伪最优解。
+- 每个风险阻塞可追溯到规则、输入、阈值和人工处置。
+- 账本重建与存量快照一致，偏差和 PnL 可解释。
+- G3 决策工作台 Beta 的 SLO、告警、runbook 和恢复 Gate 通过。
 
 ## 11. R5：AI Copilot / Agent v1
 
 ### 目标
 
-AI 首先作为投研、解释和审批式建议助手，不直接自动交易。
+在稳定数据、策略、回测、组合和 Daily Decision 上增加 grounded AI，不让模型成为新的事实源或隐形交易者。
 
-### 分层
+### 技术选择
 
-L0 基础设施：
+首个 runtime 采用 OpenAI Agents SDK，使用其 agents、function tools、handoffs、guardrails、sessions、tracing 与 human-in-the-loop interruption/resume。选择是当前路线，不等于当前已有能力，也不阻止未来在模型边界接入其他 provider。
 
-- LLM provider 网关。
-- Agent runtime。
-- Tool registry，把 ditto API、reports、artifacts 包装为可审计工具。
-- Permission 和 audit。
-- Tracing 和 eval。
+### 分层交付
 
-**技术选型（2026-07-10 决策）：Agent runtime 用 [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)（`openai-agents`，不自研 LLM）。** 其原语与 ditto 架构天然映射，最大化复用现有强项：
+**R5.0 评测与安全底座**
 
-| OpenAI Agents SDK 原语 | ditto 映射（复用而非新建） |
-|---|---|
-| Tools（function tools） | 包装 ditto API/报告/artifacts 为 LLM 可调工具 |
-| Handoffs（多 agent 委托） | analyst/researcher/trader/risk/ops 分工（L3） |
-| Guardrails（输入/输出校验） | **复用 `RiskGate` pre/post-trade check 作为 agent 输出 guardrail** |
-| Sessions/Memory | **复用 ditto `Experience Memory`** |
-| Tracing（自动全链路） | 接入 OpenTelemetry 可观测 |
-| Resumable Approval（可恢复审批） | 契合「人工交易」：agent 产建议 → 人工审批 → 执行 |
+- 建立宏观解读、报告解读、策略生成、仓位建议的黄金样本与评分 rubric。
+- 定义 token/成本/延迟预算、模型版本、prompt/version、结构化输出 schema。
+- 处理 prompt injection、越权工具调用、敏感数据、幻觉引用和 trace 脱敏。
 
-> 依赖 `openai-agents` 已授权（与 `cvxpy` 同批）。AI 是「接入」非「自研」——ditto 的 daily-decision 信号 + 因子 IC + PIT 严格数据是 agent 的 grounding 底座，正是 OpenBB Copilot/TradingAgents 缺的「可信数据层」。
+**R5.1 只读 Copilot**
 
-L1 只读 Copilot：
+- 回测、因子、组合、风险和 Daily Decision 报告解读。
+- 宏观/市场信息分析、带来源 RAG、受控自然语言查询。
+- AI 生成的结论必须附 snapshot、artifact、tool result 与不确定性。
 
-- 解释今日信号。
-- 总结宏观、市场、行业和商品信息。
-- 解读回测、因子和风险报告。
-- Text-to-SQL 或受控数据查询。
-- RAG 研报/公告/内部文档问答。
+**R5.2 策略与建议辅助**
 
-L2 审批式建议：
+- StrategySpec/DSL 生成、参数解释、代码审计和测试建议。
+- 仓位与买卖建议只调用 Ditto tools，并经过 deterministic risk guardrail。
+- 所有写操作与建议发布使用 HITL；状态可序列化并恢复。
 
-- 生成策略草稿和因子表达式。
-- 提出仓位和买卖建议。
-- 给出风险复核意见。
-- 生成复盘总结。
+**R5.3 多 Agent（有证据才启用）**
 
-L3 多 Agent 投研：
+- analyst/researcher/portfolio/risk 角色采用 manager-as-tools 或 handoff。
+- 只有单 Agent 基线评测证明多 Agent 提升质量时才增加复杂度。
+- Experience Memory 只保存经验证反馈，不自动把模型输出当经验真相。
 
-- Research Agent 提出假设。
-- Strategy Agent 生成实验。
-- Portfolio Agent 给出仓位建议。
-- Risk Agent 做反方检查。
-- Ops Agent 检查数据和 EOD 故障。
+### 运营要求
 
-### 硬约束
-
-- Agent 不得直接下单。
-- 所有建议必须引用数据、报告或代码来源。
-- 所有写操作必须经过人工审批和审计。
-- AI 输出不得绕过 RiskGate 或 maturity gate。
+- tracing 记录模型、tool、handoff 和 guardrail，但敏感输入/输出默认不上传。
+- sessions 负责会话连续性，不替代 Ditto 的长期研究 artifact 和审计账本。
+- 每次运行记录模型、prompt、tools、usage、cost、latency、result 和人工反馈。
+- Agent 不直接连接券商；R5 仍以人工建议为边界。
 
 ### 验收
 
-- AI 可以基于真实 Ditto 数据回答，不依赖 mock。
-- AI 生成策略草稿后，必须经过测试、回测和人工发布。
-- Agent tool call、permission、audit、eval 均有证据。
+- 黄金集质量、grounding、拒答、安全、成本和延迟指标达到预设阈值。
+- 无来源结论、tool 失败和越权请求 fail closed。
+- 敏感 tool 调用可暂停、批准/拒绝并恢复，审批记录可审计。
+- G4 外部 Beta 前完成认证/RBAC、数据权利、隐私和安全 Gate。
 
 ## 12. R6：分钟级与盘中信号 Beta
 
 ### 目标
 
-在日频产品稳定后，扩展分钟级数据、盘中因子和盘中信号观察。R6 仍以提醒和观察为主，不引入自动交易。
+在不破坏日频正确性的前提下，支持分钟级数据、增量因子、盘中风险和人工盘中信号。
 
 ### 核心工作包
 
-- 建立分钟级 bar 数据模型和 storage。
-- 扩展 calendar/session/late-arrival 语义。
-- 支持分钟级 rolling、当日累计和盘中截面因子。
-- 增加 intraday signal snapshot。
-- 增加前端 intraday monitor：信号变化、触发条件、风险变化、数据新鲜度。
-- 调度从 EOD 扩展到 intraday jobs。
+1. 显式 frequency、event time、knowledge time、market session、timezone 和 sequence contract。
+2. minute bar 分区、压缩、增量摄取、缺口检测、回补和 retention。
+3. event-driven clock、Synchronizer/TimeSlice 演进与确定性 replay。
+4. streaming/incremental factor state、checkpoint 和崩溃恢复。
+5. 盘中 signal package、去重、过期、节流和状态变化通知。
+6. 连续 risk state、行情中断、数据延迟、kill switch 和降级到日频。
+7. 事件驱动回测与盘中 runtime 的同语义验证。
 
 ### 验收
 
-- 至少 ETF 分钟级数据和盘中信号观察可用。
-- 盘中链路不破坏 R1-R4 的日频主流程。
-- 每个盘中信号有时间戳、数据新鲜度和可复现证据。
+- minute 数据 freshness、完整性、延迟和回补达到明确 SLO。
+- 相同事件序列 replay 得到相同因子和信号。
+- 乱序、重复、迟到、断流、午休、跨日和重启均有测试。
+- 盘中建议仍由人审批；券商 adapter 不是 R6 Beta 的必需条件。
 
-## 13. R7：全球全品类扩展
+## 13. R7：全球全品类与机构化
 
 ### 目标
 
-从 A 股本土日频产品扩展为多市场、多资产、多币种平台。
+把已验证的日频、研究、AI 和盘中能力扩展为多市场、多资产、多账户平台。
 
-### 扩展顺序
+### 建议扩展顺序
 
-1. A 股 ETF、个股、指数、宏观、商品日频。
-2. 港股和美股 ETF/指数。
-3. FX、商品现货、全球宏观数据。
-4. 期货和连续合约。
-5. 期权、债券等复杂品类。
+1. 港股/美股 ETF 与股票。
+2. 国内商品期货与主力/连续合约研究。
+3. 全球期货、外汇与利率产品。
+4. 期权及其他非线性产品。
+
+每一类资产都要独立通过数据、市场规则、回测、风险、账户、合规与运营 Gate，不能只扩一个 `asset_class` enum。
 
 ### 平台能力
 
-- 多交易所 calendar。
-- 多币种和 FX conversion。
-- futures roll 和 contract mapping。
-- corporate actions。
-- asset-class-specific risk model。
-- global data source abstraction。
+- 跨市场日历、时区、币种、FX conversion、税费、交收与公司行动。
+- 期货合约链、换月、保证金、结算价、涨跌停；期权 Greeks、波动率面和行权指派。
+- 多账户、多 sleeve、多币种现金、权限、租户隔离和机构审计。
+- 多区域部署、灾备、容量、成本、SLA 和支持体系。
+- 可选 broker/execution adapters，保持人工审批和 kill switch。
 
 ### 验收
 
-- 新资产类别接入不破坏 A 股主流程。
-- 每个资产类别都必须拥有数据、回测、风险、信号和前端展示的最小闭环。
-- experimental asset class 不得被文档或 API 描述为 production-ready。
+- 每个市场有 authoritative rule book、golden cases 和真实对账证据。
+- 组合 NAV、FX、税费、公司行动和保证金可逐日重建。
+- G6 全球机构 Gate 通过后才对外宣称全球全品类。
+- 十维 10/10 必须逐维重新审查，不能由 R7 标签自动授予。
 
-## 14. 跨阶段依赖
+## 14. 横向工程轨道
+
+这些工作不能留到 R7，一旦进入对应 Gate 就必须完成。
+
+| 轨道 | R1 | R2-R3 | R4-R5 | R6-R7 |
+|---|---|---|---|---|
+| 安全与身份 | loopback、密钥不落盘/日志 | secret rotation、依赖扫描 | auth/RBAC、租户隔离、威胁建模 | 区域隔离、broker secrets、渗透测试 |
+| Schema 与 API | migration 清单、OpenAPI 集成测试 | 版本/兼容策略、备份恢复 | deprecation、审计事件版本 | 多区域迁移、向后兼容回放 |
+| 可靠性与运维 | runbook、备份恢复、结构化 outcome | freshness/DQ SLO、告警 | 服务 SLO、事件响应、容量 | 盘中延迟/可用性、灾备演练 |
+| 数据权利与合规 | 内部使用边界 | 供应商许可、再分发清单 | 投资建议边界、隐私、留存 | 各市场监管、跨境和机构政策 |
+| 质量与证据 | unit/integration/E2E/live 分层 | 数据与研究复现 | 风险、账本与 UX 验收 | replay、性能、全球 golden cases |
+| AI 模型风险 | 不启动 runtime | 准备可引用 artifacts | eval 数据与权限基础 | R5 后持续 eval、成本、模型/提示版本 |
+
+## 15. 发布 Gates
+
+| Gate | 面向对象 | 必须通过 |
+|---|---|---|
+| G1 内部本机 Beta | 单个开发/交易操作者 | R1 清单、loopback、恢复、真实数据 evidence |
+| G2 日频研究 Beta | 内部研究用户 | R3 可复现、数据许可、API 兼容、备份恢复 |
+| G3 决策工作台 Beta | 内部投资决策用户 | R4 组合/风险/账本、SLO、告警、runbook |
+| G4 受控外部 Beta | 邀请用户 | auth/RBAC、隔离、安全、隐私、数据再分发、支持流程 |
+| G5 A 股商业产品 | 付费/正式用户 | 法务合规、投资建议边界、授权、审计、灾备、SLA、客服与计费 |
+| G6 全球机构版 | 多市场机构用户 | R7 市场规则、多账户/租户、区域合规、容量与机构运营 |
+
+G5 是独立横向 Gate，可以在 R7 之前完成；R7 不是 A 股商业化前置条件。任何 Gate 都不能由功能平均分替代。
+
+## 16. 依赖关系
 
 ```text
-R0 product boundary
-  -> R1 daily manual trading MVP
-    -> R2 A-share daily data/research depth
-      -> R3 backtest/selection/strategy management
-        -> R4 portfolio/risk/review workbench
-          -> R5 AI Copilot/Agent
-          -> R6 intraday beta
-            -> R7 global multi-asset
+R0
+ └─ R1 ── G1
+     └─ R2
+         └─ R3 ── G2
+             └─ R4 ── G3
+                 ├─ 安全/合规横向工程 ── G4/G5
+                 └─ R5
+                     └─ R6
+                         └─ R7 ── G6
 ```
 
-可以并行但必须受控：
+允许的准备性并行：
 
-- R1 和 R2 可部分并行：R1 以当前 RC1 数据打通闭环，R2 解决历史和数据广度。
-- R3 可在 R1 ready 后启动，不应等待 R2 全部完成。
-- R5 和 R6 都以 R4 的日频决策工作台稳定为前置；二者不是严格串行，R5 可以更早预研，R6 应等日频主链路稳定后再启动。
-- R5 的 L0 基础设施可以在 R3/R4 稳定后预研，但不应早于 Daily Decision 和 strategy lifecycle 稳定。
-- R6 不应早于 R1-R4；分钟级会放大所有日频未闭环的问题。
+- R1 期间可调研 R2 数据许可，但不启动大规模 ingestion 改造。
+- R3 后期可制作 AI eval 数据集，但 R5 runtime 仍依赖 R4 稳定 artifacts。
+- R5 与 R6 可在团队资源充足时并行，但共享 API/schema 需先冻结。
+- 安全、备份、SLO、许可和合规按 Gate 持续推进，不受功能 release 串行限制。
 
-## 15. 优先级
+## 17. 优先级与资源配置
 
-P0：
+### P0：现在
 
-- seed 策略发布链路。
-- EOD -> signal package -> daily-decision ready。
-- Daily Decision V2。
-- Trading 前端真实信号态。
-- 手工成交和偏差复盘。
+- 只执行 R1 九个 task。
+- R1 过程中发现的非阻塞需求进入 R2+ 候选池，不顺手扩 scope。
+- 数据库 schema task 在执行前单独审批。
 
-P1：
+### P1：G1 后
 
-- A 股历史数据扩容和写入瓶颈治理。
-- 回测参数、实验对比、策略生命周期。
-- 组合优化 v2。
-- 风险和复盘报告。
+- 先做 R2 数据产品，再做 R3 研究产品。
+- 真实用户每天使用 R1 工作流产生的摩擦，优先回流到 R2/R3。
 
-P2：
+### P2：G2/G3 后
 
-- 宏观/商品研究数据。
-- AI 只读 Copilot。
-- 情绪/文本因子。
-- 策略代码生成和审计。
+- R4 完成可靠组合与风险事实，R5 才接 AI 建议。
+- AI 与分钟级分别立项，避免两个高不确定性架构改造同时压在核心团队上。
 
-P3：
+### P3：验证产品价值后
 
-- Agent 审批式投研。
-- 分钟级/盘中信号。
-- 全球多资产。
+- R7 按市场/资产逐个立项，不启动“全球全品类大爆炸”项目。
 
-## 16. 开发治理
+## 18. 开发治理
 
-每个阶段启动前必须满足：
+1. 每个 release 在施工前重新做 code exploration 和 mini-design。
+2. 计划必须列出目标、非目标、事实源、失败状态、schema/API 影响、测试和回滚。
+3. 数据库 schema、新依赖、CI/CD、架构边界和环境配置变更遵循人工审批规则。
+4. API 变更必须有 integration test、OpenAPI diff 和前端 codegen 验证。
+5. migration 必须有前向、回滚、旧数据兼容和备份恢复测试。
+6. 默认测试使用确定性 fixture；live acceptance 单独标记并保留证据。
+7. 每个 task 独立提交；跨仓库提交分别保持可回滚。
+8. release 结束填写 evidence pack，再更新评分、maturity 和路线图状态。
+9. 每季度复核范围和投入；每半年复核外部对标。
+10. 用户需求、事故和验收失败优先于计划中的主观排序。
 
-- 有单独 implementation plan。
-- 明确涉及的 package boundary。
-- 明确 API contract 和 maturity。
-- 明确测试层级：unit、integration、golden、acceptance。
-- 明确真实数据 evidence 或 mock/prototype 限制。
+## 19. 风险与缓解
 
-每个阶段结束前必须满足：
-
-- 后端 `pixi run -e dev check` 通过。
-- 涉及架构边界时 import-linter 和 architecture smell check 通过。
-- 前端阶段需要 ditto-app 独立 `bun run check` 和必要 browser smoke。
-- 验收证据写入 `docs/acceptance/` 或对应 review/report 文档。
-- capability maturity 文档同步更新。
-
-## 17. 风险与缓解
-
-| 风险 | 影响 | 缓解 |
+| 风险 | 早期信号 | 缓解 |
 |---|---|---|
-| 全球全品类目标过早扩散 | 日频产品继续不成形 | R1-R4 只服务 A 股日频人工交易主线 |
-| AI 过早启动 | 形成演示型功能，无法落地交易决策 | R5 前置条件设为 Daily Decision 和 strategy lifecycle 稳定 |
-| 分钟级过早启动 | 数据/调度/回测复杂度爆炸 | R6 后置，先留抽象扩展点 |
-| 数据历史扩容受写入瓶颈限制 | 回测和因子研究可信度不足 | R2 专门处理 backfill 性能和批量写入 |
-| 前端继续 prototype 化 | 后端能力无法产品化 | R1/R3/R4 均设置前端真实态验收 |
-| optimizer/risk 引入复杂依赖 | 破坏包边界或 CI 成本上升 | 新依赖必须在阶段计划中 mini-design 和架构检查 |
+| 计划膨胀 | R1 混入 AI/分钟/优化 | 严格 non-goals，新增项迁入后续 release |
+| 文档与代码漂移 | 命令、路径、DTO 不存在 | 每个 release 开始复核源码，CI 加文档引用检查 |
+| 数据“有但不可用” | 历史浅、延迟、许可不清 | dataset-level evidence 与 promotion gate |
+| 重跑破坏交易账本 | 重复 intent/fill 或静默覆盖 | stable key、checksum、append-only、冲突 fail closed |
+| 前端掩盖后端缺失 | live 模式展示 mock | Trading domain 禁止 live fallback，契约测试 |
+| AI 输出像事实 | 无引用、越权调用 | grounded tools、structured output、eval、HITL、guardrails |
+| 实时化破坏日频 | 时间语义混乱、结果不一致 | frequency/clock contract、replay、日频 regression suite |
+| 全球化只扩枚举 | NAV/税费/交收错误 | 每市场 golden cases 与独立 Gate |
+| 商业化后补安全合规 | 外部 Beta 才发现授权/RBAC 缺失 | G4/G5 横向轨道提前推进 |
+| 单人关键依赖 | runbook 不可执行 | 恢复演练、证据包、自动化 preflight 和可观察 outcome |
 
-## 18. 最近一个实施切片
+## 20. 产品成功指标
 
-下一份实施计划应聚焦 R1，不要同时启动 R2-R7。R1 推荐拆为：
+### R1-R4 日频产品
 
-1. 策略定义发布链路。
-2. EOD 信号生成闭环。
-3. Daily Decision V2。
-4. Trading 前端真实信号态。
-5. 手工成交、偏差和复盘 evidence。
+- 交易日 EOD 成功率、数据按时率、blocked 原因分布和恢复时间。
+- 建议复核耗时、建议到 fill 覆盖率、偏差、换手、费用和未解决冲突。
+- 回测/策略复现率、研究周期、发布频率和策略失效发现时间。
+- 组合/风险阻塞准确性、人工 override 率和账本重建一致率。
 
-已有 `docs/plans/2026-07-10-phase-a-implementation-plan.md` 可作为 R1/R2/R4 的候选素材，但需要在实际开工前按 R1 范围重新裁剪，避免把组合优化、风控连续性、数据 promotion 和前端 production 全部塞入第一批。
+### R5 AI
 
-## 19. 成功标准
+- grounded answer rate、引用正确率、tool success、guardrail 拦截和人工采纳率。
+- hallucination/unsafe action rate、单任务成本、P50/P95 延迟和恢复成功率。
+- 单 Agent 与多 Agent 的增益必须通过 eval 证明。
 
-短期成功：
+### R6-R7
 
-- 一个真实交易日后，系统能展示真实信号、目标仓位、建议操作和风险提示。
-- 用户能人工记录成交，并在系统里看到偏差和复盘。
-- 该流程可连续运行多个交易日，而不是一次性 smoke。
+- 数据与信号延迟、事件丢失/重复、replay 一致性和盘中恢复时间。
+- 各市场 NAV/FX/税费/交收 golden case 通过率。
+- SLO、灾备、租户隔离、安全与合规审计结果。
 
-中期成功：
+## 21. 最近一个实施切片
 
-- 策略可以被创建、回测、比较、晋级和发布。
-- 组合优化和风险解释进入每日决策。
-- AI 可以解释信号和报告，但仍受审批和审计约束。
+当前只启动 R1，并按以下顺序执行：
 
-长期成功：
+```text
+活动策略
+  → 账户基线
+  → 建议数量
+  → signal package / 幂等
+  → EOD outcome / 运营入口
+  → 成交账本
+  → Daily Decision V2
+  → ditto-app live
+  → G1 evidence
+```
 
-- Ditto 成为以 A 股本土和 AI 原生为差异化的全球多资产量化平台。
-- 每个资产类别都遵守数据治理、回测、风险、信号和产品展示的统一闭环。
+R1 未通过 G1 前，不启动 R2 正式施工、不接 AI runtime、不做分钟级改造。
