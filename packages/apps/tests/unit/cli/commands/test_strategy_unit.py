@@ -54,6 +54,11 @@ class TestStrategyCommandHelp:
         assert result.exit_code == 0
         assert "publish-signals" in result.output
 
+    def test_strategy_bootstrap_seeds_help_exists(self, runner: CliRunner) -> None:
+        result = runner.invoke(app, ["strategy", "bootstrap-seeds", "--help"])
+        assert result.exit_code == 0
+        assert "bootstrap-seeds" in result.output
+
 
 @pytest.mark.unit
 class TestStrategyCommandIntegration:

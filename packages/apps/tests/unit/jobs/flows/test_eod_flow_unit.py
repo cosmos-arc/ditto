@@ -122,7 +122,7 @@ class TestEodFlowHappyPath:
 
         # 策略 bundle mock: 无已发布策略
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = []
+        mock_catalog.list_latest_published.return_value = []
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),
@@ -189,16 +189,8 @@ class TestEodFlowHappyPath:
             version=2,
             status="published",
         )
-        spec_draft = StrategySpecRecord(
-            strategy_id="alpha_draft",
-            name="Alpha Draft",
-            spec_json={},
-            version=1,
-            status="draft",
-        )
-
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = [spec1, spec2, spec_draft]
+        mock_catalog.list_latest_published.return_value = [spec1, spec2]
 
         # 模拟 StrategyFacade
         mock_facade = mocker.MagicMock()
@@ -295,7 +287,7 @@ class TestEodFlowHappyPath:
         )
         target = self._make_target_portfolio("alpha_momentum", "run-001")
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = [spec]
+        mock_catalog.list_latest_published.return_value = [spec]
         mock_facade = mocker.MagicMock()
         mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
             run_id="run-001",
@@ -362,7 +354,7 @@ class TestEodFlowHappyPath:
 
         # 无策略
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = []
+        mock_catalog.list_latest_published.return_value = []
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),
@@ -529,7 +521,7 @@ class TestEodFlowStrategyPartialFailure:
             status="published",
         )
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = [spec]
+        mock_catalog.list_latest_published.return_value = [spec]
         mock_facade = mocker.MagicMock()
         mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
             run_id="run-no-publisher",
@@ -612,7 +604,7 @@ class TestEodFlowStrategyPartialFailure:
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = [spec1, spec2]
+        mock_catalog.list_latest_published.return_value = [spec1, spec2]
 
         mock_facade = mocker.MagicMock()
         from ditto_application.processes.execution.strategy_run_process import (
@@ -707,7 +699,7 @@ class TestEodFlowStrategyPartialFailure:
         target_bad = self._make_target_portfolio("alpha_bad_publish", "run-bad")
         target_good = self._make_target_portfolio("alpha_good_publish", "run-good")
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = [spec_bad, spec_good]
+        mock_catalog.list_latest_published.return_value = [spec_bad, spec_good]
         mock_facade = mocker.MagicMock()
         mock_facade.run_strategy_for_date_from_catalog.side_effect = [
             StrategyRunResult(
@@ -818,7 +810,7 @@ class TestEodFlowMaterializationFailure:
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = [spec]
+        mock_catalog.list_latest_published.return_value = [spec]
 
         mock_facade = mocker.MagicMock()
         from ditto_application.processes.execution.strategy_run_process import (
@@ -908,7 +900,7 @@ class TestEodFlowReturnValueStructure:
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = []
+        mock_catalog.list_latest_published.return_value = []
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),
@@ -966,7 +958,7 @@ class TestEodFlowReturnValueStructure:
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.list_specs.return_value = []
+        mock_catalog.list_latest_published.return_value = []
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),

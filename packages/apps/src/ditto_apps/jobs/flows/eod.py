@@ -93,9 +93,7 @@ def _run_strategies(
         if catalog is None:
             return [], True
 
-        published_specs = [
-            spec for spec in catalog.list_specs() if spec.status == "published"
-        ]
+        published_specs = catalog.list_latest_published()
 
         if not published_specs:
             return [], True

@@ -63,6 +63,26 @@ class TestStrategyQueryFacadeListSpecs:
 
         assert result == []
 
+    def test_list_latest_published_uses_published_catalog_query(self) -> None:
+        service = MagicMock(
+            spec=[
+                "list_specs",
+                "get_spec",
+                "list_versions",
+                "get_latest_published",
+                "list_latest_published",
+            ]
+        )
+        service.list_latest_published.return_value = [
+            _make_record("s-1", version=1, status="published")
+        ]
+        facade = StrategyQueryFacade(catalog_service=service)
+
+        result = facade.list_latest_published()
+
+        assert result == [_make_spec_info("s-1", version=1, status="published")]
+        service.list_latest_published.assert_called_once_with()
+
 
 class TestStrategyQueryFacadeGetSpec:
     """StrategyQueryFacade.get_spec — 委托 catalog_service 并转换为 StrategySpecInfo."""

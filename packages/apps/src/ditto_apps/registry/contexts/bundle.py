@@ -19,6 +19,7 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
+from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBootstrap
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
@@ -63,3 +64,4 @@ class StrategyBundle:
     run_service: RunLifecycleService | None = None
     run_writer: StrategyRunStatusWriter | None = None
     signal_package_publisher: SignalPackagePublisher | None = None
+    seed_bootstrap: SeedStrategyBootstrap | None = None

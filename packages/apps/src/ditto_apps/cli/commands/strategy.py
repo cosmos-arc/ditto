@@ -18,6 +18,28 @@ from ditto_apps.registry.contexts import create_strategy_bundle
 app = typer.Typer(help="运行策略与回测")
 
 
+@app.command("bootstrap-seeds")
+def bootstrap_seeds() -> None:
+    """幂等创建并发布内置 seed 策略。"""
+    with create_strategy_bundle() as bundle:
+        if bundle.seed_bootstrap is None:
+            raise typer.BadParameter("SeedStrategyBootstrap 未配置")
+        results = bundle.seed_bootstrap.run()
+    for result in results:
+        differences = ",".join(result.differences) or "none"
+        summary = " ".join(
+            (
+                f"strategy_id={result.strategy_id}",
+                f"status={result.status.value}",
+                f"version={result.version}",
+                f"differences={differences}",
+            )
+        )
+        typer.echo(summary)
+    if any(result.differences for result in results):
+        raise typer.Exit(code=1)
+
+
 def _build_run_config(
     strategy_id: str,
     mode: StrategyRunMode,
