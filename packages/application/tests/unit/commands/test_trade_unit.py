@@ -430,11 +430,13 @@ class TestUpdateIntentStatusHandler:
             "partially_filled",
             "cancelled",
             "expired",
+            "superseded",
         ) or set(call_kwargs["expected_current"]) == {
             "filled",
             "partially_filled",
             "cancelled",
             "expired",
+            "superseded",
         }
 
     def test_handle_raises_on_missing_intent(self) -> None:

@@ -421,6 +421,19 @@ class TestSaveIntent:
 
         assert svc.get_intent("NONEXISTENT") is None
 
+    def test_stable_intent_id_is_idempotent_but_conflicting_payload_fails(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        intent = _make_intent()
+
+        svc.save_intent(intent)
+        svc.save_intent(intent)
+
+        assert len(svc.list_intents("STRAT-A")) == 1
+        with pytest.raises(ValueError, match="Intent ID conflict"):
+            svc.save_intent(_make_intent(quantity=2000))
+
 
 class TestListIntents:
     """list_intents 测试."""

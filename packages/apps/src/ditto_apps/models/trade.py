@@ -28,9 +28,14 @@ class RecordFillRequest(BaseModel):
 class UpdateIntentStatusRequest(BaseModel):
     """更新意图状态请求."""
 
-    status: Literal["pending", "filled", "partially_filled", "cancelled", "expired"] = (
-        Field(description="新状态")
-    )
+    status: Literal[
+        "pending",
+        "filled",
+        "partially_filled",
+        "cancelled",
+        "expired",
+        "superseded",
+    ] = Field(description="新状态")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 

@@ -24,6 +24,7 @@ class ArtifactKind(StrEnum):
     SIGNAL_SNAPSHOT = "signal_snapshot"
     TARGET_PORTFOLIO = "target_portfolio"
     REBALANCE_PLAN = "rebalance_plan"
+    SIGNAL_PACKAGE = "signal_package"
     # 执行层输出
     ORDER_LOG = "order_log"
     FILL_LOG = "fill_log"

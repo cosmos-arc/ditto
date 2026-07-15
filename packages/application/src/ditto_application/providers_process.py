@@ -301,11 +301,13 @@ class AppProcessProvider(Provider):
         self,
         position_reader: StoredPositionReader,
         intent_port: IntentDataPort,
+        artifact_service: StrategyArtifactService,
     ) -> SignalPackagePublisher:
         """Signal package publisher backed by execution intent storage."""
         return SignalPackagePublisher(
             position_reader=position_reader,
             intent_port=intent_port,
+            artifact_service=artifact_service,
         )
 
     @provide

@@ -30,14 +30,22 @@ _VALID_INTENT_STATUSES = {
     "partially_filled",
     "cancelled",
     "expired",
+    "superseded",
 }
 
 _VALID_TRANSITIONS: dict[str, set[str]] = {
-    "pending": {"filled", "partially_filled", "cancelled", "expired"},
+    "pending": {
+        "filled",
+        "partially_filled",
+        "cancelled",
+        "expired",
+        "superseded",
+    },
     "partially_filled": {"filled", "partially_filled", "cancelled", "expired"},
     "filled": set(),  # terminal
     "cancelled": set(),  # terminal
     "expired": set(),  # terminal
+    "superseded": set(),  # terminal
 }
 
 

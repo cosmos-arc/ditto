@@ -57,7 +57,12 @@ class TradeService:
     # ------------------------------------------------------------------
 
     def save_intent(self, record: SignalRecord) -> None:
-        """保存交易信号记录."""
+        """按 stable intent ID 幂等保存；不同 payload 拒绝覆盖。"""
+        existing = self._readers.intent.get(record.intent_id)
+        if existing is not None:
+            if existing == record:
+                return
+            raise ValueError(f"Intent ID conflict: {record.intent_id}")
         self._writers.intent.save(record)
 
     def get_intent(self, intent_id: str) -> SignalRecord | None:

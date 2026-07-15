@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from ditto_application.processes.execution.ports import PositionReader
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_execution.models import SignalRecord
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.models import TargetPortfolio
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 
 
 class _PositionReader(PositionReader):
@@ -48,6 +52,34 @@ class _IntentPort:
         *,
         expected_current: tuple[str, ...],
     ) -> bool:
+        for index, row in enumerate(self.saved):
+            if row.intent_id == intent_id and row.status in expected_current:
+                self.saved[index] = replace(row, status=status)
+                return True
+        return False
+
+
+@dataclass
+class _ArtifactStore:
+    rows: list[StrategyArtifactRecord]
+
+    def get(self, artifact_id: str) -> StrategyArtifactRecord | None:
+        return next((row for row in self.rows if row.artifact_id == artifact_id), None)
+
+    def list_all(self) -> list[StrategyArtifactRecord]:
+        return list(self.rows)
+
+    def list_by_strategy(self, strategy_id: str) -> list[StrategyArtifactRecord]:
+        return [row for row in self.rows if row.strategy_id == strategy_id]
+
+    def save(self, record: StrategyArtifactRecord) -> None:
+        self.rows.append(record)
+
+    def update_status(self, artifact_id: str, status: str) -> bool:
+        for index, row in enumerate(self.rows):
+            if row.artifact_id == artifact_id:
+                self.rows[index] = replace(row, status=status)
+                return True
         return False
 
 
@@ -98,3 +130,58 @@ def test_same_inputs_produce_same_checksum() -> None:
     ).publish(target=_target())
 
     assert first.checksum == second.checksum
+
+
+def test_same_batch_retry_persists_one_artifact_and_no_duplicate_intents() -> None:
+    intents = _IntentPort(saved=[])
+    artifacts = _ArtifactStore(rows=[])
+    publisher = SignalPackagePublisher(
+        position_reader=_PositionReader(),
+        intent_port=intents,
+        artifact_service=StrategyArtifactService(artifacts, artifacts),
+    )
+
+    first = publisher.publish(target=_target())
+    second = publisher.publish(target=_target())
+
+    assert first.artifact_id == second.artifact_id
+    assert len(artifacts.rows) == 1
+    assert len(intents.saved) == 2
+    assert artifacts.rows[0].artifact_type == ArtifactKind.SIGNAL_PACKAGE
+    assert artifacts.rows[0].metadata["schema_version"] == "1.0"
+
+
+def test_zero_intents_still_persists_no_rebalance_package() -> None:
+    artifacts = _ArtifactStore(rows=[])
+    target = replace(_target(), positions={InstrumentId(1): 0.1})
+    package = SignalPackagePublisher(
+        position_reader=_PositionReader(),
+        intent_port=_IntentPort(saved=[]),
+        artifact_service=StrategyArtifactService(artifacts, artifacts),
+    ).publish(target=target)
+
+    assert package.intents == ()
+    assert package.no_rebalance is True
+    assert package.outcome == "no_rebalance"
+    assert artifacts.rows[0].metadata["no_rebalance"] is True
+
+
+def test_changed_checksum_with_non_pending_intent_fails_closed() -> None:
+    intents = _IntentPort(saved=[])
+    artifacts = _ArtifactStore(rows=[])
+    publisher = SignalPackagePublisher(
+        position_reader=_PositionReader(),
+        intent_port=intents,
+        artifact_service=StrategyArtifactService(artifacts, artifacts),
+    )
+    publisher.publish(target=_target())
+    intents.saved[0] = replace(intents.saved[0], status="filled")
+
+    conflict = publisher.publish(
+        target=_target(),
+        risk_flags=("changed",),
+    )
+
+    assert conflict.outcome == "rerun_conflict"
+    assert len(artifacts.rows) == 1
+    assert len(intents.saved) == 2
