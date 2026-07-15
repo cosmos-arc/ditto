@@ -41,6 +41,7 @@ from ditto_application.queries.comparison import ComparisonQueryFacade
 from ditto_application.queries.daily_decision import (
     DailyDecisionQueryFacade,
     DailyDecisionReport,
+    DailyDecisionV2Report,
 )
 from ditto_application.queries.deviation import (
     SignalDeviationItem,
@@ -546,6 +547,28 @@ class TestSignalIntentsByDate:
 
 @pytest.mark.integration
 class TestDailyDecision:
+    def test_v2_returns_stable_readiness_sections(
+        self, client: TC, mock_daily_decision_facade: MC
+    ) -> None:
+        mock_daily_decision_facade.get_report_v2.return_value = DailyDecisionV2Report(
+            identity={"strategy_id": "strat-a"},
+            readiness={"status": "review", "reason_codes": ["NO_REBALANCE"]},
+            data={"required_datasets": ["etf_daily"]},
+            run_package={"outcome": "no_rebalance"},
+            account_positions={"as_of": "2024-01-15"},
+            actions=(),
+            execution_review={"unresolved_conflicts": []},
+        )
+
+        response = client.get(
+            "/api/v1/trade/daily-decision/v2",
+            params={"strategy_id": "strat-a", "trade_date": "2024-01-15"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["readiness"]["status"] == "review"
+        assert response.json()["data"]["run_package"]["outcome"] == "no_rebalance"
+
     def test_returns_report(
         self,
         client: TC,

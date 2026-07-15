@@ -9,6 +9,9 @@ from ditto_execution.contracts import (
     IntentDataPort,
     PositionDataPort,
 )
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.daily_decision import DailyDecisionQueryFacade
@@ -84,10 +87,12 @@ class AppPortfolioQueryProvider(Provider):
         signal_facade: SignalQueryFacade,
         portfolio_facade: PortfolioActualQueryFacade,
         deviation_facade: SignalDeviationQueryFacade,
+        artifact_service: StrategyArtifactService,
     ) -> DailyDecisionQueryFacade:
         """每日决策查询 facade — 聚合信号、持仓、偏差和 P&L."""
         return DailyDecisionQueryFacade(
             signal_facade=signal_facade,
             portfolio_facade=portfolio_facade,
             deviation_facade=deviation_facade,
+            package_reader=artifact_service,
         )

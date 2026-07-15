@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 from ditto_application.execution_dto import ActualPositionSnapshot, TradeIntent
 from ditto_application.queries.deviation import (
     SignalDeviationItem,
@@ -179,3 +180,34 @@ def test_returns_structured_blocked_report_when_no_signals_exist() -> None:
     assert report.pnl is None
     portfolio_facade.get_position_history.assert_not_called()
     deviation_facade.get_deviation.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        ({"unresolved_conflict": True}, ("blocked", ("RERUN_CONFLICT",))),
+        ({"run_outcome": "failed"}, ("blocked", ("RUN_FAILED",))),
+        ({"package_exists": False}, ("blocked", ("PACKAGE_MISSING",))),
+        ({"data_ready": False}, ("blocked", ("DATA_BLOCKED",))),
+        (
+            {"account_ready": False},
+            ("blocked", ("ACCOUNT_BASELINE_MISSING",)),
+        ),
+        ({"no_rebalance": True}, ("review", ("NO_REBALANCE",))),
+        ({"risk_warning": True}, ("review", ("RISK_WARNING",))),
+        ({"date_mismatch": True}, ("review", ("DATE_MISMATCH",))),
+        ({}, ("ready", ())),
+    ],
+)
+def test_v2_readiness_truth_table(
+    overrides: dict[str, object],
+    expected: tuple[str, tuple[str, ...]],
+) -> None:
+    from ditto_application.queries.daily_decision import (
+        ReadinessFacts,
+        evaluate_readiness,
+    )
+
+    facts = ReadinessFacts(**overrides)  # type: ignore[arg-type]
+
+    assert evaluate_readiness(facts) == expected

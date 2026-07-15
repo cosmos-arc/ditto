@@ -233,12 +233,41 @@ class DailyDecisionReportResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class DailyDecisionV2Response(BaseModel):
+    """Daily Decision V2 分区 read model。"""
+
+    identity: dict[str, object]
+    readiness: dict[str, object]
+    data: dict[str, object]
+    run_package: dict[str, object]
+    account_positions: dict[str, object]
+    actions: list[dict[str, object]]
+    execution_review: dict[str, object]
+
+    model_config = ConfigDict(
+        strict=True,
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "identity": {"strategy_id": "seed_etf_industry_rotation"},
+                "readiness": {"status": "ready", "reason_codes": []},
+                "data": {"required_datasets": ["etf_daily"]},
+                "run_package": {"outcome": "completed"},
+                "account_positions": {"as_of": "2026-07-16"},
+                "actions": [],
+                "execution_review": {"unresolved_conflicts": []},
+            }
+        },
+    )
+
+
 __all__ = [
     "AccountBaselineImportResponse",
     "AccountBaselineResponse",
     "ComparisonMetricsResponse",
     "DailyDecisionReadinessResponse",
     "DailyDecisionReportResponse",
+    "DailyDecisionV2Response",
     "DeviationResponse",
     "FillResponse",
     "ImportAccountBaselineRequest",

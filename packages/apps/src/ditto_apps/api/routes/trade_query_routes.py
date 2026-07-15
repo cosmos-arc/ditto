@@ -50,6 +50,7 @@ from ditto_apps.models.trade import (
     ComparisonMetricsResponse,
     DailyDecisionReadinessResponse,
     DailyDecisionReportResponse,
+    DailyDecisionV2Response,
     DeviationResponse,
     FillResponse,
     PnlSummaryResponse,
@@ -255,6 +256,35 @@ async def get_daily_decision(
         trade_date=trade_date,
     )
     return APIResponse(data=to_daily_decision_response(report))
+
+
+@router.get(
+    "/daily-decision/v2",
+    response_model=APIResponse[DailyDecisionV2Response],
+)
+@inject
+async def get_daily_decision_v2(
+    facade: Annotated[DailyDecisionQueryFacade, FromComponent()],
+    strategy_id: str = Query(..., description="策略 ID"),
+    trade_date: str | None = Query(None, description="交易/信号日期"),
+) -> APIResponse[DailyDecisionV2Response]:
+    """获取以持久化 Signal Package 为事实源的 Daily Decision V2。"""
+    report = await asyncio.to_thread(
+        facade.get_report_v2,
+        strategy_id=strategy_id,
+        trade_date=trade_date,
+    )
+    return APIResponse(
+        data=DailyDecisionV2Response(
+            identity=report.identity,
+            readiness=report.readiness,
+            data=report.data,
+            run_package=report.run_package,
+            account_positions=report.account_positions,
+            actions=list(report.actions),
+            execution_review=report.execution_review,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
