@@ -106,7 +106,7 @@
 | [capability-maturity.md](capability-maturity.md) | Active | 能力成熟度分级（initial-focus / experimental / infrastructure / debug）|
 | [public-api-and-guard-backlog.md](public-api-and-guard-backlog.md) | Active | Public API 收敛与架构门禁 backlog |
 | [public-api-maturity.md](public-api-maturity.md) | Active | Public API 成熟度登记（kernel/features/application stable/candidate/internal 三级） |
-| [2026-05-31-current-architecture-review.md](2026-05-31-current-architecture-review.md) | Active | 当前源码全局及分模块架构 review、评分、产品差距与逐模块攻克路线 |
+| [2026-05-31-current-architecture-review.md](archive/2026-05-31-current-architecture-review.md) | 📦 Historical | 一次性源码全局/分模块架构 review 快照（已归档） |
 
 ### ADR（架构决策记录）
 

@@ -141,8 +141,15 @@ class AShareFillModel:
     def __init__(
         self,
         auction_model: ClosingAuctionFillModel | None = None,
+        participation_rate: float = 0.0,
     ) -> None:
         self._auction = auction_model or ClosingAuctionFillModel()
+        self._participation_rate = participation_rate
+
+    @property
+    def participation_rate(self) -> float:
+        """连续竞价 participation rate；0 表示不限流。"""
+        return self._participation_rate
 
     def try_fill(
         self,
@@ -188,7 +195,11 @@ class AShareFillModel:
 
         # MARKET / LIMIT 单 — 使用共享函数
         if order.order_type in (_OrderType.MARKET, _OrderType.LIMIT):
-            return _fill_market_or_limit(order, market)
+            return _fill_market_or_limit(
+                order,
+                market,
+                participation_rate=self._participation_rate,
+            )
 
         return None
 
@@ -198,7 +209,12 @@ class AShareFillModel:
 # ---------------------------------------------------------------------------
 
 
-def _fill_market_or_limit(order: _Order, market: _MarketSnapshot) -> FillOutcome:
+def _fill_market_or_limit(
+    order: _Order,
+    market: _MarketSnapshot,
+    *,
+    participation_rate: float = 0.0,
+) -> FillOutcome:
     """
     MARKET / LIMIT 通用成交逻辑。
 
@@ -206,13 +222,51 @@ def _fill_market_or_limit(order: _Order, market: _MarketSnapshot) -> FillOutcome
     - LIMIT 单: 限价在 [low, high] 内以限价成交; 否则 NoFill
     """
     if order.order_type == _OrderType.MARKET:
-        return _make_filled(order, market.close)
+        return _make_volume_checked_filled(
+            order,
+            market,
+            market.close,
+            participation_rate=participation_rate,
+        )
 
     # LIMIT 单
     limit_price = order.price
     if limit_price is None or not (market.low <= limit_price <= market.high):
         return NoFill(reason="price_out_of_range", can_retry=False)
-    return _make_filled(order, limit_price)
+    return _make_volume_checked_filled(
+        order,
+        market,
+        limit_price,
+        participation_rate=participation_rate,
+    )
+
+
+def _make_volume_checked_filled(
+    order: _Order,
+    market: _MarketSnapshot,
+    fill_price: float,
+    *,
+    participation_rate: float,
+) -> FillOutcome:
+    filled_qty = _volume_limited_quantity(
+        order.quantity,
+        market.volume,
+        participation_rate,
+    )
+    if filled_qty <= 0:
+        return NoFill(reason="volume_constraint", can_retry=True)
+    return _make_filled(order, fill_price, filled_qty=filled_qty)
+
+
+def _volume_limited_quantity(
+    order_quantity: int,
+    volume: float,
+    participation_rate: float,
+) -> int:
+    if participation_rate <= 0:
+        return order_quantity
+    capped_quantity = int(max(0.0, volume) * participation_rate)
+    return min(order_quantity, capped_quantity)
 
 
 def _make_filled(

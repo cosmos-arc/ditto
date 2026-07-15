@@ -23,6 +23,7 @@ validate_maturity_status_from_stdout = importlib.import_module(
 ).validate_maturity_status_from_stdout
 
 COMMAND_OUTPUT_LIMIT = 8000
+TEST_COMMANDS = frozenset({"check", "targeted-golden", "real-data-e2e"})
 
 
 @dataclass(frozen=True)
@@ -145,10 +146,39 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
 def _synthetic_acceptance_env(output: Path) -> dict[str, str]:
     data_root = (output.parent / "runtime").resolve()
     return os.environ | {
+        "ENVIRONMENT": "testing",
         "DITTO_DATA_ROOT": data_root.as_posix(),
         "SQLITE_PATH": (data_root / "metadata" / "metadata.sqlite").as_posix(),
         "DUCKDB_PATH": (data_root / "db" / "ditto.duckdb").as_posix(),
     }
+
+
+def _test_acceptance_env(output: Path) -> dict[str, str]:
+    """Return an isolated env for code-quality tests inside real-data acceptance."""
+    data_root = (output.parent / "test-runtime").resolve()
+    env = dict(os.environ)
+    env.update(
+        {
+            "ENVIRONMENT": "testing",
+            "DITTO_DATA_ROOT": data_root.as_posix(),
+        }
+    )
+    env.pop("SQLITE_PATH", None)
+    env.pop("DUCKDB_PATH", None)
+    return env
+
+
+def _env_for_command(
+    name: str,
+    *,
+    output: Path,
+    synthetic_env: dict[str, str] | None,
+) -> dict[str, str] | None:
+    if synthetic_env is not None:
+        return synthetic_env
+    if name in TEST_COMMANDS:
+        return _test_acceptance_env(output)
+    return None
 
 
 def main() -> int:
@@ -165,14 +195,19 @@ def main() -> int:
         if args.real_data or args.require_promoted
         else _synthetic_acceptance_env(output)
     )
-    results = [
-        _run(
-            name,
-            command,
-            env=synthetic_env if name == "promotion-evidence-stock-daily" else None,
+    results = []
+    for name, command in _commands(args.real_data, args.require_promoted):
+        results.append(
+            _run(
+                name,
+                command,
+                env=_env_for_command(
+                    name,
+                    output=output,
+                    synthetic_env=synthetic_env,
+                ),
+            )
         )
-        for name, command in _commands(args.real_data, args.require_promoted)
-    ]
     business_failures: list[str] = []
     if args.require_promoted:
         for result in results:

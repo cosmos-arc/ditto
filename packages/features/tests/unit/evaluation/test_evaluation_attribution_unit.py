@@ -117,6 +117,33 @@ class TestPerformanceAttribution:
         assert result.tracking_error == 0.0
         assert result.information_ratio == 0.0
         assert result.win_rate_by_quantile == {}
+        assert result.contributions == ()
+
+    def test_contributions_explain_total_return_by_quantile(self) -> None:
+        """Contribution report should show which quantile drove total return."""
+        df = _make_known_quantile_ret_df()
+
+        result = performance_attribution(df, periods_per_year=244)
+
+        assert len(result.contributions) == 2
+        assert result.contributions[0].label == "quantile_2"
+        assert result.contributions[0].contribution_return == pytest.approx(0.244)
+        assert result.contributions[1].label == "quantile_1"
+        assert result.contributions[1].contribution_return == pytest.approx(0.122)
+        assert sum(
+            item.contribution_return for item in result.contributions
+        ) == pytest.approx(result.total_return)
+
+    def test_timing_and_interaction_are_not_residual_placeholders(self) -> None:
+        """Timing/interaction should remain zero unless explicitly modelled."""
+        df = _make_known_quantile_ret_df()
+
+        result = performance_attribution(df, periods_per_year=244)
+
+        assert result.total_return == pytest.approx(0.366)
+        assert result.selection_return == pytest.approx(0.244)
+        assert result.timing_return == 0.0
+        assert result.interaction_return == 0.0
 
     def test_performance_attribution_result_type(self) -> None:
         """Result should be a frozen dataclass."""

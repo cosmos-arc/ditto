@@ -43,6 +43,7 @@ def _market_snapshot(
     low: float = 10.0,
     high: float = 11.0,
     instrument_id: int = 1,
+    volume: float = 1_000_000,
     limit_up: float | None = None,
     limit_down: float | None = None,
     is_suspended: bool = False,
@@ -56,7 +57,7 @@ def _market_snapshot(
         low=low,
         close=close,
         prev_close=10.0,
-        volume=1_000_000,
+        volume=volume,
         amount=10_500_000,
         limit_up=limit_up,
         limit_down=limit_down,
@@ -234,6 +235,56 @@ class TestAShareFillModel:
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, Filled)
         assert result.fill_event.fill_price == pytest.approx(10.5)
+
+    def test_market_order_respects_participation_rate(self) -> None:
+        model = AShareFillModel(participation_rate=0.05)
+        order = _order(quantity=2000)
+        market = _market_snapshot(close=10.5, volume=10_000)
+
+        result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
+
+        assert isinstance(result, Filled)
+        assert result.fill_event.filled_quantity == 500
+        assert result.fill_event.leaves_quantity == 1500
+
+    def test_market_order_below_participation_cap_fills_full_quantity(self) -> None:
+        model = AShareFillModel(participation_rate=0.05)
+        order = _order(quantity=300)
+        market = _market_snapshot(close=10.5, volume=10_000)
+
+        result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
+
+        assert isinstance(result, Filled)
+        assert result.fill_event.filled_quantity == 300
+        assert result.fill_event.leaves_quantity == 0
+
+    def test_zero_volume_returns_retryable_no_fill(self) -> None:
+        model = AShareFillModel(participation_rate=0.05)
+        order = _order(quantity=100)
+        market = _market_snapshot(close=10.5, volume=0)
+
+        result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
+
+        assert isinstance(result, NoFill)
+        assert result.reason == "volume_constraint"
+        assert result.can_retry is True
+
+    def test_market_on_close_uses_auction_volume_cap(self) -> None:
+        model = AShareFillModel(
+            participation_rate=0.01,
+            auction_model=ClosingAuctionFillModel(participation_rate_threshold=0.05),
+        )
+        order = _order(order_type=OrderType.MARKET_ON_CLOSE, quantity=100_000)
+        market = _market_snapshot(
+            close=10.5,
+            volume=1,
+            avg_volume_20d=1_000_000,
+        )
+
+        result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
+
+        assert isinstance(result, Filled)
+        assert result.fill_event.filled_quantity == 50_000
 
     def test_limit_order_in_range_fills(self) -> None:
         model = AShareFillModel()

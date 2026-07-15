@@ -14,6 +14,7 @@ from ditto_features.derived_types import (
     MaterializationProfile,
 )
 from ditto_features.evaluation.report import (
+    AttributionContribution,
     FactorEvaluationReport,
     FactorExposureResult,
     FamaMacBethResult,
@@ -405,6 +406,31 @@ class TestPerformanceAttributionResultDataclass:
         )
         assert result.total_return == 0.15
         assert result.win_rate_by_quantile[5] == 0.55
+        assert result.contributions == ()
+
+    def test_creation_with_contributions(self) -> None:
+        """Contribution report items can be attached to attribution results."""
+        contribution = AttributionContribution(
+            label="quantile_5",
+            contribution_return=0.12,
+            contribution_share=0.8,
+            mean_return=0.001,
+            observation_count=120,
+        )
+        result = PerformanceAttributionResult(
+            total_return=0.15,
+            selection_return=0.10,
+            timing_return=0.0,
+            interaction_return=0.0,
+            annual_alpha=0.10,
+            tracking_error=0.08,
+            information_ratio=1.25,
+            win_rate_by_quantile={5: 0.55},
+            contributions=(contribution,),
+        )
+
+        assert result.contributions[0].label == "quantile_5"
+        assert result.contributions[0].contribution_return == 0.12
 
     def test_zero_result(self) -> None:
         """All-zero result."""
@@ -420,6 +446,7 @@ class TestPerformanceAttributionResultDataclass:
         )
         assert result.total_return == 0.0
         assert result.win_rate_by_quantile == {}
+        assert result.contributions == ()
 
 
 # ---------------------------------------------------------------------------

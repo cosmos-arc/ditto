@@ -17,6 +17,7 @@ from ditto_portfolio.rebalancing import (
     MaxPositionsConstraint,
     MaxTurnoverConstraint,
     MaxWeightConstraint,
+    MeanVarianceAllocator,
     ScoreWeightAllocator,
     TradabilityConstraint,
 )
@@ -157,6 +158,10 @@ def build_portfolio_stages(spec: StrategySpec) -> list[DecisionStage]:
     """从 StrategySpec 构建 allocation + constraint stages。"""
     params = spec.params
     stages: list[DecisionStage] = []
+    max_weight = read_optional_float(
+        params.get("max_weight"),
+        field_name="params.max_weight",
+    )
 
     # Allocation — stock_sector_rotation 使用内置 SectorWeightStage，跳过
     if spec.template != "stock_sector_rotation":
@@ -169,16 +174,17 @@ def build_portfolio_stages(spec: StrategySpec) -> list[DecisionStage]:
             allocator = ScoreWeightAllocator(cash_target=cash_target)
         elif method == "inverse_vol":
             allocator = InverseVolAllocator(cash_target=cash_target)
+        elif method == "mean_variance":
+            allocator = MeanVarianceAllocator(
+                cash_target=cash_target,
+                max_weight=max_weight or 1.0,
+            )
         else:
             allocator = EqualWeightAllocator(cash_target=cash_target)
         stages.append(AllocationStage(allocator=allocator))
 
     # Constraints
     constraint_list: list[Constraint] = []
-    max_weight = read_optional_float(
-        params.get("max_weight"),
-        field_name="params.max_weight",
-    )
     if max_weight is not None:
         constraint_list.append(MaxWeightConstraint(max_weight=max_weight))
     max_positions = read_optional_int(

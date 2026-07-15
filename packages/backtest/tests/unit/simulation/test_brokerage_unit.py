@@ -15,6 +15,7 @@ from ditto_backtest.simulation.settlement import (
 )
 from ditto_backtest.simulation.slippage import FixedBpsSlippage
 from ditto_execution.brokerage import ProcessInput
+from ditto_execution.fills import Filled
 from ditto_execution.orders.book import OrderBook
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.journal import InMemoryOrderEventJournal
@@ -31,6 +32,7 @@ from ditto_kernel.trading import (
 from ditto_portfolio.accounting import (
     Account,
     CashBook,
+    FillEvent,
     Position,
 )
 
@@ -95,6 +97,35 @@ def _process_input(
         trade_date="2026-01-01",
         bars=bars or {1: _market_snapshot()},
     )
+
+
+class _PartialFillModel:
+    def __init__(self, filled_quantity: int) -> None:
+        self._filled_quantity = filled_quantity
+
+    def try_fill(
+        self,
+        order: Order,
+        market: MarketSnapshot,
+        definition: InstrumentDefinition,
+        trading_rule: TradingRuleSet,
+    ) -> Filled:
+        del definition, trading_rule
+        return Filled(
+            fill_event=FillEvent(
+                fill_id="",
+                order_id=order.order_id,
+                instrument_id=order.instrument_id,
+                direction=order.direction,
+                filled_quantity=self._filled_quantity,
+                fill_price=market.close,
+                fee=0.0,
+                slippage=0.0,
+                event_time=datetime.min,
+                cumulative_quantity=0,
+                leaves_quantity=order.quantity - self._filled_quantity,
+            )
+        )
 
 
 @pytest.fixture
@@ -273,6 +304,39 @@ class TestProcessMarketOrder:
         sd = _process_input(step_time=step_time)
         fills = brokerage.process_pending(sd)
         assert fills[0].event_time == step_time
+
+
+# ---------------------------------------------------------------------------
+# process_pending — partial fill
+# ---------------------------------------------------------------------------
+
+
+class TestProcessPartialFill:
+    def test_fill_model_quantity_updates_ticket_as_partially_filled(self) -> None:
+        brk = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+            model=BrokerageModel(
+                fill_model=_PartialFillModel(filled_quantity=300),
+                slippage_model=FixedBpsSlippage(bps=0),
+            ),
+        )
+        order = _order(quantity=1000)
+        brk.place_order(order)
+
+        fills = brk.process_pending(_process_input())
+
+        assert len(fills) == 1
+        fill = fills[0]
+        assert fill.filled_quantity == 300
+        assert fill.cumulative_quantity == 300
+        assert fill.leaves_quantity == 700
+
+        ticket = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket is not None
+        assert ticket.status == OrderStatus.PARTIALLY_FILLED
+        assert ticket.filled_quantity == 300
+        assert ticket.leaves_quantity == 700
 
 
 # ---------------------------------------------------------------------------

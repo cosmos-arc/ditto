@@ -6,7 +6,10 @@ import math
 
 import polars as pl
 
-from ditto_features.evaluation.report import PerformanceAttributionResult
+from ditto_features.evaluation.report import (
+    AttributionContribution,
+    PerformanceAttributionResult,
+)
 
 from ._math import IR_TE_EPSILON, scalar_to_float
 
@@ -26,11 +29,12 @@ def performance_attribution(
 
     * **total_return**: Annualized equal-weighted average of all quantile returns.
     * **selection_return**: Annualized long-short spread (top - bottom).
-    * **timing_return**: ``total_return - selection_return`` (simplified model).
-    * **interaction_return**: 0.0 (simplified decomposition).
+    * **timing_return**: 0.0 until a dedicated timing model is available.
+    * **interaction_return**: 0.0 until a dedicated interaction model is available.
     * **annual_alpha**: Same as selection_return.
     * **tracking_error**: Daily std of LS return * sqrt(periods_per_year).
     * **information_ratio**: alpha / tracking_error (0.0 if TE is 0).
+    * **contributions**: Annualized return contribution by quantile bucket.
 
     Args:
         quantile_ret_df: ``pl.DataFrame[date, quantile, mean_return]``.
@@ -60,6 +64,13 @@ def performance_attribution(
         quantile_ret_df.select(pl.col(return_col).mean()).item(),
     )
     total_return = total_daily * periods_per_year
+    contributions = _build_quantile_contributions(
+        quantile_ret_df,
+        periods_per_year=periods_per_year,
+        total_return=total_return,
+        quantile_col=quantile_col,
+        return_col=return_col,
+    )
 
     # Selection return: LS spread (top quantile - bottom quantile), annualized
     max_q = scalar_to_float(
@@ -82,8 +93,9 @@ def performance_attribution(
     ls_daily = top_daily - bottom_daily
     selection_return = ls_daily * periods_per_year
 
-    # Timing and interaction (simplified)
-    timing_return = total_return - selection_return
+    # Timing and interaction require a dedicated allocation/timing model. Keep
+    # them at zero instead of manufacturing a residual component.
+    timing_return = 0.0
     interaction_return = 0.0
 
     # Alpha = selection return
@@ -140,4 +152,57 @@ def performance_attribution(
         tracking_error=tracking_error,
         information_ratio=information_ratio,
         win_rate_by_quantile=win_rate_by_quantile,
+        contributions=contributions,
+    )
+
+
+def _build_quantile_contributions(
+    quantile_ret_df: pl.DataFrame,
+    *,
+    periods_per_year: int,
+    total_return: float,
+    quantile_col: str,
+    return_col: str,
+) -> tuple[AttributionContribution, ...]:
+    """Build annualized contribution items whose sum equals total_return."""
+    total_observations = quantile_ret_df.height
+    if total_observations == 0:
+        return ()
+
+    contribution_rows = (
+        quantile_ret_df.group_by(quantile_col)
+        .agg(
+            pl.col(return_col).mean().alias("mean_return"),
+            pl.len().alias("observation_count"),
+        )
+        .sort(quantile_col)
+    )
+    items: list[AttributionContribution] = []
+    for row in contribution_rows.iter_rows(named=True):
+        quantile = int(row[quantile_col])
+        mean_return = scalar_to_float(row["mean_return"])
+        observation_count = int(row["observation_count"])
+        contribution_return = (
+            mean_return * observation_count / total_observations * periods_per_year
+        )
+        contribution_share = (
+            contribution_return / total_return
+            if abs(total_return) > IR_TE_EPSILON
+            else 0.0
+        )
+        items.append(
+            AttributionContribution(
+                label=f"{quantile_col}_{quantile}",
+                contribution_return=contribution_return,
+                contribution_share=contribution_share,
+                mean_return=mean_return,
+                observation_count=observation_count,
+            )
+        )
+    return tuple(
+        sorted(
+            items,
+            key=lambda item: abs(item.contribution_return),
+            reverse=True,
+        )
     )

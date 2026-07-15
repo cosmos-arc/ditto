@@ -30,6 +30,11 @@ from ditto_portfolio.rebalancing.constraints import (
     MinWeightConstraint,
     TradabilityConstraint,
 )
+from ditto_portfolio.rebalancing.optimization import (
+    CovarianceProvider,
+    DiagonalVolCovariance,
+    MeanVarianceAllocator,
+)
 from ditto_portfolio.rebalancing.report_views import (
     AggregatedTradeStatsView,
     AlphaStatsView,
@@ -45,6 +50,8 @@ __all__ = [
     "ConstraintAdjustment",
     "ConstraintChecker",
     "ConstraintStage",
+    "CovarianceProvider",
+    "DiagonalVolCovariance",
     "EqualWeightAllocator",
     "IndustryMaxWeightConstraint",
     "InverseVolAllocator",
@@ -52,6 +59,7 @@ __all__ = [
     "MaxPositionsConstraint",
     "MaxTurnoverConstraint",
     "MaxWeightConstraint",
+    "MeanVarianceAllocator",
     "MetricsDelta",
     "MinWeightConstraint",
     "ScoreWeightAllocator",

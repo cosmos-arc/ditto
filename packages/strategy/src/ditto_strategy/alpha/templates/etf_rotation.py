@@ -65,7 +65,8 @@ class ETFRotationConfig:
         top_k: 选取标的数量。
         scoring_method: 评分方法。
         scoring_ascending: True 表示信号值大的得分高（动量策略默认 True）。
-        allocation_method: 分配方式（``"equal_weight"`` / ``"score_weight"``）。
+        allocation_method: 分配方式（``"equal_weight"`` / ``"score_weight"``
+            / ``"mean_variance"``）。
         cash_target: 目标现金比例（0.0 = 全仓）。
         signal_column: 信号源列名。
         max_weight: 单标的权重上限（None = 不限制）。
@@ -121,7 +122,7 @@ def validate_config(config: ETFRotationConfig) -> None:
             max_value=1,
         )
 
-    valid_methods = ("equal_weight", "score_weight")
+    valid_methods = ("equal_weight", "score_weight", "mean_variance")
     if config.allocation_method not in valid_methods:
         msg = (
             f"allocation_method must be one of {valid_methods}, "
@@ -178,7 +179,7 @@ def get_param_constraints() -> tuple[ParamConstraint, ...]:
         ParamConstraint(
             name="allocation_method",
             dtype="str",
-            allowed_values=("equal_weight", "score_weight"),
+            allowed_values=("equal_weight", "score_weight", "mean_variance"),
         ),
     )
 

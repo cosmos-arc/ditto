@@ -308,6 +308,11 @@ class TestETFRotationValidateConfig:
         with pytest.raises(StrategySpecError, match="allocation_method"):
             validate_config(config)
 
+    def test_mean_variance_allocation_method_is_valid(self) -> None:
+        """mean_variance 是 ETF rotation 的合法组合分配方法。"""
+        config = ETFRotationConfig(allocation_method="mean_variance")
+        validate_config(config)
+
     def test_invalid_cash_target_raises(self) -> None:
         """cash_target < 0 或 >= 1 时抛异常。"""
         config = ETFRotationConfig(cash_target=-0.1)
@@ -338,3 +343,9 @@ class TestETFRotationGetParamConstraints:
         constraints = get_param_constraints()
         names = [c.name for c in constraints]
         assert "top_k" in names
+
+    def test_allocation_method_constraint_includes_mean_variance(self) -> None:
+        """allocation_method 参数枚举包含 mean_variance。"""
+        constraints = get_param_constraints()
+        allocation = next(c for c in constraints if c.name == "allocation_method")
+        assert "mean_variance" in allocation.allowed_values

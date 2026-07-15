@@ -197,6 +197,29 @@ class IngestionResultHandler:
             message="获取的数据为空",
         )
 
+    def handle_empty_success(self, dataset: str, trade_date: str) -> IngestionResult:
+        """
+        处理允许为空的稀疏事件数据。
+
+        这类数据集在非披露日返回空数据是正常状态，应覆盖旧失败日志。
+        """
+        self._save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.SUCCESS,
+                rows=0,
+            )
+        )
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="success",
+            row_count=0,
+            message="无新数据",
+        )
+
     def handle_write_error(
         self, dataset: str, trade_date: str, error: Exception
     ) -> IngestionResult:

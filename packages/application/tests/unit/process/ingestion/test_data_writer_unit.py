@@ -218,6 +218,39 @@ class TestWriteCapital:
 
 
 @pytest.mark.unit
+class TestWriteFundamental:
+    """测试基本面写入路径。"""
+
+    def test_write_fundamental_filters_unresolved_tickers_without_schema_error(
+        self,
+        data_writer,
+        mock_fundamental_store,
+    ) -> None:
+        """空 instrument_id mapping 不应导致 Polars join dtype 错误。"""
+        df = pl.DataFrame(
+            {
+                "source_ticker": ["999999.SZ"],
+                "report_date": [date(2024, 12, 31)],
+                "announcement_date": [date(2025, 1, 7)],
+                "knowledge_date": [date(2025, 1, 8)],
+                "effective_from": [date(2025, 1, 8)],
+                "effective_to": [None],
+                "total_assets": [1_000_000.0],
+            }
+        )
+
+        result = data_writer.write_data(
+            dataset="balance_sheet",
+            df=df,
+            trade_date="2025-01-07",
+        )
+
+        assert result.rows_written == 0
+        assert not result.blocked
+        mock_fundamental_store.save_balance_sheet.assert_not_called()
+
+
+@pytest.mark.unit
 class TestToWriteResult:
     """Test _to_write_result helper."""
 

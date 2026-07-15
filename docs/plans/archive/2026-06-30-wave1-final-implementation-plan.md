@@ -110,9 +110,9 @@ Allowed fallback:
 Update this section with:
 
 ```markdown
-Baseline decision: <main-after-dev-merge | dev-integration-branch>
-Decision date: YYYY-MM-DD
-Reason:
+Baseline decision: main-after-dev-merge
+Decision date: 2026-07-01
+Reason: `main` is up to date with `origin/main` and contains PR #66 (`refactor: V2 架构整改 Batch 2-6 — 全模块治理`). The Wave 1 dependency `packages/application/src/ditto_application/processes/execution/signal_package.py` exists on both `main` and `dev/architecture-remediation-batch2-6` with the same blob, so Wave 1 backend implementation will branch directly from current `main`.
 ```
 
 Commit:
@@ -175,6 +175,21 @@ Create a short table in this plan before execution with the exact V1a dataset li
 - trade intent and position stores used by the manual loop
 
 Do not use the full 14-dataset RC1 list as a V1a blocker unless the selected ETF workflow genuinely needs all 14.
+
+**V1a launch dataset decision (recorded 2026-07-01):**
+
+| Dataset / Store | Why V1a Needs It | V1a Blocking? | Notes |
+|---|---|---|---|
+| `calendar` | trading-day and T+1/manual-loop date semantics | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `etf_basic` | ETF instrument metadata for the selected ETF workflow | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `etf_daily` | selected ETF strategy daily market inputs | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `index_basic` | benchmark/index metadata | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `index_daily` | benchmark/index daily market inputs | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `fund_adj` | ETF/fund adjustment factors for adjusted ETF signals | yes | Dataset maturity is `initial-focus`; catalog evidence still required. |
+| `adj_factor` | stock/index-adj compatibility for shared market paths | review | Included as conservative shared-market dependency; can be demoted if the chosen ETF workflow proves it is unused. |
+| trade intent / fill / position runtime stores | manual execution loop state | yes | Not catalog datasets; readiness is verified through trade APIs and execution store tests rather than promotion review. |
+
+Full stock/fundamental/macro launch datasets from `scripts/acceptance/rc1_requirements.py` remain Wave 1c RC1 blockers, not V1a blockers.
 
 **Step 2: Collect readiness evidence**
 
@@ -448,6 +463,24 @@ Defer risk parity, Black-Litterman, and broad industry constraints unless V1b re
 - Reproducibility tests remain stable.
 - Golden updates include before/after evidence.
 
+**Implementation Evidence (2026-07-01):**
+
+- Added partial-fill support in `BacktestBrokerage._build_fill_event`; fill events now use the fill model's actual `filled_quantity` and reject only non-positive/over-leaves quantities.
+- Added continuous-auction participation cap in `AShareFillModel`; `participation_rate=0` remains the unlimited-volume compatibility path.
+- Wired `BacktestServiceConfig.participation_rate` and `fill_mode` through the backtest flow and published-runtime builder; `fill_mode="all_or_nothing"` injects `participation_rate=0`.
+- RED observed:
+  - `pixi run -e dev pytest packages/backtest/tests/unit/simulation/test_brokerage_unit.py -k partial -q --no-cov` failed on the old all-or-nothing guard.
+  - `pixi run -e dev pytest packages/backtest/tests/unit/simulation/test_fill_model_unit.py -k 'participation_rate or participation_cap or zero_volume or auction_volume_cap' -q --no-cov` failed because `AShareFillModel` had no participation-rate parameter.
+  - Config/runtime/flow tests failed on missing config fields and SimpleFillModel runtime injection.
+- GREEN verification:
+  - `pixi run -e dev pytest packages/backtest/tests/unit/simulation/test_fill_model_unit.py packages/backtest/tests/unit/simulation/test_brokerage_unit.py packages/application/tests/unit/process/strategy/test_backtest_service_unit.py packages/application/tests/unit/process/strategy/test_backtest_runtime_builder_unit.py packages/apps/tests/unit/jobs/flows/test_backtest_flow_unit.py -q --no-cov` -> 159 passed.
+  - `pixi run -e dev type packages/backtest/src packages/application/src packages/apps/src` -> 0 errors.
+  - `pixi run -e dev pytest packages/backtest/tests/integration/test_golden_baseline.py packages/backtest/tests/integration/test_reproducibility.py -q --no-cov` -> 17 passed after snapshot review.
+- Golden deltas reviewed before re-record:
+  - 3-day ETF rotation final NAV `999954.2841199999 -> 998136.3701199999`; annualized return `3.2494 -> -15.8138`; aggregated trades `3 -> 2`.
+  - 5-day ETF rotation final NAV `1001160.0580472726 -> 1040636.1681199998`; annualized return `9.6266 -> 1169.0820`; aggregated trades `8 -> 5`.
+  - 3-day trend swing final NAV unchanged at `992355.3246009998`; annualized return `-60.5127 -> -59.5067`; max drawdown `-0.7347 -> -1.6824`.
+
 ### Task 9: B3b Full RC1 Promotion
 
 **Detailed Reference:** full `docs/plans/2026-06-24-wave1-b3-real-data-promotion.md`
@@ -478,6 +511,16 @@ Defer risk parity, Black-Litterman, and broad industry constraints unless V1b re
 **Acceptance:**
 
 - User can answer at least "which positions/factors drove the result" without relying on hard-coded residual attribution.
+
+**Implementation Evidence (2026-07-01):**
+
+- Replaced residual-style timing attribution with conservative semantics: `timing_return=0.0` and `interaction_return=0.0` unless a dedicated model is implemented.
+- Added `AttributionContribution` and `PerformanceAttributionResult.contributions` for quantile/factor-sleeve contribution reporting. Contributions are annualized, observation-weighted, sorted by absolute impact, and sum back to `total_return`.
+- RED observed: `pixi run -e dev pytest packages/features/tests/unit/evaluation/test_evaluation_attribution_unit.py -q --no-cov` failed on missing `contributions` and old residual `timing_return`.
+- GREEN verification:
+  - `pixi run -e dev pytest packages/features/tests/unit/evaluation/test_evaluation_attribution_unit.py packages/features/tests/unit/evaluation/test_report_builder_unit.py packages/features/tests/unit/evaluation/test_derived_types_and_fama_boundary_unit.py -q --no-cov` -> 76 passed.
+  - `pixi run -e dev type packages/features/src` -> 0 errors.
+- Scope note: v1 explains factor/quantile sleeves in the existing factor evaluation pipeline. Position-level Brinson/Barra-style attribution remains deferred.
 
 ## 7. Wave 2: AI and Paper Operating Loop
 

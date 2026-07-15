@@ -126,6 +126,8 @@ class TestBacktestServiceConfig:
         assert config.rebalance_freq == "daily"
         assert config.engine_version == "0.1.0"
         assert config.parameter_overrides == ()
+        assert config.participation_rate == pytest.approx(0.05)
+        assert config.fill_mode == "partial"
 
     def test_custom_values(self) -> None:
         """自定义值正确。"""
@@ -136,6 +138,8 @@ class TestBacktestServiceConfig:
             initial_cash=5_000_000.0,
             benchmark_id=InstrumentId(3_000_001),
             parameter_overrides=("top_k=5",),
+            participation_rate=0.02,
+            fill_mode="all_or_nothing",
         )
         assert config.strategy_id == "my-strategy"
         assert config.strategy_version == "2026.03"
@@ -143,6 +147,8 @@ class TestBacktestServiceConfig:
         assert config.initial_cash == 5_000_000.0
         assert config.benchmark_id == InstrumentId(3_000_001)
         assert config.parameter_overrides == ("top_k=5",)
+        assert config.participation_rate == pytest.approx(0.02)
+        assert config.fill_mode == "all_or_nothing"
 
     def test_frozen(self) -> None:
         """BacktestServiceConfig 是 frozen，不可变。"""

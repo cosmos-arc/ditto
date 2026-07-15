@@ -30,6 +30,14 @@ from ditto_application.execution_dto import (
     TradeIntent,
 )
 from ditto_application.queries.comparison import ComparisonQueryFacade
+from ditto_application.queries.daily_decision import (
+    DailyDecisionQueryFacade,
+    DailyDecisionReport,
+)
+from ditto_application.queries.deviation import (
+    SignalDeviationItem,
+    SignalDeviationReport,
+)
 from ditto_application.queries.portfolio_actual import (
     PnlSummary,
     PortfolioActualQueryFacade,
@@ -68,6 +76,11 @@ def mock_comparison_facade() -> MagicMock:
 
 
 @pytest.fixture
+def mock_daily_decision_facade() -> MagicMock:
+    return MagicMock(spec=DailyDecisionQueryFacade)
+
+
+@pytest.fixture
 def mock_fill_handler() -> MagicMock:
     return MagicMock(spec=RecordFillHandler)
 
@@ -83,6 +96,7 @@ def app(
     mock_portfolio_facade: MagicMock,
     mock_signal_facade: MagicMock,
     mock_comparison_facade: MagicMock,
+    mock_daily_decision_facade: MagicMock,
     mock_fill_handler: MagicMock,
     mock_status_handler: MagicMock,
 ) -> FastAPI:
@@ -106,6 +120,10 @@ def app(
         @provide
         def comparison_facade(self) -> ComparisonQueryFacade:
             return mock_comparison_facade
+
+        @provide
+        def daily_decision_facade(self) -> DailyDecisionQueryFacade:
+            return mock_daily_decision_facade
 
         @provide
         def fill_handler(self) -> RecordFillHandler:
@@ -195,6 +213,48 @@ def _make_position(**overrides: object) -> ActualPositionSnapshot:
     }
     defaults.update(overrides)
     return ActualPositionSnapshot(**defaults)  # type: ignore[arg-type]
+
+
+def _make_deviation_report(**overrides: object) -> SignalDeviationReport:
+    defaults: dict[str, object] = {
+        "strategy_id": "strat-a",
+        "signal_date": "2024-01-15",
+        "total_signals": 1,
+        "filled": 1,
+        "unfilled": 0,
+        "items": (
+            SignalDeviationItem(
+                instrument_id=510300,
+                signal_action="buy",
+                signal_weight=0.3,
+                actual_weight=0.3,
+                deviation_bps=0.0,
+                fill_status="filled",
+            ),
+        ),
+    }
+    defaults.update(overrides)
+    return SignalDeviationReport(**defaults)  # type: ignore[arg-type]
+
+
+def _make_daily_decision_report(**overrides: object) -> DailyDecisionReport:
+    defaults: dict[str, object] = {
+        "strategy_id": "strat-a",
+        "trade_date": "2024-01-15",
+        "readiness_status": "ready",
+        "readiness_reasons": (),
+        "signal_intents": (_make_intent(),),
+        "deviation": _make_deviation_report(),
+        "positions": (_make_position(snapshot_date="2024-01-15"),),
+        "pnl": PnlSummary(
+            total_realized_pnl=100.0,
+            total_unrealized_pnl=-50.0,
+            total_fees=10.0,
+            net_pnl=40.0,
+        ),
+    }
+    defaults.update(overrides)
+    return DailyDecisionReport(**defaults)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -342,6 +402,81 @@ class TestSignalIntentsByDate:
 
 
 # ---------------------------------------------------------------------------
+# Tests: Daily Decision
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestDailyDecision:
+    def test_returns_report(
+        self,
+        client: TC,
+        mock_daily_decision_facade: MC,
+    ) -> None:
+        mock_daily_decision_facade.get_report.return_value = (
+            _make_daily_decision_report()
+        )
+
+        resp = client.get(
+            "/api/v1/trade/daily-decision",
+            params={"strategy_id": "strat-a", "trade_date": "2024-01-15"},
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["strategy_id"] == "strat-a"
+        assert body["trade_date"] == "2024-01-15"
+        assert body["readiness"]["status"] == "ready"
+        assert body["readiness"]["reasons"] == []
+        assert body["signal_intents"][0]["intent_id"] == "int-001"
+        assert body["positions"][0]["snapshot_id"] == "snap-001"
+        assert body["deviation"]["total_signals"] == 1
+        assert body["pnl"]["net_pnl"] == 40.0
+        mock_daily_decision_facade.get_report.assert_called_once_with(
+            strategy_id="strat-a",
+            trade_date="2024-01-15",
+        )
+
+    def test_returns_empty_structured_report_when_no_signals_exist(
+        self,
+        client: TC,
+        mock_daily_decision_facade: MC,
+    ) -> None:
+        mock_daily_decision_facade.get_report.return_value = (
+            _make_daily_decision_report(
+                trade_date=None,
+                readiness_status="blocked",
+                readiness_reasons=("no signal intents available",),
+                signal_intents=(),
+                deviation=None,
+                positions=(),
+                pnl=None,
+            )
+        )
+
+        resp = client.get(
+            "/api/v1/trade/daily-decision",
+            params={"strategy_id": "strat-a"},
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["trade_date"] is None
+        assert body["readiness"] == {
+            "status": "blocked",
+            "reasons": ["no signal intents available"],
+        }
+        assert body["signal_intents"] == []
+        assert body["positions"] == []
+        assert body["deviation"] is None
+        assert body["pnl"] is None
+        mock_daily_decision_facade.get_report.assert_called_once_with(
+            strategy_id="strat-a",
+            trade_date=None,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Tests: Comparison
 # ---------------------------------------------------------------------------
 
@@ -450,6 +585,11 @@ class TestMissingRequiredParams:
     ) -> None:
         """signals/{date}/intents 缺少 strategy_id → 422."""
         resp = client.get("/api/v1/trade/signals/2024-01-15/intents")
+        assert resp.status_code == 422
+
+    def test_daily_decision_missing_strategy_id(self, client: TC) -> None:
+        """daily-decision 缺少 strategy_id → 422."""
+        resp = client.get("/api/v1/trade/daily-decision")
         assert resp.status_code == 422
 
 

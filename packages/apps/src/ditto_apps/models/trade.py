@@ -145,8 +145,36 @@ class DeviationResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class DailyDecisionReadinessResponse(BaseModel):
+    """每日决策就绪状态响应."""
+
+    status: Literal["ready", "blocked", "review"] = Field(description="就绪状态")
+    reasons: list[str] = Field(description="就绪/阻塞原因")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DailyDecisionReportResponse(BaseModel):
+    """每日决策驾驶舱报告响应."""
+
+    strategy_id: str = Field(description="策略 ID")
+    trade_date: str | None = Field(default=None, description="交易/信号日期")
+    readiness: DailyDecisionReadinessResponse = Field(description="就绪状态")
+    signal_intents: list[TradeIntentResponse] = Field(description="信号意图列表")
+    positions: list[PositionSnapshotResponse] = Field(description="实际持仓快照")
+    deviation: DeviationResponse | None = Field(
+        default=None,
+        description="信号-成交偏差报告",
+    )
+    pnl: PnlSummaryResponse | None = Field(default=None, description="P&L 汇总")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 __all__ = [
     "ComparisonMetricsResponse",
+    "DailyDecisionReadinessResponse",
+    "DailyDecisionReportResponse",
     "DeviationResponse",
     "FillResponse",
     "PnlSummaryResponse",

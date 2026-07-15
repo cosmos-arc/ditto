@@ -12,10 +12,8 @@
 
 ```
 plans/
-├── {date}-{name}.md          # 日期前缀的规划文件
-├── app/                       # App 层相关规划
-├── archive/                   # 已完成或废弃的归档计划
-├── improvements/              # 改进方案
+├── {date}-{name}.md          # 日期前缀的活跃规划文件
+├── archive/                   # 已完成或废弃的归档计划（含原 improvements/）
 ├── task-template.md           # 任务模板
 └── README.md                  # 本文件
 ```

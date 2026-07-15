@@ -48,6 +48,9 @@ def _enrich_with_instrument_id(
         if source_ticker_col != "source_ticker"
         else df
     )
+    standardized_df = standardized_df.with_columns(
+        pl.col("source_ticker").cast(pl.Utf8)
+    )
 
     # 处理空 DataFrame
     if len(standardized_df) == 0:
@@ -61,7 +64,8 @@ def _enrich_with_instrument_id(
         {
             "source_ticker": list(instrument_id_mapping.keys()),
             "instrument_id": list(instrument_id_mapping.values()),
-        }
+        },
+        schema={"source_ticker": pl.Utf8, "instrument_id": pl.Int64},
     )
 
     return standardized_df.join(

@@ -152,6 +152,26 @@ class TestRunBacktestFlow:
         assert config.start_date == "2025-01-01"
         assert config.end_date == "2025-06-30"
 
+    def test_passes_fill_config_to_facade(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow passes fill mode and participation rate to BacktestServiceConfig."""
+        RUNNER(
+            run_id="run-fill",
+            strategy_id="my-strategy",
+            start_date="2025-01-01",
+            end_date="2025-06-30",
+            participation_rate=0.02,
+            fill_mode="all_or_nothing",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        config = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
+        assert config is not None
+        assert config.participation_rate == pytest.approx(0.02)
+        assert config.fill_mode == "all_or_nothing"
+
     def test_passes_resume_provenance_to_config(
         self,
         mock_facade: Mock,

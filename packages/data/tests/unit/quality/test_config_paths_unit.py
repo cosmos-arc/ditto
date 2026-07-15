@@ -25,3 +25,26 @@ class TestDefaultConfigPaths:
 
         assert golden_path.exists(), f"Golden dataset config not found: {golden_path}"
         assert golden_path.name == "golden_dataset.yml"
+
+    def test_financial_statement_l1_rules_allow_nullable_source_measures(self) -> None:
+        """财报源金额字段可为空，不能作为 L1 阻断项。"""
+        import yaml
+        from ditto_data.quality.config_paths import get_default_dq_rules_dir
+
+        dq_dir = get_default_dq_rules_dir()
+        expected_not_null = {
+            "balance_sheet": {"instrument_id", "report_date"},
+            "income_statement": {"instrument_id", "report_date"},
+            "cash_flow": {"instrument_id", "report_date"},
+        }
+
+        for dataset, expected_columns in expected_not_null.items():
+            with (dq_dir / f"{dataset}.yml").open(encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+
+            not_null_rules = [
+                rule for rule in config["technical"] if rule.get("rule") == "not_null"
+            ]
+
+            assert len(not_null_rules) == 1
+            assert set(not_null_rules[0]["columns"]) == expected_columns

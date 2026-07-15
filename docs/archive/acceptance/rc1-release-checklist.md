@@ -24,6 +24,14 @@ passed == true
 business_failures == []
 ```
 
+### ✅ RC1 验收结果（2026-07-02, Phase 2 Task 2.1）
+
+- 报告: `artifacts/acceptance/rc1-report.json`（`generated_at=2026-07-02T08:48:39Z`）。
+- `passed == true`、`business_failures == []`。
+- 5 命令全过（rc=0）: `check` / `targeted-golden` / `promotion-evidence-stock-daily` / `real-data-e2e` / `maturity-status`。
+- 运行 env: `source scripts/acceptance/wave1_env.sh`（`DITTO_DATA_ROOT=.tmp/ditto-rc1`、`ENVIRONMENT=testing`），真实 Tushare/FRED 凭证。
+- 覆盖并替换了 Phase 1 之前的旧报告（旧报告为 Jun 17 生成）。
+
 ## 二、必需数据集
 
 以下 launch 数据集全部为发布必需项:

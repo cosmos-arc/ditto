@@ -12,11 +12,14 @@ from ditto_application.builders.template_builders import (
     build_portfolio_stages,
     build_stock_selection_trend_config,
 )
+from ditto_portfolio.rebalancing import AllocationStage, MeanVarianceAllocator
 from ditto_strategy.alpha.specs import ConstraintSpec, StrategySpec
 
 
 def _make_spec(
     *,
+    template: str = "stock_selection",
+    asset_class: str = "stock",
     constraints: tuple[ConstraintSpec, ...] = (),
     **params: object,
 ) -> StrategySpec:
@@ -24,9 +27,9 @@ def _make_spec(
     return StrategySpec(
         strategy_id="test_stock_selection",
         name="test",
-        template="stock_selection",
+        template=template,
         universe="test_universe",
-        asset_class="stock",
+        asset_class=asset_class,
         constraints=constraints,
         params=params,
     )
@@ -70,6 +73,23 @@ class TestBuildStockSelectionTrendConfigPreprocess:
 
 class TestBuildPortfolioStagesLaunchConstraints:
     """Launch portfolio controls are wired from StrategySpec constraints."""
+
+    def test_mean_variance_allocation_method_builds_optimizer_stage(self) -> None:
+        spec = _make_spec(
+            template="etf_rotation",
+            asset_class="etf",
+            allocation_method="mean_variance",
+            cash_target=0.10,
+            max_weight=0.30,
+        )
+
+        stages = build_portfolio_stages(spec)
+
+        allocation_stage = stages[0]
+        assert isinstance(allocation_stage, AllocationStage)
+        assert isinstance(allocation_stage.allocator, MeanVarianceAllocator)
+        assert allocation_stage.allocator.cash_target == pytest.approx(0.10)
+        assert allocation_stage.allocator.max_weight == pytest.approx(0.30)
 
     def test_declared_launch_constraints_adjust_target_weights(self) -> None:
         spec = _make_spec(

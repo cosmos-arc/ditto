@@ -277,8 +277,8 @@ Foundation Layer (packages/platform/)
 ## 相关文档
 
 - [架构规范](../../.claude/rules/architecture.md)
-- [系统设计](../../docs/design/01_system_design.md)
-- [引擎设计](../../docs/design/03_engine_design.md)
+- [系统设计](../../docs/design/archive/01_system_design.md)
+- [引擎设计](../../docs/design/archive/03_engine_design.md)
 - [ADR 0002: Monorepo 结构](0002-monorepo-structure.md)
 - [ADR 0003: 数据存储策略](0003-data-storage-strategy.md)
 
