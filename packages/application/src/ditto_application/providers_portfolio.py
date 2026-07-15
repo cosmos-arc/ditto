@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
+from ditto_execution.contracts import (
+    AccountDataPort,
+    FillDataPort,
+    IntentDataPort,
+    PositionDataPort,
+)
 
+from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.daily_decision import DailyDecisionQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
@@ -18,6 +24,18 @@ class AppPortfolioQueryProvider(Provider):
     """App Query 层 DI Provider — 组合/交易查询服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def account_baseline_query(
+        self,
+        account_port: AccountDataPort,
+        position_port: PositionDataPort,
+    ) -> AccountBaselineQuery:
+        """账户基线按信号日查询服务。"""
+        return AccountBaselineQuery(
+            account_port=account_port,
+            position_port=position_port,
+        )
 
     @provide
     def trade_query_facade(

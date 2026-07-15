@@ -141,6 +141,11 @@ class PositionWriter:
 
     def save(self, record: PositionRecord) -> None:
         """Persist a position snapshot."""
+        self.save_uncommitted(record)
+        self._client.commit()
+
+    def save_uncommitted(self, record: PositionRecord) -> None:
+        """Persist a position snapshot without committing the transaction."""
         self._client.execute(
             _INSERT_POSITION,
             (
@@ -159,4 +164,3 @@ class PositionWriter:
                 record.created_at,
             ),
         )
-        self._client.commit()

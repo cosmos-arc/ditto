@@ -7,6 +7,7 @@ from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.contracts import (
+    AccountDataPort,
     BrokerEventDataPort,
     FillDataPort,
     IntentDataPort,
@@ -111,10 +112,17 @@ class ExecutionStorageProvider(Provider):
         self,
         readers: ExecutionReaders,
         writers: ExecutionWriters,
+        sqlite_client: SQLiteClient,
+        audit_service: ExecutionAuditService,
         _schema_initialized: None,
     ) -> TradeService:
         """交易信号/成交/持仓 CRUD 服务（内部实例）。"""
-        return TradeService(readers=readers, writers=writers)
+        return TradeService(
+            readers=readers,
+            writers=writers,
+            sqlite_client=sqlite_client,
+            audit_service=audit_service,
+        )
 
     # ── ISP 窄 Port 暴露 ──
 
@@ -131,6 +139,11 @@ class ExecutionStorageProvider(Provider):
     @provide
     def position_data_port(self, trade_service: TradeService) -> PositionDataPort:
         """持仓窄 Port."""
+        return trade_service
+
+    @provide
+    def account_data_port(self, trade_service: TradeService) -> AccountDataPort:
+        """账户基线聚合窄 Port."""
         return trade_service
 
     @provide

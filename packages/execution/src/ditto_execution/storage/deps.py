@@ -88,6 +88,8 @@ class _PositionWriterPort(Protocol):
 
     def save(self, record: PositionRecord) -> None: ...
 
+    def save_uncommitted(self, record: PositionRecord) -> None: ...
+
 
 class _AccountSnapshotReaderPort(Protocol):
     """Read-side dependency for account snapshots."""
@@ -112,6 +114,8 @@ class _AccountSnapshotWriterPort(Protocol):
     """Write-side dependency for account snapshots."""
 
     def save(self, record: AccountSnapshotRecord) -> None: ...
+
+    def save_uncommitted(self, record: AccountSnapshotRecord) -> None: ...
 
 
 class _BrokerEventReaderPort(Protocol):

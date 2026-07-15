@@ -18,6 +18,7 @@ import orjson
 from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_execution.audit.models import (
+    AccountBaselineAuditPayload,
     ExecutionTimelineEntry,
     PreTradeDecisionPayload,
     RepairExecutionPayload,
@@ -376,6 +377,38 @@ class ExecutionAuditService:
         )
         return count
 
+    @traced("audit.save_account_baseline_log")
+    def save_account_baseline_log(
+        self,
+        run_id: str,
+        record: AccountBaselineAuditPayload,
+        *,
+        commit: bool = True,
+    ) -> None:
+        """Save one typed account baseline import/correction audit record."""
+        record_type = (
+            "account_baseline_correction"
+            if record.operation == "correction"
+            else "account_baseline_import"
+        )
+        conn = self._pool.get_connection()
+        conn.execute(
+            _INSERT_SQL,
+            (
+                run_id,
+                record.trade_date,
+                record_type,
+                None,
+                "account",
+                record.new_snapshot_id,
+                None,
+                None,
+                self._serialize_record(record, run_id=run_id),
+            ),
+        )
+        if commit:
+            self._pool.commit()
+
     @traced("audit.query")
     def query(
         self,
@@ -539,7 +572,8 @@ class ExecutionAuditService:
     # ------------------------------------------------------------------
 
     _PayloadT = (
-        RiskScanPayload
+        AccountBaselineAuditPayload
+        | RiskScanPayload
         | PreTradeDecisionPayload
         | TradeFillPayload
         | RiskDecisionPayload

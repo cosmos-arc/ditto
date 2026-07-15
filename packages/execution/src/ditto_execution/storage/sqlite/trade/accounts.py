@@ -123,6 +123,11 @@ class AccountSnapshotWriter:
 
     def save(self, record: AccountSnapshotRecord) -> None:
         """Persist an account snapshot."""
+        self.save_uncommitted(record)
+        self._client.commit()
+
+    def save_uncommitted(self, record: AccountSnapshotRecord) -> None:
+        """Persist an account snapshot without committing the transaction."""
         self._client.execute(
             _INSERT_ACCOUNT_SNAPSHOT,
             (
@@ -140,4 +145,3 @@ class AccountSnapshotWriter:
                 record.created_at,
             ),
         )
-        self._client.commit()

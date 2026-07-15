@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from ditto_execution.audit.models import (
+    AccountBaselineAuditPayload,
     PreTradeDecisionPayload,
     RepairExecutionPayload,
     RiskDecisionPayload,
@@ -12,6 +13,7 @@ from ditto_execution.audit.models import (
     TradeFillPayload,
 )
 from ditto_execution.models import (
+    AccountSnapshotRecord,
     BrokerEventRecord,
     FillRecord,
     PositionRecord,
@@ -19,6 +21,7 @@ from ditto_execution.models import (
 )
 
 __all__ = [
+    "AccountDataPort",
     "BrokerEventDataPort",
     "FillDataPort",
     "IntentDataPort",
@@ -150,6 +153,39 @@ class PositionDataPort(Protocol):
         run_id: str | None = None,
     ) -> list[PositionRecord]:
         """按条件查询持仓快照列表."""
+        ...
+
+
+class AccountDataPort(Protocol):
+    """Account baseline aggregate persistence port."""
+
+    def save_account_baseline(
+        self,
+        *,
+        account: AccountSnapshotRecord,
+        positions: tuple[PositionRecord, ...],
+        audit_payload: AccountBaselineAuditPayload | None = None,
+    ) -> None:
+        """Atomically persist one account baseline and its positions."""
+        ...
+
+    def get_latest_account_snapshot(
+        self,
+        run_id: str,
+        account_id: str,
+    ) -> AccountSnapshotRecord | None:
+        """Return the latest account snapshot for one sleeve."""
+        ...
+
+    def list_account_snapshots(
+        self,
+        run_id: str,
+        *,
+        strategy_id: str | None = None,
+        account_id: str | None = None,
+        snapshot_date: str | None = None,
+    ) -> list[AccountSnapshotRecord]:
+        """List matching account snapshots."""
         ...
 
 

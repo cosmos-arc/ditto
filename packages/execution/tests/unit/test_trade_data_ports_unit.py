@@ -5,8 +5,18 @@ from __future__ import annotations
 from typing import Protocol, get_type_hints
 
 import pytest
-from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
-from ditto_execution.models import FillRecord, PositionRecord, SignalRecord
+from ditto_execution.contracts import (
+    AccountDataPort,
+    FillDataPort,
+    IntentDataPort,
+    PositionDataPort,
+)
+from ditto_execution.models import (
+    AccountSnapshotRecord,
+    FillRecord,
+    PositionRecord,
+    SignalRecord,
+)
 from ditto_execution.storage.sqlite.trade.service import TradeService
 
 # ---------------------------------------------------------------------------
@@ -96,6 +106,28 @@ class TestPositionDataPort:
         assert hints.get("record") is PositionRecord
 
 
+class TestAccountDataPort:
+    """AccountDataPort — account baseline aggregate narrow port."""
+
+    def test_is_protocol(self) -> None:
+        assert issubclass(AccountDataPort, Protocol)
+
+    @pytest.mark.parametrize(
+        "method_name",
+        [
+            "save_account_baseline",
+            "get_latest_account_snapshot",
+            "list_account_snapshots",
+        ],
+    )
+    def test_has_account_methods(self, method_name: str) -> None:
+        assert hasattr(AccountDataPort, method_name)
+
+    def test_save_baseline_accepts_account_snapshot(self) -> None:
+        hints = get_type_hints(AccountDataPort.save_account_baseline)
+        assert hints.get("account") is AccountSnapshotRecord
+
+
 # ---------------------------------------------------------------------------
 # TradeService 结构兼容性
 # ---------------------------------------------------------------------------
@@ -119,4 +151,12 @@ class TestTradeServiceCompatibility:
 
     def test_satisfies_position_port(self) -> None:
         for method_name in ("save_position", "list_positions"):
+            assert hasattr(TradeService, method_name)
+
+    def test_satisfies_account_port(self) -> None:
+        for method_name in (
+            "save_account_baseline",
+            "get_latest_account_snapshot",
+            "list_account_snapshots",
+        ):
             assert hasattr(TradeService, method_name)

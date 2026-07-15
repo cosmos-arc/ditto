@@ -29,7 +29,12 @@ from ditto_data.quality.protocols import (
     TdxSourceProtocol,
 )
 from ditto_data.services.metadata_service import MetadataService
-from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
+from ditto_execution.contracts import (
+    AccountDataPort,
+    FillDataPort,
+    IntentDataPort,
+    PositionDataPort,
+)
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -38,6 +43,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
 
+from ditto_application.commands.account import ImportAccountBaselineHandler
 from ditto_application.commands.backtest import (
     BacktestRunHandler,
     CancelRunHandler,
@@ -90,6 +96,14 @@ class AppCommandProvider(Provider):
     """App Command 层 DI Provider — Command Handler 注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def import_account_baseline_handler(
+        self,
+        account_port: AccountDataPort,
+    ) -> ImportAccountBaselineHandler:
+        """账户与持仓期初基线导入 Handler."""
+        return ImportAccountBaselineHandler(account_port=account_port)
 
     @provide
     def check_data_quality_handler(

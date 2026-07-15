@@ -23,6 +23,7 @@ from ditto_application.execution_dto import (
     ActualPositionSnapshot,
     TradeIntent,
 )
+from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.comparison import ComparisonQueryFacade
 from ditto_application.queries.comparison_math import ComparisonMetrics
 from ditto_application.queries.daily_decision import (
@@ -45,6 +46,7 @@ from ditto_apps.models.common import (
     PaginationRequest,
 )
 from ditto_apps.models.trade import (
+    AccountBaselineResponse,
     ComparisonMetricsResponse,
     DailyDecisionReadinessResponse,
     DailyDecisionReportResponse,
@@ -57,6 +59,60 @@ from ditto_apps.models.trade import (
 )
 
 router = APIRouter()
+
+
+@router.get(
+    "/account-baseline",
+    response_model=APIResponse[AccountBaselineResponse | None],
+)
+@inject
+async def get_account_baseline(
+    query: Annotated[AccountBaselineQuery, FromComponent()],
+    account_id: str = Query(..., description="账户 ID"),
+    strategy_id: str = Query(..., description="策略 ID"),
+    signal_date: str = Query(..., description="信号日期"),
+) -> APIResponse[AccountBaselineResponse | None]:
+    """返回不晚于信号日的最新账户基线及同日持仓。"""
+    result = await asyncio.to_thread(
+        query.get_latest,
+        account_id=account_id,
+        strategy_id=strategy_id,
+        signal_date=signal_date,
+    )
+    if result is None:
+        return APIResponse(data=None)
+    account = result.account
+    return APIResponse(
+        data=AccountBaselineResponse(
+            snapshot_id=account.snapshot_id,
+            sleeve_id=account.run_id,
+            account_id=account.account_id,
+            strategy_id=account.strategy_id,
+            snapshot_date=account.snapshot_date,
+            cash_available=account.cash_available,
+            cash_settled=account.cash_settled,
+            cash_frozen=account.cash_frozen,
+            total_value=account.total_value,
+            nav=account.nav,
+            exposure=account.exposure,
+            positions=[
+                PositionSnapshotResponse(
+                    snapshot_id=item.snapshot_id,
+                    strategy_id=item.strategy_id,
+                    snapshot_date=item.snapshot_date,
+                    instrument_id=item.instrument_id,
+                    quantity=item.quantity,
+                    available_quantity=item.available_quantity,
+                    average_cost=item.average_cost,
+                    market_value=item.market_value,
+                    unrealized_pnl=item.unrealized_pnl,
+                    realized_pnl=item.realized_pnl,
+                    total_fees=item.total_fees,
+                )
+                for item in result.positions
+            ],
+        )
+    )
 
 
 # ---------------------------------------------------------------------------

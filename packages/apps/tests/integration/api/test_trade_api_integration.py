@@ -20,6 +20,10 @@ from unittest.mock import MagicMock
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
+from ditto_application.commands.account import (
+    AccountBaselineResult,
+    ImportAccountBaselineHandler,
+)
 from ditto_application.commands.trade import (
     RecordFillHandler,
     UpdateIntentStatusHandler,
@@ -28,6 +32,10 @@ from ditto_application.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
     TradeIntent,
+)
+from ditto_application.queries.account import (
+    AccountBaselineQuery,
+    AccountBaselineReadModel,
 )
 from ditto_application.queries.comparison import ComparisonQueryFacade
 from ditto_application.queries.daily_decision import (
@@ -47,6 +55,7 @@ from ditto_application.queries.trade import TradeQueryFacade
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.trade import router
 from ditto_apps.middleware import api_error_handler
+from ditto_execution.models import AccountSnapshotRecord, PositionRecord
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -91,6 +100,16 @@ def mock_status_handler() -> MagicMock:
 
 
 @pytest.fixture
+def mock_account_handler() -> MagicMock:
+    return MagicMock(spec=ImportAccountBaselineHandler)
+
+
+@pytest.fixture
+def mock_account_query() -> MagicMock:
+    return MagicMock(spec=AccountBaselineQuery)
+
+
+@pytest.fixture
 def app(
     mock_trade_facade: MagicMock,
     mock_portfolio_facade: MagicMock,
@@ -99,6 +118,8 @@ def app(
     mock_daily_decision_facade: MagicMock,
     mock_fill_handler: MagicMock,
     mock_status_handler: MagicMock,
+    mock_account_handler: MagicMock,
+    mock_account_query: MagicMock,
 ) -> FastAPI:
     app = FastAPI()
 
@@ -132,6 +153,14 @@ def app(
         @provide
         def status_handler(self) -> UpdateIntentStatusHandler:
             return mock_status_handler
+
+        @provide
+        def account_handler(self) -> ImportAccountBaselineHandler:
+            return mock_account_handler
+
+        @provide
+        def account_query(self) -> AccountBaselineQuery:
+            return mock_account_query
 
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
@@ -176,6 +205,115 @@ def _make_intent(**overrides: object) -> TradeIntent:
     }
     defaults.update(overrides)
     return TradeIntent(**defaults)  # type: ignore[arg-type]
+
+
+class TestAccountBaseline:
+    """账户基线导入与按信号日读取 API。"""
+
+    def test_import_empty_positions_returns_stable_identity(
+        self, client: TC, mock_account_handler: MC
+    ) -> None:
+        mock_account_handler.handle.return_value = AccountBaselineResult(
+            snapshot_id="baseline-abc",
+            sleeve_id="manual-acct-strat-a",
+            status="created",
+        )
+
+        response = client.post(
+            "/api/v1/trade/account-baseline",
+            json={
+                "account_id": "acct",
+                "strategy_id": "strat-a",
+                "snapshot_date": "2024-01-15",
+                "cash_available": 1000.0,
+                "cash_settled": 1000.0,
+                "cash_frozen": 0.0,
+                "total_value": 1000.0,
+                "nav": 1.0,
+                "positions": [],
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {
+            "snapshot_id": "baseline-abc",
+            "sleeve_id": "manual-acct-strat-a",
+            "status": "created",
+        }
+        command = mock_account_handler.handle.call_args.args[0]
+        assert command.positions == ()
+
+    def test_rejects_negative_values_before_handler(
+        self, client: TC, mock_account_handler: MC
+    ) -> None:
+        response = client.post(
+            "/api/v1/trade/account-baseline",
+            json={
+                "account_id": "acct",
+                "strategy_id": "strat-a",
+                "snapshot_date": "2024-01-15",
+                "cash_available": -1.0,
+                "cash_settled": 0.0,
+                "cash_frozen": 0.0,
+                "total_value": 0.0,
+                "nav": 1.0,
+            },
+        )
+
+        assert response.status_code == 422
+        mock_account_handler.handle.assert_not_called()
+
+    def test_query_returns_account_and_same_baseline_positions(
+        self, client: TC, mock_account_query: MC
+    ) -> None:
+        account = AccountSnapshotRecord(
+            snapshot_id="baseline-abc",
+            run_id="manual-acct-strat-a",
+            strategy_id="strat-a",
+            account_id="acct",
+            snapshot_date="2024-01-15",
+            cash_available=500.0,
+            cash_settled=500.0,
+            cash_frozen=0.0,
+            total_value=1000.0,
+            nav=1.0,
+            exposure=500.0,
+            created_at="2024-01-15T08:00:00+00:00",
+        )
+        position = PositionRecord(
+            snapshot_id="baseline-abc-510300",
+            run_id=account.run_id,
+            strategy_id=account.strategy_id,
+            snapshot_date=account.snapshot_date,
+            instrument_id=510300,
+            quantity=100,
+            available_quantity=100,
+            average_cost=5.0,
+            market_value=500.0,
+            unrealized_pnl=0.0,
+            realized_pnl=0.0,
+            total_fees=0.0,
+            created_at=account.created_at,
+        )
+        mock_account_query.get_latest.return_value = AccountBaselineReadModel(
+            account=account,
+            positions=(position,),
+        )
+
+        response = client.get(
+            "/api/v1/trade/account-baseline",
+            params={
+                "account_id": "acct",
+                "strategy_id": "strat-a",
+                "signal_date": "2024-01-16",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["snapshot_date"] == "2024-01-15"
+        assert response.json()["data"]["positions"][0]["snapshot_id"] == (
+            "baseline-abc-510300"
+        )
 
 
 def _make_fill(**overrides: object) -> ManualExecutionFill:

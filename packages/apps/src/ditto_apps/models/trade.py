@@ -35,6 +35,63 @@ class UpdateIntentStatusRequest(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class PositionBaselineRequest(BaseModel):
+    """账户基线中的单只标的持仓。"""
+
+    instrument_id: int = Field(description="标的 ID")
+    quantity: int = Field(ge=0, description="持仓数量")
+    available_quantity: int = Field(ge=0, description="可用数量")
+    average_cost: float = Field(ge=0, description="平均成本")
+    market_value: float = Field(ge=0, description="持仓市值")
+    unrealized_pnl: float = Field(default=0, description="浮动盈亏")
+    realized_pnl: float = Field(default=0, description="已实现盈亏")
+    total_fees: float = Field(default=0, ge=0, description="累计费用")
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class ImportAccountBaselineRequest(BaseModel):
+    """导入账户与持仓期初基线。"""
+
+    account_id: str = Field(min_length=1, description="账户 ID")
+    strategy_id: str = Field(min_length=1, description="策略 ID")
+    snapshot_date: str = Field(description="快照日期 (YYYY-MM-DD)")
+    cash_available: float = Field(ge=0, description="可用现金")
+    cash_settled: float = Field(ge=0, description="已交收现金")
+    cash_frozen: float = Field(ge=0, description="冻结现金")
+    total_value: float = Field(ge=0, description="账户总资产")
+    nav: float = Field(ge=0, description="单位净值")
+    positions: list[PositionBaselineRequest] = Field(default_factory=list)
+    replace_confirmed: bool = Field(default=False, description="确认覆盖已有基线")
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class AccountBaselineImportResponse(BaseModel):
+    """账户基线导入结果。"""
+
+    snapshot_id: str
+    sleeve_id: str
+    status: Literal["created", "unchanged", "replaced"]
+
+
+class AccountBaselineResponse(BaseModel):
+    """与信号日匹配的账户基线。"""
+
+    snapshot_id: str
+    sleeve_id: str
+    account_id: str
+    strategy_id: str
+    snapshot_date: str
+    cash_available: float
+    cash_settled: float
+    cash_frozen: float
+    total_value: float
+    nav: float
+    exposure: float
+    positions: list[PositionSnapshotResponse]
+
+
 class TradeIntentResponse(BaseModel):
     """交易意图响应."""
 
@@ -172,12 +229,16 @@ class DailyDecisionReportResponse(BaseModel):
 
 
 __all__ = [
+    "AccountBaselineImportResponse",
+    "AccountBaselineResponse",
     "ComparisonMetricsResponse",
     "DailyDecisionReadinessResponse",
     "DailyDecisionReportResponse",
     "DeviationResponse",
     "FillResponse",
+    "ImportAccountBaselineRequest",
     "PnlSummaryResponse",
+    "PositionBaselineRequest",
     "PositionSnapshotResponse",
     "RecordFillRequest",
     "SignalDeviationItem",

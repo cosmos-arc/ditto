@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
+from ditto_execution.audit.execution_audit_service import ExecutionAuditService
+from ditto_execution.audit.models import AccountBaselineAuditPayload
 from ditto_execution.models import (
     AccountSnapshotRecord,
     BrokerEventRecord,
@@ -71,7 +73,14 @@ def _make_service(client: SQLiteClient) -> TradeService:
         account=AccountSnapshotWriter(client),
         broker_event=BrokerEventWriter(client),
     )
-    return TradeService(readers=readers, writers=writers)
+    audit_service = ExecutionAuditService(client._pool)
+    audit_service.init_schema()
+    return TradeService(
+        readers=readers,
+        writers=writers,
+        sqlite_client=client,
+        audit_service=audit_service,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1114,6 +1123,67 @@ class TestListAccountSnapshots:
         assert [r.snapshot_id for r in results] == ["ACCT-001", "ACCT-002"]
         assert {r.run_id for r in results} == {"RUN-001"}
         assert {r.strategy_id for r in results} == {"STRAT-A"}
+
+
+class TestSaveAccountBaseline:
+    """Atomic account + positions + audit baseline persistence."""
+
+    def test_saves_account_positions_and_typed_audit_atomically(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        account = _make_account_snapshot()
+        positions = (
+            _make_position(snapshot_id="POS-001", instrument_id=510300),
+            _make_position(snapshot_id="POS-002", instrument_id=159915),
+        )
+        audit = AccountBaselineAuditPayload(
+            trade_date=account.snapshot_date,
+            operation="import",
+            account_id=account.account_id,
+            strategy_id=account.strategy_id,
+            sleeve_id=account.run_id,
+            old_snapshot_id=None,
+            new_snapshot_id=account.snapshot_id,
+        )
+
+        svc.save_account_baseline(
+            account=account,
+            positions=positions,
+            audit_payload=audit,
+        )
+
+        assert svc.get_latest_account_snapshot("RUN-001", "ACCT-A") == account
+        assert len(svc.list_positions("STRAT-A", run_id="RUN-001")) == 2
+        rows = sqlite_client.fetchall(
+            "SELECT record_type, payload FROM execution_audit WHERE run_id = ?",
+            ("RUN-001",),
+        )
+        assert len(rows) == 1
+        assert rows[0]["record_type"] == "account_baseline_import"
+
+    def test_rolls_back_all_rows_when_position_write_fails(
+        self, sqlite_client: SQLiteClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        account = _make_account_snapshot()
+        positions = (_make_position(),)
+
+        def fail(_: PositionRecord) -> None:
+            raise RuntimeError("position write failed")
+
+        monkeypatch.setattr(svc._writers.position, "save_uncommitted", fail)
+
+        with pytest.raises(RuntimeError, match="position write failed"):
+            svc.save_account_baseline(
+                account=account,
+                positions=positions,
+                audit_payload=None,
+            )
+
+        assert svc.get_latest_account_snapshot("RUN-001", "ACCT-A") is None
+        assert svc.list_positions("STRAT-A", run_id="RUN-001") == []
+        assert sqlite_client.count("execution_audit") == 0
 
 
 # ===========================================================================

@@ -12,6 +12,7 @@ import orjson
 import pytest
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_execution.audit.models import (
+    AccountBaselineAuditPayload,
     PreTradeDecisionPayload,
     RiskScanPayload,
 )
@@ -80,6 +81,50 @@ def _make_pre_trade_payload(
         reason=None,
         check_sequence=("lot_size", "buying_power"),
     )
+
+
+def test_save_account_baseline_log_uses_typed_import_and_correction_records(
+    audit_service: ExecutionAuditService,
+) -> None:
+    """账户基线审计保留操作类型以及覆盖前后的完整载荷。"""
+    imported = AccountBaselineAuditPayload(
+        trade_date="2026-03-20",
+        operation="import",
+        account_id="acct-1",
+        strategy_id="strategy-1",
+        sleeve_id="manual-acct-1-strategy-1",
+        old_snapshot_id=None,
+        new_snapshot_id="baseline-new",
+        old_baseline=None,
+        new_baseline={"total_value": 1000.0},
+    )
+    corrected = AccountBaselineAuditPayload(
+        trade_date="2026-03-20",
+        operation="correction",
+        account_id="acct-1",
+        strategy_id="strategy-1",
+        sleeve_id="manual-acct-1-strategy-1",
+        old_snapshot_id="baseline-old",
+        new_snapshot_id="baseline-new",
+        old_baseline={"total_value": 900.0},
+        new_baseline={"total_value": 1000.0},
+    )
+
+    audit_service.save_account_baseline_log("run-import", imported)
+    audit_service.save_account_baseline_log("run-correction", corrected)
+
+    rows = (
+        audit_service._pool.get_connection()
+        .execute("SELECT record_type, payload FROM execution_audit ORDER BY id")
+        .fetchall()
+    )
+    assert [row["record_type"] for row in rows] == [
+        "account_baseline_import",
+        "account_baseline_correction",
+    ]
+    payload = orjson.loads(rows[1]["payload"])
+    assert payload["old_baseline"] == {"total_value": 900.0}
+    assert payload["new_baseline"] == {"total_value": 1000.0}
 
 
 # ---------------------------------------------------------------------------

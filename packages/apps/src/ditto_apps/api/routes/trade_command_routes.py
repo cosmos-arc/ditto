@@ -13,6 +13,11 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.commands.account import (
+    ImportAccountBaselineCommand,
+    ImportAccountBaselineHandler,
+    PositionBaselineInput,
+)
 from ditto_application.commands.trade import (
     RecordFillCommand,
     RecordFillHandler,
@@ -26,12 +31,45 @@ from fastapi import APIRouter
 from ditto_apps.api.errors import raise_business_error
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.trade import (
+    AccountBaselineImportResponse,
     FillResponse,
+    ImportAccountBaselineRequest,
     RecordFillRequest,
     UpdateIntentStatusRequest,
 )
 
 router = APIRouter()
+
+
+@router.post(
+    "/account-baseline",
+    response_model=APIResponse[AccountBaselineImportResponse],
+)
+@inject
+async def import_account_baseline(
+    request: ImportAccountBaselineRequest,
+    handler: Annotated[ImportAccountBaselineHandler, FromComponent()],
+) -> APIResponse[AccountBaselineImportResponse]:
+    """幂等导入账户与持仓期初基线。"""
+    command = ImportAccountBaselineCommand(
+        account_id=request.account_id,
+        strategy_id=request.strategy_id,
+        snapshot_date=request.snapshot_date,
+        cash_available=request.cash_available,
+        cash_settled=request.cash_settled,
+        cash_frozen=request.cash_frozen,
+        total_value=request.total_value,
+        nav=request.nav,
+        positions=tuple(
+            PositionBaselineInput(**item.model_dump()) for item in request.positions
+        ),
+        replace_confirmed=request.replace_confirmed,
+    )
+    try:
+        result = await asyncio.to_thread(handler.handle, command)
+    except (AppError, ValueError) as exc:
+        raise_business_error(exc, conflict_keywords=("differs",))
+    return APIResponse(data=AccountBaselineImportResponse(**result.__dict__))
 
 
 # ---------------------------------------------------------------------------

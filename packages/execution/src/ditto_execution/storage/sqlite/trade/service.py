@@ -10,6 +10,10 @@ FillRecord、PositionRecord、AccountSnapshotRecord），
 
 from __future__ import annotations
 
+from ditto_platform.foundation import SQLiteClient
+
+from ditto_execution.audit.execution_audit_service import ExecutionAuditService
+from ditto_execution.audit.models import AccountBaselineAuditPayload
 from ditto_execution.models import (
     AccountSnapshotRecord,
     BrokerEventRecord,
@@ -40,9 +44,13 @@ class TradeService:
         self,
         readers: ExecutionReaders,
         writers: ExecutionWriters,
+        sqlite_client: SQLiteClient | None = None,
+        audit_service: ExecutionAuditService | None = None,
     ) -> None:
         self._readers = readers
         self._writers = writers
+        self._sqlite_client = sqlite_client
+        self._audit_service = audit_service
 
     # ------------------------------------------------------------------
     # Intent CRUD
@@ -169,6 +177,53 @@ class TradeService:
     def save_account_snapshot(self, record: AccountSnapshotRecord) -> None:
         """保存账户快照."""
         self._writers.account.save(record)
+
+    def save_account_baseline(
+        self,
+        *,
+        account: AccountSnapshotRecord,
+        positions: tuple[PositionRecord, ...],
+        audit_payload: AccountBaselineAuditPayload | None = None,
+    ) -> None:
+        """Atomically persist one account baseline and its positions."""
+        if self._sqlite_client is None:
+            raise RuntimeError(
+                "TradeService baseline transaction client is not configured"
+            )
+        try:
+            self._sqlite_client.execute(
+                """DELETE FROM actual_positions
+                WHERE run_id = ? AND strategy_id = ? AND snapshot_date = ?""",
+                (account.run_id, account.strategy_id, account.snapshot_date),
+            )
+            self._sqlite_client.execute(
+                """DELETE FROM account_snapshots
+                WHERE run_id = ? AND strategy_id = ? AND account_id = ?
+                AND snapshot_date = ?""",
+                (
+                    account.run_id,
+                    account.strategy_id,
+                    account.account_id,
+                    account.snapshot_date,
+                ),
+            )
+            self._writers.account.save_uncommitted(account)
+            for position in positions:
+                self._writers.position.save_uncommitted(position)
+            if audit_payload is not None:
+                if self._audit_service is None:
+                    raise RuntimeError(
+                        "TradeService baseline audit service is not configured"
+                    )
+                self._audit_service.save_account_baseline_log(
+                    account.run_id,
+                    audit_payload,
+                    commit=False,
+                )
+            self._sqlite_client.commit()
+        except Exception:
+            self._sqlite_client.rollback()
+            raise
 
     def get_latest_account_snapshot(
         self,
