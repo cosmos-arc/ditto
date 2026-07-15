@@ -38,6 +38,7 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 )
 
 from ditto_application.processes.execution.factor_bridge import FactorBridge
+from ditto_application.processes.execution.manual_sizing import ManualSizingService
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.position_reader import StoredPositionReader
 from ditto_application.processes.execution.replay_process import ReplayProcess
@@ -282,9 +283,18 @@ class AppProcessProvider(Provider):
     def signal_snapshot_process(
         self,
         position_reader: StoredPositionReader,
+        sizing_service: ManualSizingService,
     ) -> SignalSnapshotProcess:
         """Signal snapshot process using stored manual positions."""
-        return SignalSnapshotProcess(position_reader=position_reader)
+        return SignalSnapshotProcess(
+            position_reader=position_reader,
+            sizing_service=sizing_service,
+        )
+
+    @provide
+    def manual_sizing_service(self) -> ManualSizingService:
+        """A 股人工交易建议数量服务。"""
+        return ManualSizingService()
 
     @provide
     def signal_package_publisher(

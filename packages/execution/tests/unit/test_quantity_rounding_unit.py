@@ -24,15 +24,16 @@ class TestRoundBuyQty:
         assert round_buy_qty(-100, lot_size=100) == 0
 
     def test_round_buy_qty_normal_above_lot(self) -> None:
-        """正常值 >= lot_size → 原样返回。"""
+        """买入数量向下取整为整手，避免超过目标或现金上限。"""
         assert round_buy_qty(200, lot_size=100) == 200
         assert round_buy_qty(500, lot_size=100) == 500
+        assert round_buy_qty(150, lot_size=100) == 100
 
     def test_round_buy_qty_normal_below_lot(self) -> None:
-        """正常值 < lot_size → 向上取到 lot_size（最小1手）。"""
-        assert round_buy_qty(1, lot_size=100) == 100
-        assert round_buy_qty(50, lot_size=100) == 100
-        assert round_buy_qty(99, lot_size=100) == 100
+        """不足一手不强制买入。"""
+        assert round_buy_qty(1, lot_size=100) == 0
+        assert round_buy_qty(50, lot_size=100) == 0
+        assert round_buy_qty(99, lot_size=100) == 0
 
     def test_round_buy_qty_exactly_lot(self) -> None:
         """raw_qty == lot_size → 原样返回。"""
@@ -40,8 +41,8 @@ class TestRoundBuyQty:
 
     def test_round_buy_qty_custom_lot_size(self) -> None:
         """自定义 lot_size。"""
-        assert round_buy_qty(5, lot_size=10) == 10
-        assert round_buy_qty(15, lot_size=10) == 15
+        assert round_buy_qty(5, lot_size=10) == 0
+        assert round_buy_qty(15, lot_size=10) == 10
 
 
 # ---------------------------------------------------------------------------

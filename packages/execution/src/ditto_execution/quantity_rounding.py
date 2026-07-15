@@ -25,10 +25,10 @@ def get_lot_size(
 
 
 def round_buy_qty(raw_qty: int, lot_size: int) -> int:
-    """买入数量取整 — 最小1手 (100+1 规则)。"""
+    """买入数量向下取整到整手；不足一手不强行交易。"""
     if raw_qty <= 0:
         return 0
-    return max(lot_size, raw_qty)
+    return (raw_qty // lot_size) * lot_size
 
 
 def sell_quantities(raw_qty: int, lot_size: int) -> list[int]:

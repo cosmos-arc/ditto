@@ -15,11 +15,17 @@ SignalSnapshotProcess — 信号快照 + 交易意图推导.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
+from dataclasses import replace
 
 from ditto_execution.targets import TargetPortfolioLike
 from ditto_kernel.identity import InstrumentId
 
 from ditto_application.execution_dto import TradeIntent
+from ditto_application.processes.execution.manual_sizing import (
+    ManualSizingContext,
+    ManualSizingService,
+)
 from ditto_application.processes.execution.ports import (
     PositionReader,
     SignalDeliveryProtocol,
@@ -35,9 +41,11 @@ class SignalSnapshotProcess:
         self,
         position_reader: PositionReader,
         signal_delivery: SignalDeliveryProtocol | None = None,
+        sizing_service: ManualSizingService | None = None,
     ) -> None:
         self._position_reader = position_reader
         self._signal_delivery = signal_delivery
+        self._sizing_service = sizing_service
 
     def generate_intents(
         self,
@@ -45,6 +53,7 @@ class SignalSnapshotProcess:
         signal_date: str,
         target: TargetPortfolioLike,
         threshold: float = 0.01,
+        sizing_contexts: Mapping[int, ManualSizingContext] | None = None,
     ) -> list[TradeIntent]:
         """
         对比目标组合与当前持仓，生成交易意图列表.
@@ -54,6 +63,7 @@ class SignalSnapshotProcess:
             signal_date: 信号日期 (YYYY-MM-DD).
             target: Pipeline 输出的目标组合.
             threshold: delta_weight 阈值，低于此值不生成 intent.
+            sizing_contexts: 可选的逐标的账户、行情和交易规则上下文.
 
         Returns:
             需要调整的交易意图列表.
@@ -86,6 +96,10 @@ class SignalSnapshotProcess:
                     current_weight=current_weight,
                     delta_weight=delta_weight,
                 )
+                context = (sizing_contexts or {}).get(iid_int)
+                if self._sizing_service is not None and context is not None:
+                    sizing = self._sizing_service.size_intent(intent, context)
+                    intent = replace(intent, quantity=sizing.rounded_quantity)
                 intents.append(intent)
 
         # 可选推送信号
