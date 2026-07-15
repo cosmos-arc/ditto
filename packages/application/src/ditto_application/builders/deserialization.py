@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import replace
 
 from ditto_kernel.strategy import ImpactModel
@@ -93,10 +94,20 @@ def _normalize_impact_model(raw: str | None) -> ImpactModel:
 def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
     """将 catalog 中的 ``spec_json`` 恢复为 ``StrategySpec``。"""
     payload = as_object_dict(record.spec_json, field_name="spec_json")
+    template = read_required_str(payload, "template")
+    required_datasets = as_str_tuple(
+        payload.get("required_datasets"),
+        field_name="required_datasets",
+    )
+    if not required_datasets:
+        message = f"Strategy {record.strategy_id} missing required_datasets"
+        message += "; using template migration default"
+        warnings.warn(message, stacklevel=2)
+        required_datasets = _default_required_datasets(template)
     spec = StrategySpec(
         strategy_id=read_optional_str(payload.get("strategy_id")) or record.strategy_id,
         name=read_optional_str(payload.get("name")) or record.name,
-        template=read_required_str(payload, "template"),
+        template=template,
         universe=read_required_str(payload, "universe"),
         asset_class=read_required_str(payload, "asset_class"),
         scorer=deserialize_scorer(payload.get("scorer")),
@@ -115,8 +126,18 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
             payload.get("signal_weights"),
             field_name="signal_weights",
         ),
+        required_datasets=required_datasets,
     )
     return inject_template_constraints(spec)
+
+
+def _default_required_datasets(template: str) -> tuple[str, ...]:
+    """旧 spec 的兼容映射；新写入必须显式保存 required_datasets。"""
+    if template in {"etf_rotation", "etf_trend_swing"}:
+        return ("etf_daily",)
+    if template in {"stock_selection", "stock_sector_rotation"}:
+        return ("stock_daily", "adj_factor")
+    return ()
 
 
 # ---------------------------------------------------------------------------

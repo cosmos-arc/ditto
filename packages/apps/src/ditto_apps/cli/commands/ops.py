@@ -37,6 +37,7 @@ from ditto_application.queries.promotion_evidence import (
 )
 
 from ditto_apps.cli.utils.output import output_json_dict, output_json_dicts
+from ditto_apps.jobs.flows.eod import eod_flow
 from ditto_apps.registry.container import Container, make_app_container
 
 app = typer.Typer(help="运维命令")
@@ -64,6 +65,26 @@ _COL_DATASET = 24
 _COL_DATE = 14
 _COL_STATUS = 10
 _COL_RECORDS = 10
+
+
+@app.command("run-eod")
+def run_eod(
+    signal_date: str = typer.Option(..., "--signal-date", help="信号日 YYYY-MM-DD"),
+    strategy_id: str | None = typer.Option(
+        None, "--strategy-id", help="仅运行指定策略"
+    ),
+) -> None:
+    """运行与 Prefect 共用的 EOD 业务入口并结构化输出结果。"""
+    result = eod_flow(trade_date=signal_date, strategy_id=strategy_id)
+    output_json_dict(dict(result))
+    strategies = result.get("strategies", [])
+    if isinstance(strategies, list) and any(
+        isinstance(item, dict)
+        and cast("dict[str, object]", item).get("status")
+        in {"blocked", "failed", "rerun_conflict"}
+        for item in cast("list[object]", strategies)
+    ):
+        raise typer.Exit(1)
 
 
 def _status_color(status: str | None) -> str:

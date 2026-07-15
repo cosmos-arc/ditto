@@ -74,12 +74,14 @@ def _send_alert_safely(
 
 def _run_strategies(
     trade_date: str,
+    strategy_id: str | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """
     运行所有已发布策略。
 
     Args:
         trade_date: 交易日期
+        strategy_id: 可选的单策略过滤。
 
     Returns:
         (策略结果列表, 是否全部成功)
@@ -102,6 +104,8 @@ def _run_strategies(
         all_success = True
 
         for spec in published_specs:
+            if strategy_id is not None and spec.strategy_id != strategy_id:
+                continue
             try:
                 run_result = facade.run_strategy_for_date_from_catalog(
                     config=StrategyRunServiceConfig(
@@ -160,7 +164,11 @@ def _run_strategies(
     name="eod-pipeline",
     description="EOD 编排: 摄取 -> 物化 -> 策略运行",
 )
-def eod_flow(trade_date: str, source: str = "tushare") -> dict[str, object]:
+def eod_flow(
+    trade_date: str,
+    source: str = "tushare",
+    strategy_id: str | None = None,
+) -> dict[str, object]:
     """
     EOD 编排 Flow。
 
@@ -170,6 +178,7 @@ def eod_flow(trade_date: str, source: str = "tushare") -> dict[str, object]:
     Args:
         trade_date: 交易日期 (YYYY-MM-DD)
         source: 数据源名称
+        strategy_id: 可选的单策略过滤。
 
     Returns:
         EOD 运行结果字典，包含:
@@ -271,7 +280,9 @@ def eod_flow(trade_date: str, source: str = "tushare") -> dict[str, object]:
             container.close()
 
     # 5. 运行策略（策略依赖摄取数据，不依赖物化结果）
-    strategy_results, strategy_all_success = _run_strategies(trade_date)
+    strategy_results, strategy_all_success = _run_strategies(
+        trade_date, strategy_id=strategy_id
+    )
 
     # 6. 计算整体状态
     overall_status = "success" if mat_success and strategy_all_success else "partial"

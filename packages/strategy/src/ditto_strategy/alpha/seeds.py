@@ -62,6 +62,7 @@ _seed_etf_industry_rotation = StrategySpec(
     tags=("seed", "etf", "rotation", "industry"),
     signal_expressions=("momentum_1m", "reversal_1w", "volatility_factor"),
     signal_weights=(0.5, 0.3, 0.2),
+    required_datasets=("etf_daily",),
 )
 
 # ---------------------------------------------------------------------------
@@ -107,6 +108,7 @@ _seed_etf_trend_swing = StrategySpec(
     tags=("seed", "etf", "trend", "swing"),
     signal_expressions=("macd_hist", "rsi_14", "atr_14"),
     signal_weights=(0.4, 0.3, 0.3),
+    required_datasets=("etf_daily",),
 )
 
 # ---------------------------------------------------------------------------
@@ -153,6 +155,7 @@ _seed_stock_selection_rotation = StrategySpec(
     tags=("seed", "stock", "selection", "rotation"),
     signal_expressions=("quality_roe", "value_pe", "momentum_1m"),
     signal_weights=(0.4, 0.3, 0.3),
+    required_datasets=("stock_daily", "adj_factor"),
 )
 
 # ---------------------------------------------------------------------------

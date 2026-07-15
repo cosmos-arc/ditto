@@ -192,6 +192,7 @@ class StrategySpec:
     tags: tuple[str, ...] = ()
     signal_expressions: tuple[str, ...] = ()
     signal_weights: tuple[float, ...] = ()
+    required_datasets: tuple[str, ...] = ()
 
     _VALID_TEMPLATES = frozenset(
         {"etf_rotation", "etf_trend_swing", "stock_selection", "stock_sector_rotation"},
