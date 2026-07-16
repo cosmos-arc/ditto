@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import tomllib
 from pathlib import Path
 
 import ditto_apps.main as app_main
@@ -82,3 +83,12 @@ def test_local_prefect_runbook_is_loopback_only() -> None:
 
     assert "prefect server start --host 127.0.0.1 &" in operations_manual
     assert "prefect server start --host 0.0.0.0" not in operations_manual
+
+
+def test_local_prefect_memory_runtime_declares_lua_dependency() -> None:
+    """Prefect's in-memory Docket backend requires fakeredis Lua support."""
+    pixi_config = tomllib.loads(
+        (PROJECT_ROOT / "pixi.toml").read_text(encoding="utf-8")
+    )
+
+    assert pixi_config["dependencies"]["lupa"] == ">=2.1,<3"

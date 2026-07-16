@@ -158,6 +158,9 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxml2-2.15.3-h49c6c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/loguru-0.7.3-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/lua-5.5.0-h76c996d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/luajit-2.1.1744318430-h280c20c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/lupa-2.8-py313lua55h7033f15_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mako-1.3.11-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-3.10.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-it-py-4.0.0-pyhd8ed1ab_0.conda
@@ -429,6 +432,9 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.2-hfd05255_2.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/llvm-openmp-22.1.4-h4fa8253_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/loguru-0.7.3-pyh7428d3b_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/lua-5.5.0-h6a83c73_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/luajit-2.1.1744318430-h6a83c73_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/lupa-2.8-py313lua55hfe59770_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mako-1.3.11-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-3.10.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-it-py-4.0.0-pyhd8ed1ab_0.conda
@@ -781,6 +787,9 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libxml2-2.15.3-h49c6c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/loguru-0.7.3-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/lua-5.5.0-h76c996d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/luajit-2.1.1744318430-h280c20c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/lupa-2.8-py313lua55h7033f15_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mako-1.3.11-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-3.10.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-it-py-4.0.0-pyhd8ed1ab_0.conda
@@ -1155,6 +1164,9 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.2-hfd05255_2.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/llvm-openmp-22.1.4-h4fa8253_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/loguru-0.7.3-pyh7428d3b_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/lua-5.5.0-h6a83c73_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/luajit-2.1.1744318430-h6a83c73_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/lupa-2.8-py313lua55hfe59770_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mako-1.3.11-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-3.10.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-it-py-4.0.0-pyhd8ed1ab_0.conda
@@ -5330,6 +5342,94 @@ packages:
   - pkg:pypi/loguru?source=hash-mapping
   size: 60119
   timestamp: 1746634872414
+- conda: https://conda.anaconda.org/conda-forge/linux-64/lua-5.5.0-h76c996d_0.conda
+  sha256: dcf9f670f00f31fe52f553d00cd4745e0d716737b475ea2d39318ae8c704ba50
+  md5: 9ae4320f887730f0c09366e27b8ceebb
+  depends:
+  - readline
+  - ncurses
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - ncurses >=6.5,<7.0a0
+  - readline >=8.3,<9.0a0
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 242035
+  timestamp: 1767624000411
+- conda: https://conda.anaconda.org/conda-forge/win-64/lua-5.5.0-h6a83c73_0.conda
+  sha256: f9f91dc23574f331bc2bc66cef210d488f6086a216f594855455768c2fb40b1f
+  md5: a12e5dc725bb636ec86cf24e46644abe
+  depends:
+  - vc >=14.3,<15
+  - vc14_runtime >=14.44.35208
+  - ucrt >=10.0.20348.0
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 225075
+  timestamp: 1767624043639
+- conda: https://conda.anaconda.org/conda-forge/linux-64/luajit-2.1.1744318430-h280c20c_0.conda
+  sha256: ba8559635ebee997cfb3fe3ade3131bcae487e4b6e858770c2f0dc597b700044
+  md5: 52e460d0a6653032e34ea025236fa11b
+  depends:
+  - libgcc >=14
+  - __glibc >=2.17,<3.0.a0
+  constrains:
+  - lua <5.1|>=5.2
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 406493
+  timestamp: 1779190616505
+- conda: https://conda.anaconda.org/conda-forge/win-64/luajit-2.1.1744318430-h6a83c73_0.conda
+  sha256: 57c3f176e63246a9960ed830f6c49228f629db6641b87fc399b628208156be47
+  md5: 45076ef7ea54cea2afdf99718652c67f
+  depends:
+  - vc >=14.3,<15
+  - vc14_runtime >=14.44.35208
+  - ucrt >=10.0.20348.0
+  constrains:
+  - lua <5.1|>=5.2
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 648030
+  timestamp: 1779190641368
+- conda: https://conda.anaconda.org/conda-forge/linux-64/lupa-2.8-py313lua55h7033f15_0.conda
+  sha256: 71b35e992eb6bf5bc85e3df8db5db91732e8cb69aab11d397b40c765e3829b46
+  md5: e3923220d656bf64d3fd945ad994c050
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - libstdcxx >=14
+  - lua >=5.5.0,<5.6.0a0
+  - luajit >=2.1.1744318430,<3.0a0
+  - python >=3.13,<3.14.0a0
+  - python_abi 3.13.* *_cp313
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/lupa?source=hash-mapping
+  size: 1252444
+  timestamp: 1776338480314
+- conda: https://conda.anaconda.org/conda-forge/win-64/lupa-2.8-py313lua55hfe59770_0.conda
+  sha256: cc6e11863f0e534c09dd6b67aa87c4bef35650b61fe8a5457d530227b41589ee
+  md5: f61838a75b156529afbe3be75912fda3
+  depends:
+  - lua >=5.5.0,<5.6.0a0
+  - luajit >=2.1.1744318430,<3.0a0
+  - python >=3.13,<3.14.0a0
+  - python_abi 3.13.* *_cp313
+  - ucrt >=10.0.20348.0
+  - vc >=14.3,<15
+  - vc14_runtime >=14.44.35208
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/lupa?source=hash-mapping
+  size: 1213761
+  timestamp: 1776338648362
 - conda: https://conda.anaconda.org/conda-forge/noarch/mako-1.3.11-pyhcf101f3_0.conda
   sha256: 28e3b3d3fb0419f4cb31c31b33b004abd7ec1e222c35a7fd0caf7b9296615a08
   md5: 20ed6abf97e8f35892e2b1c5da744eef
