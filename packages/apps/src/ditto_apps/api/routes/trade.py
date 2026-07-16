@@ -4,7 +4,7 @@
 聚合子模块路由，对外暴露统一的 router 对象。
 端点详情见 trade_command_routes / trade_query_routes。
 
-maturity: experimental
+maturity: initial-focus
 """
 
 from __future__ import annotations

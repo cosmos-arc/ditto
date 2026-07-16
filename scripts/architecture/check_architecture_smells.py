@@ -2014,7 +2014,6 @@ _ROUTE_MATURITY_EXPECTED: dict[str, str] = {
     "fundamental.py": "experimental",
     "fx.py": "experimental",
     "macro.py": "experimental",
-    "trade.py": "experimental",
     "ingestion.py": "infrastructure",
     "source.py": "infrastructure",
     "debug.py": "debug",

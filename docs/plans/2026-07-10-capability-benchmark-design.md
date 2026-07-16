@@ -1,7 +1,7 @@
 # Ditto 功能能力评级与业界对标
 
 > **首次评估**：2026-07-10<br>
-> **最近复核**：2026-07-15<br>
+> **最近复核**：2026-07-16<br>
 > **状态**：能力事实基准（Capability Baseline）<br>
 > **目标**：10 个能力维度全部达到 10/10；当前分数必须由代码与验收证据支持，目标分数不得提前计入。
 
@@ -15,7 +15,9 @@ Ditto 的北极星是全球全品类、AI 原生的量化研究与人工决策�
 - 后续支持分钟级数据、盘中因子与信号、事件驱动计算和可选券商连接。
 - AI 支持策略编写、投研、市场与宏观分析、仓位与买卖建议，并最终演进为可审计的多 Agent 工作流。
 
-截至本次复核，系统仍是**内部研发系统**，不是可对外经营的投资产品。R1 的目标是单操作者、单账户、单执行 sleeve、本机使用的日频人工交易 Beta。
+截至本次复核，系统已通过 G1，达到单操作者、单账户、单执行 sleeve、
+本机使用的日频人工交易 Beta；它仍是**内部研发系统**，不是可对外经营的
+投资产品，也不是自动交易或真实券商生产系统。
 
 ## 2. 文档职责与事实优先级
 
@@ -36,8 +38,8 @@ Ditto 的北极星是全球全品类、AI 原生的量化研究与人工决策�
 
 | 量尺 | 用途 | 当前结论 |
 |---|---|---|
-| 能力广度分 | 10 个维度等权，描述“已经实现了多少” | **5.7/10** |
-| R1 日频人工交易就绪度 | 只衡量每日建议到人工成交复盘的目标工作流 | **5.8/10，Release Gate 未通过** |
+| 能力广度分 | 10 个维度等权，描述“已经实现了多少” | **5.9/10** |
+| R1 日频人工交易就绪度 | 只衡量每日建议到人工成交复盘的目标工作流 | **7.9/10，G1 已通过** |
 | Release Gate | 安全、数据、运行、合规等硬门槛 | 任一硬门槛失败即不得发布，平均分不能抵消 |
 
 能力广度分只表示功能覆盖，不表示生产成熟度。R1 就绪度高于或低于某个分数，也不能替代端到端验收。
@@ -71,50 +73,54 @@ Ditto 的北极星是全球全品类、AI 原生的量化研究与人工决策�
 | 1 | 数据覆盖与接入 | 6.0 | B | A 股 ETF 日级主线较完整；stock/macro 已有接入，fx/commodity 较弱；无统一分钟级与 tick 平台 | 全球主要资产统一 schema；日/分钟/tick 分层；跨市场日历、时区、FX、合约与公司行动完整；供应商切换可验收 | R2、R6、R7 |
 | 2 | 数据治理与 PIT | 9.0 | A | `knowledge_date` fail-closed、promotion evidence、lineage、source health/fallback 是强项；尚缺全数据集覆盖、长期 SLO 与恢复演练 | 所有资产和频率统一 PIT；质量规则、血缘、版本、许可、回补、降级、审计和 SLO 全覆盖 | R2、R6、R7 |
 | 3 | 因子与特征工程 | 7.0 | B | 表达式、物化和 IC 诊断已具备；因子库、正交化、衰减、稳定性和自动发现不足 | 跨资产因子库；PIT 物化；研究到生产一致；完整诊断、版本和复现；支持日频与盘中 | R2、R3、R6 |
-| 4 | 策略与研究 | 5.0 | B | pipeline 与 DecisionFrame 存在；策略样本少，活动版本语义、研究工作台、实验比较和策略治理不完整 | 配置化策略、实验追踪、审批/发布/回滚、参数版本、复现、模板与 AI 辅助形成完整研究生命周期 | R1、R3、R5 |
+| 4 | 策略与研究 | 6.0 | A/B | R1 已闭合 latest-published、seed bootstrap、确定性 EOD 与 package provenance；策略样本、研究工作台、实验比较和完整治理仍不足 | 配置化策略、实验追踪、审批/发布/回滚、参数版本、复现、模板与 AI 辅助形成完整研究生命周期 | R1、R3、R5 |
 | 5 | 回测与仿真 | 7.0 | A/B | checkpoint、replay、PIT、费用、T+1、涨跌停等基础较强；流动性、成交量、归因、批量实验和盘中仿真不足 | 日频与事件驱动分钟级统一；真实市场规则、容量与冲击；分布式实验；归因与回放；研究/实盘一致性证明 | R3、R6、R7 |
 | 6 | 组合构建与优化 | 5.0 | B | 等权、均值方差和协方差抽象存在；约束求解、风险预算、Black-Litterman、稳健性与前沿分析不足 | 多目标、多约束、交易成本和税费感知；风险预算与情景优化；求解可解释、可复现、可降级 | R4、R7 |
 | 7 | 风险管理 | 5.0 | B | 集中度、回撤、止损、市场异常、kill switch 与 `RiskGate` 已有；连续状态、持久化、恢复和组合风险不足 | 事前/事中/事后统一；组合与因子风险；压力测试；状态恢复；事件审计；告警与人工处置闭环 | R4、R6、R7 |
-| 8 | 执行、OMS 与账户 | 6.0 | B | OMS FSM、对账与修复基础较强；R1 手工账户基线、多笔部分成交、修正、建议数量和日终复盘未闭环；无真实券商 adapter | 多账户/多 sleeve；完整订单与成交账本；幂等、修正、对账、恢复；人工审批与可选券商适配 | R1、R4、R6、R7 |
+| 8 | 执行、OMS 与账户 | 7.0 | A/B | R1 已闭合手工账户基线、建议数量、多笔部分成交、追加式更正、effective-fill 重建和日终复盘；仍无多账户、多 sleeve 和真实券商 adapter | 多账户/多 sleeve；完整订单与成交账本；幂等、修正、对账、恢复；人工审批与可选券商适配 | R1、R4、R6、R7 |
 | 9 | AI、ML 与 Agent | 0.0 runtime / 2.0 adjacent | C | 无正式 LLM/Agent runtime；有 hypothesis、Experience Memory 和前端原型等邻接能力 | 有评测和成本治理的 Copilot；grounded tools；可解释建议；HITL 审批；多 Agent；模型风险、提示注入与数据泄露防护 | R5、R7 |
-| 10 | 平台、体验与运营 | 7.0 engineering / 4.0 product | B | 分层、合约、API、CLI、可观测基础较强；前端大量 prototype；认证、备份恢复、多租户、SLO 和发布治理不完整 | 稳定工作台；API 兼容；RBAC；备份恢复；SLO/告警/事件响应；安全供应链；多租户与可运营部署 | R1-R7 横向 |
+| 10 | 平台、体验与运营 | 7.0 engineering / 6.0 product | A/B | R1 live 工作台、共享 CLI/Prefect 编排、loopback、runbook 与 SQLite 备份恢复已验收；认证、RBAC、多租户、SLO 和发布治理仍不完整 | 稳定工作台；API 兼容；RBAC；备份恢复；SLO/告警/事件响应；安全供应链；多租户与可运营部署 | R1-R7 横向 |
 
-**等权能力广度分：5.7/10。** 计算时维度 9 取 runtime 0 分、维度 10 取 engineering 7 分；产品工作流另由 R1 就绪度与 Release Gate 衡量。该值不含任何未来规划分，也不代表 R1 可发布。
+**等权能力广度分：5.9/10。** 计算时维度 9 取 runtime 0 分、维度 10 取 engineering 7 分；产品工作流另由 R1 就绪度与 Release Gate 衡量。该值不含任何未来规划分，也不代表可对外发布。
 
 ## 5. R1 日频人工交易就绪度
 
-### 5.1 已有基础
+### 5.1 R1 已交付
 
-- 日级数据治理、PIT 和数据质量骨架。
-- 策略创建/发布 handler 与 API。
-- Prefect EOD flow、strategy runtime、signal intent 和 Daily Decision V1。
-- `AccountSnapshotRecord`、execution planner、OMS/对账基础。
-- `ditto-app` 的 trading 页面、API adapter 和原型交互。
+- latest-published 策略选择与幂等 seed bootstrap。
+- 日级数据就绪、确定性 EOD、持久化 signal package 与同日重跑冲突保护。
+- 原子账户/持仓基线、稳定 sleeve 与可解释 D+1 建议数量。
+- 多笔部分成交、append-only void/replace 与 effective-fill read model。
+- Daily Decision V2 blocked/review/ready 真值表和 `/api/v1/trade` API。
+- `VITE_USE_MOCK=false` 的 Trading live 工作台、成交录入与盘后复盘。
+- CLI/Prefect 共用 coordinator、loopback-only、runbook 和 SQLite 备份恢复。
 
-### 5.2 五个硬阻塞
+### 5.2 原五个硬阻塞清零
 
-| 阻塞 | 真实问题 | R1 必须交付的证据 |
+| 原阻塞 | 闭环事实 | 验收证据 |
 |---|---|---|
-| 活动策略不确定 | “latest” 查询可能被较新 draft 遮住较旧 published；seed bootstrap 尚无稳定运营入口 | 同一策略多版本下，活动 published 版本和回滚语义的集成测试 |
-| EOD 结果不可判定 | signal package 未完整持久化；零信号与流水线缺失/失败无法区分；同日重跑可能重复 intent | 同日重跑、零信号、失败、连续交易日四类验收 |
-| 账户与建议数量不闭环 | 账户快照存在但未成为 Daily Decision 的明确基线；intent quantity 通常为空 | 开盘账户/持仓 + 收盘价生成可解释建议数量 |
-| 成交账本不满足人工交易 | 当前按 `intent_id + trade_date` 查首笔，无法可靠记录同日多笔部分成交 | 同一 intent 同日两笔 fill、撤销/更正、状态和偏差重建验收 |
-| UI 仍是混合原型 | live 模式只接入部分 banner，关键内容仍有 prototype fallback | `VITE_USE_MOCK=false` 下完成 ready/review/blocked、成交录入和复盘 |
+| 活动策略不确定 | 最高 published 版本独立于 draft；bootstrap 可重复且冲突 fail closed | 多版本、幂等与冲突测试；确定性 E2E |
+| EOD 结果不可判定 | package、零调仓、失败、冲突和幂等重跑均为持久化事实 | 有交易/零调仓、same-input、changed-input 与中断恢复 E2E |
+| 账户与建议数量不闭环 | 原子 baseline 与 D+1 sizing 已进入 Daily Decision | 现金、手数、T+1、参考价和回滚测试 |
+| 成交账本不满足人工交易 | 同日多 fill、append-only void/replace 和 effective-fill 重建已闭环 | Task 6 API/E2E、备份恢复后的 raw/effective identity |
+| UI 仍是混合原型 | Trading live 路径不使用 prototype fallback | 14/14 desktop/mobile acceptance 与前端完整检查 |
 
 ### 5.3 就绪度计算
 
 | 子能力 | 权重 | 当前分 | 加权分 |
 |---|---:|---:|---:|
 | 日频数据、PIT 与 DQ | 20% | 8.5 | 1.70 |
-| 策略生命周期 | 10% | 6.0 | 0.60 |
-| EOD、package 与重跑 | 15% | 5.0 | 0.75 |
-| 账户基线与建议数量 | 15% | 5.0 | 0.75 |
-| 成交账本与复盘 | 15% | 6.0 | 0.90 |
-| Daily Decision API 与 UI | 15% | 4.0 | 0.60 |
-| 运维、安全与恢复 | 10% | 5.0 | 0.50 |
-| **合计** | **100%** |  | **5.80** |
+| 策略生命周期 | 10% | 7.5 | 0.75 |
+| EOD、package 与重跑 | 15% | 8.0 | 1.20 |
+| 账户基线与建议数量 | 15% | 8.0 | 1.20 |
+| 成交账本与复盘 | 15% | 8.0 | 1.20 |
+| Daily Decision API 与 UI | 15% | 8.0 | 1.20 |
+| 运维、安全与恢复 | 10% | 6.5 | 0.65 |
+| **合计** | **100%** |  | **7.90** |
 
-R1 就绪度为 **5.8/10**，但五个硬阻塞使 **G1 内部 Beta Gate = FAIL**。R1 结束后不按加权分单独宣布完成，只按 `docs/plans/2026-07-10-r1-implementation-plan.md` 的验收矩阵判定。
+R1 就绪度为 **7.9/10**，十三项完成定义与四层验收全部通过，
+**G1 内部本机 Beta Gate = PASS**。该分数和 Gate 只证明 R1 的本机单操作者
+边界，不代表认证、多租户、真实券商、自动交易、外部 Beta 或商业发布能力。
 
 ## 6. 业界对标方法
 
@@ -143,7 +149,7 @@ R1 就绪度为 **5.8/10**，但五个硬阻塞使 **G1 内部 Beta Gate = FAIL*
 | 回测/仿真 | 中 | 强 | 强 | 中-强 | 强 | 弱 | 弱 |
 | 因子/ML 研究 | 中 | 中 | 弱 | 强 | 中-强 | 中 | 中 |
 | 组合、风险与执行 | 中等骨架 | 强 | 强 | 中 | 中-强 | 弱 | 弱 |
-| 人工决策工作台 | 原型 | 中 | 弱 | 弱 | 强 | 强 | 原型 |
+| 人工决策工作台 | 本机 Beta | 中 | 弱 | 弱 | 强 | 强 | 原型 |
 | AI Copilot/Agent | 无 runtime | 弱 | 弱 | ML 强、Agent 弱 | 中 | 强入口 | 强模式、弱产品化 |
 | 数据治理差异化 | 强 | 中 | 中 | 中-强 | 不透明 | 取决于供应商 | 弱 |
 

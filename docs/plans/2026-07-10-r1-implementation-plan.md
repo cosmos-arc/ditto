@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task by task.<br>
 > **首次创建**：2026-07-10<br>
-> **最近复核**：2026-07-15<br>
-> **状态**：READY FOR EXECUTION（唯一近期施工图）<br>
-> **目标 Gate**：G1 内部本机 Beta
+> **最近复核**：2026-07-16<br>
+> **状态**：COMPLETED（R1 九个 task 与四层验收已完成）<br>
+> **目标 Gate**：G1 内部本机 Beta（2026-07-16 PASS）
 
 ## 1. 目标
 
@@ -493,6 +493,11 @@ bun run visual:audit
 6. 填写 evidence template，逐项给出命令、时间、commit SHA、artifact/checksum 与结果。
 7. 所有 G1 条件通过后，才将 `/api/v1/trade` 从 `experimental` 提升到 `initial-focus`，并更新能力评分和 evidence，提交文档。
 
+**Dependency approval recorded (2026-07-16):** 用户已批准为 Prefect 3 的
+in-memory Docket/fakeredis Lua runtime 新增 `lupa >=2.1,<3`。Pixi 锁定
+`lupa 2.8`，default/dev 的 Linux/Windows 解算均完成；default/dev 实际
+Prefect `/api/health` 与 `127.0.0.1:4200` socket 验收通过。
+
 **Verify:**
 
 ```bash
@@ -525,18 +530,18 @@ Task 1-8 ───────→ Task 9 G1 验收
 
 R1 只有在以下条件全部满足时完成：
 
-- [ ] seed bootstrap 幂等，活动 published 版本选择正确。
-- [ ] 账户与持仓基线完整，单 sleeve 规则 fail closed。
-- [ ] D 日数据只产生 D+1 建议，数量、手数、现金和 T+1 可解释。
-- [ ] signal package 对有信号和零调仓都持久化并可校验。
-- [ ] 同日重跑不重复 intent，checksum 冲突不静默覆盖。
-- [ ] 一个 intent 可录入多笔部分成交，错误录入可追加式更正。
-- [ ] Daily Decision 的 blocked/review/ready 与 reason code 真值表一致。
-- [ ] `ditto-app` live 模式不使用 Trading prototype fallback。
-- [ ] Prefect 调度和 CLI 人工重跑共用同一 coordinator。
-- [ ] SQLite 备份/恢复演练通过，runbook 可由操作者独立执行。
-- [ ] 后端与前端完整检查、架构门禁、确定性 E2E 全部通过。
-- [ ] 至少一份真实数据 evidence 包完成；token、账户敏感信息不进入日志或仓库。
-- [ ] 服务保持 loopback-only，未实现认证前不得对外暴露。
+- [x] seed bootstrap 幂等，活动 published 版本选择正确。
+- [x] 账户与持仓基线完整，单 sleeve 规则 fail closed。
+- [x] D 日数据只产生 D+1 建议，数量、手数、现金和 T+1 可解释。
+- [x] signal package 对有信号和零调仓都持久化并可校验。
+- [x] 同日重跑不重复 intent，checksum 冲突不静默覆盖。
+- [x] 一个 intent 可录入多笔部分成交，错误录入可追加式更正。
+- [x] Daily Decision 的 blocked/review/ready 与 reason code 真值表一致。
+- [x] `ditto-app` live 模式不使用 Trading prototype fallback。
+- [x] Prefect 调度和 CLI 人工重跑共用同一 coordinator。
+- [x] SQLite 备份/恢复演练通过，runbook 可由操作者独立执行。
+- [x] 后端与前端完整检查、架构门禁、确定性 E2E 全部通过。
+- [x] 至少一份真实数据 evidence 包完成；token、账户敏感信息不进入日志或仓库。
+- [x] 服务保持 loopback-only，未实现认证前不得对外暴露。
 
 任一项未完成，G1 仍为 FAIL，不以“综合分已达某值”替代。
