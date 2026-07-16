@@ -1,7 +1,10 @@
 """测试结果统计辅助函数。"""
 
 import pytest
-from ditto_application.processes.ingestion.result_handler import count_results
+from ditto_application.processes.ingestion.result_handler import (
+    count_results,
+    persisted_ingestion_dq_evidence,
+)
 from ditto_data.models.ingestion import IngestionResult
 
 
@@ -214,3 +217,22 @@ class TestCountResultsEdgeCases:
         assert counts.success == 1
         assert counts.failed == 1
         assert counts.skipped == 0
+
+
+@pytest.mark.unit
+def test_persisted_dq_evidence_rejects_blank_checksum() -> None:
+    """状态成功不能代替 exact-date、可验证 checksum 与 row count 证据。"""
+    evidence = persisted_ingestion_dq_evidence(
+        {
+            "dataset": "stock_daily",
+            "trade_date": "2026-07-16",
+            "status": "success",
+            "checksum": "   ",
+            "row_count": 5_000,
+        },
+        dataset="stock_daily",
+        trade_date="2026-07-16",
+    )
+
+    assert evidence.passed is False
+    assert evidence.error == "INGESTION_QUALITY_EVIDENCE_MISSING"

@@ -7,7 +7,10 @@ testing individual code paths and branches without full integration setup.
 
 from __future__ import annotations
 
+import ditto_apps.jobs.flows.daily as daily_module
 import pytest
+from ditto_application.processes.quality.batch import QualityBatchCoordinator
+from ditto_application.processes.quality.types import L3CheckResult
 from ditto_apps.jobs.flows.daily import (
     _collect_results,
     check_trading_day,
@@ -23,6 +26,331 @@ def _prefect_runner(entrypoint):
 
 CHECK_TRADING_DAY_RUNNER = _prefect_runner(check_trading_day)
 DAILY_INGESTION_FLOW_RUNNER = _prefect_runner(daily_ingestion_flow)
+
+
+def test_sync_runner_ingests_only_explicit_dependency_closed_scope(
+    mocker: MockerFixture,
+) -> None:
+    """A strategy-scoped sync run must not call unrelated dataset providers."""
+    mocker.patch.object(daily_module, "run_check_trading_day", return_value=True)
+    ingested: list[Dataset] = []
+
+    def ingest_dataset(**kwargs: object) -> dict[str, object]:
+        dataset = kwargs["dataset"]
+        assert isinstance(dataset, Dataset)
+        ingested.append(dataset)
+        return {
+            "dataset": dataset.value,
+            "trade_date": "2026-07-16",
+            "status": "success",
+            "checksum": f"sha256:{dataset.value}",
+        }
+
+    mocker.patch.object(
+        daily_module,
+        "run_ingest_dataset",
+        side_effect=ingest_dataset,
+    )
+    dq = mocker.patch.object(
+        daily_module,
+        "run_dq_batch_check",
+        return_value={"trade_date": "2026-07-16", "results_by_dataset": {}},
+    )
+
+    result = daily_module.run_daily_ingestion(
+        trade_date="2026-07-16",
+        source="tushare",
+        required_datasets=("stock_daily", "adj_factor"),
+    )
+
+    assert ingested == [
+        Dataset.STOCK_BASIC,
+        Dataset.STOCK_DAILY,
+        Dataset.ADJ_FACTOR,
+    ]
+    assert set(result["t0_results"]) == {"stock_basic"}
+    assert set(result["t1_results"]) == {"stock_daily", "adj_factor"}
+    assert dq.call_args.kwargs["datasets"] == [
+        "stock_basic",
+        "stock_daily",
+        "adj_factor",
+    ]
+
+
+def test_sync_runner_uses_plain_business_functions_without_prefect_entrypoints(
+    mocker: MockerFixture,
+) -> None:
+    """CLI 同步路径顺序执行同一摄取/DQ 业务函数，不提交 Prefect task。"""
+    assert hasattr(daily_module, "run_daily_ingestion")
+    check_day = mocker.patch.object(
+        daily_module,
+        "run_check_trading_day",
+        return_value=True,
+    )
+    mocker.patch.object(
+        daily_module,
+        "get_datasets_by_tier",
+        return_value=[Dataset.CALENDAR],
+    )
+    mocker.patch.object(
+        daily_module,
+        "get_parallel_datasets",
+        return_value=[[Dataset.STOCK_DAILY]],
+    )
+    ingest = mocker.patch.object(
+        daily_module,
+        "run_ingest_dataset",
+        side_effect=[
+            {
+                "dataset": "calendar",
+                "trade_date": "2026-07-16",
+                "status": "success",
+                "checksum": "sha256:calendar",
+            },
+            {
+                "dataset": "stock_daily",
+                "trade_date": "2026-07-16",
+                "status": "success",
+                "checksum": "sha256:stock",
+            },
+        ],
+    )
+    dq = mocker.patch.object(
+        daily_module,
+        "run_dq_batch_check",
+        return_value={
+            "trade_date": "2026-07-16",
+            "results_by_dataset": {
+                "calendar": {"passed": True},
+                "stock_daily": {"passed": True},
+            },
+        },
+    )
+    prefect_check = mocker.patch.object(daily_module, "check_trading_day")
+    prefect_dq = mocker.patch.object(daily_module, "dq_batch_check")
+    prefect_t0 = mocker.patch.object(daily_module, "create_ingest_task_t0")
+    prefect_t1 = mocker.patch.object(daily_module, "create_ingest_task_t1_bars")
+
+    result = daily_module.run_daily_ingestion(
+        trade_date="2026-07-16",
+        source="tushare",
+    )
+
+    assert result["skipped"] is False
+    assert result["summary"] == {
+        "trade_date": "2026-07-16",
+        "total_tasks": 2,
+        "success_count": 2,
+        "failed_count": 0,
+        "skipped_count": 0,
+    }
+    check_day.assert_called_once_with("2026-07-16")
+    assert ingest.call_args_list == [
+        mocker.call(
+            dataset=Dataset.CALENDAR,
+            trade_date="2026-07-16",
+            source="tushare",
+            force=False,
+        ),
+        mocker.call(
+            dataset=Dataset.STOCK_DAILY,
+            trade_date="2026-07-16",
+            source="tushare",
+            force=False,
+        ),
+    ]
+    dq.assert_called_once_with(
+        trade_date="2026-07-16",
+        datasets=["calendar", "stock_daily"],
+        market_wide=True,
+        ingestion_results={
+            "calendar": {
+                "dataset": "calendar",
+                "trade_date": "2026-07-16",
+                "status": "success",
+                "checksum": "sha256:calendar",
+            },
+            "stock_daily": {
+                "dataset": "stock_daily",
+                "trade_date": "2026-07-16",
+                "status": "success",
+                "checksum": "sha256:stock",
+            },
+        },
+    )
+    prefect_check.assert_not_called()
+    prefect_dq.assert_not_called()
+    prefect_t0.assert_not_called()
+    prefect_t1.assert_not_called()
+
+
+def test_sync_runner_second_same_day_run_keeps_authoritative_dq_evidence(
+    mocker: MockerFixture,
+) -> None:
+    """首次成功与同日跳过重跑必须返回同一 checksum/row-count DQ 证据。"""
+    from ditto_apps.jobs.tasks import dq_batch as dq_batch_module
+    from ditto_apps.registry.infra.observability import (
+        register_app_metric_definitions,
+    )
+
+    register_app_metric_definitions()
+
+    mocker.patch.object(daily_module, "run_check_trading_day", return_value=True)
+    mocker.patch.object(daily_module, "get_datasets_by_tier", return_value=[])
+    mocker.patch.object(
+        daily_module,
+        "get_parallel_datasets",
+        return_value=[[Dataset.STOCK_DAILY, Dataset.VALUATION_METRICS]],
+    )
+    ingest = mocker.patch.object(
+        daily_module,
+        "run_ingest_dataset",
+        side_effect=[
+            {
+                "dataset": "stock_daily",
+                "trade_date": "2026-07-16",
+                "status": "success",
+                "checksum": "sha256:stock",
+                "row_count": 5_000,
+                "quality_evidence": {
+                    "kind": "write_time_l1_l2",
+                    "status": "passed",
+                    "source": "tushare",
+                    "trade_date": "2026-07-16",
+                    "levels": ["l1", "l2"],
+                    "row_count": 5_000,
+                    "checksum": "sha256:stock",
+                },
+            },
+            {
+                "dataset": "valuation_metrics",
+                "trade_date": "2026-07-16",
+                "status": "success",
+                "checksum": "sha256:valuation",
+                "row_count": 5_000,
+                "quality_evidence": {
+                    "kind": "write_time_l1_l2",
+                    "status": "passed",
+                    "source": "tushare",
+                    "trade_date": "2026-07-16",
+                    "levels": ["l1", "l2"],
+                    "row_count": 5_000,
+                    "checksum": "sha256:valuation",
+                },
+            },
+            {
+                "dataset": "stock_daily",
+                "trade_date": "2026-07-16",
+                "status": "skipped",
+                "checksum": "sha256:stock",
+                "row_count": 5_000,
+                "quality_evidence": {
+                    "kind": "persisted_ingestion_l1_l2",
+                    "status": "passed",
+                    "source": "tushare",
+                    "trade_date": "2026-07-16",
+                    "levels": ["l1", "l2"],
+                    "row_count": 5_000,
+                    "checksum": "sha256:stock",
+                },
+            },
+            {
+                "dataset": "valuation_metrics",
+                "trade_date": "2026-07-16",
+                "status": "skipped",
+                "checksum": "sha256:valuation",
+                "row_count": 5_000,
+                "quality_evidence": {
+                    "kind": "persisted_ingestion_l1_l2",
+                    "status": "passed",
+                    "source": "tushare",
+                    "trade_date": "2026-07-16",
+                    "levels": ["l1", "l2"],
+                    "row_count": 5_000,
+                    "checksum": "sha256:valuation",
+                },
+            },
+        ],
+    )
+    l3_service = mocker.MagicMock()
+    l3_service.check_dataset.side_effect = [
+        L3CheckResult(
+            dataset="stock_daily",
+            trade_date="2026-07-16",
+            passed=True,
+            issue_count=0,
+        ),
+        L3CheckResult(
+            dataset="valuation_metrics",
+            trade_date="2026-07-16",
+            passed=True,
+            issue_count=0,
+            applicable=False,
+        ),
+        L3CheckResult(
+            dataset="stock_daily",
+            trade_date="2026-07-16",
+            passed=True,
+            issue_count=0,
+        ),
+        L3CheckResult(
+            dataset="valuation_metrics",
+            trade_date="2026-07-16",
+            passed=True,
+            issue_count=0,
+            applicable=False,
+        ),
+    ]
+    evidence_verifier = mocker.MagicMock()
+    evidence_verifier.verify_exact_date.return_value = True
+    quality_coordinator = QualityBatchCoordinator(
+        patrol=l3_service,
+        metadata=mocker.MagicMock(),
+        evidence_verifier=evidence_verifier,
+        alert_manager=mocker.MagicMock(),
+    )
+    container = mocker.MagicMock()
+
+    def get_service(service_type: type[object]) -> object:
+        if service_type is QualityBatchCoordinator:
+            return quality_coordinator
+        return mocker.MagicMock()
+
+    container.get.side_effect = get_service
+    context = mocker.MagicMock()
+    context.__enter__.return_value = container
+    context.__exit__.return_value = None
+    mocker.patch.object(
+        dq_batch_module,
+        "create_prefect_host",
+        return_value=context,
+    )
+    mocker.patch.object(
+        daily_module,
+        "run_dq_batch_check",
+        side_effect=dq_batch_module.run_dq_batch_check,
+    )
+
+    first = daily_module.run_daily_ingestion("2026-07-16")
+    second = daily_module.run_daily_ingestion("2026-07-16")
+
+    assert first["t1_results"]["stock_daily"]["status"] == "success"
+    assert second["t1_results"]["stock_daily"]["status"] == "skipped"
+    assert (
+        first["dqc_results"]["results_by_dataset"]
+        == second["dqc_results"]["results_by_dataset"]
+    )
+    assert second["dqc_results"]["results_by_dataset"]["stock_daily"]["passed"] is True
+    assert (
+        second["dqc_results"]["results_by_dataset"]["valuation_metrics"]["passed"]
+        is True
+    )
+    assert ingest.call_count == 4
+    assert l3_service.check_dataset.call_count == 4
+    assert all(
+        call.kwargs["market_wide"] is True
+        for call in l3_service.check_dataset.call_args_list
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -376,6 +704,54 @@ class TestDailyIngestionFlowT1Execution:
         t1_adj_submit_call = mock_t1_adj_task.submit.call_args
         assert "wait_for" in t1_adj_submit_call.kwargs
 
+    def test_prefect_runner_submits_only_explicit_dependency_closed_scope(
+        self,
+        mocker: MockerFixture,
+        mock_daily_dq_batch_check: object,
+    ) -> None:
+        """The Prefect adapter must consume the same application-owned scope."""
+        mocker.patch(
+            "ditto_apps.jobs.flows.daily.check_trading_day",
+            return_value=True,
+        )
+
+        def task_for(dataset: Dataset):
+            task = mocker.Mock()
+            future = mocker.Mock()
+            future.result.return_value = {
+                "dataset": dataset.value,
+                "trade_date": "2026-07-16",
+                "status": "success",
+                "checksum": f"sha256:{dataset.value}",
+            }
+            task.submit.return_value = future
+            return task
+
+        t0_factory = mocker.patch(
+            "ditto_apps.jobs.flows.daily.create_ingest_task_t0",
+            side_effect=task_for,
+        )
+        bars_factory = mocker.patch(
+            "ditto_apps.jobs.flows.daily.create_ingest_task_t1_bars",
+            side_effect=task_for,
+        )
+        adj_factory = mocker.patch(
+            "ditto_apps.jobs.flows.daily.create_ingest_task_t1_adj",
+            side_effect=task_for,
+        )
+
+        result = DAILY_INGESTION_FLOW_RUNNER(
+            trade_date="2026-07-16",
+            source="tushare",
+            required_datasets=("stock_daily", "adj_factor"),
+        )
+
+        assert t0_factory.call_args_list == [mocker.call(Dataset.STOCK_BASIC)]
+        assert bars_factory.call_args_list == [mocker.call(Dataset.STOCK_DAILY)]
+        assert adj_factory.call_args_list == [mocker.call(Dataset.ADJ_FACTOR)]
+        assert set(result["t0_results"]) == {"stock_basic"}
+        assert set(result["t1_results"]) == {"stock_daily", "adj_factor"}
+
     def test_handles_empty_t1_datasets(self, mocker: MockerFixture):
         """Test that flow handles empty T1 datasets list."""
         mocker.patch("ditto_apps.jobs.flows.daily.check_trading_day", return_value=True)
@@ -607,6 +983,13 @@ class TestDailyIngestionFlowReturnValue:
         assert "datasets_checked" in result["dqc_results"]
         assert "total_issues" in result["dqc_results"]
         assert "alert_count" in result["dqc_results"]
+        mock_dqc_task.submit.assert_called_once_with(
+            trade_date="2024-01-02",
+            datasets=[],
+            market_wide=True,
+            ingestion_results={},
+            wait_for=[],
+        )
 
 
 # Helper class for mocking datasets

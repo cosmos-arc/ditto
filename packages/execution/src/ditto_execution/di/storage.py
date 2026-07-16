@@ -7,6 +7,7 @@ from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.contracts import (
+    AccountDataPort,
     BrokerEventDataPort,
     FillDataPort,
     IntentDataPort,
@@ -20,6 +21,7 @@ from ditto_execution.storage.sqlite.reconciliation import (
 from ditto_execution.storage.sqlite.trade import (
     ACCOUNT_SNAPSHOTS_DDL,
     BROKER_EVENTS_DDL,
+    FILL_ADJUSTMENTS_DDL,
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
@@ -27,6 +29,8 @@ from ditto_execution.storage.sqlite.trade import (
     AccountSnapshotWriter,
     BrokerEventReader,
     BrokerEventWriter,
+    FillAdjustmentReader,
+    FillAdjustmentWriter,
     FillReader,
     FillWriter,
     IntentReader,
@@ -70,6 +74,7 @@ class ExecutionStorageProvider(Provider):
             position=PositionReader(sqlite_client),
             account=AccountSnapshotReader(sqlite_client),
             broker_event=BrokerEventReader(sqlite_client),
+            fill_adjustment=FillAdjustmentReader(sqlite_client),
         )
 
     @provide
@@ -81,6 +86,7 @@ class ExecutionStorageProvider(Provider):
             position=PositionWriter(sqlite_client),
             account=AccountSnapshotWriter(sqlite_client),
             broker_event=BrokerEventWriter(sqlite_client),
+            fill_adjustment=FillAdjustmentWriter(sqlite_client),
         )
 
     @provide
@@ -89,6 +95,7 @@ class ExecutionStorageProvider(Provider):
         sqlite_client.executescript(
             INTENTS_DDL
             + FILLS_DDL
+            + FILL_ADJUSTMENTS_DDL
             + POSITIONS_DDL
             + ACCOUNT_SNAPSHOTS_DDL
             + BROKER_EVENTS_DDL
@@ -111,10 +118,17 @@ class ExecutionStorageProvider(Provider):
         self,
         readers: ExecutionReaders,
         writers: ExecutionWriters,
+        sqlite_client: SQLiteClient,
+        audit_service: ExecutionAuditService,
         _schema_initialized: None,
     ) -> TradeService:
         """交易信号/成交/持仓 CRUD 服务（内部实例）。"""
-        return TradeService(readers=readers, writers=writers)
+        return TradeService(
+            readers=readers,
+            writers=writers,
+            sqlite_client=sqlite_client,
+            audit_service=audit_service,
+        )
 
     # ── ISP 窄 Port 暴露 ──
 
@@ -131,6 +145,11 @@ class ExecutionStorageProvider(Provider):
     @provide
     def position_data_port(self, trade_service: TradeService) -> PositionDataPort:
         """持仓窄 Port."""
+        return trade_service
+
+    @provide
+    def account_data_port(self, trade_service: TradeService) -> AccountDataPort:
+        """账户基线聚合窄 Port."""
         return trade_service
 
     @provide

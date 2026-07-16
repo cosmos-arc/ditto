@@ -11,8 +11,11 @@ pytestmark = pytest.mark.serial
 
 
 @pytest.fixture(autouse=True)
-def ensure_flow_module_fresh() -> None:
+def ensure_flow_module_fresh(monkeypatch: pytest.MonkeyPatch) -> None:
     """确保 flow 模块是最新加载的（防御性措施）."""
+    monkeypatch.setenv("DITTO_EOD_STRATEGY_ID", "test-etf-rotation")
+    monkeypatch.setenv("DITTO_EOD_ACCOUNT_ID", "test-paper-account")
+    monkeypatch.delenv("DITTO_EOD_ALLOW_EXPERIMENTAL_DATA", raising=False)
     # 重新加载 flow 模块以确保获取最新的 flow 对象
     try:
         import ditto_apps.jobs.flows

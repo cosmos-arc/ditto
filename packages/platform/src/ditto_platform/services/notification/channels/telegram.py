@@ -64,38 +64,36 @@ class TelegramSender:
             logger.info("Telegram message sent successfully", event="telegram_sent")
             return True
 
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             logger.warning(
                 "Telegram timeout",
                 event="telegram_timeout",
-                error=str(e),
+                error_code="TELEGRAM_TIMEOUT",
             )
             return False
         except httpx.HTTPStatusError as e:
             logger.error(
                 "Telegram HTTP error",
                 event="telegram_http_error",
+                error_code="TELEGRAM_HTTP_STATUS",
                 status_code=e.response.status_code,
-                error=str(e),
             )
             return False
-        except httpx.NetworkError as e:
+        except httpx.NetworkError:
             logger.error(
                 "Telegram network error",
                 event="telegram_network_error",
-                error=str(e),
+                error_code="TELEGRAM_NETWORK_ERROR",
             )
             return False
         except Exception as e:
-            # 未预期的错误应该抛出，让调用方处理
             logger.error(
                 "Telegram send failed with unexpected error",
                 event="telegram_unexpected_error",
+                error_code="TELEGRAM_UNEXPECTED_ERROR",
                 error_type=type(e).__name__,
-                error=str(e),
-                exc_info=True,
             )
-            raise
+            return False
 
 
 __all__ = ["TelegramSender"]

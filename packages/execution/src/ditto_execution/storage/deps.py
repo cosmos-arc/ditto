@@ -8,6 +8,7 @@ from typing import Protocol
 from ditto_execution.models import (
     AccountSnapshotRecord,
     BrokerEventRecord,
+    FillAdjustmentRecord,
     FillRecord,
     PositionRecord,
     SignalRecord,
@@ -40,15 +41,29 @@ class _IntentWriterPort(Protocol):
         expected_current: tuple[str, ...],
     ) -> bool: ...
 
+    def update_status_uncommitted(
+        self,
+        intent_id: str,
+        status: str,
+        *,
+        expected_current: tuple[str, ...],
+    ) -> bool: ...
+
 
 class _FillReaderPort(Protocol):
     """Read-side dependency for fills."""
 
     def get(self, fill_id: str) -> FillRecord | None: ...
 
-    def find(self, intent_id: str, trade_date: str) -> FillRecord | None: ...
-
     def list(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+        intent_id: str | None = None,
+        end_date: str | None = None,
+    ) -> list[FillRecord]: ...
+
+    def list_effective(
         self,
         strategy_id: str,
         trade_date: str | None = None,
@@ -60,9 +75,29 @@ class _FillReaderPort(Protocol):
 class _FillWriterPort(Protocol):
     """Write-side dependency for fills."""
 
-    def save(self, record: FillRecord) -> None: ...
+    def save_strict_uncommitted(self, record: FillRecord) -> None: ...
 
-    def replace(self, record: FillRecord) -> bool: ...
+
+class _FillAdjustmentReaderPort(Protocol):
+    """Read-side dependency for append-only fill adjustments."""
+
+    def get(self, adjustment_id: str) -> FillAdjustmentRecord | None: ...
+
+    def get_for_fill(self, fill_id: str) -> FillAdjustmentRecord | None: ...
+
+    def list(
+        self,
+        strategy_id: str,
+        *,
+        fill_id: str | None = None,
+        intent_id: str | None = None,
+    ) -> list[FillAdjustmentRecord]: ...
+
+
+class _FillAdjustmentWriterPort(Protocol):
+    """Write-side dependency for append-only fill adjustments."""
+
+    def save_uncommitted(self, record: FillAdjustmentRecord) -> None: ...
 
 
 class _PositionReaderPort(Protocol):
@@ -88,6 +123,8 @@ class _PositionWriterPort(Protocol):
 
     def save(self, record: PositionRecord) -> None: ...
 
+    def save_uncommitted(self, record: PositionRecord) -> None: ...
+
 
 class _AccountSnapshotReaderPort(Protocol):
     """Read-side dependency for account snapshots."""
@@ -112,6 +149,8 @@ class _AccountSnapshotWriterPort(Protocol):
     """Write-side dependency for account snapshots."""
 
     def save(self, record: AccountSnapshotRecord) -> None: ...
+
+    def save_uncommitted(self, record: AccountSnapshotRecord) -> None: ...
 
 
 class _BrokerEventReaderPort(Protocol):
@@ -147,6 +186,7 @@ class ExecutionReaders:
     position: _PositionReaderPort
     account: _AccountSnapshotReaderPort
     broker_event: _BrokerEventReaderPort
+    fill_adjustment: _FillAdjustmentReaderPort
 
 
 @dataclass(frozen=True)
@@ -158,6 +198,7 @@ class ExecutionWriters:
     position: _PositionWriterPort
     account: _AccountSnapshotWriterPort
     broker_event: _BrokerEventWriterPort
+    fill_adjustment: _FillAdjustmentWriterPort
 
 
 __all__ = ["ExecutionReaders", "ExecutionWriters"]

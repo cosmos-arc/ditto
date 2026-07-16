@@ -8,11 +8,12 @@ from pathlib import Path
 from dishka import Provider, Scope, provide
 from ditto_data.catalog import DataCatalogReader
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.quality import QualityEngine
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_execution.contracts import IntentDataPort, PositionDataPort
+from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
 from ditto_features.compile_cache import SQLiteCompileCache, SQLiteCompileCacheBackend
 from ditto_features.services import (
     ArtifactPersistenceService,
@@ -37,7 +38,13 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
+from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.processes.execution.factor_bridge import FactorBridge
+from ditto_application.processes.execution.manual_sizing import (
+    AShareTradeDateResolver,
+    ManualSizingContextBuilder,
+    ManualSizingService,
+)
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.position_reader import StoredPositionReader
 from ditto_application.processes.execution.replay_process import ReplayProcess
@@ -59,8 +66,13 @@ from ditto_application.processes.materialization.source_snapshot_resolver import
     CatalogSourceSnapshotResolver,
     UniverseSourceTickersRequest,
 )
-from ditto_application.processes.quality import QualityPatrolService
+from ditto_application.processes.quality import (
+    QualityBatchCoordinator,
+    QualityCompletenessService,
+    QualityPatrolService,
+)
 from ditto_application.providers_builder import get_trading_calendar_range
+from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.run import RunReadModel
@@ -98,6 +110,18 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def persisted_ingestion_evidence_verifier(
+        self,
+        data_catalog_reader: DataCatalogReader,
+        ingestion_log_store: IngestionLogStore,
+    ) -> PersistedIngestionEvidenceVerifier:
+        """Bind DQ outcomes to durable catalog and ingestion-log facts."""
+        return PersistedIngestionEvidenceVerifier(
+            reader=data_catalog_reader,
+            ingestion_logs=ingestion_log_store,
+        )
 
     @provide
     def compile_cache_service(
@@ -260,6 +284,30 @@ class AppProcessProvider(Provider):
         )
 
     @provide
+    def quality_batch_coordinator(
+        self,
+        quality_patrol_service: QualityPatrolService,
+        metadata_facade: MetadataQueryFacade,
+        evidence_verifier: PersistedIngestionEvidenceVerifier,
+        alert_manager: AlertManager,
+    ) -> QualityBatchCoordinator:
+        """Quality batch application coordinator."""
+        return QualityBatchCoordinator(
+            patrol=quality_patrol_service,
+            metadata=metadata_facade,
+            evidence_verifier=evidence_verifier,
+            alert_manager=alert_manager,
+        )
+
+    @provide
+    def quality_completeness_service(
+        self,
+        market_facade: MarketQueryFacade,
+    ) -> QualityCompletenessService:
+        """Market instrument completeness process."""
+        return QualityCompletenessService(market=market_facade)
+
+    @provide
     def manual_tracker(
         self,
         metadata_service: MetadataService,
@@ -282,20 +330,59 @@ class AppProcessProvider(Provider):
     def signal_snapshot_process(
         self,
         position_reader: StoredPositionReader,
+        sizing_service: ManualSizingService,
     ) -> SignalSnapshotProcess:
         """Signal snapshot process using stored manual positions."""
-        return SignalSnapshotProcess(position_reader=position_reader)
+        return SignalSnapshotProcess(
+            position_reader=position_reader,
+            sizing_service=sizing_service,
+        )
+
+    @provide
+    def manual_sizing_service(self) -> ManualSizingService:
+        """A 股人工交易建议数量服务。"""
+        return ManualSizingService()
+
+    @provide
+    def manual_sizing_context_builder(
+        self,
+        account_query: AccountBaselineQuery,
+        market_query: MarketQueryFacade,
+    ) -> ManualSizingContextBuilder:
+        """显式账户基线与 D 日收盘价的 sizing context builder。"""
+        return ManualSizingContextBuilder(
+            account_query=account_query,
+            market_query=market_query,
+        )
+
+    @provide
+    def a_share_trade_date_resolver(
+        self,
+        metadata_service: MetadataService,
+        trading_settings: TradingSettings,
+    ) -> AShareTradeDateResolver:
+        """基于正式 A 股交易日历解析建议交易日。"""
+        start_date, end_date = get_trading_calendar_range(trading_settings)
+        return AShareTradeDateResolver(
+            trading_days=tuple(metadata_service.list_trading_days(start_date, end_date))
+        )
 
     @provide
     def signal_package_publisher(
         self,
-        position_reader: StoredPositionReader,
+        snapshot_process: SignalSnapshotProcess,
         intent_port: IntentDataPort,
+        fill_port: FillDataPort,
+        date_resolver: AShareTradeDateResolver,
+        artifact_service: StrategyArtifactService,
     ) -> SignalPackagePublisher:
         """Signal package publisher backed by execution intent storage."""
         return SignalPackagePublisher(
-            position_reader=position_reader,
+            snapshot_process=snapshot_process,
             intent_port=intent_port,
+            fill_port=fill_port,
+            date_resolver=date_resolver,
+            artifact_service=artifact_service,
         )
 
     @provide

@@ -7,10 +7,10 @@ and handler stubs used across the split test modules. Do not modify behavior.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
-from ditto_execution.models import FillRecord
+from ditto_execution.models import FillAdjustmentRecord, FillRecord
 from ditto_execution.reconciliation import (
     MismatchType,
     ReconciliationDiff,
@@ -394,7 +394,9 @@ class _ReportReentrantFillAmendmentSource:
 class _FakeLocalFillStore:
     def __init__(self) -> None:
         self.records: dict[str, FillRecord] = {}
+        self.adjustments: dict[str, FillAdjustmentRecord] = {}
         self.saved_fill_ids: list[str] = []
+        self.projected_fill_ids: list[str] = []
         self.replaced_fill_ids: list[str] = []
 
     def get_fill(self, fill_id: str) -> FillRecord | None:
@@ -404,11 +406,40 @@ class _FakeLocalFillStore:
         self.saved_fill_ids.append(record.fill_id)
         self.records[record.fill_id] = record
 
-    def replace_fill(self, record: FillRecord) -> bool:
-        if record.fill_id not in self.records:
+    def append_projected_fill(self, record: FillRecord) -> bool:
+        """Mimic the projection-capable append adapter's idempotency contract."""
+        self.projected_fill_ids.append(record.fill_id)
+        existing = self.records.get(record.fill_id)
+        if existing is not None:
+            comparable_existing = replace(existing, created_at=record.created_at)
+            if comparable_existing != record:
+                raise ValueError("fill replay payload conflict")
             return False
-        self.replaced_fill_ids.append(record.fill_id)
+        self.saved_fill_ids.append(record.fill_id)
         self.records[record.fill_id] = record
+        return True
+
+    def apply_projected_fill_replacement(
+        self,
+        *,
+        adjustment: FillAdjustmentRecord,
+        replacement_fill: FillRecord,
+    ) -> bool:
+        existing = self.adjustments.get(adjustment.adjustment_id)
+        if existing is not None:
+            persisted = self.records.get(replacement_fill.fill_id)
+            if existing != adjustment or persisted != replacement_fill:
+                raise ValueError("replacement replay payload conflict")
+            return False
+        if any(
+            item.fill_id == adjustment.fill_id for item in self.adjustments.values()
+        ):
+            raise ValueError("fill already adjusted")
+        if adjustment.fill_id not in self.records:
+            raise ValueError("source fill not found")
+        self.adjustments[adjustment.adjustment_id] = adjustment
+        self.records[replacement_fill.fill_id] = replacement_fill
+        self.replaced_fill_ids.append(adjustment.fill_id)
         return True
 
 

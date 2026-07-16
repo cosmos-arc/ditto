@@ -53,8 +53,8 @@ class StrategyRunReaderProtocol(Protocol):
 class StrategyRunWriterProtocol(Protocol):
     """策略运行写入协议."""
 
-    def save(self, record: StrategyRunRecord) -> None:
-        """保存运行记录."""
+    def save(self, record: StrategyRunRecord) -> bool:
+        """Insert a run if absent; return False without replacing evidence."""
         ...
 
     def update_status(
@@ -64,6 +64,18 @@ class StrategyRunWriterProtocol(Protocol):
         error_message: str = "",
     ) -> bool:
         """更新运行状态，成功返回 True."""
+        ...
+
+    def retry_failed(self, run_id: str, *, config_json: str = "") -> bool:
+        """CAS 恢复 failed run，成功返回 True."""
+        ...
+
+    def mark_pending_failed(self, run_id: str, error_message: str = "") -> bool:
+        """Only fail a run that has not been claimed by a worker."""
+        ...
+
+    def refresh_blocked_evidence(self, run_id: str, *, config_json: str) -> bool:
+        """Refresh required-data evidence on its exact failed state."""
         ...
 
     def update_progress(
@@ -131,6 +143,32 @@ class StrategyRunCheckpointStore:
         return self._reader.list_checkpoints_by_strategy(strategy_id)
 
 
+def _validate_run_identity(
+    existing: StrategyRunRecord,
+    *,
+    strategy_id: str,
+    strategy_version: str,
+    mode: str,
+    parent_run_id: str,
+) -> None:
+    """Reject a deterministic run ID already owned by another identity."""
+    identity = (
+        existing.strategy_id,
+        existing.strategy_version,
+        existing.mode,
+        existing.parent_run_id,
+    )
+    requested_identity = (
+        strategy_id,
+        strategy_version,
+        mode,
+        parent_run_id,
+    )
+    if identity != requested_identity:
+        msg = f"run_id {existing.run_id} already belongs to a different run identity"
+        raise ValueError(msg)
+
+
 class StrategyRunLifecycleStore:
     """
     Persistent strategy run lifecycle store.
@@ -156,6 +194,16 @@ class StrategyRunLifecycleStore:
         config_json: str = "",
     ) -> None:
         """创建运行记录 (初始状态 pending)."""
+        existing = self._reader.get(run_id)
+        if existing is not None:
+            _validate_run_identity(
+                existing,
+                strategy_id=strategy_id,
+                strategy_version=strategy_version,
+                mode=mode,
+                parent_run_id=parent_run_id,
+            )
+            return
         record = StrategyRunRecord(
             run_id=run_id,
             strategy_id=strategy_id,
@@ -166,11 +214,27 @@ class StrategyRunLifecycleStore:
             parent_run_id=parent_run_id,
             config_json=config_json,
         )
-        self._writer.save(record)
+        if self._writer.save(record):
+            return
+        concurrent = self._reader.get(run_id)
+        if concurrent is None:
+            msg = f"run_id {run_id} insert lost without a durable owner"
+            raise RuntimeError(msg)
+        _validate_run_identity(
+            concurrent,
+            strategy_id=strategy_id,
+            strategy_version=strategy_version,
+            mode=mode,
+            parent_run_id=parent_run_id,
+        )
 
     def mark_running(self, run_id: str) -> bool:
         """标记为运行中."""
         return self._writer.update_status(run_id, RunStatus.RUNNING)
+
+    def retry_failed(self, run_id: str, *, config_json: str = "") -> bool:
+        """只允许 failed run 以同一身份进入一次新的 pending 尝试。"""
+        return self._writer.retry_failed(run_id, config_json=config_json)
 
     def mark_completed(self, run_id: str) -> bool:
         """标记为已完成."""
@@ -179,6 +243,17 @@ class StrategyRunLifecycleStore:
     def mark_failed(self, run_id: str, error_message: str = "") -> bool:
         """标记为失败."""
         return self._writer.update_status(run_id, RunStatus.FAILED, error_message)
+
+    def mark_pending_failed(self, run_id: str, error_message: str = "") -> bool:
+        """Persist blocked evidence only while the run remains unclaimed."""
+        return self._writer.mark_pending_failed(run_id, error_message)
+
+    def refresh_blocked_evidence(self, run_id: str, *, config_json: str) -> bool:
+        """Refresh required-data evidence without reopening failed ownership."""
+        return self._writer.refresh_blocked_evidence(
+            run_id,
+            config_json=config_json,
+        )
 
     def mark_cancelled(self, run_id: str) -> bool:
         """标记为已取消."""

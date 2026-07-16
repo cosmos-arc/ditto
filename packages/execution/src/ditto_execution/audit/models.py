@@ -8,7 +8,7 @@ Data 层持久化审计日志所需的本地数据传输对象。
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from ditto_kernel.strategy import RiskScope as _RiskScope
@@ -22,6 +22,8 @@ class AuditRecordType(StrEnum):
     TRADE_FILL = "trade_fill"
     RISK_DECISION = "risk_decision"
     REPAIR_EXECUTION = "repair_execution"
+    ACCOUNT_BASELINE_IMPORT = "account_baseline_import"
+    ACCOUNT_BASELINE_CORRECTION = "account_baseline_correction"
 
 
 @dataclass(frozen=True)
@@ -164,6 +166,21 @@ class RepairExecutionPayload:
 
 
 @dataclass(frozen=True)
+class AccountBaselineAuditPayload:
+    """Typed audit payload for account baseline imports and corrections."""
+
+    trade_date: str
+    operation: str
+    account_id: str
+    strategy_id: str
+    sleeve_id: str
+    old_snapshot_id: str | None
+    new_snapshot_id: str
+    old_baseline: dict[str, object] | None = None
+    new_baseline: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class ExecutionTimelineEntry:
     """Normalized audit entry with top-level execution correlation keys."""
 
@@ -181,6 +198,7 @@ class ExecutionTimelineEntry:
 
 
 __all__ = [
+    "AccountBaselineAuditPayload",
     "AuditRecordType",
     "ExecutionTimelineEntry",
     "PreTradeDecisionPayload",

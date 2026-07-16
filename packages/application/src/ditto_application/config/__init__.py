@@ -17,6 +17,10 @@ The registry enables:
 from __future__ import annotations
 
 from ditto_application.config.helpers import now_iso
+from ditto_application.config.ingestion_scope import (
+    IngestionScope,
+    resolve_ingestion_scope,
+)
 from ditto_application.config.queries import (
     INGESTION_SPECS,
     get_all_datasets,
@@ -40,6 +44,7 @@ __all__ = [
     "INGESTION_SPECS",
     "DatasetRef",
     "DatasetSpec",
+    "IngestionScope",
     "T1ConfigSpec",
     "TaskTier",
     "create_t0_config",
@@ -50,4 +55,5 @@ __all__ = [
     "get_datasets_by_tier",
     "get_parallel_datasets",
     "now_iso",
+    "resolve_ingestion_scope",
 ]

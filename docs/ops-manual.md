@@ -378,7 +378,7 @@ sudo chown -R $USER:$USER /opt/ditto
 
 ```bash
 # 1. 启动 Prefect Server（后台）
-prefect server start --host 0.0.0.0 &
+prefect server start --host 127.0.0.1 &
 
 # 2. 等待 Server 就绪（约 5 秒）
 sleep 5

@@ -18,9 +18,9 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - DITTO_DATA_DIR=/app/data
+      - DITTO_DATA_ROOT=/app/data
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_DIR=/app/logs
       - TUSHARE_TOKEN=${TUSHARE_TOKEN}
@@ -40,6 +40,10 @@ services:
       resources:
         limits:
           memory: 1G
+    # 容器内需监听 bridge interface；host publication 仍只绑定 loopback。
+    command: >
+      pixi run granian ditto_apps.main:app --interface asgi
+      --host 0.0.0.0 --port 8000 --workers 4
 
   # ───────────────────────────────────────────────────────────────────
   # Job 服务 (Prefect Server + Worker)
@@ -52,9 +56,9 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
     ports:
-      - "4200:4200"
+      - "127.0.0.1:4200:4200"
     environment:
-      - DITTO_DATA_DIR=/app/data
+      - DITTO_DATA_ROOT=/app/data
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - LOG_DIR=/app/logs
       - TUSHARE_TOKEN=${TUSHARE_TOKEN}

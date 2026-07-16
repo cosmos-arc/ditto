@@ -24,6 +24,7 @@ def _make_record(
     started_at: str = "2026-03-24T10:00:00Z",
     completed_at: str = "",
     error_message: str = "",
+    config_json: str = "",
 ) -> StrategyRunRecord:
     return StrategyRunRecord(
         run_id=run_id,
@@ -34,6 +35,7 @@ def _make_record(
         started_at=started_at,
         completed_at=completed_at,
         error_message=error_message,
+        config_json=config_json,
     )
 
 
@@ -128,6 +130,28 @@ class TestSQLiteStrategyRunStore:
         finally:
             pool.close()
 
+    def test_stale_create_cannot_replace_an_already_claimed_run(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A losing first-create race must not reset running back to pending."""
+        pool = _make_pool(tmp_path)
+        try:
+            writer = SQLiteStrategyRunWriter(pool)
+            reader = SQLiteStrategyRunReader(pool)
+            writer.init_schema()
+            stale_pending = _make_record(run_id="eod-first-claim")
+
+            assert writer.save(stale_pending)
+            assert writer.update_status("eod-first-claim", RunStatus.RUNNING)
+            assert not writer.save(stale_pending)
+
+            claimed = reader.get("eod-first-claim")
+            assert claimed is not None
+            assert claimed.status == RunStatus.RUNNING
+        finally:
+            pool.close()
+
     def test_list_by_strategy_orders_by_started_at_desc(self, tmp_path: Path) -> None:
         """按策略列出时按 started_at 倒序返回。"""
         pool = _make_pool(tmp_path)
@@ -196,6 +220,155 @@ class TestSQLiteStrategyRunStore:
             assert result.status == RunStatus.FAILED
             assert result.completed_at != ""
             assert result.error_message == "engine crash"
+        finally:
+            pool.close()
+
+    def test_retry_failed_is_cas_and_preserves_completed_terminal_run(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        pool = _make_pool(tmp_path)
+        try:
+            writer = SQLiteStrategyRunWriter(pool)
+            reader = SQLiteStrategyRunReader(pool)
+            writer.init_schema()
+            writer.save(_make_record(run_id="failed-run"))
+            writer.save(_make_record(run_id="completed-run"))
+            assert writer.update_status("failed-run", RunStatus.FAILED, "blocked")
+            assert writer.update_status("completed-run", RunStatus.COMPLETED)
+
+            assert writer.retry_failed(
+                "failed-run",
+                config_json='{"attempt":2}',
+            )
+            assert not writer.retry_failed("failed-run")
+            assert not writer.retry_failed("completed-run")
+
+            retried = reader.get("failed-run")
+            completed = reader.get("completed-run")
+            assert retried is not None
+            assert retried.status == RunStatus.PENDING
+            assert retried.error_message == ""
+            assert retried.completed_at == ""
+            assert retried.config_json == '{"attempt":2}'
+            assert completed is not None
+            assert completed.status == RunStatus.COMPLETED
+        finally:
+            pool.close()
+
+    def test_running_claim_is_single_winner_after_failed_retry(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Only one worker may claim each pending EOD attempt."""
+        pool = _make_pool(tmp_path)
+        try:
+            writer = SQLiteStrategyRunWriter(pool)
+            writer.init_schema()
+            writer.save(_make_record(run_id="eod-batch"))
+
+            assert writer.update_status("eod-batch", RunStatus.RUNNING)
+            assert not writer.update_status("eod-batch", RunStatus.RUNNING)
+
+            assert writer.update_status("eod-batch", RunStatus.FAILED, "retryable")
+            assert writer.retry_failed("eod-batch", config_json='{"attempt":2}')
+            assert writer.update_status("eod-batch", RunStatus.RUNNING)
+            assert not writer.update_status("eod-batch", RunStatus.RUNNING)
+        finally:
+            pool.close()
+
+    def test_pending_failure_cas_cannot_terminate_running_or_completed_owner(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Blocked evidence may only terminate a still-unclaimed pending run."""
+        pool = _make_pool(tmp_path)
+        try:
+            writer = SQLiteStrategyRunWriter(pool)
+            reader = SQLiteStrategyRunReader(pool)
+            writer.init_schema()
+            writer.save(_make_record(run_id="pending-run"))
+            writer.save(_make_record(run_id="running-run"))
+            writer.save(_make_record(run_id="completed-run"))
+            assert writer.update_status("running-run", RunStatus.RUNNING)
+            assert writer.update_status("completed-run", RunStatus.COMPLETED)
+
+            assert writer.mark_pending_failed("pending-run", "blocked:NOT_READY")
+            assert not writer.mark_pending_failed("pending-run", "blocked:OTHER")
+            assert not writer.mark_pending_failed("running-run", "blocked:NOT_READY")
+            assert not writer.mark_pending_failed("completed-run", "blocked:NOT_READY")
+
+            pending = reader.get("pending-run")
+            running = reader.get("running-run")
+            completed = reader.get("completed-run")
+            assert pending is not None
+            assert pending.status == RunStatus.FAILED
+            assert pending.error_message == "blocked:NOT_READY"
+            assert running is not None
+            assert running.status == RunStatus.RUNNING
+            assert completed is not None
+            assert completed.status == RunStatus.COMPLETED
+        finally:
+            pool.close()
+
+    def test_refresh_blocked_evidence_only_updates_required_data_failure(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Refresh stays failed and cannot overwrite another lifecycle owner."""
+        pool = _make_pool(tmp_path)
+        try:
+            writer = SQLiteStrategyRunWriter(pool)
+            reader = SQLiteStrategyRunReader(pool)
+            writer.init_schema()
+            for run_id in (
+                "blocked-run",
+                "other-failed-run",
+                "running-run",
+                "completed-run",
+            ):
+                assert writer.save(
+                    _make_record(run_id=run_id, config_json='{"state":"A"}')
+                )
+            assert writer.update_status(
+                "blocked-run",
+                RunStatus.FAILED,
+                "blocked:REQUIRED_DATA_NOT_READY",
+            )
+            assert writer.update_status(
+                "other-failed-run",
+                RunStatus.FAILED,
+                "failed:SIGNAL_PACKAGE_PUBLISH_FAILED",
+            )
+            assert writer.update_status("running-run", RunStatus.RUNNING)
+            assert writer.update_status("completed-run", RunStatus.COMPLETED)
+
+            assert writer.refresh_blocked_evidence(
+                "blocked-run",
+                config_json='{"state":"B"}',
+            )
+            assert not writer.refresh_blocked_evidence(
+                "other-failed-run",
+                config_json='{"state":"B"}',
+            )
+            assert not writer.refresh_blocked_evidence(
+                "running-run",
+                config_json='{"state":"B"}',
+            )
+            assert not writer.refresh_blocked_evidence(
+                "completed-run",
+                config_json='{"state":"B"}',
+            )
+
+            blocked = reader.get("blocked-run")
+            assert blocked is not None
+            assert blocked.status == RunStatus.FAILED
+            assert blocked.error_message == "blocked:REQUIRED_DATA_NOT_READY"
+            assert blocked.config_json == '{"state":"B"}'
+            for run_id in ("other-failed-run", "running-run", "completed-run"):
+                unchanged = reader.get(run_id)
+                assert unchanged is not None
+                assert unchanged.config_json == '{"state":"A"}'
         finally:
             pool.close()
 

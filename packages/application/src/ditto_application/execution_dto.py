@@ -16,15 +16,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Literal
 
-from ditto_execution.models import FillRecord, PositionRecord, SignalRecord
+from ditto_execution.models import (
+    FillAdjustmentRecord,
+    FillAdjustmentType,
+    FillRecord,
+    PositionRecord,
+    SignalRecord,
+)
 
 __all__ = [
     "ActualPositionSnapshot",
+    "FillAdjustment",
     "ManualExecutionFill",
     "TradeIntent",
+    "adjustment_to_record",
     "fill_to_record",
     "intent_to_record",
+    "record_to_adjustment",
     "record_to_fill",
     "record_to_intent",
     "record_to_snapshot",
@@ -55,6 +65,13 @@ class TradeIntent:
         current_weight: 当前权重.
         delta_weight: 权重偏差.
         quantity: 预估数量 (None = 待计算).
+        raw_quantity: 交易规则约束前的原始数量.
+        rounded_quantity: 应用手数、现金与风险约束后的建议数量.
+        lot_size: 本次 sizing 使用的交易单位.
+        reference_price: 本次 sizing 使用的参考价.
+        cash_impact: 建议数量对应的现金影响（买入为负、卖出为正）.
+        sizing_reason: 取整、上限或阻塞原因.
+        sizing_readiness: sizing 结果状态 (ready/review/blocked).
         status: 状态 (pending/filled/partially_filled/cancelled/expired).
 
     """
@@ -68,6 +85,13 @@ class TradeIntent:
     current_weight: float
     delta_weight: float
     quantity: int | None = None
+    raw_quantity: int | None = None
+    rounded_quantity: int | None = None
+    lot_size: int | None = None
+    reference_price: float | None = None
+    cash_impact: float | None = None
+    sizing_reason: str | None = None
+    sizing_readiness: Literal["ready", "review", "blocked"] | None = None
     status: str = "pending"
 
 
@@ -105,6 +129,18 @@ class ManualExecutionFill:
     slippage: float = 0.0
     notes: str = ""
     settlement_date: str = ""
+
+
+@dataclass(frozen=True)
+class FillAdjustment:
+    """Application read model for one immutable fill correction event."""
+
+    adjustment_id: str
+    fill_id: str
+    adjustment_type: FillAdjustmentType
+    replacement_fill_id: str | None
+    reason: str
+    created_at: str
 
 
 @dataclass(frozen=True)
@@ -183,6 +219,18 @@ def fill_to_record(fill: ManualExecutionFill) -> FillRecord:
     )
 
 
+def adjustment_to_record(adjustment: FillAdjustment) -> FillAdjustmentRecord:
+    """FillAdjustment DTO → FillAdjustmentRecord."""
+    return FillAdjustmentRecord(
+        adjustment_id=adjustment.adjustment_id,
+        fill_id=adjustment.fill_id,
+        adjustment_type=adjustment.adjustment_type,
+        replacement_fill_id=adjustment.replacement_fill_id,
+        reason=adjustment.reason,
+        created_at=adjustment.created_at,
+    )
+
+
 def snapshot_to_record(
     snapshot: ActualPositionSnapshot,
 ) -> PositionRecord:
@@ -239,6 +287,18 @@ def record_to_fill(record: FillRecord) -> ManualExecutionFill:
         slippage=record.slippage,
         notes=record.notes,
         settlement_date=record.settlement_date,
+    )
+
+
+def record_to_adjustment(record: FillAdjustmentRecord) -> FillAdjustment:
+    """FillAdjustmentRecord → FillAdjustment DTO."""
+    return FillAdjustment(
+        adjustment_id=record.adjustment_id,
+        fill_id=record.fill_id,
+        adjustment_type=record.adjustment_type,
+        replacement_fill_id=record.replacement_fill_id,
+        reason=record.reason,
+        created_at=record.created_at,
     )
 
 

@@ -130,6 +130,16 @@ def _handle_buy(
         )
     elif rounded > 0:
         orders.append(make_order(iid, OrderSide.BUY, rounded))
+    else:
+        blocked.append(
+            BlockedOrder(
+                instrument_id=iid,
+                direction=OrderSide.BUY,
+                intended_quantity=dr.diff_qty,
+                reason="below_board_lot",
+                severity=BlockSeverity.DEFER,
+            )
+        )
 
 
 def _handle_sell(

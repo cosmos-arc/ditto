@@ -14,6 +14,7 @@ import polars as pl
 from ditto_data.catalog import (
     DataAssetRef,
     DataCatalogEntry,
+    DataCatalogReader,
     DataCatalogWriter,
     DataSchemaFingerprint,
     default_dataset_metadata,
@@ -32,17 +33,27 @@ from ditto_data.lineage import (
     LineageInputRef,
     LineageOutputRef,
 )
-from ditto_data.models.ingestion import IngestionResult
+from ditto_data.models.ingestion import (
+    IngestionQualityEvidence,
+    IngestionResult,
+    IngestionSnapshotEvidence,
+)
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
-from ditto_application.contracts import CheckDataQualityCommand
+from ditto_application.catalog_freshness import catalog_source_snapshot_id
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
 from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
+from ditto_application.processes.ingestion.quality_gate import run_write_quality_gate
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
+from ditto_application.processes.ingestion.sparse_pit import (
+    is_sparse_pit_dataset,
+    resolve_sparse_asof_snapshot,
+    validate_sparse_pit_cutoff,
+)
 
 __all__ = [
     "CatalogWriteContext",
@@ -50,9 +61,11 @@ __all__ = [
     "PostIngestContext",
     "create_freeze_point",
     "handle_fetch_error",
+    "is_sparse_pit_dataset",
     "process_fetched_data",
     "record_data_catalog_entry",
     "record_ingestion_lineage",
+    "resolve_sparse_asof_snapshot",
     "run_list_date_inference",
     "run_post_ingest_hooks",
     "safe_side_effect",
@@ -72,6 +85,7 @@ class CatalogWriteContext:
     df: pl.DataFrame
     source_ticker: str | None = None
     end_date: str | None = None
+    l1_l2_attested: bool = False
 
 
 @dataclass(frozen=True)
@@ -94,23 +108,12 @@ class PostIngestContext:
     data_writer: IngestionDataWriter
     list_date_inference: ListDateInferenceService
     source_name: str
+    catalog_reader: DataCatalogReader | None = None
     quality_checker: QualityCheckerProtocol | None = None
     cursor_store: IngestionCursorStore | None = None
     freeze_store: FreezeStore | None = None
     lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
-
-
-_SPARSE_EMPTY_SUCCESS_DATASETS: frozenset[str] = frozenset(
-    {
-        "balance_sheet",
-        "income_statement",
-        "cash_flow",
-        "dividend",
-        "corporate_actions",
-        "index_weight",
-    }
-)
 
 
 def run_list_date_inference(
@@ -174,7 +177,7 @@ def run_list_date_inference(
         )
 
 
-def process_fetched_data(
+def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
     df: pl.DataFrame,
     dataset: str,
     trade_date: str,
@@ -184,31 +187,58 @@ def process_fetched_data(
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
     if df.is_empty():
-        if dataset in _SPARSE_EMPTY_SUCCESS_DATASETS:
-            return ctx.result_handler.handle_empty_success(dataset, trade_date)
-        return ctx.result_handler.handle_empty_data(dataset, trade_date)
-
-    if ctx.quality_checker is not None:
-        checked_df, should_block = ctx.quality_checker.handle(
-            CheckDataQualityCommand(
-                df=df,
+        if is_sparse_pit_dataset(dataset):
+            snapshot = resolve_sparse_asof_snapshot(
                 dataset=dataset,
-                context={"trade_date": trade_date},
-            ),
-        )
-        if should_block:
-            return ctx.result_handler.handle_dq_blocked(
+                trade_date=trade_date,
+                source_name=ctx.source_name,
+                catalog_reader=ctx.catalog_reader,
+            )
+            if snapshot is None:
+                return ctx.result_handler.handle_pit_snapshot_missing(
+                    dataset,
+                    trade_date,
+                )
+            return ctx.result_handler.handle_empty_success(
                 dataset,
                 trade_date,
-                WriteResult(
-                    file_path="",
-                    checksum="",
-                    rows_written=0,
-                    rows_total=df.height,
-                    blocked=True,
+                message="无新数据, 复用最近 PIT 快照",
+                snapshot_evidence=snapshot,
+                quality_evidence=IngestionQualityEvidence(
+                    kind="no_new_rows",
+                    status="not_applicable_no_new_rows",
+                    source=ctx.source_name,
+                    trade_date=trade_date,
+                    levels=(),
+                    row_count=0,
                 ),
             )
-        df = checked_df
+        return ctx.result_handler.handle_empty_data(dataset, trade_date)
+
+    sparse_pit = is_sparse_pit_dataset(dataset)
+    cutoff_error = validate_sparse_pit_cutoff(
+        df,
+        dataset=dataset,
+        trade_date=trade_date,
+    )
+    if cutoff_error is not None:
+        return ctx.result_handler.handle_pit_cutoff_failure(
+            dataset,
+            trade_date,
+            error=cutoff_error,
+        )
+    if sparse_pit and ctx.quality_checker is None:
+        return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
+
+    df, quality_failure = run_write_quality_gate(
+        df,
+        dataset=dataset,
+        trade_date=trade_date,
+        quality_checker=ctx.quality_checker,
+        result_handler=ctx.result_handler,
+    )
+    if quality_failure is not None:
+        return quality_failure
 
     on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
@@ -228,6 +258,36 @@ def process_fetched_data(
     if write_result.blocked:
         return ctx.result_handler.handle_dq_blocked(dataset, trade_date, write_result)
 
+    catalog_ctx = CatalogWriteContext(
+        dataset=dataset,
+        trade_date=trade_date,
+        source_name=ctx.source_name,
+        write_result=write_result,
+        df=df,
+        l1_l2_attested=ctx.quality_checker is not None,
+    )
+    snapshot_evidence: IngestionSnapshotEvidence | None = None
+    if sparse_pit:
+        if not _record_required_data_catalog_entry(
+            catalog_ctx,
+            catalog_writer=ctx.catalog_writer,
+        ):
+            return ctx.result_handler.handle_catalog_evidence_failed(
+                dataset,
+                trade_date,
+            )
+        snapshot_evidence = resolve_sparse_asof_snapshot(
+            dataset=dataset,
+            trade_date=trade_date,
+            source_name=ctx.source_name,
+            catalog_reader=ctx.catalog_reader,
+        )
+        if snapshot_evidence is None:
+            return ctx.result_handler.handle_pit_snapshot_missing(
+                dataset,
+                trade_date,
+            )
+
     run_post_ingest_hooks(
         dataset,
         trade_date,
@@ -236,7 +296,26 @@ def process_fetched_data(
         source_name=ctx.source_name,
     )
 
-    result = ctx.result_handler.handle_success(dataset, trade_date, df, write_result)
+    result = ctx.result_handler.handle_success(
+        dataset,
+        trade_date,
+        df,
+        write_result,
+        snapshot_evidence=snapshot_evidence,
+        quality_evidence=(
+            IngestionQualityEvidence(
+                kind="write_time_l1_l2",
+                status="passed",
+                source=ctx.source_name,
+                trade_date=trade_date,
+                levels=("l1", "l2"),
+                row_count=write_result.rows_written,
+                checksum=write_result.checksum,
+            )
+            if ctx.quality_checker is not None
+            else None
+        ),
+    )
     record_ingestion_lineage(
         dataset,
         trade_date,
@@ -244,16 +323,11 @@ def process_fetched_data(
         lineage_recorder=ctx.lineage_recorder,
         write_result=write_result,
     )
-    record_data_catalog_entry(
-        CatalogWriteContext(
-            dataset=dataset,
-            trade_date=trade_date,
-            source_name=ctx.source_name,
-            write_result=write_result,
-            df=df,
-        ),
-        catalog_writer=ctx.catalog_writer,
-    )
+    if not sparse_pit:
+        record_data_catalog_entry(
+            catalog_ctx,
+            catalog_writer=ctx.catalog_writer,
+        )
     run_list_date_inference(ctx.list_date_inference, dataset)
     return result
 
@@ -342,13 +416,20 @@ def _source_snapshot_id(
     *,
     source_ticker: str | None = None,
     end_date: str | None = None,
+    l1_l2_attested: bool = False,
 ) -> str:
     if source_ticker is not None:
         return (
             f"snapshot:{source_name}:{dataset}:{source_ticker}:"
             f"{trade_date}:{end_date or trade_date}:{checksum}"
         )
-    return f"snapshot:{source_name}:{dataset}:{trade_date}:{checksum}"
+    return catalog_source_snapshot_id(
+        dataset=dataset,
+        trade_date=trade_date,
+        source=source_name,
+        checksum=checksum,
+        l1_l2_attested=l1_l2_attested,
+    )
 
 
 def record_ingestion_lineage(
@@ -456,6 +537,7 @@ def _data_catalog_entry(
             ctx.write_result.checksum,
             source_ticker=ctx.source_ticker,
             end_date=ctx.end_date,
+            l1_l2_attested=ctx.l1_l2_attested,
         ),
     )
 
@@ -481,6 +563,39 @@ def record_data_catalog_entry(
         dataset=ctx.dataset,
         trade_date=ctx.trade_date,
     )
+
+
+def _record_required_data_catalog_entry(
+    ctx: CatalogWriteContext,
+    *,
+    catalog_writer: DataCatalogWriter | None,
+) -> bool:
+    """Persist evidence-critical sparse catalog metadata or fail closed."""
+    if catalog_writer is None:
+        logger.error(
+            "required_catalog_writer_missing",
+            event="catalog_evidence_error",
+            dataset=ctx.dataset,
+            trade_date=ctx.trade_date,
+        )
+        return False
+    try:
+        catalog_writer.upsert_asset(
+            _data_catalog_entry(
+                ctx,
+                now=datetime.now(UTC),
+            )
+        )
+    except Exception as error:
+        logger.error(
+            "required_catalog_upsert_failed",
+            event="catalog_evidence_error",
+            dataset=ctx.dataset,
+            trade_date=ctx.trade_date,
+            error_type=type(error).__name__,
+        )
+        return False
+    return True
 
 
 def run_post_ingest_hooks(
@@ -656,8 +771,7 @@ def handle_fetch_error(
         return result_handler.handle_fetch_error(dataset, date_identifier, fetch_error)
 
     if isinstance(error, SourceFetchError):
-        normalized = _normalize_source_fetch_error(error)
-        return result_handler.handle_fetch_error(dataset, date_identifier, normalized)
+        return result_handler.handle_fetch_error(dataset, date_identifier, error)
 
     logger.exception(
         f"unexpected_error_{log_tag}",
@@ -665,9 +779,3 @@ def handle_fetch_error(
         error_type=type(error).__name__,
     )
     return result_handler.handle_unknown_error(dataset, date_identifier, error)
-
-
-def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
-    """Normalize external fetch error into app-level SourceFetchError."""
-    source_name = getattr(error, "source", "unknown")
-    return SourceFetchError(message=str(error), source=str(source_name))

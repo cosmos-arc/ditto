@@ -15,6 +15,14 @@ class AppCommandError(AppError):
     """应用命令异常."""
 
 
+class AppNotFoundError(AppCommandError):
+    """命令目标不存在。"""
+
+
+class AppConflictError(AppCommandError):
+    """命令幂等键或当前资源状态发生冲突。"""
+
+
 class AppQueryError(AppError):
     """应用查询异常."""
 
@@ -31,7 +39,9 @@ __all__ = [
     "AppBuilderError",
     "AppCommandError",
     "AppConfigurationError",
+    "AppConflictError",
     "AppError",
+    "AppNotFoundError",
     "AppProcessError",
     "AppQueryError",
 ]

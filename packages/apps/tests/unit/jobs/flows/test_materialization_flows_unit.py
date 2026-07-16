@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
+import ditto_apps.jobs.flows.materialization as materialization_module
 from ditto_application.processes.materialization.cascade_orchestrator import (
     RepairBatchResult,
 )
@@ -62,6 +63,34 @@ class TestDailyMaterializationFlow:
             derived_ids=None,
         )
         assert result["summary"]["materialized_count"] == 1
+
+    def test_plain_runner_uses_same_materialization_business_function(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """CLI 可直接运行未装饰的物化业务函数。"""
+        assert hasattr(materialization_module, "run_daily_materialization")
+        bundle = mocker.MagicMock()
+        bundle.materialization_service.materialize_daily.return_value = ()
+        context = mocker.MagicMock()
+        context.__enter__.return_value = bundle
+        context.__exit__.return_value = None
+        mocker.patch.object(
+            materialization_module,
+            "create_materialization_bundle",
+            return_value=context,
+        )
+
+        result = materialization_module.run_daily_materialization(
+            trade_date="2026-07-16"
+        )
+
+        assert result["summary"]["materialized_count"] == 0
+        bundle.materialization_service.materialize_daily.assert_called_once_with(
+            trade_date="2026-07-16",
+            mode="incremental",
+            derived_ids=None,
+        )
 
 
 class TestRepairFromInvalidationFlow:

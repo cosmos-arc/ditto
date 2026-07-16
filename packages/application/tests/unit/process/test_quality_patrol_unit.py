@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock
 
+import polars as pl
 import pytest
 from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.processes.quality.types import L3CheckResult
@@ -97,3 +98,122 @@ class TestQualityPatrolServiceContract:
         assert result.has_error is True
         assert result.passed is False
         assert "RuntimeError" in result.error
+
+    def test_dataset_without_statistical_rules_is_explicitly_not_applicable(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+    ) -> None:
+        mock_statistical_engine.has_statistical_rules.return_value = False
+        service = QualityPatrolService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        result = service.check_dataset(
+            dataset="balance_sheet",
+            trade_date="2026-07-16",
+            asset_class="stock",
+            market_wide=True,
+        )
+
+        assert result.passed is True
+        assert result.applicable is False
+        mock_market_service.find_bars.assert_not_called()
+        mock_statistical_engine.check_statistical.assert_not_called()
+
+    def test_adj_factor_l3_uses_matching_factor_reader_not_market_bars(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+    ) -> None:
+        mock_statistical_engine.has_statistical_rules.return_value = True
+        mock_market_service.get_adj_factors.return_value = pl.DataFrame()
+        service = QualityPatrolService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        result = service.check_dataset(
+            dataset="adj_factor",
+            trade_date="2026-07-16",
+            asset_class="stock",
+            market_wide=True,
+        )
+
+        assert result.passed is True
+        mock_market_service.get_adj_factors.assert_any_call(
+            start="2026-07-16",
+            end="2026-07-16",
+            allow_experimental_data=True,
+        )
+        mock_market_service.find_bars.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("dataset", "asset_class"),
+        [
+            ("stock_daily", "stock"),
+            ("fx_daily", "fx"),
+            ("commodity_daily", "commodity"),
+        ],
+    )
+    def test_market_l3_reader_explicitly_allows_governance_inspection(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+        dataset: str,
+        asset_class: str,
+    ) -> None:
+        mock_statistical_engine.has_statistical_rules.return_value = True
+        service = QualityPatrolService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        result = service.check_dataset(
+            dataset=dataset,
+            trade_date="2026-07-16",
+            asset_class=asset_class,  # type: ignore[arg-type]
+            market_wide=True,
+        )
+
+        assert result.passed is True
+        mock_market_service.find_bars.assert_any_call(
+            instrument_ids=None,
+            start="2026-07-16",
+            end="2026-07-16",
+            market_wide=True,
+            asset_class=asset_class,
+            allow_experimental_data=True,
+        )
+
+    def test_configured_l3_without_matching_reader_fails_closed(
+        self,
+        mock_statistical_engine: MagicMock,
+        mock_market_service: MagicMock,
+        mock_metadata_service: MagicMock,
+    ) -> None:
+        mock_statistical_engine.has_statistical_rules.return_value = True
+        service = QualityPatrolService(
+            engine=mock_statistical_engine,
+            market_facade=mock_market_service,
+            metadata_facade=mock_metadata_service,
+        )
+
+        result = service.check_dataset(
+            dataset="index_weight",
+            trade_date="2026-07-16",
+            asset_class="index",
+            market_wide=True,
+        )
+
+        assert result.passed is False
+        assert result.error == "L3_UNSUPPORTED_READER"
+        mock_market_service.find_bars.assert_not_called()
+        mock_statistical_engine.check_statistical.assert_not_called()

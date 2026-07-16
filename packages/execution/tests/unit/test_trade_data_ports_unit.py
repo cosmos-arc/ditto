@@ -5,8 +5,18 @@ from __future__ import annotations
 from typing import Protocol, get_type_hints
 
 import pytest
-from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
-from ditto_execution.models import FillRecord, PositionRecord, SignalRecord
+from ditto_execution.contracts import (
+    AccountDataPort,
+    FillDataPort,
+    IntentDataPort,
+    PositionDataPort,
+)
+from ditto_execution.models import (
+    AccountSnapshotRecord,
+    FillRecord,
+    PositionRecord,
+    SignalRecord,
+)
 from ditto_execution.storage.sqlite.trade.service import TradeService
 
 # ---------------------------------------------------------------------------
@@ -45,7 +55,7 @@ class TestIntentDataPort:
 
 
 class TestFillDataPort:
-    """FillDataPort — 成交聚合窄 Port（3 方法）."""
+    """FillDataPort — append-only ledger and effective projection port."""
 
     def test_is_protocol(self) -> None:
         assert issubclass(FillDataPort, Protocol)
@@ -56,11 +66,20 @@ class TestFillDataPort:
             for m in dir(FillDataPort)
             if not m.startswith("_") and callable(getattr(FillDataPort, m, None))
         ]
-        assert len(methods) == 3
+        assert len(methods) == 8
 
     @pytest.mark.parametrize(
         "method_name",
-        ["save_fill", "find_fill", "list_fills"],
+        [
+            "ledger_transaction",
+            "save_fill",
+            "get_fill",
+            "list_fills",
+            "list_effective_fills",
+            "get_fill_adjustment",
+            "list_fill_adjustments",
+            "apply_fill_adjustment",
+        ],
     )
     def test_has_fill_methods(self, method_name: str) -> None:
         assert hasattr(FillDataPort, method_name)
@@ -68,10 +87,11 @@ class TestFillDataPort:
     def test_save_fill_signature(self) -> None:
         hints = get_type_hints(FillDataPort.save_fill)
         assert hints.get("record") is FillRecord
+        assert hints.get("return") is bool
 
 
 class TestPositionDataPort:
-    """PositionDataPort — 持仓聚合窄 Port（2 方法）."""
+    """PositionDataPort — position reads and atomic projection replacement."""
 
     def test_is_protocol(self) -> None:
         assert issubclass(PositionDataPort, Protocol)
@@ -82,11 +102,11 @@ class TestPositionDataPort:
             for m in dir(PositionDataPort)
             if not m.startswith("_") and callable(getattr(PositionDataPort, m, None))
         ]
-        assert len(methods) == 2
+        assert len(methods) == 3
 
     @pytest.mark.parametrize(
         "method_name",
-        ["save_position", "list_positions"],
+        ["save_position", "replace_position_snapshot", "list_positions"],
     )
     def test_has_position_methods(self, method_name: str) -> None:
         assert hasattr(PositionDataPort, method_name)
@@ -94,6 +114,28 @@ class TestPositionDataPort:
     def test_save_position_signature(self) -> None:
         hints = get_type_hints(PositionDataPort.save_position)
         assert hints.get("record") is PositionRecord
+
+
+class TestAccountDataPort:
+    """AccountDataPort — account baseline aggregate narrow port."""
+
+    def test_is_protocol(self) -> None:
+        assert issubclass(AccountDataPort, Protocol)
+
+    @pytest.mark.parametrize(
+        "method_name",
+        [
+            "save_account_baseline",
+            "get_latest_account_snapshot",
+            "list_account_snapshots",
+        ],
+    )
+    def test_has_account_methods(self, method_name: str) -> None:
+        assert hasattr(AccountDataPort, method_name)
+
+    def test_save_baseline_accepts_account_snapshot(self) -> None:
+        hints = get_type_hints(AccountDataPort.save_account_baseline)
+        assert hints.get("account") is AccountSnapshotRecord
 
 
 # ---------------------------------------------------------------------------
@@ -114,9 +156,30 @@ class TestTradeServiceCompatibility:
             assert hasattr(TradeService, method_name)
 
     def test_satisfies_fill_port(self) -> None:
-        for method_name in ("save_fill", "find_fill", "list_fills"):
+        for method_name in (
+            "ledger_transaction",
+            "save_fill",
+            "get_fill",
+            "list_fills",
+            "list_effective_fills",
+            "get_fill_adjustment",
+            "list_fill_adjustments",
+            "apply_fill_adjustment",
+        ):
             assert hasattr(TradeService, method_name)
 
     def test_satisfies_position_port(self) -> None:
-        for method_name in ("save_position", "list_positions"):
+        for method_name in (
+            "save_position",
+            "replace_position_snapshot",
+            "list_positions",
+        ):
+            assert hasattr(TradeService, method_name)
+
+    def test_satisfies_account_port(self) -> None:
+        for method_name in (
+            "save_account_baseline",
+            "get_latest_account_snapshot",
+            "list_account_snapshots",
+        ):
             assert hasattr(TradeService, method_name)

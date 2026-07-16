@@ -90,9 +90,17 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
         "RetryManager",
         return_value=MagicMock(),
     )
+    reattestation = MagicMock()
+    reattestation_cls = mocker.patch.object(
+        ingestion_context,
+        "SparsePITReattestationProcess",
+        create=True,
+        return_value=reattestation,
+    )
 
     with ingestion_context.create_ingestion_bundle(source="tushare") as bundle:
         assert bundle.coordinator is coordinator
+        assert bundle.sparse_pit_reattestation is reattestation
 
     coordinator_services = cast(CoordinatorServices, captured_services["services"])
     assert coordinator_services.source_registry is source_registry
@@ -102,4 +110,9 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
     assert runtime.catalog_writer is catalog
     assert runtime.source_fallback_policy_reader is source_fallback_policy_reader
     assert retry_manager_cls.call_args.kwargs["data_catalog_reader"] is catalog
+    assert reattestation_cls.call_args.kwargs["ingestion"] is coordinator
+    assert reattestation_cls.call_args.kwargs["catalog"] is catalog
+    verifier = reattestation_cls.call_args.kwargs["verifier"]
+    assert verifier.reader is catalog
+    assert verifier.ingestion_logs is services[ingestion_context.IngestionLogStore]
     assert container.closed

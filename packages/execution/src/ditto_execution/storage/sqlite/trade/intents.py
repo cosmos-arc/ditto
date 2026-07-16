@@ -129,9 +129,24 @@ class IntentWriter:
         expected_current: tuple[str, ...],
     ) -> bool:
         """Update an intent status with optimistic concurrency protection."""
+        updated = self.update_status_uncommitted(
+            intent_id,
+            status,
+            expected_current=expected_current,
+        )
+        self._client.commit()
+        return updated
+
+    def update_status_uncommitted(
+        self,
+        intent_id: str,
+        status: str,
+        *,
+        expected_current: tuple[str, ...],
+    ) -> bool:
+        """Update status in the caller-owned transaction."""
         placeholders = ", ".join("?" for _ in expected_current)
         sql = _UPDATE_INTENT_STATUS_TRANSITION.format(placeholders=placeholders)
         params = [status, intent_id, *expected_current]
         cursor = self._client.execute(sql, params)
-        self._client.commit()
         return cursor.rowcount > 0

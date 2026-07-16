@@ -282,6 +282,23 @@ class TestComputeDiffBasic:
         assert all(o.direction == OrderSide.SELL for o in orders)
         assert all(o.instrument_id == _iid(1) for o in orders)
 
+    def test_current_price_reversal_uses_exact_target_shares_for_sell(self) -> None:
+        """D 日价格重估后，100 股到目标 62 股应只卖出 38 股。"""
+        ctx = _ctx(
+            target_positions={1: 0.5},
+            account_positions={1: _position(1, quantity=100, market_value=1_000.0)},
+            instruments={1},
+            snaps_map={1: _snap(1, close=80.0)},
+            nav=10_000.0,
+        )
+
+        orders, blocked = compute_diff(ctx, _make_order)
+
+        assert blocked == []
+        assert [(order.direction, order.quantity) for order in orders] == [
+            (OrderSide.SELL, 38)
+        ]
+
 
 # ---------------------------------------------------------------------------
 # compute_diff — pending delta
@@ -418,3 +435,20 @@ class TestComputePendingDelta:
         delta = compute_pending_delta(OrderBookReadOnly({"b1": buy, "s1": sell}))
         assert delta[_iid(1)] == 100
         assert delta[_iid(2)] == -200
+
+
+def test_buy_below_board_lot_is_deferred_with_reason() -> None:
+    """不足一手的买入差额不生成订单，并保留可解释原因。"""
+    ctx = _ctx(
+        target_positions={1: 0.01},
+        account_positions={1: _position(1, quantity=50, market_value=500.0)},
+        snaps_map={1: _snap(close=10.0)},
+        nav=100_000.0,
+    )
+
+    orders, blocked = compute_diff(ctx, _make_order)
+
+    assert orders == []
+    assert len(blocked) == 1
+    assert blocked[0].reason == "below_board_lot"
+    assert blocked[0].intended_quantity == 50

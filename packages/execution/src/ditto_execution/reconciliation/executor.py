@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Protocol
+from dataclasses import replace
+from typing import Protocol, cast
 
 from ditto_kernel.tracing import traced
 from ditto_portfolio.accounting import FillEvent
 
 from ditto_execution.errors import ReconciliationError
-from ditto_execution.models import FillRecord
+from ditto_execution.models import FillAdjustmentRecord, FillRecord
 from ditto_execution.reconciliation.types import (
     RepairActionRecord,
     RepairActionStatus,
@@ -27,6 +28,8 @@ __all__ = [
     "LocalFillRepairPort",
     "LocalOrderStatusRepairPort",
     "OrderStatusReviewSource",
+    "ProjectedFillAppendPort",
+    "ProjectedFillCorrectionPort",
     "RepairActionExecutor",
     "RepairActionHandler",
     "RepairExecutionAuditSink",
@@ -139,18 +142,31 @@ class OrderStatusReviewSource(Protocol):
 
 
 class LocalFillRepairPort(Protocol):
-    """Narrow local fill store used by mutating repair handlers."""
+    """Narrow immutable local fill store used by repair handlers."""
 
     def get_fill(self, fill_id: str) -> FillRecord | None:
         """Return one local fill by ID."""
         ...
 
-    def save_fill(self, record: FillRecord) -> None:
-        """Persist one local fill record."""
+
+class ProjectedFillAppendPort(Protocol):
+    """Append a fill and atomically rebuild intent/position projections."""
+
+    def append_projected_fill(self, record: FillRecord) -> bool:
+        """Return True for a new fill and False for an exact replay."""
         ...
 
-    def replace_fill(self, record: FillRecord) -> bool:
-        """Replace one existing local fill record."""
+
+class ProjectedFillCorrectionPort(Protocol):
+    """Append a replacement and atomically rebuild intent/position projections."""
+
+    def apply_projected_fill_replacement(
+        self,
+        *,
+        adjustment: FillAdjustmentRecord,
+        replacement_fill: FillRecord,
+    ) -> bool:
+        """Return True for a new event and False for an exact replay."""
         ...
 
 
@@ -203,9 +219,18 @@ class ImportBrokerFillRepairHandler:
         *,
         broker_fill_source: BrokerFillImportSource,
         local_fill_store: LocalFillRepairPort,
+        projected_fill_port: ProjectedFillAppendPort | None = None,
     ) -> None:
         self._broker_fill_source = broker_fill_source
-        self._local_fill_store = local_fill_store
+        resolved_port = projected_fill_port or local_fill_store
+        append_fill = getattr(resolved_port, "append_projected_fill", None)
+        if not callable(append_fill):
+            msg = (
+                "ImportBrokerFillRepairHandler requires a projection-capable "
+                + "fill append adapter"
+            )
+            raise TypeError(msg)
+        self._projected_fill_port = cast(ProjectedFillAppendPort, resolved_port)
 
     def execute(self, action: RepairActionRecord) -> RepairExecutionResult:
         """Import a broker fill after explicit workflow approval."""
@@ -219,14 +244,6 @@ class ImportBrokerFillRepairHandler:
             return RepairExecutionResult.failed(
                 action,
                 message="import broker fill action has no fill_id",
-            )
-
-        existing = self._local_fill_store.get_fill(action.fill_id)
-        if existing is not None:
-            return RepairExecutionResult.executed(
-                action,
-                message=f"broker fill {action.fill_id} already imported",
-                effect_count=0,
             )
 
         record = self._broker_fill_source.get_fill_record(action)
@@ -244,7 +261,13 @@ class ImportBrokerFillRepairHandler:
                 ),
             )
 
-        self._local_fill_store.save_fill(record)
+        created = self._projected_fill_port.append_projected_fill(record)
+        if not created:
+            return RepairExecutionResult.executed(
+                action,
+                message=f"broker fill {action.fill_id} already imported",
+                effect_count=0,
+            )
         return RepairExecutionResult.executed(
             action,
             message=f"imported broker fill {record.fill_id}",
@@ -253,19 +276,33 @@ class ImportBrokerFillRepairHandler:
 
 
 class AmendLocalFillRepairHandler:
-    """Mutating handler that replaces one approved local fill record."""
+    """Append-only handler for one approved local fill correction."""
 
     def __init__(
         self,
         *,
         amendment_source: FillAmendmentSource,
         local_fill_store: LocalFillRepairPort,
+        correction_port: ProjectedFillCorrectionPort | None = None,
     ) -> None:
         self._amendment_source = amendment_source
         self._local_fill_store = local_fill_store
+        resolved_port = correction_port or local_fill_store
+        apply_replacement = getattr(
+            resolved_port,
+            "apply_projected_fill_replacement",
+            None,
+        )
+        if not callable(apply_replacement):
+            msg = (
+                "AmendLocalFillRepairHandler requires a projection-capable "
+                + "fill correction adapter"
+            )
+            raise TypeError(msg)
+        self._correction_port = cast(ProjectedFillCorrectionPort, resolved_port)
 
     def execute(self, action: RepairActionRecord) -> RepairExecutionResult:
-        """Replace a local fill after explicit workflow approval."""
+        """Append a projected replacement after explicit workflow approval."""
         if action.action_type is not RepairActionType.AMEND_LOCAL_FILL:
             raise ReconciliationError(
                 "local fill amendment handler received unsupported repair action",
@@ -277,23 +314,35 @@ class AmendLocalFillRepairHandler:
             return loaded
         current, amended = loaded
 
-        if amended == current:
-            return RepairExecutionResult.executed(
-                action,
-                message=f"local fill {action.fill_id} already matched amendment",
-                effect_count=0,
-            )
-
-        replaced = self._local_fill_store.replace_fill(amended)
-        if not replaced:
-            return RepairExecutionResult.failed(
-                action,
-                message=f"local fill {action.fill_id} could not be replaced",
-            )
+        evidence_time = (
+            action.reviewed_at or action.created_at or f"{action.trade_date}T00:00:00Z"
+        )
+        replacement_fill_id = f"{current.fill_id}:repair:{action.action_id}"
+        replacement_fill = replace(
+            amended,
+            fill_id=replacement_fill_id,
+            created_at=evidence_time,
+        )
+        adjustment = FillAdjustmentRecord(
+            adjustment_id=f"repair-adjustment:{action.action_id}",
+            fill_id=current.fill_id,
+            adjustment_type="replace",
+            replacement_fill_id=replacement_fill_id,
+            reason=(
+                action.review_reason
+                or action.reason
+                or f"approved reconciliation amendment {action.action_id}"
+            ),
+            created_at=evidence_time,
+        )
+        created = self._correction_port.apply_projected_fill_replacement(
+            adjustment=adjustment,
+            replacement_fill=replacement_fill,
+        )
         return RepairExecutionResult.executed(
             action,
-            message=f"amended local fill {amended.fill_id}",
-            effect_count=1,
+            message=f"amended local fill {current.fill_id}",
+            effect_count=int(created),
         )
 
     def _load_amendment(

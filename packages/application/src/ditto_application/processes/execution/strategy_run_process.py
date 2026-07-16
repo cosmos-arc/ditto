@@ -9,16 +9,17 @@ StrategyFacade 封装 catalog-backed 策略执行入口。
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from math import isfinite
 from typing import Protocol
 
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.statistics import BacktestReport
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
-from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.alpha.validation import validate_spec_params
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
@@ -75,6 +76,7 @@ class StrategyRunServiceConfig:
         run_id: 运行 ID (空字符串时自动生成)
         mode: 运行模式 (research / recommendation)
         spec: 策略定义（可选，设置后 run() 会先校验参数）
+        manage_run_lifecycle: 是否由本服务写入 run 终态；EOD coordinator 接管时关闭
 
     """
 
@@ -83,6 +85,7 @@ class StrategyRunServiceConfig:
     run_id: str = ""
     mode: StrategyRunMode = StrategyRunMode.RESEARCH
     spec: StrategySpec | None = None
+    manage_run_lifecycle: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +112,50 @@ class StrategyRunResult:
     strategy_id: str
     target: TargetPortfolio
     mode: StrategyRunMode
+    factor_ids: tuple[str, ...] = ()
+    factor_values: dict[int, dict[str, float]] = field(default_factory=dict)
+    risk_flags: tuple[str, ...] = ()
+    risk_locked_instruments: tuple[int, ...] = ()
+
+
+def _factor_evidence(
+    input_bundle: StrategyInputBundle,
+    target: TargetPortfolio,
+) -> tuple[tuple[str, ...], dict[int, dict[str, float]]]:
+    """从本次实际 signal frame 提取已选标的的有限因子值。"""
+    frame = input_bundle.signal_values
+    if frame is None or frame.is_empty():
+        return (), {}
+    factor_columns = tuple(
+        sorted(column for column in frame.columns if column != "instrument_id")
+    )
+    selected = {int(instrument_id) for instrument_id in target.positions}
+    observed: set[str] = set()
+    values_by_instrument: dict[int, dict[str, float]] = {}
+    for row in frame.to_dicts():
+        raw_instrument_id = row.get("instrument_id")
+        mapped = input_bundle.instrument_id_map.get(
+            raw_instrument_id,
+            raw_instrument_id,
+        )
+        instrument_id = (
+            int(mapped)
+            if isinstance(mapped, int) and not isinstance(mapped, bool)
+            else None
+        )
+        values: dict[str, float] = {}
+        for factor_id in factor_columns:
+            raw_value = row.get(factor_id)
+            if (
+                isinstance(raw_value, (int, float))
+                and not isinstance(raw_value, bool)
+                and isfinite(float(raw_value))
+            ):
+                values[factor_id] = float(raw_value)
+                observed.add(factor_id)
+        if instrument_id is not None and instrument_id in selected and values:
+            values_by_instrument[instrument_id] = values
+    return tuple(sorted(observed)), values_by_instrument
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +213,7 @@ class StrategyRunService:
 
         """
         run_id = self._resolve_run_id()
-        run_svc = self._run_service
+        run_svc = self._run_service if self._config.manage_run_lifecycle else None
         if run_svc is not None:
             existing = run_svc.get_run(run_id)
             if existing is None:
@@ -200,6 +247,7 @@ class StrategyRunService:
 
         context = StrategyContext()
         target = self._pipeline.run(context, input_bundle)
+        factor_ids, factor_values = _factor_evidence(input_bundle, target)
 
         result = StrategyRunResult(
             run_id=run_id,
@@ -207,12 +255,31 @@ class StrategyRunService:
             strategy_id=self._config.strategy_id,
             target=target,
             mode=self._config.mode,
+            factor_ids=factor_ids,
+            factor_values=factor_values,
+            risk_flags=tuple(
+                sorted(
+                    {
+                        reason
+                        for reason, _cooldown_until in (
+                            context.risk_locked_instruments.values()
+                        )
+                        if reason
+                    }
+                )
+            ),
+            risk_locked_instruments=tuple(
+                sorted(
+                    int(instrument_id)
+                    for instrument_id in context.get_locked_instruments()
+                )
+            ),
         )
 
         if self._config.mode == StrategyRunMode.RECOMMENDATION:
             self._persist_signal(run_id, trade_date, target)
 
-        run_svc = self._run_service
+        run_svc = self._run_service if self._config.manage_run_lifecycle else None
         if run_svc is not None:
             run_svc.mark_completed(run_id)
 

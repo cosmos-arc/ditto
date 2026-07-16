@@ -172,6 +172,7 @@ class ConfigProvider(Provider):
         self,
         data_store_settings: _DataStoreSettings,
         feature_artifact_store_settings: FeatureArtifactStoreSettings,
+        data_source_settings: DataSourceSettings,
     ) -> ConfigInitCoordinator:
         """配置初始化协调器（注册所有 providers）."""
         coordinator = ConfigInitCoordinator()
@@ -183,7 +184,7 @@ class ConfigProvider(Provider):
                 )
             )
         )
-        coordinator.register(DataSourceValidationProvider())
+        coordinator.register(DataSourceValidationProvider(data_source_settings))
         coordinator.register(MetadataDbInitProvider())
         return coordinator
 
@@ -225,6 +226,9 @@ class ConfigProvider(Provider):
     def data_source_settings(self, config_loader: ConfigLoader) -> DataSourceSettings:
         """加载数据源配置。"""
         data_source_values = load_env_file(config_loader, "data_source")
+        for secret_key in ("tushare_token", "fred_api_key"):
+            if data_source_values.get(secret_key) is None:
+                data_source_values.pop(secret_key, None)
 
         # Token 加载优先级：环境变量 > keyring > 配置文件
         # 安全规范：Token 不应明文存储在配置文件中

@@ -24,15 +24,16 @@ class TestRoundBuyQty:
         assert round_buy_qty(-100, lot_size=100) == 0
 
     def test_round_buy_qty_normal_above_lot(self) -> None:
-        """正常值 >= lot_size → 原样返回。"""
+        """买入数量向下取整为整手，避免超过目标或现金上限。"""
         assert round_buy_qty(200, lot_size=100) == 200
         assert round_buy_qty(500, lot_size=100) == 500
+        assert round_buy_qty(150, lot_size=100) == 100
 
     def test_round_buy_qty_normal_below_lot(self) -> None:
-        """正常值 < lot_size → 向上取到 lot_size（最小1手）。"""
-        assert round_buy_qty(1, lot_size=100) == 100
-        assert round_buy_qty(50, lot_size=100) == 100
-        assert round_buy_qty(99, lot_size=100) == 100
+        """不足一手不强制买入。"""
+        assert round_buy_qty(1, lot_size=100) == 0
+        assert round_buy_qty(50, lot_size=100) == 0
+        assert round_buy_qty(99, lot_size=100) == 0
 
     def test_round_buy_qty_exactly_lot(self) -> None:
         """raw_qty == lot_size → 原样返回。"""
@@ -40,8 +41,8 @@ class TestRoundBuyQty:
 
     def test_round_buy_qty_custom_lot_size(self) -> None:
         """自定义 lot_size。"""
-        assert round_buy_qty(5, lot_size=10) == 10
-        assert round_buy_qty(15, lot_size=10) == 15
+        assert round_buy_qty(5, lot_size=10) == 0
+        assert round_buy_qty(15, lot_size=10) == 10
 
 
 # ---------------------------------------------------------------------------
@@ -108,10 +109,10 @@ class TestTargetQuantity:
         assert target_quantity(0.3, nav=100_000, lot_size=100, price=10.0) == 3000
 
     def test_target_quantity_with_price_truncates(self) -> None:
-        """有价格时向下取整到 lot_size 整数倍。"""
+        """有价格时只截断到整数股，交易方向确定后再应用手数规则。"""
         # weight=0.1, nav=100_000, price=3.0, lot_size=100
-        # target_value = 10000, shares = 3333.33, lots = 33, qty = 3300
-        assert target_quantity(0.1, nav=100_000, lot_size=100, price=3.0) == 3300
+        # target_value = 10000, shares = 3333.33, raw target = 3333
+        assert target_quantity(0.1, nav=100_000, lot_size=100, price=3.0) == 3333
 
     def test_target_quantity_without_price(self) -> None:
         """无价格（price=0）→ lots = target_value / lot_size。"""
@@ -122,3 +123,7 @@ class TestTargetQuantity:
     def test_target_quantity_no_price_defaults(self) -> None:
         """price 参数默认为 0.0。"""
         assert target_quantity(0.5, nav=100_000, lot_size=100) == 50000
+
+    def test_target_quantity_preserves_odd_share_target_for_sell_diff(self) -> None:
+        """目标股数不应提前按买入手数取整，否则会放大减仓数量。"""
+        assert target_quantity(0.5, nav=10_000, lot_size=100, price=80.0) == 62

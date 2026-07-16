@@ -47,12 +47,24 @@ class RunLifecycleService(Protocol):
         """标记运行为 running。"""
         ...
 
+    def retry_failed(self, run_id: str, *, config_json: str = "") -> bool:
+        """将同一确定性 batch 的 failed 记录恢复为 pending。"""
+        ...
+
     def mark_completed(self, run_id: str) -> bool:
         """标记运行为 completed。"""
         ...
 
     def mark_failed(self, run_id: str, error_message: str = "") -> bool:
         """标记运行为 failed。"""
+        ...
+
+    def mark_pending_failed(self, run_id: str, error_message: str = "") -> bool:
+        """Only fail an unclaimed pending run."""
+        ...
+
+    def refresh_blocked_evidence(self, run_id: str, *, config_json: str) -> bool:
+        """Refresh exact required-data blocked evidence without reopening it."""
         ...
 
     def mark_cancelled(self, run_id: str) -> bool:

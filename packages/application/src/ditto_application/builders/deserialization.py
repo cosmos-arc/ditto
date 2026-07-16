@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import replace
 
 from ditto_kernel.strategy import ImpactModel
@@ -42,6 +43,7 @@ __all__ = [
     "_DEFAULT_TOP_K",
     "_DEFAULT_TRAILING_STOP_PCT",
     "_normalize_impact_model",
+    "default_required_datasets_for_template",
     "deserialize_constraint",
     "deserialize_constraints",
     "deserialize_cost_model",
@@ -93,10 +95,20 @@ def _normalize_impact_model(raw: str | None) -> ImpactModel:
 def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
     """将 catalog 中的 ``spec_json`` 恢复为 ``StrategySpec``。"""
     payload = as_object_dict(record.spec_json, field_name="spec_json")
+    template = read_required_str(payload, "template")
+    required_datasets = as_str_tuple(
+        payload.get("required_datasets"),
+        field_name="required_datasets",
+    )
+    if not required_datasets:
+        message = f"Strategy {record.strategy_id} missing required_datasets"
+        message += "; using template migration default"
+        warnings.warn(message, stacklevel=2)
+        required_datasets = default_required_datasets_for_template(template)
     spec = StrategySpec(
         strategy_id=read_optional_str(payload.get("strategy_id")) or record.strategy_id,
         name=read_optional_str(payload.get("name")) or record.name,
-        template=read_required_str(payload, "template"),
+        template=template,
         universe=read_required_str(payload, "universe"),
         asset_class=read_required_str(payload, "asset_class"),
         scorer=deserialize_scorer(payload.get("scorer")),
@@ -115,8 +127,25 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
             payload.get("signal_weights"),
             field_name="signal_weights",
         ),
+        required_datasets=required_datasets,
     )
     return inject_template_constraints(spec)
+
+
+def default_required_datasets_for_template(template: str) -> tuple[str, ...]:
+    """旧 spec 的兼容映射；新写入必须显式保存 required_datasets。"""
+    if template in {"etf_rotation", "etf_trend_swing"}:
+        return ("etf_daily",)
+    if template == "stock_selection":
+        return (
+            "stock_daily",
+            "adj_factor",
+            "balance_sheet",
+            "income_statement",
+        )
+    if template == "stock_sector_rotation":
+        return ("stock_daily", "adj_factor")
+    return ()
 
 
 # ---------------------------------------------------------------------------

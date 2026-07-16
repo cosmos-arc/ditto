@@ -70,7 +70,7 @@ apps → application ✅
 apps → platform ✅
 apps.registry → data/features/strategy/portfolio/risk/execution/backtest/analysis ✅
 apps.jobs.context → ditto_data.quality ✅ (narrow DQ engine lookup)
-apps.jobs.tasks.{dq_batch,monitoring} → ditto_data.quality.quality_types ✅ (DQ type annotations for task signatures)
+apps.jobs.tasks.monitoring → ditto_data.quality.quality_types ✅ (DQ type annotations for task signatures)
 ```
 
 ## 禁止依赖
@@ -217,7 +217,7 @@ policy stay in application/data-owned catalog helpers.
 | `/metadata` | metadata | `api/routes/metadata.py` | 元数据查询 | initial-focus |
 | `/source` | source | `api/routes/source.py` | Source 数据查询；显式 experimental dataset 必须透传 application maturity gate | infrastructure |
 | `/strategies` | strategies | `api/routes/strategy.py` | 策略 CRUD + 发布 | initial-focus |
-| `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） | experimental |
+| `/trade` | trade | `api/routes/trade.py` | R1 本机人工交易闭环（意图/成交/持仓/盈亏/对比） | initial-focus |
 | `/universes` | universes | `api/routes/universe.py` | Universe 管理 | initial-focus |
 | `/api/v1/logs` | debug | `api/routes/debug.py` | 调试端点（仅非生产环境） | debug |
 

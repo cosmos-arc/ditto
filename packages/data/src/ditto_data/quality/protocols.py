@@ -50,6 +50,10 @@ class QualityEngineProtocol(Protocol):
         """执行统计类异常检查."""
         ...
 
+    def has_statistical_rules(self, dataset: str) -> bool:
+        """Return whether the configured dataset has applicable L3 rules."""
+        ...
+
 
 class InstrumentStoreProtocol(Protocol):
     """证券信息补充协议 — instrument_id → ticker 转换."""

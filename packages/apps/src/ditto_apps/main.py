@@ -360,6 +360,6 @@ if __name__ == "__main__":
 
     granian.Granian(
         "ditto_apps.main:app",
-        address="0.0.0.0:8000",
+        address="127.0.0.1:8000",
         interface=Interfaces.ASGI,  # FastAPI 需要 ASGI 接口
     ).serve()

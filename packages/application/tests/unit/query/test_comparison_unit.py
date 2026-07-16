@@ -29,7 +29,7 @@ def _make_actual_facade(
 ) -> MagicMock:
     """构造 mock PortfolioActualQueryFacade."""
     facade = MagicMock()
-    facade.get_fills.return_value = fills or []
+    facade.get_effective_fills.return_value = fills or []
     facade.get_latest_positions.return_value = positions or []
     return facade
 
@@ -159,7 +159,7 @@ class TestGetComparison:
 
         facade.get_comparison(strategy_id="strat-001", run_id="run-001")
 
-        actual_facade.get_fills.assert_called_once_with("strat-001")
+        actual_facade.get_effective_fills.assert_called_once_with("strat-001")
 
 
 # ========== get_comparison — 边界情况 ==========

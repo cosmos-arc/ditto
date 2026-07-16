@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from ditto_platform.foundation import (
@@ -10,6 +9,8 @@ from ditto_platform.foundation import (
     InitScope,
 )
 from loguru import logger
+
+from ditto_data.config.data_source import DataSourceSettings
 
 __all__ = ["DataSourceValidationProvider"]
 
@@ -20,6 +21,9 @@ class DataSourceValidationProvider:
 
     职责：校验数据源所需的配置项（如 API Token）。
     """
+
+    def __init__(self, settings: DataSourceSettings | None = None) -> None:
+        self._settings = settings or DataSourceSettings()
 
     @property
     def name(self) -> str:
@@ -39,8 +43,9 @@ class DataSourceValidationProvider:
         """校验数据源配置项."""
         errors: list[str] = []
 
-        # 校验 TUSHARE_TOKEN
-        token = os.environ.get("TUSHARE_TOKEN", "")
+        # Validate the already-resolved env > keyring > config value. Reading only
+        # os.environ here would reject a valid keyring-backed runtime.
+        token = self._settings.tushare_token
         if not token.strip():
             errors.append("TUSHARE_TOKEN is not set or empty")
 

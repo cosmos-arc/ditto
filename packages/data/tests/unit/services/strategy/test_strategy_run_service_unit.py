@@ -42,8 +42,11 @@ def _make_service(
     writer: MagicMock | None = None,
 ) -> StrategyRunLifecycleStore:
     """创建 StrategyRunLifecycleStore 实例。"""
+    resolved_reader = reader or MagicMock(spec=StrategyRunReaderProtocol)
+    if reader is None:
+        resolved_reader.get.return_value = None
     return StrategyRunLifecycleStore(
-        reader=reader or MagicMock(spec=StrategyRunReaderProtocol),
+        reader=resolved_reader,
         writer=writer or MagicMock(spec=StrategyRunWriterProtocol),
     )
 
@@ -147,6 +150,76 @@ class TestStrategyRunServiceLifecycle:
         assert record.started_at != ""
         assert record.started_at.endswith("Z")
 
+    def test_create_run_does_not_overwrite_completed_evidence(self) -> None:
+        """Deterministic retries must preserve an existing terminal run fact."""
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        mock_reader.get.return_value = _make_record(
+            run_id="eod-2026-07-16-stock-1",
+            strategy_id="stock",
+            strategy_version="1",
+            mode="recommendation",
+            status="completed",
+        )
+        mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
+        service = _make_service(reader=mock_reader, writer=mock_writer)
+
+        service.create_run(
+            run_id="eod-2026-07-16-stock-1",
+            strategy_id="stock",
+            strategy_version="1",
+            mode="recommendation",
+        )
+
+        mock_writer.save.assert_not_called()
+
+    def test_create_run_accepts_same_identity_after_losing_insert_race(self) -> None:
+        """A concurrent identical creator owns the durable row without conflict."""
+        concurrent = _make_record(
+            run_id="eod-2026-07-16-stock-1",
+            strategy_id="stock",
+            strategy_version="1",
+            mode="recommendation",
+        )
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        mock_reader.get.side_effect = [None, concurrent]
+        mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
+        mock_writer.save.return_value = False
+        service = _make_service(reader=mock_reader, writer=mock_writer)
+
+        service.create_run(
+            run_id="eod-2026-07-16-stock-1",
+            strategy_id="stock",
+            strategy_version="1",
+            mode="recommendation",
+        )
+
+        mock_writer.save.assert_called_once()
+        assert mock_reader.get.call_count == 2
+
+    def test_create_run_rejects_different_identity_after_losing_insert_race(
+        self,
+    ) -> None:
+        """A concurrent hash collision must never be claimed as this run."""
+        concurrent = _make_record(
+            run_id="eod-collision",
+            strategy_id="other",
+            strategy_version="9",
+            mode="recommendation",
+        )
+        mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
+        mock_reader.get.side_effect = [None, concurrent]
+        mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
+        mock_writer.save.return_value = False
+        service = _make_service(reader=mock_reader, writer=mock_writer)
+
+        with pytest.raises(ValueError, match="different run identity"):
+            service.create_run(
+                run_id="eod-collision",
+                strategy_id="stock",
+                strategy_version="1",
+                mode="recommendation",
+            )
+
     def test_mark_running(self) -> None:
         """mark_running() 更新状态为 running。"""
         mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
@@ -157,6 +230,19 @@ class TestStrategyRunServiceLifecycle:
 
         assert result is True
         mock_writer.update_status.assert_called_once_with("run-001", RunStatus.RUNNING)
+
+    def test_retry_failed_delegates_to_guarded_writer_transition(self) -> None:
+        mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
+        mock_writer.retry_failed.return_value = True
+        service = _make_service(writer=mock_writer)
+
+        result = service.retry_failed("run-001", config_json='{"attempt":2}')
+
+        assert result is True
+        mock_writer.retry_failed.assert_called_once_with(
+            "run-001",
+            config_json='{"attempt":2}',
+        )
 
     def test_mark_completed(self) -> None:
         """mark_completed() 更新状态为 completed。"""
@@ -182,6 +268,37 @@ class TestStrategyRunServiceLifecycle:
         assert result is True
         mock_writer.update_status.assert_called_once_with(
             "run-001", RunStatus.FAILED, "OOM error"
+        )
+
+    def test_mark_pending_failed_delegates_to_guarded_writer_transition(self) -> None:
+        mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
+        mock_writer.mark_pending_failed.return_value = True
+        service = _make_service(writer=mock_writer)
+
+        result = service.mark_pending_failed("run-001", "blocked:NOT_READY")
+
+        assert result is True
+        mock_writer.mark_pending_failed.assert_called_once_with(
+            "run-001",
+            "blocked:NOT_READY",
+        )
+
+    def test_refresh_blocked_evidence_delegates_to_guarded_writer_update(
+        self,
+    ) -> None:
+        mock_writer = MagicMock(spec=StrategyRunWriterProtocol)
+        mock_writer.refresh_blocked_evidence.return_value = True
+        service = _make_service(writer=mock_writer)
+
+        result = service.refresh_blocked_evidence(
+            "run-001",
+            config_json='{"state":"B"}',
+        )
+
+        assert result is True
+        mock_writer.refresh_blocked_evidence.assert_called_once_with(
+            "run-001",
+            config_json='{"state":"B"}',
         )
 
     def test_get_run(self) -> None:

@@ -2,6 +2,10 @@
 
 from dataclasses import dataclass
 
+from ditto_application.processes.execution.manual_sizing import (
+    AShareTradeDateResolver,
+    ManualSizingContextBuilder,
+)
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
@@ -9,6 +13,9 @@ from ditto_application.processes.ingestion.backfill_manager import BackfillManag
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
+)
+from ditto_application.processes.ingestion.sparse_recovery import (
+    SparsePITReattestationProcess,
 )
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
@@ -19,6 +26,7 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
+from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBootstrap
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
@@ -40,6 +48,7 @@ class IngestionBundle:
     coordinator: IngestionCoordinatorLike
     backfill_manager: BackfillManager
     retry_manager: RetryManager
+    sparse_pit_reattestation: SparsePITReattestationProcess
     metadata_facade: MetadataQueryFacade
     exchange_transformers: ExchangeTransformers
 
@@ -63,3 +72,6 @@ class StrategyBundle:
     run_service: RunLifecycleService | None = None
     run_writer: StrategyRunStatusWriter | None = None
     signal_package_publisher: SignalPackagePublisher | None = None
+    sizing_context_builder: ManualSizingContextBuilder | None = None
+    trade_date_resolver: AShareTradeDateResolver | None = None
+    seed_bootstrap: SeedStrategyBootstrap | None = None

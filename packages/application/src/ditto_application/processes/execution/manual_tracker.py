@@ -14,7 +14,6 @@ ManualTracker — 从 Fill 聚合 → 实际持仓/P&L (含 T+1 交收).
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
 from itertools import groupby
 
 from ditto_application.exceptions import AppProcessError
@@ -36,14 +35,12 @@ def _apply_buy_fill(
     quantity: int,
     avg_cost: float,
     fill: ManualExecutionFill,
-    compute_settlement: Callable[[str], str],
-    snapshot_date: str,
-) -> tuple[int, float, int]:
+) -> tuple[int, float]:
     """
     处理买入成交: 加权平均成本计算 + T+1 交收检查.
 
     Returns:
-        (new_quantity, new_avg_cost, unsettled_buy_increment)
+        (new_quantity, new_avg_cost)
 
     """
     old_qty = quantity
@@ -52,24 +49,37 @@ def _apply_buy_fill(
     if total_qty > 0:
         avg_cost = (avg_cost * old_qty + fill.fill_price * new_qty) / total_qty
 
-    # T+1: 买入当天冻结
-    settlement = compute_settlement(fill.trade_date)
-    unsettled_buy_increment = new_qty if settlement > snapshot_date else 0
+    return total_qty, avg_cost
 
-    return total_qty, avg_cost, unsettled_buy_increment
+
+def _release_settled_buys(
+    pending: list[tuple[str, str, int]],
+    *,
+    as_of_date: str,
+) -> tuple[int, list[tuple[str, str, int]]]:
+    """Release buys settled before a later processing date, never on trade day."""
+    released = 0
+    remaining: list[tuple[str, str, int]] = []
+    for settlement_date, trade_date, quantity in pending:
+        if settlement_date <= as_of_date and trade_date < as_of_date:
+            released += quantity
+        else:
+            remaining.append((settlement_date, trade_date, quantity))
+    return released, remaining
 
 
 def _apply_sell_fill(
     quantity: int,
+    available_quantity: int,
     avg_cost: float,
     fill: ManualExecutionFill,
     instrument_id: int,
-) -> tuple[int, float]:
+) -> tuple[int, int, float]:
     """
     处理卖出成交: 超卖验证 + 已实现盈亏计算.
 
     Returns:
-        (remaining_quantity, realized_pnl_increment)
+        (remaining_quantity, remaining_available_quantity, realized_pnl_increment)
 
     Raises:
         AppProcessError: 卖出数量超过当前持仓.
@@ -82,9 +92,19 @@ def _apply_sell_fill(
             f"trying to sell {sell_qty} but holding {quantity}"
         )
         raise AppProcessError(msg)
+    if sell_qty > available_quantity:
+        msg = (
+            f"unavailable instrument_id={instrument_id}: "
+            f"trying to sell {sell_qty} but available {available_quantity}"
+        )
+        raise AppProcessError(msg)
 
     realized_pnl_increment = (fill.fill_price - avg_cost) * sell_qty
-    return quantity - sell_qty, realized_pnl_increment
+    return (
+        quantity - sell_qty,
+        available_quantity - sell_qty,
+        realized_pnl_increment,
+    )
 
 
 class ManualTracker:
@@ -109,6 +129,7 @@ class ManualTracker:
         strategy_id: str,
         snapshot_date: str,
         market_prices: dict[int, float] | None = None,
+        opening_positions: tuple[ActualPositionSnapshot, ...] = (),
     ) -> list[ActualPositionSnapshot]:
         """
         从所有 Fill 聚合 → ActualPositionSnapshot 列表.
@@ -121,7 +142,7 @@ class ManualTracker:
              c. 卖出时计算已实现盈亏
              d. 计算 T+1 available_quantity
              e. 可选市价计算未实现盈亏
-          3. 仅返回 quantity != 0 的持仓
+          3. 全平后仅在仍有 realized P&L/fee 证据时保留零数量快照
 
         """
         # 1. PIT 截断: 仅保留 snapshot_date 及之前的成交 + 过滤策略 + 按标的分组
@@ -130,17 +151,33 @@ class ManualTracker:
             for f in fills
             if f.strategy_id == strategy_id and f.trade_date <= snapshot_date
         ]
-        if not filtered:
+        opening_by_instrument = _opening_positions_by_instrument(
+            opening_positions,
+            strategy_id=strategy_id,
+            snapshot_date=snapshot_date,
+        )
+        if not filtered and not opening_by_instrument:
             return []
 
         sorted_fills = sorted(filtered, key=lambda f: f.instrument_id)
-        grouped = groupby(sorted_fills, key=lambda f: f.instrument_id)
+        fills_by_instrument = {
+            instrument_id: list(group)
+            for instrument_id, group in groupby(
+                sorted_fills,
+                key=lambda fill: fill.instrument_id,
+            )
+        }
 
         snapshots: list[ActualPositionSnapshot] = []
-        for instrument_id, group in grouped:
-            group_list = sorted(group, key=lambda f: f.trade_date)
+        instrument_ids = sorted(set(fills_by_instrument) | set(opening_by_instrument))
+        for instrument_id in instrument_ids:
+            group_list = sorted(
+                fills_by_instrument.get(instrument_id, ()),
+                key=lambda fill: fill.trade_date,
+            )
             snapshot = self._compute_single_instrument(
                 fills=group_list,
+                opening=opening_by_instrument.get(instrument_id),
                 instrument_id=instrument_id,
                 strategy_id=strategy_id,
                 snapshot_date=snapshot_date,
@@ -177,49 +214,61 @@ class ManualTracker:
     def _compute_single_instrument(
         self,
         fills: list[ManualExecutionFill],
+        opening: ActualPositionSnapshot | None,
         instrument_id: int,
         strategy_id: str,
         snapshot_date: str,
         market_price: float | None,
     ) -> ActualPositionSnapshot | None:
         """对单个标的聚合计算持仓快照."""
-        quantity = 0
-        avg_cost = 0.0
-        total_fees = 0.0
-        realized_pnl = 0.0
-        unsettled_buy_quantity = 0  # 当天买入未交收的累计量
+        quantity = opening.quantity if opening is not None else 0
+        available_quantity = opening.available_quantity if opening is not None else 0
+        avg_cost = opening.average_cost if opening is not None else 0.0
+        total_fees = opening.total_fees if opening is not None else 0.0
+        realized_pnl = opening.realized_pnl if opening is not None else 0.0
+        pending_buys: list[tuple[str, str, int]] = []
 
         for fill in fills:
+            released, pending_buys = _release_settled_buys(
+                pending_buys,
+                as_of_date=fill.trade_date,
+            )
+            available_quantity += released
             total_fees += fill.fee
 
             if fill.direction == "buy":
-                quantity, avg_cost, unsettled_inc = _apply_buy_fill(
+                quantity, avg_cost = _apply_buy_fill(
                     quantity,
                     avg_cost,
                     fill,
-                    lambda trade_date: self.compute_settlement_date(
-                        trade_date,
-                        cycle=1,
-                    ),
-                    snapshot_date,
                 )
-                unsettled_buy_quantity += unsettled_inc
+                pending_buys.append(
+                    (
+                        fill.settlement_date
+                        or self.compute_settlement_date(fill.trade_date, cycle=1),
+                        fill.trade_date,
+                        fill.quantity,
+                    )
+                )
 
             elif fill.direction == "sell":
-                quantity, pnl_inc = _apply_sell_fill(
+                quantity, available_quantity, pnl_inc = _apply_sell_fill(
                     quantity,
+                    available_quantity,
                     avg_cost,
                     fill,
                     instrument_id,
                 )
                 realized_pnl += pnl_inc
 
-        # 仅返回 quantity != 0 的持仓
-        if quantity == 0:
-            return None
+        released, _ = _release_settled_buys(
+            pending_buys,
+            as_of_date=snapshot_date,
+        )
+        available_quantity += released
 
-        # available_quantity = quantity - 未交收的买入量
-        available_quantity = max(0, quantity - unsettled_buy_quantity)
+        if quantity == 0 and realized_pnl == 0.0 and total_fees == 0.0:
+            return None
 
         # 未实现盈亏 & 市值
         if market_price is not None:
@@ -249,3 +298,29 @@ class ManualTracker:
             realized_pnl=realized_pnl,
             total_fees=total_fees,
         )
+
+
+def _opening_positions_by_instrument(
+    positions: tuple[ActualPositionSnapshot, ...],
+    *,
+    strategy_id: str,
+    snapshot_date: str,
+) -> dict[int, ActualPositionSnapshot]:
+    """Validate and index the exact opening position set for one replay."""
+    indexed: dict[int, ActualPositionSnapshot] = {}
+    for position in positions:
+        if (
+            position.strategy_id != strategy_id
+            or position.snapshot_date > snapshot_date
+        ):
+            continue
+        if position.instrument_id in indexed:
+            raise AppProcessError(
+                f"duplicate opening position: {position.instrument_id}"
+            )
+        if not 0 <= position.available_quantity <= position.quantity:
+            raise AppProcessError(
+                f"invalid opening availability: {position.instrument_id}"
+            )
+        indexed[position.instrument_id] = position
+    return indexed

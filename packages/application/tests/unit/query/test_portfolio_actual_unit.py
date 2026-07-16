@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from ditto_execution.models import (
+    FillAdjustmentRecord,
     FillRecord,
     PositionRecord,
 )
@@ -109,7 +110,10 @@ class TestGetLatestPositions:
         assert len(result) == 1
         assert result[0].instrument_id == 1
         assert result[0].strategy_id == "strat-1"
-        mock_position_port.list_positions.assert_called_once_with("strat-1")
+        mock_position_port.list_positions.assert_called_once_with(
+            "strat-1",
+            run_id="",
+        )
 
     def test_empty_positions(self) -> None:
         """无持仓时返回空列表."""
@@ -152,6 +156,36 @@ class TestGetLatestPositions:
         assert len(result) == 2
         instruments = [r.instrument_id for r in result]
         assert instruments == [1, 2]
+
+    def test_excludes_zero_quantity_pnl_snapshots_from_active_positions(self) -> None:
+        """全平后的零数量 P&L 行不是 active position。"""
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+
+        mock_position_port = MagicMock()
+        mock_position_port.list_positions.return_value = [
+            _make_position_record(
+                instrument_id=1,
+                quantity=100,
+                snapshot_date="2026-04-10",
+            ),
+            _make_position_record(
+                instrument_id=1,
+                quantity=0,
+                snapshot_date="2026-04-11",
+                realized_pnl=250.0,
+                total_fees=5.0,
+            ),
+        ]
+        facade = PortfolioActualQueryFacade(
+            fill_port=MagicMock(),
+            position_port=mock_position_port,
+        )
+
+        result = facade.get_latest_positions("strat-1")
+
+        assert result == []
 
 
 # ---------------------------------------------------------------------------
@@ -284,6 +318,69 @@ class TestGetFills:
         result = facade.get_fills("strat-1")
 
         assert result == []
+
+    def test_effective_fills_delegate_to_effective_ledger_projection(self) -> None:
+        """业务读模型必须排除已 void/replaced 的原始成交。"""
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_fill_port.list_effective_fills.return_value = [_make_fill_record()]
+
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
+        result = facade.get_effective_fills(
+            "strat-1",
+            start_date="2026-01-01",
+            end_date="2026-03-31",
+        )
+
+        assert [fill.fill_id for fill in result] == ["fill-1"]
+        mock_fill_port.list_effective_fills.assert_called_once_with(
+            "strat-1",
+            trade_date="2026-01-01",
+            end_date="2026-03-31",
+        )
+
+    def test_fill_adjustments_are_mapped_from_immutable_ledger_events(self) -> None:
+        """修正证据查询需保留事件 ID、目标及替换链。"""
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_fill_port.list_fill_adjustments.return_value = [
+            FillAdjustmentRecord(
+                adjustment_id="adj-1",
+                fill_id="fill-1",
+                adjustment_type="replace",
+                replacement_fill_id="fill-2",
+                reason="fix price",
+                created_at="2026-04-10T09:31:00Z",
+            )
+        ]
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
+
+        result = facade.get_fill_adjustments(
+            "strat-1",
+            fill_id="fill-1",
+            intent_id="intent-1",
+        )
+
+        assert result[0].replacement_fill_id == "fill-2"
+        mock_fill_port.list_fill_adjustments.assert_called_once_with(
+            "strat-1",
+            fill_id="fill-1",
+            intent_id="intent-1",
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -9,29 +9,78 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated
+from typing import Annotated, Never
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.commands.account import (
+    ImportAccountBaselineCommand,
+    ImportAccountBaselineHandler,
+    PositionBaselineInput,
+)
 from ditto_application.commands.trade import (
     RecordFillCommand,
     RecordFillHandler,
+    ReplaceFillCommand,
+    ReplaceFillHandler,
     UpdateIntentStatusCommand,
     UpdateIntentStatusHandler,
+    VoidFillCommand,
+    VoidFillHandler,
 )
-from ditto_application.exceptions import AppError
-from ditto_application.execution_dto import ManualExecutionFill
+from ditto_application.exceptions import (
+    AppConflictError,
+    AppError,
+    AppNotFoundError,
+)
+from ditto_application.execution_dto import FillAdjustment, ManualExecutionFill
 from fastapi import APIRouter
 
-from ditto_apps.api.errors import raise_business_error
+from ditto_apps.api.errors import ConflictError, NotFoundError, raise_business_error
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.trade import (
+    AccountBaselineImportResponse,
+    FillAdjustmentResponse,
     FillResponse,
+    ImportAccountBaselineRequest,
     RecordFillRequest,
+    ReplaceFillRequest,
     UpdateIntentStatusRequest,
+    VoidFillRequest,
 )
 
 router = APIRouter()
+
+
+@router.post(
+    "/account-baseline",
+    response_model=APIResponse[AccountBaselineImportResponse],
+)
+@inject
+async def import_account_baseline(
+    request: ImportAccountBaselineRequest,
+    handler: Annotated[ImportAccountBaselineHandler, FromComponent()],
+) -> APIResponse[AccountBaselineImportResponse]:
+    """幂等导入账户与持仓期初基线。"""
+    command = ImportAccountBaselineCommand(
+        account_id=request.account_id,
+        strategy_id=request.strategy_id,
+        snapshot_date=request.snapshot_date,
+        cash_available=request.cash_available,
+        cash_settled=request.cash_settled,
+        cash_frozen=request.cash_frozen,
+        total_value=request.total_value,
+        nav=request.nav,
+        positions=tuple(
+            PositionBaselineInput(**item.model_dump()) for item in request.positions
+        ),
+        replace_confirmed=request.replace_confirmed,
+    )
+    try:
+        result = await asyncio.to_thread(handler.handle, command)
+    except (AppError, ValueError) as exc:
+        raise_business_error(exc, conflict_keywords=("differs",))
+    return APIResponse(data=AccountBaselineImportResponse(**result.__dict__))
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +106,20 @@ def to_fill_response(dto: ManualExecutionFill) -> FillResponse:
     )
 
 
+def to_fill_adjustment_response(dto: FillAdjustment) -> FillAdjustmentResponse:
+    """将不可变成交修正 DTO 转为 API 响应。"""
+    return FillAdjustmentResponse(**dto.__dict__)
+
+
+def _raise_trade_command_error(exc: Exception) -> Never:
+    """按应用层显式错误类型映射成交命令的 HTTP 语义。"""
+    if isinstance(exc, AppNotFoundError):
+        raise NotFoundError(str(exc)) from exc
+    if isinstance(exc, AppConflictError):
+        raise ConflictError(str(exc)) from exc
+    raise_business_error(exc)
+
+
 # ---------------------------------------------------------------------------
 # Update Intent Status
 # ---------------------------------------------------------------------------
@@ -77,6 +140,8 @@ async def update_intent_status(
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
     except (AppError, ValueError) as exc:
+        if isinstance(exc, AppConflictError | AppNotFoundError):
+            _raise_trade_command_error(exc)
         raise_business_error(exc, conflict_keywords=("transition",))
     return APIResponse(data=result)
 
@@ -109,5 +174,58 @@ async def record_fill(
     try:
         fill = await asyncio.to_thread(handler.handle, cmd)
     except (AppError, ValueError) as exc:
-        raise_business_error(exc, conflict_keywords=("transition",))
+        _raise_trade_command_error(exc)
     return APIResponse(data=to_fill_response(fill))
+
+
+@router.post(
+    "/fills/{fill_id}/void",
+    response_model=APIResponse[FillAdjustmentResponse],
+)
+@inject
+async def void_fill(
+    fill_id: str,
+    request: VoidFillRequest,
+    handler: Annotated[VoidFillHandler, FromComponent()],
+) -> APIResponse[FillAdjustmentResponse]:
+    """追加作废事件；原始成交保持不可变。"""
+    command = VoidFillCommand(
+        adjustment_id=request.adjustment_id,
+        fill_id=fill_id,
+        reason=request.reason,
+    )
+    try:
+        adjustment = await asyncio.to_thread(handler.handle, command)
+    except (AppError, ValueError) as exc:
+        _raise_trade_command_error(exc)
+    return APIResponse(data=to_fill_adjustment_response(adjustment))
+
+
+@router.post(
+    "/fills/{fill_id}/replace",
+    response_model=APIResponse[FillAdjustmentResponse],
+)
+@inject
+async def replace_fill(
+    fill_id: str,
+    request: ReplaceFillRequest,
+    handler: Annotated[ReplaceFillHandler, FromComponent()],
+) -> APIResponse[FillAdjustmentResponse]:
+    """追加替换成交及链接事件；原始成交保持不可变。"""
+    command = ReplaceFillCommand(
+        adjustment_id=request.adjustment_id,
+        fill_id=fill_id,
+        replacement_fill_id=request.replacement_fill_id,
+        trade_date=request.trade_date,
+        quantity=request.quantity,
+        fill_price=request.fill_price,
+        reason=request.reason,
+        fee=request.fee,
+        slippage=request.slippage,
+        notes=request.notes,
+    )
+    try:
+        adjustment = await asyncio.to_thread(handler.handle, command)
+    except (AppError, ValueError) as exc:
+        _raise_trade_command_error(exc)
+    return APIResponse(data=to_fill_adjustment_response(adjustment))

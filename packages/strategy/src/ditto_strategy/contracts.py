@@ -48,6 +48,14 @@ class StrategyCatalogReader(Protocol):
         """列出策略的所有版本."""
         ...
 
+    def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
+        """获取最高 published 版本，忽略更新的草稿."""
+        ...
+
+    def list_latest_published(self) -> list[StrategySpecRecord]:
+        """列出每个策略的最高 published 版本."""
+        ...
+
 
 @runtime_checkable
 class StrategyCatalogWriter(Protocol):

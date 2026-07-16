@@ -13,7 +13,9 @@ from ditto_execution.contracts import FillDataPort, PositionDataPort
 
 from ditto_application.execution_dto import (
     ActualPositionSnapshot,
+    FillAdjustment,
     ManualExecutionFill,
+    record_to_adjustment,
     record_to_fill,
     record_to_snapshot,
 )
@@ -72,8 +74,15 @@ class PortfolioActualQueryFacade:
             ActualPositionSnapshot 列表.
 
         """
-        records = self._position_port.list_positions(strategy_id)
-        return [record_to_snapshot(r) for r in records]
+        records = self._position_port.list_positions(strategy_id, run_id="")
+        if not records:
+            return []
+        latest_date = max(record.snapshot_date for record in records)
+        return [
+            record_to_snapshot(record)
+            for record in records
+            if record.snapshot_date == latest_date and record.quantity > 0
+        ]
 
     def get_position_history(
         self,
@@ -121,6 +130,35 @@ class PortfolioActualQueryFacade:
             end_date=end_date,
         )
         return [record_to_fill(r) for r in records]
+
+    def get_effective_fills(
+        self,
+        strategy_id: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[ManualExecutionFill]:
+        """获取排除已作废/被替换原记录后的有效成交。"""
+        records = self._fill_port.list_effective_fills(
+            strategy_id,
+            trade_date=start_date,
+            end_date=end_date,
+        )
+        return [record_to_fill(record) for record in records]
+
+    def get_fill_adjustments(
+        self,
+        strategy_id: str,
+        *,
+        fill_id: str | None = None,
+        intent_id: str | None = None,
+    ) -> list[FillAdjustment]:
+        """获取 append-only 成交修正证据。"""
+        records = self._fill_port.list_fill_adjustments(
+            strategy_id,
+            fill_id=fill_id,
+            intent_id=intent_id,
+        )
+        return [record_to_adjustment(record) for record in records]
 
     def compute_pnl(
         self,

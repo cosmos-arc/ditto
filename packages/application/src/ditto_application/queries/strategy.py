@@ -29,3 +29,12 @@ class StrategyQueryFacade:
         """获取策略详情，version=None 返回最新版本."""
         record = self._service.get_spec(strategy_id, version)
         return to_spec_info(record) if record is not None else None
+
+    def get_latest_published(self, strategy_id: str) -> StrategySpecInfo | None:
+        """获取活动 published 版本，忽略更新的草稿."""
+        record = self._service.get_latest_published(strategy_id)
+        return to_spec_info(record) if record is not None else None
+
+    def list_latest_published(self) -> list[StrategySpecInfo]:
+        """列出每个策略的活动 published 版本."""
+        return [to_spec_info(r) for r in self._service.list_latest_published()]

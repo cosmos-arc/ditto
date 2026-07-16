@@ -2,37 +2,157 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from datetime import date
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
+
+type NonBlankStr = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
+
+
+def _validate_iso_calendar_date(value: str) -> str:
+    """Keep the transport value as a string while rejecting impossible dates."""
+    try:
+        date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("must be a valid YYYY-MM-DD calendar date") from exc
+    return value
+
+
+type IsoCalendarDateStr = Annotated[
+    str,
+    StringConstraints(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    AfterValidator(_validate_iso_calendar_date),
+]
 
 
 class RecordFillRequest(BaseModel):
     """录入成交请求."""
 
-    fill_id: str = Field(description="成交唯一标识")
-    intent_id: str = Field(description="关联交易意图 ID")
-    strategy_id: str = Field(description="策略 ID")
-    trade_date: str = Field(description="成交日期 (YYYY-MM-DD)")
-    instrument_id: int = Field(description="标的 ID")
+    fill_id: NonBlankStr = Field(description="成交唯一标识")
+    intent_id: NonBlankStr = Field(description="关联交易意图 ID")
+    strategy_id: NonBlankStr = Field(description="策略 ID")
+    trade_date: IsoCalendarDateStr = Field(description="成交日期 (YYYY-MM-DD)")
+    instrument_id: int = Field(gt=0, description="标的 ID")
     direction: Literal["buy", "sell"] = Field(description="方向 (buy/sell)")
-    quantity: int = Field(description="成交数量")
-    fill_price: float = Field(description="成交价格")
-    fee: float = Field(default=0.0, description="手续费")
+    quantity: int = Field(gt=0, description="成交数量")
+    fill_price: float = Field(gt=0, description="成交价格")
+    fee: float = Field(default=0.0, ge=0, description="手续费")
     slippage: float = Field(default=0.0, description="实际滑点")
     notes: str = Field(default="", description="人工备注")
 
-    model_config = ConfigDict(strict=True, extra="ignore")
+    model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
+
+
+class VoidFillRequest(BaseModel):
+    """以 append-only 事件作废一笔原始成交。"""
+
+    adjustment_id: NonBlankStr = Field(description="修正事件唯一标识")
+    reason: NonBlankStr = Field(description="人工修正原因")
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class ReplaceFillRequest(BaseModel):
+    """追加一笔替换成交并链接原始成交。"""
+
+    adjustment_id: NonBlankStr = Field(description="修正事件唯一标识")
+    replacement_fill_id: NonBlankStr = Field(description="替换成交唯一标识")
+    trade_date: IsoCalendarDateStr = Field(description="替换成交日期 (YYYY-MM-DD)")
+    quantity: int = Field(gt=0, description="替换成交数量")
+    fill_price: float = Field(gt=0, description="替换成交价格")
+    reason: NonBlankStr = Field(description="人工修正原因")
+    fee: float = Field(default=0.0, ge=0, description="手续费")
+    slippage: float = Field(default=0.0, description="实际滑点")
+    notes: str = Field(default="", description="人工备注")
+
+    model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
 
 
 class UpdateIntentStatusRequest(BaseModel):
     """更新意图状态请求."""
 
-    status: Literal["pending", "filled", "partially_filled", "cancelled", "expired"] = (
-        Field(description="新状态")
-    )
+    status: Literal[
+        "pending",
+        "filled",
+        "partially_filled",
+        "cancelled",
+        "expired",
+        "superseded",
+    ] = Field(description="新状态")
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class PositionBaselineRequest(BaseModel):
+    """账户基线中的单只标的持仓。"""
+
+    instrument_id: int = Field(description="标的 ID")
+    quantity: int = Field(ge=0, description="持仓数量")
+    available_quantity: int = Field(ge=0, description="可用数量")
+    average_cost: float = Field(ge=0, description="平均成本")
+    market_value: float = Field(ge=0, description="持仓市值")
+    unrealized_pnl: float = Field(default=0, description="浮动盈亏")
+    realized_pnl: float = Field(default=0, description="已实现盈亏")
+    total_fees: float = Field(default=0, ge=0, description="累计费用")
+
+    model_config = ConfigDict(
+        strict=True,
+        extra="forbid",
+        allow_inf_nan=False,
+    )
+
+
+class ImportAccountBaselineRequest(BaseModel):
+    """导入账户与持仓期初基线。"""
+
+    account_id: str = Field(min_length=1, description="账户 ID")
+    strategy_id: str = Field(min_length=1, description="策略 ID")
+    snapshot_date: str = Field(
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+        description="快照日期 (YYYY-MM-DD)",
+    )
+    cash_available: float = Field(ge=0, description="可用现金")
+    cash_settled: float = Field(ge=0, description="已交收现金")
+    cash_frozen: float = Field(ge=0, description="冻结现金")
+    total_value: float = Field(ge=0, description="账户总资产")
+    nav: float = Field(ge=0, description="单位净值")
+    positions: list[PositionBaselineRequest] = Field(default_factory=list)
+    replace_confirmed: bool = Field(default=False, description="确认覆盖已有基线")
+
+    model_config = ConfigDict(
+        strict=True,
+        extra="forbid",
+        allow_inf_nan=False,
+    )
+
+
+class AccountBaselineImportResponse(BaseModel):
+    """账户基线导入结果。"""
+
+    snapshot_id: str
+    sleeve_id: str
+    status: Literal["created", "unchanged", "replaced"]
+
+
+class AccountBaselineResponse(BaseModel):
+    """与信号日匹配的账户基线。"""
+
+    snapshot_id: str
+    sleeve_id: str
+    account_id: str
+    strategy_id: str
+    snapshot_date: str
+    cash_available: float
+    cash_settled: float
+    cash_frozen: float
+    total_value: float
+    nav: float
+    exposure: float
+    positions: list[PositionSnapshotResponse]
 
 
 class TradeIntentResponse(BaseModel):
@@ -69,6 +189,19 @@ class FillResponse(BaseModel):
     settlement_date: str = Field(default="", description="交收日期")
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class FillAdjustmentResponse(BaseModel):
+    """不可变成交修正事件响应。"""
+
+    adjustment_id: str
+    fill_id: str
+    adjustment_type: Literal["void", "replace"]
+    replacement_fill_id: str | None = None
+    reason: str
+    created_at: str
+
+    model_config = ConfigDict(strict=True, extra="forbid")
 
 
 class PositionSnapshotResponse(BaseModel):
@@ -171,13 +304,192 @@ class DailyDecisionReportResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+type DailyDecisionReasonCode = Literal[
+    "NO_ACTIVE_STRATEGY",
+    "REQUIRED_DATA_NOT_READY",
+    "ACCOUNT_BASELINE_MISSING",
+    "EOD_RUN_MISSING",
+    "EOD_RUN_FAILED",
+    "EOD_RUN_INCOMPLETE",
+    "SIGNAL_PACKAGE_MISSING",
+    "SIGNAL_INTENT_MISMATCH",
+    "CHECKSUM_MISMATCH",
+    "NO_REBALANCE_REQUIRED",
+    "RISK_WARNING",
+    "TRADE_DATE_MISMATCH",
+    "RERUN_CONFLICT",
+    "FILL_QUANTITY_EXCEEDED",
+    "QUANTITY_UNAVAILABLE",
+    "READY_FOR_REVIEW",
+]
+
+
+class DailyDecisionIdentityResponse(BaseModel):
+    """策略、账户与 D→D+1 日期身份。"""
+
+    strategy_id: str
+    strategy_version: str | None = None
+    account_id: str | None = None
+    sleeve_id: str | None = None
+    signal_date: str | None = None
+    decision_date: str | None = None
+    intended_trade_date: str | None = None
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionV2ReadinessResponse(BaseModel):
+    """后端判定的 readiness 与稳定 reason code。"""
+
+    status: Literal["ready", "blocked", "review"]
+    reason_codes: list[DailyDecisionReasonCode]
+    details: list[str]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionDatasetStateResponse(BaseModel):
+    """一个必需数据集的 EOD 就绪证据。"""
+
+    dataset: str
+    status: Literal["ready", "missing", "stale", "dq_failed", "unknown"]
+    snapshot_id: str | None = None
+    reason: str = ""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionDataResponse(BaseModel):
+    """策略所需数据、snapshot 与 DQ 证据。"""
+
+    required_datasets: list[str]
+    snapshot_ids: dict[str, str]
+    dataset_states: list[DailyDecisionDatasetStateResponse]
+    freshness: Literal["ready", "blocked"]
+    dq_state: Literal["passed", "failed"]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionRunPackageResponse(BaseModel):
+    """确定性 EOD run 与持久化 Signal Package 证据。"""
+
+    outcome: str
+    batch_key: str | None = None
+    artifact_id: str | None = None
+    conflict_artifact_id: str | None = None
+    checksum: str | None = None
+    checksum_valid: bool
+    no_rebalance: bool
+    factor_evidence: dict[str, dict[str, float]]
+    risk_evidence: list[str]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionAccountPositionsResponse(BaseModel):
+    """信号日可用的完整账户基线。"""
+
+    baseline_id: str | None = None
+    account_id: str | None = None
+    sleeve_id: str | None = None
+    cash_available: float | None = None
+    cash_settled: float | None = None
+    cash_frozen: float | None = None
+    total_value: float | None = None
+    nav: float | None = None
+    exposure: float | None = None
+    as_of: str | None = None
+    positions: list[PositionSnapshotResponse]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionActionResponse(BaseModel):
+    """一个可人工复核的建议动作及执行进度。"""
+
+    intent_id: str
+    instrument_id: int
+    direction: str
+    target_weight: float
+    current_weight: float
+    delta_weight: float
+    raw_quantity: int | None = None
+    rounded_quantity: int | None = None
+    suggested_quantity: int | None = None
+    reference_price: float | None = None
+    lot_size: int | None = None
+    cash_impact: float | None = None
+    reason: str | None = None
+    sizing_readiness: Literal["ready", "review", "blocked"] | None = None
+    risk_flags: list[str]
+    intent_status: str | None = None
+    filled_quantity: int
+    remaining_quantity: int | None = None
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionExecutionReviewResponse(BaseModel):
+    """当前有效成交、偏差、PnL 与未解决冲突。"""
+
+    effective_fills: list[FillResponse]
+    deviation: DeviationResponse | None = None
+    pnl: PnlSummaryResponse | None = None
+    exceptions: list[str]
+    unresolved_conflicts: list[str]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionV2Response(BaseModel):
+    """Daily Decision V2 分区 read model。"""
+
+    identity: DailyDecisionIdentityResponse
+    readiness: DailyDecisionV2ReadinessResponse
+    data: DailyDecisionDataResponse
+    run_package: DailyDecisionRunPackageResponse
+    account_positions: DailyDecisionAccountPositionsResponse
+    actions: list[DailyDecisionActionResponse]
+    execution_review: DailyDecisionExecutionReviewResponse
+
+    model_config = ConfigDict(
+        strict=True,
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "identity": {"strategy_id": "seed_etf_industry_rotation"},
+                "readiness": {"status": "ready", "reason_codes": []},
+                "data": {"required_datasets": ["etf_daily"]},
+                "run_package": {"outcome": "completed"},
+                "account_positions": {"as_of": "2026-07-16"},
+                "actions": [],
+                "execution_review": {"unresolved_conflicts": []},
+            }
+        },
+    )
+
+
 __all__ = [
+    "AccountBaselineImportResponse",
+    "AccountBaselineResponse",
     "ComparisonMetricsResponse",
+    "DailyDecisionAccountPositionsResponse",
+    "DailyDecisionActionResponse",
+    "DailyDecisionDataResponse",
+    "DailyDecisionDatasetStateResponse",
+    "DailyDecisionExecutionReviewResponse",
+    "DailyDecisionIdentityResponse",
     "DailyDecisionReadinessResponse",
     "DailyDecisionReportResponse",
+    "DailyDecisionRunPackageResponse",
+    "DailyDecisionV2ReadinessResponse",
+    "DailyDecisionV2Response",
     "DeviationResponse",
     "FillResponse",
+    "ImportAccountBaselineRequest",
     "PnlSummaryResponse",
+    "PositionBaselineRequest",
     "PositionSnapshotResponse",
     "RecordFillRequest",
     "SignalDeviationItem",

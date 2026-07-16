@@ -44,36 +44,22 @@ _CREATE_IDX_FILLS_INTENT = (
 )
 
 _INSERT_FILL = """
-INSERT OR IGNORE INTO execution_fills
+INSERT INTO execution_fills
     (fill_id, intent_id, strategy_id, trade_date, instrument_id, direction,
      quantity, fill_price, fee, slippage, notes, settlement_date, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
-_UPDATE_FILL = """
-UPDATE execution_fills
-SET intent_id = ?,
-    strategy_id = ?,
-    trade_date = ?,
-    instrument_id = ?,
-    direction = ?,
-    quantity = ?,
-    fill_price = ?,
-    fee = ?,
-    slippage = ?,
-    notes = ?,
-    settlement_date = ?,
-    created_at = ?
-WHERE fill_id = ?
-"""
-
 _SELECT_FILL_BY_ID = "SELECT * FROM execution_fills WHERE fill_id = ?"
 
-_FIND_FILL_BY_INTENT_AND_DATE = (
-    "SELECT * FROM execution_fills WHERE intent_id = ? AND trade_date = ? LIMIT 1"
-)
-
 _LIST_FILLS_BASE = "SELECT * FROM execution_fills WHERE strategy_id = ?"
+
+_LIST_EFFECTIVE_FILLS_BASE = """
+SELECT f.*
+FROM execution_fills AS f
+LEFT JOIN execution_fill_adjustments AS a ON a.fill_id = f.fill_id
+WHERE f.strategy_id = ? AND a.adjustment_id IS NULL
+""".strip()
 
 FILLS_DDL = (
     _CREATE_FILLS_TABLE + _CREATE_IDX_FILLS_STRATEGY_DATE + _CREATE_IDX_FILLS_INTENT
@@ -89,13 +75,6 @@ class FillReader:
     def get(self, fill_id: str) -> FillRecord | None:
         """Return one fill by ID."""
         row = self._client.fetchone(_SELECT_FILL_BY_ID, (fill_id,))
-        return self._row_to_fill(row) if row else None
-
-    def find(self, intent_id: str, trade_date: str) -> FillRecord | None:
-        """Find a fill by intent ID and trade date for idempotency."""
-        row = self._client.fetchone(
-            _FIND_FILL_BY_INTENT_AND_DATE, (intent_id, trade_date)
-        )
         return self._row_to_fill(row) if row else None
 
     def list(
@@ -119,9 +98,41 @@ class FillReader:
             filters["intent_id"] = intent_id
 
         sql, params = build_where_clause(
-            _LIST_FILLS_BASE, strategy_id, filters, "trade_date ASC"
+            _LIST_FILLS_BASE,
+            strategy_id,
+            filters,
+            "trade_date ASC, created_at ASC, fill_id ASC",
         )
 
+        rows = self._client.fetchall(sql, params)
+        return [self._row_to_fill(row) for row in rows]
+
+    def list_effective(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+        intent_id: str | None = None,
+        end_date: str | None = None,
+    ) -> list[FillRecord]:
+        """Return fills that have no void/replacement event targeting them."""
+        filters: dict[str, str | tuple[str, str] | None] = {}
+
+        if trade_date is not None and end_date is not None:
+            filters["trade_date"] = (trade_date, end_date)
+        elif trade_date is not None:
+            filters["trade_date"] = trade_date
+        elif end_date is not None:
+            filters["trade_date"] = ("", end_date)
+
+        if intent_id is not None:
+            filters["intent_id"] = intent_id
+
+        sql, params = build_where_clause(
+            _LIST_EFFECTIVE_FILLS_BASE,
+            strategy_id,
+            filters,
+            "trade_date ASC, created_at ASC, fill_id ASC",
+        )
         rows = self._client.fetchall(sql, params)
         return [self._row_to_fill(row) for row in rows]
 
@@ -136,8 +147,8 @@ class FillWriter:
     def __init__(self, client: SQLiteClient) -> None:
         self._client = client
 
-    def save(self, record: FillRecord) -> None:
-        """Persist a fill record."""
+    def save_strict_uncommitted(self, record: FillRecord) -> None:
+        """Append a new fill in the caller-owned transaction."""
         self._client.execute(
             _INSERT_FILL,
             (
@@ -156,28 +167,3 @@ class FillWriter:
                 record.created_at,
             ),
         )
-        self._client.commit()
-
-    def replace(self, record: FillRecord) -> bool:
-        """Replace an existing fill record by ``fill_id``."""
-        cursor = self._client.execute(
-            _UPDATE_FILL,
-            (
-                record.intent_id,
-                record.strategy_id,
-                record.trade_date,
-                record.instrument_id,
-                record.direction,
-                record.quantity,
-                record.fill_price,
-                record.fee,
-                record.slippage,
-                record.notes,
-                record.settlement_date,
-                record.created_at,
-                record.fill_id,
-            ),
-        )
-        replaced = cursor.rowcount > 0
-        self._client.commit()
-        return replaced

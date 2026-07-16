@@ -39,9 +39,6 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
                 "ditto_data.quality.protocols",
             }
         ),
-        "packages/apps/src/ditto_apps/jobs/tasks/dq_batch.py": frozenset(
-            {"ditto_data.quality.quality_types"}
-        ),
         "packages/apps/src/ditto_apps/jobs/tasks/monitoring.py": frozenset(
             {"ditto_data.quality.quality_types"}
         ),
@@ -273,7 +270,7 @@ def test_apps_capability_import_guard_limits_prefect_host_exception() -> None:
     ]
 
 
-def test_apps_capability_import_guard_allows_dq_batch_quality_types() -> None:
+def test_apps_capability_import_guard_rejects_dq_batch_quality_types() -> None:
     check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
 
     errors = check(
@@ -281,7 +278,12 @@ def test_apps_capability_import_guard_allows_dq_batch_quality_types() -> None:
         "packages/apps/src/ditto_apps/jobs/tasks/dq_batch.py",
     )
 
-    assert errors == []
+    assert errors == [
+        "packages/apps/src/ditto_apps/jobs/tasks/dq_batch.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.quality.quality_types'; use application facades or "
+        "registry composition"
+    ]
 
 
 def test_apps_capability_import_guard_allows_monitoring_quality_types() -> None:

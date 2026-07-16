@@ -11,9 +11,60 @@ from __future__ import annotations
 
 from typing import cast
 
+from ditto_application.processes.ingestion.sparse_recovery_models import (
+    SparsePITReattestationRequest,
+)
 from prefect import flow
 
 from ditto_apps.registry import create_ingestion_bundle
+
+__all__ = [
+    "daily_repair_flow",
+    "repair_holes_flow",
+    "retry_failed_flow",
+    "run_sparse_pit_reattestation",
+    "sparse_pit_reattestation_flow",
+]
+
+
+def run_sparse_pit_reattestation(
+    *,
+    dataset: str,
+    signal_date: str,
+    source: str = "tushare",
+) -> dict[str, object]:
+    """Run application-owned full-history sparse PIT recovery synchronously."""
+    with create_ingestion_bundle(source=source) as bundle:
+        result = bundle.sparse_pit_reattestation.run(
+            SparsePITReattestationRequest(
+                dataset=dataset,
+                source=source,
+                signal_date=signal_date,
+            )
+        )
+    return result.to_dict()
+
+
+@flow(
+    name="sparse-pit-reattestation",
+    description="全量重摄取稀疏 PIT 历史并重建可验证 L1/L2 证据",
+)
+def sparse_pit_reattestation_flow(
+    dataset: str,
+    signal_date: str,
+    source: str = "tushare",
+) -> dict[str, object]:
+    """Schedule the same sparse recovery used by the synchronous ops CLI."""
+    result = run_sparse_pit_reattestation(
+        dataset=dataset,
+        signal_date=signal_date,
+        source=source,
+    )
+    if result.get("passed") is not True:
+        error = result.get("error")
+        error_code = error if isinstance(error, str) else "SPARSE_REATTEST_FAILED"
+        raise RuntimeError(error_code)
+    return result
 
 
 @flow(name="retry-failed", description="重试失败任务")

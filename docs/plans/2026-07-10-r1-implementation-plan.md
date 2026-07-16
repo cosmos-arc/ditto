@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task by task.<br>
 > **首次创建**：2026-07-10<br>
-> **最近复核**：2026-07-15<br>
-> **状态**：READY FOR EXECUTION（唯一近期施工图）<br>
-> **目标 Gate**：G1 内部本机 Beta
+> **最近复核**：2026-07-16<br>
+> **状态**：COMPLETED（R1 九个 task 与四层验收已完成）<br>
+> **目标 Gate**：G1 内部本机 Beta（2026-07-16 PASS）
 
 ## 1. 目标
 
@@ -320,6 +320,11 @@ pixi run -e dev pytest packages/strategy/tests/unit/alpha/test_specs_unit.py pac
 
 本 task 计划新增 `execution_fill_adjustments` 表。执行前必须向用户展示 DDL、迁移/回滚方案并取得数据库 schema 变更批准。未批准时停止本 task，不得改用破坏性覆盖规避审批。
 
+**Approval recorded (2026-07-16):** 用户已批准该 schema，并明确系统尚未上线，
+无需兼容旧 schema、回填历史 fill 或保留历史迁移/回滚数据。实现以 fresh schema
+初始化为准；开发库允许重建。该简化只作用于上线前迁移，上线后的原 fill
+append-only、adjustment 可追溯和 effective-fill 计算规则仍是强制不变量。
+
 **Files:**
 
 - Modify: `packages/execution/src/ditto_execution/models.py`
@@ -345,7 +350,7 @@ pixi run -e dev pytest packages/strategy/tests/unit/alpha/test_specs_unit.py pac
 - status、position、deviation 和 PnL 只消费 effective fills。
 - 累积有效数量不得静默超过 intent quantity；超过时进入 review。
 
-**Proposed schema（批准前不得执行）:**
+**Approved fresh schema（2026-07-16）:**
 
 | 列 | 类型/约束 | 语义 |
 |---|---|---|
@@ -356,12 +361,12 @@ pixi run -e dev pytest packages/strategy/tests/unit/alpha/test_specs_unit.py pac
 | `reason` | TEXT NOT NULL | 人工更正理由 |
 | `created_at` | TEXT NOT NULL | 审计时间 |
 
-对 `fill_id` 建唯一索引；若 replacement 仍需更正，则对 replacement fill 新增下一条 adjustment。迁移只新增表/索引，不重写旧 fill；回滚前导出 adjustment evidence，只有表为空或用户确认丢弃 R1 更正状态时才允许 drop。
+对 `fill_id` 建唯一索引；若 replacement 仍需更正，则对 replacement fill 新增下一条 adjustment。当前为未上线 fresh-schema 阶段，不做旧 fill 回填、兼容 shim 或历史迁移保留；开发环境回滚可直接重建数据库。首次实际使用后，fill 与 adjustment 证据不得原地改写或删除。
 
 **Steps:**
 
 1. 取得 schema 批准后，先写多笔 fill、fill ID conflict、void、replacement 和重建失败测试。
-2. 增加 adjustment model/store/port 与 effective-fill query；迁移保持旧 fills 全部有效。
+2. 增加 adjustment model/store/port 与 effective-fill query；fresh schema 直接初始化，不提供旧 fill 回填或兼容迁移。
 3. 修改 `RecordFillHandler`：先按 fill ID 幂等，再累计同 intent 的 effective fills。
 4. 增加 void/replace command 与 API，禁止直接暴露 store `replace()`。
 5. 让 ManualTracker、intent status、deviation 和 PnL 使用 effective fills。
@@ -488,6 +493,11 @@ bun run visual:audit
 6. 填写 evidence template，逐项给出命令、时间、commit SHA、artifact/checksum 与结果。
 7. 所有 G1 条件通过后，才将 `/api/v1/trade` 从 `experimental` 提升到 `initial-focus`，并更新能力评分和 evidence，提交文档。
 
+**Dependency approval recorded (2026-07-16):** 用户已批准为 Prefect 3 的
+in-memory Docket/fakeredis Lua runtime 新增 `lupa >=2.1,<3`。Pixi 锁定
+`lupa 2.8`，default/dev 的 Linux/Windows 解算均完成；default/dev 实际
+Prefect `/api/health` 与 `127.0.0.1:4200` socket 验收通过。
+
 **Verify:**
 
 ```bash
@@ -520,18 +530,18 @@ Task 1-8 ───────→ Task 9 G1 验收
 
 R1 只有在以下条件全部满足时完成：
 
-- [ ] seed bootstrap 幂等，活动 published 版本选择正确。
-- [ ] 账户与持仓基线完整，单 sleeve 规则 fail closed。
-- [ ] D 日数据只产生 D+1 建议，数量、手数、现金和 T+1 可解释。
-- [ ] signal package 对有信号和零调仓都持久化并可校验。
-- [ ] 同日重跑不重复 intent，checksum 冲突不静默覆盖。
-- [ ] 一个 intent 可录入多笔部分成交，错误录入可追加式更正。
-- [ ] Daily Decision 的 blocked/review/ready 与 reason code 真值表一致。
-- [ ] `ditto-app` live 模式不使用 Trading prototype fallback。
-- [ ] Prefect 调度和 CLI 人工重跑共用同一 coordinator。
-- [ ] SQLite 备份/恢复演练通过，runbook 可由操作者独立执行。
-- [ ] 后端与前端完整检查、架构门禁、确定性 E2E 全部通过。
-- [ ] 至少一份真实数据 evidence 包完成；token、账户敏感信息不进入日志或仓库。
-- [ ] 服务保持 loopback-only，未实现认证前不得对外暴露。
+- [x] seed bootstrap 幂等，活动 published 版本选择正确。
+- [x] 账户与持仓基线完整，单 sleeve 规则 fail closed。
+- [x] D 日数据只产生 D+1 建议，数量、手数、现金和 T+1 可解释。
+- [x] signal package 对有信号和零调仓都持久化并可校验。
+- [x] 同日重跑不重复 intent，checksum 冲突不静默覆盖。
+- [x] 一个 intent 可录入多笔部分成交，错误录入可追加式更正。
+- [x] Daily Decision 的 blocked/review/ready 与 reason code 真值表一致。
+- [x] `ditto-app` live 模式不使用 Trading prototype fallback。
+- [x] Prefect 调度和 CLI 人工重跑共用同一 coordinator。
+- [x] SQLite 备份/恢复演练通过，runbook 可由操作者独立执行。
+- [x] 后端与前端完整检查、架构门禁、确定性 E2E 全部通过。
+- [x] 至少一份真实数据 evidence 包完成；token、账户敏感信息不进入日志或仓库。
+- [x] 服务保持 loopback-only，未实现认证前不得对外暴露。
 
 任一项未完成，G1 仍为 FAIL，不以“综合分已达某值”替代。

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import polars as pl
@@ -18,9 +19,19 @@ from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import ChecksumCompute, logger
 
 from ditto_application.catalog_freshness import (
-    assess_catalog_freshness,
+    PersistedIngestionEvidenceVerifier,
     catalog_entry_for_date,
 )
+
+
+@dataclass(frozen=True)
+class IngestionSkipDecision:
+    """Skip decision together with the persisted evidence that justified it."""
+
+    should_skip: bool
+    reason: str | None = None
+    checksum: str | None = None
+    row_count: int | None = None
 
 
 class MetadataManager:
@@ -80,6 +91,22 @@ class MetadataManager:
             - reason: 跳过原因(如果不跳过则为 None)
 
         """
+        decision = self.get_skip_decision(
+            dataset=dataset,
+            trade_date=trade_date,
+            source=source,
+            force=force,
+        )
+        return decision.should_skip, decision.reason
+
+    def get_skip_decision(
+        self,
+        dataset: str,
+        trade_date: str,
+        source: str = "tushare",
+        force: bool = False,
+    ) -> IngestionSkipDecision:
+        """Return the skip decision without discarding persisted result evidence."""
         # 如果 force=True, 不跳过
         if force:
             logger.debug(
@@ -89,7 +116,7 @@ class MetadataManager:
                 trade_date=trade_date,
                 reason="force=True",
             )
-            return False, None
+            return IngestionSkipDecision(should_skip=False)
 
         # 检查是否有历史记录
         if self._ingestion_log_store is None:
@@ -101,7 +128,7 @@ class MetadataManager:
                 trade_date=trade_date,
                 reason="no_log_service",
             )
-            return False, None
+            return IngestionSkipDecision(should_skip=False)
 
         existing = self._ingestion_log_store.get_log(
             dataset=dataset,
@@ -111,7 +138,7 @@ class MetadataManager:
 
         # 无历史记录, 不跳过
         if existing is None:
-            return self._should_skip_without_history(
+            return self._skip_decision_without_history(
                 dataset=dataset,
                 trade_date=trade_date,
                 source=source,
@@ -119,20 +146,12 @@ class MetadataManager:
 
         # 历史成功, 跳过
         if existing.status.value == "SUCCESS":
-            reason = (
-                f"数据已存在且摄取成功({trade_date}, "
-                f"checksum={existing.checksum[:8] if existing.checksum else 'N/A'}..., "
-                f"rows={existing.rows})"
-            )
-            logger.debug(
-                "Previous success found, skipping",
-                event="should_skip_true",
+            return self._decision_from_success(
+                existing=existing,
                 dataset=dataset,
                 trade_date=trade_date,
-                checksum=existing.checksum,
-                rows=existing.rows,
+                source=source,
             )
-            return True, reason
 
         # 历史失败, 不跳过
         logger.debug(
@@ -142,15 +161,85 @@ class MetadataManager:
             trade_date=trade_date,
             reason="previous_failure",
         )
-        return False, None
+        return IngestionSkipDecision(should_skip=False)
 
-    def _should_skip_without_history(
+    def _decision_from_success(
+        self,
+        *,
+        existing: IngestionLog,
+        dataset: str,
+        trade_date: str,
+        source: str,
+    ) -> IngestionSkipDecision:
+        checksum = existing.checksum
+        row_count = existing.rows
+        if (
+            not isinstance(checksum, str)
+            or not checksum.strip()
+            or not isinstance(row_count, int)
+            or isinstance(row_count, bool)
+            or row_count < 0
+        ):
+            logger.warning(
+                "Previous success lacks durable snapshot evidence; retrying",
+                event="should_skip_false",
+                dataset=dataset,
+                trade_date=trade_date,
+                reason="incomplete_success_evidence",
+            )
+            return IngestionSkipDecision(should_skip=False)
+
+        verifier = (
+            PersistedIngestionEvidenceVerifier(
+                reader=self._data_catalog_reader,
+                ingestion_logs=self._ingestion_log_store,
+            )
+            if self._data_catalog_reader is not None
+            and self._ingestion_log_store is not None
+            else None
+        )
+        if verifier is None or not verifier.verify_exact_date(
+            dataset=dataset,
+            source=source,
+            trade_date=trade_date,
+            checksum=checksum,
+            row_count=row_count,
+        ):
+            logger.warning(
+                "Previous success lacks matching attested catalog evidence; retrying",
+                event="should_skip_false",
+                dataset=dataset,
+                trade_date=trade_date,
+                reason="unattested_success_evidence",
+            )
+            return IngestionSkipDecision(should_skip=False)
+
+        reason = (
+            f"数据已存在且摄取成功({trade_date}, "
+            f"checksum={checksum[:8]}..., rows={row_count})"
+        )
+        logger.debug(
+            "Previous success found, skipping",
+            event="should_skip_true",
+            dataset=dataset,
+            trade_date=trade_date,
+            checksum=checksum,
+            rows=row_count,
+        )
+        return IngestionSkipDecision(
+            should_skip=True,
+            reason=reason,
+            checksum=checksum,
+            row_count=row_count,
+        )
+
+    def _skip_decision_without_history(
         self,
         *,
         dataset: str,
         trade_date: str,
         source: str,
-    ) -> tuple[bool, str | None]:
+    ) -> IngestionSkipDecision:
         catalog_entry = self._catalog_entry_for_date(
             dataset=dataset,
             trade_date=trade_date,
@@ -164,40 +253,18 @@ class MetadataManager:
                 trade_date=trade_date,
                 reason="no_history",
             )
-            return False, None
+            return IngestionSkipDecision(should_skip=False)
 
-        freshness = assess_catalog_freshness(
-            dataset=dataset,
-            catalog_entry=catalog_entry,
-            now=self._now,
-        )
-        if freshness.status == "stale":
-            logger.debug(
-                "Catalog asset stale, not skipping",
-                event="should_skip_false",
-                dataset=dataset,
-                trade_date=trade_date,
-                storage_uri=catalog_entry.storage_uri,
-                source=source,
-            )
-            return False, None
-
-        reason = (
-            f"DataCatalog asset exists({trade_date}, "
-            f"storage_uri={catalog_entry.storage_uri}, "
-            f"schema={catalog_entry.schema.schema_hash}, "
-            f"rows={catalog_entry.schema.row_count}, "
-            f"freshness_at={catalog_entry.freshness_at.isoformat()})"
-        )
-        logger.debug(
-            "Catalog asset found, skipping",
-            event="should_skip_true",
+        logger.warning(
+            "Catalog asset lacks matching ingestion log; retrying",
+            event="should_skip_false",
             dataset=dataset,
             trade_date=trade_date,
             storage_uri=catalog_entry.storage_uri,
             source=source,
+            reason="catalog_without_success_log",
         )
-        return True, reason
+        return IngestionSkipDecision(should_skip=False)
 
     def _catalog_entry_for_date(
         self,

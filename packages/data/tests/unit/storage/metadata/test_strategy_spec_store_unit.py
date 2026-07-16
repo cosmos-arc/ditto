@@ -181,6 +181,41 @@ class TestSQLiteStrategySpecReader:
         writer.init_schema()
         assert reader.list_specs() == []
 
+    def test_get_latest_published_ignores_newer_draft(
+        self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
+    ) -> None:
+        writer.init_schema()
+        writer.save(_make_spec(version=1, status="published", name="Published V1"))
+        writer.save(_make_spec(version=2, status="draft", name="Draft V2"))
+
+        result = reader.get_latest_published("strat-001")
+
+        assert result is not None
+        assert result.version == 1
+        assert result.name == "Published V1"
+
+    def test_list_latest_published_includes_strategy_with_newer_draft(
+        self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
+    ) -> None:
+        writer.init_schema()
+        writer.save(
+            _make_spec(
+                strategy_id="strat-a", version=1, status="published", name="A V1"
+            )
+        )
+        writer.save(
+            _make_spec(strategy_id="strat-a", version=2, status="draft", name="A V2")
+        )
+        writer.save(
+            _make_spec(strategy_id="strat-b", version=1, status="draft", name="B V1")
+        )
+
+        result = reader.list_latest_published()
+
+        assert [(record.strategy_id, record.version) for record in result] == [
+            ("strat-a", 1)
+        ]
+
     def test_list_versions_returns_all_for_strategy(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:

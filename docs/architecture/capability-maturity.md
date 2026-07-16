@@ -167,7 +167,7 @@ OpenAPI prefix registry.
 | `/fundamental` | experimental | `api/routes/fundamental.py` |
 | `/fx` | experimental | `api/routes/fx.py` |
 | `/macro` | experimental | `api/routes/macro.py` |
-| `/trade` | experimental | `api/routes/trade.py` |
+| `/trade` | initial-focus | `api/routes/trade.py` |
 | `/ingestion` | infrastructure | `api/routes/ingestion.py` |
 | `/source` | infrastructure | `api/routes/source.py` |
 | `/api/v1/logs` | debug | `api/routes/debug.py` |
@@ -185,3 +185,8 @@ promotion override.
 `/fundamental`, `/capital`, and `/macro` are experimental query surfaces; their
 explicit dataset reads must flow through application maturity gates with
 default-off `allow_experimental_data` or a persisted promotion override.
+
+`/trade` is initial-focus only for the R1 single-operator, single-account,
+manual-trading local Beta proven by the G1 evidence package. This promotion
+does not imply authentication, multi-tenancy, broker production, automated
+execution, external Beta, or commercial readiness.

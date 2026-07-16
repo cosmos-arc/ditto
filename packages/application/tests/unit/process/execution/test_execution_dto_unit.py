@@ -126,6 +126,13 @@ class TestTradeIntent:
         assert intent.intent_id == "intent-1"
         assert intent.instrument_id == 1
         assert intent.quantity is None
+        assert intent.raw_quantity is None
+        assert intent.rounded_quantity is None
+        assert intent.lot_size is None
+        assert intent.reference_price is None
+        assert intent.cash_impact is None
+        assert intent.sizing_reason is None
+        assert intent.sizing_readiness is None
         assert intent.status == "pending"
 
     def test_frozen_immutability(self) -> None:
@@ -356,6 +363,45 @@ class TestDtoRecordMapping:
         assert restored.direction == original.direction
         assert restored.quantity == original.quantity
         assert restored.status == original.status
+
+    def test_intent_storage_projects_execution_fields_without_schema_change(
+        self,
+    ) -> None:
+        """Sizing evidence stays in package metadata; intent rows remain compatible."""
+        from ditto_application.execution_dto import (
+            TradeIntent,
+            intent_to_record,
+            record_to_intent,
+        )
+
+        original = TradeIntent(
+            intent_id="intent-sized",
+            strategy_id="strat-1",
+            signal_date="2026-04-10",
+            instrument_id=1,
+            direction="buy",
+            target_weight=0.3,
+            current_weight=0.1,
+            delta_weight=0.2,
+            quantity=200,
+            raw_quantity=250,
+            rounded_quantity=200,
+            lot_size=100,
+            reference_price=10.0,
+            cash_impact=-2_000.0,
+            sizing_reason="rounded_down_to_board_lot",
+            sizing_readiness="ready",
+        )
+
+        record = intent_to_record(original)
+        restored = record_to_intent(record)
+
+        assert record.quantity == 200
+        assert restored.quantity == 200
+        assert restored.raw_quantity is None
+        assert restored.rounded_quantity is None
+        assert restored.sizing_reason is None
+        assert restored.sizing_readiness is None
 
     def test_roundtrip_fill(self) -> None:
         """Fill DTO → Record → DTO 往返映射保持一致性."""

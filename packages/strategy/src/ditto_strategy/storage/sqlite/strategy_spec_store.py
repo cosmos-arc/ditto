@@ -70,6 +70,15 @@ ORDER BY version DESC
 LIMIT 1
 """
 
+_GET_LATEST_PUBLISHED_SQL = """
+SELECT strategy_id, version, name, spec_json, status, tags,
+       created_at, updated_at
+FROM strategy_spec
+WHERE strategy_id = ? AND status = 'published'
+ORDER BY version DESC
+LIMIT 1
+"""
+
 _LIST_ALL_LATEST_SQL = """
 SELECT s.strategy_id, s.version, s.name, s.spec_json, s.status, s.tags,
        s.created_at, s.updated_at
@@ -79,6 +88,19 @@ INNER JOIN (
     FROM strategy_spec
     GROUP BY strategy_id
 ) latest ON s.strategy_id = latest.strategy_id AND s.version = latest.max_ver
+"""
+
+_LIST_LATEST_PUBLISHED_SQL = """
+SELECT s.strategy_id, s.version, s.name, s.spec_json, s.status, s.tags,
+       s.created_at, s.updated_at
+FROM strategy_spec s
+INNER JOIN (
+    SELECT strategy_id, MAX(version) AS max_ver
+    FROM strategy_spec
+    WHERE status = 'published'
+    GROUP BY strategy_id
+) latest ON s.strategy_id = latest.strategy_id AND s.version = latest.max_ver
+ORDER BY s.strategy_id
 """
 
 _LIST_VERSIONS_SQL = """
@@ -217,6 +239,20 @@ class SQLiteStrategySpecReader:
         """List all strategy specs (latest version per strategy_id)."""
         conn = self._pool.get_connection()
         rows = conn.execute(_LIST_ALL_LATEST_SQL).fetchall()
+        return [_row_to_record(row) for row in rows]
+
+    @traced("store.spec_reader.get_latest_published")
+    def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
+        """Return the highest published version, ignoring newer drafts."""
+        conn = self._pool.get_connection()
+        row = conn.execute(_GET_LATEST_PUBLISHED_SQL, (strategy_id,)).fetchone()
+        return _row_to_record(row) if row is not None else None
+
+    @traced("store.spec_reader.list_latest_published")
+    def list_latest_published(self) -> list[StrategySpecRecord]:
+        """Return the highest published version for every published strategy."""
+        conn = self._pool.get_connection()
+        rows = conn.execute(_LIST_LATEST_PUBLISHED_SQL).fetchall()
         return [_row_to_record(row) for row in rows]
 
     @traced("store.spec_reader.list_versions")

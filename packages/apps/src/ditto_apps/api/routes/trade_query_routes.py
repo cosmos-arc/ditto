@@ -15,21 +15,28 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated
+from typing import Annotated, cast
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.execution_dto import (
     ActualPositionSnapshot,
+    FillAdjustment,
+    ManualExecutionFill,
     TradeIntent,
 )
+from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.comparison import ComparisonQueryFacade
 from ditto_application.queries.comparison_math import ComparisonMetrics
 from ditto_application.queries.daily_decision import (
     DailyDecisionQueryFacade,
     DailyDecisionReport,
+    DailyDecisionV2Report,
 )
-from ditto_application.queries.deviation import SignalDeviationReport
+from ditto_application.queries.deviation import (
+    SignalDeviationQueryFacade,
+    SignalDeviationReport,
+)
 from ditto_application.queries.portfolio_actual import (
     PnlSummary,
     PortfolioActualQueryFacade,
@@ -45,10 +52,20 @@ from ditto_apps.models.common import (
     PaginationRequest,
 )
 from ditto_apps.models.trade import (
+    AccountBaselineResponse,
     ComparisonMetricsResponse,
+    DailyDecisionAccountPositionsResponse,
+    DailyDecisionActionResponse,
+    DailyDecisionDataResponse,
+    DailyDecisionExecutionReviewResponse,
+    DailyDecisionIdentityResponse,
     DailyDecisionReadinessResponse,
     DailyDecisionReportResponse,
+    DailyDecisionRunPackageResponse,
+    DailyDecisionV2ReadinessResponse,
+    DailyDecisionV2Response,
     DeviationResponse,
+    FillAdjustmentResponse,
     FillResponse,
     PnlSummaryResponse,
     PositionSnapshotResponse,
@@ -57,6 +74,60 @@ from ditto_apps.models.trade import (
 )
 
 router = APIRouter()
+
+
+@router.get(
+    "/account-baseline",
+    response_model=APIResponse[AccountBaselineResponse | None],
+)
+@inject
+async def get_account_baseline(
+    query: Annotated[AccountBaselineQuery, FromComponent()],
+    account_id: str = Query(..., description="账户 ID"),
+    strategy_id: str = Query(..., description="策略 ID"),
+    signal_date: str = Query(..., description="信号日期"),
+) -> APIResponse[AccountBaselineResponse | None]:
+    """返回不晚于信号日的最新账户基线及同日持仓。"""
+    result = await asyncio.to_thread(
+        query.get_latest,
+        account_id=account_id,
+        strategy_id=strategy_id,
+        signal_date=signal_date,
+    )
+    if result is None:
+        return APIResponse(data=None)
+    account = result.account
+    return APIResponse(
+        data=AccountBaselineResponse(
+            snapshot_id=account.snapshot_id,
+            sleeve_id=account.run_id,
+            account_id=account.account_id,
+            strategy_id=account.strategy_id,
+            snapshot_date=account.snapshot_date,
+            cash_available=account.cash_available,
+            cash_settled=account.cash_settled,
+            cash_frozen=account.cash_frozen,
+            total_value=account.total_value,
+            nav=account.nav,
+            exposure=account.exposure,
+            positions=[
+                PositionSnapshotResponse(
+                    snapshot_id=item.snapshot_id,
+                    strategy_id=item.strategy_id,
+                    snapshot_date=item.snapshot_date,
+                    instrument_id=item.instrument_id,
+                    quantity=item.quantity,
+                    available_quantity=item.available_quantity,
+                    average_cost=item.average_cost,
+                    market_value=item.market_value,
+                    unrealized_pnl=item.unrealized_pnl,
+                    realized_pnl=item.realized_pnl,
+                    total_fees=item.total_fees,
+                )
+                for item in result.positions
+            ],
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +166,11 @@ def to_position_response(dto: ActualPositionSnapshot) -> PositionSnapshotRespons
         realized_pnl=dto.realized_pnl,
         total_fees=dto.total_fees,
     )
+
+
+def to_fill_adjustment_response(dto: FillAdjustment) -> FillAdjustmentResponse:
+    """将不可变成交修正事件映射为 API 响应。"""
+    return FillAdjustmentResponse(**dto.__dict__)
 
 
 def to_pnl_response(summary: PnlSummary) -> PnlSummaryResponse:
@@ -177,6 +253,91 @@ from ditto_apps.api.routes.trade_command_routes import (  # noqa: E402
     to_fill_response,
 )
 
+
+def to_daily_decision_v2_response(
+    report: DailyDecisionV2Report,
+) -> DailyDecisionV2Response:
+    """把 application V2 read model 显式映射为 typed OpenAPI DTO。"""
+    readiness = dict(report.readiness)
+    readiness["reason_codes"] = list(
+        cast(tuple[str, ...], readiness.get("reason_codes", ()))
+    )
+    readiness["details"] = list(cast(tuple[str, ...], readiness.get("details", ())))
+
+    data = dict(report.data)
+    data["required_datasets"] = list(
+        cast(tuple[str, ...], data.get("required_datasets", ()))
+    )
+    data["dataset_states"] = list(
+        cast(tuple[dict[str, object], ...], data.get("dataset_states", ()))
+    )
+
+    run_package = dict(report.run_package)
+    run_package["risk_evidence"] = list(
+        cast(tuple[str, ...], run_package.get("risk_evidence", ()))
+    )
+
+    account_positions = dict(report.account_positions)
+    account_positions["positions"] = [
+        to_position_response(position)
+        for position in cast(
+            tuple[ActualPositionSnapshot, ...],
+            account_positions.get("positions", ()),
+        )
+    ]
+
+    actions: list[dict[str, object]] = []
+    for action in report.actions:
+        payload = dict(action)
+        payload["risk_flags"] = list(
+            cast(tuple[str, ...], payload.get("risk_flags", ()))
+        )
+        actions.append(payload)
+
+    execution_review = dict(report.execution_review)
+    execution_review["effective_fills"] = [
+        to_fill_response(fill)
+        for fill in cast(
+            tuple[ManualExecutionFill, ...],
+            execution_review.get("effective_fills", ()),
+        )
+    ]
+    deviation = execution_review.get("deviation")
+    execution_review["deviation"] = (
+        to_deviation_response(cast(SignalDeviationReport, deviation))
+        if deviation is not None
+        else None
+    )
+    pnl = execution_review.get("pnl")
+    execution_review["pnl"] = (
+        to_pnl_response(cast(PnlSummary, pnl)) if pnl is not None else None
+    )
+    execution_review["exceptions"] = list(
+        cast(tuple[str, ...], execution_review.get("exceptions", ()))
+    )
+    execution_review["unresolved_conflicts"] = list(
+        cast(
+            tuple[str, ...],
+            execution_review.get("unresolved_conflicts", ()),
+        )
+    )
+    return DailyDecisionV2Response(
+        identity=DailyDecisionIdentityResponse.model_validate(report.identity),
+        readiness=DailyDecisionV2ReadinessResponse.model_validate(readiness),
+        data=DailyDecisionDataResponse.model_validate(data),
+        run_package=DailyDecisionRunPackageResponse.model_validate(run_package),
+        account_positions=DailyDecisionAccountPositionsResponse.model_validate(
+            account_positions
+        ),
+        actions=[
+            DailyDecisionActionResponse.model_validate(action) for action in actions
+        ],
+        execution_review=DailyDecisionExecutionReviewResponse.model_validate(
+            execution_review
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Daily Decision
 # ---------------------------------------------------------------------------
@@ -199,6 +360,30 @@ async def get_daily_decision(
         trade_date=trade_date,
     )
     return APIResponse(data=to_daily_decision_response(report))
+
+
+@router.get(
+    "/daily-decision/v2",
+    response_model=APIResponse[DailyDecisionV2Response],
+)
+@inject
+async def get_daily_decision_v2(
+    facade: Annotated[DailyDecisionQueryFacade, FromComponent()],
+    strategy_id: str = Query(..., description="策略 ID"),
+    trade_date: str | None = Query(None, description="交易/信号日期"),
+    account_id: str | None = Query(
+        None,
+        description="人工账户 ID; 缺失时 V2 fail closed 为 ACCOUNT_BASELINE_MISSING",
+    ),
+) -> APIResponse[DailyDecisionV2Response]:
+    """获取以持久化 Signal Package 为事实源的 Daily Decision V2。"""
+    report = await asyncio.to_thread(
+        facade.get_report_v2,
+        strategy_id=strategy_id,
+        trade_date=trade_date,
+        account_id=account_id,
+    )
+    return APIResponse(data=to_daily_decision_v2_response(report))
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +432,50 @@ async def list_fills(
         end_date=end_date,
     )
     return paginate([to_fill_response(f) for f in fills], pagination)
+
+
+@router.get("/fills/effective", response_model=APIResponse[list[FillResponse]])
+@inject
+async def list_effective_fills(
+    facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
+    strategy_id: str = Query(..., description="策略 ID"),
+    start_date: str | None = Query(None, description="起始日期"),
+    end_date: str | None = Query(None, description="结束日期"),
+    pagination: PaginationRequest = Depends(pagination_params),
+) -> APIResponse[list[FillResponse]]:
+    """列出排除已作废/被替换原记录后的有效成交。"""
+    fills = await asyncio.to_thread(
+        facade.get_effective_fills,
+        strategy_id=strategy_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    return paginate([to_fill_response(fill) for fill in fills], pagination)
+
+
+@router.get(
+    "/fill-adjustments",
+    response_model=APIResponse[list[FillAdjustmentResponse]],
+)
+@inject
+async def list_fill_adjustments(
+    facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
+    strategy_id: str = Query(..., description="策略 ID"),
+    fill_id: str | None = Query(None, description="目标成交 ID"),
+    intent_id: str | None = Query(None, description="关联意图 ID"),
+    pagination: PaginationRequest = Depends(pagination_params),
+) -> APIResponse[list[FillAdjustmentResponse]]:
+    """列出 append-only 成交修正证据。"""
+    adjustments = await asyncio.to_thread(
+        facade.get_fill_adjustments,
+        strategy_id=strategy_id,
+        fill_id=fill_id,
+        intent_id=intent_id,
+    )
+    return paginate(
+        [to_fill_adjustment_response(adjustment) for adjustment in adjustments],
+        pagination,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -340,60 +569,19 @@ async def get_signal_intents(
 @router.get("/deviation", response_model=APIResponse[DeviationResponse])
 @inject
 async def get_deviation(
-    trade_facade: Annotated[TradeQueryFacade, FromComponent()],
-    portfolio_facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
+    facade: Annotated[SignalDeviationQueryFacade, FromComponent()],
     strategy_id: str = Query(..., description="策略 ID"),
     signal_date: str = Query(..., description="信号日期"),
+    execution_date: str | None = Query(None, description="实际成交/持仓日期"),
 ) -> APIResponse[DeviationResponse]:
     """信号-成交偏差报告."""
-    intents, fills = await asyncio.gather(
-        asyncio.to_thread(
-            trade_facade.list_intents,
-            strategy_id=strategy_id,
-            signal_date=signal_date,
-        ),
-        asyncio.to_thread(
-            portfolio_facade.get_fills,
-            strategy_id=strategy_id,
-            start_date=signal_date,
-            end_date=signal_date,
-        ),
+    report = await asyncio.to_thread(
+        facade.get_deviation,
+        strategy_id=strategy_id,
+        signal_date=signal_date,
+        execution_date=execution_date,
     )
-
-    fill_qty_by_instrument: dict[int, int] = {}
-    for fill in fills:
-        iid = fill.instrument_id
-        fill_qty_by_instrument[iid] = fill_qty_by_instrument.get(iid, 0) + fill.quantity
-
-    items: list[SignalDeviationItem] = []
-    filled_count = 0
-    for intent in intents:
-        actual_qty = fill_qty_by_instrument.get(intent.instrument_id, 0)
-        has_fill = actual_qty > 0
-        if has_fill:
-            filled_count += 1
-
-        items.append(
-            SignalDeviationItem(
-                instrument_id=intent.instrument_id,
-                signal_action=intent.direction,
-                signal_weight=intent.target_weight,
-                actual_weight=intent.target_weight if has_fill else None,
-                deviation_bps=0.0 if has_fill else None,
-                fill_status="filled" if has_fill else "unfilled",
-            )
-        )
-
-    return APIResponse(
-        data=DeviationResponse(
-            strategy_id=strategy_id,
-            signal_date=signal_date,
-            total_signals=len(intents),
-            filled=filled_count,
-            unfilled=len(intents) - filled_count,
-            items=items,
-        )
-    )
+    return APIResponse(data=to_deviation_response(report))
 
 
 # ---------------------------------------------------------------------------
