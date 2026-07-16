@@ -4,9 +4,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import {
+	isSuccessfulResponseStatus,
+	NAVIGATION_WAIT_UNTIL,
 	parseArgs,
 	renderReport,
 	resolvePages,
+	shouldIgnoreRequestFailure,
 	USAGE,
 	validateTargetKeyParity,
 } from "./visual-audit-core.mjs";
@@ -102,13 +105,14 @@ function createPageIssueCollector(page) {
 
 	page.on("requestfailed", (request) => {
 		const failure = request.failure();
-		issues.push(
-			`requestfailed ${request.resourceType()} ${request.url()}: ${failure?.errorText ?? "unknown failure"}`,
-		);
+		if (shouldIgnoreRequestFailure(request.resourceType(), failure?.errorText ?? "")) {
+			return;
+		}
+		issues.push(`requestfailed ${request.resourceType()} ${request.url()}: ${failure?.errorText ?? "unknown failure"}`);
 	});
 	page.on("response", (response) => {
 		const request = response.request();
-		if (request.resourceType() === "document" || response.ok()) {
+		if (request.resourceType() === "document" || isSuccessfulResponseStatus(response.status())) {
 			return;
 		}
 		issues.push(
@@ -194,7 +198,7 @@ async function captureTargetMetrics(page, targets) {
 
 async function openPage(page, url) {
 	const response = await page.goto(url, {
-		waitUntil: "networkidle",
+		waitUntil: NAVIGATION_WAIT_UNTIL,
 		timeout: 30_000,
 	});
 

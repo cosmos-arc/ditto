@@ -2,8 +2,14 @@ export const DEFAULT_STRATEGY_ID = "seed_etf_industry_rotation";
 
 export const tradingKeys = {
 	all: ["trading"] as const,
-	dailyDecision: (strategyId = DEFAULT_STRATEGY_ID, tradeDate?: string) =>
-		[...tradingKeys.all, "daily-decision", strategyId, tradeDate ?? "latest"] as const,
+	dailyDecision: (strategyId = DEFAULT_STRATEGY_ID, tradeDate?: string, accountId?: string) =>
+		[
+			...tradingKeys.all,
+			"daily-decision",
+			strategyId,
+			tradeDate ?? "latest",
+			accountId ?? "account-unselected",
+		] as const,
 	signals: (strategyId = DEFAULT_STRATEGY_ID, signalDate?: string) =>
 		[...tradingKeys.all, "signals", strategyId, signalDate ?? "latest"] as const,
 	intents: (strategyId = DEFAULT_STRATEGY_ID, status?: string) =>

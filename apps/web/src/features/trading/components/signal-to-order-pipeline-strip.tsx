@@ -1,3 +1,5 @@
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { Button } from "@/components/ui/button";
 import { useFillLedger, useOrdersSummary, useSignalsQueue } from "../hooks";
 
 type PipelineStage = {
@@ -15,10 +17,19 @@ function StagePill({ label, count }: PipelineStage) {
 }
 
 export function SignalToOrderPipelineStrip() {
-	const { data: signals } = useSignalsQueue();
-	const { data: orders } = useOrdersSummary();
-	const { data: ledger } = useFillLedger();
+	const signalsQuery = useSignalsQueue();
+	const ordersQuery = useOrdersSummary();
+	const ledgerQuery = useFillLedger();
+	const signals = signalsQuery.data;
+	const orders = ordersQuery.data;
+	const ledger = ledgerQuery.data;
 	const filledCount = Math.max(orders?.filled ?? 0, ledger?.fills.length ?? 0);
+	const isError = signalsQuery.isError || ordersQuery.isError || ledgerQuery.isError;
+	const isLoading = !isError && (signalsQuery.isLoading || ordersQuery.isLoading || ledgerQuery.isLoading);
+
+	function retryPipeline() {
+		void Promise.all([signalsQuery.refetch(), ordersQuery.refetch(), ledgerQuery.refetch()]);
+	}
 
 	const stages: readonly PipelineStage[] = [
 		{
@@ -41,11 +52,29 @@ export function SignalToOrderPipelineStrip() {
 				<h2 className="text-sm font-medium text-(--color-foreground)">Signal-to-Order Pipeline</h2>
 				<span className="text-xs text-(--color-foreground-tertiary)">manual / paper</span>
 			</div>
-			<div className="grid grid-cols-4 gap-2">
-				{stages.map((stage) => (
-					<StagePill key={stage.label} {...stage} />
-				))}
-			</div>
+			{isLoading && (
+				<div role="status" aria-label="Pipeline 加载中">
+					<LoadingSkeleton variant="panel" rows={2} />
+				</div>
+			)}
+			{isError && (
+				<div
+					role="alert"
+					className="flex flex-col items-start gap-2 rounded-(--radius-sm) border border-(--color-risk-critical-fg) px-3 py-3 text-sm text-(--color-foreground-secondary) sm:flex-row sm:items-center sm:justify-between"
+				>
+					<span>信号到订单流水线加载失败</span>
+					<Button variant="outline" size="sm" onClick={retryPipeline}>
+						重试
+					</Button>
+				</div>
+			)}
+			{!isLoading && !isError && (
+				<div role="status" aria-label="Pipeline 数据" className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+					{stages.map((stage) => (
+						<StagePill key={stage.label} {...stage} />
+					))}
+				</div>
+			)}
 		</section>
 	);
 }

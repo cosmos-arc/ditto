@@ -40,6 +40,8 @@ export function AnalyticalLayout({
 		: "grid-cols-[1fr]";
 	const rows = buildRows(hasBanner, hasAnalysis);
 	const areas = buildAreas(hasBanner, hasAnalysis, hasActivity);
+	const narrowRows = hasActivity ? buildNarrowRows(hasBanner, hasAnalysis) : "";
+	const narrowAreas = hasActivity ? buildNarrowAreas(hasBanner, hasAnalysis) : "";
 
 	return (
 		<div
@@ -48,8 +50,13 @@ export function AnalyticalLayout({
 				cols,
 				rows,
 				areas,
+				hasActivity && "max-md:grid-cols-[minmax(0,1fr)]",
+				narrowRows,
+				narrowAreas,
 				className,
-			].join(" ")}
+			]
+				.filter(Boolean)
+				.join(" ")}
 		>
 			{strip && (
 				<div className="min-h-0 overflow-hidden [grid-area:strip]" data-slot="strip">
@@ -57,15 +64,21 @@ export function AnalyticalLayout({
 				</div>
 			)}
 			{banner && (
-				<div className="overflow-hidden [grid-area:banner]" data-slot="banner">{banner}</div>
+				<div className="overflow-hidden [grid-area:banner]" data-slot="banner">
+					{banner}
+				</div>
 			)}
-			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
+			<div className="min-h-0 overflow-hidden [grid-area:main] max-md:overflow-y-auto" data-slot="main">
+				{main}
+			</div>
 			{activity && (
 				<div
 					className={[
-						"min-h-0 overflow-hidden [grid-area:activity]",
+						"min-h-0 overflow-hidden [grid-area:activity] max-md:max-h-56 max-md:overflow-y-auto",
 						activityCollapsed && "w-(--width-sidebar-collapsed)",
-					].filter(Boolean).join(" ")}
+					]
+						.filter(Boolean)
+						.join(" ")}
 					data-slot="activity"
 				>
 					{activity}
@@ -119,4 +132,30 @@ function buildAreas(hasBanner: boolean, hasAnalysis: boolean, hasActivity: boole
 		return '[grid-template-areas:"strip""main""analysis"]';
 	}
 	return '[grid-template-areas:"strip""main"]';
+}
+
+function buildNarrowRows(hasBanner: boolean, hasAnalysis: boolean): string {
+	if (hasBanner && hasAnalysis) {
+		return "max-md:grid-rows-[auto_auto_minmax(0,1fr)_auto_auto]";
+	}
+	if (hasBanner) {
+		return "max-md:grid-rows-[auto_auto_minmax(0,1fr)_auto]";
+	}
+	if (hasAnalysis) {
+		return "max-md:grid-rows-[auto_minmax(0,1fr)_auto_auto]";
+	}
+	return "max-md:grid-rows-[auto_minmax(0,1fr)_auto]";
+}
+
+function buildNarrowAreas(hasBanner: boolean, hasAnalysis: boolean): string {
+	if (hasBanner && hasAnalysis) {
+		return 'max-md:[grid-template-areas:"strip""banner""main""activity""analysis"]';
+	}
+	if (hasBanner) {
+		return 'max-md:[grid-template-areas:"strip""banner""main""activity"]';
+	}
+	if (hasAnalysis) {
+		return 'max-md:[grid-template-areas:"strip""main""activity""analysis"]';
+	}
+	return 'max-md:[grid-template-areas:"strip""main""activity"]';
 }

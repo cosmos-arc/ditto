@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { Drawer } from "./drawer";
 
 describe("Drawer", () => {
@@ -51,7 +51,7 @@ describe("Drawer", () => {
 
 	// ── Props ──
 
-	it("applies default width via v3 drawer design token (440px)", async () => {
+	it("uses full viewport width on mobile and the shared drawer token from sm", async () => {
 		render(
 			<Drawer open={true} onClose={() => {}} title="Test">
 				Content
@@ -60,8 +60,10 @@ describe("Drawer", () => {
 		await waitFor(() => {
 			const content = document.querySelector("[data-slot='sheet-content']") as HTMLElement;
 			expect(content).toBeInTheDocument();
-			expect(content.className).toContain("w-(--width-drawer)");
-			expect(content.className).toContain("max-w-(--width-drawer)");
+			expect(content.className).toContain("w-full");
+			expect(content.className).toContain("max-w-full");
+			expect(content.className).toContain("sm:w-(--width-drawer)");
+			expect(content.className).toContain("sm:max-w-(--width-drawer)");
 			expect(content.style.width).toBe("");
 		});
 	});

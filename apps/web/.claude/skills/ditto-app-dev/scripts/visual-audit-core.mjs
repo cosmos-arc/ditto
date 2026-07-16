@@ -1,5 +1,14 @@
 export const DEFAULT_VIEWPORT = { width: 1536, height: 900 };
 export const DEFAULT_OUT_DIR = "docs/review/visual-audit";
+export const NAVIGATION_WAIT_UNTIL = "load";
+
+export function isSuccessfulResponseStatus(status) {
+	return (status >= 200 && status < 300) || status === 304;
+}
+
+export function shouldIgnoreRequestFailure(resourceType, errorText) {
+	return resourceType === "script" && errorText === "net::ERR_ABORTED";
+}
 
 export const USAGE = `Usage:
   bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs --route <route> --react-base <url> --prototype-base <url>

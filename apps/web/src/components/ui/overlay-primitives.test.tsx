@@ -25,14 +25,17 @@ describe("overlay primitives", () => {
 		expect(readUiSource("sheet.tsx")).toContain('aria-label="Close"');
 	});
 
-	it("keeps sheet right side compatible with the drawer width token", () => {
+	it("keeps sheet right side viewport-safe before applying the drawer width token", () => {
 		const classes = sheetVariants({ side: "right" });
-		expect(classes).toContain("w-(--width-drawer)");
+		expect(classes).toContain("w-full");
+		expect(classes).toContain("max-w-full");
+		expect(classes).toContain("sm:w-(--width-drawer)");
+		expect(classes).toContain("sm:max-w-(--width-drawer)");
 	});
 
-	it("keeps Drawer bound to the shared drawer width token", () => {
+	it("keeps Drawer viewport-safe and bound to the shared desktop width token", () => {
 		const source = readFileSync(DRAWER_PATH, "utf-8");
-		expect(source).toContain("w-(--width-drawer)");
-		expect(source).toContain("max-w-(--width-drawer)");
+		expect(source).toContain("w-full max-w-full");
+		expect(source).toContain("sm:w-(--width-drawer) sm:max-w-(--width-drawer)");
 	});
 });
