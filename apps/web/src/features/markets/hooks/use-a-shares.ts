@@ -5,7 +5,6 @@ import type { ASharesOverviewResponse } from "@/types";
 export function useAShares() {
 	return useQuery({
 		queryKey: ["markets", "a-shares"],
-		queryFn: () =>
-			apiClient.get<ASharesOverviewResponse>("/markets/a-shares"),
+		queryFn: () => apiClient.get<ASharesOverviewResponse>("/markets/a-shares"),
 	});
 }

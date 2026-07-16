@@ -1,7 +1,7 @@
-import { useIntelligenceFundamentals } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useIntelligenceFundamentals } from "../hooks";
 
 export function IntelligenceFundamentalsView() {
 	const { data, isLoading, refetch } = useIntelligenceFundamentals();
@@ -27,16 +27,12 @@ export function IntelligenceFundamentalsView() {
 									className="flex items-center justify-between py-1 border-b border-(--color-border) last:border-b-0"
 								>
 									<div className="flex flex-col gap-0.5 min-w-0">
-										<span className="text-sm text-(--color-foreground)">
-											{rc.name}
-										</span>
+										<span className="text-sm text-(--color-foreground)">{rc.name}</span>
 										<span className="text-xs text-(--color-foreground-tertiary)">
 											{rc.org} · {rc.action}
 										</span>
 									</div>
-									<span className="text-xs text-(--color-foreground-secondary) font-medium shrink-0">
-										{rc.rating}
-									</span>
+									<span className="text-xs text-(--color-foreground-secondary) font-medium shrink-0">{rc.rating}</span>
 								</div>
 							))}
 						</div>

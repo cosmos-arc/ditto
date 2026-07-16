@@ -1,9 +1,4 @@
-import type {
-	FilterCondition,
-	PaginatedRequest,
-	PaginatedResponse,
-	SparklinePoint,
-} from "./common";
+import type { FilterCondition, PaginatedRequest, PaginatedResponse, SparklinePoint } from "./common";
 
 // === Request Types ===
 

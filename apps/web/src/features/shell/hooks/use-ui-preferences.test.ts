@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useUIPreferences } from "./use-ui-preferences";
 
 describe("useUIPreferences store", () => {
@@ -112,18 +112,14 @@ describe("useUIPreferences store", () => {
 		it("sets data-sidebar-collapsed attribute when true", () => {
 			useUIPreferences.setState({ sidebarCollapsed: true });
 			useUIPreferences.getState().applyThemeToDom();
-			expect(
-				document.documentElement.getAttribute("data-sidebar-collapsed"),
-			).toBe("");
+			expect(document.documentElement.getAttribute("data-sidebar-collapsed")).toBe("");
 		});
 
 		it("removes data-sidebar-collapsed attribute when false", () => {
 			document.documentElement.setAttribute("data-sidebar-collapsed", "");
 			useUIPreferences.setState({ sidebarCollapsed: false });
 			useUIPreferences.getState().applyThemeToDom();
-			expect(
-				document.documentElement.getAttribute("data-sidebar-collapsed"),
-			).toBeNull();
+			expect(document.documentElement.getAttribute("data-sidebar-collapsed")).toBeNull();
 		});
 	});
 });

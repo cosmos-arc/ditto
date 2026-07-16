@@ -1,7 +1,7 @@
 import type {
 	GetIntelligenceFlowResponse,
-	GetIntelligenceMacroResponse,
 	GetIntelligenceFundamentalsResponse,
+	GetIntelligenceMacroResponse,
 } from "@/types";
 
 export const mockIntelligenceFlow: GetIntelligenceFlowResponse = {
@@ -35,11 +35,56 @@ export const mockIntelligenceFlow: GetIntelligenceFlowResponse = {
 
 export const mockIntelligenceMacro: GetIntelligenceMacroResponse = {
 	calendar: [
-		{ date: "2026-04-10", time: "09:30", country: "中国", event: "CPI 同比", actual: undefined, forecast: 0.3, previous: 0.2, importance: "high" },
-		{ date: "2026-04-10", time: "10:00", country: "中国", event: "PPI 同比", actual: undefined, forecast: -2.1, previous: -2.3, importance: "medium" },
-		{ date: "2026-04-11", time: "20:30", country: "美国", event: "CPI 同比", actual: undefined, forecast: 3.2, previous: 3.1, importance: "high" },
-		{ date: "2026-04-11", time: "20:30", country: "美国", event: "核心 CPI 同比", actual: undefined, forecast: 3.5, previous: 3.4, importance: "high" },
-		{ date: "2026-04-12", time: "09:30", country: "中国", event: "社会融资规模", actual: undefined, forecast: 25000, previous: 23600, importance: "medium" },
+		{
+			date: "2026-04-10",
+			time: "09:30",
+			country: "中国",
+			event: "CPI 同比",
+			actual: undefined,
+			forecast: 0.3,
+			previous: 0.2,
+			importance: "high",
+		},
+		{
+			date: "2026-04-10",
+			time: "10:00",
+			country: "中国",
+			event: "PPI 同比",
+			actual: undefined,
+			forecast: -2.1,
+			previous: -2.3,
+			importance: "medium",
+		},
+		{
+			date: "2026-04-11",
+			time: "20:30",
+			country: "美国",
+			event: "CPI 同比",
+			actual: undefined,
+			forecast: 3.2,
+			previous: 3.1,
+			importance: "high",
+		},
+		{
+			date: "2026-04-11",
+			time: "20:30",
+			country: "美国",
+			event: "核心 CPI 同比",
+			actual: undefined,
+			forecast: 3.5,
+			previous: 3.4,
+			importance: "high",
+		},
+		{
+			date: "2026-04-12",
+			time: "09:30",
+			country: "中国",
+			event: "社会融资规模",
+			actual: undefined,
+			forecast: 25000,
+			previous: 23600,
+			importance: "medium",
+		},
 	],
 	indicators: [
 		{ name: "PMI 制造业", value: 50.8, change: 0.3, unit: "" },
@@ -56,9 +101,30 @@ export const mockIntelligenceMacro: GetIntelligenceMacroResponse = {
 
 export const mockIntelligenceFundamentals: GetIntelligenceFundamentalsResponse = {
 	earningsCalendar: [
-		{ date: "2026-04-10", code: "600519.SH", name: "贵州茅台", epsActual: undefined, epsEstimate: 15.8, surprise: undefined },
-		{ date: "2026-04-12", code: "300750.SZ", name: "宁德时代", epsActual: undefined, epsEstimate: 3.2, surprise: undefined },
-		{ date: "2026-04-15", code: "002594.SZ", name: "比亚迪", epsActual: undefined, epsEstimate: 2.85, surprise: undefined },
+		{
+			date: "2026-04-10",
+			code: "600519.SH",
+			name: "贵州茅台",
+			epsActual: undefined,
+			epsEstimate: 15.8,
+			surprise: undefined,
+		},
+		{
+			date: "2026-04-12",
+			code: "300750.SZ",
+			name: "宁德时代",
+			epsActual: undefined,
+			epsEstimate: 3.2,
+			surprise: undefined,
+		},
+		{
+			date: "2026-04-15",
+			code: "002594.SZ",
+			name: "比亚迪",
+			epsActual: undefined,
+			epsEstimate: 2.85,
+			surprise: undefined,
+		},
 	],
 	ratingChanges: [
 		{ date: "2026-04-08", code: "601318.SH", name: "中国平安", org: "中金公司", action: "上调", rating: "跑赢行业" },

@@ -3,29 +3,31 @@
  * 此文件保留 React 专用的 Tailwind namespace 别名覆盖 */
 
 [data-theme="light"] {
-  /* 兼容别名覆盖（对齐暗色主题的别名映射） */
-  --color-surface-hover: oklch(0 0 0 / 0.05);
-  --color-surface-base:     var(--surface-panel-base);
-  --color-surface-elevated: var(--surface-panel-elevated);
-  --color-status-success:   var(--system-healthy-fg);
-  --color-status-error:     var(--system-down-fg);
-  --color-status-warning:   var(--risk-medium-fg);
-  --color-border-primary:   var(--border-strong);
+	color-scheme: light;
+
+	/* 兼容别名覆盖（对齐暗色主题的别名映射） */
+	--color-surface-hover: oklch(0 0 0 / 0.05);
+	--color-surface-base: var(--surface-panel-base);
+	--color-surface-elevated: var(--surface-panel-elevated);
+	--color-status-success: var(--system-healthy-fg);
+	--color-status-error: var(--system-down-fg);
+	--color-status-warning: var(--risk-medium-fg);
+	--color-border-primary: var(--border-strong);
 }
 
 /* Light mode — reduce visual effect intensity (per prototype) */
 [data-theme="light"] [data-slot="noise-layer"] [data-testid="noise-top-light"] {
-  opacity: 0.4;
+	opacity: 0.4;
 }
 
 [data-theme="light"] [data-testid="rail-right-light"] {
-  opacity: 0.4;
+	opacity: 0.4;
 }
 
 [data-theme="light"] [data-slot="noise-layer"] svg {
-  opacity: 0.008;
+	opacity: 0.008;
 }
 
 [data-theme="light"] [data-slot="home-primary"]::before {
-  opacity: 0.3;
+	opacity: 0.3;
 }

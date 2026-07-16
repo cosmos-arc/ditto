@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /* ── Types ── */
@@ -29,10 +29,7 @@ interface DataTableProps<TRow extends object> {
 
 /* ── Cell renderer ── */
 
-function renderCell<TRow extends object>(
-	row: TRow,
-	accessor: ColumnDef<TRow>["accessor"],
-): React.ReactNode {
+function renderCell<TRow extends object>(row: TRow, accessor: ColumnDef<TRow>["accessor"]): React.ReactNode {
 	if (typeof accessor === "function") return accessor(row);
 	const value = row[accessor];
 	if (typeof value === "number") return value.toLocaleString("en-US");
@@ -103,10 +100,7 @@ function DataTable<TRow extends object>({
 
 	return (
 		<div data-slot="data-table" className={cn("w-full overflow-auto", className)}>
-			<table
-				data-density={density || undefined}
-				className="w-full table-fixed border-collapse text-sm"
-			>
+			<table data-density={density || undefined} className="w-full table-fixed border-collapse text-sm">
 				<thead className="sticky top-0 z-2 bg-(--color-surface-1)">
 					<tr>
 						{columns.map((col) => {
@@ -132,10 +126,7 @@ function DataTable<TRow extends object>({
 									<span className="inline-flex items-center gap-1">
 										{col.header}
 										{col.sortable && (
-											<span
-												aria-hidden="true"
-												className="inline-flex flex-col text-[8px] leading-none opacity-50"
-											>
+											<span aria-hidden="true" className="inline-flex flex-col text-[8px] leading-none opacity-50">
 												<span className={isActive && dir === "asc" ? "opacity-100" : "opacity-30"}>▲</span>
 												<span className={isActive && dir === "desc" ? "opacity-100" : "opacity-30"}>▼</span>
 											</span>
@@ -158,7 +149,7 @@ function DataTable<TRow extends object>({
 									"transition-colors",
 									onRowClick && "cursor-pointer hover:bg-(--color-surface-hover)",
 									isSelected && "bg-(--color-surface-2)",
-										rowClassName?.(row),
+									rowClassName?.(row),
 								)}
 							>
 								{columns.map((col) => (
@@ -185,5 +176,5 @@ function DataTable<TRow extends object>({
 	);
 }
 
-export { DataTable };
 export type { ColumnDef, DataTableProps };
+export { DataTable };

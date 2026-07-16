@@ -1,7 +1,7 @@
-import { useRiskExposure } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useRiskExposure } from "../hooks";
 
 export function RiskExposureSummary() {
 	const { data, isLoading, refetch } = useRiskExposure();
@@ -25,10 +25,7 @@ export function RiskExposureSummary() {
 						<div data-info-level="l1" data-info-unit="sector-breakdown" className="space-y-1">
 							<span className="text-xs font-medium text-(--color-foreground-tertiary)">板块分布</span>
 							{data.bySector.map((sector) => (
-								<div
-									key={sector.name}
-									className="flex items-center justify-between rounded-md px-3 py-1.5 text-sm"
-								>
+								<div key={sector.name} className="flex items-center justify-between rounded-md px-3 py-1.5 text-sm">
 									<span>{sector.name}</span>
 									<div className="flex gap-3 text-xs text-(--color-foreground-tertiary)">
 										<span>多 {sector.long}%</span>

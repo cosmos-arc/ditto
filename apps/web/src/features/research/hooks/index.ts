@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient, withQueryParams } from "@/lib/api-client";
 import type {
-	ResearchPulseResponse,
+	GetExperimentsResponse,
 	GetFactorsResponse,
 	GetResearchRunsResponse,
-	GetExperimentsResponse,
 	GetReviewQueueResponse,
 	PaginatedRequest,
+	ResearchPulseResponse,
 } from "@/types";
 
 export function useResearchPulse() {
@@ -44,8 +44,8 @@ export function useReviewQueue() {
 	});
 }
 
+export { useFactorAnalysis, useFactorDetail } from "./use-factor-detail";
 export { useRegimeCurrent } from "./use-regime-current";
 export { useRegimeDrivers } from "./use-regime-drivers";
 export { useRegimeHistory } from "./use-regime-history";
 export { useRegimeStrategyImpact } from "./use-regime-strategy-impact";
-export { useFactorDetail, useFactorAnalysis } from "./use-factor-detail";

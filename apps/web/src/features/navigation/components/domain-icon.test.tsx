@@ -1,15 +1,9 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { DomainId } from "../types";
 import { DomainIcon } from "./domain-icon";
 
-const ALL_DOMAIN_IDS: DomainId[] = [
-	"home",
-	"markets",
-	"research",
-	"trading",
-	"platform",
-];
+const ALL_DOMAIN_IDS: DomainId[] = ["home", "markets", "research", "trading", "platform"];
 
 describe("DomainIcon", () => {
 	it("renders an SVG element for each domain", () => {

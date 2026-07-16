@@ -1,6 +1,6 @@
-import { useDataHealth } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
+import { useDataHealth } from "../hooks";
 
 const STATUS_DOT_COLOR: Record<string, string> = {
 	healthy: "bg-(--color-system-healthy-fg)",
@@ -47,13 +47,9 @@ export function DataHealthSection() {
 								<span
 									className={`inline-block size-1.5 rounded-full ${STATUS_DOT_COLOR[provider.status] ?? "bg-(--color-foreground-disabled)"}`}
 								/>
-								<span className="text-xs text-(--color-foreground-secondary)">
-									{provider.label}
-								</span>
+								<span className="text-xs text-(--color-foreground-secondary)">{provider.label}</span>
 							</div>
-							<span
-								className={`text-xs ${STATUS_TEXT_COLOR[provider.status] ?? "text-(--color-foreground-tertiary)"}`}
-							>
+							<span className={`text-xs ${STATUS_TEXT_COLOR[provider.status] ?? "text-(--color-foreground-tertiary)"}`}>
 								{provider.status === "healthy" ? "正常" : provider.statusText.split("·")[0].trim()}
 							</span>
 						</div>

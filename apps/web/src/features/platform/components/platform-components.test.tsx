@@ -1,17 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
-import { platformHandlers } from "@/mocks/handlers/platform";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { aiHandlers } from "@/mocks/handlers/ai";
-
-import { HealthStrip } from "./health-strip";
-import { ProviderTable } from "./provider-table";
-import { PipelineTable } from "./pipeline-table";
-import { AlertList } from "./alert-list";
-import { PlatformPage } from "./platform-page";
+import { platformHandlers } from "@/mocks/handlers/platform";
+import { server } from "@/mocks/server";
 import { PlatformAgentsPage } from "./agents-page";
+import { AlertList } from "./alert-list";
+import { HealthStrip } from "./health-strip";
+import { PipelineTable } from "./pipeline-table";
+import { PlatformPage } from "./platform-page";
+import { ProviderTable } from "./provider-table";
 import { PlatformSettingsPage } from "./settings-page";
 
 function createQueryClient(): QueryClient {
@@ -139,9 +138,7 @@ describe("AlertList", () => {
 	it("显示活跃告警", async () => {
 		render(<AlertList />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("FRED 数据源连接超时"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("FRED 数据源连接超时")).resolves.toBeInTheDocument();
 	});
 
 	it("过滤掉非活跃告警", async () => {

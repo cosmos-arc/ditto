@@ -8,9 +8,7 @@ function BreachDetailContent({ breachId }: BreachDetailContentProps) {
 			<div className="flex items-center justify-between">
 				<span className="font-data text-xs text-(--color-foreground-muted)">ID: {breachId}</span>
 			</div>
-			<p className="text-xs text-(--color-foreground-muted)">
-				详细告警信息待接入 API
-			</p>
+			<p className="text-xs text-(--color-foreground-muted)">详细告警信息待接入 API</p>
 		</div>
 	);
 }

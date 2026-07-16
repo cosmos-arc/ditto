@@ -1,9 +1,11 @@
-import { StatusBadge } from "@/components/status";
-import { useTradingSession } from "../hooks";
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { shouldUsePrototypeMocks } from "../api/runtime";
+import { StatusBadge } from "@/components/status";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { shouldUsePrototypeMocks } from "../api/runtime";
+import { useTradingSession } from "../hooks";
+
+const LOADING_METRIC_IDS = ["phase", "cash", "margin", "risk-budget"] as const;
 
 export function TradingSessionStrip() {
 	const usePrototypeMocks = shouldUsePrototypeMocks();
@@ -21,8 +23,8 @@ export function TradingSessionStrip() {
 	if (isLoading) {
 		return (
 			<div className="flex gap-3 px-4 py-2">
-				{Array.from({ length: 4 }).map((_, i) => (
-					<LoadingSkeleton key={i} variant="metric" className="flex-1" />
+				{LOADING_METRIC_IDS.map((metricId) => (
+					<LoadingSkeleton key={metricId} variant="metric" className="flex-1" />
 				))}
 			</div>
 		);

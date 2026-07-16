@@ -1,1 +1,1 @@
-export { Metric, metricVariants, type MetricProps } from "./metric";
+export { Metric, type MetricProps, metricVariants } from "./metric";

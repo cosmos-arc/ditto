@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 function formatTime(date: Date): string {
 	const hours = date.getHours().toString().padStart(2, "0");

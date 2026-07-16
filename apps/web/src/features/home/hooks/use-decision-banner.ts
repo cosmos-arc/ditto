@@ -5,7 +5,6 @@ import type { DecisionBannerResponse } from "@/types";
 export function useDecisionBanner() {
 	return useQuery({
 		queryKey: ["home", "decision-banner"],
-		queryFn: () =>
-			apiClient.get<DecisionBannerResponse>("/home/decision-banner"),
+		queryFn: () => apiClient.get<DecisionBannerResponse>("/home/decision-banner"),
 	});
 }

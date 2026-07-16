@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { ConfidenceBar } from "./confidence-bar";
 
 const COLOR_CLASSES: Record<string, string> = {
@@ -60,14 +60,17 @@ describe("ConfidenceBar", () => {
 
 	// ── Color variants ──
 
-	it.each(["brand", "success", "warning", "danger", "neutral"] as const)(
-		"applies correct color class for color=%s",
-		(color) => {
-			render(<ConfidenceBar value={50} color={color} />);
-			const fill = screen.getByTestId("confidence-fill");
-			expect(fill.className).toContain(COLOR_CLASSES[color]);
-		},
-	);
+	it.each([
+		"brand",
+		"success",
+		"warning",
+		"danger",
+		"neutral",
+	] as const)("applies correct color class for color=%s", (color) => {
+		render(<ConfidenceBar value={50} color={color} />);
+		const fill = screen.getByTestId("confidence-fill");
+		expect(fill.className).toContain(COLOR_CLASSES[color]);
+	});
 
 	it("applies neutral color by default", () => {
 		render(<ConfidenceBar value={50} />);
@@ -78,9 +81,7 @@ describe("ConfidenceBar", () => {
 	// ── Size variants ──
 
 	it("applies data-size sm for size=sm", () => {
-		const { container } = render(
-			<ConfidenceBar value={50} size="sm" />,
-		);
+		const { container } = render(<ConfidenceBar value={50} size="sm" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root).toHaveAttribute("data-size", "sm");
 	});
@@ -157,21 +158,14 @@ describe("ConfidenceBar", () => {
 	});
 
 	it("does not render single fill in segmented mode", () => {
-		render(
-			<ConfidenceBar
-				value={100}
-				segments={[{ value: 100, color: "brand" }]}
-			/>,
-		);
+		render(<ConfidenceBar value={100} segments={[{ value: 100, color: "brand" }]} />);
 		expect(screen.queryByTestId("confidence-fill")).not.toBeInTheDocument();
 	});
 
 	// ── className merging ──
 
 	it("merges custom className", () => {
-		const { container } = render(
-			<ConfidenceBar value={50} className="extra-class" />,
-		);
+		const { container } = render(<ConfidenceBar value={50} className="extra-class" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root.classList.contains("extra-class")).toBe(true);
 	});

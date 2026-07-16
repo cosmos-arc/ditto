@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { useThemeStore } from "./theme.store";
+import { beforeEach, describe, expect, it } from "vitest";
 import { useNavigationStore } from "./navigation.store";
+import { useThemeStore } from "./theme.store";
 
 describe("themeStore", () => {
 	beforeEach(() => {

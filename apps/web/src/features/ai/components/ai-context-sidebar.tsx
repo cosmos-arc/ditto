@@ -65,26 +65,16 @@ const VALUE_COLORS: Record<string, string> = {
 
 export function AiContextSidebar() {
 	return (
-		<aside
-			data-slot="sidebar-rail"
-			data-testid="sidebar-rail"
-			className="flex h-full flex-col overflow-y-auto"
-		>
+		<aside data-slot="sidebar-rail" data-testid="sidebar-rail" className="flex h-full flex-col overflow-y-auto">
 			{/* AI 状态概览 */}
 			<ContextSection title="AI 状态概览" data-info-level="l1" data-info-unit="ai-status-overview">
 				<div className="space-y-2 py-1">
 					{STATUS_STATS.map((stat) => (
 						<div key={stat.label} className="rounded-md bg-(--color-surface-panel-base) px-3 py-2">
-							<div className="text-xs text-(--color-foreground-tertiary)">
-								{stat.label}
-							</div>
+							<div className="text-xs text-(--color-foreground-tertiary)">{stat.label}</div>
 							<div className="mt-0.5 flex items-baseline gap-2">
-								<span className={`font-data text-sm font-semibold ${VALUE_COLORS[stat.variant]}`}>
-									{stat.value}
-								</span>
-								<span className="text-xs text-(--color-foreground-tertiary)">
-									{stat.sub}
-								</span>
+								<span className={`font-data text-sm font-semibold ${VALUE_COLORS[stat.variant]}`}>{stat.value}</span>
+								<span className="text-xs text-(--color-foreground-tertiary)">{stat.sub}</span>
 							</div>
 						</div>
 					))}
@@ -98,16 +88,10 @@ export function AiContextSidebar() {
 						<div key={tier.level} className="flex items-center gap-2 text-xs">
 							<span className={`size-2 rounded-full ${DOT_COLORS[tier.level]}`} />
 							<span className="text-(--color-foreground-secondary)">{tier.label}</span>
-							<span className="ml-auto font-data text-(--color-foreground-tertiary)">
-								{tier.count}
-							</span>
+							<span className="ml-auto font-data text-(--color-foreground-tertiary)">{tier.count}</span>
 						</div>
 					))}
-					<ConfidenceBar
-						value={100}
-						segments={CONFIDENCE_SEGMENTS}
-						aria-label="置信度分布"
-					/>
+					<ConfidenceBar value={100} segments={CONFIDENCE_SEGMENTS} aria-label="置信度分布" />
 					<div className="flex text-xs text-(--color-foreground-tertiary)">
 						<span className="flex-1">42%</span>
 						<span className="flex-1">33%</span>
@@ -135,9 +119,7 @@ export function AiContextSidebar() {
 					{RESOURCE_METRICS.map((metric) => (
 						<div key={metric.label} className="flex items-baseline justify-between text-xs">
 							<span className="text-(--color-foreground-tertiary)">{metric.label}</span>
-							<span className={`font-data ${VALUE_COLORS[metric.variant]}`}>
-								{metric.value}
-							</span>
+							<span className={`font-data ${VALUE_COLORS[metric.variant]}`}>{metric.value}</span>
 						</div>
 					))}
 				</div>

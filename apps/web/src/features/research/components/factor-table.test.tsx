@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { researchHandlers } from "@/mocks/handlers/research";
+import { server } from "@/mocks/server";
 
 import { FactorTable } from "./factor-table";
 
@@ -40,18 +40,7 @@ describe("FactorTable", () => {
 		const headers = within(table).getAllByRole("columnheader");
 		const headerTexts = headers.map((h) => h.textContent);
 
-		expect(headerTexts).toEqual([
-			"",
-			"因子",
-			"IC",
-			"IR",
-			"换手率",
-			"衰减",
-			"覆盖率",
-			"Sharpe",
-			"Universe",
-			"状态",
-		]);
+		expect(headerTexts).toEqual(["", "因子", "IC", "IR", "换手率", "衰减", "覆盖率", "Sharpe", "Universe", "状态"]);
 	});
 
 	it("renders factor name in the second column", async () => {

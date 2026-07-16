@@ -1,8 +1,8 @@
-import { useBacktestResult } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { AreaChart } from "@/components/chart/area-chart";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useBacktestResult } from "../hooks";
 
 interface BacktestOverviewProps {
 	readonly jobId: string;
@@ -44,9 +44,7 @@ export function BacktestOverview({ jobId }: BacktestOverviewProps) {
 									>
 										<div className="flex items-center gap-3">
 											<span className="font-medium">{h.name}</span>
-											<span className="text-xs text-(--color-foreground-tertiary)">
-												{h.code}
-											</span>
+											<span className="text-xs text-(--color-foreground-tertiary)">{h.code}</span>
 										</div>
 										<div className="flex items-center gap-4 text-(--color-foreground-tertiary)">
 											<span>{(h.weight * 100).toFixed(0)}%</span>

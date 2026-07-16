@@ -1,8 +1,8 @@
-import { useAgentPlans } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useAgentPlans } from "../hooks";
 
 const STATUS_VARIANT_MAP: Record<string, "live" | "warning" | "default" | "error"> = {
 	running: "live",
@@ -19,11 +19,7 @@ const STATUS_LABEL_MAP: Record<string, string> = {
 };
 
 export function AgentPlansList() {
-	const {
-		data,
-		isLoading,
-		refetch,
-	} = useAgentPlans();
+	const { data, isLoading, refetch } = useAgentPlans();
 
 	return (
 		<ContextSection title="Agent 计划" count={data?.total}>
@@ -42,18 +38,14 @@ export function AgentPlansList() {
 								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center justify-between">
-									<span className="font-medium text-(--color-foreground)">
-										{plan.name}
-									</span>
+									<span className="font-medium text-(--color-foreground)">{plan.name}</span>
 									<StatusBadge
 										variant={STATUS_VARIANT_MAP[plan.status] ?? "default"}
 										label={STATUS_LABEL_MAP[plan.status] ?? plan.status}
 										size="sm"
 									/>
 								</div>
-								<p className="mt-1 text-xs text-(--color-foreground-tertiary)">
-									{plan.objective}
-								</p>
+								<p className="mt-1 text-xs text-(--color-foreground-tertiary)">{plan.objective}</p>
 								<div className="mt-1 flex flex-wrap gap-1">
 									{plan.scope.map((item) => (
 										<span

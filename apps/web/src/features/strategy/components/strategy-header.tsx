@@ -1,7 +1,7 @@
-import { useStrategy } from "../hooks";
-import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useStrategy } from "../hooks";
 
 interface StrategyHeaderProps {
 	readonly id: string;
@@ -29,13 +29,11 @@ export function StrategyHeader({ id }: StrategyHeaderProps) {
 				<div className="flex items-center gap-4 px-4 py-3">
 					<div className="flex flex-col">
 						<span className="text-lg font-bold">{data.name}</span>
-						<span className="text-xs text-(--color-foreground-tertiary)">v{data.version} · {data.universe}</span>
+						<span className="text-xs text-(--color-foreground-tertiary)">
+							v{data.version} · {data.universe}
+						</span>
 					</div>
-					<StatusBadge
-						variant={STATUS_VARIANT[data.status] ?? "default"}
-						label={data.status}
-						size="sm"
-					/>
+					<StatusBadge variant={STATUS_VARIANT[data.status] ?? "default"} label={data.status} size="sm" />
 					<div className="flex gap-2">
 						{data.factors.map((f) => (
 							<span

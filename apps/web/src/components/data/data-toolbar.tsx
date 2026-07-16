@@ -47,12 +47,7 @@ function SearchIcon() {
 function FilterIcon() {
 	return (
 		<svg width={13} height={13} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-			<path
-				d="M4 5h12M6 10h8M8 15h4"
-				stroke="currentColor"
-				strokeWidth={1.5}
-				strokeLinecap="round"
-			/>
+			<path d="M4 5h12M6 10h8M8 15h4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
 		</svg>
 	);
 }

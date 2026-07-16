@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
+import { cn } from "@/lib/utils";
 
 interface CollapsedItem {
 	readonly icon: React.ReactNode;
@@ -23,7 +23,7 @@ export function IntelligenceCollapsedSidebar({
 	const items: CollapsedItem[] = [
 		{
 			icon: (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M10 2L10 10M10 10L7 7M10 10L13 7"
 						stroke="currentColor"
@@ -38,7 +38,7 @@ export function IntelligenceCollapsedSidebar({
 		},
 		{
 			icon: (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path d="M3 5H17M3 10H17M3 15H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
 				</svg>
 			),
@@ -47,7 +47,7 @@ export function IntelligenceCollapsedSidebar({
 		},
 		{
 			icon: (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
 					<path d="M10 7V10M10 13H10.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
 				</svg>

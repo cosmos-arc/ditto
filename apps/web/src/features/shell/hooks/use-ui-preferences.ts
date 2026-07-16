@@ -19,11 +19,7 @@ interface UIPreferencesActions {
 
 export type UIPreferences = UIPreferencesState & UIPreferencesActions;
 
-function applyAttributesToDom(
-	theme: Theme,
-	density: Density,
-	sidebarCollapsed: boolean,
-): void {
+function applyAttributesToDom(theme: Theme, density: Density, sidebarCollapsed: boolean): void {
 	const root = document.documentElement;
 
 	if (theme === "dark") {

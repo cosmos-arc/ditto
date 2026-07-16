@@ -1,17 +1,12 @@
 import { useState } from "react";
-import {
-	AnalyticalLayout,
-	OverlayProvider,
-	StatusBar,
-	useOverlayController,
-} from "@/features/shell";
-import { StatusBadge } from "@/components/status";
 import { Drawer } from "@/components/indicator/overlay/drawer";
+import { StatusBadge } from "@/components/status";
+import { AnalyticalLayout, OverlayProvider, StatusBar, useOverlayController } from "@/features/shell";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { RiskScopeStrip } from "./risk-scope-strip";
-import { RiskExposureSummary } from "./risk-exposure-summary";
-import { RiskBreachesList } from "./risk-breaches-list";
 import { BreachDetailContent } from "./risk-breach-detail";
+import { RiskBreachesList } from "./risk-breaches-list";
+import { RiskExposureSummary } from "./risk-exposure-summary";
+import { RiskScopeStrip } from "./risk-scope-strip";
 
 const RISK_BREACH_OVERLAY_ID = "risk.breach-detail";
 
@@ -33,7 +28,11 @@ function RiskLiveEmptyPage() {
 			<AnalyticalLayout
 				className="pb-(--height-status-bar)"
 				strip={
-					<div data-info-level="l1" data-info-unit="risk-scope-strip" className="flex h-9 items-center gap-3 px-4 py-1.5">
+					<div
+						data-info-level="l1"
+						data-info-unit="risk-scope-strip"
+						className="flex h-9 items-center gap-3 px-4 py-1.5"
+					>
 						<StatusBadge label="prototype only" variant="idle" size="sm" />
 						<span className="text-sm text-(--color-foreground-secondary)">Risk 数据待后端补齐</span>
 					</div>
@@ -50,7 +49,11 @@ function RiskLiveEmptyPage() {
 					</div>
 				}
 				analysis={
-					<div data-info-level="l2" data-info-unit="risk-analysis-panel" className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<div
+						data-info-level="l2"
+						data-info-unit="risk-analysis-panel"
+						className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2"
+					>
 						<span className="text-xs text-(--color-foreground-tertiary)">风控分析面板 · 待 live 接口补齐</span>
 					</div>
 				}
@@ -86,7 +89,11 @@ function RiskPageContent() {
 					</div>
 				}
 				analysis={
-					<div data-info-level="l2" data-info-unit="risk-analysis-panel" className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<div
+						data-info-level="l2"
+						data-info-unit="risk-analysis-panel"
+						className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2"
+					>
 						<span className="text-xs text-(--color-foreground-tertiary)">风控分析面板 · 待实现</span>
 					</div>
 				}

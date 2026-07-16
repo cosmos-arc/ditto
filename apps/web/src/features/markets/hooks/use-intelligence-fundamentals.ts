@@ -5,7 +5,6 @@ import type { GetIntelligenceFundamentalsResponse } from "@/types";
 export function useIntelligenceFundamentals() {
 	return useQuery({
 		queryKey: ["markets", "intelligence", "fundamentals"],
-		queryFn: () =>
-			apiClient.get<GetIntelligenceFundamentalsResponse>("/markets/intelligence/fundamentals"),
+		queryFn: () => apiClient.get<GetIntelligenceFundamentalsResponse>("/markets/intelligence/fundamentals"),
 	});
 }

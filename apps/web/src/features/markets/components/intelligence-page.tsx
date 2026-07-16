@@ -1,12 +1,12 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalyticalLayout, StatusBar } from "@/features/shell";
-import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
-import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
-import { IntelligenceFlowView } from "./intelligence-flow-view";
-import { IntelligenceMacroView } from "./intelligence-macro-view";
-import { IntelligenceFundamentalsView } from "./intelligence-fundamentals-view";
+import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 import { IntelligenceCollapsedSidebar } from "./intelligence-collapsed-sidebar";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { IntelligenceFlowView } from "./intelligence-flow-view";
+import { IntelligenceFundamentalsView } from "./intelligence-fundamentals-view";
+import { IntelligenceMacroView } from "./intelligence-macro-view";
 
 export function IntelligencePage() {
 	const { sidebarCollapsed, toggleSidebarCollapsed } = useUIPreferences();
@@ -61,7 +61,11 @@ export function IntelligencePage() {
 					)
 				}
 				analysis={
-					<div data-info-level="l2" data-info-unit="analysis-panel" className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2">
+					<div
+						data-info-level="l2"
+						data-info-unit="analysis-panel"
+						className="border-t border-(--color-border-subtle) bg-(--color-surface-0) px-3 py-2"
+					>
 						<span className="text-xs text-(--color-foreground-tertiary)">市场分析 · 待实现</span>
 					</div>
 				}

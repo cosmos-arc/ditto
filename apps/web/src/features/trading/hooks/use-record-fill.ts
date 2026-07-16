@@ -1,14 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { recordFill, type RecordFillRequest } from "../api/fills";
+import { type RecordFillRequest, recordFill } from "../api/fills";
 import { tradingKeys } from "../api/query-keys";
 
-const RECORD_FILL_INVALIDATION_SCOPES = [
-	"daily-decision",
-	"positions",
-	"deviation",
-	"pnl",
-	"fills",
-] as const;
+const RECORD_FILL_INVALIDATION_SCOPES = ["daily-decision", "positions", "deviation", "pnl", "fills"] as const;
 
 export function useRecordFill() {
 	const queryClient = useQueryClient();

@@ -1,12 +1,10 @@
 "use client";
 
 import { Tooltip as TooltipPrimitive } from "radix-ui";
-import * as React from "react";
+import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-function DittoTooltip({
-	...props
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+function DittoTooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
 	return (
 		<TooltipPrimitive.Provider delayDuration={300}>
 			<TooltipPrimitive.Root {...props} />
@@ -14,15 +12,8 @@ function DittoTooltip({
 	);
 }
 
-function DittoTooltipTrigger({
-	...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-	return (
-		<TooltipPrimitive.Trigger
-			data-slot="tooltip-trigger"
-			{...props}
-		/>
-	);
+function DittoTooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+	return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
 function DittoTooltipContent({
@@ -57,4 +48,4 @@ function DittoTooltipContent({
 	);
 }
 
-export { DittoTooltip, DittoTooltipTrigger, DittoTooltipContent };
+export { DittoTooltip, DittoTooltipContent, DittoTooltipTrigger };

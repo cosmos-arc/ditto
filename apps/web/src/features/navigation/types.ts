@@ -8,12 +8,7 @@ export interface Domain {
 	readonly path: string;
 }
 
-export type DomainId =
-	| "home"
-	| "markets"
-	| "research"
-	| "trading"
-	| "platform";
+export type DomainId = "home" | "markets" | "research" | "trading" | "platform";
 
 /** 所有域配置 */
 export const DOMAINS: readonly Domain[] = [

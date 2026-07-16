@@ -1,7 +1,7 @@
-import { useStrategyVersions } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useStrategyVersions } from "../hooks";
 
 interface StrategyVersionsViewProps {
 	readonly id: string;
@@ -27,9 +27,7 @@ export function StrategyVersionsView({ id }: StrategyVersionsViewProps) {
 								>
 									<div className="flex items-center gap-3">
 										<span className="font-medium">v{ver.version}</span>
-										<span className="text-(--color-foreground-tertiary)">
-											{ver.changeNote}
-										</span>
+										<span className="text-(--color-foreground-tertiary)">{ver.changeNote}</span>
 									</div>
 									<span className="text-xs text-(--color-foreground-tertiary)">
 										{new Date(ver.savedAt).toLocaleDateString("zh-CN")}

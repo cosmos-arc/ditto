@@ -1,7 +1,7 @@
-import { useFactorAnalysis } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useFactorAnalysis } from "../hooks";
 
 interface FactorAnalysisViewProps {
 	readonly id: string;
@@ -25,9 +25,7 @@ export function FactorAnalysisView({ id }: FactorAnalysisViewProps) {
 									key={point.date}
 									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
-									<span className="text-(--color-foreground-tertiary)">
-										{point.date}
-									</span>
+									<span className="text-(--color-foreground-tertiary)">{point.date}</span>
 									<span className="font-mono">IC {point.ic.toFixed(3)}</span>
 									<span className="font-mono">IR {point.ir.toFixed(2)}</span>
 								</div>
@@ -43,13 +41,7 @@ export function FactorAnalysisView({ id }: FactorAnalysisViewProps) {
 									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<span className="font-medium">{item.sector}</span>
-									<span
-										className={
-											item.exposure >= 0
-												? "text-(--color-led-success)"
-												: "text-(--color-led-error)"
-										}
-									>
+									<span className={item.exposure >= 0 ? "text-(--color-led-success)" : "text-(--color-led-error)"}>
 										{item.exposure > 0 ? "+" : ""}
 										{item.exposure.toFixed(2)}
 									</span>

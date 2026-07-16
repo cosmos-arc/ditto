@@ -1,8 +1,8 @@
-import { useMacroDrivers } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
-import { Sparkline } from "@/components/data/sparkline/sparkline";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { Sparkline } from "@/components/data/sparkline/sparkline";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useMacroDrivers } from "../hooks";
 
 export function MacroDriversBar() {
 	const { data, isLoading, refetch } = useMacroDrivers();
@@ -18,18 +18,10 @@ export function MacroDriversBar() {
 								key={indicator.name}
 								className="flex flex-1 flex-col items-center gap-1 rounded-md bg-(--color-surface-1) p-2"
 							>
-								<span className="text-xs text-(--color-foreground-tertiary)">
-									{indicator.name}
-								</span>
-								<span className="text-sm font-medium">
-									{indicator.value.toLocaleString()}
-								</span>
+								<span className="text-xs text-(--color-foreground-tertiary)">{indicator.name}</span>
+								<span className="text-sm font-medium">{indicator.value.toLocaleString()}</span>
 								<span
-									className={
-										indicator.change >= 0
-											? "text-(--color-system-healthy)"
-											: "text-(--color-system-down)"
-									}
+									className={indicator.change >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}
 								>
 									{indicator.change >= 0 ? "+" : ""}
 									{indicator.change.toFixed(2)}

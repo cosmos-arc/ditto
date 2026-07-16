@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
 import { MarketCard } from "./market-card";
 
 describe("MarketCard", () => {
@@ -76,6 +76,23 @@ describe("MarketCard", () => {
 		render(<MarketCard name="Test" regime="on" index="3,912" change={0} judgment="Test" onClick={onClick} />);
 		await user.click(document.querySelector("[data-slot='market-card']") as HTMLElement);
 		expect(onClick).toHaveBeenCalledTimes(1);
+	});
+
+	it("renders an interactive card as a native button", () => {
+		render(<MarketCard name="Test" regime="on" index="3,912" change={0} judgment="Summary" onClick={() => {}} />);
+
+		expect(screen.getByRole("button", { name: /Test/ })).toHaveAttribute("type", "button");
+	});
+
+	it("activates an interactive card from the keyboard", async () => {
+		const user = userEvent.setup();
+		const onClick = vi.fn();
+		render(<MarketCard name="Test" regime="on" index="3,912" change={0} judgment="Summary" onClick={onClick} />);
+
+		screen.getByRole("button", { name: /Test/ }).focus();
+		await user.keyboard("{Enter}");
+
+		expect(onClick).toHaveBeenCalledOnce();
 	});
 
 	// ── className merging ──

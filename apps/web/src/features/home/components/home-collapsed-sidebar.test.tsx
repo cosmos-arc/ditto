@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HomeCollapsedSidebar } from "./home-collapsed-sidebar";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
+import { HomeCollapsedSidebar } from "./home-collapsed-sidebar";
 
 describe("HomeCollapsedSidebar", () => {
 	beforeEach(() => {

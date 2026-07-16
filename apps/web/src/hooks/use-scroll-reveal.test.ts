@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScrollReveal } from "./use-scroll-reveal";
 
 /* ── IntersectionObserver mock ── */
@@ -40,17 +40,13 @@ afterEach(() => {
 
 function triggerViewportEntry(target?: Element): void {
 	act(() => {
-		mockObserverCallback([
-			{ isIntersecting: true, target: target ?? document.createElement("div") },
-		]);
+		mockObserverCallback([{ isIntersecting: true, target: target ?? document.createElement("div") }]);
 	});
 }
 
 function triggerViewportExit(target?: Element): void {
 	act(() => {
-		mockObserverCallback([
-			{ isIntersecting: false, target: target ?? document.createElement("div") },
-		]);
+		mockObserverCallback([{ isIntersecting: false, target: target ?? document.createElement("div") }]);
 	});
 }
 
@@ -170,9 +166,7 @@ describe("useScrollReveal", () => {
 	/* ── Observer options ── */
 
 	it("passes threshold option to IntersectionObserver", () => {
-		const { result } = renderHook(() =>
-			useScrollReveal({ threshold: 0.5 }),
-		);
+		const { result } = renderHook(() => useScrollReveal({ threshold: 0.5 }));
 		const element = document.createElement("div");
 		act(() => {
 			result.current.ref(element);
@@ -182,9 +176,7 @@ describe("useScrollReveal", () => {
 	});
 
 	it("passes rootMargin option to IntersectionObserver", () => {
-		const { result } = renderHook(() =>
-			useScrollReveal({ rootMargin: "50px" }),
-		);
+		const { result } = renderHook(() => useScrollReveal({ rootMargin: "50px" }));
 		const element = document.createElement("div");
 		act(() => {
 			result.current.ref(element);

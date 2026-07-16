@@ -1,9 +1,5 @@
 import { useEffect } from "react";
-import {
-	CopilotChatView,
-	CopilotContextPanel,
-	CopilotSessionList,
-} from "@/features/ai";
+import { CopilotChatView, CopilotContextPanel, CopilotSessionList } from "@/features/ai/copilot";
 
 interface CopilotSidecarProps {
 	readonly open: boolean;

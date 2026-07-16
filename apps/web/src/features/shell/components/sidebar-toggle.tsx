@@ -1,5 +1,5 @@
-import { useUIPreferences } from "../hooks/use-ui-preferences";
 import { cn } from "@/lib/utils";
+import { useUIPreferences } from "../hooks/use-ui-preferences";
 
 interface SidebarToggleProps {
 	readonly className?: string;
@@ -31,7 +31,7 @@ export function SidebarToggle({ className }: SidebarToggleProps) {
 			)}
 		>
 			{sidebarCollapsed ? (
-				<svg className="size-4" viewBox="0 0 16 16" fill="none">
+				<svg className="size-4" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M10 3L5 8L10 13"
 						stroke="currentColor"
@@ -41,7 +41,7 @@ export function SidebarToggle({ className }: SidebarToggleProps) {
 					/>
 				</svg>
 			) : (
-				<svg className="size-4" viewBox="0 0 16 16" fill="none">
+				<svg className="size-4" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M6 3L11 8L6 13"
 						stroke="currentColor"

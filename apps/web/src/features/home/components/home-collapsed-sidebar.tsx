@@ -1,6 +1,6 @@
-import { cn } from "@/lib/utils";
 import { MiniSparkline } from "@/components/data-viz";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
+import { cn } from "@/lib/utils";
 
 interface CollapsedItem {
 	readonly icon: React.ReactNode;
@@ -32,7 +32,9 @@ export function HomeCollapsedSidebar({
 	className,
 }: HomeCollapsedSidebarProps) {
 	const marketTrend = marketTrendData
-		? marketTrendData[marketTrendData.length - 1] >= marketTrendData[0] ? "up" : "down"
+		? marketTrendData[marketTrendData.length - 1] >= marketTrendData[0]
+			? "up"
+			: "down"
 		: undefined;
 
 	const items: CollapsedItem[] = [
@@ -40,7 +42,7 @@ export function HomeCollapsedSidebar({
 			icon: marketTrendData ? (
 				<MiniSparkline data={marketTrendData} trend={marketTrend} ariaLabel="市场脉搏趋势" />
 			) : (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M2 14L6 10L10 13L14 6L18 8"
 						stroke="currentColor"
@@ -54,7 +56,7 @@ export function HomeCollapsedSidebar({
 		},
 		{
 			icon: (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M10 3L10 10M10 10L7 7M10 10L13 7"
 						stroke="currentColor"
@@ -62,12 +64,7 @@ export function HomeCollapsedSidebar({
 						strokeLinecap="round"
 						strokeLinejoin="round"
 					/>
-					<path
-						d="M3 17H17"
-						stroke="currentColor"
-						strokeWidth="1.5"
-						strokeLinecap="round"
-					/>
+					<path d="M3 17H17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
 				</svg>
 			),
 			badge: alertCount > 0 ? alertCount : undefined,
@@ -75,7 +72,7 @@ export function HomeCollapsedSidebar({
 		},
 		{
 			icon: (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M10 3C5.58 3 2 6.58 2 11H10V3Z"
 						stroke="currentColor"
@@ -90,15 +87,7 @@ export function HomeCollapsedSidebar({
 						strokeLinecap="round"
 						strokeLinejoin="round"
 					/>
-					<rect
-						x="2"
-						y="13"
-						width="16"
-						height="4"
-						rx="1"
-						stroke="currentColor"
-						strokeWidth="1.5"
-					/>
+					<rect x="2" y="13" width="16" height="4" rx="1" stroke="currentColor" strokeWidth="1.5" />
 				</svg>
 			),
 			indicator: healthStatus,
@@ -141,10 +130,7 @@ export function HomeCollapsedSidebar({
 						)}
 						{item.indicator && (
 							<span
-								className={cn(
-									"absolute bottom-0.5 right-0.5 size-2 rounded-full",
-									INDICATOR_COLORS[item.indicator],
-								)}
+								className={cn("absolute bottom-0.5 right-0.5 size-2 rounded-full", INDICATOR_COLORS[item.indicator])}
 							/>
 						)}
 					</button>

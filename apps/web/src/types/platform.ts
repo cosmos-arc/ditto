@@ -1,9 +1,4 @@
-import type {
-	HealthStatus,
-	PaginatedRequest,
-	PaginatedResponse,
-	Severity,
-} from "./common";
+import type { HealthStatus, PaginatedRequest, PaginatedResponse, Severity } from "./common";
 
 // === Request Types ===
 
@@ -67,12 +62,7 @@ export type GetProvidersResponse = {
 };
 
 /** 管道状态 */
-export type PipelineStatus =
-	| "idle"
-	| "running"
-	| "success"
-	| "failed"
-	| "warning";
+export type PipelineStatus = "idle" | "running" | "success" | "failed" | "warning";
 
 /** 数据管道 */
 export type Pipeline = {

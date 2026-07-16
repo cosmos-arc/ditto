@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { riskHandlers } from "@/mocks/handlers/risk";
+import { server } from "@/mocks/server";
 
 import { RiskBreachesList } from "./risk-breaches-list";
 import { RiskExposureSummary } from "./risk-exposure-summary";
-import { RiskScopeStrip } from "./risk-scope-strip";
 import { RiskPage } from "./risk-page";
+import { RiskScopeStrip } from "./risk-scope-strip";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -56,6 +56,15 @@ describe("RiskBreachesList", () => {
 
 		expect(onSelectBreach).toHaveBeenCalledOnce();
 		expect(onSelectBreach).toHaveBeenCalledWith("rb-001");
+	});
+
+	it("可选择告警使用原生按钮语义", async () => {
+		render(<RiskBreachesList onSelectBreach={() => {}} />, {
+			wrapper: createWrapper(),
+		});
+
+		const breach = await screen.findByRole("button", { name: /单日 VaR 超限/ });
+		expect(breach).toHaveAttribute("type", "button");
 	});
 
 	it("未传 onSelectBreach 时点击不报错", async () => {

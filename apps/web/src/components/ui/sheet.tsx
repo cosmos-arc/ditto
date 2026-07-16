@@ -1,8 +1,8 @@
 "use client";
 
-import { Dialog as DialogPrimitive } from "radix-ui";
-import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Dialog as DialogPrimitive } from "radix-ui";
+import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const sheetVariants = cva(
@@ -28,9 +28,7 @@ function Sheet({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) 
 	return <DialogPrimitive.Root data-slot="sheet" {...props} />;
 }
 
-function SheetTrigger({
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+function SheetTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
 	return <DialogPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
 }
 
@@ -66,16 +64,11 @@ function SheetClose({
 	);
 }
 
-function SheetPortal({
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+function SheetPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
 	return <DialogPrimitive.Portal data-slot="sheet-portal" {...props} />;
 }
 
-function SheetOverlay({
-	className,
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+function SheetOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
 	return (
 		<DialogPrimitive.Overlay
 			data-slot="sheet-overlay"
@@ -96,13 +89,7 @@ interface SheetContentProps
 	readonly showClose?: boolean;
 }
 
-function SheetContent({
-	side = "right",
-	className,
-	children,
-	showClose = true,
-	...props
-}: SheetContentProps) {
+function SheetContent({ side = "right", className, children, showClose = true, ...props }: SheetContentProps) {
 	return (
 		<SheetPortal>
 			<SheetOverlay />
@@ -118,73 +105,47 @@ function SheetContent({
 				{...props}
 			>
 				{children}
-				{showClose && (
-					<SheetClose aria-label="Close" />
-				)}
+				{showClose && <SheetClose aria-label="Close" />}
 			</DialogPrimitive.Content>
 		</SheetPortal>
 	);
 }
 
-function SheetHeader({
-	className,
-	...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+function SheetHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
 	return (
 		<div
 			data-slot="sheet-header"
-			className={cn(
-				"flex flex-col space-y-2 text-center sm:text-left",
-				className,
-			)}
+			className={cn("flex flex-col space-y-2 text-center sm:text-left", className)}
 			{...props}
 		/>
 	);
 }
 
-function SheetFooter({
-	className,
-	...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+function SheetFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
 	return (
 		<div
 			data-slot="sheet-footer"
-			className={cn(
-				"flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-				className,
-			)}
+			className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
 			{...props}
 		/>
 	);
 }
 
-function SheetTitle({
-	className,
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+function SheetTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
 	return (
 		<DialogPrimitive.Title
 			data-slot="sheet-title"
-			className={cn(
-				"text-lg font-semibold leading-none text-(--color-foreground)",
-				className,
-			)}
+			className={cn("text-lg font-semibold leading-none text-(--color-foreground)", className)}
 			{...props}
 		/>
 	);
 }
 
-function SheetDescription({
-	className,
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+function SheetDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
 	return (
 		<DialogPrimitive.Description
 			data-slot="sheet-description"
-			className={cn(
-				"text-sm text-(--color-foreground-secondary)",
-				className,
-			)}
+			className={cn("text-sm text-(--color-foreground-secondary)", className)}
 			{...props}
 		/>
 	);

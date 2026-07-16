@@ -7,22 +7,13 @@ interface SparklineCellProps {
 	readonly className?: string;
 }
 
-function SparklineCell({
-	data,
-	color,
-	gradient,
-	className,
-}: SparklineCellProps) {
+function SparklineCell({ data, color, gradient, className }: SparklineCellProps) {
 	return (
-		<span
-			data-slot="sparkline-cell"
-			data-testid="sparkline-cell-root"
-			className={className}
-		>
+		<span data-slot="sparkline-cell" data-testid="sparkline-cell-root" className={className}>
 			<Sparkline data={data} color={color} gradient={gradient} />
 		</span>
 	);
 }
 
-export { SparklineCell };
 export type { SparklineCellProps };
+export { SparklineCell };

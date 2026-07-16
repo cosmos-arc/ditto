@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
 import { AlertRow } from "./alert-row";
 
 describe("AlertRow", () => {
@@ -12,33 +12,29 @@ describe("AlertRow", () => {
 	});
 
 	it("renders with data-slot attribute", () => {
-		const { container } = render(
-			<AlertRow severity="info" title="数据延迟" />,
-		);
+		const { container } = render(<AlertRow severity="info" title="数据延迟" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root).toHaveAttribute("data-slot", "alert-row");
 	});
 
 	it("renders severity attribute", () => {
-		const { container } = render(
-			<AlertRow severity="critical" title="VaR 突破" />,
-		);
+		const { container } = render(<AlertRow severity="critical" title="VaR 突破" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root).toHaveAttribute("data-severity", "critical");
 	});
 
 	// ── Severity variants ──
 
-	it.each(["critical", "warning", "info"] as const)(
-		"renders StatusDot with correct variant for severity=%s",
-		(severity) => {
-			render(<AlertRow severity={severity} title="Test" />);
-			const dot = document.querySelector("[data-slot='status-dot']") as HTMLElement;
-			const expectedDotVariant =
-				severity === "warning" ? "degraded" : severity;
-			expect(dot).toHaveAttribute("data-variant", expectedDotVariant);
-		},
-	);
+	it.each([
+		"critical",
+		"warning",
+		"info",
+	] as const)("renders StatusDot with correct variant for severity=%s", (severity) => {
+		render(<AlertRow severity={severity} title="Test" />);
+		const dot = document.querySelector("[data-slot='status-dot']") as HTMLElement;
+		const expectedDotVariant = severity === "warning" ? "degraded" : severity;
+		expect(dot).toHaveAttribute("data-variant", expectedDotVariant);
+	});
 
 	it("applies pulse to critical severity dot", () => {
 		render(<AlertRow severity="critical" title="Test" />);
@@ -75,25 +71,25 @@ describe("AlertRow", () => {
 	it("calls onClick when clicked", async () => {
 		const user = userEvent.setup();
 		const onClick = vi.fn();
-		render(
-			<AlertRow severity="info" title="数据延迟" onClick={onClick} />,
-		);
+		render(<AlertRow severity="info" title="数据延迟" onClick={onClick} />);
 		await user.click(screen.getByText("数据延迟"));
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
+	it("renders an interactive alert as a native button", () => {
+		render(<AlertRow severity="info" title="数据延迟" onClick={() => {}} />);
+
+		expect(screen.getByRole("button", { name: "数据延迟" })).toHaveAttribute("type", "button");
+	});
+
 	it("applies cursor-pointer when onClick is provided", () => {
-		const { container } = render(
-			<AlertRow severity="info" title="数据延迟" onClick={() => {}} />,
-		);
+		const { container } = render(<AlertRow severity="info" title="数据延迟" onClick={() => {}} />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root.className).toContain("cursor-pointer");
 	});
 
 	it("does not apply cursor-pointer when onClick is not provided", () => {
-		const { container } = render(
-			<AlertRow severity="info" title="数据延迟" />,
-		);
+		const { container } = render(<AlertRow severity="info" title="数据延迟" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root.className).not.toContain("cursor-pointer");
 	});
@@ -101,9 +97,7 @@ describe("AlertRow", () => {
 	// ── className merging ──
 
 	it("merges custom className", () => {
-		const { container } = render(
-			<AlertRow severity="info" title="Test" className="extra-class" />,
-		);
+		const { container } = render(<AlertRow severity="info" title="Test" className="extra-class" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root.classList.contains("extra-class")).toBe(true);
 	});
@@ -111,9 +105,7 @@ describe("AlertRow", () => {
 	// ── Structure ──
 
 	it("applies flex layout with items-center", () => {
-		const { container } = render(
-			<AlertRow severity="info" title="Test" />,
-		);
+		const { container } = render(<AlertRow severity="info" title="Test" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root.className).toContain("flex");
 		expect(root.className).toContain("items-center");

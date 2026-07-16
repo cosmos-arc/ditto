@@ -1,9 +1,9 @@
-import { usePipelines } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import type { PipelineStatus } from "@/types";
+import { usePipelines } from "../hooks";
 
 const STATUS_VARIANT_MAP: Record<PipelineStatus, "healthy" | "degraded" | "warning" | "error"> = {
 	idle: "healthy",
@@ -52,9 +52,7 @@ export function PipelineTable() {
 									<span>{pipeline.recordsProcessed.toLocaleString()} 条</span>
 									<span>{pipeline.duration}s</span>
 									{pipeline.errorCount > 0 && (
-										<span className="text-(--color-system-down)">
-											{pipeline.errorCount} 错误
-										</span>
+										<span className="text-(--color-system-down)">{pipeline.errorCount} 错误</span>
 									)}
 								</div>
 							</div>

@@ -1,14 +1,9 @@
 import { useState } from "react";
-import {
-	OpsConsoleLayout,
-	OverlayProvider,
-	StatusBar,
-	useOverlayController,
-} from "@/features/shell";
 import { Drawer } from "@/components/indicator/overlay/drawer";
-import { SignalsList } from "./signals-list";
-import { SignalsHealthStrip } from "./signals-health-strip";
+import { OpsConsoleLayout, OverlayProvider, StatusBar, useOverlayController } from "@/features/shell";
 import { SignalDetailPanel } from "./signal-detail-panel";
+import { SignalsHealthStrip } from "./signals-health-strip";
+import { SignalsList } from "./signals-list";
 
 const SIGNAL_DETAIL_OVERLAY_ID = "signals.detail";
 

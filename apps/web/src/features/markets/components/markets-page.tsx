@@ -1,16 +1,16 @@
-import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
-import { RadarLayout, StatusBar } from "@/features/shell";
-import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
-import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
-import { useMarketContext } from "../hooks";
-import { MarketCardGrid } from "./market-card-grid";
-import { MacroDriversBar } from "./macro-drivers-bar";
-import { CapitalRotationTable } from "./capital-rotation-table";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
 import { ContextSection } from "@/components/domain/context-section";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
+import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadarLayout, StatusBar } from "@/features/shell";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
+import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useMarketContext } from "../hooks";
+import { CapitalRotationTable } from "./capital-rotation-table";
+import { MacroDriversBar } from "./macro-drivers-bar";
+import { MarketCardGrid } from "./market-card-grid";
 
 /* ── Context Bar ── */
 
@@ -63,10 +63,10 @@ const MOCK_SCOPE_TEXT =
 const CORRELATION_LABELS = ["沪深300", "创业板", "恒生", "标普500"] as const;
 
 const CORRELATION_MATRIX: ReadonlyArray<ReadonlyArray<number>> = [
-	[1.00, 0.85, 0.62, 0.35],
-	[0.85, 1.00, 0.55, 0.28],
-	[0.62, 0.55, 1.00, 0.45],
-	[0.35, 0.28, 0.45, 1.00],
+	[1.0, 0.85, 0.62, 0.35],
+	[0.85, 1.0, 0.55, 0.28],
+	[0.62, 0.55, 1.0, 0.45],
+	[0.35, 0.28, 0.45, 1.0],
 ];
 
 function correlationCellClass(value: number, rowIdx: number, colIdx: number): string {
@@ -96,9 +96,7 @@ function ScopeStrip() {
 			<span className="mb-1 block text-xs font-medium uppercase tracking-wide text-(--color-foreground-tertiary)">
 				今日解读
 			</span>
-			<p className="text-base leading-relaxed text-(--color-foreground-secondary)">
-				{MOCK_SCOPE_TEXT}
-			</p>
+			<p className="text-base leading-relaxed text-(--color-foreground-secondary)">{MOCK_SCOPE_TEXT}</p>
 		</div>
 	);
 }
@@ -108,11 +106,7 @@ function ScopeStrip() {
 function CrossMarketMatrix() {
 	return (
 		<ContextSection title="跨市场相关性" data-info-level="l2" data-info-unit="cross-market-matrix">
-			<div
-				data-slot="cross-market-matrix"
-				data-testid="cross-market-matrix"
-				className="overflow-x-auto pb-2"
-			>
+			<div data-slot="cross-market-matrix" data-testid="cross-market-matrix" className="overflow-x-auto pb-2">
 				<div className="mb-3 flex flex-wrap items-center justify-between gap-3">
 					<div className="text-xs text-(--color-foreground-tertiary)">
 						强相关焦点 <span className="font-data text-(--color-accent)">沪深300/创业板 0.85</span>
@@ -135,26 +129,24 @@ function CrossMarketMatrix() {
 							))}
 						</tr>
 					</thead>
-						<tbody>
-							{CORRELATION_MATRIX.map((row, rowIdx) => (
-								<tr key={CORRELATION_LABELS[rowIdx]}>
-									<td className="p-1.5 font-medium text-(--color-foreground-tertiary)">
-										{CORRELATION_LABELS[rowIdx]}
+					<tbody>
+						{CORRELATION_MATRIX.map((row, rowIdx) => (
+							<tr key={CORRELATION_LABELS[rowIdx]}>
+								<td className="p-1.5 font-medium text-(--color-foreground-tertiary)">{CORRELATION_LABELS[rowIdx]}</td>
+								{row.map((value, colIdx) => (
+									<td
+										key={`${CORRELATION_LABELS[rowIdx]}-${CORRELATION_LABELS[colIdx]}`}
+										data-testid={`corr-${rowIdx}-${colIdx}`}
+										className={`rounded-(--radius-sm) p-1.5 text-center font-data tabular-nums transition-transform hover:scale-105 ${correlationCellClass(value, rowIdx, colIdx)}`}
+										aria-label={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]}: 相关系数 ${value.toFixed(2)}`}
+										title={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]} · 相关系数 ${value.toFixed(2)}`}
+									>
+										{value.toFixed(2)}
 									</td>
-									{row.map((value, colIdx) => (
-										<td
-											key={`${rowIdx}-${colIdx}`}
-											data-testid={`corr-${rowIdx}-${colIdx}`}
-											className={`rounded-(--radius-sm) p-1.5 text-center font-data tabular-nums transition-transform hover:scale-105 ${correlationCellClass(value, rowIdx, colIdx)}`}
-											aria-label={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]}: 相关系数 ${value.toFixed(2)}`}
-											title={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]} · 相关系数 ${value.toFixed(2)}`}
-										>
-											{value.toFixed(2)}
-										</td>
-									))}
-								</tr>
-							))}
-						</tbody>
+								))}
+							</tr>
+						))}
+					</tbody>
 				</table>
 			</div>
 		</ContextSection>
@@ -170,16 +162,19 @@ function MarketRightRail() {
 				<PanelHeader
 					title="市场事件"
 					actions={
-						<button type="button" className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5">
+						<button
+							type="button"
+							className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5"
+						>
 							查看全部 →
 						</button>
 					}
 				/>
 				<PanelBody className="p-3">
 					<div className="flex flex-col gap-1">
-						{MOCK_EVENTS.map((event, i) => (
+						{MOCK_EVENTS.map((event) => (
 							<div
-								key={i}
+								key={`${event.text}-${event.time}`}
 								data-info-level="l3"
 								data-info-unit="market-event-item"
 								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
@@ -187,9 +182,7 @@ function MarketRightRail() {
 								<span
 									className={`inline-block size-1.5 shrink-0 rounded-full ${event.severity === "up" ? "bg-(--color-market-up-fg)" : event.severity === "down" ? "bg-(--color-market-down-fg)" : "bg-(--color-foreground-muted)"}`}
 								/>
-								<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground)">
-									{event.text}
-								</span>
+								<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground)">{event.text}</span>
 								<span className="shrink-0 font-data text-xs tabular-nums text-(--color-foreground-muted)">
 									{event.time}
 								</span>
@@ -207,9 +200,7 @@ function MarketRightRail() {
 								key={item.sector}
 								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
-								<span className="text-xs text-(--color-foreground-secondary)">
-									{item.sector}
-								</span>
+								<span className="text-xs text-(--color-foreground-secondary)">{item.sector}</span>
 								<span
 									className={`font-data text-xs tabular-nums ${item.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
 								>
@@ -238,34 +229,34 @@ export function MarketsPage() {
 
 	return (
 		<>
-		<RadarLayout
-			className="pb-(--height-status-bar)"
-			contextBar={<MarketContextBar />}
-			scopeStrip={<ScopeStrip />}
-			main={
-				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
-					<MarketCardGrid />
-					<Tabs defaultValue="macro" className="flex flex-col gap-(--section-gap)">
-						<TabsList>
-							<TabsTrigger value="macro">宏观驱动</TabsTrigger>
-							<TabsTrigger value="rotation">资金轮动</TabsTrigger>
-							<TabsTrigger value="correlation">跨市场相关性</TabsTrigger>
-						</TabsList>
-						<TabsContent value="macro">
-							<MacroDriversBar />
-						</TabsContent>
-						<TabsContent value="rotation">
-							<CapitalRotationTable />
-						</TabsContent>
-						<TabsContent value="correlation">
-							<CrossMarketMatrix />
-						</TabsContent>
-					</Tabs>
-				</div>
-			}
-			rightRail={<MarketRightRail />}
-		/>
-		<StatusBar />
+			<RadarLayout
+				className="pb-(--height-status-bar)"
+				contextBar={<MarketContextBar />}
+				scopeStrip={<ScopeStrip />}
+				main={
+					<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+						<MarketCardGrid />
+						<Tabs defaultValue="macro" className="flex flex-col gap-(--section-gap)">
+							<TabsList>
+								<TabsTrigger value="macro">宏观驱动</TabsTrigger>
+								<TabsTrigger value="rotation">资金轮动</TabsTrigger>
+								<TabsTrigger value="correlation">跨市场相关性</TabsTrigger>
+							</TabsList>
+							<TabsContent value="macro">
+								<MacroDriversBar />
+							</TabsContent>
+							<TabsContent value="rotation">
+								<CapitalRotationTable />
+							</TabsContent>
+							<TabsContent value="correlation">
+								<CrossMarketMatrix />
+							</TabsContent>
+						</Tabs>
+					</div>
+				}
+				rightRail={<MarketRightRail />}
+			/>
+			<StatusBar />
 		</>
 	);
 }

@@ -1,8 +1,8 @@
 import { useParams } from "@tanstack/react-router";
-import { StudioLayout, StatusBar } from "@/features/shell";
-import { StrategyHeader } from "./strategy-header";
+import { StatusBar, StudioLayout } from "@/features/shell";
 import { FactorBrowser } from "./factor-browser";
 import { StrategyEditor } from "./strategy-editor";
+import { StrategyHeader } from "./strategy-header";
 import { StrategyInspector } from "./strategy-inspector";
 import { StudioModeBar } from "./studio-mode-bar";
 

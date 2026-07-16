@@ -1,12 +1,12 @@
 export { AppShell } from "./components/app-shell";
 export { GlobalCommandButton } from "./components/global-command-button";
+export { ShellHeader } from "./components/header";
 export { HeaderUtilityBar } from "./components/header-utility-bar";
 export { NoiseLayer } from "./components/noise-layer";
-export { Panel, PanelBody, PanelHeader } from "./components/panel";
-export { PageTitleBlock } from "./components/page-title-block";
-export { Rail } from "./components/rail";
-export { ShellHeader } from "./components/header";
 export { OverlayProvider, useOverlayController } from "./components/overlay-provider";
+export { PageTitleBlock } from "./components/page-title-block";
+export { Panel, PanelBody, PanelHeader } from "./components/panel";
+export { Rail } from "./components/rail";
 export { StatusBar } from "./components/status-bar";
 export { ThemeSwitcher } from "./components/theme-switcher";
 export { ViewPreferencesMenu } from "./components/view-preferences-menu";
@@ -17,19 +17,18 @@ export { ObjectHubLayout } from "./layouts/object-hub.layout";
 export { OpsConsoleLayout } from "./layouts/ops-console.layout";
 export { RadarLayout } from "./layouts/radar.layout";
 export { StudioLayout } from "./layouts/studio.layout";
-
-// Page contracts — generated from docs/contracts/pages/*.contract.json
-export {
-	PAGE_CONTRACTS,
-	SHELL_SLOT_MAP,
-	PAGE_PATTERNS,
-	SHELL_FAMILIES,
-	PROTOTYPE_SOURCES,
-} from "./page-contracts.generated";
+export type { OverlayContract, OverlayKind } from "./overlay-contracts";
 export type {
 	PageContract,
 	PagePattern,
-	ShellFamily,
 	PrototypeSource,
+	ShellFamily,
 } from "./page-contracts.generated";
-export type { OverlayContract, OverlayKind } from "./overlay-contracts";
+// Page contracts — generated from docs/contracts/pages/*.contract.json
+export {
+	PAGE_CONTRACTS,
+	PAGE_PATTERNS,
+	PROTOTYPE_SOURCES,
+	SHELL_FAMILIES,
+	SHELL_SLOT_MAP,
+} from "./page-contracts.generated";

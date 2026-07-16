@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
+import type { mockDecisionBanner, mockHomePulse } from "../fixtures/home";
 import { homeHandlers } from "./home";
-import { mockHomePulse, mockDecisionBanner } from "../fixtures/home";
 
 beforeEach(() => {
 	server.use(...homeHandlers);

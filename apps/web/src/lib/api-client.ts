@@ -47,20 +47,13 @@ class ApiError extends Error {
 
 function serializeQueryValue(value: unknown): string | undefined {
 	if (value == null) return undefined;
-	if (
-		typeof value === "string" ||
-		typeof value === "number" ||
-		typeof value === "boolean"
-	) {
+	if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
 		return String(value);
 	}
 	return JSON.stringify(value);
 }
 
-function withQueryParams<TParams extends object>(
-	path: string,
-	params?: TParams,
-): string {
+function withQueryParams<TParams extends object>(path: string, params?: TParams): string {
 	if (!params) return path;
 
 	const searchParams = new URLSearchParams();

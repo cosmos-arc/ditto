@@ -1,7 +1,7 @@
-import { useAgentFindings } from "../hooks";
-import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useAgentFindings } from "../hooks";
 
 const ICON_COLOR: Record<string, string> = {
 	insight: "text-(--color-system-healthy-fg)",
@@ -14,11 +14,7 @@ const ICON_COLOR: Record<string, string> = {
  * Matches prototype .secondary-panel with .research-item rows.
  */
 export function ResearchProgressSection() {
-	const {
-		data: findingsData,
-		isLoading,
-		refetch,
-	} = useAgentFindings();
+	const { data: findingsData, isLoading, refetch } = useAgentFindings();
 
 	return (
 		<Panel className="min-h-0 overflow-hidden" data-info-level="l2" data-info-unit="research-progress">
@@ -44,13 +40,24 @@ export function ResearchProgressSection() {
 				>
 					{findingsData && (
 						<div className="flex flex-col">
-							{findingsData.findings.map((finding, i) => (
+							{findingsData.findings.map((finding) => (
 								<div
-									key={`${finding.source}-${i}`}
+									key={`${finding.source}-${finding.text}`}
 									className="flex gap-2 rounded-[4px] p-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
-									<span className={`mt-0.5 shrink-0 ${ICON_COLOR[finding.icon] ?? "text-(--color-foreground-tertiary)"}`}>
-										<svg width={14} height={14} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5}>
+									<span
+										className={`mt-0.5 shrink-0 ${ICON_COLOR[finding.icon] ?? "text-(--color-foreground-tertiary)"}`}
+									>
+										<svg
+											width={14}
+											height={14}
+											viewBox="0 0 20 20"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth={1.5}
+											aria-hidden="true"
+											focusable="false"
+										>
 											{finding.icon === "warning" ? (
 												<path d="M10 3L3 17h14L10 3z" />
 											) : finding.icon === "insight" ? (
@@ -61,9 +68,7 @@ export function ResearchProgressSection() {
 										</svg>
 									</span>
 									<div className="min-w-0 flex-1">
-										<p className="text-(--color-foreground)">
-											{finding.summary ?? finding.text}
-										</p>
+										<p className="text-(--color-foreground)">{finding.summary ?? finding.text}</p>
 										<span className="text-xs tabular-nums text-(--color-foreground-tertiary)">
 											{finding.time ?? finding.source}
 										</span>

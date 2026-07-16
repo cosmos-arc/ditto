@@ -1,12 +1,12 @@
 import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
 import { AnalyticalLayout } from "@/features/shell";
-import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
 import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
-import { ResearchPulseStrip } from "./research-pulse-strip";
+import { AnalysisBand } from "./analysis-band";
+import { ExperimentQueue } from "./experiment-queue";
 import { FactorTable } from "./factor-table";
 import { RecentRuns } from "./recent-runs";
-import { ExperimentQueue } from "./experiment-queue";
-import { AnalysisBand } from "./analysis-band";
+import { ResearchPulseStrip } from "./research-pulse-strip";
 
 export function ResearchPage() {
 	if (!shouldUsePrototypeMocks()) {
@@ -15,9 +15,17 @@ export function ResearchPage() {
 
 	return (
 		<AnalyticalLayout
-			strip={<div data-info-level="l1" data-info-unit="research-pulse-strip"><ResearchPulseStrip /></div>}
+			strip={
+				<div data-info-level="l1" data-info-unit="research-pulse-strip">
+					<ResearchPulseStrip />
+				</div>
+			}
 			main={
-				<div data-info-level="l1" data-info-unit="factor-table" className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+				<div
+					data-info-level="l1"
+					data-info-unit="factor-table"
+					className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)"
+				>
 					<FactorTable />
 				</div>
 			}
@@ -27,7 +35,10 @@ export function ResearchPage() {
 						<PanelHeader
 							title="最近运行"
 							actions={
-								<button type="button" className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5">
+								<button
+									type="button"
+									className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5"
+								>
 									查看全部 →
 								</button>
 							}
@@ -42,7 +53,10 @@ export function ResearchPage() {
 						<PanelHeader
 							title="实验队列"
 							actions={
-								<button type="button" className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5">
+								<button
+									type="button"
+									className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5"
+								>
 									查看全部 →
 								</button>
 							}

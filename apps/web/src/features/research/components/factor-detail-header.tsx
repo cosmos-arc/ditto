@@ -1,7 +1,7 @@
-import { useFactorDetail } from "../hooks";
-import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useFactorDetail } from "../hooks";
 
 const HEALTH_VARIANT: Record<string, "healthy" | "warning" | "error" | "default"> = {
 	completed: "healthy",
@@ -29,9 +29,7 @@ export function FactorDetailHeader({ id }: FactorDetailHeaderProps) {
 				<div className="flex items-center gap-4 px-4 py-3">
 					<div className="flex flex-col">
 						<span className="text-lg font-bold">{data.factor.name}</span>
-						<span className="text-xs text-(--color-foreground-tertiary)">
-							{data.factor.family}
-						</span>
+						<span className="text-xs text-(--color-foreground-tertiary)">{data.factor.family}</span>
 					</div>
 					<StatusBadge
 						variant={HEALTH_VARIANT[data.factor.healthStatus] ?? "default"}

@@ -1,8 +1,8 @@
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useScreenerResults } from "../hooks";
 import { useScreenerStore } from "../stores/screener.store";
-import { ContextSection } from "@/components/domain/context-section";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function ScreenerResults() {
 	const { data, isLoading, refetch } = useScreenerResults();
@@ -29,11 +29,7 @@ export function ScreenerResults() {
 								<div className="flex items-center gap-4 text-(--color-foreground-tertiary)">
 									<span className="tabular-nums">{item.price.toFixed(2)}</span>
 									<span
-										className={
-											item.changePercent >= 0
-												? "text-(--color-system-healthy)"
-												: "text-(--color-system-down)"
-										}
+										className={item.changePercent >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}
 									>
 										{item.changePercent >= 0 ? "+" : ""}
 										{item.changePercent.toFixed(2)}%

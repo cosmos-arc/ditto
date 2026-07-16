@@ -1,6 +1,6 @@
-import { useAgentFindings } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useAgentFindings } from "../hooks";
 
 const FINDING_ICON_CLASS: Record<string, string> = {
 	insight: "text-(--color-brand-500)",
@@ -33,22 +33,20 @@ export function AgentFindingsSection() {
 				>
 					{data && (
 						<div className="flex flex-col gap-1">
-							{data.findings.map((finding, i) => (
+							{data.findings.map((finding) => (
 								<div
-									key={`${finding.source}-${i}`}
+									key={`${finding.source}-${finding.text}`}
 									className="rounded-[4px] p-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center gap-1.5">
-										<span className={`shrink-0 text-xs ${FINDING_ICON_CLASS[finding.icon] ?? "text-(--color-foreground-tertiary)"}`}>
+										<span
+											className={`shrink-0 text-xs ${FINDING_ICON_CLASS[finding.icon] ?? "text-(--color-foreground-tertiary)"}`}
+										>
 											{finding.icon === "insight" ? "💡" : finding.icon === "warning" ? "⚠" : "ℹ"}
 										</span>
-										<span className="text-xs text-(--color-foreground)">
-											{finding.summary ?? finding.source}
-										</span>
+										<span className="text-xs text-(--color-foreground)">{finding.summary ?? finding.source}</span>
 									</div>
-									<p className="mt-0.5 text-xs text-(--color-foreground-tertiary)">
-										{finding.text}
-									</p>
+									<p className="mt-0.5 text-xs text-(--color-foreground-tertiary)">{finding.text}</p>
 								</div>
 							))}
 							<div className="pt-1">

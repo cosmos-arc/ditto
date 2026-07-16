@@ -1,10 +1,10 @@
 import { CommandCenterLayout, StatusBar } from "@/features/shell";
-import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
-import { AiPulseStrip } from "./ai-pulse-strip";
-import { AiMainContent } from "./ai-main-content";
-import { AiContextSidebar } from "./ai-context-sidebar";
+import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 import { AiCollapsedSidebar } from "./ai-collapsed-sidebar";
+import { AiContextSidebar } from "./ai-context-sidebar";
+import { AiMainContent } from "./ai-main-content";
+import { AiPulseStrip } from "./ai-pulse-strip";
 
 export function AiPage() {
 	const { sidebarCollapsed, toggleSidebarCollapsed } = useUIPreferences();

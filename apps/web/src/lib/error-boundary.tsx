@@ -10,26 +10,15 @@ interface ErrorStateProps {
 	readonly className?: string;
 }
 
-function ErrorState({
-	title = "加载失败",
-	description,
-	onRetry,
-	className,
-}: ErrorStateProps) {
+function ErrorState({ title = "加载失败", description, onRetry, className }: ErrorStateProps) {
 	return (
 		<div
 			data-slot="error-state"
-			className={cn(
-				"flex flex-col items-center justify-center gap-3 py-8 text-center",
-				className,
-			)}
+			className={cn("flex flex-col items-center justify-center gap-3 py-8 text-center", className)}
 		>
 			<span
 				data-testid="error-state-icon"
-				className={cn(
-					"flex items-center justify-center w-10 h-10 rounded-full",
-					"bg-(--color-led-error)/10",
-				)}
+				className={cn("flex items-center justify-center w-10 h-10 rounded-full", "bg-(--color-led-error)/10")}
 			>
 				<svg
 					width="20"
@@ -37,6 +26,8 @@ function ErrorState({
 					viewBox="0 0 20 20"
 					fill="none"
 					className="text-(--color-led-error)"
+					aria-hidden="true"
+					focusable="false"
 				>
 					<path
 						d="M10 6v5m0 3v.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z"
@@ -49,14 +40,9 @@ function ErrorState({
 			</span>
 
 			<div className="flex flex-col gap-1">
-				<span className="text-[--text-md] font-medium text-(--color-foreground)">
-					{title}
-				</span>
+				<span className="text-[--text-md] font-medium text-(--color-foreground)">{title}</span>
 				{description && (
-					<span
-						data-testid="error-state-description"
-						className="text-[--text-sm] text-(--color-foreground-tertiary)"
-					>
+					<span data-testid="error-state-description" className="text-[--text-sm] text-(--color-foreground-tertiary)">
 						{description}
 					</span>
 				)}
@@ -88,19 +74,11 @@ interface DittoErrorBoundaryProps {
 	readonly className?: string;
 }
 
-function DittoErrorBoundary({
-	children,
-	fallbackProps,
-	className,
-}: DittoErrorBoundaryProps) {
+function DittoErrorBoundary({ children, fallbackProps, className }: DittoErrorBoundaryProps) {
 	return (
 		<ReactErrorBoundary
 			fallbackRender={({ resetErrorBoundary }) => (
-				<ErrorState
-					{...fallbackProps}
-					onRetry={fallbackProps?.onRetry ?? resetErrorBoundary}
-					className={className}
-				/>
+				<ErrorState {...fallbackProps} onRetry={fallbackProps?.onRetry ?? resetErrorBoundary} className={className} />
 			)}
 		>
 			{children}
@@ -108,4 +86,4 @@ function DittoErrorBoundary({
 	);
 }
 
-export { ErrorState, DittoErrorBoundary };
+export { DittoErrorBoundary, ErrorState };

@@ -29,18 +29,12 @@ const statusDotVariants = cva("inline-block shrink-0 rounded-full", {
 	},
 });
 
-interface StatusDotProps
-	extends VariantProps<typeof statusDotVariants> {
+interface StatusDotProps extends VariantProps<typeof statusDotVariants> {
 	readonly pulse?: boolean;
 	readonly className?: string;
 }
 
-function StatusDot({
-	size = "md",
-	variant = "healthy",
-	pulse = false,
-	className,
-}: StatusDotProps) {
+function StatusDot({ size = "md", variant = "healthy", pulse = false, className }: StatusDotProps) {
 	const isLivePulse = variant === "live" && pulse;
 
 	return (

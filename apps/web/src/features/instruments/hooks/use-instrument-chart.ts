@@ -10,10 +10,7 @@ type ChartParams = {
 export function useInstrumentChart(id: string, params?: ChartParams) {
 	return useQuery({
 		queryKey: ["instruments", id, "chart", params],
-		queryFn: () =>
-			apiClient.get<GetInstrumentChartResponse>(
-				withQueryParams(`/instruments/${id}/chart`, params),
-			),
+		queryFn: () => apiClient.get<GetInstrumentChartResponse>(withQueryParams(`/instruments/${id}/chart`, params)),
 		enabled: id.length > 0,
 	});
 }

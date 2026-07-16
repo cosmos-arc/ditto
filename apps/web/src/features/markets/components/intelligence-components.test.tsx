@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { intelligenceHandlers } from "@/mocks/handlers/intelligence";
+import { server } from "@/mocks/server";
 
 import { IntelligenceFlowView } from "./intelligence-flow-view";
-import { IntelligenceMacroView } from "./intelligence-macro-view";
 import { IntelligenceFundamentalsView } from "./intelligence-fundamentals-view";
+import { IntelligenceMacroView } from "./intelligence-macro-view";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({

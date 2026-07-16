@@ -12,10 +12,7 @@ describe("ThemeSwitcher", () => {
 	it("renders the account-scoped view preferences trigger", () => {
 		render(<ThemeSwitcher />);
 
-		expect(screen.getByRole("button", { name: "账户与视图偏好" })).toHaveAttribute(
-			"data-shell-utility",
-			"account",
-		);
+		expect(screen.getByRole("button", { name: "账户与视图偏好" })).toHaveAttribute("data-shell-utility", "account");
 	});
 
 	it("keeps density and theme choices inside the preferences menu", async () => {

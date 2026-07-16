@@ -45,14 +45,7 @@ export function DonutGauge({
 			className={cn("overflow-visible", className)}
 		>
 			{/* Track */}
-			<circle
-				cx={center}
-				cy={center}
-				r={radius}
-				fill="none"
-				stroke="var(--color-border)"
-				strokeWidth={strokeWidth}
-			/>
+			<circle cx={center} cy={center} r={radius} fill="none" stroke="var(--color-border)" strokeWidth={strokeWidth} />
 			{/* Value */}
 			<circle
 				cx={center}

@@ -1,22 +1,15 @@
 "use client";
 
 import { Dialog as DialogPrimitive } from "radix-ui";
-import * as React from "react";
+import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
 	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
-function DialogTrigger({
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-	return (
-		<DialogPrimitive.Trigger
-			data-slot="dialog-trigger"
-			{...props}
-		/>
-	);
+function DialogTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+	return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
 function CloseIcon() {
@@ -52,16 +45,11 @@ function DialogClose({
 	);
 }
 
-function DialogPortal({
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
 	return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function DialogOverlay({
-	className,
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
 	return (
 		<DialogPrimitive.Overlay
 			data-slot="dialog-overlay"
@@ -76,11 +64,7 @@ function DialogOverlay({
 	);
 }
 
-function DialogContent({
-	className,
-	children,
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+function DialogContent({ className, children, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
 	return (
 		<DialogPortal>
 			<DialogOverlay />
@@ -103,65 +87,41 @@ function DialogContent({
 	);
 }
 
-function DialogHeader({
-	className,
-	...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
 	return (
 		<div
 			data-slot="dialog-header"
-			className={cn(
-				"flex flex-col space-y-1.5 text-center sm:text-left",
-				className,
-			)}
+			className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)}
 			{...props}
 		/>
 	);
 }
 
-function DialogFooter({
-	className,
-	...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
 	return (
 		<div
 			data-slot="dialog-footer"
-			className={cn(
-				"flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-				className,
-			)}
+			className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
 			{...props}
 		/>
 	);
 }
 
-function DialogTitle({
-	className,
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
 	return (
 		<DialogPrimitive.Title
 			data-slot="dialog-title"
-			className={cn(
-				"text-lg font-semibold leading-none text-(--color-foreground)",
-				className,
-			)}
+			className={cn("text-lg font-semibold leading-none text-(--color-foreground)", className)}
 			{...props}
 		/>
 	);
 }
 
-function DialogDescription({
-	className,
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
 	return (
 		<DialogPrimitive.Description
 			data-slot="dialog-description"
-			className={cn(
-				"text-sm text-(--color-foreground-secondary)",
-				className,
-			)}
+			className={cn("text-sm text-(--color-foreground-secondary)", className)}
 			{...props}
 		/>
 	);

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 type ConfidenceColor = "brand" | "success" | "warning" | "danger" | "neutral";
 
 interface Segment {
+	readonly id?: string;
 	readonly value: number;
 	readonly color: ConfidenceColor;
 	readonly label?: string;
@@ -52,6 +53,12 @@ function ConfidenceBar({
 }: ConfidenceBarProps) {
 	const isSegmented = segments !== undefined && segments.length > 0;
 	const percentage = Math.min((value / max) * 100, 100);
+	let cumulativeValue = 0;
+	const renderedSegments = segments?.map((segment) => {
+		const startValue = cumulativeValue;
+		cumulativeValue += segment.value;
+		return { segment, startValue, endValue: cumulativeValue };
+	});
 
 	return (
 		<div
@@ -65,27 +72,18 @@ function ConfidenceBar({
 			<div
 				data-slot="confidence-track"
 				data-testid="confidence-track"
-				className={cn(
-					"w-full overflow-hidden rounded-full bg-(--color-border-subtle)",
-					SIZE_TRACK_CLASS[size],
-				)}
+				className={cn("w-full overflow-hidden rounded-full bg-(--color-border-subtle)", SIZE_TRACK_CLASS[size])}
 			>
 				{isSegmented ? (
 					/* Segmented fills */
 					<div className="flex h-full">
-						{segments.map((seg, i) => {
-							const segPercent = Math.min(
-								(seg.value / max) * 100,
-								100,
-							);
+						{renderedSegments?.map(({ segment, startValue, endValue }) => {
+							const segPercent = Math.min((segment.value / max) * 100, 100);
 							return (
 								<div
-									key={`seg-${i}`}
+									key={segment.id ?? `${segment.label ?? segment.color}-${startValue}-${endValue}`}
 									data-testid="confidence-segment"
-									className={cn(
-										"h-full rounded-full transition-[width] duration-200",
-										COLOR_CLASSES[seg.color],
-									)}
+									className={cn("h-full rounded-full transition-[width] duration-200", COLOR_CLASSES[segment.color])}
 									style={{ width: `${segPercent}%` }}
 								/>
 							);
@@ -95,10 +93,7 @@ function ConfidenceBar({
 					/* Single fill */
 					<div
 						data-testid="confidence-fill"
-						className={cn(
-							"h-full rounded-full transition-[width] duration-200",
-							COLOR_CLASSES[color],
-						)}
+						className={cn("h-full rounded-full transition-[width] duration-200", COLOR_CLASSES[color])}
 						style={{ width: `${percentage}%` }}
 					/>
 				)}
@@ -114,5 +109,5 @@ function ConfidenceBar({
 	);
 }
 
-export { ConfidenceBar };
 export type { ConfidenceBarProps, ConfidenceColor, Segment };
+export { ConfidenceBar };

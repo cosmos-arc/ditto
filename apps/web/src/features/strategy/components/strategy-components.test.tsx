@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { strategyHandlers } from "@/mocks/handlers/strategy";
-
-import { StrategyHeader } from "./strategy-header";
+import { server } from "@/mocks/server";
 import { FactorBrowser } from "./factor-browser";
 import { StrategyEditor } from "./strategy-editor";
+import { StrategyHeader } from "./strategy-header";
 import { StrategyInspector } from "./strategy-inspector";
 import { StrategyListPage } from "./strategy-list-page";
 

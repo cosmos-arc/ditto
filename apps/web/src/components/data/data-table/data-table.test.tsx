@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { DataTable, type ColumnDef } from "./data-table";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { type ColumnDef, DataTable } from "./data-table";
 
 /* ── Test data ── */
 
@@ -185,9 +185,7 @@ describe("DataTable", () => {
 	/* ── Sorting ── */
 
 	it("sets data-sort=asc after first click on sortable column", () => {
-		const columns: readonly ColumnDef<TestRow>[] = [
-			{ id: "name", header: "名称", accessor: "name", sortable: true },
-		];
+		const columns: readonly ColumnDef<TestRow>[] = [{ id: "name", header: "名称", accessor: "name", sortable: true }];
 		render(<DataTable<TestRow> columns={columns} data={DATA} />);
 		const th = screen.getByText("名称").closest("th")!;
 		fireEvent.click(th);
@@ -195,9 +193,7 @@ describe("DataTable", () => {
 	});
 
 	it("toggles sort direction on repeated clicks (asc → desc → none)", () => {
-		const columns: readonly ColumnDef<TestRow>[] = [
-			{ id: "value", header: "值", accessor: "value", sortable: true },
-		];
+		const columns: readonly ColumnDef<TestRow>[] = [{ id: "value", header: "值", accessor: "value", sortable: true }];
 		render(<DataTable<TestRow> columns={columns} data={DATA} />);
 		const th = screen.getByText("值").closest("th")!;
 
@@ -239,9 +235,7 @@ describe("DataTable", () => {
 	});
 
 	it("adds cursor-pointer to sortable column headers", () => {
-		const columns: readonly ColumnDef<TestRow>[] = [
-			{ id: "name", header: "名称", accessor: "name", sortable: true },
-		];
+		const columns: readonly ColumnDef<TestRow>[] = [{ id: "name", header: "名称", accessor: "name", sortable: true }];
 		render(<DataTable<TestRow> columns={columns} data={DATA} />);
 		const th = screen.getByText("名称").closest("th");
 		expect(th?.className).toContain("cursor-pointer");

@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { instrumentsHandlers } from "@/mocks/handlers/instruments";
-
+import { server } from "@/mocks/server";
+import { InstrumentChartView } from "./instrument-chart-view";
 import { InstrumentMetaStrip } from "./instrument-meta-strip";
 import { InstrumentOverview } from "./instrument-overview";
-import { InstrumentChartView } from "./instrument-chart-view";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({

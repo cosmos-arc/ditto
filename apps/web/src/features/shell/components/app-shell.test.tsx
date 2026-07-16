@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "./app-shell";
 
 // Mock TanStack Router hooks used by child components (Rail, ShellHeader)
@@ -7,22 +7,12 @@ const mockUseLocation = vi.fn().mockReturnValue({ pathname: "/" });
 const mockUseMatches = vi.fn().mockReturnValue([]);
 
 vi.mock("@tanstack/react-router", async () => {
-	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
-		"@tanstack/react-router",
-	);
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
 	return {
 		...actual,
 		useLocation: () => mockUseLocation(),
 		useMatches: () => mockUseMatches(),
-		Link: ({
-			children,
-			to,
-			...props
-		}: {
-			children: React.ReactNode;
-			to: string;
-			[key: string]: unknown;
-		}) => (
+		Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [key: string]: unknown }) => (
 			<a href={to} data-testid={`link-${to}`} {...props}>
 				{children}
 			</a>

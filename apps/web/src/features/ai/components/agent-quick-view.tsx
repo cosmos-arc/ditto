@@ -1,8 +1,8 @@
-import { useAgentQuickView } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useAgentQuickView } from "../hooks";
 
 const STATUS_VARIANT_MAP: Record<string, "live" | "warning" | "default"> = {
 	running: "live",
@@ -17,11 +17,7 @@ const STATUS_LABEL_MAP: Record<string, string> = {
 };
 
 export function AgentQuickView() {
-	const {
-		data,
-		isLoading,
-		refetch,
-	} = useAgentQuickView();
+	const { data, isLoading, refetch } = useAgentQuickView();
 
 	return (
 		<div className="grid grid-cols-2 gap-4">
@@ -41,9 +37,7 @@ export function AgentQuickView() {
 									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center justify-between">
-										<span className="text-(--color-foreground)">
-											{plan.name}
-										</span>
+										<span className="text-(--color-foreground)">{plan.name}</span>
 										<StatusBadge
 											variant={STATUS_VARIANT_MAP[plan.status] ?? "default"}
 											label={STATUS_LABEL_MAP[plan.status] ?? plan.status}
@@ -51,9 +45,7 @@ export function AgentQuickView() {
 										/>
 									</div>
 									{plan.progress > 0 && (
-										<div className="mt-1 text-xs text-(--color-foreground-tertiary)">
-											{plan.progress}%
-										</div>
+										<div className="mt-1 text-xs text-(--color-foreground-tertiary)">{plan.progress}%</div>
 									)}
 								</div>
 							))}
@@ -62,10 +54,7 @@ export function AgentQuickView() {
 				</DittoErrorBoundary>
 			</ContextSection>
 
-			<ContextSection
-				title="近期发现"
-				count={data?.recentFindings.length}
-			>
+			<ContextSection title="近期发现" count={data?.recentFindings.length}>
 				{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 				{data && (
 					<div className="space-y-1">
@@ -74,9 +63,7 @@ export function AgentQuickView() {
 								key={finding.id}
 								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
-								<p className="text-(--color-foreground)">
-									{finding.text}
-								</p>
+								<p className="text-(--color-foreground)">{finding.text}</p>
 								<div className="mt-1 text-xs text-(--color-foreground-tertiary)">
 									置信度 {Math.round(finding.confidence * 100)}%
 								</div>

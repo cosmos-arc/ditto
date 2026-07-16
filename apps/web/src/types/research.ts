@@ -1,9 +1,4 @@
-import type {
-	ApprovalStatus,
-	PaginatedRequest,
-	PaginatedResponse,
-	RunStatus,
-} from "./common";
+import type { ApprovalStatus, PaginatedRequest, PaginatedResponse, RunStatus } from "./common";
 
 // === Request Types ===
 
@@ -309,7 +304,7 @@ export type ValidateStrategyResponse = {
 export type DryRunResult = {
 	readonly previewResults: {
 		readonly navSeries: readonly NavPoint[];
-	readonly statistics: Partial<BacktestStatistics>;
+		readonly statistics: Partial<BacktestStatistics>;
 	};
 	readonly warnings: readonly string[];
 };
@@ -337,7 +332,7 @@ export type FactorLibraryItem = {
 	readonly source: string;
 	readonly preprocessorOptions: readonly {
 		readonly name: string;
-	 readonly params: Readonly<Record<string, unknown>>;
+		readonly params: Readonly<Record<string, unknown>>;
 	}[];
 };
 

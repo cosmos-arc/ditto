@@ -80,7 +80,7 @@ function FactorBreadthPanel() {
 					const barHeight = (val / maxVal) * 40;
 					return (
 						<rect
-							key={`bar-${i}-${val}`}
+							key={`bar-${val}`}
 							data-bar=""
 							x={i * 20}
 							y={45 - barHeight}
@@ -148,9 +148,10 @@ function CorrelationPanel() {
 								const toneClass = correlationCellClass(value, rowIdx, colIdx);
 								return (
 									<div
-										key={`hm-${rowIdx}-${colIdx}`}
+										key={`hm-${rowLabel}-${colLabel}`}
 										data-heatmap-cell=""
 										data-correlation-tone={toneClass.split(" ")[0]}
+										role="img"
 										className={[
 											"flex h-7 w-7 items-center justify-center rounded-[3px] text-xs tabular-nums transition-transform hover:scale-110",
 											toneClass,

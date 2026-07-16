@@ -1,5 +1,5 @@
-import { themeQuartz } from "ag-grid-community";
 import type { Theme, ThemeDefaultParams } from "ag-grid-community";
+import { themeQuartz } from "ag-grid-community";
 
 /** Ditto dark theme — maps Design Token CSS variables to AG Grid theme params. */
 export const dittoTheme: Theme<ThemeDefaultParams> = themeQuartz.withParams({

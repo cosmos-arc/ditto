@@ -1,7 +1,7 @@
-import { useStrategy } from "../hooks/use-strategy";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ContextSection } from "@/components/domain/context-section";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useStrategy } from "../hooks/use-strategy";
 
 interface StrategyFactorsViewProps {
 	readonly id: string;

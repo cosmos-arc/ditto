@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
 import { DecisionBanner } from "./decision-banner";
 
 const BASE_PROPS = {
@@ -84,12 +84,7 @@ describe("DecisionBanner", () => {
 	// ── Minimal props ──
 
 	it("renders without optional props", () => {
-		render(
-			<DecisionBanner
-				primary={{ label: "PnL", value: 0 }}
-				judgment={{ text: "Test judgment", metrics: [] }}
-			/>,
-		);
+		render(<DecisionBanner primary={{ label: "PnL", value: 0 }} judgment={{ text: "Test judgment", metrics: [] }} />);
 		expect(screen.getByText("PnL")).toBeInTheDocument();
 		expect(screen.getByText("Test judgment")).toBeInTheDocument();
 	});
@@ -99,12 +94,7 @@ describe("DecisionBanner", () => {
 	it("calls action onClick when clicked", async () => {
 		const user = userEvent.setup();
 		const onClick = vi.fn();
-		render(
-			<DecisionBanner
-				{...BASE_PROPS}
-				actions={[{ label: "Action", variant: "primary", onClick }]}
-			/>,
-		);
+		render(<DecisionBanner {...BASE_PROPS} actions={[{ label: "Action", variant: "primary", onClick }]} />);
 		await user.click(screen.getByText("Action"));
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
@@ -112,9 +102,7 @@ describe("DecisionBanner", () => {
 	// ── className merging ──
 
 	it("merges custom className", () => {
-		render(
-			<DecisionBanner {...BASE_PROPS} className="extra-class" />,
-		);
+		render(<DecisionBanner {...BASE_PROPS} className="extra-class" />);
 		const banner = document.querySelector("[data-slot='decision-banner']") as HTMLElement;
 		expect(banner.classList.contains("extra-class")).toBe(true);
 	});

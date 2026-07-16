@@ -111,5 +111,5 @@ function NumberTicker({
 	);
 }
 
-export { NumberTicker };
 export type { NumberTickerProps };
+export { NumberTicker };

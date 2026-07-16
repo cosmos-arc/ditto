@@ -1,9 +1,5 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
-import {
-	mockIntelligenceFlow,
-	mockIntelligenceMacro,
-	mockIntelligenceFundamentals,
-} from "../fixtures/intelligence";
+import { HttpResponse, http, type RequestHandler } from "msw";
+import { mockIntelligenceFlow, mockIntelligenceFundamentals, mockIntelligenceMacro } from "../fixtures/intelligence";
 
 export const intelligenceHandlers: RequestHandler[] = [
 	http.get("/api/markets/intelligence/flow", () => {

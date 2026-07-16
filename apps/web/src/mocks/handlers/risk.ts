@@ -1,10 +1,5 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
-import {
-	mockRiskBreaches,
-	mockRiskDrawdown,
-	mockRiskExposure,
-	mockRiskVar,
-} from "../fixtures/risk";
+import { HttpResponse, http, type RequestHandler } from "msw";
+import { mockRiskBreaches, mockRiskDrawdown, mockRiskExposure, mockRiskVar } from "../fixtures/risk";
 
 export const riskHandlers: RequestHandler[] = [
 	http.get("/api/trading/risk/var", () => {

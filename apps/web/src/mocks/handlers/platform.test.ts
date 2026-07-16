@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
+import type { mockPlatformHealth, mockProviders } from "../fixtures/platform";
 import { platformHandlers } from "./platform";
-import { mockPlatformHealth, mockProviders } from "../fixtures/platform";
 
 beforeEach(() => {
 	server.use(...platformHandlers);
@@ -58,9 +58,7 @@ describe("platformHandlers", () => {
 
 		expect(res.status).toBe(200);
 		expect(data.items.length).toBeGreaterThan(0);
-		const criticalAlert = data.items.find(
-			(a: { severity: string }) => a.severity === "critical",
-		);
+		const criticalAlert = data.items.find((a: { severity: string }) => a.severity === "critical");
 		expect(criticalAlert).toBeDefined();
 	});
 

@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
-import { marketsHandlers } from "@/mocks/handlers/markets";
+import { beforeEach, describe, expect, it } from "vitest";
 import { intelligenceHandlers } from "@/mocks/handlers/intelligence";
-import { MarketsPage } from "./markets-page";
-import { IntelligencePage } from "./intelligence-page";
+import { marketsHandlers } from "@/mocks/handlers/markets";
+import { server } from "@/mocks/server";
 import { ASharesPage } from "./a-shares-page";
 import { CalendarPage } from "./calendar-page";
+import { IntelligencePage } from "./intelligence-page";
+import { MarketsPage } from "./markets-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -39,9 +39,7 @@ describe("MarketsPage info-level annotations", () => {
 		await screen.findByText("上证A股");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("scope-strip");
 		expect(l1UnitNames).toContain("market-cards");
@@ -56,9 +54,7 @@ describe("MarketsPage info-level annotations", () => {
 		await screen.findByText("上证A股");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("macro-drivers");
 		expect(l2Units).toHaveLength(1);
@@ -75,9 +71,7 @@ describe("MarketsPage info-level annotations", () => {
 		await screen.findByText(/\+23\.1亿/);
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("capital-rotation");
 		expect(l2Units).toHaveLength(1);
@@ -93,9 +87,7 @@ describe("MarketsPage info-level annotations", () => {
 		await screen.findByTestId("cross-market-matrix");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("cross-market-matrix");
 		expect(l2Units).toHaveLength(1);
@@ -107,9 +99,7 @@ describe("MarketsPage info-level annotations", () => {
 		await screen.findByText("科技板块资金净流入 +12.3 亿");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
-		const l3UnitNames = Array.from(l3Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l3UnitNames.filter((n) => n === "market-event-item")).toHaveLength(4);
 		expect(l3Units).toHaveLength(4);
@@ -129,9 +119,7 @@ describe("IntelligencePage info-level annotations", () => {
 		await screen.findByText("板块排名");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("intelligence-flow");
 		expect(l1UnitNames).toContain("ai-interpretation");
@@ -148,9 +136,7 @@ describe("IntelligencePage info-level annotations", () => {
 		await screen.findByText("PMI 制造业");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("intelligence-macro");
 		expect(l1UnitNames).toContain("ai-interpretation");
@@ -166,9 +152,7 @@ describe("IntelligencePage info-level annotations", () => {
 		await screen.findByText("贵州茅台");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("intelligence-fundamentals");
 		expect(l1UnitNames).toContain("ai-interpretation");
@@ -180,9 +164,7 @@ describe("IntelligencePage info-level annotations", () => {
 		await screen.findByText("板块排名");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("analysis-panel");
 		expect(l2Units).toHaveLength(1);
@@ -198,9 +180,7 @@ describe("IntelligencePage info-level annotations", () => {
 		await screen.findByText("经济日历");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
-		const l3UnitNames = Array.from(l3Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l3UnitNames.filter((n) => n === "macro-calendar-item")).toHaveLength(4);
 	});
@@ -217,9 +197,7 @@ describe("ASharesPage info-level annotations", () => {
 		await screen.findByText("上证指数");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("a-shares-main");
 		expect(l1UnitNames).toContain("index-overview");
@@ -234,9 +212,7 @@ describe("ASharesPage info-level annotations", () => {
 		await screen.findByText("上证指数");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("overview-container");
 		expect(l2UnitNames).toContain("snapshot-body");
@@ -250,9 +226,7 @@ describe("ASharesPage info-level annotations", () => {
 		await screen.findByText("市场快照");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
-		const l3UnitNames = Array.from(l3Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l3UnitNames).toContain("snapshot-timestamp");
 		expect(l3Units).toHaveLength(1);
@@ -270,9 +244,7 @@ describe("CalendarPage info-level annotations", () => {
 		await screen.findByRole("heading", { name: "市场日历" });
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("calendar-toolbar");
 		expect(l1UnitNames).toContain("calendar-content");
@@ -286,9 +258,7 @@ describe("CalendarPage info-level annotations", () => {
 		await screen.findByRole("heading", { name: "市场日历" });
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("calendar-main");
 		expect(l2Units).toHaveLength(1);

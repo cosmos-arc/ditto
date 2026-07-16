@@ -1,7 +1,7 @@
-import { useBacktestResult } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useBacktestResult } from "../hooks";
 
 interface BacktestReturnsViewProps {
 	readonly jobId: string;
@@ -33,22 +33,10 @@ export function BacktestReturnsView({ jobId }: BacktestReturnsViewProps) {
 							>
 								<span className="font-medium">{mr.month}</span>
 								<div className="flex items-center gap-4">
-									<span
-										className={
-											mr.return >= 0
-												? "text-(--color-led-success)"
-												: "text-(--color-led-error)"
-										}
-									>
+									<span className={mr.return >= 0 ? "text-(--color-led-success)" : "text-(--color-led-error)"}>
 										{mr.return.toFixed(1)}%
 									</span>
-									<span
-										className={
-											mr.benchmarkReturn >= 0
-												? "text-(--color-led-success)"
-												: "text-(--color-led-error)"
-										}
-									>
+									<span className={mr.benchmarkReturn >= 0 ? "text-(--color-led-success)" : "text-(--color-led-error)"}>
 										{mr.benchmarkReturn.toFixed(1)}%
 									</span>
 								</div>

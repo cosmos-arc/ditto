@@ -1,7 +1,7 @@
-import { useStrategy } from "../hooks/use-strategy";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ContextSection } from "@/components/domain/context-section";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useStrategy } from "../hooks/use-strategy";
 
 interface StrategyOverviewProps {
 	readonly id: string;
@@ -31,9 +31,7 @@ function StrategyOverviewContent({ id }: StrategyOverviewProps) {
 								className="flex items-center justify-between p-(--density-panel-padding) hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 							>
 								<span>{node.name}</span>
-								<span className="text-(--color-foreground-tertiary) text-sm">
-									{node.type}
-								</span>
+								<span className="text-(--color-foreground-tertiary) text-sm">{node.type}</span>
 							</li>
 						))}
 					</ul>
@@ -49,9 +47,7 @@ function StrategyOverviewContent({ id }: StrategyOverviewProps) {
 								className="flex items-center justify-between p-(--density-panel-padding) hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 							>
 								<span>{factor}</span>
-								<span className="text-(--color-foreground-tertiary)">
-									{(weight * 100).toFixed(0)}%
-								</span>
+								<span className="text-(--color-foreground-tertiary)">{(weight * 100).toFixed(0)}%</span>
 							</li>
 						))}
 					</ul>
@@ -67,13 +63,7 @@ function StrategyOverviewContent({ id }: StrategyOverviewProps) {
 								className="flex items-center justify-between p-(--density-panel-padding) hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
 							>
 								<span>{rule.name}</span>
-								<span
-									className={
-										rule.enabled
-											? "text-(--color-led-success)"
-											: "text-(--color-foreground-tertiary)"
-									}
-								>
+								<span className={rule.enabled ? "text-(--color-led-success)" : "text-(--color-foreground-tertiary)"}>
 									{rule.enabled ? "启用" : "禁用"}
 								</span>
 							</li>

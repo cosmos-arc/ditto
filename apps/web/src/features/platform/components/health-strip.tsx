@@ -1,7 +1,9 @@
 import { Metric } from "@/components/data/metric";
-import { usePlatformHealth } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { usePlatformHealth } from "../hooks";
+
+const LOADING_METRIC_IDS = ["freshness", "completeness", "accuracy", "jobs"] as const;
 
 export function HealthStrip() {
 	const { data, isLoading, refetch } = usePlatformHealth();
@@ -9,8 +11,8 @@ export function HealthStrip() {
 	if (isLoading) {
 		return (
 			<div className="flex h-9 items-center gap-3 px-4 py-1.5">
-				{Array.from({ length: 4 }).map((_, i) => (
-					<LoadingSkeleton key={i} variant="metric" className="flex-1" />
+				{LOADING_METRIC_IDS.map((metricId) => (
+					<LoadingSkeleton key={metricId} variant="metric" className="flex-1" />
 				))}
 			</div>
 		);

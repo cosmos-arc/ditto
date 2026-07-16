@@ -30,5 +30,5 @@ function NumericCell({ value, className }: NumericCellProps) {
 	);
 }
 
-export { NumericCell };
 export type { NumericCellProps };
+export { NumericCell };

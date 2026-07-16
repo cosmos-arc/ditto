@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useUIPreferences } from "../hooks/use-ui-preferences";
 import type { Density, Theme } from "../hooks/use-ui-preferences";
+import { useUIPreferences } from "../hooks/use-ui-preferences";
 
 const densityOptions: readonly { readonly value: Density; readonly label: string }[] = [
 	{ value: "dense", label: "紧凑" },
@@ -41,9 +41,7 @@ export function ViewPreferencesMenu() {
 					className="absolute right-0 top-[calc(100%+var(--spacing-2))] z-20 min-w-44 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-overlay)] p-[var(--spacing-2)] shadow-(--shadow-dragging)"
 				>
 					<div className="space-y-1">
-						<p className="px-1 text-xs font-medium uppercase text-(--color-foreground-tertiary)">
-							密度
-						</p>
+						<p className="px-1 text-xs font-medium uppercase text-(--color-foreground-tertiary)">密度</p>
 						<div className="grid grid-cols-3 gap-1">
 							{densityOptions.map((option) => (
 								<button
@@ -65,9 +63,7 @@ export function ViewPreferencesMenu() {
 						</div>
 					</div>
 					<div className="mt-2 space-y-1 border-t border-(--color-border-subtle) pt-2">
-						<p className="px-1 text-xs font-medium uppercase text-(--color-foreground-tertiary)">
-							主题
-						</p>
+						<p className="px-1 text-xs font-medium uppercase text-(--color-foreground-tertiary)">主题</p>
 						<div className="grid grid-cols-2 gap-1">
 							{themeOptions.map((option) => (
 								<button

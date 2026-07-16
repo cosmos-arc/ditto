@@ -1,8 +1,8 @@
-import { usePendingActions } from "../hooks";
-import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { usePendingActions } from "../hooks";
 
 const PRIORITY_BAR_COLOR: Record<string, string> = {
 	critical: "bg-(--color-risk-high-fg)",
@@ -34,7 +34,12 @@ export function PriorityQueueSection() {
 	const { data, isLoading, refetch } = usePendingActions();
 
 	return (
-		<Panel data-testid="priority-queue" data-info-level="l1" data-info-unit="priority-queue" className="h-[192px] flex-none">
+		<Panel
+			data-testid="priority-queue"
+			data-info-level="l1"
+			data-info-unit="priority-queue"
+			className="h-[192px] flex-none"
+		>
 			<PanelHeader
 				title="今日优先事项"
 				subtitle="跨域关注项"
@@ -85,9 +90,7 @@ export function PriorityQueueSection() {
 													</span>
 												))}
 											</div>
-											<span className="text-xs text-(--color-foreground-secondary)">
-												{action.meta}
-											</span>
+											<span className="text-xs text-(--color-foreground-secondary)">{action.meta}</span>
 											<div className="flex items-center justify-between pt-0.5">
 												<span className="text-xs tabular-nums text-(--color-foreground-muted)">
 													{action.domain} · {action.time}

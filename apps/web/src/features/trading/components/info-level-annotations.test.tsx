@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
-import { tradingHandlers } from "@/mocks/handlers/trading";
+import { beforeEach, describe, expect, it } from "vitest";
 import { ordersHandlers } from "@/mocks/handlers/orders";
 import { riskHandlers } from "@/mocks/handlers/risk";
-import { SignalsPage } from "./signals-page";
+import { tradingHandlers } from "@/mocks/handlers/trading";
+import { server } from "@/mocks/server";
 import { OrdersPage } from "./orders-page";
-import { TradingPage } from "./trading-page";
 import { RiskPage } from "./risk-page";
+import { SignalsPage } from "./signals-page";
+import { TradingPage } from "./trading-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -38,9 +38,7 @@ describe("SignalsPage info-level annotations", () => {
 		await screen.findByText("待处理");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("signal-metric-pending");
 		expect(l1UnitNames).toContain("signal-metric-confirmed");
@@ -67,9 +65,7 @@ describe("SignalsPage info-level annotations", () => {
 		await screen.findByText("涨跌停检查");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
-		const l3UnitNames = Array.from(l3Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l3UnitNames).toContain("signal-detail");
 		expect(l3Units).toHaveLength(1);
@@ -87,9 +83,7 @@ describe("OrdersPage info-level annotations", () => {
 		await screen.findByText("待提交");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("order-metric-pending");
 		expect(l1UnitNames).toContain("order-metric-submitted");
@@ -103,9 +97,7 @@ describe("OrdersPage info-level annotations", () => {
 		await screen.findByText("待提交");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("order-metric-filled");
 		expect(l2UnitNames).toContain("order-metric-failed");
@@ -121,9 +113,7 @@ describe("OrdersPage info-level annotations", () => {
 		await screen.findByRole("dialog");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
-		const l3UnitNames = Array.from(l3Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l3UnitNames).toContain("order-detail");
 		expect(l3Units).toHaveLength(1);
@@ -141,9 +131,7 @@ describe("TradingPage info-level annotations", () => {
 		await screen.findByText("交易阶段");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("decision-banner");
 		expect(l1UnitNames).toContain("equity-pnl");
@@ -159,9 +147,7 @@ describe("TradingPage info-level annotations", () => {
 		await screen.findByText("交易阶段");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("session-strip");
 		expect(l2UnitNames).toContain("signals-queue");
@@ -182,9 +168,7 @@ describe("RiskPage info-level annotations", () => {
 		await screen.findByText("VaR(95%)");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("risk-scope-strip");
 		expect(l1UnitNames).toContain("exposure-metrics");
@@ -202,9 +186,7 @@ describe("RiskPage info-level annotations", () => {
 
 		await waitFor(() => {
 			const l2Units = document.querySelectorAll("[data-info-level='l2']");
-			const l2UnitNames = Array.from(l2Units).map(
-				(el) => el.getAttribute("data-info-unit"),
-			);
+			const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 			expect(l2UnitNames).toContain("risk-analysis-panel");
 			expect(l2UnitNames).toContain("breach-detail");

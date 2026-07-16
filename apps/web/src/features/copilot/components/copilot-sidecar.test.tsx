@@ -3,31 +3,21 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AppShell } from "@/features/shell/components/app-shell";
 import { aiHandlers } from "@/mocks/handlers/ai";
 import { server } from "@/mocks/server";
-import { AppShell } from "@/features/shell/components/app-shell";
 
 const mockUseLocation = vi.fn().mockReturnValue({ pathname: "/" });
 const mockUseMatches = vi.fn().mockReturnValue([]);
 
 vi.mock("@tanstack/react-router", async () => {
-	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
-		"@tanstack/react-router",
-	);
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
 
 	return {
 		...actual,
 		useLocation: () => mockUseLocation(),
 		useMatches: () => mockUseMatches(),
-		Link: ({
-			children,
-			to,
-			...props
-		}: {
-			children: React.ReactNode;
-			to: string;
-			[key: string]: unknown;
-		}) => (
+		Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [key: string]: unknown }) => (
 			<a href={to} {...props}>
 				{children}
 			</a>

@@ -1,9 +1,4 @@
-import type {
-	ApprovalStatus,
-	PaginatedRequest,
-	PaginatedResponse,
-	RunStatus,
-} from "./common";
+import type { ApprovalStatus, PaginatedRequest, PaginatedResponse, RunStatus } from "./common";
 
 // === Request Types ===
 

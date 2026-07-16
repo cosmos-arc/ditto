@@ -9,10 +9,7 @@ interface CopilotMessagesResponse {
 export function useCopilotMessages(sessionId: string) {
 	return useQuery({
 		queryKey: ["ai", "copilot", "sessions", sessionId, "messages"],
-		queryFn: () =>
-			apiClient.get<CopilotMessagesResponse>(
-				`/ai/copilot/sessions/${sessionId}/messages`,
-			),
+		queryFn: () => apiClient.get<CopilotMessagesResponse>(`/ai/copilot/sessions/${sessionId}/messages`),
 		enabled: sessionId.length > 0,
 	});
 }

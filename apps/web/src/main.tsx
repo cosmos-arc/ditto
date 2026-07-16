@@ -1,8 +1,8 @@
+import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { routeTree } from "./routeTree.gen";
 import { QueryProvider } from "@/providers";
+import { routeTree } from "./routeTree.gen";
 
 // Fonts — all via Fontsource (bundled woff2, no Google Fonts dependency)
 // Inter: body text (400/500/600)

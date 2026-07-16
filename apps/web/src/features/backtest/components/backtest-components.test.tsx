@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { backtestHandlers } from "@/mocks/handlers/backtest";
+import { server } from "@/mocks/server";
 
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
-import { BacktestTrades } from "./backtest-trades";
+import { BacktestListPage } from "./backtest-list-page";
 import { BacktestOverview } from "./backtest-overview";
 import { BacktestReturnsView } from "./backtest-returns-view";
-import { BacktestListPage } from "./backtest-list-page";
+import { BacktestTrades } from "./backtest-trades";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({

@@ -1,25 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Rail } from "./rail";
 
 // Mock TanStack Router's useLocation
 const mockUseLocation = vi.fn().mockReturnValue({ pathname: "/" });
 vi.mock("@tanstack/react-router", async () => {
-	const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
-		"@tanstack/react-router",
-	);
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
 	return {
 		...actual,
 		useLocation: () => mockUseLocation(),
-		Link: ({
-			children,
-			to,
-			...props
-		}: {
-			children: React.ReactNode;
-			to: string;
-			[key: string]: unknown;
-		}) => (
+		Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [key: string]: unknown }) => (
 			<a href={to} data-testid={`link-${to}`} {...props}>
 				{children}
 			</a>

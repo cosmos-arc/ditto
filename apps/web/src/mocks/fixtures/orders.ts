@@ -1,7 +1,4 @@
-import type {
-	GetOrderDetailResponse,
-	GetOrdersResponse,
-} from "@/types";
+import type { GetOrderDetailResponse, GetOrdersResponse } from "@/types";
 
 export const mockOrders: GetOrdersResponse = {
 	items: [
@@ -113,7 +110,7 @@ export const mockOrderDetail: GetOrderDetailResponse = {
 		},
 	],
 	fees: 32.15,
-	slippage: -0.20,
+	slippage: -0.2,
 	routeLog: [
 		{
 			time: "2026-04-09T10:05:03Z",

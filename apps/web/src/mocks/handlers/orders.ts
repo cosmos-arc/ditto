@@ -1,4 +1,4 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
+import { HttpResponse, http, type RequestHandler } from "msw";
 import { mockOrderDetail, mockOrders } from "../fixtures/orders";
 
 export const ordersHandlers: RequestHandler[] = [

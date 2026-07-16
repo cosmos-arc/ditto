@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { Timeline } from "./timeline";
 
 const SAMPLE_ITEMS = [
@@ -100,9 +100,7 @@ describe("Timeline", () => {
 	// ── className merging ──
 
 	it("merges custom className", () => {
-		const { container } = render(
-			<Timeline items={[SAMPLE_ITEMS[0]]} className="extra-class" />,
-		);
+		const { container } = render(<Timeline items={[SAMPLE_ITEMS[0]]} className="extra-class" />);
 		const root = container.firstElementChild as HTMLElement;
 		expect(root.classList.contains("extra-class")).toBe(true);
 	});
