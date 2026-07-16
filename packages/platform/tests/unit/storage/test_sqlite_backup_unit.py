@@ -47,6 +47,10 @@ def test_backup_database_captures_committed_wal_and_returns_manifest(
     assert len(report.sha256) == len("sha256:") + 64
     assert report.table_row_counts == {"fills": 2}
     assert report.size_bytes == destination.stat().st_size
+    partial_artifacts = sorted(
+        path.name for path in tmp_path.iterdir() if ".partial" in path.name
+    )
+    assert partial_artifacts == []
     with sqlite3.connect(destination) as restored:
         assert restored.execute(
             "SELECT fill_id, quantity FROM fills ORDER BY fill_id"

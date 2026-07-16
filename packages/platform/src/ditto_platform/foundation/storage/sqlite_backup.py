@@ -91,12 +91,12 @@ def _copy_database(source: Path, destination: Path) -> SQLiteDatabaseReport:
             destination_path.hardlink_to(temporary_path)
         except FileExistsError as exc:
             raise SQLiteBackupError("destination already exists") from exc
-        temporary_path.unlink()
+        _remove_database_artifacts(temporary_path)
     except SQLiteBackupError:
-        temporary_path.unlink(missing_ok=True)
+        _remove_database_artifacts(temporary_path)
         raise
     except (OSError, sqlite3.Error) as exc:
-        temporary_path.unlink(missing_ok=True)
+        _remove_database_artifacts(temporary_path)
         raise SQLiteBackupError("SQLite integrity verification failed") from exc
 
     return SQLiteDatabaseReport(
@@ -113,6 +113,11 @@ def _validated_source(database: Path) -> Path:
     if not path.is_file():
         raise SQLiteBackupError("source database does not exist")
     return path
+
+
+def _remove_database_artifacts(database: Path) -> None:
+    for suffix in ("", "-wal", "-shm", "-journal"):
+        database.with_name(f"{database.name}{suffix}").unlink(missing_ok=True)
 
 
 def _read_only_connection(database: Path) -> sqlite3.Connection:
