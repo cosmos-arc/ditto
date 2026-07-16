@@ -43,6 +43,7 @@ __all__ = [
     "_DEFAULT_TOP_K",
     "_DEFAULT_TRAILING_STOP_PCT",
     "_normalize_impact_model",
+    "default_required_datasets_for_template",
     "deserialize_constraint",
     "deserialize_constraints",
     "deserialize_cost_model",
@@ -103,7 +104,7 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
         message = f"Strategy {record.strategy_id} missing required_datasets"
         message += "; using template migration default"
         warnings.warn(message, stacklevel=2)
-        required_datasets = _default_required_datasets(template)
+        required_datasets = default_required_datasets_for_template(template)
     spec = StrategySpec(
         strategy_id=read_optional_str(payload.get("strategy_id")) or record.strategy_id,
         name=read_optional_str(payload.get("name")) or record.name,
@@ -131,11 +132,18 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
     return inject_template_constraints(spec)
 
 
-def _default_required_datasets(template: str) -> tuple[str, ...]:
+def default_required_datasets_for_template(template: str) -> tuple[str, ...]:
     """旧 spec 的兼容映射；新写入必须显式保存 required_datasets。"""
     if template in {"etf_rotation", "etf_trend_swing"}:
         return ("etf_daily",)
-    if template in {"stock_selection", "stock_sector_rotation"}:
+    if template == "stock_selection":
+        return (
+            "stock_daily",
+            "adj_factor",
+            "balance_sheet",
+            "income_statement",
+        )
+    if template == "stock_sector_rotation":
         return ("stock_daily", "adj_factor")
     return ()
 

@@ -10,13 +10,27 @@ FillRecord、PositionRecord、AccountSnapshotRecord），
 
 from __future__ import annotations
 
+import sqlite3
+from collections.abc import Generator
+from contextlib import contextmanager
+
 from ditto_platform.foundation import SQLiteClient
 
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_execution.audit.models import AccountBaselineAuditPayload
+from ditto_execution.errors import (
+    FillConflictError,
+    FillNotFoundError,
+    FillProcessingError,
+)
+from ditto_execution.fills.validation import (
+    validate_fill_adjustment_record,
+    validate_fill_record,
+)
 from ditto_execution.models import (
     AccountSnapshotRecord,
     BrokerEventRecord,
+    FillAdjustmentRecord,
     FillRecord,
     PositionRecord,
     SignalRecord,
@@ -26,6 +40,53 @@ from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
 __all__ = [
     "TradeService",
 ]
+
+
+def _same_intent_payload(existing: SignalRecord, candidate: SignalRecord) -> bool:
+    """Compare immutable intent facts, excluding lifecycle and generated time."""
+    return (
+        existing.intent_id == candidate.intent_id
+        and existing.strategy_id == candidate.strategy_id
+        and existing.signal_date == candidate.signal_date
+        and existing.instrument_id == candidate.instrument_id
+        and existing.direction == candidate.direction
+        and existing.target_weight == candidate.target_weight
+        and existing.current_weight == candidate.current_weight
+        and existing.delta_weight == candidate.delta_weight
+        and existing.quantity == candidate.quantity
+    )
+
+
+def _same_fill_payload(existing: FillRecord, candidate: FillRecord) -> bool:
+    """Compare immutable fill facts while ignoring generated write time."""
+    return (
+        existing.fill_id == candidate.fill_id
+        and existing.intent_id == candidate.intent_id
+        and existing.strategy_id == candidate.strategy_id
+        and existing.trade_date == candidate.trade_date
+        and existing.instrument_id == candidate.instrument_id
+        and existing.direction == candidate.direction
+        and existing.quantity == candidate.quantity
+        and existing.fill_price == candidate.fill_price
+        and existing.fee == candidate.fee
+        and existing.slippage == candidate.slippage
+        and existing.notes == candidate.notes
+        and existing.settlement_date == candidate.settlement_date
+    )
+
+
+def _same_adjustment_payload(
+    existing: FillAdjustmentRecord,
+    candidate: FillAdjustmentRecord,
+) -> bool:
+    """Compare request facts while ignoring the generated evidence timestamp."""
+    return (
+        existing.adjustment_id == candidate.adjustment_id
+        and existing.fill_id == candidate.fill_id
+        and existing.adjustment_type == candidate.adjustment_type
+        and existing.replacement_fill_id == candidate.replacement_fill_id
+        and existing.reason == candidate.reason
+    )
 
 
 class TradeService:
@@ -52,6 +113,26 @@ class TradeService:
         self._sqlite_client = sqlite_client
         self._audit_service = audit_service
 
+    @contextmanager
+    def ledger_transaction(self) -> Generator[None]:
+        """Own one nested-safe SQLite transaction for a ledger/projection update."""
+        if self._sqlite_client is None:
+            msg = "Trade ledger transaction client is not configured"
+            raise FillProcessingError(msg)
+        connection = self._sqlite_client.conn
+        owns_transaction = not connection.in_transaction
+        if owns_transaction:
+            connection.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+        except Exception:
+            if owns_transaction:
+                self._sqlite_client.rollback()
+            raise
+        else:
+            if owns_transaction:
+                self._sqlite_client.commit()
+
     # ------------------------------------------------------------------
     # Intent CRUD
     # ------------------------------------------------------------------
@@ -60,7 +141,7 @@ class TradeService:
         """按 stable intent ID 幂等保存；不同 payload 拒绝覆盖。"""
         existing = self._readers.intent.get(record.intent_id)
         if existing is not None:
-            if existing == record:
+            if _same_intent_payload(existing, record):
                 return
             raise ValueError(f"Intent ID conflict: {record.intent_id}")
         self._writers.intent.save(record)
@@ -88,9 +169,12 @@ class TradeService:
         expected_current: tuple[str, ...],
     ) -> bool:
         """更新交易信号状态（expected_current 用于 TOCTOU 防护）。"""
-        return self._writers.intent.update_status(
-            intent_id, status, expected_current=expected_current
-        )
+        with self.ledger_transaction():
+            return self._writers.intent.update_status_uncommitted(
+                intent_id,
+                status,
+                expected_current=expected_current,
+            )
 
     def get_order_status(self, order_id: str) -> str | None:
         """按 order_id 查询本地订单状态；当前由 intent status 承载。"""
@@ -117,21 +201,26 @@ class TradeService:
     # Fill CRUD
     # ------------------------------------------------------------------
 
-    def save_fill(self, record: FillRecord) -> None:
-        """保存成交记录."""
-        self._writers.fill.save(record)
-
-    def replace_fill(self, record: FillRecord) -> bool:
-        """按 fill_id 替换已有成交记录；不存在时返回 False."""
-        return self._writers.fill.replace(record)
+    def save_fill(self, record: FillRecord) -> bool:
+        """Persist by fill ID and report whether this call created the row."""
+        try:
+            with self.ledger_transaction():
+                validate_fill_record(record)
+                existing = self._readers.fill.get(record.fill_id)
+                if existing is not None:
+                    if _same_fill_payload(existing, record):
+                        return False
+                    msg = f"Fill ID conflict: {record.fill_id}"
+                    raise FillConflictError(msg)
+                self._writers.fill.save_strict_uncommitted(record)
+                return True
+        except sqlite3.IntegrityError as exc:
+            msg = f"Fill ID conflict: {record.fill_id}"
+            raise FillConflictError(msg) from exc
 
     def get_fill(self, fill_id: str) -> FillRecord | None:
         """按 fill_id 查询单条成交记录."""
         return self._readers.fill.get(fill_id)
-
-    def find_fill(self, intent_id: str, trade_date: str) -> FillRecord | None:
-        """按 intent_id + trade_date 查找成交记录（幂等去重用）。"""
-        return self._readers.fill.find(intent_id, trade_date)
 
     def list_fills(
         self,
@@ -145,6 +234,167 @@ class TradeService:
             strategy_id, trade_date=trade_date, intent_id=intent_id, end_date=end_date
         )
 
+    def list_effective_fills(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+        intent_id: str | None = None,
+        end_date: str | None = None,
+    ) -> list[FillRecord]:
+        """List fills that remain effective after append-only corrections."""
+        return self._readers.fill.list_effective(
+            strategy_id,
+            trade_date=trade_date,
+            intent_id=intent_id,
+            end_date=end_date,
+        )
+
+    def get_fill_adjustment(
+        self,
+        adjustment_id: str,
+    ) -> FillAdjustmentRecord | None:
+        """Return one append-only correction event by idempotency key."""
+        return self._readers.fill_adjustment.get(adjustment_id)
+
+    def list_fill_adjustments(
+        self,
+        strategy_id: str,
+        *,
+        fill_id: str | None = None,
+        intent_id: str | None = None,
+    ) -> list[FillAdjustmentRecord]:
+        """List immutable correction evidence for a strategy ledger."""
+        return self._readers.fill_adjustment.list(
+            strategy_id,
+            fill_id=fill_id,
+            intent_id=intent_id,
+        )
+
+    def apply_fill_adjustment(
+        self,
+        record: FillAdjustmentRecord,
+        *,
+        replacement_fill: FillRecord | None = None,
+    ) -> bool:
+        """Atomically append an adjustment and report whether it was created."""
+        self._validate_adjustment_request(record, replacement_fill)
+        reader = self._readers.fill_adjustment
+        writer = self._writers.fill_adjustment
+        try:
+            with self.ledger_transaction():
+                if replacement_fill is not None:
+                    validate_fill_record(replacement_fill)
+                existing = reader.get(record.adjustment_id)
+                if existing is not None:
+                    if _same_adjustment_payload(existing, record):
+                        self._validate_adjustment_replay(
+                            existing,
+                            replacement_fill=replacement_fill,
+                        )
+                        return False
+                    msg = f"Fill adjustment ID conflict: {record.adjustment_id}"
+                    raise FillConflictError(msg)
+
+                existing_for_fill = reader.get_for_fill(record.fill_id)
+                if existing_for_fill is not None:
+                    msg = f"Fill already adjusted: {record.fill_id}"
+                    raise FillConflictError(msg)
+
+                source_fill = self._readers.fill.get(record.fill_id)
+                if source_fill is None:
+                    msg = f"Fill not found: {record.fill_id}"
+                    raise FillNotFoundError(msg)
+
+                if replacement_fill is not None:
+                    self._validate_replacement_identity(source_fill, replacement_fill)
+                    if self._readers.fill.get(replacement_fill.fill_id) is not None:
+                        msg = (
+                            "Replacement fill already exists: "
+                            f"{replacement_fill.fill_id}"
+                        )
+                        raise FillConflictError(msg)
+                    self._writers.fill.save_strict_uncommitted(replacement_fill)
+
+                writer.save_uncommitted(record)
+                return True
+        except sqlite3.IntegrityError as exc:
+            msg = f"Fill adjustment conflict: {record.adjustment_id}"
+            raise FillConflictError(msg) from exc
+
+    def _validate_adjustment_replay(
+        self,
+        existing: FillAdjustmentRecord,
+        *,
+        replacement_fill: FillRecord | None,
+    ) -> None:
+        """Exact replay also requires the persisted replacement facts to match."""
+        if existing.adjustment_type == "void":
+            return
+        if replacement_fill is None or existing.replacement_fill_id is None:
+            msg = f"Replacement fill payload conflict: {existing.replacement_fill_id}"
+            raise FillConflictError(msg)
+        persisted = self._readers.fill.get(existing.replacement_fill_id)
+        if persisted is None or not _same_fill_payload(persisted, replacement_fill):
+            msg = f"Replacement fill payload conflict: {existing.replacement_fill_id}"
+            raise FillConflictError(msg)
+
+    @staticmethod
+    def _validate_adjustment_request(
+        record: FillAdjustmentRecord,
+        replacement_fill: FillRecord | None,
+    ) -> None:
+        validate_fill_adjustment_record(record)
+        if record.adjustment_type == "void":
+            TradeService._validate_void_adjustment_request(record, replacement_fill)
+            return
+        if record.adjustment_type == "replace":
+            TradeService._validate_replace_adjustment_request(
+                record,
+                replacement_fill,
+            )
+            return
+        msg = f"Unsupported fill adjustment type: {record.adjustment_type}"
+        raise FillProcessingError(msg)
+
+    @staticmethod
+    def _validate_void_adjustment_request(
+        record: FillAdjustmentRecord,
+        replacement_fill: FillRecord | None,
+    ) -> None:
+        if record.replacement_fill_id is not None or replacement_fill is not None:
+            raise FillProcessingError("Void adjustment cannot include replacement fill")
+
+    @staticmethod
+    def _validate_replace_adjustment_request(
+        record: FillAdjustmentRecord,
+        replacement_fill: FillRecord | None,
+    ) -> None:
+        if not record.replacement_fill_id:
+            raise FillProcessingError("Replace adjustment requires replacement_fill_id")
+        if replacement_fill is None:
+            raise FillProcessingError("Replace adjustment requires replacement fill")
+        if replacement_fill.fill_id != record.replacement_fill_id:
+            raise FillProcessingError("Replacement fill ID does not match adjustment")
+        if replacement_fill.fill_id == record.fill_id:
+            raise FillProcessingError("Replacement fill must use a new fill_id")
+
+    @staticmethod
+    def _validate_replacement_identity(
+        source: FillRecord,
+        replacement: FillRecord,
+    ) -> None:
+        if (
+            source.intent_id != replacement.intent_id
+            or source.strategy_id != replacement.strategy_id
+            or source.instrument_id != replacement.instrument_id
+            or source.direction != replacement.direction
+        ):
+            msg = (
+                "Replacement fill must preserve intent, strategy, instrument, "
+                + "and direction"
+            )
+            raise FillProcessingError(msg)
+
     # ------------------------------------------------------------------
     # Position CRUD
     # ------------------------------------------------------------------
@@ -152,6 +402,38 @@ class TradeService:
     def save_position(self, record: PositionRecord) -> None:
         """保存持仓快照."""
         self._writers.position.save(record)
+
+    def replace_position_snapshot(
+        self,
+        *,
+        strategy_id: str,
+        snapshot_date: str,
+        positions: tuple[PositionRecord, ...],
+    ) -> None:
+        """Atomically replace one derived manual-position snapshot as a group."""
+        if self._sqlite_client is None:
+            msg = "Trade ledger transaction client is not configured"
+            raise FillProcessingError(msg)
+        for position in positions:
+            if (
+                position.run_id != ""
+                or position.strategy_id != strategy_id
+                or position.snapshot_date != snapshot_date
+            ):
+                raise FillProcessingError(
+                    "Manual position projection identity does not match replacement"
+                )
+        with self.ledger_transaction():
+            delete_sql = (
+                "DELETE FROM actual_positions "  # noqa: S608 - constant SQL
+                + "WHERE run_id = '' AND strategy_id = ? AND snapshot_date = ?"
+            )
+            self._sqlite_client.execute(
+                delete_sql,
+                (strategy_id, snapshot_date),
+            )
+            for position in positions:
+                self._writers.position.save_uncommitted(position)
 
     def get_latest_position(
         self,

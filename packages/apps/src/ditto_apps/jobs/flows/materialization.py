@@ -31,13 +31,12 @@ def _normalize_results(results: tuple[object, ...]) -> list[dict[str, Any] | obj
     return normalized
 
 
-@flow(name="daily-materialization", description="每日 durable profile 物化流程")
-def daily_materialization_flow(
+def run_daily_materialization(
     trade_date: str,
     mode: str = "incremental",
     derived_ids: list[str] | None = None,
 ) -> dict[str, object]:
-    """Schedule durable derived materialization for one trade date."""
+    """执行单日 durable 物化业务，供 Prefect flow 与同步 CLI 共用。"""
     with create_materialization_bundle() as bundle:
         results = bundle.materialization_service.materialize_daily(
             trade_date=trade_date,
@@ -52,6 +51,20 @@ def daily_materialization_flow(
             "materialized_count": len(results),
         },
     }
+
+
+@flow(name="daily-materialization", description="每日 durable profile 物化流程")
+def daily_materialization_flow(
+    trade_date: str,
+    mode: str = "incremental",
+    derived_ids: list[str] | None = None,
+) -> dict[str, object]:
+    """Schedule durable derived materialization for one trade date."""
+    return run_daily_materialization(
+        trade_date=trade_date,
+        mode=mode,
+        derived_ids=derived_ids,
+    )
 
 
 @flow(

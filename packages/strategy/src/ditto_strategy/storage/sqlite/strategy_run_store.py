@@ -156,12 +156,13 @@ _CHECKPOINT_MIGRATIONS: list[tuple[str, str]] = [
     ),
 ]
 
-_UPSERT_SQL = """
-INSERT OR REPLACE INTO strategy_run (
+_INSERT_IF_ABSENT_SQL = """
+INSERT INTO strategy_run (
     run_id, strategy_id, strategy_version, mode,
     status, started_at, completed_at, error_message, parent_run_id,
     progress_pct, current_step, completed_days, total_days, config_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(run_id) DO NOTHING
 """
 
 _GET_SQL = """
@@ -184,13 +185,35 @@ ORDER BY started_at DESC, run_id DESC
 _UPDATE_RUNNING_SQL = """
 UPDATE strategy_run
 SET status = ?
-WHERE run_id = ? AND status NOT IN ('cancelled', 'completed', 'failed')
+WHERE run_id = ? AND status = 'pending'
+"""
+
+_RETRY_FAILED_SQL = """
+UPDATE strategy_run
+SET status = 'pending', started_at = ?, completed_at = '', error_message = '',
+    progress_pct = 0.0, current_step = '', completed_days = 0,
+    total_days = 0, config_json = ?
+WHERE run_id = ? AND status = 'failed'
 """
 
 _UPDATE_TERMINAL_SQL = """
 UPDATE strategy_run
 SET status = ?, completed_at = ?, error_message = ?
 WHERE run_id = ? AND status NOT IN ('cancelled', 'completed', 'failed')
+"""
+
+_UPDATE_PENDING_FAILED_SQL = """
+UPDATE strategy_run
+SET status = 'failed', completed_at = ?, error_message = ?
+WHERE run_id = ? AND status = 'pending'
+"""
+
+_REFRESH_BLOCKED_EVIDENCE_SQL = """
+UPDATE strategy_run
+SET completed_at = ?, config_json = ?
+WHERE run_id = ?
+  AND status = 'failed'
+  AND error_message = 'blocked:REQUIRED_DATA_NOT_READY'
 """
 
 _UPDATE_CANCELLED_SQL = """
@@ -376,11 +399,11 @@ class SQLiteStrategyRunWriter:
         _init_schema(self._pool)
 
     @traced("store.strategy_run_writer.save")
-    def save(self, record: StrategyRunRecord) -> None:
-        """INSERT OR REPLACE a StrategyRunRecord."""
+    def save(self, record: StrategyRunRecord) -> bool:
+        """Insert a run without replacing an existing lifecycle fact."""
         conn = self._pool.get_connection()
-        conn.execute(
-            _UPSERT_SQL,
+        cursor = conn.execute(
+            _INSERT_IF_ABSENT_SQL,
             (
                 record.run_id,
                 record.strategy_id,
@@ -404,7 +427,9 @@ class SQLiteStrategyRunWriter:
             event="strategy_run_save",
             run_id=record.run_id,
             strategy_id=record.strategy_id,
+            inserted=cursor.rowcount > 0,
         )
+        return cursor.rowcount > 0
 
     @traced("store.strategy_run_writer.update_status")
     def update_status(
@@ -437,6 +462,60 @@ class SQLiteStrategyRunWriter:
             event="strategy_run_status_update",
             run_id=run_id,
             status=status,
+            updated=updated,
+        )
+        return updated > 0
+
+    @traced("store.strategy_run_writer.retry_failed")
+    def retry_failed(self, run_id: str, *, config_json: str = "") -> bool:
+        """CAS reset one failed deterministic run for an explicit retry."""
+        conn = self._pool.get_connection()
+        cursor = conn.execute(
+            _RETRY_FAILED_SQL,
+            (utc_now(), config_json, run_id),
+        )
+        self._pool.commit()
+        updated = cursor.rowcount
+        logger.debug(
+            "strategy_run retry requested",
+            event="strategy_run_retry_failed",
+            run_id=run_id,
+            updated=updated,
+        )
+        return updated > 0
+
+    @traced("store.strategy_run_writer.mark_pending_failed")
+    def mark_pending_failed(self, run_id: str, error_message: str = "") -> bool:
+        """Fail only an unclaimed pending run, preserving a running owner."""
+        conn = self._pool.get_connection()
+        cursor = conn.execute(
+            _UPDATE_PENDING_FAILED_SQL,
+            (utc_now(), error_message, run_id),
+        )
+        self._pool.commit()
+        updated = cursor.rowcount
+        logger.debug(
+            "pending strategy run failure requested",
+            event="strategy_run_mark_pending_failed",
+            run_id=run_id,
+            updated=updated,
+        )
+        return updated > 0
+
+    @traced("store.strategy_run_writer.refresh_blocked_evidence")
+    def refresh_blocked_evidence(self, run_id: str, *, config_json: str) -> bool:
+        """Refresh current required-data evidence without reopening the run."""
+        conn = self._pool.get_connection()
+        cursor = conn.execute(
+            _REFRESH_BLOCKED_EVIDENCE_SQL,
+            (utc_now(), config_json, run_id),
+        )
+        self._pool.commit()
+        updated = cursor.rowcount
+        logger.debug(
+            "blocked strategy run evidence refresh requested",
+            event="strategy_run_refresh_blocked_evidence",
+            run_id=run_id,
             updated=updated,
         )
         return updated > 0

@@ -18,6 +18,7 @@ from ditto_execution.broker.recording import BrokerEventRecordingGateway
 from ditto_execution.models import (
     STANDARD_BROKER_EVENT_TYPES,
     BrokerEventRecord,
+    FillAdjustmentRecord,
     FillRecord,
 )
 from ditto_execution.orders.ids import ClientOrderId
@@ -846,6 +847,7 @@ class _BrokerEventOrderStatusReviewSource:
 class _InMemoryLocalFillStore:
     def __init__(self) -> None:
         self.records: dict[str, FillRecord] = {}
+        self.adjustments: dict[str, FillAdjustmentRecord] = {}
 
     def get_fill(self, fill_id: str) -> FillRecord | None:
         return self.records.get(fill_id)
@@ -853,11 +855,63 @@ class _InMemoryLocalFillStore:
     def save_fill(self, record: FillRecord) -> None:
         self.records[record.fill_id] = record
 
-    def replace_fill(self, record: FillRecord) -> bool:
-        if record.fill_id not in self.records:
+    def append_projected_fill(self, record: FillRecord) -> bool:
+        existing = self.records.get(record.fill_id)
+        if existing is not None:
+            if replace(existing, created_at=record.created_at) != record:
+                raise ValueError("fill replay payload conflict")
             return False
         self.records[record.fill_id] = record
         return True
+
+    def apply_projected_fill_replacement(
+        self,
+        *,
+        adjustment: FillAdjustmentRecord,
+        replacement_fill: FillRecord,
+    ) -> bool:
+        existing = self.adjustments.get(adjustment.adjustment_id)
+        if existing is not None:
+            persisted = self.records.get(replacement_fill.fill_id)
+            if existing != adjustment or persisted != replacement_fill:
+                raise ValueError("replacement replay payload conflict")
+            return False
+        if any(
+            item.fill_id == adjustment.fill_id for item in self.adjustments.values()
+        ):
+            raise ValueError("fill already adjusted")
+        if adjustment.fill_id not in self.records:
+            raise ValueError("source fill not found")
+        self.adjustments[adjustment.adjustment_id] = adjustment
+        self.records[replacement_fill.fill_id] = replacement_fill
+        return True
+
+
+def _assert_append_only_amendment(
+    store: _InMemoryLocalFillStore,
+    amended: FillRecord,
+) -> None:
+    """Assert logical amended facts without expecting an in-place overwrite."""
+    source = store.get_fill(amended.fill_id)
+    assert source is not None
+    matching = [
+        adjustment
+        for adjustment in store.adjustments.values()
+        if adjustment.fill_id == amended.fill_id
+    ]
+    assert len(matching) == 1
+    replacement_fill_id = matching[0].replacement_fill_id
+    assert replacement_fill_id is not None
+    replacement_fill = store.get_fill(replacement_fill_id)
+    assert replacement_fill is not None
+    assert (
+        replace(
+            replacement_fill,
+            fill_id=amended.fill_id,
+            created_at=amended.created_at,
+        )
+        == amended
+    )
 
 
 class _InMemoryLocalOrderStatusStore:
@@ -2197,7 +2251,7 @@ def test_recorded_qty_mismatch_amend_execution_audit_preserves_fill_link(
         record_type="repair_execution",
     )
     assert [result.status for result in results] == ["executed"]
-    assert local_fills.get_fill("broker-fill-001") == amended_fill
+    _assert_append_only_amendment(local_fills, amended_fill)
     assert len(rows) == 1
     payload = orjson.loads(rows[0]["payload"])
     assert payload["action_type"] == "amend_local_fill"
@@ -2326,7 +2380,7 @@ def test_recorded_price_mismatch_amend_execution_audit_preserves_fill_link(
         MismatchType.PRICE_MISMATCH
     ]
     assert [result.status for result in results] == ["executed"]
-    assert local_fills.get_fill("broker-fill-001") == amended_fill
+    _assert_append_only_amendment(local_fills, amended_fill)
     assert len(rows) == 1
     payload = orjson.loads(rows[0]["payload"])
     assert payload["action_type"] == "amend_local_fill"
@@ -2648,7 +2702,7 @@ def test_callback_derived_mixed_repair_sequence_execution_audit_preserves_links(
         RepairActionType.REFRESH_BROKER_ORDER,
         RepairActionType.IMPORT_BROKER_FILL,
     ]
-    assert local_fills.get_fill(amend_fill_id) == amended_fill
+    _assert_append_only_amendment(local_fills, amended_fill)
     imported_extra_fill = local_fills.get_fill(extra_fill_id)
     assert imported_extra_fill is not None
     assert imported_extra_fill.intent_id == "callback-sequence-extra-001"
@@ -2820,8 +2874,8 @@ def test_callback_derived_all_mismatch_repair_sequence_execution_audit_preserves
         RepairActionType.REFRESH_BROKER_ORDER,
         RepairActionType.IMPORT_BROKER_FILL,
     ]
-    assert local_fills.get_fill(qty_fill_id) == amended_qty_fill
-    assert local_fills.get_fill(price_fill_id) == amended_price_fill
+    _assert_append_only_amendment(local_fills, amended_qty_fill)
+    _assert_append_only_amendment(local_fills, amended_price_fill)
     imported_extra_fill = local_fills.get_fill(extra_fill_id)
     assert imported_extra_fill is not None
     assert imported_extra_fill.intent_id == "callback-all-sequence-extra-001"
@@ -2958,7 +3012,7 @@ def test_callback_derived_failed_amendment_sequence_keeps_unrelated_repairs_exec
         RepairActionStatus.EXECUTED,
         RepairActionStatus.EXECUTED,
     ]
-    assert local_fills.get_fill(qty_fill_id) == amended_qty_fill
+    _assert_append_only_amendment(local_fills, amended_qty_fill)
     assert local_fills.get_fill(price_fill_id) == current_price_fill
     imported_extra_fill = local_fills.get_fill(extra_fill_id)
     assert imported_extra_fill is not None
@@ -3079,7 +3133,7 @@ def test_callback_derived_failed_amendment_retry_replays_only_unfinished_repair(
     assert first_local_order_updates == [
         ("callback-all-sequence-status-001", "filled", ("submitted",))
     ]
-    assert fixture.local_fills.get_fill(fixture.qty_fill_id) == fixture.amended_qty_fill
+    _assert_append_only_amendment(fixture.local_fills, fixture.amended_qty_fill)
     assert (
         fixture.local_fills.get_fill(fixture.price_fill_id)
         == fixture.current_price_fill
@@ -3160,10 +3214,10 @@ def test_callback_derived_failed_amendment_retry_replays_only_unfinished_repair(
     assert second_amend_source.requested_fill_ids == [fixture.price_fill_id]
     assert second_review_source.requested_action_ids == []
     assert fixture.local_orders.updated == first_local_order_updates
-    assert fixture.local_fills.get_fill(fixture.qty_fill_id) == fixture.amended_qty_fill
-    assert (
-        fixture.local_fills.get_fill(fixture.price_fill_id)
-        == fixture.amended_price_fill
+    _assert_append_only_amendment(fixture.local_fills, fixture.amended_qty_fill)
+    _assert_append_only_amendment(
+        fixture.local_fills,
+        fixture.amended_price_fill,
     )
     imported_extra_fill = fixture.local_fills.get_fill(fixture.extra_fill_id)
     assert imported_extra_fill is not None
@@ -3294,7 +3348,7 @@ def test_callback_derived_stale_same_fill_claim_can_be_replaced_across_reports(
     assert result.message == f"amended local fill {qty_fill_id}"
     assert amendment_source.requested_action_ids == [f"{report_b_id}:0000"]
     assert amendment_source.requested_fill_ids == [qty_fill_id]
-    assert local_fills.get_fill(qty_fill_id) == amended_qty_fill
+    _assert_append_only_amendment(local_fills, amended_qty_fill)
     assert stale_owner_mark is False
     assert stale_record is not None
     assert stale_record.status is RepairActionStatus.APPROVED
@@ -3666,7 +3720,7 @@ def test_callback_derived_stale_claim_reclaim_closes_later_same_fill_report_acti
     assert [result.effect_count for result in results] == [1, 0]
     assert amendment_source.requested_action_ids == [f"{report_b_id}:0000"]
     assert amendment_source.requested_fill_ids == [fill_id]
-    assert local_fills.get_fill(fill_id) == amended_fill
+    _assert_append_only_amendment(local_fills, amended_fill)
     assert stale_owner_mark is False
     assert stale_record is not None
     assert stale_record.status is RepairActionStatus.APPROVED
@@ -4371,7 +4425,7 @@ def test_callback_derived_successful_import_allows_later_same_fill_amendment(
     ]
     assert amendment_source.requested_action_ids == [f"{report_id}:0001"]
     assert amendment_source.requested_fill_ids == [fill_id]
-    assert local_fills.get_fill(fill_id) == amended_fill
+    _assert_append_only_amendment(local_fills, amended_fill)
     assert import_action.status is RepairActionStatus.EXECUTED
     assert amendment_action.status is RepairActionStatus.EXECUTED
     assert [
@@ -4600,7 +4654,7 @@ def test_callback_derived_stale_import_claim_reclaim_allows_report_amendment(
     assert [result.effect_count for result in results] == [1, 1]
     assert amendment_source.requested_action_ids == [f"{report_b_id}:0001"]
     assert amendment_source.requested_fill_ids == [fill_id]
-    assert local_fills.get_fill(fill_id) == amended_fill
+    _assert_append_only_amendment(local_fills, amended_fill)
     assert stale_owner_mark is False
     assert stale_record is not None
     assert stale_record.status is RepairActionStatus.APPROVED

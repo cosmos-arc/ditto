@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Literal
 
 # ============ New Ingestion System: Event Log + Cursor ============
 
@@ -122,6 +123,34 @@ class LateArrivalCheckResult:
 
 
 @dataclass(frozen=True)
+class IngestionSnapshotEvidence:
+    """Explicit evidence for a sparse dataset's persisted PIT snapshot."""
+
+    kind: Literal["persisted_asof_catalog_snapshot"]
+    source: str
+    signal_date: str
+    checked_at: str
+    effective_partition_date: str
+    source_snapshot_id: str
+    source_snapshot_ids: tuple[str, ...]
+    row_count: int
+    freshness_sla_hours: int
+
+
+@dataclass(frozen=True)
+class IngestionQualityEvidence:
+    """Explicit write-time quality-gate attestation for one ingestion outcome."""
+
+    kind: Literal["write_time_l1_l2", "persisted_ingestion_l1_l2", "no_new_rows"]
+    status: Literal["passed", "not_applicable_no_new_rows"]
+    source: str
+    trade_date: str
+    levels: tuple[Literal["l1", "l2"], ...]
+    row_count: int
+    checksum: str | None = None
+
+
+@dataclass(frozen=True)
 class IngestionResult:
     """数据摄取结果。"""
 
@@ -132,6 +161,8 @@ class IngestionResult:
     checksum: str | None = None
     message: str = ""
     error: str | None = None
+    snapshot_evidence: IngestionSnapshotEvidence | None = None
+    quality_evidence: IngestionQualityEvidence | None = None
 
 
 @dataclass(frozen=True)

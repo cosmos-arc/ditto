@@ -47,8 +47,8 @@ _CREATE_INDEX_STATUS = (
     "CREATE INDEX IF NOT EXISTS idx_artifact_status ON strategy_artifact(status);"
 )
 
-_UPSERT_SQL = """
-INSERT OR REPLACE INTO strategy_artifact (
+_INSERT_IF_ABSENT_SQL = """
+INSERT OR IGNORE INTO strategy_artifact (
     artifact_id, strategy_id, run_id, artifact_type,
     file_path, metadata, status, created_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -76,10 +76,19 @@ WHERE strategy_id = ?
 ORDER BY created_at DESC
 """
 
-_UPDATE_STATUS_SQL = """
-UPDATE strategy_artifact
-SET status = ?
+_UPDATE_STATUS_SQL = "UPDATE strategy_artifact SET status = ? WHERE artifact_id = ?"
+
+_GET_LIFECYCLE_SQL = """
+SELECT strategy_id, run_id, artifact_type, status
+FROM strategy_artifact
 WHERE artifact_id = ?
+"""
+
+_LIST_STATUS_BY_IDENTITY_SQL = """
+SELECT artifact_id
+FROM strategy_artifact
+WHERE strategy_id = ? AND run_id = ? AND artifact_type = ? AND status = ?
+ORDER BY artifact_id
 """
 
 
@@ -101,6 +110,33 @@ def _row_to_record(row: sqlite3.Row) -> StrategyArtifactRecord:
         status=str(d["status"]),
         created_at=str(d["created_at"]),
     )
+
+
+def _lifecycle_identity(
+    conn: sqlite3.Connection,
+    artifact_id: str,
+) -> tuple[str, str, str, str] | None:
+    row = conn.execute(_GET_LIFECYCLE_SQL, (artifact_id,)).fetchone()
+    if row is None:
+        return None
+    return (str(row[0]), str(row[1]), str(row[2]), str(row[3]))
+
+
+def _ids_with_status(
+    conn: sqlite3.Connection,
+    identity: tuple[str, str, str],
+    status: str,
+) -> list[str]:
+    rows = conn.execute(
+        _LIST_STATUS_BY_IDENTITY_SQL,
+        (*identity, status),
+    ).fetchall()
+    return [str(row[0]) for row in rows]
+
+
+def _rollback_false(conn: sqlite3.Connection) -> bool:
+    conn.rollback()
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -128,11 +164,11 @@ class SQLiteStrategyArtifactWriter:
         )
 
     @traced("store.artifact_writer.save")
-    def save(self, record: StrategyArtifactRecord) -> None:
-        """INSERT OR REPLACE a StrategyArtifactRecord."""
+    def save(self, record: StrategyArtifactRecord) -> bool:
+        """Insert an artifact without ever replacing prior evidence."""
         conn = self._pool.get_connection()
-        conn.execute(
-            _UPSERT_SQL,
+        cursor = conn.execute(
+            _INSERT_IF_ABSENT_SQL,
             (
                 record.artifact_id,
                 record.strategy_id,
@@ -150,15 +186,29 @@ class SQLiteStrategyArtifactWriter:
             event="artifact_save",
             artifact_id=record.artifact_id,
             strategy_id=record.strategy_id,
+            inserted=cursor.rowcount > 0,
         )
+        return cursor.rowcount > 0
 
     @traced("store.artifact_writer.update_status")
-    def update_status(self, artifact_id: str, status: str) -> bool:
+    def update_status(
+        self,
+        artifact_id: str,
+        status: str,
+        *,
+        expected_current: tuple[str, ...] | None = None,
+    ) -> bool:
         """Update status for a specific artifact_id. Returns True if row found."""
         conn = self._pool.get_connection()
+        sql = _UPDATE_STATUS_SQL
+        params: list[object] = [status, artifact_id]
+        if expected_current is not None:
+            placeholders = ", ".join("?" for _ in expected_current)
+            sql += f" AND status IN ({placeholders})"
+            params.extend(expected_current)
         cursor = conn.execute(
-            _UPDATE_STATUS_SQL,
-            (status, artifact_id),
+            sql,
+            params,
         )
         self._pool.commit()
         updated = cursor.rowcount
@@ -170,6 +220,81 @@ class SQLiteStrategyArtifactWriter:
             updated=updated,
         )
         return updated > 0
+
+    @traced("store.artifact_writer.claim_replacement")
+    def claim_replacement(
+        self,
+        candidate_artifact_id: str,
+        replaced_artifact_id: str,
+    ) -> bool:
+        """Claim the sole replacement slot for one strategy batch."""
+        conn = self._pool.get_connection()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            candidate = _lifecycle_identity(conn, candidate_artifact_id)
+            replaced = _lifecycle_identity(conn, replaced_artifact_id)
+            if candidate is None or replaced is None:
+                return _rollback_false(conn)
+            identity = candidate[:3]
+            if (
+                candidate[3] != "staged"
+                or replaced[:3] != identity
+                or replaced[3] != "active"
+                or _ids_with_status(conn, identity, "replacing")
+            ):
+                return _rollback_false(conn)
+            cursor = conn.execute(
+                _UPDATE_STATUS_SQL + " AND status = ?",
+                ("replacing", candidate_artifact_id, "staged"),
+            )
+            if cursor.rowcount != 1:
+                return _rollback_false(conn)
+            conn.commit()
+            return True
+        except Exception:
+            conn.rollback()
+            raise
+
+    @traced("store.artifact_writer.activate_candidate")
+    def activate_candidate(
+        self,
+        candidate_artifact_id: str,
+        *,
+        replaced_artifact_id: str | None = None,
+    ) -> bool:
+        """Atomically activate a staged candidate and optionally archive its parent."""
+        conn = self._pool.get_connection()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            candidate = _lifecycle_identity(conn, candidate_artifact_id)
+            if candidate is None:
+                return _rollback_false(conn)
+            identity = candidate[:3]
+            active_ids = _ids_with_status(conn, identity, "active")
+            expected_status = "staged"
+            if replaced_artifact_id is not None:
+                expected_status = "replacing"
+                if active_ids != [replaced_artifact_id]:
+                    return _rollback_false(conn)
+                archived = conn.execute(
+                    _UPDATE_STATUS_SQL + " AND status = ?",
+                    ("archived", replaced_artifact_id, "active"),
+                )
+                if archived.rowcount != 1:
+                    return _rollback_false(conn)
+            elif active_ids:
+                return _rollback_false(conn)
+            activated = conn.execute(
+                _UPDATE_STATUS_SQL + " AND status = ?",
+                ("active", candidate_artifact_id, expected_status),
+            )
+            if activated.rowcount != 1:
+                return _rollback_false(conn)
+            conn.commit()
+            return True
+        except Exception:
+            conn.rollback()
+            raise
 
 
 # ---------------------------------------------------------------------------

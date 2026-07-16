@@ -13,6 +13,9 @@ from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorServices,
     create_coordinator,
 )
+from ditto_application.processes.ingestion.source_capability import (
+    UnsupportedIngestionSourceError,
+)
 from ditto_application.processes.ingestion.source_selection import (
     AutoSourceIngestionCoordinator,
 )
@@ -625,7 +628,10 @@ class TestCreateCoordinatorSourceRegistryRouting:
             ),
         )
 
-        with pytest.raises(AppProcessError, match="does not support dataset") as exc:
+        with pytest.raises(
+            UnsupportedIngestionSourceError,
+            match="does not support dataset",
+        ) as exc:
             coordinator.ingest_date("stock_daily", "2024-12-27")
 
         assert exc.value.details == {

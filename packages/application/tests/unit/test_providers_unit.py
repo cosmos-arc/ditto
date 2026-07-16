@@ -13,6 +13,7 @@ from ditto_application.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
+from ditto_application.commands.account import ImportAccountBaselineHandler
 from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
     RevokeDatasetMaturityPromotionHandler,
@@ -22,6 +23,12 @@ from ditto_application.commands.catalog_remediation import (
     ExecuteCatalogRemediationApprovalHandler,
 )
 from ditto_application.commands.quality_check import CheckDataQualityHandler
+from ditto_application.commands.trade import ProjectedFillCorrectionAdapter
+from ditto_application.processes.execution.manual_sizing import (
+    AShareTradeDateResolver,
+    ManualSizingContextBuilder,
+)
+from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
@@ -33,7 +40,11 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.processes.quality import QualityPatrolService
+from ditto_application.processes.quality import (
+    QualityBatchCoordinator,
+    QualityCompletenessService,
+    QualityPatrolService,
+)
 from ditto_application.providers import (
     AppBuilderFactory,
     AppCommandProvider,
@@ -310,6 +321,45 @@ class TestAppProviderStructure:
         }
         assert expected.issubset(method_names)
 
+    def test_account_baseline_handler_receives_both_aggregate_ports(self) -> None:
+        """Provider wiring must preserve complete replacement audit evidence."""
+        provider = AppCommandProvider()
+        account_port = MagicMock()
+        position_port = MagicMock()
+
+        handler = provider.import_account_baseline_handler(
+            account_port=account_port,
+            position_port=position_port,
+        )
+
+        assert isinstance(handler, ImportAccountBaselineHandler)
+        assert handler._account_port is account_port
+        assert handler._position_port is position_port
+
+    def test_projected_fill_correction_adapter_wires_all_atomic_ports(self) -> None:
+        """Reconciliation provider must not expose a raw fill-only correction."""
+        provider = AppCommandProvider()
+        intent_port = MagicMock()
+        fill_port = MagicMock()
+        position_port = MagicMock()
+        tracker = MagicMock()
+        opening_baseline_resolver = MagicMock()
+
+        adapter = provider.projected_fill_correction_adapter(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+            opening_baseline_resolver=opening_baseline_resolver,
+        )
+
+        assert isinstance(adapter, ProjectedFillCorrectionAdapter)
+        assert adapter._intent is intent_port
+        assert adapter._fill is fill_port
+        assert adapter._position is position_port
+        assert adapter._tracker is tracker
+        assert adapter._opening_baseline is opening_baseline_resolver
+
     def test_app_process_provider_methods(self) -> None:
         """AppProcessProvider 应包含 provide 方法."""
         provider = AppProcessProvider()
@@ -320,9 +370,60 @@ class TestAppProviderStructure:
             "derived_materialization_orchestrator",
             "derived_invalidation_orchestrator",
             "derived_publication_facade",
+            "quality_batch_coordinator",
+            "quality_completeness_service",
             "quality_patrol_service",
+            "manual_sizing_context_builder",
+            "a_share_trade_date_resolver",
         }
         assert expected.issubset(method_names)
+
+    def test_quality_batch_coordinator_provider_wires_application_dependencies(
+        self,
+    ) -> None:
+        provider = AppProcessProvider()
+        patrol = MagicMock()
+        metadata = MagicMock()
+        verifier = MagicMock()
+        alert_manager = MagicMock()
+
+        coordinator = provider.quality_batch_coordinator(
+            quality_patrol_service=patrol,
+            metadata_facade=metadata,
+            evidence_verifier=verifier,
+            alert_manager=alert_manager,
+        )
+
+        assert isinstance(coordinator, QualityBatchCoordinator)
+        assert coordinator._patrol is patrol
+        assert coordinator._metadata is metadata
+        assert coordinator._evidence_verifier is verifier
+        assert coordinator._alert_manager is alert_manager
+
+    def test_quality_completeness_provider_wires_market_facade(self) -> None:
+        provider = AppProcessProvider()
+        market = MagicMock()
+
+        service = provider.quality_completeness_service(market_facade=market)
+
+        assert isinstance(service, QualityCompletenessService)
+        assert service._market is market
+
+    def test_signal_package_provider_reuses_sizing_snapshot_and_runtime_ports(
+        self,
+    ) -> None:
+        """Publisher 必须复用带 sizing 的 snapshot，并注入 fill/date 事实源。"""
+        provider_source = AppProcessProvider.__dict__["signal_package_publisher"]
+        signature = inspect.signature(provider_source.origin)
+
+        assert list(signature.parameters) == [
+            "self",
+            "snapshot_process",
+            "intent_port",
+            "fill_port",
+            "date_resolver",
+            "artifact_service",
+        ]
 
     def test_materialization_orchestrator_provider_accepts_runtime_ports(self) -> None:
         """Materialization orchestrator provider should consume assembled ports."""
@@ -643,6 +744,25 @@ class TestAppProviderIntegration:
             DerivedPublicationFacade,
         )
         assert isinstance(app_container.get(QualityPatrolService), QualityPatrolService)
+        assert isinstance(
+            app_container.get(QualityBatchCoordinator), QualityBatchCoordinator
+        )
+        assert isinstance(
+            app_container.get(QualityCompletenessService),
+            QualityCompletenessService,
+        )
+        assert isinstance(
+            app_container.get(ManualSizingContextBuilder),
+            ManualSizingContextBuilder,
+        )
+        assert isinstance(
+            app_container.get(AShareTradeDateResolver),
+            AShareTradeDateResolver,
+        )
+        assert isinstance(
+            app_container.get(SignalPackagePublisher),
+            SignalPackagePublisher,
+        )
 
     def test_builder_services_resolved(self, app_container) -> None:
         """AppBuilderFactory 的服务应可从容器解析."""

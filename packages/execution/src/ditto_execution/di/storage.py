@@ -21,6 +21,7 @@ from ditto_execution.storage.sqlite.reconciliation import (
 from ditto_execution.storage.sqlite.trade import (
     ACCOUNT_SNAPSHOTS_DDL,
     BROKER_EVENTS_DDL,
+    FILL_ADJUSTMENTS_DDL,
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
@@ -28,6 +29,8 @@ from ditto_execution.storage.sqlite.trade import (
     AccountSnapshotWriter,
     BrokerEventReader,
     BrokerEventWriter,
+    FillAdjustmentReader,
+    FillAdjustmentWriter,
     FillReader,
     FillWriter,
     IntentReader,
@@ -71,6 +74,7 @@ class ExecutionStorageProvider(Provider):
             position=PositionReader(sqlite_client),
             account=AccountSnapshotReader(sqlite_client),
             broker_event=BrokerEventReader(sqlite_client),
+            fill_adjustment=FillAdjustmentReader(sqlite_client),
         )
 
     @provide
@@ -82,6 +86,7 @@ class ExecutionStorageProvider(Provider):
             position=PositionWriter(sqlite_client),
             account=AccountSnapshotWriter(sqlite_client),
             broker_event=BrokerEventWriter(sqlite_client),
+            fill_adjustment=FillAdjustmentWriter(sqlite_client),
         )
 
     @provide
@@ -90,6 +95,7 @@ class ExecutionStorageProvider(Provider):
         sqlite_client.executescript(
             INTENTS_DDL
             + FILLS_DDL
+            + FILL_ADJUSTMENTS_DDL
             + POSITIONS_DDL
             + ACCOUNT_SNAPSHOTS_DDL
             + BROKER_EVENTS_DDL

@@ -37,6 +37,10 @@ def test_strategy_bundle_does_not_expose_storage_implementation_types() -> None:
 
 
 def test_strategy_bundle_exposes_signal_package_publisher() -> None:
-    assert "signal_package_publisher" in {
-        field.name for field in fields(StrategyBundle)
-    }
+    field_names = {field.name for field in fields(StrategyBundle)}
+
+    assert {
+        "signal_package_publisher",
+        "sizing_context_builder",
+        "trade_date_resolver",
+    }.issubset(field_names)

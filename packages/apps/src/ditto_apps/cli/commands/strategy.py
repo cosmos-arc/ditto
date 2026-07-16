@@ -12,10 +12,43 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunServiceConfig,
 )
+from ditto_application.processes.strategy.seed_bootstrap import (
+    SeedBootstrapResult,
+    SeedBootstrapStatus,
+)
 
+from ditto_apps.cli.utils.output import output_json_dict
 from ditto_apps.registry.contexts import create_strategy_bundle
 
 app = typer.Typer(help="运行策略与回测")
+
+
+def _seed_bootstrap_payload(
+    results: tuple[SeedBootstrapResult, ...],
+) -> dict[str, object]:
+    return {
+        "summary": {
+            "created": sum(result.created for result in results),
+            "published": sum(result.published for result in results),
+            "unchanged": sum(
+                result.status == SeedBootstrapStatus.UNCHANGED for result in results
+            ),
+            "conflict": sum(
+                result.status == SeedBootstrapStatus.CONFLICT for result in results
+            ),
+        },
+        "results": [
+            {
+                "strategy_id": result.strategy_id,
+                "status": result.status.value,
+                "version": result.version,
+                "created": result.created,
+                "published": result.published,
+                "differences": list(result.differences),
+            }
+            for result in results
+        ],
+    }
 
 
 @app.command("bootstrap-seeds")
@@ -25,18 +58,8 @@ def bootstrap_seeds() -> None:
         if bundle.seed_bootstrap is None:
             raise typer.BadParameter("SeedStrategyBootstrap 未配置")
         results = bundle.seed_bootstrap.run()
-    for result in results:
-        differences = ",".join(result.differences) or "none"
-        summary = " ".join(
-            (
-                f"strategy_id={result.strategy_id}",
-                f"status={result.status.value}",
-                f"version={result.version}",
-                f"differences={differences}",
-            )
-        )
-        typer.echo(summary)
-    if any(result.differences for result in results):
+    output_json_dict(_seed_bootstrap_payload(results))
+    if any(result.status == SeedBootstrapStatus.CONFLICT for result in results):
         raise typer.Exit(code=1)
 
 
@@ -64,22 +87,6 @@ def _print_backtest_result(
     final_nav: float,
 ) -> None:
     typer.echo(f"run_id={run_id} period={period[0]}:{period[1]} final_nav={final_nav}")
-
-
-def _parse_dataset_snapshots(items: list[str] | None) -> dict[str, str]:
-    snapshots: dict[str, str] = {}
-    for item in items or []:
-        if "=" not in item:
-            raise typer.BadParameter(
-                f"dataset snapshot must be DATASET=CHECKSUM, got {item!r}"
-            )
-        dataset, checksum = item.split("=", 1)
-        if not dataset or not checksum:
-            raise typer.BadParameter(
-                f"dataset snapshot must be DATASET=CHECKSUM, got {item!r}"
-            )
-        snapshots[dataset] = checksum
-    return snapshots
 
 
 @app.command()
@@ -136,6 +143,11 @@ def recommend(
 def publish_signals(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
     strategy_id: str = typer.Argument(..., help="策略 ID"),
     trade_date: str = typer.Argument(..., help="交易日期 YYYY-MM-DD"),
+    account_id: str | None = typer.Option(
+        None,
+        "--account-id",
+        help="人工账户 ID, 停用命令仅用于生成迁移指引",
+    ),
     version: int | None = typer.Option(None, "--version", help="策略版本"),
     source: str = typer.Option("tushare", "--source", help="数据源名称"),
     dataset_snapshot: list[str] | None = typer.Option(
@@ -155,36 +167,23 @@ def publish_signals(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注
         help="显式允许 experimental 数据集进入推荐态运行",
     ),
 ) -> None:
-    """运行推荐态策略并发布人工交易信号包。"""
-    config = _build_run_config(strategy_id, StrategyRunMode.RECOMMENDATION)
-    snapshots = _parse_dataset_snapshots(dataset_snapshot)
-    with create_strategy_bundle() as bundle:
-        if bundle.signal_package_publisher is None:
-            raise typer.BadParameter("SignalPackagePublisher 未配置")
-        result = bundle.strategy_facade.run_strategy_for_date_from_catalog(
-            config=config,
-            trade_date=trade_date,
-            version=version,
-            source=source,
-            allow_experimental_data=allow_experimental_data,
-        )
-        package = bundle.signal_package_publisher.publish(
-            target=result.target,
-            dataset_snapshot_ids=snapshots,
-            factor_ids=tuple(factor or ()),
-            threshold=threshold,
-        )
-    typer.echo(
-        " ".join(
-            [
-                f"run_id={package.run_id}",
-                f"strategy_id={package.strategy_id}",
-                f"signal_date={package.signal_date}",
-                f"intents={len(package.intents)}",
-                f"checksum={package.checksum}",
-            ]
-        )
+    """已停用；人工交易信号只能由 EOD 数据质量门禁发布。"""
+    del version, source, dataset_snapshot, factor, threshold, allow_experimental_data
+    migrated_account_id = account_id or "ACCOUNT_ID"
+    command = (
+        f"ditto ops run-eod --signal-date {trade_date} "
+        f"--strategy-id {strategy_id} --account-id {migrated_account_id}"
     )
+    message = (
+        "已停用: strategy publish-signals 会绕过 EOD 数据新鲜度与 DQ 门禁; "
+        + "未写入信号包。请改用: "
+        + command
+    )
+    typer.echo(
+        message,
+        err=True,
+    )
+    raise typer.Exit(code=2)
 
 
 @app.command()

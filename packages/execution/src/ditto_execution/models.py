@@ -15,6 +15,8 @@ __all__ = [
     "AccountSnapshotRecord",
     "BrokerEventRecord",
     "BrokerEventType",
+    "FillAdjustmentRecord",
+    "FillAdjustmentType",
     "FillRecord",
     "PositionRecord",
     "SignalRecord",
@@ -30,6 +32,8 @@ type BrokerEventType = Literal[
     "reject",
     "account_update",
 ]
+
+type FillAdjustmentType = Literal["void", "replace"]
 
 STANDARD_BROKER_EVENT_TYPES: tuple[BrokerEventType, ...] = (
     "connect",
@@ -128,6 +132,18 @@ class FillRecord:
     notes: str = ""
     settlement_date: str = ""
     created_at: str = ""
+
+
+@dataclass(frozen=True)
+class FillAdjustmentRecord:
+    """Append-only event that voids or replaces one immutable fill."""
+
+    adjustment_id: str
+    fill_id: str
+    adjustment_type: FillAdjustmentType
+    replacement_fill_id: str | None
+    reason: str
+    created_at: str
 
 
 # ===========================================================================

@@ -7,9 +7,13 @@ T0 元数据摄取任务工厂.
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Any
 
 from ditto_application.config import DatasetRef, get_dataset_config_by_value
+from ditto_application.processes.ingestion.source_capability import (
+    UnsupportedIngestionSourceError,
+)
 from prefect import task
 
 from ditto_apps.registry import create_ingestion_bundle
@@ -18,6 +22,47 @@ from ditto_apps.registry import create_ingestion_bundle
 # （submit 返回 PrefectFuture 而非 Task 本身，导致类型参数不变性冲突），
 # 使用类型别名避免裸 Any 注解触发 ANN401。
 type _PrefectTask = Any
+
+
+def run_ingest_dataset(
+    *,
+    dataset: DatasetRef,
+    trade_date: str,
+    source: str = "tushare",
+    force: bool = False,
+) -> dict[str, object]:
+    """执行单数据集摄取业务，供 Prefect task 与同步 CLI 共用。"""
+    try:
+        with create_ingestion_bundle(source=source) as bundle:
+            result = bundle.coordinator.ingest_date(
+                dataset=dataset.value,
+                trade_date=trade_date,
+                force=force,
+            )
+    except UnsupportedIngestionSourceError as exc:
+        return {
+            "dataset": dataset.value,
+            "trade_date": trade_date,
+            "status": "skipped",
+            "row_count": None,
+            "checksum": None,
+            "message": str(exc),
+            "error": "SOURCE_UNSUPPORTED",
+        }
+    payload: dict[str, object] = {
+        "dataset": result.dataset,
+        "trade_date": result.trade_date,
+        "status": result.status,
+        "row_count": result.row_count,
+        "checksum": result.checksum,
+        "message": result.message,
+        "error": result.error,
+    }
+    if result.snapshot_evidence is not None:
+        payload["snapshot_evidence"] = asdict(result.snapshot_evidence)
+    if result.quality_evidence is not None:
+        payload["quality_evidence"] = asdict(result.quality_evidence)
+    return payload
 
 
 def create_ingest_task(dataset: DatasetRef) -> _PrefectTask:
@@ -83,23 +128,12 @@ def create_ingest_task(dataset: DatasetRef) -> _PrefectTask:
             Exception: 摄取失败时抛出异常
 
         """
-        with create_ingestion_bundle(source=source) as bundle:
-            result = bundle.coordinator.ingest_date(
-                dataset=dataset_value,
-                trade_date=trade_date,
-                force=force,
-            )
-
-            # 转换为字典返回
-            return {
-                "dataset": result.dataset,
-                "trade_date": result.trade_date,
-                "status": result.status,
-                "row_count": result.row_count,
-                "checksum": result.checksum,
-                "message": result.message,
-                "error": result.error,
-            }
+        return run_ingest_dataset(
+            dataset=dataset,
+            trade_date=trade_date,
+            source=source,
+            force=force,
+        )
 
     return ingest_task
 

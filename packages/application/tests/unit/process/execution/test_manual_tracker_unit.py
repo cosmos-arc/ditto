@@ -296,8 +296,8 @@ class TestComputePositionsBuyAndSell:
                 snapshot_date="2026-04-09",
             )
 
-    def test_fully_closed_position_excluded(self) -> None:
-        """全部平仓后 (quantity=0) 不出现在结果中."""
+    def test_fully_closed_position_retains_realized_pnl_and_fees(self) -> None:
+        """全部平仓后保留零数量经济快照，供 P&L 汇总读取。"""
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -326,8 +326,11 @@ class TestComputePositionsBuyAndSell:
             snapshot_date="2026-04-09",
         )
 
-        # quantity = 0, 应被排除
-        assert len(result) == 0
+        assert len(result) == 1
+        assert result[0].quantity == 0
+        assert result[0].available_quantity == 0
+        assert result[0].realized_pnl == pytest.approx(500.0)
+        assert result[0].total_fees == pytest.approx(8.0)
 
 
 class TestComputePositionsMultipleBuys:

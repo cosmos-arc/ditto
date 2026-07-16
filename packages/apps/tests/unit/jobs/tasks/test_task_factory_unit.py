@@ -7,22 +7,69 @@ The factories are lightweight wrappers that delegate to IngestionCoordinator.
 
 import pytest
 from ditto_application.config import INGESTION_SPECS, TaskTier
+from ditto_application.processes.ingestion.source_capability import (
+    UnsupportedIngestionSourceError,
+)
 from ditto_apps.jobs.tasks import (
     create_ingest_task_t1_adj,
     create_ingest_task_t1_bars,
     t0_meta,
 )
-from ditto_apps.jobs.tasks.t0_meta import create_ingest_task
+from ditto_apps.jobs.tasks.t0_meta import create_ingest_task, run_ingest_dataset
 from ditto_data.errors import DatasetNotFoundError
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import (
     IngestionResult,
 )
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
 class TestCreateIngestTask:
     """Tests for create_ingest_task factory function."""
+
+    def test_daily_task_skips_dataset_without_runtime_source(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """调度器不得因目录中明确不可摄取的数据集而中止整批任务。"""
+        coordinator = mocker.MagicMock()
+        coordinator.ingest_date.side_effect = UnsupportedIngestionSourceError(
+            "Data source 'tushare' does not support dataset index_weight",
+            source_name="tushare",
+            dataset="index_weight",
+        )
+        bundle = mocker.MagicMock()
+        bundle.coordinator = coordinator
+        context = mocker.MagicMock()
+        context.__enter__.return_value = bundle
+        context.__exit__.return_value = None
+        create_bundle = mocker.patch(
+            "ditto_apps.jobs.tasks.t0_meta.create_ingestion_bundle",
+            return_value=context,
+        )
+
+        result = run_ingest_dataset(
+            dataset=Dataset.INDEX_WEIGHT,
+            trade_date="2026-07-16",
+            source="tushare",
+        )
+
+        assert result == {
+            "dataset": "index_weight",
+            "trade_date": "2026-07-16",
+            "status": "skipped",
+            "row_count": None,
+            "checksum": None,
+            "message": "Data source 'tushare' does not support dataset index_weight",
+            "error": "SOURCE_UNSUPPORTED",
+        }
+        create_bundle.assert_called_once_with(source="tushare")
+        coordinator.ingest_date.assert_called_once_with(
+            dataset="index_weight",
+            trade_date="2026-07-16",
+            force=False,
+        )
 
     def test_create_task_returns_callable(self):
         """Test that create_ingest_task returns a callable."""
@@ -264,7 +311,7 @@ class TestTaskIntegration:
 
         result2 = task_func(
             trade_date="2024-01-03",
-            source="akshare",
+            source="tushare",
             force=False,
         )
 

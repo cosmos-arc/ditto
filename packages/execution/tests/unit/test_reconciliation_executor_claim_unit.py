@@ -338,7 +338,13 @@ class TestRepairActionExecutorClaim:
         assert source.requested_action_ids == ["rec-amend-b:0000"]
         assert source.observed_current_records == [current]
         assert local_fills.replaced_fill_ids == ["fill-shared-mutation"]
-        assert local_fills.get_fill("fill-shared-mutation") == amended
+        assert local_fills.get_fill("fill-shared-mutation") == current
+        replacement_id = "fill-shared-mutation:repair:rec-amend-b:0000"
+        assert local_fills.get_fill(replacement_id) == replace(
+            amended,
+            fill_id=replacement_id,
+            created_at="2026-05-31T09:40:00Z",
+        )
         assert audit.results == [result]
         assert stale_owner_mark is False
         assert stale_record is not None

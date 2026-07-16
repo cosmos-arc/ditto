@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -35,9 +36,16 @@ from ditto_application.queries.promotion_evidence import (
     PromotionEvidenceCollector,
     PromotionEvidenceReport,
 )
+from ditto_platform.foundation.storage.sqlite_backup import (
+    SQLiteBackupError,
+    backup_database,
+    inspect_database,
+    restore_database,
+)
 
 from ditto_apps.cli.utils.output import output_json_dict, output_json_dicts
-from ditto_apps.jobs.flows.eod import eod_flow
+from ditto_apps.jobs.flows.eod import run_eod_pipeline
+from ditto_apps.jobs.flows.repair import run_sparse_pit_reattestation
 from ditto_apps.registry.container import Container, make_app_container
 
 app = typer.Typer(help="运维命令")
@@ -67,15 +75,84 @@ _COL_STATUS = 10
 _COL_RECORDS = 10
 
 
+def _output_sqlite_failure(reason: str, error: SQLiteBackupError) -> None:
+    output_json_dict(
+        {
+            "status": "failed",
+            "reason": reason,
+            "detail": str(error),
+        }
+    )
+    raise typer.Exit(1)
+
+
+@app.command("backup-sqlite")
+def backup_sqlite(
+    source: Path = typer.Option(..., "--source", help="活动 SQLite 数据库路径"),
+    destination: Path = typer.Option(
+        ...,
+        "--destination",
+        help="新的备份文件路径; 已存在时拒绝覆盖",
+    ),
+) -> None:
+    """使用 SQLite online backup API 创建并验证原子备份。"""
+    try:
+        report = backup_database(source, destination)
+    except SQLiteBackupError as error:
+        _output_sqlite_failure("SQLITE_BACKUP_FAILED", error)
+        return
+    output_json_dict({"status": "completed", **asdict(report)})
+
+
+@app.command("verify-sqlite")
+def verify_sqlite(
+    database: Path = typer.Option(..., "--database", help="待验证 SQLite 文件路径"),
+) -> None:
+    """验证 SQLite 完整性并输出 checksum 与逐表行数 evidence。"""
+    try:
+        report = inspect_database(database)
+    except SQLiteBackupError as error:
+        _output_sqlite_failure("SQLITE_VERIFY_FAILED", error)
+        return
+    output_json_dict({"status": "completed", **asdict(report)})
+
+
+@app.command("restore-sqlite")
+def restore_sqlite(
+    backup: Path = typer.Option(..., "--backup", help="已验证的 SQLite 备份路径"),
+    destination: Path = typer.Option(
+        ...,
+        "--destination",
+        help="独立恢复库路径; 已存在时拒绝覆盖",
+    ),
+) -> None:
+    """把备份恢复到新路径，禁止覆盖原库，并再次验证。"""
+    try:
+        report = restore_database(backup, destination)
+    except SQLiteBackupError as error:
+        _output_sqlite_failure("SQLITE_RESTORE_FAILED", error)
+        return
+    output_json_dict({"status": "completed", **asdict(report)})
+
+
 @app.command("run-eod")
 def run_eod(
     signal_date: str = typer.Option(..., "--signal-date", help="信号日 YYYY-MM-DD"),
-    strategy_id: str | None = typer.Option(
-        None, "--strategy-id", help="仅运行指定策略"
+    strategy_id: str = typer.Option(..., "--strategy-id", help="显式选择活动执行策略"),
+    account_id: str = typer.Option(..., "--account-id", help="显式选择人工交易账户"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许实验级数据集进入本次 EOD 策略输入",
     ),
 ) -> None:
     """运行与 Prefect 共用的 EOD 业务入口并结构化输出结果。"""
-    result = eod_flow(trade_date=signal_date, strategy_id=strategy_id)
+    result = run_eod_pipeline(
+        trade_date=signal_date,
+        strategy_id=strategy_id,
+        account_id=account_id,
+        allow_experimental_data=allow_experimental_data,
+    )
     output_json_dict(dict(result))
     strategies = result.get("strategies", [])
     if isinstance(strategies, list) and any(
@@ -84,6 +161,35 @@ def run_eod(
         in {"blocked", "failed", "rerun_conflict"}
         for item in cast("list[object]", strategies)
     ):
+        raise typer.Exit(1)
+
+
+@app.command("reattest-sparse-pit")
+def reattest_sparse_pit(
+    dataset: str = typer.Option(
+        ...,
+        "--dataset",
+        help="稀疏 PIT 数据集, 如 balance_sheet",
+    ),
+    signal_date: str = typer.Option(
+        ...,
+        "--signal-date",
+        help="恢复截止信号日 YYYY-MM-DD",
+    ),
+    source: str = typer.Option(
+        "tushare",
+        "--source",
+        help="需要重摄取并核验的具体数据源",
+    ),
+) -> None:
+    """全量重摄取稀疏 PIT 历史并重建可验证 L1/L2 证据。"""
+    result = run_sparse_pit_reattestation(
+        dataset=dataset,
+        signal_date=signal_date,
+        source=source,
+    )
+    output_json_dict(result)
+    if result.get("passed") is not True:
         raise typer.Exit(1)
 
 

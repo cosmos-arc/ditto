@@ -109,10 +109,10 @@ class TestTargetQuantity:
         assert target_quantity(0.3, nav=100_000, lot_size=100, price=10.0) == 3000
 
     def test_target_quantity_with_price_truncates(self) -> None:
-        """有价格时向下取整到 lot_size 整数倍。"""
+        """有价格时只截断到整数股，交易方向确定后再应用手数规则。"""
         # weight=0.1, nav=100_000, price=3.0, lot_size=100
-        # target_value = 10000, shares = 3333.33, lots = 33, qty = 3300
-        assert target_quantity(0.1, nav=100_000, lot_size=100, price=3.0) == 3300
+        # target_value = 10000, shares = 3333.33, raw target = 3333
+        assert target_quantity(0.1, nav=100_000, lot_size=100, price=3.0) == 3333
 
     def test_target_quantity_without_price(self) -> None:
         """无价格（price=0）→ lots = target_value / lot_size。"""
@@ -123,3 +123,7 @@ class TestTargetQuantity:
     def test_target_quantity_no_price_defaults(self) -> None:
         """price 参数默认为 0.0。"""
         assert target_quantity(0.5, nav=100_000, lot_size=100) == 50000
+
+    def test_target_quantity_preserves_odd_share_target_for_sell_diff(self) -> None:
+        """目标股数不应提前按买入手数取整，否则会放大减仓数量。"""
+        assert target_quantity(0.5, nav=10_000, lot_size=100, price=80.0) == 62

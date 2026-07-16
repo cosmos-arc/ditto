@@ -3,6 +3,7 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
+from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
 from ditto_application.processes.ingestion.coordinator_factory import (
@@ -11,6 +12,9 @@ from ditto_application.processes.ingestion.coordinator_factory import (
     create_coordinator,
 )
 from ditto_application.processes.ingestion.retry_manager import RetryManager
+from ditto_application.processes.ingestion.sparse_recovery import (
+    SparsePITReattestationProcess,
+)
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
@@ -111,6 +115,14 @@ def create_ingestion_bundle(
                 source=source,
                 data_catalog_reader=catalog_reader,
             )
+            sparse_pit_reattestation = SparsePITReattestationProcess(
+                ingestion=coordinator,
+                catalog=catalog_reader,
+                verifier=PersistedIngestionEvidenceVerifier(
+                    reader=catalog_reader,
+                    ingestion_logs=ingestion_log_store,
+                ),
+            )
             # 创建查询 facade
             metadata_facade = MetadataQueryFacade(metadata_service=metadata_service)
 
@@ -118,6 +130,7 @@ def create_ingestion_bundle(
                 coordinator=coordinator,
                 backfill_manager=backfill_manager,
                 retry_manager=retry_manager,
+                sparse_pit_reattestation=sparse_pit_reattestation,
                 metadata_facade=metadata_facade,
                 exchange_transformers=exchange_transformers,
             )

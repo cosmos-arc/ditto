@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from ditto_apps.registry.infra.config import ConfigProvider
+from ditto_data.config import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_features.config import FeatureArtifactStoreSettings
 from ditto_platform.foundation import InitScope
@@ -16,6 +17,7 @@ def test_config_provider_init_coordinator_creates_feature_artifact_dirs(
     coordinator = ConfigProvider().init_coordinator(
         DataStoreSettings(data_root=data_root),
         FeatureArtifactStoreSettings(data_root=data_root),
+        DataSourceSettings(tushare_token="resolved-test-token"),
     )
 
     results = coordinator.initialize(
@@ -27,3 +29,4 @@ def test_config_provider_init_coordinator_creates_feature_artifact_dirs(
     assert results["data_root"].success
     assert (data_root / "features" / "technical" / "price").is_dir()
     assert (data_root / "factors" / "factors_narrow").is_dir()
+    assert results["data_source_validation"].success

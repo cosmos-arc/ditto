@@ -6,11 +6,18 @@ PositionRecord)，不依赖 app/engine 包。
 
 from __future__ import annotations
 
-from dataclasses import replace
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import MISSING, replace
+from pathlib import Path
+from threading import Barrier
+from typing import cast
 
+import ditto_execution.models as execution_models
 import pytest
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_execution.audit.models import AccountBaselineAuditPayload
+from ditto_execution.errors import FillProcessingError
 from ditto_execution.models import (
     AccountSnapshotRecord,
     BrokerEventRecord,
@@ -22,6 +29,7 @@ from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
 from ditto_execution.storage.sqlite.trade import (
     ACCOUNT_SNAPSHOTS_DDL,
     BROKER_EVENTS_DDL,
+    FILL_ADJUSTMENTS_DDL,
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
@@ -29,6 +37,8 @@ from ditto_execution.storage.sqlite.trade import (
     AccountSnapshotWriter,
     BrokerEventReader,
     BrokerEventWriter,
+    FillAdjustmentReader,
+    FillAdjustmentWriter,
     FillReader,
     FillWriter,
     IntentReader,
@@ -40,7 +50,7 @@ from ditto_execution.storage.sqlite.trade import (
 from ditto_execution.storage.sqlite.trade.service import (
     TradeService,
 )
-from ditto_platform.foundation import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 def _init_db(client: SQLiteClient) -> None:
@@ -48,6 +58,7 @@ def _init_db(client: SQLiteClient) -> None:
     client.executescript(
         INTENTS_DDL
         + FILLS_DDL
+        + FILL_ADJUSTMENTS_DDL
         + POSITIONS_DDL
         + ACCOUNT_SNAPSHOTS_DDL
         + BROKER_EVENTS_DDL
@@ -65,6 +76,7 @@ def _make_service(client: SQLiteClient) -> TradeService:
         position=PositionReader(client),
         account=AccountSnapshotReader(client),
         broker_event=BrokerEventReader(client),
+        fill_adjustment=FillAdjustmentReader(client),
     )
     writers = ExecutionWriters(
         intent=IntentWriter(client),
@@ -72,6 +84,7 @@ def _make_service(client: SQLiteClient) -> TradeService:
         position=PositionWriter(client),
         account=AccountSnapshotWriter(client),
         broker_event=BrokerEventWriter(client),
+        fill_adjustment=FillAdjustmentWriter(client),
     )
     audit_service = ExecutionAuditService(client._pool)
     audit_service.init_schema()
@@ -269,6 +282,65 @@ class TestInitSchema:
         assert row is not None
         assert row["name"] == "execution_fills"
 
+    def test_creates_execution_fill_adjustments_table(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """Fresh schema must include the append-only fill adjustment ledger."""
+        _init_db(sqlite_client)
+
+        row = sqlite_client.fetchone(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name='execution_fill_adjustments'"
+        )
+
+        assert row is not None
+        assert row["name"] == "execution_fill_adjustments"
+
+        table = sqlite_client.fetchone(
+            "SELECT sql FROM sqlite_master "
+            "WHERE type='table' AND name='execution_fill_adjustments'"
+        )
+        index = sqlite_client.fetchone(
+            "SELECT sql FROM sqlite_master "
+            "WHERE type='index' AND name='idx_execution_fill_adjustments_fill'"
+        )
+        assert table is not None
+        assert "CHECK (adjustment_type IN ('void', 'replace'))" in table["sql"]
+        assert "CHECK (length(trim(reason)) > 0)" in table["sql"]
+        assert (
+            "adjustment_type = 'void' AND replacement_fill_id IS NULL" in table["sql"]
+        )
+        assert (
+            "adjustment_type = 'replace' AND replacement_fill_id IS NOT NULL"
+            in (table["sql"])
+        )
+        assert index is not None
+        assert "CREATE UNIQUE INDEX" in index["sql"]
+
+        invalid_rows = (
+            ("ADJ-TYPE", "FILL-1", "overwrite", None, "invalid"),
+            ("ADJ-VOID", "FILL-2", "void", "FILL-3", "invalid replacement"),
+            ("ADJ-REPLACE", "FILL-4", "replace", None, "missing replacement"),
+            ("ADJ-REASON", "FILL-5", "void", None, "   "),
+        )
+        for row_values in invalid_rows:
+            with pytest.raises(sqlite3.IntegrityError):
+                sqlite_client.execute(
+                    "INSERT INTO execution_fill_adjustments "
+                    "(adjustment_id, fill_id, adjustment_type, "
+                    "replacement_fill_id, reason, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (*row_values, "2026-04-11"),
+                )
+            sqlite_client.rollback()
+
+    def test_fill_adjustment_dependencies_are_required(self) -> None:
+        reader_field = ExecutionReaders.__dataclass_fields__["fill_adjustment"]
+        writer_field = ExecutionWriters.__dataclass_fields__["fill_adjustment"]
+
+        assert reader_field.default is MISSING
+        assert writer_field.default is MISSING
+
     def test_creates_actual_positions_table(self, sqlite_client: SQLiteClient) -> None:
         """_init_db 应创建 actual_positions 表."""
         _init_db(sqlite_client)
@@ -316,6 +388,7 @@ class TestInitSchema:
         assert "idx_trade_intents_status" in index_names
         assert "idx_execution_fills_strategy_date" in index_names
         assert "idx_execution_fills_intent" in index_names
+        assert "idx_execution_fill_adjustments_fill" in index_names
         assert "idx_actual_positions_strategy_date" in index_names
         assert "idx_actual_positions_run_date" in index_names
         assert "idx_actual_positions_run_strategy_instrument_date" in index_names
@@ -433,6 +506,27 @@ class TestSaveIntent:
         assert len(svc.list_intents("STRAT-A")) == 1
         with pytest.raises(ValueError, match="Intent ID conflict"):
             svc.save_intent(_make_intent(quantity=2000))
+
+    def test_idempotent_retry_ignores_generated_time_and_preserves_terminal_status(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        """A package retry cannot overwrite lifecycle state or creation evidence."""
+        svc = _make_service(sqlite_client)
+        original = _make_intent()
+        svc.save_intent(original)
+        assert svc.update_intent_status(
+            original.intent_id,
+            "filled",
+            expected_current=("pending",),
+        )
+
+        svc.save_intent(replace(original, created_at="2026-04-10T10:00:00Z"))
+
+        persisted = svc.get_intent(original.intent_id)
+        assert persisted is not None
+        assert persisted.status == "filled"
+        assert persisted.created_at == original.created_at
 
 
 class TestListIntents:
@@ -656,6 +750,217 @@ class TestOrderStatusRepairPort:
 class TestSaveFill:
     """save_fill / get_fill 测试."""
 
+    @pytest.mark.parametrize(
+        ("record", "error"),
+        [
+            pytest.param(
+                replace(_make_fill(), fill_id=""),
+                "fill_id is required",
+                id="empty-fill-id",
+            ),
+            pytest.param(
+                replace(_make_fill(), fill_id=cast(str, None)),
+                "fill_id is required",
+                id="non-string-fill-id",
+            ),
+            pytest.param(
+                replace(_make_fill(), intent_id=" \t"),
+                "intent_id is required",
+                id="empty-intent-id",
+            ),
+            pytest.param(
+                replace(_make_fill(), strategy_id=""),
+                "strategy_id is required",
+                id="empty-strategy-id",
+            ),
+            pytest.param(
+                replace(_make_fill(), trade_date="2026-02-30"),
+                "trade_date must be a valid YYYY-MM-DD date",
+                id="invalid-calendar-date",
+            ),
+            pytest.param(
+                replace(_make_fill(), instrument_id=0),
+                "instrument_id must be positive",
+                id="zero-instrument",
+            ),
+            pytest.param(
+                replace(_make_fill(), instrument_id=-1),
+                "instrument_id must be positive",
+                id="negative-instrument",
+            ),
+            pytest.param(
+                replace(_make_fill(), instrument_id=2**63),
+                "instrument_id exceeds SQLite INTEGER range",
+                id="instrument-overflow",
+            ),
+            pytest.param(
+                replace(_make_fill(), direction="hold"),
+                "direction must be 'buy' or 'sell'",
+                id="invalid-direction",
+            ),
+            pytest.param(
+                replace(_make_fill(), direction=cast(str, [])),
+                "direction must be 'buy' or 'sell'",
+                id="unhashable-direction",
+            ),
+            pytest.param(
+                replace(_make_fill(), quantity=0),
+                "quantity must be positive",
+                id="zero-quantity",
+            ),
+            pytest.param(
+                replace(_make_fill(), quantity=-1),
+                "quantity must be positive",
+                id="negative-quantity",
+            ),
+            pytest.param(
+                replace(_make_fill(), quantity=2**63),
+                "quantity exceeds SQLite INTEGER range",
+                id="quantity-overflow",
+            ),
+            pytest.param(
+                replace(_make_fill(), fill_price=0.0),
+                "fill_price must be positive and finite",
+                id="zero-price",
+            ),
+            pytest.param(
+                replace(_make_fill(), fill_price=-1.0),
+                "fill_price must be positive and finite",
+                id="negative-price",
+            ),
+            pytest.param(
+                replace(_make_fill(), fill_price=float("nan")),
+                "fill_price must be positive and finite",
+                id="nan-price",
+            ),
+            pytest.param(
+                replace(_make_fill(), fill_price=float("inf")),
+                "fill_price must be positive and finite",
+                id="infinite-price",
+            ),
+            pytest.param(
+                replace(_make_fill(), fill_price=2**100),
+                "fill_price must be positive and finite",
+                id="sqlite-overflow-price",
+            ),
+            pytest.param(
+                replace(_make_fill(), fill_price=2**53 + 1),
+                "fill_price must be positive and finite",
+                id="sqlite-inexact-real-price",
+            ),
+            pytest.param(
+                replace(_make_fill(), fee=-0.01),
+                "fee must be non-negative and finite",
+                id="negative-fee",
+            ),
+            pytest.param(
+                replace(_make_fill(), fee=float("nan")),
+                "fee must be non-negative and finite",
+                id="nan-fee",
+            ),
+            pytest.param(
+                replace(_make_fill(), fee=float("inf")),
+                "fee must be non-negative and finite",
+                id="infinite-fee",
+            ),
+            pytest.param(
+                replace(_make_fill(), fee=2**100),
+                "fee must be non-negative and finite",
+                id="sqlite-overflow-fee",
+            ),
+            pytest.param(
+                replace(_make_fill(), fee=2**53 + 1),
+                "fee must be non-negative and finite",
+                id="sqlite-inexact-real-fee",
+            ),
+            pytest.param(
+                replace(_make_fill(), slippage=float("nan")),
+                "slippage must be finite",
+                id="nan-slippage",
+            ),
+            pytest.param(
+                replace(_make_fill(), slippage=float("inf")),
+                "slippage must be finite",
+                id="infinite-slippage",
+            ),
+            pytest.param(
+                replace(_make_fill(), slippage=2**100),
+                "slippage must be finite",
+                id="sqlite-overflow-slippage",
+            ),
+            pytest.param(
+                replace(_make_fill(), slippage=2**53 + 1),
+                "slippage must be finite",
+                id="sqlite-inexact-real-slippage",
+            ),
+            pytest.param(
+                replace(_make_fill(), notes=cast(str, b"binary notes")),
+                "notes must be a string",
+                id="binary-notes",
+            ),
+            pytest.param(
+                replace(_make_fill(), settlement_date=cast(str, [])),
+                "settlement_date must be a string",
+                id="non-string-settlement-date",
+            ),
+            pytest.param(
+                replace(_make_fill(), settlement_date="2026-02-30"),
+                "settlement_date must be empty or a valid YYYY-MM-DD date",
+                id="invalid-settlement-date",
+            ),
+            pytest.param(
+                replace(_make_fill(), created_at=cast(str, None)),
+                "created_at must be a string",
+                id="non-string-created-at",
+            ),
+        ],
+    )
+    def test_rejects_invalid_fill_record_at_authoritative_write_boundary(
+        self,
+        sqlite_client: SQLiteClient,
+        record: FillRecord,
+        error: str,
+    ) -> None:
+        """Internal callers cannot bypass fill-ledger invariants."""
+        svc = _make_service(sqlite_client)
+
+        with pytest.raises(FillProcessingError, match=error):
+            svc.save_fill(record)
+
+        assert svc.list_fills("STRAT-A") == []
+
+    def test_rejects_invalid_exact_replay_before_idempotency_lookup(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        """Corrupt persisted facts cannot turn validation into an exact no-op."""
+        svc = _make_service(sqlite_client)
+        invalid = replace(_make_fill(fill_id="FILL-CORRUPT"), quantity=-1)
+        FillWriter(sqlite_client).save_strict_uncommitted(invalid)
+        sqlite_client.commit()
+
+        with pytest.raises(FillProcessingError, match="quantity must be positive"):
+            svc.save_fill(invalid)
+
+        assert svc.get_fill(invalid.fill_id) == invalid
+
+    def test_exact_integer_real_values_preserve_idempotent_replay(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        """SQLite REAL coercion requires an exactly representable integer."""
+        svc = _make_service(sqlite_client)
+        record = replace(_make_fill(), fill_price=4, fee=5, slippage=-1)
+
+        assert svc.save_fill(record) is True
+        assert svc.save_fill(record) is False
+
+        persisted = svc.get_fill(record.fill_id)
+        assert persisted is not None
+        assert persisted.fill_price == 4.0
+        assert persisted.fee == 5.0
+        assert persisted.slippage == -1.0
+
     def test_saves_and_retrieves_fill(self, sqlite_client: SQLiteClient) -> None:
         """保存后应能按 fill_id 查回完整记录."""
         svc = _make_service(sqlite_client)
@@ -685,90 +990,78 @@ class TestSaveFill:
 
         assert svc.get_fill("NONEXISTENT") is None
 
-
-class TestFindFill:
-    """find_fill — 按 intent_id + trade_date 查找成交记录（幂等去重用）。"""
-
-    def test_finds_existing_fill(self, sqlite_client: SQLiteClient) -> None:
-        """存在匹配的 fill 时应返回对应记录."""
-        svc = _make_service(sqlite_client)
-
-        fill = _make_fill(intent_id="INT-001", trade_date="2026-04-11")
-        svc.save_fill(fill)
-
-        result = svc.find_fill("INT-001", "2026-04-11")
-        assert result is not None
-        assert result.fill_id == "FILL-001"
-        assert result.intent_id == "INT-001"
-        assert result.trade_date == "2026-04-11"
-
-    def test_returns_none_when_no_match(self, sqlite_client: SQLiteClient) -> None:
-        """无匹配时返回 None."""
-        svc = _make_service(sqlite_client)
-
-        fill = _make_fill(intent_id="INT-001", trade_date="2026-04-11")
-        svc.save_fill(fill)
-
-        assert svc.find_fill("INT-001", "2026-04-12") is None
-        assert svc.find_fill("INT-999", "2026-04-11") is None
-
-    def test_returns_first_when_multiple_fills_same_key(
+    def test_fill_id_replay_is_noop_but_conflicting_payload_fails(
         self, sqlite_client: SQLiteClient
     ) -> None:
-        """同 intent_id + trade_date 存在多条时返回第一条（LIMIT 1）."""
+        """fill_id is the idempotency key, independent of intent/date."""
         svc = _make_service(sqlite_client)
+        original = _make_fill(fill_id="FILL-STABLE", quantity=400)
 
-        svc.save_fill(
-            _make_fill(
-                fill_id="FILL-001",
-                intent_id="INT-001",
-                trade_date="2026-04-11",
-            )
-        )
-        svc.save_fill(
-            _make_fill(
-                fill_id="FILL-002",
-                intent_id="INT-001",
-                trade_date="2026-04-11",
-                quantity=500,
-            )
+        assert svc.save_fill(original) is True
+        assert (
+            svc.save_fill(replace(original, created_at="2026-04-11T10:01:00Z")) is False
         )
 
-        result = svc.find_fill("INT-001", "2026-04-11")
-        assert result is not None
-        assert result.fill_id == "FILL-001"
+        with pytest.raises(FillProcessingError, match="Fill ID conflict: FILL-STABLE"):
+            svc.save_fill(replace(original, quantity=500))
 
+        assert svc.get_fill("FILL-STABLE") == original
 
-class TestReplaceFill:
-    """replace_fill 测试."""
+    def test_concurrent_exact_fill_has_one_creator_and_one_noop(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """BEGIN IMMEDIATE must serialize exact idempotent file-SQLite writes."""
+        pool = SQLitePool(str(tmp_path / "fill-concurrency.sqlite"))
+        service = _make_service(SQLiteClient(pool))
+        fill = _make_fill(fill_id="FILL-CONCURRENT")
+        barrier = Barrier(2)
 
-    def test_replaces_existing_fill_by_id(self, sqlite_client: SQLiteClient) -> None:
-        """替换已有 fill_id 时应覆盖可修正字段并保留主键."""
+        def save_at_barrier() -> bool:
+            barrier.wait()
+            return service.save_fill(fill)
+
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(lambda _: save_at_barrier(), range(2)))
+
+            assert sorted(results) == [False, True]
+            assert service.list_fills("STRAT-A", intent_id="INT-001") == [fill]
+        finally:
+            pool.close_all()
+
+    def test_same_intent_and_trade_date_accepts_multiple_fill_ids(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """intent_id + trade_date is not a uniqueness or idempotency key."""
         svc = _make_service(sqlite_client)
-        original = _make_fill()
-        amended = replace(
-            original,
-            quantity=1200,
-            fill_price=4.25,
-            fee=6.0,
-            notes="amended by reconciliation repair",
-        )
-        svc.save_fill(original)
 
-        replaced = svc.replace_fill(amended)
+        svc.save_fill(_make_fill(fill_id="FILL-PART-1", quantity=300))
+        svc.save_fill(_make_fill(fill_id="FILL-PART-2", quantity=700))
 
-        result = svc.get_fill("FILL-001")
-        assert replaced is True
-        assert result == amended
+        fills = svc.list_fills("STRAT-A", intent_id="INT-001")
+        assert [(fill.fill_id, fill.quantity) for fill in fills] == [
+            ("FILL-PART-1", 300),
+            ("FILL-PART-2", 700),
+        ]
 
-    def test_returns_false_when_fill_missing(self, sqlite_client: SQLiteClient) -> None:
-        """缺失 fill_id 时不应插入新成交."""
+
+class TestImmutableFillStorageSurface:
+    """Production storage exposes no in-place fill mutation backdoor."""
+
+    def test_writer_reader_and_service_have_only_strict_fill_id_surface(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
         svc = _make_service(sqlite_client)
+        writer = FillWriter(sqlite_client)
+        reader = FillReader(sqlite_client)
 
-        replaced = svc.replace_fill(_make_fill())
-
-        assert replaced is False
-        assert svc.get_fill("FILL-001") is None
+        assert not hasattr(svc, "replace_fill")
+        assert not hasattr(svc, "find_fill")
+        assert not hasattr(writer, "replace")
+        assert not hasattr(writer, "save")
+        assert not hasattr(reader, "find")
 
 
 class TestListFills:
@@ -800,6 +1093,25 @@ class TestListFills:
                 trade_date="2026-04-11",
             )
         )
+
+    def test_same_day_raw_and_effective_order_is_stable_by_created_at_and_id(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        later_id = _make_fill(fill_id="FILL-Z")
+        earlier_id = _make_fill(fill_id="FILL-A")
+        svc.save_fill(later_id)
+        svc.save_fill(earlier_id)
+
+        assert [fill.fill_id for fill in svc.list_fills("STRAT-A")] == [
+            "FILL-A",
+            "FILL-Z",
+        ]
+        assert [fill.fill_id for fill in svc.list_effective_fills("STRAT-A")] == [
+            "FILL-A",
+            "FILL-Z",
+        ]
 
     def test_list_by_strategy_id(self, sqlite_client: SQLiteClient) -> None:
         """按 strategy_id 过滤."""
@@ -834,6 +1146,468 @@ class TestListFills:
         self._seed_fills(svc)
 
         assert svc.list_fills("STRAT-NONE") == []
+
+
+class TestFillAdjustments:
+    """Append-only void/replacement events and effective-fill projection."""
+
+    @pytest.mark.parametrize(
+        ("adjustment", "error"),
+        [
+            pytest.param(
+                execution_models.FillAdjustmentRecord(
+                    adjustment_id=cast(str, None),
+                    fill_id="FILL-SOURCE",
+                    adjustment_type="void",
+                    replacement_fill_id=None,
+                    reason="duplicate",
+                    created_at="2026-04-11T11:00:00Z",
+                ),
+                "adjustment_id is required",
+                id="non-string-adjustment-id",
+            ),
+            pytest.param(
+                execution_models.FillAdjustmentRecord(
+                    adjustment_id="ADJ-INVALID",
+                    fill_id=cast(str, 123),
+                    adjustment_type="void",
+                    replacement_fill_id=None,
+                    reason="duplicate",
+                    created_at="2026-04-11T11:00:00Z",
+                ),
+                "fill_id is required",
+                id="non-string-fill-id",
+            ),
+            pytest.param(
+                execution_models.FillAdjustmentRecord(
+                    adjustment_id="ADJ-INVALID",
+                    fill_id="FILL-SOURCE",
+                    adjustment_type="void",
+                    replacement_fill_id=None,
+                    reason=cast(str, None),
+                    created_at="2026-04-11T11:00:00Z",
+                ),
+                "Fill adjustment reason is required",
+                id="non-string-reason",
+            ),
+            pytest.param(
+                execution_models.FillAdjustmentRecord(
+                    adjustment_id="ADJ-INVALID",
+                    fill_id="FILL-SOURCE",
+                    adjustment_type="void",
+                    replacement_fill_id=None,
+                    reason="duplicate",
+                    created_at=cast(str, None),
+                ),
+                "Fill adjustment created_at is required",
+                id="non-string-created-at",
+            ),
+        ],
+    )
+    def test_invalid_adjustment_fields_raise_domain_error_without_writes(
+        self,
+        sqlite_client: SQLiteClient,
+        adjustment: execution_models.FillAdjustmentRecord,
+        error: str,
+    ) -> None:
+        """Runtime type drift must not leak storage or attribute exceptions."""
+        svc = _make_service(sqlite_client)
+        original = _make_fill(fill_id="FILL-SOURCE")
+        svc.save_fill(original)
+
+        with pytest.raises(FillProcessingError, match=error):
+            svc.apply_fill_adjustment(adjustment)
+
+        assert svc.list_fill_adjustments("STRAT-A") == []
+        assert svc.list_effective_fills("STRAT-A") == [original]
+
+    @pytest.mark.parametrize(
+        ("replacement", "error"),
+        [
+            pytest.param(
+                replace(_make_fill(fill_id="FILL-REPLACEMENT"), intent_id=""),
+                "intent_id is required",
+                id="empty-intent-id",
+            ),
+            pytest.param(
+                replace(_make_fill(fill_id="FILL-REPLACEMENT"), strategy_id=" "),
+                "strategy_id is required",
+                id="empty-strategy-id",
+            ),
+            pytest.param(
+                replace(
+                    _make_fill(fill_id="FILL-REPLACEMENT"),
+                    trade_date="2026-02-30",
+                ),
+                "trade_date must be a valid YYYY-MM-DD date",
+                id="invalid-calendar-date",
+            ),
+            pytest.param(
+                replace(_make_fill(fill_id="FILL-REPLACEMENT"), instrument_id=0),
+                "instrument_id must be positive",
+                id="zero-instrument",
+            ),
+            pytest.param(
+                replace(_make_fill(fill_id="FILL-REPLACEMENT"), direction="hold"),
+                "direction must be 'buy' or 'sell'",
+                id="invalid-direction",
+            ),
+            pytest.param(
+                replace(_make_fill(fill_id="FILL-REPLACEMENT"), quantity=-1),
+                "quantity must be positive",
+                id="negative-quantity",
+            ),
+            pytest.param(
+                replace(_make_fill(fill_id="FILL-REPLACEMENT"), fill_price=0.0),
+                "fill_price must be positive and finite",
+                id="zero-price",
+            ),
+            pytest.param(
+                replace(
+                    _make_fill(fill_id="FILL-REPLACEMENT"),
+                    fill_price=float("nan"),
+                ),
+                "fill_price must be positive and finite",
+                id="nan-price",
+            ),
+            pytest.param(
+                replace(_make_fill(fill_id="FILL-REPLACEMENT"), fee=-0.01),
+                "fee must be non-negative and finite",
+                id="negative-fee",
+            ),
+            pytest.param(
+                replace(
+                    _make_fill(fill_id="FILL-REPLACEMENT"),
+                    fee=float("inf"),
+                ),
+                "fee must be non-negative and finite",
+                id="infinite-fee",
+            ),
+            pytest.param(
+                replace(
+                    _make_fill(fill_id="FILL-REPLACEMENT"),
+                    slippage=float("nan"),
+                ),
+                "slippage must be finite",
+                id="nan-slippage",
+            ),
+        ],
+    )
+    def test_invalid_replacement_rolls_back_fill_and_adjustment_together(
+        self,
+        sqlite_client: SQLiteClient,
+        replacement: FillRecord,
+        error: str,
+    ) -> None:
+        """Replacement validation must precede both immutable ledger writes."""
+        svc = _make_service(sqlite_client)
+        original = _make_fill(fill_id="FILL-SOURCE")
+        adjustment = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-INVALID-REPLACEMENT",
+            fill_id=original.fill_id,
+            adjustment_type="replace",
+            replacement_fill_id=replacement.fill_id,
+            reason="reviewed correction",
+            created_at="2026-04-11T11:00:00Z",
+        )
+        svc.save_fill(original)
+
+        with pytest.raises(FillProcessingError, match=error):
+            svc.apply_fill_adjustment(
+                adjustment,
+                replacement_fill=replacement,
+            )
+
+        assert svc.get_fill(replacement.fill_id) is None
+        assert svc.get_fill_adjustment(adjustment.adjustment_id) is None
+        assert svc.list_effective_fills("STRAT-A") == [original]
+
+    def test_exact_adjustment_replay_reports_created_then_noop(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        original = _make_fill(fill_id="FILL-ADJUST-ONCE")
+        adjustment = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-ONCE",
+            fill_id=original.fill_id,
+            adjustment_type="void",
+            replacement_fill_id=None,
+            reason="duplicate",
+            created_at="2026-04-11T11:00:00Z",
+        )
+        svc.save_fill(original)
+
+        assert svc.apply_fill_adjustment(adjustment) is True
+        assert (
+            svc.apply_fill_adjustment(
+                replace(adjustment, created_at="2026-04-11T11:01:00Z")
+            )
+            is False
+        )
+        assert svc.list_fill_adjustments("STRAT-A") == [adjustment]
+
+    def test_concurrent_exact_adjustment_has_one_creator_and_one_noop(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        pool = SQLitePool(str(tmp_path / "adjustment-concurrency.sqlite"))
+        service = _make_service(SQLiteClient(pool))
+        original = _make_fill(fill_id="FILL-ADJUST-CONCURRENT", quantity=100)
+        replacement_fill = _make_fill(
+            fill_id="FILL-ADJUST-CONCURRENT-REPLACEMENT",
+            quantity=80,
+        )
+        adjustment = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-CONCURRENT",
+            fill_id=original.fill_id,
+            adjustment_type="replace",
+            replacement_fill_id=replacement_fill.fill_id,
+            reason="correct quantity",
+            created_at="2026-04-11T11:00:00Z",
+        )
+        service.save_fill(original)
+        barrier = Barrier(2)
+
+        def adjust_at_barrier() -> bool:
+            barrier.wait()
+            return service.apply_fill_adjustment(
+                adjustment,
+                replacement_fill=replacement_fill,
+            )
+
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(lambda _: adjust_at_barrier(), range(2)))
+
+            assert sorted(results) == [False, True]
+            assert service.list_fill_adjustments("STRAT-A") == [adjustment]
+            assert service.list_fills("STRAT-A") == [original, replacement_fill]
+        finally:
+            pool.close_all()
+
+    def test_void_preserves_raw_fill_and_removes_it_from_effective_fills(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        original = _make_fill(fill_id="FILL-VOID", quantity=300)
+        svc.save_fill(original)
+        adjustment = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-VOID",
+            fill_id=original.fill_id,
+            adjustment_type="void",
+            replacement_fill_id=None,
+            reason="duplicate broker entry",
+            created_at="2026-04-11T11:00:00Z",
+        )
+
+        svc.apply_fill_adjustment(adjustment)
+
+        assert svc.get_fill(original.fill_id) == original
+        assert svc.list_fills("STRAT-A") == [original]
+        assert svc.list_effective_fills("STRAT-A") == []
+        assert svc.list_fill_adjustments("STRAT-A") == [adjustment]
+
+    def test_replace_appends_new_fill_and_supports_chained_correction(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        original = _make_fill(fill_id="FILL-ORIGINAL", quantity=300)
+        replacement = _make_fill(fill_id="FILL-REPLACEMENT", quantity=400)
+        svc.save_fill(original)
+        replacement_event = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-REPLACE",
+            fill_id=original.fill_id,
+            adjustment_type="replace",
+            replacement_fill_id=replacement.fill_id,
+            reason="correct partial-fill quantity",
+            created_at="2026-04-11T11:00:00Z",
+        )
+
+        svc.apply_fill_adjustment(
+            replacement_event,
+            replacement_fill=replacement,
+        )
+
+        assert svc.list_fills("STRAT-A") == [original, replacement]
+        assert svc.list_effective_fills("STRAT-A") == [replacement]
+
+        void_replacement = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-VOID-REPLACEMENT",
+            fill_id=replacement.fill_id,
+            adjustment_type="void",
+            replacement_fill_id=None,
+            reason="broker cancelled corrected execution",
+            created_at="2026-04-11T11:05:00Z",
+        )
+        svc.apply_fill_adjustment(void_replacement)
+
+        assert svc.list_effective_fills("STRAT-A") == []
+        assert svc.list_fill_adjustments("STRAT-A") == [
+            replacement_event,
+            void_replacement,
+        ]
+
+    def test_adjustment_replay_is_noop_but_payload_or_target_conflicts_fail(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        svc.save_fill(_make_fill(fill_id="FILL-TARGET"))
+        adjustment = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-STABLE",
+            fill_id="FILL-TARGET",
+            adjustment_type="void",
+            replacement_fill_id=None,
+            reason="operator confirmed duplicate",
+            created_at="2026-04-11T11:00:00Z",
+        )
+
+        svc.apply_fill_adjustment(adjustment)
+        svc.apply_fill_adjustment(adjustment)
+
+        with pytest.raises(
+            FillProcessingError,
+            match="Fill adjustment ID conflict: ADJ-STABLE",
+        ):
+            svc.apply_fill_adjustment(
+                replace(adjustment, reason="different correction reason")
+            )
+        with pytest.raises(
+            FillProcessingError,
+            match="Fill already adjusted: FILL-TARGET",
+        ):
+            svc.apply_fill_adjustment(replace(adjustment, adjustment_id="ADJ-SECOND"))
+
+        assert svc.list_fill_adjustments("STRAT-A") == [adjustment]
+
+    def test_replacement_replay_checks_the_immutable_replacement_payload(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        """同一修正 ID 重试只允许完全相同的替换成交事实。"""
+        svc = _make_service(sqlite_client)
+        original = _make_fill(fill_id="FILL-SOURCE", quantity=300)
+        replacement = _make_fill(fill_id="FILL-CORRECTED", quantity=400)
+        adjustment = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-REPAIR-STABLE",
+            fill_id=original.fill_id,
+            adjustment_type="replace",
+            replacement_fill_id=replacement.fill_id,
+            reason="approved reconciliation correction",
+            created_at="2026-04-11T11:00:00Z",
+        )
+        svc.save_fill(original)
+        svc.apply_fill_adjustment(adjustment, replacement_fill=replacement)
+
+        svc.apply_fill_adjustment(adjustment, replacement_fill=replacement)
+
+        with pytest.raises(
+            FillProcessingError,
+            match="Replacement fill payload conflict: FILL-CORRECTED",
+        ):
+            svc.apply_fill_adjustment(
+                adjustment,
+                replacement_fill=replace(replacement, fill_price=9.99),
+            )
+        assert svc.get_fill(original.fill_id) == original
+        assert svc.get_fill(replacement.fill_id) == replacement
+
+    def test_failed_replacement_does_not_leave_orphan_fill(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        replacement = _make_fill(fill_id="FILL-ORPHAN")
+        adjustment = execution_models.FillAdjustmentRecord(
+            adjustment_id="ADJ-MISSING-SOURCE",
+            fill_id="FILL-MISSING",
+            adjustment_type="replace",
+            replacement_fill_id=replacement.fill_id,
+            reason="source does not exist",
+            created_at="2026-04-11T11:00:00Z",
+        )
+
+        with pytest.raises(FillProcessingError, match="Fill not found: FILL-MISSING"):
+            svc.apply_fill_adjustment(
+                adjustment,
+                replacement_fill=replacement,
+            )
+
+        assert svc.get_fill(replacement.fill_id) is None
+        assert svc.list_fill_adjustments("STRAT-A") == []
+
+
+class TestLedgerTransaction:
+    """Atomic fill, intent-status, and position projection boundary."""
+
+    def test_rolls_back_fill_status_and_position_projection_together(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        intent = _make_intent(status="pending")
+        previous = _make_position(
+            snapshot_id="POS-PREVIOUS",
+            run_id="",
+            quantity=100,
+        )
+        replacement = _make_position(
+            snapshot_id="POS-REPLACEMENT",
+            run_id="",
+            quantity=400,
+        )
+        svc.save_intent(intent)
+        svc.save_position(previous)
+
+        def apply_then_fail() -> None:
+            with svc.ledger_transaction():
+                svc.save_fill(_make_fill(fill_id="FILL-ROLLBACK", quantity=300))
+                assert svc.update_intent_status(
+                    intent.intent_id,
+                    "partially_filled",
+                    expected_current=("pending",),
+                )
+                svc.replace_position_snapshot(
+                    strategy_id="STRAT-A",
+                    snapshot_date="2026-04-11",
+                    positions=(replacement,),
+                )
+                raise RuntimeError("projection failed")
+
+        with pytest.raises(RuntimeError, match="projection failed"):
+            apply_then_fail()
+
+        assert svc.get_fill("FILL-ROLLBACK") is None
+        assert svc.get_intent(intent.intent_id) == intent
+        assert svc.list_positions(
+            "STRAT-A",
+            snapshot_date="2026-04-11",
+            run_id="",
+        ) == [previous]
+
+    def test_empty_position_replacement_clears_stale_manual_snapshot(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        previous = _make_position(
+            snapshot_id="POS-ONLY-BUY",
+            run_id="",
+            quantity=100,
+        )
+        svc.save_position(previous)
+
+        svc.replace_position_snapshot(
+            strategy_id="STRAT-A",
+            snapshot_date="2026-04-11",
+            positions=(),
+        )
+
+        assert (
+            svc.list_positions(
+                "STRAT-A",
+                snapshot_date="2026-04-11",
+                run_id="",
+            )
+            == []
+        )
 
 
 # ===========================================================================

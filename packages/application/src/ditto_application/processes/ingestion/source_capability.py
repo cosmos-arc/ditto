@@ -7,7 +7,11 @@ from ditto_data.models import Dataset
 
 from ditto_application.exceptions import AppProcessError
 
-__all__ = ["ensure_source_supported"]
+__all__ = ["UnsupportedIngestionSourceError", "ensure_source_supported"]
+
+
+class UnsupportedIngestionSourceError(AppProcessError):
+    """Configured source cannot drive the requested ingestion dataset."""
 
 
 def ensure_source_supported(dataset: Dataset, source_name: str) -> None:
@@ -15,7 +19,7 @@ def ensure_source_supported(dataset: Dataset, source_name: str) -> None:
     metadata = default_dataset_metadata()[dataset.value]
     if metadata.supports_source(source_name):
         return
-    raise AppProcessError(
+    raise UnsupportedIngestionSourceError(
         f"Data source '{source_name}' does not support dataset {dataset.value}",
         field="source_name",
         value=source_name,

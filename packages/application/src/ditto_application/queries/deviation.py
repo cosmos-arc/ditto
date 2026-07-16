@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass
 
 from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
@@ -61,37 +62,48 @@ class SignalDeviationQueryFacade:
         *,
         strategy_id: str,
         signal_date: str,
+        execution_date: str | None = None,
+        intent_ids: Collection[str] | None = None,
     ) -> SignalDeviationReport:
-        """Return signal/fill deviation for one strategy and signal date."""
+        """
+        Return one package revision's signal/fill deviation.
+
+        ``signal_date`` selects the decision intents while ``execution_date``
+        selects the fills and positions used for post-trade review.  Callers
+        that own a signal package should also pass its exact ``intent_ids`` so
+        archived revisions from the same signal date cannot enter the report.
+        """
+        resolved_execution_date = execution_date or signal_date
         intent_records = self._intent_port.list_intents(
             strategy_id=strategy_id,
             signal_date=signal_date,
             status=None,
         )
-        fill_records = self._fill_port.list_fills(
+        if intent_ids is not None:
+            allowed_intent_ids = set(intent_ids)
+            intent_records = [
+                record
+                for record in intent_records
+                if record.intent_id in allowed_intent_ids
+            ]
+        fill_records = self._fill_port.list_effective_fills(
             strategy_id=strategy_id,
-            trade_date=signal_date,
-            end_date=signal_date,
+            trade_date=resolved_execution_date,
+            end_date=resolved_execution_date,
         )
         position_records = self._position_port.list_positions(
             strategy_id=strategy_id,
-            snapshot_date=signal_date,
+            snapshot_date=resolved_execution_date,
         )
 
         filled_intent_ids = {record.intent_id for record in fill_records}
-        filled_instrument_ids = {record.instrument_id for record in fill_records}
         actual_weights = _actual_weights_by_instrument(position_records)
 
         items: list[SignalDeviationItem] = []
         filled_count = 0
         for intent_record in intent_records:
             intent = record_to_intent(intent_record)
-            has_fill = _has_matching_fill(
-                intent_id=intent.intent_id,
-                instrument_id=intent.instrument_id,
-                filled_intent_ids=filled_intent_ids,
-                filled_instrument_ids=filled_instrument_ids,
-            )
+            has_fill = intent.intent_id in filled_intent_ids
             if has_fill:
                 filled_count += 1
 
@@ -128,16 +140,6 @@ class SignalDeviationQueryFacade:
             unfilled=len(items) - filled_count,
             items=tuple(sorted(items, key=lambda item: item.instrument_id)),
         )
-
-
-def _has_matching_fill(
-    *,
-    intent_id: str,
-    instrument_id: int,
-    filled_intent_ids: set[str],
-    filled_instrument_ids: set[int],
-) -> bool:
-    return intent_id in filled_intent_ids or instrument_id in filled_instrument_ids
 
 
 def _actual_weight_for_filled_signal(

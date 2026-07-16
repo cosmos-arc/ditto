@@ -71,7 +71,7 @@ class ComparisonQueryFacade:
             self._backtest.get_nav_series(run_id),
         )
 
-        fills = self._actual.get_fills(strategy_id)
+        fills = self._actual.get_effective_fills(strategy_id)
 
         actual_navs = _build_actual_navs(fills, initial_cash, self._market)
 

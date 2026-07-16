@@ -26,6 +26,7 @@ ALLOWED_ORDER_BY: frozenset[str] = frozenset(
         "snapshot_date DESC",
         "trade_date ASC",
         "trade_date DESC",
+        "trade_date ASC, created_at ASC, fill_id ASC",
     }
 )
 

@@ -196,15 +196,6 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/jobs/tasks/dq_batch.py",
-        allowed_modules=frozenset({"ditto_data.quality.quality_types"}),
-        owner="apps DQ batch task",
-        reason=(
-            "DQ batch task uses DQIssue type annotations for task signatures; "
-            "types are frozen dataclasses from the quality migration (B8.1)."
-        ),
-    ),
-    CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/jobs/tasks/monitoring.py",
         allowed_modules=frozenset({"ditto_data.quality.quality_types"}),
         owner="apps ingestion monitoring task",

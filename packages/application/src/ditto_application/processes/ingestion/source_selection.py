@@ -15,6 +15,7 @@ from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_application.catalog_freshness import select_ingestion_source
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.source_capability import (
+    UnsupportedIngestionSourceError,
     ensure_source_supported,
 )
 from ditto_application.source_fallback_policy_effect import (
@@ -318,7 +319,7 @@ def _ensure_selected_source_supported(
         return
     try:
         ensure_source_supported(dataset_enum, source)
-    except AppProcessError as exc:
+    except UnsupportedIngestionSourceError as exc:
         details = dict(exc.details)
         details["operation"] = operation
         if selection_date is not None:
@@ -328,7 +329,7 @@ def _ensure_selected_source_supported(
         if end_date is not None:
             details["end_date"] = end_date
         details.update(source_fallback_policy_details(source_fallback_policy_effect))
-        raise AppProcessError(str(exc), details=details) from exc
+        raise UnsupportedIngestionSourceError(str(exc), details=details) from exc
 
 
 def _aggregate_instrument_results(

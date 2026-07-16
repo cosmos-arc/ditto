@@ -7,7 +7,6 @@ __all__ = [
 ]
 
 from datetime import datetime, timedelta
-from typing import Literal
 
 import polars as pl
 import polars.exceptions as pl_exceptions
@@ -16,11 +15,22 @@ from ditto_data.quality.quality_types import DQIssue, DQResult
 from ditto_platform.foundation import logger
 from ditto_platform.services import AlertManager, NotificationLevel
 
+from ditto_application.processes.quality.batch_policy import QualityAssetClass
 from ditto_application.processes.quality.types import L3CheckResult
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 
 _CALENDAR_BUFFER_MULTIPLIER = 2
+_MARKET_BAR_L3_DATASETS = frozenset(
+    {
+        "stock_daily",
+        "etf_daily",
+        "index_daily",
+        "fx_daily",
+        "commodity_daily",
+    }
+)
+_FACTOR_L3_DATASETS = frozenset({"adj_factor"})
 
 
 class QualityPatrolService:
@@ -57,7 +67,7 @@ class QualityPatrolService:
         self,
         dataset: str,
         trade_date: str,
-        asset_class: Literal["stock", "etf", "index"] | None = None,
+        asset_class: QualityAssetClass | None = None,
         market_wide: bool = False,
     ) -> L3CheckResult:
         """
@@ -80,8 +90,26 @@ class QualityPatrolService:
             trade_date=trade_date,
         )
 
+        if not self._engine.has_statistical_rules(dataset):
+            return L3CheckResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                passed=True,
+                issue_count=0,
+                applicable=False,
+            )
+        if dataset not in _MARKET_BAR_L3_DATASETS | _FACTOR_L3_DATASETS:
+            return L3CheckResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                passed=False,
+                issue_count=0,
+                error="L3_UNSUPPORTED_READER",
+            )
+
         try:
             historical, current, calendar = self._fetch_check_data(
+                dataset,
                 trade_date,
                 asset_class,
                 market_wide,
@@ -129,13 +157,15 @@ class QualityPatrolService:
 
     def _fetch_check_data(
         self,
+        dataset: str,
         trade_date: str,
-        asset_class: Literal["stock", "etf", "index"] | None,
+        asset_class: QualityAssetClass | None,
         market_wide: bool,
     ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
         """获取 L3 检查所需的历史、当前和日历数据."""
         historical, current = self._fetch_data(
             trade_date=trade_date,
+            dataset=dataset,
             asset_class=asset_class,
             market_wide=market_wide,
         )
@@ -177,8 +207,10 @@ class QualityPatrolService:
     def _fetch_data(
         self,
         trade_date: str,
+        *,
+        dataset: str,
         window: int = 120,
-        asset_class: Literal["stock", "etf", "index"] | None = None,
+        asset_class: QualityAssetClass | None = None,
         market_wide: bool = False,
     ) -> tuple[pl.DataFrame, pl.DataFrame]:
         """
@@ -186,6 +218,7 @@ class QualityPatrolService:
 
         Args:
             trade_date: 交易日期（YYYY-MM-DD）
+            dataset: 与 reader 匹配的数据集标识
             window: 历史数据的回溯窗口（天）
             asset_class: 资产类别过滤
             market_wide: 全市场查询模式
@@ -199,6 +232,19 @@ class QualityPatrolService:
         start_dt = trade_dt - timedelta(days=window * _CALENDAR_BUFFER_MULTIPLIER)
         start_date = start_dt.strftime("%Y-%m-%d")
 
+        if dataset in _FACTOR_L3_DATASETS:
+            historical = self._market_facade.get_adj_factors(
+                start=start_date,
+                end=trade_date,
+                allow_experimental_data=True,
+            )
+            current = self._market_facade.get_adj_factors(
+                start=trade_date,
+                end=trade_date,
+                allow_experimental_data=True,
+            )
+            return historical, current
+
         # end=trade_date 包含当日数据（与 current 重叠），这是预存行为。
         # 引擎内部使用 historical 构建参考分布时需排除 current 行。
         # 注: end=trade_date 前一天可避免参考分布污染，但需引擎侧同步调整，
@@ -209,6 +255,7 @@ class QualityPatrolService:
             end=trade_date,
             market_wide=market_wide,
             asset_class=asset_class,
+            allow_experimental_data=True,
         )
 
         # Fetch current data
@@ -218,6 +265,7 @@ class QualityPatrolService:
             end=trade_date,
             market_wide=market_wide,
             asset_class=asset_class,
+            allow_experimental_data=True,
         )
 
         return historical, current

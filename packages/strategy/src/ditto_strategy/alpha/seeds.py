@@ -148,6 +148,12 @@ _seed_stock_selection_rotation = StrategySpec(
     ),
     params={
         "lookback": 252,
+        "top_k": 20,
+        "max_weight": 0.10,
+        "trend_threshold": 0.0,
+        "cash_target": 0.0,
+        "allocation_method": "equal_weight",
+        "rebalance_freq": "monthly",
         "quality_weight": 0.4,
         "value_weight": 0.3,
         "momentum_weight": 0.3,
@@ -155,7 +161,12 @@ _seed_stock_selection_rotation = StrategySpec(
     tags=("seed", "stock", "selection", "rotation"),
     signal_expressions=("quality_roe", "value_pe", "momentum_1m"),
     signal_weights=(0.4, 0.3, 0.3),
-    required_datasets=("stock_daily", "adj_factor"),
+    required_datasets=(
+        "stock_daily",
+        "adj_factor",
+        "balance_sheet",
+        "income_statement",
+    ),
 )
 
 # ---------------------------------------------------------------------------

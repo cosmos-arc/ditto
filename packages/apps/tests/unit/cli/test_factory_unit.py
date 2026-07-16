@@ -114,6 +114,35 @@ def test_create_daily_command_calls_ingest_daily(app_ctx, mocker: MockerFixture)
 
 
 @pytest.mark.unit
+def test_create_daily_command_exits_nonzero_after_failed_ingestion(
+    app_ctx, mocker: MockerFixture
+):
+    """CLI must not report process success when the ingestion result failed."""
+    cmd = create_daily_command("test_dataset", "测试描述")
+    ctx = mocker.Mock(obj={"data_root": MOCK_DATA_ROOT, "verbose": False})
+    mock_executor = mocker.Mock()
+    failed_result = {
+        "dataset": "test_dataset",
+        "trade_date": "2024-01-02",
+        "status": "failed",
+        "row_count": None,
+        "message": "provider unavailable",
+        "error": "FETCH_ERROR",
+    }
+    mock_executor.ingest_daily.return_value = failed_result
+    mock_create_exec = mocker.patch("ditto_apps.cli.commands.factory.create_executor")
+    mock_create_exec.return_value.__enter__.return_value = mock_executor
+    mocker.patch("ditto_apps.cli.commands.factory.validate_date_format")
+    mock_print = mocker.patch("ditto_apps.cli.commands.factory.print_ingestion_result")
+
+    with pytest.raises(ClickExit) as exc_info:
+        cmd(ctx, "2024-01-02", False)
+
+    assert exc_info.value.exit_code == 1
+    mock_print.assert_called_once_with(failed_result, False)
+
+
+@pytest.mark.unit
 def test_create_daily_command_with_force_flag(app_ctx, mocker: MockerFixture):
     """测试 create_daily_command 传递 force 参数"""
 
@@ -214,6 +243,34 @@ def test_create_backfill_command_calls_backfill_range(app_ctx, mocker: MockerFix
 
 
 @pytest.mark.unit
+def test_create_backfill_command_exits_nonzero_after_any_failed_date(
+    app_ctx, mocker: MockerFixture
+):
+    """A partial backfill failure must be visible to shell automation."""
+    cmd = create_backfill_command("test_dataset", "测试描述")
+    ctx = mocker.Mock(obj={"data_root": MOCK_DATA_ROOT})
+    mock_executor = mocker.Mock()
+    failed_result = {
+        "dataset": "test_dataset",
+        "total_dates": 5,
+        "success_count": 4,
+        "skipped_count": 0,
+        "failed_count": 1,
+    }
+    mock_executor.backfill_range.return_value = failed_result
+    mock_create_exec = mocker.patch("ditto_apps.cli.commands.factory.create_executor")
+    mock_create_exec.return_value.__enter__.return_value = mock_executor
+    mocker.patch("ditto_apps.cli.commands.factory.validate_date_format")
+    mock_print = mocker.patch("ditto_apps.cli.commands.factory.print_backfill_summary")
+
+    with pytest.raises(ClickExit) as exc_info:
+        cmd(ctx, "2024-01-01", "2024-01-05", 1)
+
+    assert exc_info.value.exit_code == 1
+    mock_print.assert_called_once_with(failed_result)
+
+
+@pytest.mark.unit
 def test_create_basic_command_returns_callable():
     """测试 create_basic_command 返回可调用对象"""
     cmd = create_basic_command("test_dataset", "测试描述")
@@ -252,6 +309,34 @@ def test_create_basic_command_calls_ingest_daily_with_empty_date(
     mock_executor.ingest_daily.assert_called_once_with("test_dataset", "", True)
 
     mock_print.assert_called_once()
+
+
+@pytest.mark.unit
+def test_create_basic_command_exits_nonzero_after_failed_ingestion(
+    app_ctx, mocker: MockerFixture
+):
+    """Metadata/basic ingestion failures must propagate to the process status."""
+    cmd = create_basic_command("test_dataset", "测试描述")
+    ctx = mocker.Mock(obj={"data_root": MOCK_DATA_ROOT, "verbose": False})
+    mock_executor = mocker.Mock()
+    failed_result = {
+        "dataset": "test_dataset",
+        "trade_date": "",
+        "status": "failed",
+        "row_count": None,
+        "message": "provider unavailable",
+        "error": "FETCH_ERROR",
+    }
+    mock_executor.ingest_daily.return_value = failed_result
+    mock_create_exec = mocker.patch("ditto_apps.cli.commands.factory.create_executor")
+    mock_create_exec.return_value.__enter__.return_value = mock_executor
+    mock_print = mocker.patch("ditto_apps.cli.commands.factory.print_ingestion_result")
+
+    with pytest.raises(ClickExit) as exc_info:
+        cmd(ctx, force=False)
+
+    assert exc_info.value.exit_code == 1
+    mock_print.assert_called_once_with(failed_result, False)
 
 
 @pytest.mark.unit

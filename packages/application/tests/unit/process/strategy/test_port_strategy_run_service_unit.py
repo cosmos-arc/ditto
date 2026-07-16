@@ -193,6 +193,25 @@ class TestResearchMode:
         assert result.mode == StrategyRunMode.RESEARCH
         assert result.trade_date == TRADE_DATE
 
+    def test_run_result_preserves_factor_and_risk_evidence(self) -> None:
+        """EOD package 所需证据必须来自本次真实 pipeline 输入与上下文。"""
+        target = _make_target_portfolio()
+        pipeline = _make_mock_pipeline(target)
+
+        def run_with_risk(context: StrategyContext, bundle: object) -> TargetPortfolio:
+            context.lock_instrument(1, "MAX_POSITION_LIMIT")
+            return target
+
+        pipeline.run.side_effect = run_with_risk
+        service = _make_service(pipeline=pipeline)
+
+        result = service.run(TRADE_DATE, _make_fake_slice())
+
+        assert result.factor_ids == ("signal_value",)
+        assert result.factor_values == {1: {"signal_value": pytest.approx(0.02)}}
+        assert result.risk_flags == ("MAX_POSITION_LIMIT",)
+        assert result.risk_locked_instruments == (1,)
+
     def test_recommendation_mode_without_artifact_service(self) -> None:
         """RECOMMENDATION 模式在无 artifact_service 时正常运行（无持久化）。"""
         target = _make_target_portfolio()
@@ -290,6 +309,31 @@ class TestRecommendationMode:
         )
         mock_run_service.mark_running.assert_called_once_with("run-001")
         mock_run_service.mark_completed.assert_called_once_with("run-001")
+        mock_run_service.mark_failed.assert_not_called()
+
+    def test_external_lifecycle_owner_prevents_premature_completion(self) -> None:
+        """EOD coordinator 接管 lifecycle 时，策略计算不得抢先写 completed。"""
+        mock_run_service = MagicMock()
+        service = StrategyRunService(
+            config=StrategyRunServiceConfig(
+                strategy_id="momentum-etf",
+                strategy_version="2026.03",
+                run_id="eod-2026-01-15-momentum-etf-2026.03",
+                mode=StrategyRunMode.RECOMMENDATION,
+                manage_run_lifecycle=False,
+            ),
+            pipeline=_make_mock_pipeline(),
+            assembler=_make_mock_assembler(),
+            run_service=mock_run_service,
+        )
+
+        result = service.run(TRADE_DATE, _make_fake_slice())
+
+        assert result.run_id == "eod-2026-01-15-momentum-etf-2026.03"
+        mock_run_service.get_run.assert_not_called()
+        mock_run_service.create_run.assert_not_called()
+        mock_run_service.mark_running.assert_not_called()
+        mock_run_service.mark_completed.assert_not_called()
         mock_run_service.mark_failed.assert_not_called()
 
     def test_auto_generated_run_id_flows_into_assembler_and_lifecycle(self) -> None:

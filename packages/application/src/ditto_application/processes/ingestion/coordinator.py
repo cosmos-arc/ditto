@@ -6,7 +6,7 @@ from typing import NamedTuple
 
 import polars as pl
 from ditto_data.models import Dataset
-from ditto_data.models.ingestion import IngestionResult
+from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -52,6 +52,8 @@ from ditto_application.processes.ingestion.metadata_manager import MetadataManag
 from ditto_application.processes.ingestion.post_ingest import (
     DataWriteContext,
     PostIngestContext,
+    is_sparse_pit_dataset,
+    resolve_sparse_asof_snapshot,
 )
 from ditto_application.processes.ingestion.post_ingest import (
     handle_fetch_error as _handle_fetch_error,
@@ -221,18 +223,57 @@ class IngestionCoordinator:
         self, dataset: str, trade_date: str, force: bool
     ) -> IngestionResult | None:
         """检查是否应该跳过摄取。"""
-        should_skip, skip_reason = self._metadata_manager.should_skip(
+        decision = self._metadata_manager.get_skip_decision(
             dataset=dataset,
             trade_date=trade_date,
             source=self._source_name,
             force=force,
         )
-        if should_skip:
+        if decision.should_skip:
+            quality_evidence = (
+                IngestionQualityEvidence(
+                    kind="persisted_ingestion_l1_l2",
+                    status="passed",
+                    source=self._source_name,
+                    trade_date=trade_date,
+                    levels=("l1", "l2"),
+                    row_count=decision.row_count,
+                    checksum=decision.checksum,
+                )
+                if isinstance(decision.checksum, str)
+                and decision.checksum
+                and isinstance(decision.row_count, int)
+                and not isinstance(decision.row_count, bool)
+                and decision.row_count >= 0
+                else None
+            )
+            if is_sparse_pit_dataset(dataset):
+                snapshot_evidence = resolve_sparse_asof_snapshot(
+                    dataset=dataset,
+                    trade_date=trade_date,
+                    source_name=self._source_name,
+                    catalog_reader=self._catalog_reader,
+                )
+                if snapshot_evidence is None or quality_evidence is None:
+                    return None
+                return IngestionResult(
+                    dataset=dataset,
+                    trade_date=trade_date,
+                    status="skipped",
+                    row_count=decision.row_count,
+                    checksum=None,
+                    message=decision.reason or "数据已存在且摄取成功",
+                    snapshot_evidence=snapshot_evidence,
+                    quality_evidence=quality_evidence,
+                )
             return IngestionResult(
                 dataset=dataset,
                 trade_date=trade_date,
                 status="skipped",
-                message=skip_reason or "数据已存在且摄取成功",
+                row_count=decision.row_count,
+                checksum=decision.checksum,
+                message=decision.reason or "数据已存在且摄取成功",
+                quality_evidence=quality_evidence,
             )
         return None
 
@@ -286,6 +327,7 @@ class IngestionCoordinator:
                 data_writer=self._data_writer,
                 quality_checker=self._quality_checker,
                 list_date_inference=self._list_date_inference,
+                catalog_reader=self._catalog_reader,
                 cursor_store=self._ingestion_cursor_store,
                 freeze_store=self._freeze_store,
                 lineage_recorder=self._lineage_recorder,

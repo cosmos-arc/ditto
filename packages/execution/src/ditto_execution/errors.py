@@ -8,6 +8,8 @@ __all__ = [
     "AuditError",
     "ExecutionError",
     "FatalError",
+    "FillConflictError",
+    "FillNotFoundError",
     "FillProcessingError",
     "InsufficientFundsError",
     "OrderStateError",
@@ -35,6 +37,14 @@ class OrderStateError(ExecutionError):
 
 class FillProcessingError(ExecutionError):
     """成交处理失败."""
+
+
+class FillConflictError(FillProcessingError):
+    """成交或修正事件的幂等键/当前状态发生冲突。"""
+
+
+class FillNotFoundError(FillProcessingError):
+    """目标成交不存在。"""
 
 
 class ReconciliationError(ExecutionError):

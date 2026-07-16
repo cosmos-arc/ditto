@@ -212,7 +212,13 @@ class TestRepairActionExecutorReportSequence:
         assert source.requested_action_ids == ["rec-duplicate-amend:0000"]
         assert source.observed_current_records == [current]
         assert local_fills.replaced_fill_ids == ["fill-combined-amend"]
-        assert local_fills.get_fill("fill-combined-amend") == amended
+        assert local_fills.get_fill("fill-combined-amend") == current
+        replacement_id = "fill-combined-amend:repair:rec-duplicate-amend:0000"
+        assert local_fills.get_fill(replacement_id) == replace(
+            amended,
+            fill_id=replacement_id,
+            created_at="2026-05-31T09:40:00Z",
+        )
         assert audit.results == list(results)
         assert [record.status for record in records] == [
             RepairActionStatus.EXECUTED,
@@ -545,7 +551,13 @@ class TestRepairActionExecutorReportSequence:
         assert competing_source.requested_action_ids == []
         assert competing_source.observed_current_records == []
         assert local_fills.replaced_fill_ids == ["fill-combined-amend"]
-        assert local_fills.get_fill("fill-combined-amend") == amended
+        assert local_fills.get_fill("fill-combined-amend") == current
+        replacement_id = "fill-combined-amend:repair:rec-duplicate-amend:0000"
+        assert local_fills.get_fill(replacement_id) == replace(
+            amended,
+            fill_id=replacement_id,
+            created_at="2026-05-31T09:40:00Z",
+        )
         assert competing_audit.results == list(competing_results)
         assert primary_audit.results == list(results)
         assert [record.status for record in records] == [

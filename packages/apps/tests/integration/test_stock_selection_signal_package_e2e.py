@@ -2,13 +2,32 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
-from ditto_application.processes.execution.signal_package import SignalPackagePublisher
-from ditto_execution.models import SignalRecord
+from ditto_application.processes.execution.manual_sizing import (
+    AShareTradeDateResolver,
+    ManualSizingContext,
+    ManualSizingService,
+)
+from ditto_application.processes.execution.signal_package import (
+    SignalPackagePublisher,
+    SignalPackagePublishRequest,
+)
+from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
+from ditto_execution.models import FillRecord, SignalRecord
 from ditto_kernel.identity import InstrumentId
+from ditto_platform.foundation import SQLitePool
 from ditto_strategy.alpha.models import TargetPortfolio
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
+from ditto_strategy.storage.sqlite.strategy_artifact_store import (
+    SQLiteStrategyArtifactReader,
+    SQLiteStrategyArtifactWriter,
+)
 
 STRATEGY_ID = "stock-selection-golden"
 SIGNAL_DATE = "2026-02-27"
@@ -54,12 +73,40 @@ class _IntentPort:
         return False
 
 
+class _FillPort:
+    def save_fill(self, record: FillRecord) -> None:
+        raise AssertionError("test does not persist fills")
+
+    def list_fills(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+        intent_id: str | None = None,
+        end_date: str | None = None,
+    ) -> list[FillRecord]:
+        return []
+
+
+@pytest.fixture
+def artifact_service(tmp_path: Path) -> Iterator[StrategyArtifactService]:
+    pool = SQLitePool(str(tmp_path / "signal-package.db"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    yield StrategyArtifactService(
+        reader=SQLiteStrategyArtifactReader(pool),
+        writer=writer,
+    )
+    pool.close()
+
+
 @pytest.mark.integration
-def test_stock_selection_target_publishes_readable_manual_trade_signals() -> None:
+def test_stock_selection_target_publishes_readable_manual_trade_signals(
+    artifact_service: StrategyArtifactService,
+) -> None:
     target = TargetPortfolio(
         trade_date=SIGNAL_DATE,
         strategy_id=STRATEGY_ID,
-        run_id=STRATEGY_ID,
+        run_id=f"eod-{SIGNAL_DATE}-{STRATEGY_ID}-1",
         positions={
             InstrumentId(5): 1 / 3,
             InstrumentId(4): 1 / 3,
@@ -69,29 +116,78 @@ def test_stock_selection_target_publishes_readable_manual_trade_signals() -> Non
     )
     port = _IntentPort(rows=[])
     publisher = SignalPackagePublisher(
-        position_reader=_FlatPositionReader(),
+        snapshot_process=SignalSnapshotProcess(
+            position_reader=_FlatPositionReader(),
+            sizing_service=ManualSizingService(),
+        ),
         intent_port=port,
+        fill_port=_FillPort(),
+        date_resolver=AShareTradeDateResolver(trading_days=(SIGNAL_DATE, "2026-03-02")),
+        artifact_service=artifact_service,
     )
 
     package = publisher.publish(
-        target=target,
-        dataset_snapshot_ids={
-            "stock_daily": "sha256:synthetic-stock",
-            "balance_sheet": "sha256:synthetic-balance",
-            "income_statement": "sha256:synthetic-income",
-        },
-        factor_ids=("quality_roe", "value_pe", "momentum_1m"),
-        factor_values={
-            3: {"quality_roe": 0.8, "value_pe": -0.2, "momentum_1m": 0.4},
-            4: {"quality_roe": 0.6, "value_pe": -0.4, "momentum_1m": 0.3},
-            5: {"quality_roe": 0.7, "value_pe": -0.1, "momentum_1m": 0.5},
-        },
-        industry_by_instrument={
-            3: "consumer",
-            4: "technology",
-            5: "healthcare",
-        },
-        risk_flags=("buying_power_checked", "lot_size_checked"),
+        SignalPackagePublishRequest(
+            target=target,
+            strategy_version="1",
+            account_id="paper-a",
+            sleeve_id=f"manual-paper-a-{STRATEGY_ID}",
+            sizing_contexts={
+                instrument_id: ManualSizingContext(
+                    nav=30_000.0,
+                    current_quantity=0,
+                    available_quantity=0,
+                    cash_available=30_000.0,
+                    reference_price=10.0,
+                    current_weight=0.0,
+                )
+                for instrument_id in (3, 4, 5)
+            },
+            decision_date=SIGNAL_DATE,
+            intended_trade_date="2026-03-02",
+            required_datasets=(
+                "stock_daily",
+                "balance_sheet",
+                "income_statement",
+            ),
+            required_dataset_states=(
+                {
+                    "dataset": "stock_daily",
+                    "status": "ready",
+                    "snapshot_id": "sha256:synthetic-stock",
+                    "reason": "",
+                },
+                {
+                    "dataset": "balance_sheet",
+                    "status": "ready",
+                    "snapshot_id": "sha256:synthetic-balance",
+                    "reason": "",
+                },
+                {
+                    "dataset": "income_statement",
+                    "status": "ready",
+                    "snapshot_id": "sha256:synthetic-income",
+                    "reason": "",
+                },
+            ),
+            dataset_snapshot_ids={
+                "stock_daily": "sha256:synthetic-stock",
+                "balance_sheet": "sha256:synthetic-balance",
+                "income_statement": "sha256:synthetic-income",
+            },
+            factor_ids=("quality_roe", "value_pe", "momentum_1m"),
+            factor_values={
+                3: {"quality_roe": 0.8, "value_pe": -0.2, "momentum_1m": 0.4},
+                4: {"quality_roe": 0.6, "value_pe": -0.4, "momentum_1m": 0.3},
+                5: {"quality_roe": 0.7, "value_pe": -0.1, "momentum_1m": 0.5},
+            },
+            industry_by_instrument={
+                3: "consumer",
+                4: "technology",
+                5: "healthcare",
+            },
+            risk_flags=("buying_power_checked", "lot_size_checked"),
+        )
     )
 
     assert package.strategy_id == STRATEGY_ID
@@ -101,6 +197,8 @@ def test_stock_selection_target_publishes_readable_manual_trade_signals() -> Non
     assert len(port.list_intents(strategy_id=STRATEGY_ID, signal_date=SIGNAL_DATE)) == 3
     assert {row.instrument_id for row in port.rows} == {3, 4, 5}
     assert all(row.direction == "buy" for row in port.rows)
+    # 三笔最低佣金必须共享同一现金池；第三笔只能建议 900 股。
+    assert sorted(row.quantity for row in port.rows) == [900, 1000, 1000]
 
     assert set(package.selection_reasons) == {3, 4, 5}
     for instrument_id, reason in package.selection_reasons.items():

@@ -157,6 +157,11 @@ class QualityEngine:
             issues=issues,
         )
 
+    def has_statistical_rules(self, dataset: str) -> bool:
+        """Return whether ``dataset`` has configured statistical rules."""
+        dataset_rules = self.config.get_rules(dataset)
+        return bool(dataset_rules is not None and dataset_rules.statistical)
+
     def check_cross_source(
         self,
         primary: pl.DataFrame,

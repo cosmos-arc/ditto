@@ -282,6 +282,23 @@ class TestComputeDiffBasic:
         assert all(o.direction == OrderSide.SELL for o in orders)
         assert all(o.instrument_id == _iid(1) for o in orders)
 
+    def test_current_price_reversal_uses_exact_target_shares_for_sell(self) -> None:
+        """D 日价格重估后，100 股到目标 62 股应只卖出 38 股。"""
+        ctx = _ctx(
+            target_positions={1: 0.5},
+            account_positions={1: _position(1, quantity=100, market_value=1_000.0)},
+            instruments={1},
+            snaps_map={1: _snap(1, close=80.0)},
+            nav=10_000.0,
+        )
+
+        orders, blocked = compute_diff(ctx, _make_order)
+
+        assert blocked == []
+        assert [(order.direction, order.quantity) for order in orders] == [
+            (OrderSide.SELL, 38)
+        ]
+
 
 # ---------------------------------------------------------------------------
 # compute_diff — pending delta

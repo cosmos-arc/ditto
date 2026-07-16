@@ -35,6 +35,9 @@ from ditto_execution.contracts import (
     IntentDataPort,
     PositionDataPort,
 )
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -79,17 +82,24 @@ from ditto_application.commands.strategy import (
     UpdateStrategyHandler,
 )
 from ditto_application.commands.trade import (
+    ProjectedFillAppendAdapter,
+    ProjectedFillCorrectionAdapter,
     RecordFillHandler,
+    ReplaceFillHandler,
     UpdateIntentStatusHandler,
+    VoidFillHandler,
 )
 from ditto_application.commands.universe import (
     CreateCustomUniverseHandler,
     DeleteCustomUniverseHandler,
     UpdateCustomUniverseHandler,
 )
+from ditto_application.opening_baseline import OpeningBaselinePort
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.queries.account import AccountBaselineQuery
+from ditto_application.queries.opening_baseline import OpeningBaselineResolver
 
 
 class AppCommandProvider(Provider):
@@ -98,12 +108,28 @@ class AppCommandProvider(Provider):
     scope = Scope.APP
 
     @provide
+    def opening_baseline_resolver(
+        self,
+        account_query: AccountBaselineQuery,
+        artifact_service: StrategyArtifactService,
+    ) -> OpeningBaselinePort:
+        """Resolve one manual intent to its exact account opening aggregate."""
+        return OpeningBaselineResolver(
+            account_query=account_query,
+            package_reader=artifact_service,
+        )
+
+    @provide
     def import_account_baseline_handler(
         self,
         account_port: AccountDataPort,
+        position_port: PositionDataPort,
     ) -> ImportAccountBaselineHandler:
         """账户与持仓期初基线导入 Handler."""
-        return ImportAccountBaselineHandler(account_port=account_port)
+        return ImportAccountBaselineHandler(
+            account_port=account_port,
+            position_port=position_port,
+        )
 
     @provide
     def check_data_quality_handler(
@@ -292,6 +318,8 @@ class AppCommandProvider(Provider):
         fill_port: FillDataPort,
         position_port: PositionDataPort,
         manual_tracker: ManualTracker,
+        opening_baseline_resolver: OpeningBaselinePort,
+        projected_fill_adapter: ProjectedFillAppendAdapter,
     ) -> RecordFillHandler:
         """成交录入 Handler."""
         return RecordFillHandler(
@@ -299,6 +327,80 @@ class AppCommandProvider(Provider):
             fill_port=fill_port,
             position_port=position_port,
             manual_tracker=manual_tracker,
+            opening_baseline_resolver=opening_baseline_resolver,
+            projected_fill_adapter=projected_fill_adapter,
+        )
+
+    @provide
+    def projected_fill_append_adapter(
+        self,
+        intent_port: IntentDataPort,
+        fill_port: FillDataPort,
+        position_port: PositionDataPort,
+        manual_tracker: ManualTracker,
+        opening_baseline_resolver: OpeningBaselinePort,
+    ) -> ProjectedFillAppendAdapter:
+        """Broker/manual fill append adapter with atomic derived projections."""
+        return ProjectedFillAppendAdapter(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=manual_tracker,
+            opening_baseline_resolver=opening_baseline_resolver,
+        )
+
+    @provide
+    def void_fill_handler(
+        self,
+        intent_port: IntentDataPort,
+        fill_port: FillDataPort,
+        position_port: PositionDataPort,
+        manual_tracker: ManualTracker,
+        opening_baseline_resolver: OpeningBaselinePort,
+    ) -> VoidFillHandler:
+        """Append-only 成交作废 Handler。"""
+        return VoidFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=manual_tracker,
+            opening_baseline_resolver=opening_baseline_resolver,
+        )
+
+    @provide
+    def replace_fill_handler(
+        self,
+        intent_port: IntentDataPort,
+        fill_port: FillDataPort,
+        position_port: PositionDataPort,
+        manual_tracker: ManualTracker,
+        opening_baseline_resolver: OpeningBaselinePort,
+    ) -> ReplaceFillHandler:
+        """Append-only 成交替换 Handler。"""
+        return ReplaceFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=manual_tracker,
+            opening_baseline_resolver=opening_baseline_resolver,
+        )
+
+    @provide
+    def projected_fill_correction_adapter(
+        self,
+        intent_port: IntentDataPort,
+        fill_port: FillDataPort,
+        position_port: PositionDataPort,
+        manual_tracker: ManualTracker,
+        opening_baseline_resolver: OpeningBaselinePort,
+    ) -> ProjectedFillCorrectionAdapter:
+        """为 reconciliation 提供原子 ledger + projection 修正适配器。"""
+        return ProjectedFillCorrectionAdapter(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=manual_tracker,
+            opening_baseline_resolver=opening_baseline_resolver,
         )
 
     @provide

@@ -3,8 +3,6 @@
 import inspect
 from typing import Protocol, get_args, get_origin
 
-from ditto_execution.fills.store import FillStore
-from ditto_execution.models import FillRecord
 from ditto_execution.orders.store import OrderRecord, OrderStore
 from ditto_execution.reconciliation import ReconciliationReport
 
@@ -43,19 +41,6 @@ def test_order_store_uses_order_record_annotations() -> None:
     assert list_annotations["trade_date"] == str | None
     assert get_origin(list_annotations["return"]) is list
     assert get_args(list_annotations["return"]) == (OrderRecord,)
-
-
-def test_fill_store_contract_is_actionable() -> None:
-    assert issubclass(FillStore, Protocol)
-    assert hasattr(FillStore, "save_fill")
-    assert hasattr(FillStore, "get_fill")
-    assert hasattr(FillStore, "list_fills")
-
-
-def test_fill_store_uses_existing_fill_record() -> None:
-    annotations = inspect.get_annotations(FillStore.save_fill, eval_str=True)
-
-    assert annotations["record"] == FillRecord
 
 
 def test_reconciliation_report_captures_summary_counts() -> None:

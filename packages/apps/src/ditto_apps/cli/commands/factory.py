@@ -23,6 +23,19 @@ from ditto_apps.cli.utils.validation import (
 )
 
 
+def _raise_if_ingestion_failed(result: dict[str, object]) -> None:
+    """Propagate an ingestion failure to shell automation after rendering it."""
+    if result.get("status") == "failed":
+        raise typer.Exit(code=1)
+
+
+def _raise_if_backfill_failed(result: dict[str, object]) -> None:
+    """Fail the process when any requested backfill partition failed."""
+    failed_count = result.get("failed_count")
+    if isinstance(failed_count, int) and failed_count > 0:
+        raise typer.Exit(code=1)
+
+
 def create_instrument_command(
     dataset: str,
     description: str,
@@ -134,6 +147,7 @@ def create_daily_command(dataset: str, description: str) -> Callable[..., None]:
         with create_executor() as executor:
             result = executor.ingest_daily(dataset, date, force)
             print_ingestion_result(result, ctx.obj["verbose"])
+            _raise_if_ingestion_failed(result)
 
     command.__doc__ = description
     return command
@@ -176,6 +190,7 @@ def create_backfill_command(dataset: str, description: str) -> Callable[..., Non
         with create_executor() as executor:
             result = executor.backfill_range(dataset, start, end, parallel)
             print_backfill_summary(result)
+            _raise_if_backfill_failed(result)
 
     command.__doc__ = description
     return command
@@ -209,6 +224,7 @@ def create_basic_command(dataset: str, description: str) -> Callable[..., None]:
         with create_executor() as executor:
             result = executor.ingest_daily(dataset, "", force)
             print_ingestion_result(result, ctx.obj["verbose"])
+            _raise_if_ingestion_failed(result)
 
     command.__doc__ = description
     return command

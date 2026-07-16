@@ -56,6 +56,9 @@ class TestShouldSkip:
         *,
         dataset: str = "stock_daily",
         trade_date: str = "2024-12-27",
+        source: str = "tushare",
+        checksum: str = "abc123",
+        row_count: int = 1000,
         freshness_at: datetime | None = None,
     ) -> InMemoryDataCatalog:
         catalog = InMemoryDataCatalog()
@@ -69,11 +72,14 @@ class TestShouldSkip:
                 storage_uri=f"{dataset}/2024",
                 schema=DataSchemaFingerprint(
                     schema_hash=f"schema:{dataset}:v1",
-                    row_count=1000,
+                    row_count=row_count,
                     created_at=datetime(2024, 12, 27, 18, 0, tzinfo=UTC),
                 ),
-                source="tushare",
+                source=source,
                 freshness_at=freshness_at or datetime(2024, 12, 27, 18, 5, tzinfo=UTC),
+                source_snapshot_id=(
+                    f"snapshot:{source}:{dataset}:{trade_date}:{checksum}:quality=l1-l2"
+                ),
             )
         )
         return catalog
@@ -107,11 +113,11 @@ class TestShouldSkip:
         assert reason is None
         mock_ingestion_log_store.get_log.assert_called_once()
 
-    def test_should_skip_when_catalog_has_exact_trade_date_asset(
+    def test_catalog_without_success_log_is_reingested(
         self,
         mock_ingestion_log_store,
     ) -> None:
-        """无 log 历史但 catalog 已有 exact-date 资产时跳过。"""
+        """Catalog-only 残留不能形成永久 skip/DQ 死循环。"""
         mock_ingestion_log_store.get_log.return_value = None
         manager = MetadataManager(
             mock_ingestion_log_store,
@@ -126,10 +132,8 @@ class TestShouldSkip:
             force=False,
         )
 
-        assert should_skip is True
-        assert reason is not None
-        assert "catalog" in reason.lower()
-        assert "stock_daily/2024" in reason
+        assert should_skip is False
+        assert reason is None
 
     def test_should_not_skip_when_catalog_asset_is_stale(
         self,
@@ -195,7 +199,10 @@ class TestShouldSkip:
             checksum="abc123",
             rows=1000,
         )
-        manager = MetadataManager(mock_ingestion_log_store)
+        manager = MetadataManager(
+            mock_ingestion_log_store,
+            data_catalog_reader=self._catalog_with_asset(),
+        )
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -206,6 +213,37 @@ class TestShouldSkip:
         assert should_skip is True
         assert reason is not None
         assert "成功" in reason or "SUCCESS" in reason
+
+    @pytest.mark.parametrize(
+        ("checksum", "rows"),
+        [(None, 0), ("", 0), ("sha256:known", None), ("sha256:known", -1)],
+    )
+    def test_previous_success_without_snapshot_evidence_is_retried(
+        self,
+        mock_ingestion_log_store,
+        checksum: str | None,
+        rows: int | None,
+    ) -> None:
+        """An empty sparse success must not permanently mask missing PIT evidence."""
+        mock_ingestion_log_store.get_log.return_value = IngestionLog(
+            dataset="balance_sheet",
+            source="tushare",
+            trade_date="2025-01-06",
+            status=IngestionStatus.SUCCESS,
+            checksum=checksum,
+            rows=rows,
+        )
+        manager = MetadataManager(mock_ingestion_log_store)
+
+        decision = manager.get_skip_decision(
+            dataset="balance_sheet",
+            trade_date="2025-01-06",
+            source="tushare",
+        )
+
+        assert decision.should_skip is False
+        assert decision.checksum is None
+        assert decision.row_count is None
 
     def test_should_not_skip_when_previous_failed(
         self, mock_ingestion_log_store
@@ -256,7 +294,10 @@ class TestShouldSkip:
             checksum="abc123",
             rows=1000,
         )
-        manager = MetadataManager(mock_ingestion_log_store)
+        manager = MetadataManager(
+            mock_ingestion_log_store,
+            data_catalog_reader=self._catalog_with_asset(source="akshare"),
+        )
 
         # 使用 akshare 数据源
         should_skip, reason = manager.should_skip(
@@ -267,11 +308,13 @@ class TestShouldSkip:
         )
 
         # 验证 get_log 被调用时使用了正确的 source
-        mock_ingestion_log_store.get_log.assert_called_once_with(
-            dataset="stock_daily",
-            source="akshare",  # 应该是 akshare 而不是硬编码的 tushare
-            trade_date="2024-12-27",
-        )
+        assert mock_ingestion_log_store.get_log.call_count == 2
+        for call in mock_ingestion_log_store.get_log.call_args_list:
+            assert call.kwargs == {
+                "dataset": "stock_daily",
+                "source": "akshare",
+                "trade_date": "2024-12-27",
+            }
 
         assert should_skip is True
         assert reason is not None
@@ -441,7 +484,31 @@ class TestShouldSkipEdgeCases:
             checksum="abcdef1234567890",
             rows=1000,
         )
-        manager = MetadataManager(mock_ingestion_log_store)
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="stock_daily",
+                    namespace="market",
+                    partition_keys=("trade_date=2024-12-27",),
+                ),
+                storage_uri="stock_daily/2024",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:stock_daily:v1",
+                    row_count=1000,
+                ),
+                source="tushare",
+                freshness_at=datetime(2024, 12, 27, 18, 5, tzinfo=UTC),
+                source_snapshot_id=(
+                    "snapshot:tushare:stock_daily:2024-12-27:"
+                    "abcdef1234567890:quality=l1-l2"
+                ),
+            )
+        )
+        manager = MetadataManager(
+            mock_ingestion_log_store,
+            data_catalog_reader=catalog,
+        )
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -455,10 +522,10 @@ class TestShouldSkipEdgeCases:
         assert "abcdef12" in reason  # checksum 前 8 个字符
         assert "1000" in reason  # 行数
 
-    def test_skip_reason_handles_missing_checksum(
+    def test_success_without_checksum_is_retried_for_authoritative_evidence(
         self, mock_ingestion_log_store
     ) -> None:
-        """跳过原因应处理 checksum 为 None 的情况。"""
+        """A success row without a checksum cannot prove a persisted snapshot."""
         # Mock get_log 返回成功但无 checksum 的历史记录
         mock_ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
@@ -476,6 +543,5 @@ class TestShouldSkipEdgeCases:
             force=False,
         )
 
-        assert should_skip is True
-        assert reason is not None
-        assert "N/A" in reason  # checksum 为 None 时显示 N/A
+        assert should_skip is False
+        assert reason is None

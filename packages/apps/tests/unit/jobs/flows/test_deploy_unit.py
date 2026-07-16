@@ -13,6 +13,14 @@ from ditto_apps.jobs.flows.deploy import (
 from pytest_mock import MockerFixture
 
 
+@pytest.fixture(autouse=True)
+def configured_eod_deployment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """为非配置校验用例提供一组可部署的 EOD 默认值。"""
+    monkeypatch.setenv("DITTO_EOD_STRATEGY_ID", "test-etf-rotation")
+    monkeypatch.setenv("DITTO_EOD_ACCOUNT_ID", "test-paper-account")
+    monkeypatch.delenv("DITTO_EOD_ALLOW_EXPERIMENTAL_DATA", raising=False)
+
+
 @pytest.mark.unit
 class TestGetFlow:
     """测试 _get_flow 函数."""
@@ -78,6 +86,102 @@ class TestGetFlowConfigs:
         # 所有配置都应该有 schedule 属性（dataclass 默认值为 None）
         for config in configs:
             assert hasattr(config, "schedule")
+
+    def test_eod_selection_is_explicitly_injected_from_deployment_config(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Prefect 部署不猜测 execution sleeve，只传递显式配置。"""
+        monkeypatch.setenv("DITTO_EOD_STRATEGY_ID", "etf-rotation")
+        monkeypatch.setenv("DITTO_EOD_ACCOUNT_ID", "paper")
+
+        config = _get_flow_configs()[0]
+
+        assert config.parameters == {
+            "trade_date": "{{ date }}",
+            "strategy_id": "etf-rotation",
+            "account_id": "paper",
+            "allow_experimental_data": False,
+        }
+
+    @pytest.mark.parametrize(
+        ("missing_name", "present_name", "present_value"),
+        [
+            ("DITTO_EOD_STRATEGY_ID", "DITTO_EOD_ACCOUNT_ID", "paper"),
+            ("DITTO_EOD_ACCOUNT_ID", "DITTO_EOD_STRATEGY_ID", "etf-rotation"),
+        ],
+    )
+    def test_missing_required_eod_selection_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        missing_name: str,
+        present_name: str,
+        present_value: str,
+    ) -> None:
+        """定时部署不得生成 strategy/account 缺失的每日任务。"""
+        monkeypatch.delenv(missing_name, raising=False)
+        monkeypatch.setenv(present_name, present_value)
+
+        with pytest.raises(
+            ValueError,
+            match=rf"EOD_DEPLOYMENT_CONFIG_MISSING.*{missing_name}",
+        ):
+            _get_flow_configs()
+
+    def test_blank_required_eod_selection_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """空白选择与未配置等价，不能进入 Prefect 部署。"""
+        monkeypatch.setenv("DITTO_EOD_STRATEGY_ID", "  ")
+
+        with pytest.raises(
+            ValueError,
+            match=r"EOD_DEPLOYMENT_CONFIG_MISSING.*DITTO_EOD_STRATEGY_ID",
+        ):
+            _get_flow_configs()
+
+    @pytest.mark.parametrize("raw", ["true", " TRUE ", "1", "yes", "on"])
+    def test_eod_experimental_opt_in_is_explicit(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        raw: str,
+    ) -> None:
+        """只有显式真值才允许定时任务使用 experimental 数据。"""
+        monkeypatch.setenv("DITTO_EOD_ALLOW_EXPERIMENTAL_DATA", raw)
+
+        config = _get_flow_configs()[0]
+
+        assert config.parameters["allow_experimental_data"] is True
+
+    @pytest.mark.parametrize("raw", ["false", " FALSE ", "0", "no", "off"])
+    def test_eod_experimental_opt_in_accepts_explicit_false_values(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        raw: str,
+    ) -> None:
+        """常见显式假值都保留默认 fail-closed 语义。"""
+        monkeypatch.setenv("DITTO_EOD_ALLOW_EXPERIMENTAL_DATA", raw)
+
+        config = _get_flow_configs()[0]
+
+        assert config.parameters["allow_experimental_data"] is False
+
+    def test_invalid_eod_experimental_opt_in_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """拼写错误不能静默降级或意外放行 experimental 数据。"""
+        monkeypatch.setenv("DITTO_EOD_ALLOW_EXPERIMENTAL_DATA", "sometimes")
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"EOD_DEPLOYMENT_CONFIG_INVALID.*"
+                "DITTO_EOD_ALLOW_EXPERIMENTAL_DATA"
+            ),
+        ):
+            _get_flow_configs()
 
 
 @pytest.mark.unit

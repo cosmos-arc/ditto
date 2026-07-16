@@ -51,13 +51,11 @@ def target_quantity(
     lot_size: int,
     price: float = 0.0,
 ) -> int:
-    """将目标权重转换为股数（向下取整到 lot_size 整数倍）。"""
+    """将目标权重转换为原始目标股数；买入手数在差额阶段处理。"""
+    del lot_size  # 保留稳定调用契约；卖出差额必须保留目标零股。
     target_value = weight * nav
     if target_value < 1:
         return 0
     if price > 0:
-        target_shares = target_value / price
-        lots = int(target_shares / lot_size)
-    else:
-        lots = int(target_value / lot_size)
-    return lots * lot_size
+        return int(target_value / price)
+    return int(target_value)

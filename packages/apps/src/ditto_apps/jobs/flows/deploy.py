@@ -126,15 +126,65 @@ def _get_backfill_date_range() -> tuple[str, str]:
     return start, end
 
 
+_TRUE_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
+_FALSE_ENV_VALUES = frozenset({"0", "false", "no", "off"})
+_REQUIRED_EOD_ENV_VARS = (
+    "DITTO_EOD_STRATEGY_ID",
+    "DITTO_EOD_ACCOUNT_ID",
+)
+
+
+def _parse_boolean_env(name: str, *, default: bool) -> bool:
+    """解析部署边界的布尔环境变量，拒绝有歧义的值。"""
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+
+    normalized = raw_value.strip().lower()
+    if normalized in _TRUE_ENV_VALUES:
+        return True
+    if normalized in _FALSE_ENV_VALUES:
+        return False
+    valid_values = "1/0, true/false, yes/no, or on/off"
+    raise ValueError(
+        f"EOD_DEPLOYMENT_CONFIG_INVALID: {name} must be one of {valid_values}"
+    )
+
+
+def _get_eod_deployment_parameters() -> dict[str, Any]:
+    """读取每日 EOD 的显式 execution sleeve，缺失时禁止部署。"""
+    raw_values = {name: os.environ.get(name) for name in _REQUIRED_EOD_ENV_VARS}
+    missing_names = [
+        name
+        for name, raw_value in raw_values.items()
+        if raw_value is None or not raw_value.strip()
+    ]
+    if missing_names:
+        names = ", ".join(missing_names)
+        detail = f"required non-blank environment variables: {names}"
+        raise ValueError(f"EOD_DEPLOYMENT_CONFIG_MISSING: {detail}")
+
+    return {
+        "trade_date": "{{ date }}",
+        "strategy_id": cast(str, raw_values["DITTO_EOD_STRATEGY_ID"]).strip(),
+        "account_id": cast(str, raw_values["DITTO_EOD_ACCOUNT_ID"]).strip(),
+        "allow_experimental_data": _parse_boolean_env(
+            "DITTO_EOD_ALLOW_EXPERIMENTAL_DATA",
+            default=False,
+        ),
+    }
+
+
 def _get_flow_configs() -> list[FlowDeploymentConfig]:
     """获取所有 flow 部署配置。"""
     backfill_start, backfill_end = _get_backfill_date_range()
+    eod_parameters = _get_eod_deployment_parameters()
     return [
         FlowDeploymentConfig(
             flow=lambda: _get_flow("eod_flow"),
             deployment_name="eod-pipeline-prod",
             description="EOD 编排流程 (摄取 → 物化 → 策略运行)",
-            parameters={"trade_date": "{{ date }}"},
+            parameters=eod_parameters,
             tags=["production", "daily", "eod"],
             schedule=SCHEDULE_EOD,
         ),

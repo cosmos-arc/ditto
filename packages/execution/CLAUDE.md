@@ -60,7 +60,7 @@ ditto_execution/
 │   ├── book.py           # OrderBook(mutable) + OrderBookReadOnly
 │   └── store.py          # 订单存储接口（Protocol placeholder）
 ├── fills/                # 成交处理
-│   ├── store.py          # 成交存储接口
+│   ├── validation.py     # 不可变成交事实的权威写入校验
 │   └── outcomes.py       # 成交结果
 ├── reality/              # 执行现实模拟
 │   ├── __init__.py       # re-export（AShareFeeModel / SimpleFeeModel）

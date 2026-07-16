@@ -1,8 +1,10 @@
 """Post-ingest helper unit tests."""
 
+from datetime import UTC, datetime
 from typing import cast
 
 import polars as pl
+from ditto_application.contracts import CheckDataQualityCommand
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
@@ -16,7 +18,13 @@ from ditto_application.processes.ingestion.post_ingest import (
     write_data_safe,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
-from ditto_data.catalog import DataAssetRef, InMemoryDataCatalog
+from ditto_data.catalog import (
+    DataAssetRef,
+    DataCatalogEntry,
+    DataSchemaFingerprint,
+    InMemoryDataCatalog,
+)
+from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import OnDuplicate, WriteResult
 
 
@@ -61,6 +69,29 @@ class _CatalogAwareListDateInferenceRecorder:
             self._catalog.get_asset(self._asset) is not None
         )
         return 0
+
+
+class _FailingCatalogWriter:
+    def upsert_asset(self, entry: DataCatalogEntry) -> None:
+        _ = entry
+        raise RuntimeError("catalog unavailable: secret-token")
+
+
+class _PassingQualityChecker:
+    def handle(
+        self,
+        command: CheckDataQualityCommand,
+    ) -> tuple[pl.DataFrame, bool]:
+        return command.df, False
+
+
+class _IngestionLogRecorder:
+    def __init__(self) -> None:
+        self.logs: list[IngestionLog] = []
+
+    def save_log(self, log: IngestionLog) -> IngestionLog:
+        self.logs.append(log)
+        return log
 
 
 def test_record_data_catalog_entry_accepts_catalog_write_context() -> None:
@@ -146,6 +177,7 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
         data_writer=cast(IngestionDataWriter, writer),
         list_date_inference=cast(ListDateInferenceService, list_date_inference),
         catalog_writer=catalog,
+        quality_checker=_PassingQualityChecker(),
         source_name="tushare",
     )
 
@@ -158,11 +190,14 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
     )
 
     assert result.status == "success"
+    assert result.quality_evidence is not None
+    assert result.quality_evidence.status == "passed"
+    assert result.quality_evidence.checksum == "checksum123"
     assert writer.calls == [("stock_daily", "2024-12-27", OnDuplicate.ERROR)]
     assert list_date_inference.asset_classes == []
 
 
-def test_process_fetched_data_marks_sparse_fundamental_empty_as_success() -> None:
+def test_process_fetched_data_rejects_sparse_empty_without_pit_snapshot() -> None:
     write_result = WriteResult(
         file_path="balance_sheet/2025",
         checksum="checksum123",
@@ -186,10 +221,321 @@ def test_process_fetched_data_marks_sparse_fundamental_empty_as_success() -> Non
         ctx=ctx,
     )
 
-    assert result.status == "success"
-    assert result.row_count == 0
-    assert result.message == "无新数据"
+    assert result.status == "failed"
+    assert result.error == "PIT_SNAPSHOT_MISSING"
     assert writer.calls == []
+
+
+def test_sparse_empty_reuses_latest_pit_snapshot_on_or_before_signal_date() -> None:
+    """A non-disclosure day must attest the latest known PIT snapshot, not go blank."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="unused",
+            checksum="unused",
+            rows_written=0,
+            rows_total=0,
+            blocked=False,
+        )
+    )
+    catalog = InMemoryDataCatalog()
+    for trade_date, snapshot_id, row_count in (
+        (
+            "2025-01-02",
+            "snapshot:tushare:balance_sheet:older:quality=l1-l2",
+            75,
+        ),
+        (
+            "2025-01-03",
+            "snapshot:tushare:balance_sheet:prior:quality=l1-l2",
+            125,
+        ),
+        (
+            "2025-01-07",
+            "snapshot:tushare:balance_sheet:future:quality=l1-l2",
+            999,
+        ),
+    ):
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="balance_sheet",
+                    namespace="fundamental",
+                    partition_keys=(f"trade_date={trade_date}",),
+                ),
+                storage_uri=f"balance_sheet/{trade_date}",
+                schema=DataSchemaFingerprint(
+                    schema_hash="fundamental.balance_sheet.v1",
+                    row_count=row_count,
+                ),
+                source="tushare",
+                freshness_at=datetime(2025, 1, 8, tzinfo=UTC),
+                source_snapshot_id=snapshot_id,
+            )
+        )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=catalog,
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(),
+        "balance_sheet",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "success"
+    assert result.trade_date == "2025-01-06"
+    assert result.checksum is None
+    assert result.row_count == 0
+    assert result.message == "无新数据, 复用最近 PIT 快照"
+    evidence = result.snapshot_evidence
+    assert evidence is not None
+    assert evidence.kind == "persisted_asof_catalog_snapshot"
+    assert evidence.signal_date == "2025-01-06"
+    assert evidence.effective_partition_date == "2025-01-03"
+    assert evidence.source_snapshot_id.startswith("snapshot-set:sha256:")
+    assert evidence.source_snapshot_ids == (
+        "snapshot:tushare:balance_sheet:older:quality=l1-l2",
+        "snapshot:tushare:balance_sheet:prior:quality=l1-l2",
+    )
+    assert evidence.row_count == 200
+    assert evidence.freshness_sla_hours == 24 * 45
+    datetime.fromisoformat(evidence.checked_at)
+    assert writer.calls == []
+
+
+def test_sparse_nonempty_attests_prior_and_current_pit_catalog_snapshots() -> None:
+    """A disclosure-day delta must bind the cumulative persisted PIT snapshot."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="balance_sheet/2025-01-06",
+            checksum="today-checksum",
+            rows_written=2,
+            rows_total=2,
+            blocked=False,
+        ),
+        expected_columns=["report_date", "knowledge_date", "total_assets"],
+    )
+    catalog = InMemoryDataCatalog()
+    catalog.upsert_asset(
+        DataCatalogEntry(
+            asset=DataAssetRef(
+                dataset_id="balance_sheet",
+                namespace="fundamental",
+                partition_keys=("trade_date=2025-01-03",),
+            ),
+            storage_uri="balance_sheet/2025-01-03",
+            schema=DataSchemaFingerprint(
+                schema_hash="fundamental.balance_sheet.v1",
+                row_count=3,
+            ),
+            source="tushare",
+            freshness_at=datetime(2025, 1, 3, tzinfo=UTC),
+            source_snapshot_id=("snapshot:tushare:balance_sheet:prior:quality=l1-l2"),
+        )
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=catalog,
+        catalog_writer=catalog,
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "report_date": ["2024-12-31", "2024-12-31"],
+                "knowledge_date": ["2025-01-03", "2025-01-06"],
+                "total_assets": [100.0, 200.0],
+            }
+        ),
+        "balance_sheet",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "success"
+    assert result.checksum is None
+    assert result.row_count == 2
+    evidence = result.snapshot_evidence
+    assert evidence is not None
+    assert evidence.effective_partition_date == "2025-01-06"
+    assert evidence.source_snapshot_ids == (
+        ("snapshot:tushare:balance_sheet:2025-01-06:today-checksum:quality=l1-l2"),
+        "snapshot:tushare:balance_sheet:prior:quality=l1-l2",
+    )
+    assert evidence.source_snapshot_id.startswith("snapshot-set:sha256:")
+    assert evidence.row_count == 5
+    quality_evidence = result.quality_evidence
+    assert quality_evidence is not None
+    assert quality_evidence.kind == "write_time_l1_l2"
+    assert quality_evidence.status == "passed"
+    assert quality_evidence.checksum == "today-checksum"
+    assert quality_evidence.row_count == 2
+
+
+def test_sparse_nonempty_rejects_future_knowledge_date_before_write() -> None:
+    """D 日 PIT snapshot 不能包含 D 后才公开的行。"""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="balance_sheet/2025-01-06",
+            checksum="future-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["report_date", "knowledge_date", "total_assets"],
+    )
+    catalog = InMemoryDataCatalog()
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=catalog,
+        catalog_writer=catalog,
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "report_date": ["2024-12-31"],
+                "knowledge_date": ["2025-01-07"],
+                "total_assets": [100.0],
+            }
+        ),
+        "balance_sheet",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "PIT_KNOWLEDGE_DATE_AFTER_CUTOFF"
+    assert writer.calls == []
+    assert catalog.list_assets() == ()
+
+
+def test_sparse_nonempty_requires_knowledge_date() -> None:
+    """Sparse PIT delta 缺少行级 knowledge_date 时 fail closed。"""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="balance_sheet/2025-01-06",
+            checksum="missing-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["report_date", "knowledge_date", "total_assets"],
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=InMemoryDataCatalog(),
+        catalog_writer=InMemoryDataCatalog(),
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame({"report_date": ["2024-12-31"], "total_assets": [100.0]}),
+        "balance_sheet",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "PIT_KNOWLEDGE_DATE_MISSING"
+    assert writer.calls == []
+
+
+def test_success_uses_persisted_rows_written_for_result_log_and_quality() -> None:
+    """FK 过滤后的实际写入行数是所有持久化证据的权威口径。"""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="stock_daily/2025",
+            checksum="persisted-checksum",
+            rows_written=1,
+            rows_total=2,
+            blocked=False,
+        ),
+    )
+    log_store = _IngestionLogRecorder()
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(cast(object, log_store), "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_writer=InMemoryDataCatalog(),
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {"trade_date": ["2025-01-06", "2025-01-06"], "close": [10.0, 11.0]}
+        ),
+        "stock_daily",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.row_count == 1
+    assert result.quality_evidence is not None
+    assert result.quality_evidence.row_count == 1
+    assert log_store.logs[0].rows == 1
+
+
+def test_sparse_nonempty_fails_closed_when_catalog_evidence_cannot_persist() -> None:
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="balance_sheet/2025-01-06",
+            checksum="today-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["report_date", "knowledge_date", "total_assets"],
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=InMemoryDataCatalog(),
+        catalog_writer=cast(object, _FailingCatalogWriter()),
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "report_date": ["2024-12-31"],
+                "knowledge_date": ["2025-01-06"],
+                "total_assets": [100.0],
+            }
+        ),
+        "balance_sheet",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "CATALOG_EVIDENCE_FAILED"
+    assert "secret-token" not in result.message
 
 
 def test_process_fetched_data_marks_market_empty_as_failed() -> None:

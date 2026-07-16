@@ -26,10 +26,14 @@ from ditto_application.commands.account import (
 )
 from ditto_application.commands.trade import (
     RecordFillHandler,
+    ReplaceFillHandler,
     UpdateIntentStatusHandler,
+    VoidFillHandler,
 )
+from ditto_application.exceptions import AppConflictError, AppNotFoundError
 from ditto_application.execution_dto import (
     ActualPositionSnapshot,
+    FillAdjustment,
     ManualExecutionFill,
     TradeIntent,
 )
@@ -45,6 +49,7 @@ from ditto_application.queries.daily_decision import (
 )
 from ditto_application.queries.deviation import (
     SignalDeviationItem,
+    SignalDeviationQueryFacade,
     SignalDeviationReport,
 )
 from ditto_application.queries.portfolio_actual import (
@@ -91,8 +96,23 @@ def mock_daily_decision_facade() -> MagicMock:
 
 
 @pytest.fixture
+def mock_deviation_facade() -> MagicMock:
+    return MagicMock(spec=SignalDeviationQueryFacade)
+
+
+@pytest.fixture
 def mock_fill_handler() -> MagicMock:
     return MagicMock(spec=RecordFillHandler)
+
+
+@pytest.fixture
+def mock_void_fill_handler() -> MagicMock:
+    return MagicMock(spec=VoidFillHandler)
+
+
+@pytest.fixture
+def mock_replace_fill_handler() -> MagicMock:
+    return MagicMock(spec=ReplaceFillHandler)
 
 
 @pytest.fixture
@@ -117,7 +137,10 @@ def app(
     mock_signal_facade: MagicMock,
     mock_comparison_facade: MagicMock,
     mock_daily_decision_facade: MagicMock,
+    mock_deviation_facade: MagicMock,
     mock_fill_handler: MagicMock,
+    mock_void_fill_handler: MagicMock,
+    mock_replace_fill_handler: MagicMock,
     mock_status_handler: MagicMock,
     mock_account_handler: MagicMock,
     mock_account_query: MagicMock,
@@ -148,8 +171,20 @@ def app(
             return mock_daily_decision_facade
 
         @provide
+        def deviation_facade(self) -> SignalDeviationQueryFacade:
+            return mock_deviation_facade
+
+        @provide
         def fill_handler(self) -> RecordFillHandler:
             return mock_fill_handler
+
+        @provide
+        def void_fill_handler(self) -> VoidFillHandler:
+            return mock_void_fill_handler
+
+        @provide
+        def replace_fill_handler(self) -> ReplaceFillHandler:
+            return mock_replace_fill_handler
 
         @provide
         def status_handler(self) -> UpdateIntentStatusHandler:
@@ -264,6 +299,80 @@ class TestAccountBaseline:
         assert response.status_code == 422
         mock_account_handler.handle.assert_not_called()
 
+    def test_idempotent_replay_returns_unchanged(
+        self, client: TC, mock_account_handler: MC
+    ) -> None:
+        mock_account_handler.handle.return_value = AccountBaselineResult(
+            snapshot_id="baseline-abc",
+            sleeve_id="manual-acct-strat-a",
+            status="unchanged",
+        )
+        payload = {
+            "account_id": "acct",
+            "strategy_id": "strat-a",
+            "snapshot_date": "2024-01-15",
+            "cash_available": 1000.0,
+            "cash_settled": 1000.0,
+            "cash_frozen": 0.0,
+            "total_value": 1000.0,
+            "nav": 1.0,
+            "positions": [],
+        }
+
+        response = client.post("/api/v1/trade/account-baseline", json=payload)
+
+        assert response.status_code == 200
+        assert response.json()["data"]["status"] == "unchanged"
+
+    def test_explicit_replacement_flag_reaches_command(
+        self, client: TC, mock_account_handler: MC
+    ) -> None:
+        mock_account_handler.handle.return_value = AccountBaselineResult(
+            snapshot_id="baseline-new",
+            sleeve_id="manual-acct-strat-a",
+            status="replaced",
+        )
+
+        response = client.post(
+            "/api/v1/trade/account-baseline",
+            json={
+                "account_id": "acct",
+                "strategy_id": "strat-a",
+                "snapshot_date": "2024-01-15",
+                "cash_available": 1000.0,
+                "cash_settled": 1000.0,
+                "cash_frozen": 0.0,
+                "total_value": 1000.0,
+                "nav": 1.0,
+                "positions": [],
+                "replace_confirmed": True,
+            },
+        )
+
+        assert response.status_code == 200
+        command = mock_account_handler.handle.call_args.args[0]
+        assert command.replace_confirmed is True
+
+    def test_rejects_malformed_snapshot_date_before_handler(
+        self, client: TC, mock_account_handler: MC
+    ) -> None:
+        response = client.post(
+            "/api/v1/trade/account-baseline",
+            json={
+                "account_id": "acct",
+                "strategy_id": "strat-a",
+                "snapshot_date": "2024/01/15",
+                "cash_available": 1000.0,
+                "cash_settled": 1000.0,
+                "cash_frozen": 0.0,
+                "total_value": 1000.0,
+                "nav": 1.0,
+            },
+        )
+
+        assert response.status_code == 422
+        mock_account_handler.handle.assert_not_called()
+
     def test_query_returns_account_and_same_baseline_positions(
         self, client: TC, mock_account_query: MC
     ) -> None:
@@ -334,6 +443,19 @@ def _make_fill(**overrides: object) -> ManualExecutionFill:
     }
     defaults.update(overrides)
     return ManualExecutionFill(**defaults)  # type: ignore[arg-type]
+
+
+def _make_adjustment(**overrides: object) -> FillAdjustment:
+    defaults: dict[str, object] = {
+        "adjustment_id": "adj-001",
+        "fill_id": "fill-001",
+        "adjustment_type": "void",
+        "replacement_fill_id": None,
+        "reason": "duplicate fill",
+        "created_at": "2026-07-16T10:00:00Z",
+    }
+    defaults.update(overrides)
+    return FillAdjustment(**defaults)  # type: ignore[arg-type]
 
 
 def _make_position(**overrides: object) -> ActualPositionSnapshot:
@@ -470,6 +592,108 @@ class TestListFills:
         data = resp.json()["data"]
         assert len(data) == 1
 
+    def test_returns_effective_fills(
+        self,
+        client: TC,
+        mock_portfolio_facade: MC,
+    ) -> None:
+        mock_portfolio_facade.get_effective_fills.return_value = [_make_fill()]
+
+        resp = client.get(
+            "/api/v1/trade/fills/effective",
+            params={"strategy_id": "strat-a"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["data"][0]["fill_id"] == "fill-001"
+        mock_portfolio_facade.get_effective_fills.assert_called_once_with(
+            strategy_id="strat-a",
+            start_date=None,
+            end_date=None,
+        )
+
+    def test_returns_fill_adjustments(
+        self,
+        client: TC,
+        mock_portfolio_facade: MC,
+    ) -> None:
+        mock_portfolio_facade.get_fill_adjustments.return_value = [
+            _make_adjustment(
+                adjustment_type="replace",
+                replacement_fill_id="fill-002",
+            )
+        ]
+
+        resp = client.get(
+            "/api/v1/trade/fill-adjustments",
+            params={
+                "strategy_id": "strat-a",
+                "fill_id": "fill-001",
+                "intent_id": "intent-001",
+            },
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["data"][0]["replacement_fill_id"] == "fill-002"
+        mock_portfolio_facade.get_fill_adjustments.assert_called_once_with(
+            strategy_id="strat-a",
+            fill_id="fill-001",
+            intent_id="intent-001",
+        )
+
+
+@pytest.mark.integration
+class TestFillAdjustments:
+    def test_void_fill_returns_append_only_event(
+        self,
+        client: TC,
+        mock_void_fill_handler: MC,
+    ) -> None:
+        mock_void_fill_handler.handle.return_value = _make_adjustment()
+
+        resp = client.post(
+            "/api/v1/trade/fills/fill-001/void",
+            json={"adjustment_id": "adj-001", "reason": "duplicate fill"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["data"]["adjustment_type"] == "void"
+        command = mock_void_fill_handler.handle.call_args.args[0]
+        assert command.fill_id == "fill-001"
+        assert command.adjustment_id == "adj-001"
+
+    def test_replace_fill_returns_link_event(
+        self,
+        client: TC,
+        mock_replace_fill_handler: MC,
+    ) -> None:
+        mock_replace_fill_handler.handle.return_value = _make_adjustment(
+            adjustment_type="replace",
+            replacement_fill_id="fill-002",
+            reason="correct price",
+        )
+
+        resp = client.post(
+            "/api/v1/trade/fills/fill-001/replace",
+            json={
+                "adjustment_id": "adj-001",
+                "replacement_fill_id": "fill-002",
+                "trade_date": "2026-07-16",
+                "quantity": 100,
+                "fill_price": 4.21,
+                "fee": 1.0,
+                "slippage": 0.0,
+                "notes": "broker correction",
+                "reason": "correct price",
+            },
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["data"]["replacement_fill_id"] == "fill-002"
+        command = mock_replace_fill_handler.handle.call_args.args[0]
+        assert command.fill_id == "fill-001"
+        assert command.replacement_fill_id == "fill-002"
+
 
 # ---------------------------------------------------------------------------
 # Tests: Positions
@@ -551,23 +775,127 @@ class TestDailyDecision:
         self, client: TC, mock_daily_decision_facade: MC
     ) -> None:
         mock_daily_decision_facade.get_report_v2.return_value = DailyDecisionV2Report(
-            identity={"strategy_id": "strat-a"},
-            readiness={"status": "review", "reason_codes": ["NO_REBALANCE"]},
-            data={"required_datasets": ["etf_daily"]},
-            run_package={"outcome": "no_rebalance"},
-            account_positions={"as_of": "2024-01-15"},
+            identity={
+                "strategy_id": "strat-a",
+                "strategy_version": "1",
+                "account_id": "account-1",
+                "sleeve_id": "manual-account-1-strat-a",
+                "signal_date": "2024-01-15",
+                "decision_date": "2024-01-15",
+                "intended_trade_date": "2024-01-16",
+            },
+            readiness={
+                "status": "review",
+                "reason_codes": ("NO_REBALANCE_REQUIRED",),
+                "details": ("本日无需调仓, 请复核 package 证据",),
+            },
+            data={
+                "required_datasets": ("etf_daily",),
+                "snapshot_ids": {"etf_daily": "snapshot-etf"},
+                "dataset_states": (
+                    {
+                        "dataset": "etf_daily",
+                        "status": "ready",
+                        "snapshot_id": "snapshot-etf",
+                        "reason": "",
+                    },
+                ),
+                "freshness": "ready",
+                "dq_state": "passed",
+            },
+            run_package={
+                "outcome": "no_rebalance",
+                "batch_key": "eod-2024-01-15-strat-a-1",
+                "artifact_id": "package-1",
+                "conflict_artifact_id": "package-conflict-1",
+                "checksum": "sha256:package",
+                "checksum_valid": True,
+                "no_rebalance": True,
+                "factor_evidence": {},
+                "risk_evidence": (),
+            },
+            account_positions={
+                "baseline_id": "baseline-1",
+                "account_id": "account-1",
+                "sleeve_id": "manual-account-1-strat-a",
+                "cash_available": 10_000.0,
+                "cash_settled": 10_000.0,
+                "cash_frozen": 0.0,
+                "total_value": 10_000.0,
+                "nav": 1.0,
+                "exposure": 0.0,
+                "as_of": "2024-01-15",
+                "positions": (),
+            },
             actions=(),
-            execution_review={"unresolved_conflicts": []},
+            execution_review={
+                "effective_fills": (),
+                "deviation": None,
+                "pnl": None,
+                "exceptions": (),
+                "unresolved_conflicts": (),
+            },
         )
 
         response = client.get(
             "/api/v1/trade/daily-decision/v2",
-            params={"strategy_id": "strat-a", "trade_date": "2024-01-15"},
+            params={
+                "strategy_id": "strat-a",
+                "trade_date": "2024-01-15",
+                "account_id": "account-1",
+            },
         )
 
         assert response.status_code == 200
         assert response.json()["data"]["readiness"]["status"] == "review"
         assert response.json()["data"]["run_package"]["outcome"] == "no_rebalance"
+        assert (
+            response.json()["data"]["run_package"]["conflict_artifact_id"]
+            == "package-conflict-1"
+        )
+        mock_daily_decision_facade.get_report_v2.assert_called_once_with(
+            strategy_id="strat-a",
+            trade_date="2024-01-15",
+            account_id="account-1",
+        )
+
+    def test_v2_openapi_uses_typed_nested_sections(self, client: TC) -> None:
+        """前端 codegen 不得再把七个 V2 section 生成为 unknown record。"""
+        schemas = client.get("/openapi.json").json()["components"]["schemas"]
+        report = schemas["DailyDecisionV2Response"]
+
+        for field in (
+            "identity",
+            "readiness",
+            "data",
+            "run_package",
+            "account_positions",
+            "execution_review",
+        ):
+            assert "$ref" in report["properties"][field]
+        assert report["properties"]["actions"]["items"] == {
+            "$ref": "#/components/schemas/DailyDecisionActionResponse"
+        }
+        action = schemas["DailyDecisionActionResponse"]
+        assert {
+            "intent_id",
+            "instrument_id",
+            "target_weight",
+            "raw_quantity",
+            "rounded_quantity",
+            "suggested_quantity",
+            "reference_price",
+            "lot_size",
+            "cash_impact",
+            "reason",
+            "sizing_readiness",
+            "filled_quantity",
+            "remaining_quantity",
+        } <= set(action["properties"])
+        assert (
+            "conflict_artifact_id"
+            in schemas["DailyDecisionRunPackageResponse"]["properties"]
+        )
 
     def test_returns_report(
         self,
@@ -753,6 +1081,14 @@ class TestMissingRequiredParams:
         resp = client.get("/api/v1/trade/daily-decision")
         assert resp.status_code == 422
 
+    def test_effective_fills_missing_strategy_id(self, client: TC) -> None:
+        resp = client.get("/api/v1/trade/fills/effective")
+        assert resp.status_code == 422
+
+    def test_fill_adjustments_missing_strategy_id(self, client: TC) -> None:
+        resp = client.get("/api/v1/trade/fill-adjustments")
+        assert resp.status_code == 422
+
 
 @pytest.mark.integration
 class TestInvalidRequestBody:
@@ -805,6 +1141,28 @@ class TestInvalidRequestBody:
         )
         assert resp.status_code == 422
 
+    def test_record_fill_impossible_calendar_date_is_422(
+        self,
+        client: TC,
+        mock_fill_handler: MC,
+    ) -> None:
+        resp = client.post(
+            "/api/v1/trade/fills",
+            json={
+                "fill_id": "fill-001",
+                "intent_id": "int-001",
+                "strategy_id": "strat-a",
+                "trade_date": "2026-02-31",
+                "instrument_id": 510300,
+                "direction": "buy",
+                "quantity": 1000,
+                "fill_price": 4.12,
+            },
+        )
+
+        assert resp.status_code == 422
+        mock_fill_handler.handle.assert_not_called()
+
     def test_update_status_invalid_value(self, client: TC) -> None:
         """update_intent_status status 不在有效枚举中 → 422."""
         resp = client.put(
@@ -820,6 +1178,47 @@ class TestInvalidRequestBody:
             json={},
         )
         assert resp.status_code == 422
+
+    def test_void_fill_blank_reason(self, client: TC) -> None:
+        resp = client.post(
+            "/api/v1/trade/fills/fill-001/void",
+            json={"adjustment_id": "adj-001", "reason": ""},
+        )
+        assert resp.status_code == 422
+
+    def test_replace_fill_invalid_economics(self, client: TC) -> None:
+        resp = client.post(
+            "/api/v1/trade/fills/fill-001/replace",
+            json={
+                "adjustment_id": "adj-001",
+                "replacement_fill_id": "fill-002",
+                "trade_date": "2026/07/16",
+                "quantity": 0,
+                "fill_price": 4.21,
+                "reason": "correction",
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_replace_fill_impossible_calendar_date_is_422(
+        self,
+        client: TC,
+        mock_replace_fill_handler: MC,
+    ) -> None:
+        resp = client.post(
+            "/api/v1/trade/fills/fill-001/replace",
+            json={
+                "adjustment_id": "adj-001",
+                "replacement_fill_id": "fill-002",
+                "trade_date": "2026-02-31",
+                "quantity": 100,
+                "fill_price": 4.21,
+                "reason": "correction",
+            },
+        )
+
+        assert resp.status_code == 422
+        mock_replace_fill_handler.handle.assert_not_called()
 
 
 @pytest.mark.integration
@@ -920,6 +1319,47 @@ class TestBusinessRuleErrors:
         )
         assert resp.status_code == 400
 
+    def test_void_fill_not_found_is_typed_404(
+        self,
+        client: TC,
+        mock_void_fill_handler: MC,
+    ) -> None:
+        mock_void_fill_handler.handle.side_effect = AppNotFoundError(
+            "Fill not found: fill-missing"
+        )
+
+        resp = client.post(
+            "/api/v1/trade/fills/fill-missing/void",
+            json={"adjustment_id": "adj-001", "reason": "duplicate fill"},
+        )
+
+        assert resp.status_code == 404
+        assert resp.json()["error_code"] == "NOT_FOUND"
+
+    def test_replace_fill_conflict_is_typed_409(
+        self,
+        client: TC,
+        mock_replace_fill_handler: MC,
+    ) -> None:
+        mock_replace_fill_handler.handle.side_effect = AppConflictError(
+            "Fill already adjusted: fill-001"
+        )
+
+        resp = client.post(
+            "/api/v1/trade/fills/fill-001/replace",
+            json={
+                "adjustment_id": "adj-002",
+                "replacement_fill_id": "fill-002",
+                "trade_date": "2026-07-16",
+                "quantity": 100,
+                "fill_price": 4.21,
+                "reason": "correct price",
+            },
+        )
+
+        assert resp.status_code == 409
+        assert resp.json()["error_code"] == "CONFLICT"
+
 
 # ---------------------------------------------------------------------------
 # Tests: Pagination
@@ -1005,22 +1445,34 @@ class TestDeviation:
     """信号-成交偏差报告."""
 
     def test_returns_deviation(
-        self, client: TC, mock_trade_facade: MC, mock_portfolio_facade: MC
+        self,
+        client: TC,
+        mock_deviation_facade: MC,
     ) -> None:
         """返回偏差报告 — 部分成交."""
-        mock_trade_facade.list_intents.return_value = [
-            _make_intent(instrument_id=510300, direction="buy", target_weight=0.3),
-            _make_intent(
-                intent_id="int-002",
-                instrument_id=159915,
-                direction="sell",
-                target_weight=0.2,
+        mock_deviation_facade.get_deviation.return_value = _make_deviation_report(
+            total_signals=2,
+            filled=1,
+            unfilled=1,
+            items=(
+                SignalDeviationItem(
+                    instrument_id=510300,
+                    signal_action="buy",
+                    signal_weight=0.3,
+                    actual_weight=0.3,
+                    deviation_bps=0.0,
+                    fill_status="filled",
+                ),
+                SignalDeviationItem(
+                    instrument_id=159915,
+                    signal_action="sell",
+                    signal_weight=0.2,
+                    actual_weight=None,
+                    deviation_bps=None,
+                    fill_status="unfilled",
+                ),
             ),
-        ]
-        # 只有 510300 有成交
-        mock_portfolio_facade.get_fills.return_value = [
-            _make_fill(instrument_id=510300, quantity=1000),
-        ]
+        )
         resp = client.get(
             "/api/v1/trade/deviation",
             params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
@@ -1045,17 +1497,19 @@ class TestDeviation:
         assert item_1["instrument_id"] == 159915
         assert item_1["fill_status"] == "unfilled"
         assert item_1["actual_weight"] is None
+        mock_deviation_facade.get_deviation.assert_called_once_with(
+            strategy_id="strat-a",
+            signal_date="2024-01-15",
+            execution_date=None,
+        )
 
     def test_all_filled(
-        self, client: TC, mock_trade_facade: MC, mock_portfolio_facade: MC
+        self,
+        client: TC,
+        mock_deviation_facade: MC,
     ) -> None:
         """所有信号均已成交."""
-        mock_trade_facade.list_intents.return_value = [
-            _make_intent(instrument_id=510300),
-        ]
-        mock_portfolio_facade.get_fills.return_value = [
-            _make_fill(instrument_id=510300),
-        ]
+        mock_deviation_facade.get_deviation.return_value = _make_deviation_report()
         resp = client.get(
             "/api/v1/trade/deviation",
             params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
@@ -1066,11 +1520,17 @@ class TestDeviation:
         assert body["unfilled"] == 0
 
     def test_no_intents(
-        self, client: TC, mock_trade_facade: MC, mock_portfolio_facade: MC
+        self,
+        client: TC,
+        mock_deviation_facade: MC,
     ) -> None:
         """无信号时返回空报告."""
-        mock_trade_facade.list_intents.return_value = []
-        mock_portfolio_facade.get_fills.return_value = []
+        mock_deviation_facade.get_deviation.return_value = _make_deviation_report(
+            total_signals=0,
+            filled=0,
+            unfilled=0,
+            items=(),
+        )
         resp = client.get(
             "/api/v1/trade/deviation",
             params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},

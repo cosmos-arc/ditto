@@ -34,6 +34,8 @@ class SeedBootstrapResult:
     strategy_id: str
     status: SeedBootstrapStatus
     version: int | None
+    created: bool = False
+    published: bool = False
     differences: tuple[str, ...] = ()
 
 
@@ -119,6 +121,8 @@ class SeedStrategyBootstrap:
                         strategy_id=strategy_id,
                         status=SeedBootstrapStatus.PUBLISHED,
                         version=version,
+                        created=True,
+                        published=True,
                     )
                 )
                 continue
@@ -148,13 +152,16 @@ class SeedStrategyBootstrap:
                     version=existing.version,
                 )
                 status = SeedBootstrapStatus.PUBLISHED
+                published = True
             else:
                 status = SeedBootstrapStatus.UNCHANGED
+                published = False
             results.append(
                 SeedBootstrapResult(
                     strategy_id=strategy_id,
                     status=status,
                     version=existing.version,
+                    published=published,
                 )
             )
         return tuple(results)

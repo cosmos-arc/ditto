@@ -10,6 +10,10 @@ from ditto_application.commands.strategy import (
     PublishStrategyCommand,
     PublishStrategyHandler,
 )
+from ditto_application.processes.execution.manual_sizing import (
+    AShareTradeDateResolver,
+    ManualSizingContextBuilder,
+)
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBootstrap
@@ -69,6 +73,8 @@ def create_strategy_bundle() -> Generator[StrategyBundle]:
             run_service=container.get(StrategyRunLifecycleStore),
             run_writer=container.get(StrategyRunWriterProtocol),
             signal_package_publisher=container.get(SignalPackagePublisher),
+            sizing_context_builder=container.get(ManualSizingContextBuilder),
+            trade_date_resolver=container.get(AShareTradeDateResolver),
             seed_bootstrap=SeedStrategyBootstrap(
                 catalog=catalog_service,
                 create_port=_SeedCreateAdapter(container.get(CreateStrategyHandler)),

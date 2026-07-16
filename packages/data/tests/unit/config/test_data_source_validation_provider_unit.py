@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from unittest.mock import patch
 
+from ditto_data.config import DataSourceSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
 from ditto_platform.foundation import InitScope
 
@@ -30,47 +29,40 @@ class TestTushareTokenValidation:
     """TUSHARE_TOKEN 校验测试."""
 
     def test_missing_token_returns_failure(self, tmp_path: Path) -> None:
-        provider = DataSourceValidationProvider()
-
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("TUSHARE_TOKEN", None)
-            result = provider.initialize(tmp_path)
+        provider = DataSourceValidationProvider(DataSourceSettings(tushare_token=""))
+        result = provider.initialize(tmp_path)
 
         assert result.success is False
         assert result.provider == "data_source_validation"
         assert "TUSHARE_TOKEN" in result.message
 
     def test_empty_token_returns_failure(self, tmp_path: Path) -> None:
-        provider = DataSourceValidationProvider()
-
-        with patch.dict(os.environ, {"TUSHARE_TOKEN": ""}):
-            result = provider.initialize(tmp_path)
+        provider = DataSourceValidationProvider(DataSourceSettings(tushare_token=""))
+        result = provider.initialize(tmp_path)
 
         assert result.success is False
         assert "TUSHARE_TOKEN" in result.message
 
     def test_whitespace_token_returns_failure(self, tmp_path: Path) -> None:
-        provider = DataSourceValidationProvider()
-
-        with patch.dict(os.environ, {"TUSHARE_TOKEN": "   "}):
-            result = provider.initialize(tmp_path)
+        provider = DataSourceValidationProvider(DataSourceSettings(tushare_token="   "))
+        result = provider.initialize(tmp_path)
 
         assert result.success is False
         assert "TUSHARE_TOKEN" in result.message
 
     def test_valid_token_passes(self, tmp_path: Path) -> None:
-        provider = DataSourceValidationProvider()
-
-        with patch.dict(os.environ, {"TUSHARE_TOKEN": "valid_token_123"}):
-            result = provider.initialize(tmp_path)
+        provider = DataSourceValidationProvider(
+            DataSourceSettings(tushare_token="valid_token_123")
+        )
+        result = provider.initialize(tmp_path)
 
         assert result.success is True
 
-    def test_valid_token_with_env_source(self, tmp_path: Path) -> None:
-        """Token 通过环境变量设置也应通过."""
-        provider = DataSourceValidationProvider()
-
-        with patch.dict(os.environ, {"TUSHARE_TOKEN": "env_token_xyz"}):
-            result = provider.initialize(tmp_path)
+    def test_valid_token_from_resolved_settings_passes(self, tmp_path: Path) -> None:
+        """Validation consumes the resolved env/keyring/config precedence result."""
+        provider = DataSourceValidationProvider(
+            DataSourceSettings(tushare_token="resolved_token_xyz")
+        )
+        result = provider.initialize(tmp_path)
 
         assert result.success is True

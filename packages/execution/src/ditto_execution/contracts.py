@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from typing import Protocol, runtime_checkable
 
 from ditto_execution.audit.models import (
@@ -15,6 +16,7 @@ from ditto_execution.audit.models import (
 from ditto_execution.models import (
     AccountSnapshotRecord,
     BrokerEventRecord,
+    FillAdjustmentRecord,
     FillRecord,
     PositionRecord,
     SignalRecord,
@@ -118,14 +120,18 @@ class IntentDataPort(Protocol):
 
 
 class FillDataPort(Protocol):
-    """成交窄 Port — 成交 CRUD."""
+    """Append-only fill ledger and effective-fill projection port."""
 
-    def save_fill(self, record: FillRecord) -> None:
-        """保存成交记录."""
+    def ledger_transaction(self) -> AbstractContextManager[None]:
+        """Group ledger, intent-status, and derived-position writes atomically."""
         ...
 
-    def find_fill(self, intent_id: str, trade_date: str) -> FillRecord | None:
-        """按 intent_id + trade_date 查找成交记录."""
+    def save_fill(self, record: FillRecord) -> bool:
+        """Append a fill; return whether this call created it."""
+        ...
+
+    def get_fill(self, fill_id: str) -> FillRecord | None:
+        """Return one immutable fill by its idempotency key."""
         ...
 
     def list_fills(
@@ -138,12 +144,58 @@ class FillDataPort(Protocol):
         """按条件查询成交记录列表."""
         ...
 
+    def list_effective_fills(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+        intent_id: str | None = None,
+        end_date: str | None = None,
+    ) -> list[FillRecord]:
+        """List fills not targeted by a void/replacement adjustment."""
+        ...
+
+    def get_fill_adjustment(
+        self,
+        adjustment_id: str,
+    ) -> FillAdjustmentRecord | None:
+        """Return one fill adjustment by its idempotency key."""
+        ...
+
+    def list_fill_adjustments(
+        self,
+        strategy_id: str,
+        *,
+        fill_id: str | None = None,
+        intent_id: str | None = None,
+    ) -> list[FillAdjustmentRecord]:
+        """List immutable adjustment evidence."""
+        ...
+
+    def apply_fill_adjustment(
+        self,
+        record: FillAdjustmentRecord,
+        *,
+        replacement_fill: FillRecord | None = None,
+    ) -> bool:
+        """Append correction evidence; return whether this call created it."""
+        ...
+
 
 class PositionDataPort(Protocol):
     """持仓窄 Port — 持仓快照读写."""
 
     def save_position(self, record: PositionRecord) -> None:
         """保存持仓快照."""
+        ...
+
+    def replace_position_snapshot(
+        self,
+        *,
+        strategy_id: str,
+        snapshot_date: str,
+        positions: tuple[PositionRecord, ...],
+    ) -> None:
+        """Replace one manual derived-position snapshot as a group."""
         ...
 
     def list_positions(

@@ -7,6 +7,10 @@ from dataclasses import dataclass
 from ditto_execution.contracts import AccountDataPort, PositionDataPort
 from ditto_execution.models import AccountSnapshotRecord, PositionRecord
 
+from ditto_application.account_baseline_integrity import (
+    resolve_complete_baseline_positions,
+)
+
 __all__ = ["AccountBaselineQuery", "AccountBaselineReadModel"]
 
 
@@ -44,18 +48,28 @@ class AccountBaselineQuery:
             strategy_id=strategy_id,
             account_id=account_id,
         )
-        eligible = [
-            account for account in candidates if account.snapshot_date <= signal_date
-        ]
-        if not eligible:
-            return None
-        account = max(
-            eligible,
+        eligible = sorted(
+            (
+                account
+                for account in candidates
+                if account.run_id == sleeve_id
+                and account.strategy_id == strategy_id
+                and account.account_id == account_id
+                and account.snapshot_date <= signal_date
+            ),
             key=lambda item: (item.snapshot_date, item.created_at, item.snapshot_id),
+            reverse=True,
         )
-        positions = self._position_port.list_positions(
-            strategy_id=strategy_id,
-            snapshot_date=account.snapshot_date,
-            run_id=sleeve_id,
-        )
-        return AccountBaselineReadModel(account=account, positions=tuple(positions))
+        for account in eligible:
+            candidates_for_date = self._position_port.list_positions(
+                strategy_id=strategy_id,
+                snapshot_date=account.snapshot_date,
+                run_id=sleeve_id,
+            )
+            positions = resolve_complete_baseline_positions(
+                account,
+                candidates_for_date,
+            )
+            if positions is not None:
+                return AccountBaselineReadModel(account=account, positions=positions)
+        return None

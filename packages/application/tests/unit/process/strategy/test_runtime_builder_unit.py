@@ -97,6 +97,26 @@ class TestStrategyRuntimeBuilder:
         assert len(runtime.pipeline._stages) == 6
         catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
 
+    def test_build_published_runtime_defaults_to_latest_published_version(
+        self,
+    ) -> None:
+        """未指定版本时应忽略更新的 draft。"""
+        spec = _make_rotation_spec()
+        published_v1 = _make_spec_record(spec, version=1)
+        draft_v2 = _make_spec_record(spec, version=2, status="draft")
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = draft_v2
+        catalog_service.get_latest_published.return_value = published_v1
+        builder = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        )
+
+        runtime = builder.build_published_runtime("momentum-etf")
+
+        assert runtime.record is published_v1
+        catalog_service.get_latest_published.assert_called_once_with("momentum-etf")
+        catalog_service.get_spec.assert_not_called()
+
     def test_build_published_runtime_rejects_non_published_spec(self) -> None:
         """builder 只接受 published spec。"""
         spec = _make_rotation_spec()
@@ -135,7 +155,7 @@ class TestStrategyRuntimeBuilder:
         )
 
         catalog_service = MagicMock(spec=StrategyCatalogService)
-        catalog_service.get_spec.return_value = record
+        catalog_service.get_latest_published.return_value = record
         builder = strategy_services.StrategyRuntimeBuilder(
             catalog_service=catalog_service,
         )

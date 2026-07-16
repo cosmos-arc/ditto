@@ -3,7 +3,7 @@
 # ═══════════════════════════════════════════════════════════════════════
 #
 # 构建命令: docker build -t ditto:latest -f deploy/docker/Dockerfile .
-# 运行命令: docker run -p 8000:8000 ditto:latest
+# 运行命令: docker run -p 127.0.0.1:8000:8000 ditto:latest
 
 FROM ghcr.io/prefix-dev/pixi:latest
 
@@ -23,7 +23,7 @@ COPY config/ ./config/
 RUN mkdir -p /app/data /app/logs /app/prefect
 
 # 环境变量默认值（可被 docker-compose 覆盖）
-ENV DITTO_DATA_DIR=/app/data \
+ENV DITTO_DATA_ROOT=/app/data \
     ENVIRONMENT=production \
     PYTHONUNBUFFERED=1
 
@@ -32,5 +32,5 @@ ENV DITTO_DATA_DIR=/app/data \
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')" || exit 1
 
-# 默认入口（API 服务）
-CMD ["pixi", "run", "server"]
+# 默认入口（API 服务）。容器内监听 bridge interface，发布端口必须绑定 host loopback。
+CMD ["pixi", "run", "granian", "ditto_apps.main:app", "--interface", "asgi", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

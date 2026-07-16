@@ -145,6 +145,28 @@ class MarketQueryFacade:
         """
         return self._service.get_constituents(index_id, as_of_date)
 
+    def get_adj_factors(
+        self,
+        *,
+        start: str,
+        end: str,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """Query the persisted market-wide adjustment-factor dataset."""
+        blocked = blocked_catalog_datasets(
+            ("adj_factor",),
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
+        )
+        if blocked:
+            joined = ", ".join(blocked)
+            msg = (
+                "adjustment-factor query requires experimental dataset maturity: "
+                f"{joined}"
+            )
+            raise AppQueryError(msg)
+        return self._service.get_adj_factors(start, end)
+
     def _assert_market_bars_allowed(
         self,
         asset_class: str | None,
