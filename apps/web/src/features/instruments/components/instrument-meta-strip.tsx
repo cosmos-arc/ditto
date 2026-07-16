@@ -4,6 +4,8 @@ import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useInstrumentDetail } from "../hooks";
 
+const LOADING_METRIC_IDS = ["identity", "status", "price", "pe", "pb", "market-cap"] as const;
+
 interface InstrumentMetaStripProps {
 	readonly id: string;
 }
@@ -14,8 +16,8 @@ export function InstrumentMetaStrip({ id }: InstrumentMetaStripProps) {
 	if (isLoading) {
 		return (
 			<div className="flex gap-4 px-4 py-3">
-				{Array.from({ length: 6 }).map((_, i) => (
-					<LoadingSkeleton key={i} variant="metric" className="flex-1" />
+				{LOADING_METRIC_IDS.map((metricId) => (
+					<LoadingSkeleton key={metricId} variant="metric" className="flex-1" />
 				))}
 			</div>
 		);

@@ -40,15 +40,24 @@ export function ResearchProgressSection() {
 				>
 					{findingsData && (
 						<div className="flex flex-col">
-							{findingsData.findings.map((finding, i) => (
+							{findingsData.findings.map((finding) => (
 								<div
-									key={`${finding.source}-${i}`}
+									key={`${finding.source}-${finding.text}`}
 									className="flex gap-2 rounded-[4px] p-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<span
 										className={`mt-0.5 shrink-0 ${ICON_COLOR[finding.icon] ?? "text-(--color-foreground-tertiary)"}`}
 									>
-										<svg width={14} height={14} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5}>
+										<svg
+											width={14}
+											height={14}
+											viewBox="0 0 20 20"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth={1.5}
+											aria-hidden="true"
+											focusable="false"
+										>
 											{finding.icon === "warning" ? (
 												<path d="M10 3L3 17h14L10 3z" />
 											) : finding.icon === "insight" ? (

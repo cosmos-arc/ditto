@@ -67,9 +67,7 @@ describe("visual audit core", () => {
 	});
 
 	it("rejects non-positive viewport dimensions", () => {
-		expect(() => parseArgs(["--viewport", "0x900"])).toThrow(
-			"--viewport dimensions must be greater than zero",
-		);
+		expect(() => parseArgs(["--viewport", "0x900"])).toThrow("--viewport dimensions must be greater than zero");
 	});
 
 	it("returns help usage without requiring bases", () => {
@@ -79,9 +77,7 @@ describe("visual audit core", () => {
 
 	it("resolves configured and concrete sample routes", () => {
 		expect(resolvePages({ route: "/", all: false }, pages)).toHaveLength(1);
-		expect(resolvePages({ route: "/instruments/600519", all: false }, pages)[0]?.route).toBe(
-			"/instruments/$id",
-		);
+		expect(resolvePages({ route: "/instruments/600519", all: false }, pages)[0]?.route).toBe("/instruments/$id");
 		expect(resolvePages({ all: true }, pages)).toHaveLength(2);
 	});
 
@@ -113,7 +109,7 @@ describe("visual audit core", () => {
 			react: { shell: null },
 			warnings: {
 				targets: ['prototype target "secondary" has no matching react target'],
-				prototype: ["Missing selector \"status\": .status-bar"],
+				prototype: ['Missing selector "status": .status-bar'],
 				react: ["pageerror: boom"],
 			},
 		});

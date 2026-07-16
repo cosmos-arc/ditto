@@ -42,7 +42,7 @@ export function HomeCollapsedSidebar({
 			icon: marketTrendData ? (
 				<MiniSparkline data={marketTrendData} trend={marketTrend} ariaLabel="市场脉搏趋势" />
 			) : (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M2 14L6 10L10 13L14 6L18 8"
 						stroke="currentColor"
@@ -56,7 +56,7 @@ export function HomeCollapsedSidebar({
 		},
 		{
 			icon: (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M10 3L10 10M10 10L7 7M10 10L13 7"
 						stroke="currentColor"
@@ -72,7 +72,7 @@ export function HomeCollapsedSidebar({
 		},
 		{
 			icon: (
-				<svg className="size-5" viewBox="0 0 20 20" fill="none">
+				<svg className="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 					<path
 						d="M10 3C5.58 3 2 6.58 2 11H10V3Z"
 						stroke="currentColor"

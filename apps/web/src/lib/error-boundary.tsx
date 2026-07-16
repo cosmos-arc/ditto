@@ -20,7 +20,15 @@ function ErrorState({ title = "加载失败", description, onRetry, className }:
 				data-testid="error-state-icon"
 				className={cn("flex items-center justify-center w-10 h-10 rounded-full", "bg-(--color-led-error)/10")}
 			>
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-(--color-led-error)">
+				<svg
+					width="20"
+					height="20"
+					viewBox="0 0 20 20"
+					fill="none"
+					className="text-(--color-led-error)"
+					aria-hidden="true"
+					focusable="false"
+				>
 					<path
 						d="M10 6v5m0 3v.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z"
 						stroke="currentColor"

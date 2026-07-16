@@ -78,6 +78,23 @@ describe("MarketCard", () => {
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
+	it("renders an interactive card as a native button", () => {
+		render(<MarketCard name="Test" regime="on" index="3,912" change={0} judgment="Summary" onClick={() => {}} />);
+
+		expect(screen.getByRole("button", { name: /Test/ })).toHaveAttribute("type", "button");
+	});
+
+	it("activates an interactive card from the keyboard", async () => {
+		const user = userEvent.setup();
+		const onClick = vi.fn();
+		render(<MarketCard name="Test" regime="on" index="3,912" change={0} judgment="Summary" onClick={onClick} />);
+
+		screen.getByRole("button", { name: /Test/ }).focus();
+		await user.keyboard("{Enter}");
+
+		expect(onClick).toHaveBeenCalledOnce();
+	});
+
 	// ── className merging ──
 
 	it("merges custom className", () => {

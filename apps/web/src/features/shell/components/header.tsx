@@ -7,20 +7,25 @@ import { PageTitleBlock } from "./page-title-block";
  * Uses the last match that provides a `staticData.title` property,
  * which corresponds to the most specific (deepest) route.
  */
-function resolveTitle(matches: readonly { routeId?: string }[]): string | undefined {
-	const router = useRouter();
+interface RouterWithStaticTitles {
+	readonly routesById?: Readonly<
+		Record<string, { readonly options?: { readonly staticData?: { readonly title?: string } } }>
+	>;
+	readonly routeTree?: {
+		readonly children?: readonly {
+			readonly id?: string;
+			readonly options?: { readonly staticData?: { readonly title?: string } };
+		}[];
+	};
+}
+
+function resolveTitle(matches: readonly { routeId?: string }[], router: RouterWithStaticTitles): string | undefined {
 	for (let i = matches.length - 1; i >= 0; i--) {
 		const routeId = matches[i]?.routeId;
 		if (!routeId) continue;
 		// Access route options via router's route tree
 		const route =
-			(router as unknown as { routesById?: Record<string, { options?: { staticData?: { title?: string } } }> })
-				.routesById?.[routeId] ??
-			(
-				router as unknown as {
-					routeTree?: { children?: Array<{ id?: string; options?: { staticData?: { title?: string } } }> };
-				}
-			).routeTree?.children?.find((r) => r.id === routeId);
+			router.routesById?.[routeId] ?? router.routeTree?.children?.find((candidate) => candidate.id === routeId);
 		const title = route?.options?.staticData?.title;
 		if (title) return title;
 	}
@@ -37,7 +42,8 @@ interface ShellHeaderProps {
  */
 export function ShellHeader({ onOpenCopilot }: ShellHeaderProps) {
 	const matches = useMatches();
-	const title = resolveTitle(matches);
+	const router = useRouter() as unknown as RouterWithStaticTitles;
+	const title = resolveTitle(matches, router);
 
 	return (
 		<header

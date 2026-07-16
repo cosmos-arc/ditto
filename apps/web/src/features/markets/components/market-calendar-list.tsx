@@ -24,9 +24,9 @@ export function MarketCalendarList() {
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 			<div data-info-level="l1" data-info-unit="calendar-content" className="flex flex-col gap-1 p-4">
 				<h2 className="text-lg font-medium text-(--color-foreground) mb-3">市场日历</h2>
-				{data?.items.map((item, i) => (
+				{data?.items.map((item) => (
 					<div
-						key={`${item.date}-${item.title}-${i}`}
+						key={`${item.date}-${item.time}-${item.country}-${item.title}`}
 						className="flex items-center justify-between gap-3 py-2 border-b border-(--color-border) last:border-b-0"
 					>
 						<div className="flex flex-col gap-0.5 min-w-0">

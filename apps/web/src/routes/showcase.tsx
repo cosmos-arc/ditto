@@ -167,13 +167,7 @@ function ShowcasePage() {
 			<Section title="ErrorState + StaleIndicator">
 				<div className="grid grid-cols-2 gap-4">
 					<div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
-						<ErrorState
-							title="加载失败"
-							description="网络连接超时，请检查网络后重试"
-							onRetry={() => {
-								window.console.log("retry clicked");
-							}}
-						/>
+						<ErrorState title="加载失败" description="网络连接超时，请检查网络后重试" onRetry={() => undefined} />
 					</div>
 					<div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
 						<ErrorState title="数据过期" description="最近更新：3 分钟前" />

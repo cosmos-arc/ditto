@@ -97,9 +97,7 @@ export function resolvePages(options, pages) {
 		return pages;
 	}
 
-	const page = pages.find(
-		(item) => item.route === options.route || item.resolvedRoute === options.route,
-	);
+	const page = pages.find((item) => item.route === options.route || item.resolvedRoute === options.route);
 	if (!page) {
 		const knownRoutes = pages.map((item) => item.route).join(", ");
 		throw new Error(`Unknown route "${options.route}". Known routes: ${knownRoutes}`);
@@ -145,12 +143,7 @@ const SKIP_DIFF_PROPS = new Set([
 ]);
 
 export function renderReport(metrics) {
-	const names = [
-		...new Set([
-			...Object.keys(metrics.prototype),
-			...Object.keys(metrics.react),
-		]),
-	];
+	const names = [...new Set([...Object.keys(metrics.prototype), ...Object.keys(metrics.react)])];
 	const lines = [
 		`# Visual Audit: ${metrics.name}`,
 		"",
@@ -190,9 +183,7 @@ export function renderReport(metrics) {
 		lines.push("| Target | Property | Prototype | React |");
 		lines.push("| --- | --- | --- | --- |");
 		for (const diff of styleDiffs) {
-			lines.push(
-				`| ${diff.target} | \`${diff.prop}\` | ${diff.prototype} | ${diff.react} |`,
-			);
+			lines.push(`| ${diff.target} | \`${diff.prop}\` | ${diff.prototype} | ${diff.react} |`);
 		}
 	}
 
@@ -203,9 +194,7 @@ export function renderReport(metrics) {
 		lines.push("| Target | Pseudo | Property | Prototype | React |");
 		lines.push("| --- | --- | --- | --- | --- |");
 		for (const diff of pseudoDiffs) {
-			lines.push(
-				`| ${diff.target} | ${diff.pseudo} | \`${diff.prop}\` | ${diff.prototype} | ${diff.react} |`,
-			);
+			lines.push(`| ${diff.target} | ${diff.pseudo} | \`${diff.prop}\` | ${diff.prototype} | ${diff.react} |`);
 		}
 	}
 

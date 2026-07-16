@@ -11,10 +11,6 @@ class StubIntersectionObserver implements IntersectionObserver {
 	readonly thresholds: ReadonlyArray<number> = [];
 	readonly scrollMargin: string = "";
 
-	constructor(_callback: IntersectionObserverCallback) {
-		// noop — jsdom has no layout engine
-	}
-
 	disconnect() {}
 	observe() {}
 	takeRecords(): IntersectionObserverEntry[] {

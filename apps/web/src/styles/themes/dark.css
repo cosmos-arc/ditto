@@ -2,3 +2,7 @@
  * 暗色主题值已在 L2-L7 各层的 @theme inline 中直接定义。
  * 此文件保留为显式声明或未来扩展用。
  */
+
+:root {
+	color-scheme: dark;
+}

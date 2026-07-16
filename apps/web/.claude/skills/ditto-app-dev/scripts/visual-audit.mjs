@@ -3,6 +3,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
+import { PROTOTYPE_NORMALIZE_CSS, VISUAL_AUDIT_PAGES } from "../../../../scripts/visual-audit.config.generated.mjs";
 import {
 	isSuccessfulResponseStatus,
 	NAVIGATION_WAIT_UNTIL,
@@ -13,10 +14,6 @@ import {
 	USAGE,
 	validateTargetKeyParity,
 } from "./visual-audit-core.mjs";
-import {
-	PROTOTYPE_NORMALIZE_CSS,
-	VISUAL_AUDIT_PAGES,
-} from "../../../../scripts/visual-audit.config.generated.mjs";
 
 const STYLE_PROPS = [
 	// Layout
@@ -115,9 +112,7 @@ function createPageIssueCollector(page) {
 		if (request.resourceType() === "document" || isSuccessfulResponseStatus(response.status())) {
 			return;
 		}
-		issues.push(
-			`response ${response.status()} ${request.resourceType()} ${response.url()}`,
-		);
+		issues.push(`response ${response.status()} ${request.resourceType()} ${response.url()}`);
 	});
 	page.on("pageerror", (error) => {
 		issues.push(`pageerror: ${error.message}`);
@@ -154,19 +149,14 @@ async function captureTargetMetrics(page, targets) {
 			(node, { props, pseudoProps }) => {
 				const rect = node.getBoundingClientRect();
 				const computed = window.getComputedStyle(node);
-				const styles = Object.fromEntries(
-					props.map((prop) => [prop, computed[prop]]),
-				);
+				const styles = Object.fromEntries(props.map((prop) => [prop, computed[prop]]));
 
 				const pseudoStyles = {};
 				for (const pseudo of ["::before", "::after"]) {
 					const pseudoComputed = window.getComputedStyle(node, pseudo);
-					const pseudoMap = Object.fromEntries(
-						pseudoProps.map((prop) => [prop, pseudoComputed[prop]]),
-					);
+					const pseudoMap = Object.fromEntries(pseudoProps.map((prop) => [prop, pseudoComputed[prop]]));
 					const content = pseudoComputed.content;
-					const hasContent =
-						content && content !== "none" && content !== '""';
+					const hasContent = content && content !== "none" && content !== '""';
 					if (hasContent) {
 						pseudoStyles[pseudo] = pseudoMap;
 					}
@@ -228,10 +218,7 @@ async function auditPage(browser, config, options) {
 		await openPage(reactPage, urls.react);
 		await reactPage.waitForFunction(() => document.fonts.ready);
 
-		const prototype = await captureTargetMetrics(
-			prototypePage,
-			config.prototypeTargets,
-		);
+		const prototype = await captureTargetMetrics(prototypePage, config.prototypeTargets);
 		const react = await captureTargetMetrics(reactPage, config.reactTargets);
 
 		await prototypePage.screenshot({
@@ -260,25 +247,14 @@ async function auditPage(browser, config, options) {
 			},
 		};
 
-		await writeFile(
-			join(routeOutDir, "metrics.json"),
-			`${JSON.stringify(metrics, null, 2)}\n`,
-			"utf8",
-		);
-		await writeFile(
-			join(routeOutDir, "report.md"),
-			renderReport(metrics),
-			"utf8",
-		);
+		await writeFile(join(routeOutDir, "metrics.json"), `${JSON.stringify(metrics, null, 2)}\n`, "utf8");
+		await writeFile(join(routeOutDir, "report.md"), renderReport(metrics), "utf8");
 
 		return {
 			name: config.name,
 			route: config.route,
 			outDir: routeOutDir,
-			warnings:
-				metrics.warnings.targets.length +
-				metrics.warnings.prototype.length +
-				metrics.warnings.react.length,
+			warnings: metrics.warnings.targets.length + metrics.warnings.prototype.length + metrics.warnings.react.length,
 		};
 	} finally {
 		await prototypePage.close();
@@ -293,7 +269,7 @@ async function main() {
 		return;
 	}
 	const pages = resolvePages(options, VISUAL_AUDIT_PAGES);
-	const browser = await chromium.launch({ channel: 'chromium' });
+	const browser = await chromium.launch({ channel: "chromium" });
 
 	try {
 		const results = [];
@@ -302,9 +278,7 @@ async function main() {
 		}
 
 		for (const result of results) {
-			console.log(
-				`Wrote ${result.route} (${result.name}) to ${result.outDir} with ${result.warnings} warnings`,
-			);
+			console.log(`Wrote ${result.route} (${result.name}) to ${result.outDir} with ${result.warnings} warnings`);
 		}
 	} finally {
 		await browser.close();

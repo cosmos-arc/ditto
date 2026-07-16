@@ -76,6 +76,12 @@ describe("AlertRow", () => {
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
+	it("renders an interactive alert as a native button", () => {
+		render(<AlertRow severity="info" title="数据延迟" onClick={() => {}} />);
+
+		expect(screen.getByRole("button", { name: "数据延迟" })).toHaveAttribute("type", "button");
+	});
+
 	it("applies cursor-pointer when onClick is provided", () => {
 		const { container } = render(<AlertRow severity="info" title="数据延迟" onClick={() => {}} />);
 		const root = container.firstElementChild as HTMLElement;

@@ -38,9 +38,9 @@ export function IntelligenceMacroView() {
 						</div>
 						<div className="flex flex-col gap-1">
 							<span className="text-xs text-(--color-foreground-tertiary)">经济日历</span>
-							{data.calendar.slice(0, 4).map((ev, i) => (
+							{data.calendar.slice(0, 4).map((ev) => (
 								<div
-									key={`${ev.date}-${ev.event}-${i}`}
+									key={`${ev.date}-${ev.time}-${ev.country}-${ev.event}`}
 									data-info-level="l3"
 									data-info-unit="macro-calendar-item"
 									className="flex items-center justify-between py-1 border-b border-(--color-border) last:border-b-0"

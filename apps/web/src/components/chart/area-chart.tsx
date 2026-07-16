@@ -22,7 +22,7 @@ export function AreaChart({
 
 	return (
 		<div className={cn("w-full", className)} style={{ height }}>
-			<svg width="0" height="0" style={{ position: "absolute" }}>
+			<svg width="0" height="0" aria-hidden="true" focusable="false" style={{ position: "absolute" }}>
 				<defs>
 					<linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
 						<stop offset="0%" stopColor={color} stopOpacity={0.3} />

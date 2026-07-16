@@ -3,6 +3,8 @@
  * 此文件保留 React 专用的 Tailwind namespace 别名覆盖 */
 
 [data-theme="light"] {
+	color-scheme: light;
+
 	/* 兼容别名覆盖（对齐暗色主题的别名映射） */
 	--color-surface-hover: oklch(0 0 0 / 0.05);
 	--color-surface-base: var(--surface-panel-base);

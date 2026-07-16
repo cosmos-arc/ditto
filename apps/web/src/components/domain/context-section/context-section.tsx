@@ -50,6 +50,8 @@ function ContextSection({
 						{action}
 						<svg
 							data-slot="context-section-chevron"
+							aria-hidden="true"
+							focusable="false"
 							className={cn(
 								"size-3 text-(--color-foreground-tertiary) transition-transform duration-200",
 								open && "rotate-90",

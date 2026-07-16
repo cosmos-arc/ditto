@@ -1,12 +1,4 @@
 @import "tailwindcss";
-
-@custom-variant dark (&:is(.dark *));
-
-/* ══════════════════════════════════════════════════════════
- * 共享 Design Tokens（唯一真理源 — Single Source of Truth）
- * 文件位置: src/styles/design-tokens/tokens-*.css
- * Prototype 和 React 消费同一份 CSS 变量值
- * ══════════════════════════════════════════════════════════ */
 @import "./design-tokens/tokens-base.css";
 @import "./design-tokens/tokens-semantic.css";
 @import "./design-tokens/tokens-atmosphere.css";
@@ -16,6 +8,17 @@
 @import "./design-tokens/tokens-interaction.css";
 @import "./design-tokens/tokens-domain.css";
 @import "./design-tokens/tokens-density.css";
+@import "./themes/dark.css";
+@import "./themes/light.css";
+@import "./themes/market-intl.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ══════════════════════════════════════════════════════════
+ * 共享 Design Tokens（唯一真理源 — Single Source of Truth）
+ * 文件位置: src/styles/design-tokens/tokens-*.css
+ * Prototype 和 React 消费同一份 CSS 变量值
+ * ══════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════
  * Tailwind v4 Utility 注册层
@@ -380,11 +383,6 @@
 	--sidebar-width: var(--shell-sidebar-width);
 	--activity-width: var(--shell-analytical-activity-width);
 }
-
-/* Theme overrides — 最后加载 */
-@import "./themes/dark.css";
-@import "./themes/light.css";
-@import "./themes/market-intl.css";
 
 /* Tailwind v4 Preflight 已包含 * { box-sizing/margin/padding/border } reset
  * ❌ 勿在此添加自定义 reset — unlayered CSS 会覆盖 @layer utilities 中的
@@ -796,9 +794,9 @@ body {
 	*,
 	*::before,
 	*::after {
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+		transition-duration: 0.01ms;
 	}
 }
 

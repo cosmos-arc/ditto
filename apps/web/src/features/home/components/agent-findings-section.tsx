@@ -33,9 +33,9 @@ export function AgentFindingsSection() {
 				>
 					{data && (
 						<div className="flex flex-col gap-1">
-							{data.findings.map((finding, i) => (
+							{data.findings.map((finding) => (
 								<div
-									key={`${finding.source}-${i}`}
+									key={`${finding.source}-${finding.text}`}
 									className="rounded-[4px] p-1 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center gap-1.5">

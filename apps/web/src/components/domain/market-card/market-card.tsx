@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 /* ── Types ── */
 
-interface MarketCardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface MarketCardProps extends React.HTMLAttributes<HTMLElement> {
 	readonly name: string;
 	readonly regime: "on" | "off" | "mixed";
 	readonly index: string;
@@ -44,20 +44,8 @@ function MarketCard({
 	...props
 }: MarketCardProps) {
 	const changeStr = `${change > 0 ? "+" : ""}${change.toFixed(2)}%`;
-
-	return (
-		<div
-			data-slot="market-card"
-			onClick={onClick}
-			role={onClick ? "button" : undefined}
-			tabIndex={onClick ? 0 : undefined}
-			className={cn(
-				"flex flex-col gap-2 p-3 rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-2) transition-colors duration-120 hover:bg-(--color-surface-3)",
-				onClick && "cursor-pointer",
-				className,
-			)}
-			{...props}
-		>
+	const content = (
+		<>
 			{/* Top row: name + regime */}
 			<div className="flex items-center justify-between">
 				<span className="text-sm font-medium text-(--color-foreground-primary)">{name}</span>
@@ -88,6 +76,25 @@ function MarketCard({
 
 			{/* Judgment */}
 			<p className="text-sm text-(--color-foreground-tertiary) leading-normal">{judgment}</p>
+		</>
+	);
+	const surfaceClassName = cn(
+		"flex flex-col gap-2 p-3 rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-2) text-left transition-colors duration-120 hover:bg-(--color-surface-3)",
+		onClick && "cursor-pointer",
+		className,
+	);
+
+	if (onClick) {
+		return (
+			<button type="button" data-slot="market-card" onClick={onClick} className={surfaceClassName} {...props}>
+				{content}
+			</button>
+		);
+	}
+
+	return (
+		<div data-slot="market-card" className={surfaceClassName} {...props}>
+			{content}
 		</div>
 	);
 }

@@ -29,9 +29,9 @@ export function SignalsSection() {
 			>
 				{data && (
 					<div className="space-y-1">
-						{data.signals.map((signal, i) => (
+						{data.signals.map((signal) => (
 							<div
-								key={`${signal.ticker}-${i}`}
+								key={`${signal.ticker}-${signal.strategy}-${signal.action}-${signal.time}`}
 								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">

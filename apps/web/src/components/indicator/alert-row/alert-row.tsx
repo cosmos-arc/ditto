@@ -7,7 +7,7 @@ const SEVERITY_DOT_MAP = {
 	info: "info" as const,
 };
 
-interface AlertRowProps extends React.HTMLAttributes<HTMLDivElement> {
+interface AlertRowProps extends React.HTMLAttributes<HTMLElement> {
 	readonly severity: "critical" | "warning" | "info";
 	readonly title: string;
 	readonly time?: string;
@@ -16,32 +16,8 @@ interface AlertRowProps extends React.HTMLAttributes<HTMLDivElement> {
 
 function AlertRow({ severity, title, time, onClick, className, ...props }: AlertRowProps) {
 	const dotVariant = SEVERITY_DOT_MAP[severity];
-
-	return (
-		<div
-			data-slot="alert-row"
-			data-severity={severity}
-			data-testid="alert-row"
-			className={cn(
-				"flex items-center gap-2 border-b border-(--color-border-subtle) last:border-b-0 py-[var(--density-cell-padding-y)] px-3 transition-colors duration-120 hover:bg-(--color-surface-2)",
-				onClick && "cursor-pointer",
-				className,
-			)}
-			onClick={onClick}
-			onKeyDown={
-				onClick
-					? (e) => {
-							if (e.key === "Enter" || e.key === " ") {
-								e.preventDefault();
-								onClick();
-							}
-						}
-					: undefined
-			}
-			role={onClick ? "button" : undefined}
-			tabIndex={onClick ? 0 : undefined}
-			{...props}
-		>
+	const content = (
+		<>
 			<StatusDot
 				variant={dotVariant}
 				className={severity === "critical" ? "animate-[dot-critical-pulse_2s_ease-in-out_infinite]" : undefined}
@@ -56,6 +32,33 @@ function AlertRow({ severity, title, time, onClick, className, ...props }: Alert
 					{time}
 				</span>
 			)}
+		</>
+	);
+	const rowClassName = cn(
+		"flex w-full items-center gap-2 border-b border-(--color-border-subtle) last:border-b-0 py-[var(--density-cell-padding-y)] px-3 text-left transition-colors duration-120 hover:bg-(--color-surface-2)",
+		onClick && "cursor-pointer",
+		className,
+	);
+
+	if (onClick) {
+		return (
+			<button
+				type="button"
+				data-slot="alert-row"
+				data-severity={severity}
+				data-testid="alert-row"
+				className={rowClassName}
+				onClick={onClick}
+				{...props}
+			>
+				{content}
+			</button>
+		);
+	}
+
+	return (
+		<div data-slot="alert-row" data-severity={severity} data-testid="alert-row" className={rowClassName} {...props}>
+			{content}
 		</div>
 	);
 }

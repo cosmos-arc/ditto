@@ -21,9 +21,9 @@ export function FindingsAndHealthSection() {
 				>
 					{findingsData && (
 						<div className="space-y-1">
-							{findingsData.findings.map((finding, i) => (
+							{findingsData.findings.map((finding) => (
 								<div
-									key={`${finding.source}-${i}`}
+									key={`${finding.source}-${finding.text}`}
 									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<p className="text-(--color-foreground)">{finding.text}</p>

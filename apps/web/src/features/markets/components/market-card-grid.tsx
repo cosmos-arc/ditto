@@ -4,6 +4,8 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useMarketOverview } from "../hooks";
 
+const LOADING_CARD_IDS = ["market-1", "market-2", "market-3", "market-4", "market-5", "market-6"] as const;
+
 function normalizeRegimeTag(regimeTag: string): "on" | "off" | "mixed" {
 	if (regimeTag === "on" || regimeTag === "off" || regimeTag === "mixed") {
 		return regimeTag;
@@ -17,8 +19,8 @@ export function MarketCardGrid() {
 	if (isLoading) {
 		return (
 			<div className="grid grid-cols-3 gap-3">
-				{Array.from({ length: 6 }).map((_, i) => (
-					<LoadingSkeleton key={i} variant="card" />
+				{LOADING_CARD_IDS.map((cardId) => (
+					<LoadingSkeleton key={cardId} variant="card" />
 				))}
 			</div>
 		);

@@ -4,10 +4,8 @@ export { AgentsPage } from "./components/agents-page";
 export { AiContextSidebar } from "./components/ai-context-sidebar";
 export { AiMainContent } from "./components/ai-main-content";
 export { AiPage } from "./components/ai-page";
-export { CopilotChatView } from "./components/copilot-chat-view";
-export { CopilotContextPanel } from "./components/copilot-context-panel";
 export { CopilotPage } from "./components/copilot-page";
-export { CopilotSessionList } from "./components/copilot-session-list";
+export { CopilotChatView, CopilotContextPanel, CopilotSessionList } from "./copilot";
 export {
 	useAgentFindings,
 	useAgentPlans,

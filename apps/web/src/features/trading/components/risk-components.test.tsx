@@ -58,6 +58,15 @@ describe("RiskBreachesList", () => {
 		expect(onSelectBreach).toHaveBeenCalledWith("rb-001");
 	});
 
+	it("可选择告警使用原生按钮语义", async () => {
+		render(<RiskBreachesList onSelectBreach={() => {}} />, {
+			wrapper: createWrapper(),
+		});
+
+		const breach = await screen.findByRole("button", { name: /单日 VaR 超限/ });
+		expect(breach).toHaveAttribute("type", "button");
+	});
+
 	it("未传 onSelectBreach 时点击不报错", async () => {
 		const user = userEvent.setup();
 		render(<RiskBreachesList />, { wrapper: createWrapper() });

@@ -1,6 +1,8 @@
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useAiPulse } from "../hooks";
 
+const LOADING_SLOTS = ["running-plans", "pending-approvals", "copilot-sessions"] as const;
+
 function Separator() {
 	return <span className="h-3 w-px bg-(--color-border-subtle)" aria-hidden="true" />;
 }
@@ -15,8 +17,8 @@ export function AiPulseStrip() {
 				data-testid="pulse-strip"
 				className="flex items-center h-8 px-4 gap-4 bg-(--color-surface-strip) border-b border-(--color-border-subtle)"
 			>
-				{Array.from({ length: 3 }).map((_, i) => (
-					<div key={i} className="h-3 w-24 animate-pulse rounded bg-(--color-surface-2)" />
+				{LOADING_SLOTS.map((slot) => (
+					<div key={slot} className="h-3 w-24 animate-pulse rounded bg-(--color-surface-2)" />
 				))}
 			</div>
 		);

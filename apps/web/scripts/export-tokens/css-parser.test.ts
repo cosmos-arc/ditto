@@ -56,7 +56,7 @@ describe("css-parser", () => {
         (t) => t.name === "brand-500" && t.selector === ":root",
       );
       expect(brand500).toBeDefined();
-      expect(brand500!.value).toBe("oklch(0.640 0.120 235)");
+      expect(brand500!.value).toBe("oklch(0.64 0.12 235)");
       expect(brand500!.layer).toBe("base");
     });
 
@@ -99,7 +99,7 @@ describe("css-parser", () => {
         (t) => t.name === "font-family-ui" && t.selector === ":root",
       );
       expect(ff).toBeDefined();
-      expect(ff!.value).toContain("'Inter'");
+      expect(ff!.value).toContain('"Inter"');
     });
 
     it("extracts CSS string value tokens (indicator symbols)", () => {
@@ -108,7 +108,7 @@ describe("css-parser", () => {
         (t) => t.name === "indicator-up-sym" && t.selector === ":root",
       );
       expect(upSym).toBeDefined();
-      expect(upSym!.value).toBe("'\\25B2'");
+      expect(upSym!.value).toBe('"\\25B2"');
     });
 
     it("extracts semantic layer tokens with var() references", () => {

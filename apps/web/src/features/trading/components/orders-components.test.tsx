@@ -54,6 +54,13 @@ describe("OrdersList", () => {
 		await expect(screen.findByText("pending")).resolves.toBeInTheDocument();
 		await expect(screen.findAllByText("filled")).resolves.toHaveLength(2);
 	});
+
+	it("可选择订单使用原生按钮语义", async () => {
+		render(<OrdersList onSelectOrder={() => {}} />, { wrapper: createWrapper() });
+
+		const order = await screen.findByRole("button", { name: /000001\.SZ/ });
+		expect(order).toHaveAttribute("type", "button");
+	});
 });
 
 // ── OrdersHealthStrip ───────────────────────────────────────────

@@ -48,7 +48,7 @@ describe("StatusDot", () => {
 		expect(dot.style.backgroundColor).toBe("");
 		// Color should come from CSS variable via class, not inline style
 		const className = dot.className;
-		expect(className).toContain("bg-(--color-status-led-" + variant + ")");
+		expect(className).toContain(`bg-(--color-status-led-${variant})`);
 	});
 
 	// ── Pulse animation ──

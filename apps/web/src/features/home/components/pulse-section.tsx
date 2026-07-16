@@ -3,6 +3,8 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useHomePulse } from "../hooks";
 
+const LOADING_METRIC_IDS = ["session", "pnl", "risk"] as const;
+
 /**
  * PulseSection — thin operational status strip.
  * Matches prototype .shell-pulse: calc(density-strip-height - 4px),
@@ -14,8 +16,8 @@ export function PulseSection() {
 	if (isLoading) {
 		return (
 			<div className="flex h-[calc(var(--density-strip-height)-4px)] items-center gap-4 bg-(--color-surface-strip) px-4">
-				{Array.from({ length: 3 }).map((_, i) => (
-					<LoadingSkeleton key={i} variant="metric" className="h-4 w-24" />
+				{LOADING_METRIC_IDS.map((metricId) => (
+					<LoadingSkeleton key={metricId} variant="metric" className="h-4 w-24" />
 				))}
 			</div>
 		);

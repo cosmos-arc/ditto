@@ -43,7 +43,7 @@ describe("ContextSection", () => {
 
 	it("renders action element", () => {
 		render(
-			<ContextSection title="Alerts" action={<button>View All</button>}>
+			<ContextSection title="Alerts" action={<button type="button">View All</button>}>
 				Content
 			</ContextSection>,
 		);

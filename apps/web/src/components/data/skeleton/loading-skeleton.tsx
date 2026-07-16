@@ -39,6 +39,10 @@ function ShimmerBar({
 	return <div data-testid={testId} className={cn(shimmerBase, className)} />;
 }
 
+function createSkeletonSlots(prefix: string, count: number): readonly string[] {
+	return Array.from({ length: count }, (_, position) => `${prefix}-${position + 1}`);
+}
+
 function LoadingSkeleton({ variant = "panel", rows, columns, className, ...props }: LoadingSkeletonProps) {
 	return (
 		<div
@@ -60,28 +64,31 @@ function LoadingSkeleton({ variant = "panel", rows, columns, className, ...props
 }
 
 function PanelSkeleton({ rows }: { readonly rows: number }) {
+	const rowSlots = createSkeletonSlots("panel-row", rows);
 	return (
 		<>
 			<ShimmerBar data-testid="skeleton-header" className="w-[40%] h-4" />
-			{Array.from({ length: rows }, (_, i) => (
-				<ShimmerBar key={i} data-testid="skeleton-row" className="w-full h-3" />
+			{rowSlots.map((slot) => (
+				<ShimmerBar key={slot} data-testid="skeleton-row" className="w-full h-3" />
 			))}
 		</>
 	);
 }
 
 function TableSkeleton({ columns, rows }: { readonly columns: number; readonly rows: number }) {
+	const columnSlots = createSkeletonSlots("column", columns);
+	const rowSlots = createSkeletonSlots("table-row", rows);
 	return (
 		<>
 			<div data-testid="skeleton-table-header" className="flex gap-2">
-				{Array.from({ length: columns }, (_, i) => (
-					<ShimmerBar key={`header-${i}`} data-testid="skeleton-table-header-cell" className="flex-1 h-3" />
+				{columnSlots.map((columnSlot) => (
+					<ShimmerBar key={`header-${columnSlot}`} data-testid="skeleton-table-header-cell" className="flex-1 h-3" />
 				))}
 			</div>
-			{Array.from({ length: rows }, (_, i) => (
-				<div key={`row-${i}`} data-testid="skeleton-table-row" className="flex gap-2">
-					{Array.from({ length: columns }, (_, j) => (
-						<ShimmerBar key={`row-${i}-cell-${j}`} className="flex-1 h-3" />
+			{rowSlots.map((rowSlot) => (
+				<div key={rowSlot} data-testid="skeleton-table-row" className="flex gap-2">
+					{columnSlots.map((columnSlot) => (
+						<ShimmerBar key={`${rowSlot}-${columnSlot}`} className="flex-1 h-3" />
 					))}
 				</div>
 			))}

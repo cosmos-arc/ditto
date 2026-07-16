@@ -3,14 +3,24 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useRiskSummary } from "../hooks";
 
+const LOADING_METRIC_IDS = [
+	"value-at-risk",
+	"max-drawdown",
+	"beta",
+	"gross-exposure",
+	"net-exposure",
+	"near-limit",
+	"breach-count",
+] as const;
+
 export function RiskScopeStrip() {
 	const { data, isLoading, refetch } = useRiskSummary();
 
 	if (isLoading) {
 		return (
 			<div className="flex h-9 items-center gap-3 px-4 py-1.5">
-				{Array.from({ length: 7 }).map((_, i) => (
-					<LoadingSkeleton key={i} variant="metric" className="flex-1" />
+				{LOADING_METRIC_IDS.map((metricId) => (
+					<LoadingSkeleton key={metricId} variant="metric" className="flex-1" />
 				))}
 			</div>
 		);

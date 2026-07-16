@@ -135,7 +135,7 @@ function CrossMarketMatrix() {
 								<td className="p-1.5 font-medium text-(--color-foreground-tertiary)">{CORRELATION_LABELS[rowIdx]}</td>
 								{row.map((value, colIdx) => (
 									<td
-										key={`${rowIdx}-${colIdx}`}
+										key={`${CORRELATION_LABELS[rowIdx]}-${CORRELATION_LABELS[colIdx]}`}
 										data-testid={`corr-${rowIdx}-${colIdx}`}
 										className={`rounded-(--radius-sm) p-1.5 text-center font-data tabular-nums transition-transform hover:scale-105 ${correlationCellClass(value, rowIdx, colIdx)}`}
 										aria-label={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]}: 相关系数 ${value.toFixed(2)}`}
@@ -172,9 +172,9 @@ function MarketRightRail() {
 				/>
 				<PanelBody className="p-3">
 					<div className="flex flex-col gap-1">
-						{MOCK_EVENTS.map((event, i) => (
+						{MOCK_EVENTS.map((event) => (
 							<div
-								key={i}
+								key={`${event.text}-${event.time}`}
 								data-info-level="l3"
 								data-info-unit="market-event-item"
 								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"

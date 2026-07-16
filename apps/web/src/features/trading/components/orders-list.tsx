@@ -30,39 +30,36 @@ export function OrdersList({ onSelectOrder }: OrdersListProps) {
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (
 					<div className="space-y-1">
-						{data.items.map((order) => (
-							<div
-								key={order.id}
-								className={cn(
-									"flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)",
-									onSelectOrder && "cursor-pointer",
-								)}
-								onClick={onSelectOrder ? () => onSelectOrder(order.id) : undefined}
-								onKeyDown={
-									onSelectOrder
-										? (e) => {
-												if (e.key === "Enter" || e.key === " ") {
-													e.preventDefault();
-													onSelectOrder(order.id);
-												}
-											}
-										: undefined
-								}
-								role={onSelectOrder ? "button" : undefined}
-								tabIndex={onSelectOrder ? 0 : undefined}
-							>
-								<div className="flex items-center gap-3">
-									<StatusBadge variant={SIDE_VARIANT[order.side] ?? "default"} label={order.side} size="sm" />
-									<span className="font-medium">{order.instrument}</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">{order.qty.toLocaleString()} 股</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">@ {order.price.toFixed(2)}</span>
+						{data.items.map((order) => {
+							const content = (
+								<>
+									<div className="flex items-center gap-3">
+										<StatusBadge variant={SIDE_VARIANT[order.side] ?? "default"} label={order.side} size="sm" />
+										<span className="font-medium">{order.instrument}</span>
+										<span className="text-xs text-(--color-foreground-tertiary)">{order.qty.toLocaleString()} 股</span>
+										<span className="text-xs text-(--color-foreground-tertiary)">@ {order.price.toFixed(2)}</span>
+									</div>
+									<div className="flex items-center gap-3">
+										<span className="text-xs text-(--color-foreground-tertiary)">{order.type}</span>
+										<StatusBadge variant={STATUS_VARIANT[order.status] ?? "default"} label={order.status} size="sm" />
+									</div>
+								</>
+							);
+							const rowClassName = cn(
+								"flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)",
+								onSelectOrder && "cursor-pointer",
+							);
+
+							return onSelectOrder ? (
+								<button key={order.id} type="button" className={rowClassName} onClick={() => onSelectOrder(order.id)}>
+									{content}
+								</button>
+							) : (
+								<div key={order.id} className={rowClassName}>
+									{content}
 								</div>
-								<div className="flex items-center gap-3">
-									<span className="text-xs text-(--color-foreground-tertiary)">{order.type}</span>
-									<StatusBadge variant={STATUS_VARIANT[order.status] ?? "default"} label={order.status} size="sm" />
-								</div>
-							</div>
-						))}
+							);
+						})}
 					</div>
 				)}
 			</DittoErrorBoundary>
