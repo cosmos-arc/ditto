@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { marketsHandlers } from "@/mocks/handlers/markets";
-
-import { ScreenerToolbar } from "./screener-toolbar";
-import { ScreenerResults } from "./screener-results";
+import { server } from "@/mocks/server";
 import { CompareCart } from "./compare-cart";
+import { ScreenerResults } from "./screener-results";
+import { ScreenerToolbar } from "./screener-toolbar";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({

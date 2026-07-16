@@ -1,1 +1,1 @@
-export { DataTable, type ColumnDef, type DataTableProps } from "./data-table";
+export { type ColumnDef, DataTable, type DataTableProps } from "./data-table";

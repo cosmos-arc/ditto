@@ -1,10 +1,10 @@
 import { useParams } from "@tanstack/react-router";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout } from "@/features/shell";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StrategyDetailMeta } from "./strategy-detail-meta";
-import { StrategyVersionsView } from "./strategy-versions-view";
-import { StrategyOverview } from "./strategy-overview";
 import { StrategyFactorsView } from "./strategy-factors-view";
+import { StrategyOverview } from "./strategy-overview";
+import { StrategyVersionsView } from "./strategy-versions-view";
 
 export function StrategyDetailPage() {
 	const { id } = useParams({ strict: false }) as { id: string };

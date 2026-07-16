@@ -87,10 +87,7 @@ function AgentsPanel() {
 			<p className="text-sm text-(--color-foreground-secondary)">
 				查看和管理所有 Agent 计划的运行状态、发现和审批流程。
 			</p>
-			<a
-				href="/ai/agents"
-				className="inline-flex items-center gap-1 text-xs text-(--color-accent) hover:underline"
-			>
+			<a href="/ai/agents" className="inline-flex items-center gap-1 text-xs text-(--color-accent) hover:underline">
 				进入 Agent 管理中心 →
 			</a>
 		</div>
@@ -103,10 +100,7 @@ function CopilotPanel() {
 			<p className="text-sm text-(--color-foreground-secondary)">
 				查看和继续 Copilot 研究对话、交易分析和代码辅助会话。
 			</p>
-			<a
-				href="/ai/copilot"
-				className="inline-flex items-center gap-1 text-xs text-(--color-accent) hover:underline"
-			>
+			<a href="/ai/copilot" className="inline-flex items-center gap-1 text-xs text-(--color-accent) hover:underline">
 				进入 Copilot 对话 →
 			</a>
 		</div>

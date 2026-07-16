@@ -1,6 +1,6 @@
-import { cn } from "@/lib/utils";
-import { StatusBadge } from "@/components/status";
 import { Sparkline } from "@/components/data";
+import { StatusBadge } from "@/components/status";
+import { cn } from "@/lib/utils";
 
 /* ── Types ── */
 
@@ -60,14 +60,8 @@ function MarketCard({
 		>
 			{/* Top row: name + regime */}
 			<div className="flex items-center justify-between">
-				<span className="text-sm font-medium text-(--color-foreground-primary)">
-					{name}
-				</span>
-				<StatusBadge
-					label={REGIME_LABEL_MAP[regime]}
-					variant={REGIME_VARIANT_MAP[regime]}
-					size="sm"
-				/>
+				<span className="text-sm font-medium text-(--color-foreground-primary)">{name}</span>
+				<StatusBadge label={REGIME_LABEL_MAP[regime]} variant={REGIME_VARIANT_MAP[regime]} size="sm" />
 			</div>
 
 			{/* Index + change */}
@@ -75,33 +69,28 @@ function MarketCard({
 				<span className="font-data text-[24px] font-semibold tabular-nums text-(--color-foreground-primary)">
 					{index}
 				</span>
-				<span className={cn(
-					"font-data text-[13px] font-semibold tabular-nums",
-					change > 0 && "text-(--color-market-up)",
-					change < 0 && "text-(--color-market-down)",
-					change === 0 && "text-(--color-foreground-tertiary)",
-				)}>
+				<span
+					className={cn(
+						"font-data text-[13px] font-semibold tabular-nums",
+						change > 0 && "text-(--color-market-up)",
+						change < 0 && "text-(--color-market-down)",
+						change === 0 && "text-(--color-foreground-tertiary)",
+					)}
+				>
 					{changeStr}
 				</span>
 			</div>
 
 			{/* Sparkline */}
 			{sparkline && sparkline.length > 1 && (
-				<Sparkline
-					data={[...sparkline]}
-					color={change >= 0 ? "up" : "down"}
-					width={120}
-					height={20}
-				/>
+				<Sparkline data={[...sparkline]} color={change >= 0 ? "up" : "down"} width={120} height={20} />
 			)}
 
 			{/* Judgment */}
-			<p className="text-sm text-(--color-foreground-tertiary) leading-normal">
-				{judgment}
-			</p>
+			<p className="text-sm text-(--color-foreground-tertiary) leading-normal">{judgment}</p>
 		</div>
 	);
 }
 
-export { MarketCard };
 export type { MarketCardProps };
+export { MarketCard };

@@ -1,4 +1,4 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
+import { HttpResponse, http, type RequestHandler } from "msw";
 import { mockBacktestResult } from "../fixtures/backtest";
 
 export const backtestHandlers: RequestHandler[] = [

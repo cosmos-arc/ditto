@@ -30,11 +30,7 @@ interface Point {
 }
 
 /** Normalize data to SVG coordinate points. */
-function toPoints(
-	data: readonly number[],
-	width: number,
-	height: number,
-): Point[] {
+function toPoints(data: readonly number[], width: number, height: number): Point[] {
 	const len = data.length;
 	if (len < 2) return [];
 
@@ -110,14 +106,7 @@ export function Sparkline({
 					</linearGradient>
 				</defs>
 			)}
-			{gradient && areaD && (
-				<path
-					data-part="area"
-					d={areaD}
-					fill={`url(#${gradientId})`}
-					stroke="none"
-				/>
-			)}
+			{gradient && areaD && <path data-part="area" d={areaD} fill={`url(#${gradientId})`} stroke="none" />}
 			{canDraw && (
 				<path
 					data-part="stroke"

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { StatusBadge } from "./status-badge";
 
 const STATUS_VARIANTS = [
@@ -53,45 +53,31 @@ describe("StatusBadge", () => {
 
 	// ── Size variants ──
 
-	it.each([["sm"], ["md"]] as const)(
-		"applies correct data-size for size=%s",
-		(size) => {
-			const { container } = render(
-				<StatusBadge label="Test" variant="healthy" size={size} />,
-			);
-			const badge = container.firstElementChild as HTMLElement;
-			expect(badge).toHaveAttribute("data-size", size);
-		},
-	);
+	it.each([["sm"], ["md"]] as const)("applies correct data-size for size=%s", (size) => {
+		const { container } = render(<StatusBadge label="Test" variant="healthy" size={size} />);
+		const badge = container.firstElementChild as HTMLElement;
+		expect(badge).toHaveAttribute("data-size", size);
+	});
 
 	it("applies text-xs class for size=sm", () => {
-		const { container } = render(
-			<StatusBadge label="Test" variant="healthy" size="sm" />,
-		);
+		const { container } = render(<StatusBadge label="Test" variant="healthy" size="sm" />);
 		const badge = container.firstElementChild as HTMLElement;
 		expect(badge.className).toContain("text-xs");
 	});
 
 	it("applies text-sm class for size=md", () => {
-		const { container } = render(
-			<StatusBadge label="Test" variant="healthy" size="md" />,
-		);
+		const { container } = render(<StatusBadge label="Test" variant="healthy" size="md" />);
 		const badge = container.firstElementChild as HTMLElement;
 		expect(badge.className).toContain("text-sm");
 	});
 
 	// ── Variant data-attribute ──
 
-	it.each(STATUS_VARIANTS)(
-		"applies data-variant for variant=%s",
-		(variant) => {
-			const { container } = render(
-				<StatusBadge label="Label" variant={variant} />,
-			);
-			const badge = container.firstElementChild as HTMLElement;
-			expect(badge).toHaveAttribute("data-variant", variant);
-		},
-	);
+	it.each(STATUS_VARIANTS)("applies data-variant for variant=%s", (variant) => {
+		const { container } = render(<StatusBadge label="Label" variant={variant} />);
+		const badge = container.firstElementChild as HTMLElement;
+		expect(badge).toHaveAttribute("data-variant", variant);
+	});
 
 	// ── Dot variant passthrough ──
 
@@ -114,16 +100,11 @@ describe("StatusBadge", () => {
 		["regime-mixed", "warning"],
 		["active", "live"],
 		["inactive", "idle"],
-	] as const)(
-		"maps badge variant=%s to dot variant=%s",
-		(badgeVariant, expectedDotVariant) => {
-			const { container } = render(
-				<StatusBadge label="Label" variant={badgeVariant} />,
-			);
-			const dot = getDot(container);
-			expect(dot).toHaveAttribute("data-variant", expectedDotVariant);
-		},
-	);
+	] as const)("maps badge variant=%s to dot variant=%s", (badgeVariant, expectedDotVariant) => {
+		const { container } = render(<StatusBadge label="Label" variant={badgeVariant} />);
+		const dot = getDot(container);
+		expect(dot).toHaveAttribute("data-variant", expectedDotVariant);
+	});
 
 	// ── Default variant ──
 
@@ -136,17 +117,13 @@ describe("StatusBadge", () => {
 	// ── Background color ──
 
 	it("applies background color class with 8% opacity", () => {
-		const { container } = render(
-			<StatusBadge label="Test" variant="healthy" />,
-		);
+		const { container } = render(<StatusBadge label="Test" variant="healthy" />);
 		const badge = container.firstElementChild as HTMLElement;
 		expect(badge.className).toContain("bg-(--color-status-led-healthy)/8");
 	});
 
 	it("applies business token background for trade variant", () => {
-		const { container } = render(
-			<StatusBadge label="Trade" variant="trade" />,
-		);
+		const { container } = render(<StatusBadge label="Trade" variant="trade" />);
 		const badge = container.firstElementChild as HTMLElement;
 		expect(badge.className).toContain("bg-(--color-execution-filled)/8");
 	});
@@ -154,9 +131,7 @@ describe("StatusBadge", () => {
 	// ── Layout ──
 
 	it("renders dot and label in a horizontal row", () => {
-		const { container } = render(
-			<StatusBadge label="Label" variant="healthy" />,
-		);
+		const { container } = render(<StatusBadge label="Label" variant="healthy" />);
 		const badge = container.firstElementChild as HTMLElement;
 		expect(badge.className).toContain("inline-flex");
 		expect(badge.className).toContain("items-center");
@@ -166,9 +141,7 @@ describe("StatusBadge", () => {
 	// ── Data attributes ──
 
 	it("renders with data-slot attribute", () => {
-		const { container } = render(
-			<StatusBadge label="Test" variant="healthy" />,
-		);
+		const { container } = render(<StatusBadge label="Test" variant="healthy" />);
 		const badge = container.firstElementChild as HTMLElement;
 		expect(badge).toHaveAttribute("data-slot", "status-badge");
 	});
@@ -176,9 +149,7 @@ describe("StatusBadge", () => {
 	// ── className merging ──
 
 	it("merges custom className", () => {
-		const { container } = render(
-			<StatusBadge label="Test" variant="healthy" className="extra-class" />,
-		);
+		const { container } = render(<StatusBadge label="Test" variant="healthy" className="extra-class" />);
 		const badge = container.firstElementChild as HTMLElement;
 		expect(badge.classList.contains("extra-class")).toBe(true);
 	});
@@ -186,17 +157,13 @@ describe("StatusBadge", () => {
 	// ── Dot size passthrough ──
 
 	it("passes sm size to dot when badge is sm", () => {
-		const { container } = render(
-			<StatusBadge label="Small" variant="healthy" size="sm" />,
-		);
+		const { container } = render(<StatusBadge label="Small" variant="healthy" size="sm" />);
 		const dot = getDot(container);
 		expect(dot).toHaveAttribute("data-size", "sm");
 	});
 
 	it("passes md size to dot when badge is md", () => {
-		const { container } = render(
-			<StatusBadge label="Medium" variant="healthy" size="md" />,
-		);
+		const { container } = render(<StatusBadge label="Medium" variant="healthy" size="md" />);
 		const dot = getDot(container);
 		expect(dot).toHaveAttribute("data-size", "md");
 	});

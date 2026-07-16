@@ -1,9 +1,9 @@
-import { useRiskBreaches } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { cn } from "@/lib/utils";
+import { useRiskBreaches } from "../hooks";
 
 const BREACH_STATUS_VARIANT: Record<string, "healthy" | "warning" | "default" | "degraded"> = {
 	active: "degraded",
@@ -32,20 +32,22 @@ export function RiskBreachesList({ onSelectBreach }: RiskBreachesListProps) {
 									onSelectBreach && "cursor-pointer",
 								)}
 								onClick={onSelectBreach ? () => onSelectBreach(breach.id) : undefined}
-								onKeyDown={onSelectBreach ? (e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										e.preventDefault();
-										onSelectBreach(breach.id);
-									}
-								} : undefined}
+								onKeyDown={
+									onSelectBreach
+										? (e) => {
+												if (e.key === "Enter" || e.key === " ") {
+													e.preventDefault();
+													onSelectBreach(breach.id);
+												}
+											}
+										: undefined
+								}
 								role={onSelectBreach ? "button" : undefined}
 								tabIndex={onSelectBreach ? 0 : undefined}
 							>
 								<div className="flex items-center gap-3">
 									<span className="font-medium">{breach.ruleName}</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										阈值 {String(breach.threshold)}
-									</span>
+									<span className="text-xs text-(--color-foreground-tertiary)">阈值 {String(breach.threshold)}</span>
 								</div>
 								<div className="flex items-center gap-3">
 									<span className="tabular-nums text-(--color-foreground-tertiary)">

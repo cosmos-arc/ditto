@@ -1,21 +1,20 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
-import { homeHandlers } from "@/mocks/handlers/home";
-import { mockDecisionBanner } from "@/mocks/fixtures/home";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
-
-import { PulseSection } from "./pulse-section";
+import { mockDecisionBanner } from "@/mocks/fixtures/home";
+import { homeHandlers } from "@/mocks/handlers/home";
+import { server } from "@/mocks/server";
 import { BannerSection } from "./banner-section";
-import { PriorityQueueSection } from "./priority-queue-section";
-import { MarketPulseSection } from "./market-pulse-section";
-import { GlobalAlertsSection } from "./global-alerts-section";
 import { DataHealthSection } from "./data-health-section";
-import { ResearchProgressSection } from "./research-progress-section";
+import { GlobalAlertsSection } from "./global-alerts-section";
 import { HomePage } from "./home-page";
+import { MarketPulseSection } from "./market-pulse-section";
+import { PriorityQueueSection } from "./priority-queue-section";
+import { PulseSection } from "./pulse-section";
+import { ResearchProgressSection } from "./research-progress-section";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -101,9 +100,7 @@ describe("BannerSection", () => {
 	it("渲染响应中的判断文案", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText(mockDecisionBanner.suggestion),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText(mockDecisionBanner.suggestion)).resolves.toBeInTheDocument();
 	});
 });
 

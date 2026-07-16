@@ -1,14 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { platformHandlers } from "@/mocks/handlers/platform";
-
+import { server } from "@/mocks/server";
+import { usePlatformAlerts } from "./use-alerts";
+import { usePipelines } from "./use-pipelines";
 import { usePlatformHealth } from "./use-platform-health";
 import { useProviders } from "./use-providers";
-import { usePipelines } from "./use-pipelines";
-import { usePlatformAlerts } from "./use-alerts";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({

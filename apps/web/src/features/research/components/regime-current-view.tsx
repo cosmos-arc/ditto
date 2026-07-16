@@ -1,8 +1,8 @@
-import { useRegimeCurrent } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useRegimeCurrent } from "../hooks";
 
 const STATE_VARIANT_MAP: Record<string, "regime-on" | "regime-off" | "regime-mixed"> = {
 	risk_on: "regime-on",
@@ -28,29 +28,18 @@ export function RegimeCurrentView() {
 				{data && (
 					<div className="flex flex-col gap-3">
 						<div className="flex items-center gap-3">
-							<StatusBadge
-								variant={STATE_VARIANT_MAP[data.state] ?? "regime-mixed"}
-								label={data.state}
-							/>
+							<StatusBadge variant={STATE_VARIANT_MAP[data.state] ?? "regime-mixed"} label={data.state} />
 							<span className="text-(--color-foreground-secondary) text-sm">
 								置信度 <strong>{Math.round(data.confidence * 100)}%</strong>
 							</span>
-							<span className="text-(--color-foreground-tertiary) text-xs">
-								持续 {data.duration} 天
-							</span>
+							<span className="text-(--color-foreground-tertiary) text-xs">持续 {data.duration} 天</span>
 						</div>
 						<div className="grid grid-cols-2 gap-2">
 							{data.keyIndicators.map((ind) => (
 								<div key={ind.name} className="flex flex-col gap-0.5">
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										{ind.name}
-									</span>
-									<span className="text-sm font-data text-(--color-foreground)">
-										{ind.value}
-									</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										{ind.description}
-									</span>
+									<span className="text-xs text-(--color-foreground-tertiary)">{ind.name}</span>
+									<span className="text-sm font-data text-(--color-foreground)">{ind.value}</span>
+									<span className="text-xs text-(--color-foreground-tertiary)">{ind.description}</span>
 								</div>
 							))}
 						</div>

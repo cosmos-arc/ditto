@@ -1,8 +1,8 @@
-import { useCopilotQuickView } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useCopilotQuickView } from "../hooks";
 
 const MODE_VARIANT_MAP: Record<string, "research" | "trade" | "platform"> = {
 	research: "research",
@@ -19,11 +19,7 @@ const MODE_LABEL_MAP: Record<string, string> = {
 };
 
 export function CopilotQuickView() {
-	const {
-		data,
-		isLoading,
-		refetch,
-	} = useCopilotQuickView();
+	const { data, isLoading, refetch } = useCopilotQuickView();
 
 	return (
 		<div className="grid grid-cols-2 gap-4">
@@ -43,18 +39,14 @@ export function CopilotQuickView() {
 									className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
 									<div className="flex items-center justify-between">
-										<span className="text-(--color-foreground)">
-											{session.title}
-										</span>
+										<span className="text-(--color-foreground)">{session.title}</span>
 										<StatusBadge
 											variant={MODE_VARIANT_MAP[session.mode] ?? "platform"}
 											label={MODE_LABEL_MAP[session.mode] ?? session.mode}
 											size="sm"
 										/>
 									</div>
-									<div className="mt-1 text-xs text-(--color-foreground-tertiary)">
-										{session.messageCount} 条消息
-									</div>
+									<div className="mt-1 text-xs text-(--color-foreground-tertiary)">{session.messageCount} 条消息</div>
 								</div>
 							))}
 						</div>
@@ -62,10 +54,7 @@ export function CopilotQuickView() {
 				</DittoErrorBoundary>
 			</ContextSection>
 
-			<ContextSection
-				title="近期输出"
-				count={data?.recentOutputs.length}
-			>
+			<ContextSection title="近期输出" count={data?.recentOutputs.length}>
 				{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 				{data && (
 					<div className="space-y-1">
@@ -74,12 +63,8 @@ export function CopilotQuickView() {
 								key={output.id}
 								className="rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
-								<p className="text-(--color-foreground)">
-									{output.summary}
-								</p>
-								<div className="mt-1 text-xs text-(--color-foreground-tertiary)">
-									{output.type}
-								</div>
+								<p className="text-(--color-foreground)">{output.summary}</p>
+								<div className="mt-1 text-xs text-(--color-foreground-tertiary)">{output.type}</div>
 							</div>
 						))}
 					</div>

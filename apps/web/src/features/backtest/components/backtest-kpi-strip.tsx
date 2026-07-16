@@ -1,7 +1,7 @@
-import { useBacktestResult } from "../hooks";
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useBacktestResult } from "../hooks";
 
 interface BacktestKpiStripProps {
 	readonly jobId: string;
@@ -27,7 +27,12 @@ export function BacktestKpiStrip({ jobId }: BacktestKpiStripProps) {
 					<Metric variant="strip" label="Sharpe" value={data.statistics.sharpe.toFixed(2)} />
 					<Metric variant="strip" label="最大回撤" value={`${data.statistics.mdd}%`} trend="down" />
 					<Metric variant="strip" label="胜率" value={`${data.statistics.winRate.toFixed(1)}%`} />
-					<Metric variant="strip" label="年化收益" value={`${data.statistics.annualizedReturn}%`} trend={data.statistics.annualizedReturn >= 0 ? "up" : "down"} />
+					<Metric
+						variant="strip"
+						label="年化收益"
+						value={`${data.statistics.annualizedReturn}%`}
+						trend={data.statistics.annualizedReturn >= 0 ? "up" : "down"}
+					/>
 					<Metric variant="strip" label="盈亏比" value={data.statistics.plRatio.toFixed(2)} />
 					<Metric variant="strip" label="换手率" value={`${data.statistics.turnover.toFixed(1)}x`} />
 				</div>

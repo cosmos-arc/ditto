@@ -1,8 +1,8 @@
-import { usePendingActions } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { usePendingActions } from "../hooks";
 
 const PRIORITY_VARIANT: Record<string, "critical" | "warning" | "default"> = {
 	critical: "critical",

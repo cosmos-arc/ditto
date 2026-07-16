@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { aiHandlers } from "@/mocks/handlers/ai";
-
-import { CopilotSessionList } from "./copilot-session-list";
+import { server } from "@/mocks/server";
 import { CopilotChatView } from "./copilot-chat-view";
 import { CopilotPage } from "./copilot-page";
+import { CopilotSessionList } from "./copilot-session-list";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -20,11 +19,7 @@ function createQueryClient(): QueryClient {
 function createWrapper() {
 	const queryClient = createQueryClient();
 	return function Wrapper({ children }: { children: ReactNode }) {
-		return (
-			<QueryClientProvider client={queryClient}>
-				{children}
-			</QueryClientProvider>
-		);
+		return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 	};
 }
 
@@ -38,23 +33,15 @@ describe("CopilotSessionList", () => {
 	it("渲染会话列表标题", async () => {
 		render(<CopilotSessionList />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("会话列表"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("会话列表")).resolves.toBeInTheDocument();
 	});
 
 	it("显示所有会话条目", async () => {
 		render(<CopilotSessionList />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("因子衰减分析讨论"),
-		).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText("调仓建议方案"),
-		).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText("回测框架使用指南"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("因子衰减分析讨论")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("调仓建议方案")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("回测框架使用指南")).resolves.toBeInTheDocument();
 	});
 
 	it("显示会话模式", async () => {
@@ -74,9 +61,7 @@ describe("CopilotChatView", () => {
 			wrapper: createWrapper(),
 		});
 
-		await expect(
-			screen.findByText("最近动量因子的 IC 表现怎么样？有没有衰减趋势？"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("最近动量因子的 IC 表现怎么样？有没有衰减趋势？")).resolves.toBeInTheDocument();
 	});
 
 	it("显示助手回复", async () => {
@@ -84,9 +69,7 @@ describe("CopilotChatView", () => {
 			wrapper: createWrapper(),
 		});
 
-		await expect(
-			screen.findByText(/根据最近 60 个交易日的 IC 序列分析/),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/根据最近 60 个交易日的 IC 序列分析/)).resolves.toBeInTheDocument();
 	});
 
 	it("区分用户和助手消息", async () => {
@@ -110,8 +93,6 @@ describe("CopilotPage", () => {
 	it("渲染会话列表区域", async () => {
 		render(<CopilotPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("会话列表"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("会话列表")).resolves.toBeInTheDocument();
 	});
 });

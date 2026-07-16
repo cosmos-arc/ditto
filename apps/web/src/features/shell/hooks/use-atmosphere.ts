@@ -24,14 +24,8 @@ export function useAtmosphere(): void {
 			const config = PHASE_PROFILES[phase];
 			const root = document.documentElement.style;
 			root.setProperty("--atmosphere-hue-shift", String(config.hueShift));
-			root.setProperty(
-				"--atmosphere-chroma-boost",
-				String(config.chromaBoost),
-			);
-			root.setProperty(
-				"--atmosphere-lightness-shift",
-				String(config.lightnessShift),
-			);
+			root.setProperty("--atmosphere-chroma-boost", String(config.chromaBoost));
+			root.setProperty("--atmosphere-lightness-shift", String(config.lightnessShift));
 		}
 		update();
 		const interval = setInterval(update, 300_000);

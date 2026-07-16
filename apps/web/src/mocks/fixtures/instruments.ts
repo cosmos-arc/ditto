@@ -1,11 +1,11 @@
 import type {
+	BalanceSheet,
+	CashflowStatement,
 	ChartBar,
 	ChartIndicators,
 	DupontAnalysis,
 	FinancialRatio,
 	FinancialStatement,
-	BalanceSheet,
-	CashflowStatement,
 	GetInstrumentChartResponse,
 	GetInstrumentFundamentalsResponse,
 	InstrumentDetail,
@@ -56,8 +56,48 @@ export const mockInstrumentBars: readonly ChartBar[] = [
 ] as const;
 
 export const mockInstrumentIndicators: ChartIndicators = {
-	ma5: [null, null, null, null, 1750.74, 1752.82, 1755.48, 1755.72, 1755.24, 1751.68, 1750.58, 1753.14, 1756.48, 1756.84, 1755.64, 1759.34, 1763.16, 1760.28, 1757.84],
-	ma20: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 1753.72, 1754.55, 1755.28, 1755.85],
+	ma5: [
+		null,
+		null,
+		null,
+		null,
+		1750.74,
+		1752.82,
+		1755.48,
+		1755.72,
+		1755.24,
+		1751.68,
+		1750.58,
+		1753.14,
+		1756.48,
+		1756.84,
+		1755.64,
+		1759.34,
+		1763.16,
+		1760.28,
+		1757.84,
+	],
+	ma20: [
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		1753.72,
+		1754.55,
+		1755.28,
+		1755.85,
+	],
 };
 
 export const mockInstrumentChart: GetInstrumentChartResponse = {
@@ -75,10 +115,34 @@ export const mockIncome: readonly FinancialStatement[] = [
 ] as const;
 
 export const mockBalance: readonly BalanceSheet[] = [
-	{ totalAssets: 258_430_000_000, totalLiabilities: 62_150_000_000, netAssets: 196_280_000_000, cash: 85_320_000_000, debt: 0 },
-	{ totalAssets: 255_780_000_000, totalLiabilities: 61_520_000_000, netAssets: 194_260_000_000, cash: 83_150_000_000, debt: 0 },
-	{ totalAssets: 252_610_000_000, totalLiabilities: 60_890_000_000, netAssets: 191_720_000_000, cash: 80_940_000_000, debt: 0 },
-	{ totalAssets: 249_850_000_000, totalLiabilities: 60_230_000_000, netAssets: 189_620_000_000, cash: 78_560_000_000, debt: 0 },
+	{
+		totalAssets: 258_430_000_000,
+		totalLiabilities: 62_150_000_000,
+		netAssets: 196_280_000_000,
+		cash: 85_320_000_000,
+		debt: 0,
+	},
+	{
+		totalAssets: 255_780_000_000,
+		totalLiabilities: 61_520_000_000,
+		netAssets: 194_260_000_000,
+		cash: 83_150_000_000,
+		debt: 0,
+	},
+	{
+		totalAssets: 252_610_000_000,
+		totalLiabilities: 60_890_000_000,
+		netAssets: 191_720_000_000,
+		cash: 80_940_000_000,
+		debt: 0,
+	},
+	{
+		totalAssets: 249_850_000_000,
+		totalLiabilities: 60_230_000_000,
+		netAssets: 189_620_000_000,
+		cash: 78_560_000_000,
+		debt: 0,
+	},
 ] as const;
 
 export const mockCashflow: readonly CashflowStatement[] = [

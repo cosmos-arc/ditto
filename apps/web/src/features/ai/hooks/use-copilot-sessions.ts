@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { GetCopilotSessionsResponse, GetCopilotQuickViewResponse } from "@/types";
+import type { GetCopilotQuickViewResponse, GetCopilotSessionsResponse } from "@/types";
 
 export function useCopilotQuickView() {
 	return useQuery({

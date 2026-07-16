@@ -1,13 +1,7 @@
 // === 通用枚举 ===
 
 /** 交易阶段 */
-export type MarketSession =
-	| "pre_market"
-	| "call_auction"
-	| "continuous"
-	| "lunch"
-	| "close"
-	| "after_hours";
+export type MarketSession = "pre_market" | "call_auction" | "continuous" | "lunch" | "close" | "after_hours";
 
 /** 告警严重度 */
 export type Severity = "critical" | "warning" | "info";
@@ -43,25 +37,13 @@ export type OrderSide = "BUY" | "SELL";
 export type OrderType = "LIMIT" | "MARKET";
 
 /** 订单状态 */
-export type OrderStatus =
-	| "pending"
-	| "submitted"
-	| "partial"
-	| "filled"
-	| "failed"
-	| "cancelled";
+export type OrderStatus = "pending" | "submitted" | "partial" | "filled" | "failed" | "cancelled";
 
 /** 信号状态 */
 export type SignalStatus = "pending" | "confirmed" | "ignored" | "ordered";
 
 /** 运行状态 */
-export type RunStatus =
-	| "pending"
-	| "running"
-	| "completed"
-	| "warning"
-	| "failed"
-	| "cancelled";
+export type RunStatus = "pending" | "running" | "completed" | "warning" | "failed" | "cancelled";
 
 /** 健康状态 */
 export type HealthStatus = "healthy" | "degraded" | "error";

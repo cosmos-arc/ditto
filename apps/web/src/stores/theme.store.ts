@@ -18,9 +18,7 @@ type ThemeStore = ThemeState & ThemeActions;
 
 function resolveTheme(theme: Theme): ResolvedTheme {
 	if (theme !== "system") return theme;
-	return window.matchMedia("(prefers-color-scheme: dark)").matches
-		? "dark"
-		: "light";
+	return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export const useThemeStore = create<ThemeStore>()(

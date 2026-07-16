@@ -37,9 +37,7 @@ export const useScreenerStore = create<ScreenerStore>()(
 				const existing = get().activeFilters.find((f) => f.field === filter.field);
 				if (existing) {
 					set({
-						activeFilters: get().activeFilters.map((f) =>
-							f.field === filter.field ? filter : f,
-						),
+						activeFilters: get().activeFilters.map((f) => (f.field === filter.field ? filter : f)),
 					});
 				} else {
 					set({ activeFilters: [...get().activeFilters, filter], page: 1 });
@@ -60,9 +58,7 @@ export const useScreenerStore = create<ScreenerStore>()(
 			toggleSelect: (id: string) => {
 				const ids = get().selectedIds;
 				set({
-					selectedIds: ids.includes(id)
-						? ids.filter((i) => i !== id)
-						: [...ids, id],
+					selectedIds: ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id],
 				});
 			},
 

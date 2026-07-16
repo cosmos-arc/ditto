@@ -1,6 +1,6 @@
-import { useCopilotMessages } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useCopilotMessages } from "../hooks";
 
 interface CopilotChatViewProps {
 	readonly sessionId: string;
@@ -8,37 +8,17 @@ interface CopilotChatViewProps {
 
 function RoleLabel({ role }: { readonly role: string }) {
 	if (role === "user") {
-		return (
-			<span className="text-xs font-medium text-(--color-foreground-tertiary)">
-				你
-			</span>
-		);
+		return <span className="text-xs font-medium text-(--color-foreground-tertiary)">你</span>;
 	}
-	return (
-		<span className="text-xs font-medium text-(--color-agent-thinking)">
-			Copilot
-		</span>
-	);
+	return <span className="text-xs font-medium text-(--color-agent-thinking)">Copilot</span>;
 }
 
-function MessageBubble({
-	role,
-	content,
-}: {
-	readonly role: string;
-	readonly content: string;
-}) {
+function MessageBubble({ role, content }: { readonly role: string; readonly content: string }) {
 	const isUser = role === "user";
 
 	return (
 		<div className="flex gap-3 py-3">
-			<div
-				className={
-					isUser
-						? "ml-auto max-w-[80%]"
-						: "mr-auto max-w-[80%]"
-				}
-			>
+			<div className={isUser ? "ml-auto max-w-[80%]" : "mr-auto max-w-[80%]"}>
 				<RoleLabel role={role} />
 				<div
 					className={
@@ -60,11 +40,7 @@ function MessageBubble({
 }
 
 export function CopilotChatView({ sessionId }: CopilotChatViewProps) {
-	const {
-		data,
-		isLoading,
-		refetch,
-	} = useCopilotMessages(sessionId);
+	const { data, isLoading, refetch } = useCopilotMessages(sessionId);
 
 	if (isLoading) {
 		return (
@@ -83,11 +59,7 @@ export function CopilotChatView({ sessionId }: CopilotChatViewProps) {
 		>
 			<div className="flex-1 overflow-y-auto p-4">
 				{data?.messages.map((message) => (
-					<MessageBubble
-						key={message.id}
-						role={message.role}
-						content={message.content}
-					/>
+					<MessageBubble key={message.id} role={message.role} content={message.content} />
 				))}
 			</div>
 		</DittoErrorBoundary>

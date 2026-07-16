@@ -7,13 +7,7 @@ import { tabsListVariants } from "./tabs";
 
 const UI_ROOT = join(process.cwd(), "src/components/ui");
 
-const PRIMITIVE_FILES = [
-	"button.tsx",
-	"badge.tsx",
-	"tabs.tsx",
-	"dialog.tsx",
-	"sheet.tsx",
-] as const;
+const PRIMITIVE_FILES = ["button.tsx", "badge.tsx", "tabs.tsx", "dialog.tsx", "sheet.tsx"] as const;
 
 const SHADCN_DEFAULT_TOKENS = [
 	"bg-primary",
@@ -59,9 +53,7 @@ describe("core UI primitive token compliance", () => {
 
 	it("keeps cva primitive variants on Ditto semantic tokens", () => {
 		expect(buttonVariants()).toContain("bg-(--color-accent)");
-		expect(buttonVariants({ variant: "outline" })).toContain(
-			"border-(--color-border-default)",
-		);
+		expect(buttonVariants({ variant: "outline" })).toContain("border-(--color-border-default)");
 		expect(badgeVariants()).toContain("bg-(--color-accent)");
 		expect(tabsListVariants()).toContain("bg-(--color-surface-muted)");
 	});

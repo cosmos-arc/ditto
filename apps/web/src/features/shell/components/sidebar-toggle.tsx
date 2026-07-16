@@ -1,5 +1,5 @@
-import { useUIPreferences } from "../hooks/use-ui-preferences";
 import { cn } from "@/lib/utils";
+import { useUIPreferences } from "../hooks/use-ui-preferences";
 
 interface SidebarToggleProps {
 	readonly className?: string;

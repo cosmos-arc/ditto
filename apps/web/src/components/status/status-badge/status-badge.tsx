@@ -55,17 +55,14 @@ const sizeClasses = {
 	md: "text-sm gap-1.5 px-2 py-0.5 rounded-[10px] tracking-[0.2px]",
 } as const;
 
-const statusBadgeVariants = cva(
-	"inline-flex items-center font-medium",
-	{
-		variants: {
-			size: sizeClasses,
-		},
-		defaultVariants: {
-			size: "md",
-		},
+const statusBadgeVariants = cva("inline-flex items-center font-medium", {
+	variants: {
+		size: sizeClasses,
 	},
-);
+	defaultVariants: {
+		size: "md",
+	},
+});
 
 interface StatusBadgeProps extends VariantProps<typeof statusBadgeVariants> {
 	readonly variant?: BadgeVariant;
@@ -73,12 +70,7 @@ interface StatusBadgeProps extends VariantProps<typeof statusBadgeVariants> {
 	readonly className?: string;
 }
 
-function StatusBadge({
-	variant = "default",
-	size = "md",
-	label,
-	className,
-}: StatusBadgeProps) {
+function StatusBadge({ variant = "default", size = "md", label, className }: StatusBadgeProps) {
 	const dotVariant = DOT_VARIANT_MAP[variant];
 	const bgClass = BG_COLOR_MAP[variant];
 
@@ -95,5 +87,5 @@ function StatusBadge({
 	);
 }
 
+export type { BadgeVariant, StatusBadgeProps };
 export { StatusBadge, statusBadgeVariants };
-export type { StatusBadgeProps, BadgeVariant };

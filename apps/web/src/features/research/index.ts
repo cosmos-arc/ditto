@@ -1,9 +1,9 @@
-export { ResearchPage } from "./components/research-page";
-export { FactorPage } from "./components/factor-page";
+export { ExperimentListPage } from "./components/experiment-list-page";
 export { FactorListPage } from "./components/factor-list-page";
 export { FactorOverview } from "./components/factor-overview";
+export { FactorPage } from "./components/factor-page";
 export { RegimePage } from "./components/regime-page";
-export { ExperimentListPage } from "./components/experiment-list-page";
+export { ResearchPage } from "./components/research-page";
 export { UniverseListPage } from "./components/universe-list-page";
 export { useRegimeCurrent } from "./hooks/use-regime-current";
 export { useRegimeDrivers } from "./hooks/use-regime-drivers";

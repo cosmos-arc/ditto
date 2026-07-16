@@ -5,9 +5,6 @@ import type { GetPlatformAlertsResponse, PaginatedRequest } from "@/types";
 export function usePlatformAlerts(params?: PaginatedRequest) {
 	return useQuery({
 		queryKey: ["platform", "alerts", params],
-		queryFn: () =>
-			apiClient.get<GetPlatformAlertsResponse>(
-				withQueryParams("/platform/alerts", params),
-			),
+		queryFn: () => apiClient.get<GetPlatformAlertsResponse>(withQueryParams("/platform/alerts", params)),
 	});
 }

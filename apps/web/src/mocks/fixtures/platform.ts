@@ -1,9 +1,9 @@
 import type {
-	PlatformAlert,
-	PlatformHealthResponse,
 	DataProvider,
 	Pipeline,
 	PipelineRun,
+	PlatformAlert,
+	PlatformHealthResponse,
 	ResourceUsage,
 } from "@/types";
 
@@ -50,9 +50,7 @@ export const mockProviders: readonly DataProvider[] = [
 		missingRate: 0.05,
 		anomalyRate: 0.03,
 		lastSync: "2026-04-08T08:00:00Z",
-		endpoints: [
-			{ name: "macro", url: "https://api.stlouisfed.org", latency: 230 },
-		],
+		endpoints: [{ name: "macro", url: "https://api.stlouisfed.org", latency: 230 }],
 	},
 ];
 

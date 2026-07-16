@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { homeHandlers } from "@/mocks/handlers/home";
-
-import { useHomePulse } from "./use-home-pulse";
+import { server } from "@/mocks/server";
 import { useDecisionBanner } from "./use-decision-banner";
+import { useHomePulse } from "./use-home-pulse";
 import { usePendingActions } from "./use-pending-actions";
 import { useRecentSignals } from "./use-recent-signals";
 

@@ -1,17 +1,8 @@
-import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { StatusDot } from "./status-dot";
 
-const VARIANTS = [
-	"healthy",
-	"degraded",
-	"warning",
-	"critical",
-	"live",
-	"idle",
-	"error",
-	"info",
-] as const;
+const VARIANTS = ["healthy", "degraded", "warning", "critical", "live", "idle", "error", "info"] as const;
 
 describe("StatusDot", () => {
 	// ── Rendering ──
@@ -51,17 +42,14 @@ describe("StatusDot", () => {
 		expect(dot).toHaveAttribute("data-variant", variant);
 	});
 
-	it.each(VARIANTS)(
-		"maps variant=%s to correct CSS variable color",
-		(variant) => {
-			const { container } = render(<StatusDot variant={variant} />);
-			const dot = container.firstElementChild as HTMLElement;
-			expect(dot.style.backgroundColor).toBe("");
-			// Color should come from CSS variable via class, not inline style
-			const className = dot.className;
-			expect(className).toContain("bg-(--color-status-led-" + variant + ")");
-		},
-	);
+	it.each(VARIANTS)("maps variant=%s to correct CSS variable color", (variant) => {
+		const { container } = render(<StatusDot variant={variant} />);
+		const dot = container.firstElementChild as HTMLElement;
+		expect(dot.style.backgroundColor).toBe("");
+		// Color should come from CSS variable via class, not inline style
+		const className = dot.className;
+		expect(className).toContain("bg-(--color-status-led-" + variant + ")");
+	});
 
 	// ── Pulse animation ──
 

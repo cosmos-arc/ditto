@@ -20,12 +20,7 @@ interface StudioModeBarProps {
  * StudioModeBar — Mode/tab switching bar for StudioLayout.
  * Matches prototype .studio-mode-bar: mode-tabs + separator + breadcrumb.
  */
-export function StudioModeBar({
-	modes,
-	activeMode,
-	breadcrumbs,
-	onModeChange,
-}: StudioModeBarProps) {
+export function StudioModeBar({ modes, activeMode, breadcrumbs, onModeChange }: StudioModeBarProps) {
 	const [internalActive, setInternalActive] = useState(modes[0]?.id ?? "");
 	const currentMode = activeMode ?? internalActive;
 
@@ -73,9 +68,7 @@ export function StudioModeBar({
 							return (
 								<span key={crumb} className="flex items-center gap-1">
 									{i > 0 && <span aria-hidden="true">/</span>}
-									<span className={isLast ? "text-(--color-foreground-secondary)" : ""}>
-										{crumb}
-									</span>
+									<span className={isLast ? "text-(--color-foreground-secondary)" : ""}>{crumb}</span>
 								</span>
 							);
 						})}

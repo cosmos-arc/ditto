@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { StatusDot } from "@/components/status";
+import { cn } from "@/lib/utils";
 
 const SEVERITY_DOT_MAP = {
 	critical: "critical" as const,
@@ -14,14 +14,7 @@ interface AlertRowProps extends React.HTMLAttributes<HTMLDivElement> {
 	readonly onClick?: () => void;
 }
 
-function AlertRow({
-	severity,
-	title,
-	time,
-	onClick,
-	className,
-	...props
-}: AlertRowProps) {
+function AlertRow({ severity, title, time, onClick, className, ...props }: AlertRowProps) {
 	const dotVariant = SEVERITY_DOT_MAP[severity];
 
 	return (
@@ -35,12 +28,16 @@ function AlertRow({
 				className,
 			)}
 			onClick={onClick}
-			onKeyDown={onClick ? (e) => {
-				if (e.key === "Enter" || e.key === " ") {
-					e.preventDefault();
-					onClick();
-				}
-			} : undefined}
+			onKeyDown={
+				onClick
+					? (e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								onClick();
+							}
+						}
+					: undefined
+			}
 			role={onClick ? "button" : undefined}
 			tabIndex={onClick ? 0 : undefined}
 			{...props}
@@ -63,5 +60,5 @@ function AlertRow({
 	);
 }
 
-export { AlertRow };
 export type { AlertRowProps };
+export { AlertRow };

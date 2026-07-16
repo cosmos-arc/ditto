@@ -1,8 +1,8 @@
-import { usePlatformAlerts } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { AlertRow } from "@/components/indicator/alert-row/alert-row";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { usePlatformAlerts } from "../hooks";
 
 function formatTime(isoString: string): string {
 	const date = new Date(isoString);
@@ -29,9 +29,7 @@ export function AlertList() {
 				{data && (
 					<div className="space-y-1">
 						{activeAlerts.length === 0 ? (
-							<p className="px-3 py-4 text-center text-sm text-(--color-foreground-tertiary)">
-								暂无活跃告警
-							</p>
+							<p className="px-3 py-4 text-center text-sm text-(--color-foreground-tertiary)">暂无活跃告警</p>
 						) : (
 							activeAlerts.map((alert) => (
 								<AlertRow

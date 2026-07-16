@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { researchHandlers } from "@/mocks/handlers/research";
-
-import { FactorDetailHeader } from "./factor-detail-header";
+import { server } from "@/mocks/server";
 import { FactorAnalysisView } from "./factor-analysis-view";
+import { FactorDetailHeader } from "./factor-detail-header";
 import { FactorOverview } from "./factor-overview";
 
 function createQueryClient(): QueryClient {

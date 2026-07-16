@@ -1,9 +1,9 @@
-import { useOrders } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { cn } from "@/lib/utils";
+import { useOrders } from "../hooks";
 
 const SIDE_VARIANT: Record<string, "trade" | "risk"> = {
 	BUY: "trade",
@@ -38,38 +38,28 @@ export function OrdersList({ onSelectOrder }: OrdersListProps) {
 									onSelectOrder && "cursor-pointer",
 								)}
 								onClick={onSelectOrder ? () => onSelectOrder(order.id) : undefined}
-								onKeyDown={onSelectOrder ? (e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										e.preventDefault();
-										onSelectOrder(order.id);
-									}
-								} : undefined}
+								onKeyDown={
+									onSelectOrder
+										? (e) => {
+												if (e.key === "Enter" || e.key === " ") {
+													e.preventDefault();
+													onSelectOrder(order.id);
+												}
+											}
+										: undefined
+								}
 								role={onSelectOrder ? "button" : undefined}
 								tabIndex={onSelectOrder ? 0 : undefined}
 							>
 								<div className="flex items-center gap-3">
-									<StatusBadge
-										variant={SIDE_VARIANT[order.side] ?? "default"}
-										label={order.side}
-										size="sm"
-									/>
+									<StatusBadge variant={SIDE_VARIANT[order.side] ?? "default"} label={order.side} size="sm" />
 									<span className="font-medium">{order.instrument}</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										{order.qty.toLocaleString()} 股
-									</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										@ {order.price.toFixed(2)}
-									</span>
+									<span className="text-xs text-(--color-foreground-tertiary)">{order.qty.toLocaleString()} 股</span>
+									<span className="text-xs text-(--color-foreground-tertiary)">@ {order.price.toFixed(2)}</span>
 								</div>
 								<div className="flex items-center gap-3">
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										{order.type}
-									</span>
-									<StatusBadge
-										variant={STATUS_VARIANT[order.status] ?? "default"}
-										label={order.status}
-										size="sm"
-									/>
+									<span className="text-xs text-(--color-foreground-tertiary)">{order.type}</span>
+									<StatusBadge variant={STATUS_VARIANT[order.status] ?? "default"} label={order.status} size="sm" />
 								</div>
 							</div>
 						))}

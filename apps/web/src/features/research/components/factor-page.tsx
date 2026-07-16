@@ -1,9 +1,9 @@
 import { useParams } from "@tanstack/react-router";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout } from "@/features/shell";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { FactorAnalysisView } from "./factor-analysis-view";
 import { FactorDetailHeader } from "./factor-detail-header";
 import { FactorOverview } from "./factor-overview";
-import { FactorAnalysisView } from "./factor-analysis-view";
 
 export function FactorPage() {
 	const { id } = useParams({ strict: false }) as { id: string };

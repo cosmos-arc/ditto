@@ -13,8 +13,14 @@ function resolveTitle(matches: readonly { routeId?: string }[]): string | undefi
 		const routeId = matches[i]?.routeId;
 		if (!routeId) continue;
 		// Access route options via router's route tree
-		const route = (router as unknown as { routesById?: Record<string, { options?: { staticData?: { title?: string } } }> }).routesById?.[routeId]
-			?? (router as unknown as { routeTree?: { children?: Array<{ id?: string; options?: { staticData?: { title?: string } } }> } }).routeTree?.children?.find(r => r.id === routeId);
+		const route =
+			(router as unknown as { routesById?: Record<string, { options?: { staticData?: { title?: string } } }> })
+				.routesById?.[routeId] ??
+			(
+				router as unknown as {
+					routeTree?: { children?: Array<{ id?: string; options?: { staticData?: { title?: string } } }> };
+				}
+			).routeTree?.children?.find((r) => r.id === routeId);
 		const title = route?.options?.staticData?.title;
 		if (title) return title;
 	}

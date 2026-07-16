@@ -22,9 +22,7 @@ function formatNumber(value: number | null | undefined): string {
 	return value == null ? "—" : value.toFixed(2);
 }
 
-function mapComparisonMetrics(
-	metrics: ComparisonMetricsResponse,
-): GetComparisonAttributionResponse {
+function mapComparisonMetrics(metrics: ComparisonMetricsResponse): GetComparisonAttributionResponse {
 	const sharpeDiff = metrics.actual_sharpe - metrics.backtest_sharpe;
 
 	return {

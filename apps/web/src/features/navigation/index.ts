@@ -1,3 +1,3 @@
-export { DOMAINS } from "./types";
-export type { Domain, DomainId } from "./types";
 export { DomainIcon } from "./components/domain-icon";
+export type { Domain, DomainId } from "./types";
+export { DOMAINS } from "./types";

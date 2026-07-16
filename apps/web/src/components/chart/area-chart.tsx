@@ -1,6 +1,6 @@
-import { ResponsiveContainer, AreaChart as RechartsAreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
-import type { SparklinePoint } from "@/types";
+import { Area, AreaChart as RechartsAreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
+import type { SparklinePoint } from "@/types";
 
 type AreaChartProps = {
 	readonly data: readonly SparklinePoint[];
@@ -56,13 +56,7 @@ export function AreaChart({
 							fontSize: 12,
 						}}
 					/>
-					<Area
-						type="monotone"
-						dataKey="value"
-						stroke={color}
-						strokeWidth={1.5}
-						fill={`url(#${gradientId})`}
-					/>
+					<Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} fill={`url(#${gradientId})`} />
 				</RechartsAreaChart>
 			</ResponsiveContainer>
 		</div>

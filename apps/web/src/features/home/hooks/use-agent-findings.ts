@@ -5,7 +5,6 @@ import type { GetHomeAgentFindingsResponse } from "@/types";
 export function useAgentFindings() {
 	return useQuery({
 		queryKey: ["home", "agent-findings"],
-		queryFn: () =>
-			apiClient.get<GetHomeAgentFindingsResponse>("/home/agent-findings"),
+		queryFn: () => apiClient.get<GetHomeAgentFindingsResponse>("/home/agent-findings"),
 	});
 }

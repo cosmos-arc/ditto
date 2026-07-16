@@ -1,9 +1,9 @@
-import { StatusBadge } from "@/components/status";
-import { useTradingSession } from "../hooks";
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { shouldUsePrototypeMocks } from "../api/runtime";
+import { StatusBadge } from "@/components/status";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { shouldUsePrototypeMocks } from "../api/runtime";
+import { useTradingSession } from "../hooks";
 
 export function TradingSessionStrip() {
 	const usePrototypeMocks = shouldUsePrototypeMocks();

@@ -1,13 +1,13 @@
 import type {
-	HomePulseResponse,
-	DecisionBannerResponse,
-	PendingAction,
-	HomeAlert,
-	HomeAgentFinding,
 	DataHealthProvider,
+	DecisionBannerResponse,
+	HomeAgentFinding,
+	HomeAlert,
+	HomePulseResponse,
 	MarketIndex,
-	RecentSignal,
 	MarketPulseMetric,
+	PendingAction,
+	RecentSignal,
 } from "@/types";
 
 export const mockHomePulse: HomePulseResponse = {
@@ -44,7 +44,10 @@ export const mockPendingActions: readonly PendingAction[] = [
 		title: "贵州茅台（600519）出现卖出信号",
 		meta: "RSI 背离叠加放量，Alpha v3 置信度 87%，建议查看卖出上下文。",
 		time: "3分钟前",
-		badges: [{ type: "signal", label: "交易" }, { type: "priority", label: "P1" }],
+		badges: [
+			{ type: "signal", label: "交易" },
+			{ type: "priority", label: "P1" },
+		],
 		domain: "trading",
 	},
 	{
@@ -53,7 +56,10 @@ export const mockPendingActions: readonly PendingAction[] = [
 		title: "行业集中度超限 — 科技板块 > 35%",
 		meta: "当前占比 37.2%，超过规则上限，需评估是否降集中度。",
 		time: "12分钟前",
-		badges: [{ type: "risk", label: "风控" }, { type: "priority", label: "P1" }],
+		badges: [
+			{ type: "risk", label: "风控" },
+			{ type: "priority", label: "P1" },
+		],
 		domain: "trading",
 	},
 	{
@@ -62,7 +68,10 @@ export const mockPendingActions: readonly PendingAction[] = [
 		title: "价值因子 2026 Q1 回测完成",
 		meta: "Sharpe 1.42，最大回撤 -8.3%，建议审阅后决定是否部署。",
 		time: "1小时前",
-		badges: [{ type: "research", label: "研究" }, { type: "priority", label: "P2" }],
+		badges: [
+			{ type: "research", label: "研究" },
+			{ type: "priority", label: "P2" },
+		],
 		domain: "research",
 	},
 	{

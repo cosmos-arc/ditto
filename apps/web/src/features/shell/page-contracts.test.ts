@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 import {
 	PAGE_CONTRACTS,
 	PAGE_PATTERNS,
@@ -93,10 +93,7 @@ describe("Generated page contracts", () => {
 
 			expect(validSlots, `Unknown shellFamily: ${contract.shellFamily}`).toBeDefined();
 			for (const slot of contract.requiredSlots) {
-				expect(
-					validSlots.includes(slot),
-					`Invalid slot "${slot}" for ${contract.route}`,
-				).toBe(true);
+				expect(validSlots.includes(slot), `Invalid slot "${slot}" for ${contract.route}`).toBe(true);
 			}
 		}
 	});
@@ -104,10 +101,9 @@ describe("Generated page contracts", () => {
 	it("keeps universal state coverage on every page", () => {
 		for (const contract of PAGE_CONTRACTS) {
 			for (const state of UNIVERSAL_STATES) {
-				expect(
-					contract.requiredStates.includes(state),
-					`${contract.route} missing universal state: ${state}`,
-				).toBe(true);
+				expect(contract.requiredStates.includes(state), `${contract.route} missing universal state: ${state}`).toBe(
+					true,
+				);
 			}
 		}
 	});
@@ -133,18 +129,13 @@ describe("Generated page contracts", () => {
 			if (contract.landing?.reactRouteStatus !== "implemented") continue;
 			const landing = contract.landing as typeof contract.landing & LandingWithComponentRefs;
 
-			expect(
-				landing.featureModule,
-				`${contract.route} missing featureModule`,
-			).toMatch(/^src\/features\/[^/]+$/);
-			expect(
-				landing.reactTestRefs,
-				`${contract.route} missing reactTestRefs`,
-			).toEqual(expect.arrayContaining([expect.stringMatching(/^src\/features\/.+\.test\.(ts|tsx)$/)]));
-			expect(
-				landing.reactComponentRefs,
-				`${contract.route} missing reactComponentRefs`,
-			).toEqual(expect.arrayContaining([expect.stringMatching(/^[A-Z][A-Za-z0-9]+$/)]));
+			expect(landing.featureModule, `${contract.route} missing featureModule`).toMatch(/^src\/features\/[^/]+$/);
+			expect(landing.reactTestRefs, `${contract.route} missing reactTestRefs`).toEqual(
+				expect.arrayContaining([expect.stringMatching(/^src\/features\/.+\.test\.(ts|tsx)$/)]),
+			);
+			expect(landing.reactComponentRefs, `${contract.route} missing reactComponentRefs`).toEqual(
+				expect.arrayContaining([expect.stringMatching(/^[A-Z][A-Za-z0-9]+$/)]),
+			);
 
 			const testSources = (landing.reactTestRefs ?? []).map((ref) => {
 				const path = resolve(process.cwd(), ref);

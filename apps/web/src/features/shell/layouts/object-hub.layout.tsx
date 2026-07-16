@@ -13,13 +13,7 @@ interface ObjectHubLayoutProps {
  * ObjectHubLayout — /instruments/:id, /strategies/:id.
  * Grid: meta + tabs + main + bottom (single column).
  */
-export function ObjectHubLayout({
-	meta,
-	tabs,
-	main,
-	bottom,
-	className,
-}: ObjectHubLayoutProps) {
+export function ObjectHubLayout({ meta, tabs, main, bottom, className }: ObjectHubLayoutProps) {
 	return (
 		<div
 			className={[
@@ -30,10 +24,24 @@ export function ObjectHubLayout({
 				className,
 			].join(" ")}
 		>
-			{meta && <div className="min-h-0 overflow-hidden [grid-area:meta]" data-slot="meta">{meta}</div>}
-			{tabs && <div className="min-h-0 overflow-hidden [grid-area:tabs]" data-slot="tabs">{tabs}</div>}
-			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
-			{bottom && <div className="min-h-0 overflow-hidden [grid-area:bottom]" data-slot="bottom">{bottom}</div>}
+			{meta && (
+				<div className="min-h-0 overflow-hidden [grid-area:meta]" data-slot="meta">
+					{meta}
+				</div>
+			)}
+			{tabs && (
+				<div className="min-h-0 overflow-hidden [grid-area:tabs]" data-slot="tabs">
+					{tabs}
+				</div>
+			)}
+			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">
+				{main}
+			</div>
+			{bottom && (
+				<div className="min-h-0 overflow-hidden [grid-area:bottom]" data-slot="bottom">
+					{bottom}
+				</div>
+			)}
 		</div>
 	);
 }

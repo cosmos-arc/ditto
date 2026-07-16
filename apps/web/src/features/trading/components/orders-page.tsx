@@ -1,16 +1,11 @@
 import { useState } from "react";
-import {
-	OpsConsoleLayout,
-	OverlayProvider,
-	StatusBar,
-	useOverlayController,
-} from "@/features/shell";
 import { Drawer } from "@/components/indicator/overlay/drawer";
+import { OpsConsoleLayout, OverlayProvider, StatusBar, useOverlayController } from "@/features/shell";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { FillLedgerList } from "./fill-ledger-list";
+import { OrderDetailPanel } from "./order-detail-panel";
 import { OrdersHealthStrip } from "./orders-health-strip";
 import { OrdersList } from "./orders-list";
-import { OrderDetailPanel } from "./order-detail-panel";
 import { SignalToOrderPipelineStrip } from "./signal-to-order-pipeline-strip";
 
 const ORDER_DETAIL_OVERLAY_ID = "orders.detail";

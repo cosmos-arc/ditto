@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
+import { cn } from "@/lib/utils";
 
 interface CollapsedItem {
 	readonly icon: React.ReactNode;

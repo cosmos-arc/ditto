@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { marketsHandlers } from "@/mocks/handlers/markets";
+import { server } from "@/mocks/server";
 
 import { MarketsPage } from "./markets-page";
 
@@ -43,17 +43,13 @@ describe("MarketsPage — Scope Strip", () => {
 	it("renders market summary text", async () => {
 		render(<MarketsPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText(/A股三大指数集体收涨/),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/A股三大指数集体收涨/)).resolves.toBeInTheDocument();
 	});
 
 	it("has scope-strip data-slot attribute", async () => {
 		render(<MarketsPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByTestId("scope-strip"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByTestId("scope-strip")).resolves.toBeInTheDocument();
 	});
 });
 
@@ -137,9 +133,7 @@ describe("MarketsPage — Cross-Market Matrix (correlation tab)", () => {
 	it("has cross-market-matrix data-slot attribute", async () => {
 		await switchToCorrelationTab();
 
-		await expect(
-			screen.findByTestId("cross-market-matrix"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByTestId("cross-market-matrix")).resolves.toBeInTheDocument();
 	});
 
 	it("applies high-correlation class for values >= 0.7", async () => {

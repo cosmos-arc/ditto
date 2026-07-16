@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { marketsHandlers } from "@/mocks/handlers/markets";
-
-import { MarketCardGrid } from "./market-card-grid";
-import { MacroDriversBar } from "./macro-drivers-bar";
+import { server } from "@/mocks/server";
 import { CapitalRotationTable } from "./capital-rotation-table";
+import { MacroDriversBar } from "./macro-drivers-bar";
+import { MarketCardGrid } from "./market-card-grid";
 import { WatchlistPage } from "./watchlist-page";
 
 function createQueryClient(): QueryClient {

@@ -1,12 +1,12 @@
 import type {
 	AiPulseResponse,
+	CopilotMessage,
+	GetAgentFindingsResponse,
+	GetAgentPlansResponse,
 	GetAgentQuickViewResponse,
+	GetAgentRunsResponse,
 	GetCopilotQuickViewResponse,
 	GetCopilotSessionsResponse,
-	CopilotMessage,
-	GetAgentPlansResponse,
-	GetAgentRunsResponse,
-	GetAgentFindingsResponse,
 } from "@/types";
 
 // === AI 脉动 ===
@@ -274,11 +274,7 @@ export const mockAgentFindings: GetAgentFindingsResponse = {
 			runId: "run-001",
 			text: "动量因子 IC 连续 3 周下降至 0.028，低于有效阈值 0.04，建议降权或替换",
 			confidence: 0.92,
-			evidence: [
-				"60 日滚动 IC 均值: 0.028",
-				"IC_IR 从 0.45 降至 0.18",
-				"因子收益 t 统计量降至 1.2",
-			],
+			evidence: ["60 日滚动 IC 均值: 0.028", "IC_IR 从 0.45 降至 0.18", "因子收益 t 统计量降至 1.2"],
 			impact: "high",
 			status: "pending",
 			createdAt: "2026-04-08T09:15:00Z",
@@ -288,11 +284,7 @@ export const mockAgentFindings: GetAgentFindingsResponse = {
 			runId: "run-001",
 			text: "低波动因子在当前市场环境下表现优异，IC 达到 0.065，建议提升权重",
 			confidence: 0.88,
-			evidence: [
-				"60 日滚动 IC 均值: 0.065",
-				"多空组合年化收益 12.3%",
-				"最大回撤仅 -3.2%",
-			],
+			evidence: ["60 日滚动 IC 均值: 0.065", "多空组合年化收益 12.3%", "最大回撤仅 -3.2%"],
 			impact: "medium",
 			status: "approved",
 			createdAt: "2026-04-08T09:10:00Z",
@@ -302,11 +294,7 @@ export const mockAgentFindings: GetAgentFindingsResponse = {
 			runId: "run-003",
 			text: "科技板块与消费板块相关性从 0.3 升至 0.65，分散化效果减弱",
 			confidence: 0.85,
-			evidence: [
-				"90 日滚动相关系数: 0.65",
-				"历史均值: 0.35",
-				"板块轮动频率下降 40%",
-			],
+			evidence: ["90 日滚动相关系数: 0.65", "历史均值: 0.35", "板块轮动频率下降 40%"],
 			impact: "medium",
 			status: "rejected",
 			createdAt: "2026-04-07T17:00:00Z",

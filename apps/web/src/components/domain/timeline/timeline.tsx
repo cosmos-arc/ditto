@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { StatusDot } from "@/components/status";
+import { cn } from "@/lib/utils";
 
 /* ── Types ── */
 
@@ -42,19 +42,9 @@ const STATUS_DOT_MAP: Record<string, "healthy" | "live" | "critical"> = {
 
 /* ── Component ── */
 
-function Timeline({
-	items,
-	variant = "default",
-	className,
-	...props
-}: TimelineProps) {
+function Timeline({ items, variant = "default", className, ...props }: TimelineProps) {
 	return (
-		<div
-			data-slot="timeline"
-			data-variant={variant}
-			className={cn("flex flex-col", className)}
-			{...props}
-		>
+		<div data-slot="timeline" data-variant={variant} className={cn("flex flex-col", className)} {...props}>
 			{items.map((item) => (
 				<div
 					key={item.id}
@@ -63,39 +53,21 @@ function Timeline({
 				>
 					{/* Time + severity dot */}
 					<div className="flex items-center gap-1 min-w-[50px] shrink-0">
-						{item.severity && (
-							<StatusDot
-								variant={SEVERITY_DOT_MAP[item.severity]}
-								size="sm"
-							/>
-						)}
-						<span className="font-data text-sm text-(--color-foreground-tertiary) tabular-nums">
-							{item.time}
-						</span>
+						{item.severity && <StatusDot variant={SEVERITY_DOT_MAP[item.severity]} size="sm" />}
+						<span className="font-data text-sm text-(--color-foreground-tertiary) tabular-nums">{item.time}</span>
 					</div>
 
 					{/* Body */}
 					<div className="flex flex-col gap-0.5 min-w-0">
-						<span className="text-sm text-(--color-foreground-secondary) leading-snug">
-							{item.title}
-						</span>
-						{item.description && (
-							<span className="text-xs text-(--color-foreground-tertiary)">
-								{item.description}
-							</span>
-						)}
+						<span className="text-sm text-(--color-foreground-secondary) leading-snug">{item.title}</span>
+						{item.description && <span className="text-xs text-(--color-foreground-tertiary)">{item.description}</span>}
 					</div>
 
 					{/* Status badge */}
 					{item.status && (
 						<div className="flex items-center gap-1 shrink-0 ml-auto">
-							<StatusDot
-								variant={STATUS_DOT_MAP[item.status]}
-								size="sm"
-							/>
-							<span className="text-xs text-(--color-foreground-tertiary)">
-								{STATUS_LABELS[item.status]}
-							</span>
+							<StatusDot variant={STATUS_DOT_MAP[item.status]} size="sm" />
+							<span className="text-xs text-(--color-foreground-tertiary)">{STATUS_LABELS[item.status]}</span>
 						</div>
 					)}
 				</div>
@@ -104,5 +76,5 @@ function Timeline({
 	);
 }
 
+export type { TimelineItem, TimelineProps };
 export { Timeline };
-export type { TimelineProps, TimelineItem };

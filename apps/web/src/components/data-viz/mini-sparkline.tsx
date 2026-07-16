@@ -28,14 +28,7 @@ function toPoints(data: readonly number[], width: number, height: number, paddin
 		.join(" ");
 }
 
-function MiniSparkline({
-	data,
-	width = 24,
-	height = 12,
-	trend = "neutral",
-	ariaLabel,
-	className,
-}: MiniSparklineProps) {
+function MiniSparkline({ data, width = 24, height = 12, trend = "neutral", ariaLabel, className }: MiniSparklineProps) {
 	const points = toPoints(data, width, height);
 
 	return (
@@ -48,15 +41,10 @@ function MiniSparkline({
 			fill="none"
 			className={[TREND_COLORS[trend], className].filter(Boolean).join(" ")}
 		>
-			<polyline
-				points={points}
-				strokeWidth="1.5"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
+			<polyline points={points} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 		</svg>
 	);
 }
 
-export { MiniSparkline };
 export type { MiniSparklineProps };
+export { MiniSparkline };

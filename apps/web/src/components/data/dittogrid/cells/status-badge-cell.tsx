@@ -1,4 +1,4 @@
-import { StatusBadge, type BadgeVariant } from "@/components/status/status-badge";
+import { type BadgeVariant, StatusBadge } from "@/components/status/status-badge";
 import { cn } from "@/lib/utils";
 
 interface StatusBadgeCellProps {
@@ -8,12 +8,7 @@ interface StatusBadgeCellProps {
 	readonly className?: string;
 }
 
-function StatusBadgeCell({
-	label,
-	variant = "default",
-	size = "sm",
-	className,
-}: StatusBadgeCellProps) {
+function StatusBadgeCell({ label, variant = "default", size = "sm", className }: StatusBadgeCellProps) {
 	return (
 		<span
 			data-slot="status-badge-cell"
@@ -25,5 +20,5 @@ function StatusBadgeCell({
 	);
 }
 
-export { StatusBadgeCell };
 export type { StatusBadgeCellProps };
+export { StatusBadgeCell };

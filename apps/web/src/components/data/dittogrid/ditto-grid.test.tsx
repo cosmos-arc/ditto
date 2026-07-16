@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { ColDef } from "ag-grid-community";
 import type { ReactNode } from "react";
+import { describe, expect, it } from "vitest";
 import { DittoGrid } from "./ditto-grid";
 
 interface GridRow {
@@ -46,11 +46,17 @@ describe("DittoGrid", () => {
 	});
 
 	it("passes rowData to AgGridReact", () => {
-		const rowData: GridRow[] = [{ name: "Alpha", value: 1 }, { name: "Beta", value: 2 }];
+		const rowData: GridRow[] = [
+			{ name: "Alpha", value: 1 },
+			{ name: "Beta", value: 2 },
+		];
 		render(<DittoGrid columnDefs={[]} rowData={rowData} />);
 		const grid = screen.getByTestId("ag-grid-mock");
 		const passedData = JSON.parse(grid.getAttribute("data-row-data") ?? "[]") as unknown;
-		expect(passedData).toEqual([{ name: "Alpha", value: 1 }, { name: "Beta", value: 2 }]);
+		expect(passedData).toEqual([
+			{ name: "Alpha", value: 1 },
+			{ name: "Beta", value: 2 },
+		]);
 	});
 
 	it("has data-slot attribute on wrapper", () => {

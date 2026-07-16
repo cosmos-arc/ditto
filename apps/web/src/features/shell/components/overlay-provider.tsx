@@ -1,5 +1,5 @@
-import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 interface OverlayController {
 	readonly activeOverlayId: string | null;
@@ -25,11 +25,7 @@ export function OverlayProvider({ children }: OverlayProviderProps) {
 		[activeOverlayId],
 	);
 
-	return (
-		<OverlayContext.Provider value={controller}>
-			{children}
-		</OverlayContext.Provider>
-	);
+	return <OverlayContext.Provider value={controller}>{children}</OverlayContext.Provider>;
 }
 
 export function useOverlayController(): OverlayController {

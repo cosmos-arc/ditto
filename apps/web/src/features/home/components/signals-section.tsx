@@ -1,8 +1,8 @@
-import { useRecentSignals } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useRecentSignals } from "../hooks";
 
 function formatTime(isoString: string): string {
 	const date = new Date(isoString);
@@ -35,11 +35,7 @@ export function SignalsSection() {
 								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-3">
-									<StatusBadge
-										variant={SIGNAL_VARIANT[signal.action] ?? "research"}
-										label={signal.action}
-										size="sm"
-									/>
+									<StatusBadge variant={SIGNAL_VARIANT[signal.action] ?? "research"} label={signal.action} size="sm" />
 									<span className="font-medium">{signal.ticker}</span>
 								</div>
 								<div className="flex items-center gap-3 text-(--color-foreground-tertiary)">

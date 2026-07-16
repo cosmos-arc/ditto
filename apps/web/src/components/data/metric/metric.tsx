@@ -61,9 +61,7 @@ function sparklineColor(trend: TrendDirection | undefined): "up" | "down" | "neu
 
 /* ── Props ── */
 
-interface MetricProps
-	extends React.HTMLAttributes<HTMLDivElement>,
-		VariantProps<typeof metricVariants> {
+interface MetricProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof metricVariants> {
 	readonly label: string;
 	readonly value: string | number;
 	readonly sub?: string | readonly string[];
@@ -123,12 +121,7 @@ function Metric({
 					{displayValue}
 				</span>
 				{sparkline && sparkline.length > 0 && (
-					<Sparkline
-						data={sparkline}
-						color={sparklineColor(trend)}
-						width={48}
-						height={20}
-					/>
+					<Sparkline data={sparkline} color={sparklineColor(trend)} width={48} height={20} />
 				)}
 			</div>
 
@@ -136,10 +129,7 @@ function Metric({
 			{subItems.length > 0 && (
 				<div className="flex flex-col gap-0.5">
 					{subItems.map((item) => (
-						<span
-							key={item}
-							className="text-xs text-(--color-foreground-tertiary) font-(--font-body) leading-none"
-						>
+						<span key={item} className="text-xs text-(--color-foreground-tertiary) font-(--font-body) leading-none">
 							{item}
 						</span>
 					))}
@@ -149,5 +139,5 @@ function Metric({
 	);
 }
 
-export { Metric, metricVariants };
 export type { MetricProps };
+export { Metric, metricVariants };

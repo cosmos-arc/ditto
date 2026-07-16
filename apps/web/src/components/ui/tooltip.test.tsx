@@ -1,10 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import {
-	DittoTooltip,
-	DittoTooltipTrigger,
-	DittoTooltipContent,
-} from "./tooltip";
+import { describe, expect, it } from "vitest";
+import { DittoTooltip, DittoTooltipContent, DittoTooltipTrigger } from "./tooltip";
 
 /** Helper: 渲染完整的 Tooltip 组合，返回 tooltip 内容元素 */
 function renderTooltip(
@@ -14,12 +10,8 @@ function renderTooltip(
 ) {
 	const result = render(
 		<DittoTooltip open>
-			<DittoTooltipTrigger>
-				{triggerLabel}
-			</DittoTooltipTrigger>
-			<DittoTooltipContent {...contentProps}>
-				{content}
-			</DittoTooltipContent>
+			<DittoTooltipTrigger>{triggerLabel}</DittoTooltipTrigger>
+			<DittoTooltipContent {...contentProps}>{content}</DittoTooltipContent>
 		</DittoTooltip>,
 	);
 	// Radix Tooltip 在 Portal 中渲染 content，需从 document.body 查询
@@ -42,9 +34,7 @@ describe("DittoTooltip", () => {
 
 	it("renders trigger text", () => {
 		renderTooltip("Hello tooltip", "Hover me");
-		expect(
-			screen.getByRole("button", { name: "Hover me" }),
-		).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Hover me" })).toBeInTheDocument();
 	});
 });
 

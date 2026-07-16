@@ -4,11 +4,7 @@ interface FilterToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
 	readonly children: React.ReactNode;
 }
 
-function FilterToolbar({
-	children,
-	className,
-	...props
-}: FilterToolbarProps) {
+function FilterToolbar({ children, className, ...props }: FilterToolbarProps) {
 	return (
 		<div
 			data-slot="filter-toolbar"
@@ -23,5 +19,5 @@ function FilterToolbar({
 	);
 }
 
-export { FilterToolbar };
 export type { FilterToolbarProps };
+export { FilterToolbar };

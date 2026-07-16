@@ -17,24 +17,14 @@ interface RadarLayoutProps {
  * uses flex-based vertical scrolling with sticky positioning.
  * StatusBar is no longer a slot — it uses position:fixed (see status-bar.tsx).
  */
-export function RadarLayout({
-	contextBar,
-	scopeStrip,
-	main,
-	rightRail,
-	tabBand,
-	className,
-}: RadarLayoutProps) {
+export function RadarLayout({ contextBar, scopeStrip, main, rightRail, tabBand, className }: RadarLayoutProps) {
 	const hasContextBar = Boolean(contextBar);
 	const offsets = buildStickyOffsets(hasContextBar);
 
 	return (
 		<div className={`flex h-full w-full flex-col overflow-y-auto ${className ?? ""}`.trim()}>
 			{contextBar && (
-				<div
-					className="sticky top-0 z-15 h-8 shrink-0 overflow-hidden"
-					data-slot="context-bar"
-				>
+				<div className="sticky top-0 z-15 h-8 shrink-0 overflow-hidden" data-slot="context-bar">
 					{contextBar}
 				</div>
 			)}

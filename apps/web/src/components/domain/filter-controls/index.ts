@@ -1,4 +1,4 @@
-export { FilterChip } from "./filter-chip";
 export type { FilterChipProps } from "./filter-chip";
-export { FilterToolbar } from "./filter-toolbar";
+export { FilterChip } from "./filter-chip";
 export type { FilterToolbarProps } from "./filter-toolbar";
+export { FilterToolbar } from "./filter-toolbar";

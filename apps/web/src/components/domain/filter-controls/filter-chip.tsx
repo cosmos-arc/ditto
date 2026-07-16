@@ -6,13 +6,7 @@ interface FilterChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
 	readonly count?: number;
 }
 
-function FilterChip({
-	label,
-	active = false,
-	count,
-	className,
-	...props
-}: FilterChipProps) {
+function FilterChip({ label, active = false, count, className, ...props }: FilterChipProps) {
 	return (
 		<button
 			data-slot="filter-chip"
@@ -28,14 +22,10 @@ function FilterChip({
 			{...props}
 		>
 			{label}
-			{count !== undefined && (
-				<span className="text-xs tabular-nums">
-					{count}
-				</span>
-			)}
+			{count !== undefined && <span className="text-xs tabular-nums">{count}</span>}
 		</button>
 	);
 }
 
-export { FilterChip };
 export type { FilterChipProps };
+export { FilterChip };

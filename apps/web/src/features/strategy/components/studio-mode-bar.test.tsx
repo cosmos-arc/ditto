@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
 
 import { StudioModeBar } from "./studio-mode-bar";
 
@@ -81,10 +81,7 @@ describe("StudioModeBar", () => {
 
 	it("highlights last breadcrumb as current", () => {
 		render(
-			<StudioModeBar
-				modes={[{ id: "form", label: "Form Builder" }]}
-				breadcrumbs={["研究", "策略", "当前策略"]}
-			/>,
+			<StudioModeBar modes={[{ id: "form", label: "Form Builder" }]} breadcrumbs={["研究", "策略", "当前策略"]} />,
 		);
 
 		const current = screen.getByText("当前策略");

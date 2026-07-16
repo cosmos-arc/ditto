@@ -1,8 +1,8 @@
-import { DecisionBanner } from "@/components/domain/decision-banner";
-import { useDecisionBanner } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { DecisionBanner } from "@/components/domain/decision-banner";
 import { Panel } from "@/features/shell/components/panel";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useDecisionBanner } from "../hooks";
 
 export function BannerSection() {
 	const { data, isLoading, refetch } = useDecisionBanner();
@@ -52,7 +52,11 @@ export function BannerSection() {
 									{ label: "杠杆率", value: `${data.leverage}x` },
 									{ label: "回撤", value: `${data.maxDrawdown}%`, trend: "down" },
 									{ label: "IVIX", value: `${data.ivix}`, trend: "down" },
-									{ label: "北向资金", value: `${data.northboundFlow >= 0 ? "+" : ""}${data.northboundFlow} 亿`, trend: data.northboundFlow >= 0 ? "up" as const : "down" as const },
+									{
+										label: "北向资金",
+										value: `${data.northboundFlow >= 0 ? "+" : ""}${data.northboundFlow} 亿`,
+										trend: data.northboundFlow >= 0 ? ("up" as const) : ("down" as const),
+									},
 								],
 							}}
 							actions={[

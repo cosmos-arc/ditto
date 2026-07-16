@@ -1,8 +1,8 @@
-import { useInstrumentDetail } from "../hooks";
 import { Metric } from "@/components/data/metric";
-import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useInstrumentDetail } from "../hooks";
 
 interface InstrumentMetaStripProps {
 	readonly id: string;
@@ -29,11 +29,7 @@ export function InstrumentMetaStrip({ id }: InstrumentMetaStripProps) {
 						<span className="text-lg font-bold">{data.name}</span>
 						<span className="text-xs text-(--color-foreground-tertiary)">{data.code}</span>
 					</div>
-					<StatusBadge
-						variant={data.status === "active" ? "healthy" : "warning"}
-						label={data.status}
-						size="sm"
-					/>
+					<StatusBadge variant={data.status === "active" ? "healthy" : "warning"} label={data.status} size="sm" />
 					<div className="flex gap-4">
 						<Metric
 							variant="strip"
@@ -48,9 +44,11 @@ export function InstrumentMetaStrip({ id }: InstrumentMetaStripProps) {
 						<Metric
 							variant="strip"
 							label="市值"
-							value={data.marketCap >= 1_000_000_000_000
-								? `${(data.marketCap / 1_000_000_000_000).toFixed(1)}万亿`
-								: `${(data.marketCap / 100_000_000).toFixed(0)}亿`}
+							value={
+								data.marketCap >= 1_000_000_000_000
+									? `${(data.marketCap / 1_000_000_000_000).toFixed(1)}万亿`
+									: `${(data.marketCap / 100_000_000).toFixed(0)}亿`
+							}
 						/>
 					</div>
 				</div>

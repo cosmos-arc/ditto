@@ -8,5 +8,5 @@ const TREND_CONFIG: Record<TrendDirection, { symbol: string; colorClass: string 
 	flat: { symbol: "—", colorClass: "text-(--color-foreground-muted)" },
 };
 
-export { TREND_CONFIG };
 export type { TrendDirection };
+export { TREND_CONFIG };

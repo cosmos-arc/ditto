@@ -1,6 +1,6 @@
-import { useCallback, useRef } from "react";
-import { AgGridReact } from "ag-grid-react";
 import type { ColDef } from "ag-grid-community";
+import { AgGridReact } from "ag-grid-react";
+import { useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { dittoTheme } from "./theme";
 
@@ -78,11 +78,7 @@ function DittoGrid<TData extends object = object>({
 	}, []);
 
 	return (
-		<div
-			data-slot="ditto-grid"
-			data-testid="ditto-grid-root"
-			className={cn("flex flex-col gap-2", className)}
-		>
+		<div data-slot="ditto-grid" data-testid="ditto-grid-root" className={cn("flex flex-col gap-2", className)}>
 			<div className={cn("ag-theme-quartz", `h-[${height}]`)}>
 				<AgGridReact<TData>
 					ref={gridRef}
@@ -107,5 +103,5 @@ function DittoGrid<TData extends object = object>({
 	);
 }
 
-export { DittoGrid, DEFAULT_COL_DEF, DEFAULT_NUMERIC_COL_DEF };
 export type { DittoGridProps };
+export { DEFAULT_COL_DEF, DEFAULT_NUMERIC_COL_DEF, DittoGrid };

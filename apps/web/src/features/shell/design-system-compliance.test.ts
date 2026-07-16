@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, extname, basename, relative } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, extname, join, relative } from "node:path";
+import { describe, expect, it } from "vitest";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -15,9 +15,7 @@ const NEGATIVE_LETTER_SPACING_PATTERNS: readonly RegExp[] = [
 	/\btracking-tight\b/,
 ];
 
-const FEATURE_INLINE_STYLE_ALLOWLIST = new Set([
-	"features/shell/components/noise-layer.tsx",
-]);
+const FEATURE_INLINE_STYLE_ALLOWLIST = new Set(["features/shell/components/noise-layer.tsx"]);
 
 const COMPONENT_INLINE_STYLE_ALLOWLIST = new Set([
 	"components/chart/area-chart.tsx",
@@ -30,11 +28,7 @@ function relativeSourcePath(filePath: string): string {
 	return relative(SRC_ROOT, filePath);
 }
 
-function readAllFiles(
-	dir: string,
-	extensions: string[],
-	exclude: string[] = [],
-): Map<string, string> {
+function readAllFiles(dir: string, extensions: string[], exclude: string[] = []): Map<string, string> {
 	const result = new Map<string, string>();
 
 	function walk(current: string) {
@@ -45,11 +39,7 @@ function readAllFiles(
 			if (stat.isDirectory()) {
 				if (exclude.some((ex) => full.includes(ex))) continue;
 				walk(full);
-			} else if (
-				stat.isFile() &&
-				extensions.includes(extname(full)) &&
-				!exclude.some((ex) => full.includes(ex))
-			) {
+			} else if (stat.isFile() && extensions.includes(extname(full)) && !exclude.some((ex) => full.includes(ex))) {
 				result.set(full, readFileSync(full, "utf-8"));
 			}
 		}
@@ -77,10 +67,7 @@ describe("Legacy token compliance", () => {
 		"--color-border-default": "--color-border",
 	};
 
-	const files = readAllFiles(join(SRC_ROOT, "features"), [".tsx", ".css"], [
-		"node_modules",
-		".test.",
-	]);
+	const files = readAllFiles(join(SRC_ROOT, "features"), [".tsx", ".css"], ["node_modules", ".test."]);
 
 	it("no legacy token references in feature source files", () => {
 		const violations: string[] = [];
@@ -96,16 +83,12 @@ describe("Legacy token compliance", () => {
 				);
 				const matches = content.match(pattern);
 				if (matches) {
-					violations.push(
-						`${relPath}: ${legacy} (${matches.length}x) → use ${LEGACY_TOKEN_MAP[legacy]}`,
-					);
+					violations.push(`${relPath}: ${legacy} (${matches.length}x) → use ${LEGACY_TOKEN_MAP[legacy]}`);
 				}
 			}
 		}
 
-		expect(violations.join("\n"), `${violations.length} legacy token references found:\n`).toBe(
-			"",
-		);
+		expect(violations.join("\n"), `${violations.length} legacy token references found:\n`).toBe("");
 	});
 
 	it("all legacy token aliases are unreferenced in features", () => {
@@ -121,10 +104,7 @@ describe("Legacy token compliance", () => {
 			}
 		}
 
-		expect(
-			totalRefs.length,
-			`Total files still referencing legacy tokens: ${totalRefs.length}`,
-		).toBe(0);
+		expect(totalRefs.length, `Total files still referencing legacy tokens: ${totalRefs.length}`).toBe(0);
 	});
 });
 
@@ -133,15 +113,9 @@ describe("Legacy token compliance", () => {
 /* ------------------------------------------------------------------ */
 
 describe("Inline style compliance", () => {
-	const featureFiles = readAllFiles(join(SRC_ROOT, "features"), [".tsx"], [
-		"node_modules",
-		".test.",
-	]);
+	const featureFiles = readAllFiles(join(SRC_ROOT, "features"), [".tsx"], ["node_modules", ".test."]);
 
-	const componentFiles = readAllFiles(join(SRC_ROOT, "components"), [".tsx"], [
-		"node_modules",
-		".test.",
-	]);
+	const componentFiles = readAllFiles(join(SRC_ROOT, "components"), [".tsx"], ["node_modules", ".test."]);
 
 	it("keeps feature source files free of local inline styles", () => {
 		const violations: string[] = [];
@@ -156,10 +130,7 @@ describe("Inline style compliance", () => {
 			}
 		}
 
-		expect(
-			violations.join("\n"),
-			`${violations.length} feature files with inline styles:\n`,
-		).toBe("");
+		expect(violations.join("\n"), `${violations.length} feature files with inline styles:\n`).toBe("");
 	});
 
 	it("keeps shared inline styles constrained to dynamic rendering primitives", () => {
@@ -175,10 +146,7 @@ describe("Inline style compliance", () => {
 			}
 		}
 
-		expect(
-			violations.join("\n"),
-			`${violations.length} component files with unapproved inline styles:\n`,
-		).toBe("");
+		expect(violations.join("\n"), `${violations.length} component files with unapproved inline styles:\n`).toBe("");
 	});
 });
 
@@ -187,23 +155,11 @@ describe("Inline style compliance", () => {
 /* ------------------------------------------------------------------ */
 
 describe("Typography compliance", () => {
-	const files = readAllFiles(join(SRC_ROOT, "features"), [".tsx"], [
-		"node_modules",
-		".test.",
-	]);
+	const files = readAllFiles(join(SRC_ROOT, "features"), [".tsx"], ["node_modules", ".test."]);
 	const coreFiles = new Map([
-		...readAllFiles(join(SRC_ROOT, "features"), [".tsx"], [
-			"node_modules",
-			".test.",
-		]),
-		...readAllFiles(join(SRC_ROOT, "components"), [".tsx"], [
-			"node_modules",
-			".test.",
-		]),
-		...readAllFiles(join(SRC_ROOT, "styles"), [".css"], [
-			"node_modules",
-			".test.",
-		]),
+		...readAllFiles(join(SRC_ROOT, "features"), [".tsx"], ["node_modules", ".test."]),
+		...readAllFiles(join(SRC_ROOT, "components"), [".tsx"], ["node_modules", ".test."]),
+		...readAllFiles(join(SRC_ROOT, "styles"), [".css"], ["node_modules", ".test."]),
 	]);
 
 	// text-[10px] → text-xs, text-[13px] → text-base, text-[24px] → text-3xl
@@ -226,17 +182,12 @@ describe("Typography compliance", () => {
 				const regex = new RegExp(pattern, "g");
 				const matches = content.match(regex);
 				if (matches) {
-					violations.push(
-						`${relPath}: ${matches[0]} → ${replacement} (${matches.length}x)`,
-					);
+					violations.push(`${relPath}: ${matches[0]} → ${replacement} (${matches.length}x)`);
 				}
 			}
 		}
 
-		expect(
-			violations.join("\n"),
-			`${violations.length} arbitrary font-size usages found:\n`,
-		).toBe("");
+		expect(violations.join("\n"), `${violations.length} arbitrary font-size usages found:\n`).toBe("");
 	});
 
 	it("keeps core shell and component typography free of negative letter spacing", () => {
@@ -251,10 +202,7 @@ describe("Typography compliance", () => {
 			}
 		}
 
-		expect(
-			violations.join("\n"),
-			`${violations.length} negative letter-spacing usages found:\n`,
-		).toBe("");
+		expect(violations.join("\n"), `${violations.length} negative letter-spacing usages found:\n`).toBe("");
 	});
 });
 
@@ -263,15 +211,10 @@ describe("Typography compliance", () => {
 /* ------------------------------------------------------------------ */
 
 describe("Page spacing compliance", () => {
-	const pageFiles = readAllFiles(join(SRC_ROOT, "features"), [".tsx"], [
-		"node_modules",
-		".test.",
-	]);
+	const pageFiles = readAllFiles(join(SRC_ROOT, "features"), [".tsx"], ["node_modules", ".test."]);
 
 	// Only check files ending in *-page.tsx
-	const pageEntries = [...pageFiles.entries()].filter(
-		([path]) => basename(path).endsWith("-page.tsx"),
-	);
+	const pageEntries = [...pageFiles.entries()].filter(([path]) => basename(path).endsWith("-page.tsx"));
 
 	it("page containers use density-responsive panel padding", () => {
 		const violations: string[] = [];
@@ -285,10 +228,7 @@ describe("Page spacing compliance", () => {
 			}
 		}
 
-		expect(
-			violations.join("\n"),
-			`${violations.length} pages with raw padding:\n`,
-		).toBe("");
+		expect(violations.join("\n"), `${violations.length} pages with raw padding:\n`).toBe("");
 	});
 
 	it("page grid gaps use density tokens, not raw gap-4", () => {
@@ -306,9 +246,6 @@ describe("Page spacing compliance", () => {
 			}
 		}
 
-		expect(
-			violations.join("\n"),
-			`${violations.length} pages with raw gap-4:\n`,
-		).toBe("");
+		expect(violations.join("\n"), `${violations.length} pages with raw gap-4:\n`).toBe("");
 	});
 });

@@ -1,10 +1,4 @@
-export type OverlayKind =
-	| "drawer"
-	| "sheet"
-	| "modal"
-	| "alert-dialog"
-	| "toast"
-	| "inline";
+export type OverlayKind = "drawer" | "sheet" | "modal" | "alert-dialog" | "toast" | "inline";
 
 export interface OverlayContract {
 	readonly id: string;

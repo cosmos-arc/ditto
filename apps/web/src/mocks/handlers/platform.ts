@@ -1,10 +1,10 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
+import { HttpResponse, http, type RequestHandler } from "msw";
 import {
+	mockPipelineRuns,
+	mockPipelines,
 	mockPlatformAlerts,
 	mockPlatformHealth,
-	mockPipelineRuns,
 	mockPlatformResources,
-	mockPipelines,
 	mockProviders,
 } from "../fixtures/platform";
 

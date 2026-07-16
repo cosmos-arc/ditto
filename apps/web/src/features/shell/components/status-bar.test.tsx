@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StatusBar } from "./status-bar";
 
 describe("StatusBar", () => {
@@ -23,9 +23,7 @@ describe("StatusBar", () => {
 		expect(screen.getByText("LIVE")).toBeInTheDocument();
 
 		// The pulsing dot is a span next to "LIVE" text
-		const dot = container.querySelector(
-			'[class*="animate-[status-breathe"]',
-		);
+		const dot = container.querySelector('[class*="animate-[status-breathe"]');
 		expect(dot).toBeInTheDocument();
 		expect(dot?.className).toContain("rounded-full");
 		expect(dot?.className).toContain("bg-(--color-status-led-healthy)");

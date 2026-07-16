@@ -1,17 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { aiHandlers } from "@/mocks/handlers/ai";
-
-import { AiPulseStrip } from "./ai-pulse-strip";
+import { server } from "@/mocks/server";
 import { AgentQuickView } from "./agent-quick-view";
-import { CopilotQuickView } from "./copilot-quick-view";
 import { AiContextSidebar } from "./ai-context-sidebar";
 import { AiMainContent } from "./ai-main-content";
 import { AiPage } from "./ai-page";
+import { AiPulseStrip } from "./ai-pulse-strip";
+import { CopilotQuickView } from "./copilot-quick-view";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -24,11 +23,7 @@ function createQueryClient(): QueryClient {
 function createWrapper() {
 	const queryClient = createQueryClient();
 	return function Wrapper({ children }: { children: ReactNode }) {
-		return (
-			<QueryClientProvider client={queryClient}>
-				{children}
-			</QueryClientProvider>
-		);
+		return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 	};
 }
 
@@ -49,23 +44,15 @@ describe("AiPulseStrip", () => {
 	it("shows inline ticker metrics", async () => {
 		render(<AiPulseStrip />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText(/3 个运行中计划/),
-		).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText(/2 项待审批/),
-		).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText(/5 个 Copilot 会话/),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/3 个运行中计划/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/2 项待审批/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/5 个 Copilot 会话/)).resolves.toBeInTheDocument();
 	});
 
 	it("renders action link", async () => {
 		render(<AiPulseStrip />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("查看全部"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("查看全部")).resolves.toBeInTheDocument();
 	});
 });
 
@@ -81,15 +68,9 @@ describe("AgentQuickView", () => {
 	it("显示计划条目", async () => {
 		render(<AgentQuickView />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("因子池优化扫描"),
-		).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText("风控参数调优"),
-		).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText("组合权重再平衡"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("因子池优化扫描")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("风控参数调优")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("组合权重再平衡")).resolves.toBeInTheDocument();
 	});
 
 	it("渲染近期发现标题", async () => {
@@ -101,9 +82,7 @@ describe("AgentQuickView", () => {
 	it("显示发现内容", async () => {
 		render(<AgentQuickView />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText(/动量因子 IC 连续 3 周下降/),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/动量因子 IC 连续 3 周下降/)).resolves.toBeInTheDocument();
 	});
 
 	it("显示发现置信度", async () => {
@@ -112,9 +91,7 @@ describe("AgentQuickView", () => {
 		// The confidence values appear as child text of small elements
 		const elements = await screen.findAllByText(
 			(_content, element) =>
-				(element?.tagName === "DIV" &&
-					(element?.textContent?.startsWith("置信度") ?? false)) ??
-				false,
+				(element?.tagName === "DIV" && (element?.textContent?.startsWith("置信度") ?? false)) ?? false,
 		);
 		expect(elements).toHaveLength(2);
 		expect(elements[0].textContent).toContain("92%");
@@ -128,20 +105,14 @@ describe("CopilotQuickView", () => {
 	it("渲染会话列表标题", async () => {
 		render(<CopilotQuickView />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("Copilot 会话"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("Copilot 会话")).resolves.toBeInTheDocument();
 	});
 
 	it("显示会话条目", async () => {
 		render(<CopilotQuickView />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("因子衰减分析讨论"),
-		).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText("调仓建议方案"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("因子衰减分析讨论")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("调仓建议方案")).resolves.toBeInTheDocument();
 	});
 
 	it("渲染近期输出标题", async () => {
@@ -153,9 +124,7 @@ describe("CopilotQuickView", () => {
 	it("显示输出内容", async () => {
 		render(<CopilotQuickView />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText(/动量因子 60 日 IC 序列/),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/动量因子 60 日 IC 序列/)).resolves.toBeInTheDocument();
 	});
 });
 
@@ -165,10 +134,7 @@ describe("AiContextSidebar", () => {
 	it("renders sidebar-rail slot", () => {
 		render(<AiContextSidebar />);
 
-		expect(screen.getByTestId("sidebar-rail")).toHaveAttribute(
-			"data-slot",
-			"sidebar-rail",
-		);
+		expect(screen.getByTestId("sidebar-rail")).toHaveAttribute("data-slot", "sidebar-rail");
 	});
 
 	it("renders all 6 context sections", () => {
@@ -193,12 +159,8 @@ describe("AiContextSidebar", () => {
 	it("shows AI alerts with severity", () => {
 		render(<AiContextSidebar />);
 
-		expect(
-			screen.getByText("情绪 Alpha v2 IC 持续衰减"),
-		).toBeInTheDocument();
-		expect(
-			screen.getByText("Tushare API 接近频率上限"),
-		).toBeInTheDocument();
+		expect(screen.getByText("情绪 Alpha v2 IC 持续衰减")).toBeInTheDocument();
+		expect(screen.getByText("Tushare API 接近频率上限")).toBeInTheDocument();
 	});
 
 	it("shows resource usage metrics", () => {
@@ -211,9 +173,7 @@ describe("AiContextSidebar", () => {
 	it("shows activity timeline entries", () => {
 		render(<AiContextSidebar />);
 
-		expect(
-			screen.getByText("行业轮动扫描 — Q1 季报因子验证"),
-		).toBeInTheDocument();
+		expect(screen.getByText("行业轮动扫描 — Q1 季报因子验证")).toBeInTheDocument();
 		expect(screen.getByText("价值因子 Q1 回测完成")).toBeInTheDocument();
 	});
 
@@ -248,9 +208,7 @@ describe("AiMainContent", () => {
 		render(<AiMainContent />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("Agent 计划")).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText("Copilot 会话"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("Copilot 会话")).resolves.toBeInTheDocument();
 	});
 
 	it("renders actions bar with 4 actions", () => {
@@ -288,9 +246,7 @@ describe("AiPage", () => {
 	it("renders pulse strip ticker", async () => {
 		render(<AiPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText(/个运行中计划/),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/个运行中计划/)).resolves.toBeInTheDocument();
 	});
 
 	it("renders Agent quick view", async () => {
@@ -302,9 +258,7 @@ describe("AiPage", () => {
 	it("renders Copilot quick view", async () => {
 		render(<AiPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("Copilot 会话"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("Copilot 会话")).resolves.toBeInTheDocument();
 	});
 
 	it("renders page-owned status bar", async () => {

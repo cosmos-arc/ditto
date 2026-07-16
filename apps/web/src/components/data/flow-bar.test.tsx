@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { FlowBar } from "./flow-bar";
 
 const CHART_COLORS = [
@@ -74,24 +74,14 @@ describe("FlowBar", () => {
 	});
 
 	it("applies custom color when provided", () => {
-		render(
-			<FlowBar segments={[{ value: 100, color: "#ff0000" }]} />,
-		);
+		render(<FlowBar segments={[{ value: 100, color: "#ff0000" }]} />);
 		const track = screen.getByTestId("flow-bar-track");
 		const fill = track.querySelector("[data-segment]");
 		expect(fill).toHaveStyle({ backgroundColor: "#ff0000" });
 	});
 
 	it("cycles through chart palette when no color specified", () => {
-		render(
-			<FlowBar
-				segments={[
-					{ value: 25 },
-					{ value: 25 },
-					{ value: 25 },
-				]}
-			/>,
-		);
+		render(<FlowBar segments={[{ value: 25 }, { value: 25 }, { value: 25 }]} />);
 		const track = screen.getByTestId("flow-bar-track");
 		const fills = track.querySelectorAll("[data-segment]");
 		expect(fills[0]).toHaveStyle({ backgroundColor: CHART_COLORS[0] });
@@ -112,23 +102,13 @@ describe("FlowBar", () => {
 	});
 
 	it("applies className to root element", () => {
-		render(
-			<FlowBar
-				segments={[{ value: 100 }]}
-				className="my-custom-class"
-			/>,
-		);
+		render(<FlowBar segments={[{ value: 100 }]} className="my-custom-class" />);
 		const root = screen.getByTestId("flow-bar");
 		expect(root).toHaveClass("my-custom-class");
 	});
 
 	it("applies trackClassName to track element", () => {
-		render(
-			<FlowBar
-				segments={[{ value: 100 }]}
-				trackClassName="custom-track"
-			/>,
-		);
+		render(<FlowBar segments={[{ value: 100 }]} trackClassName="custom-track" />);
 		const track = screen.getByTestId("flow-bar-track");
 		expect(track).toHaveClass("custom-track");
 	});

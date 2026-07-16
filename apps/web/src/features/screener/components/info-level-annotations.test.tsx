@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { marketsHandlers } from "@/mocks/handlers/markets";
+import { server } from "@/mocks/server";
 import { ScreenerPage } from "./screener-page";
 
 function createQueryClient(): QueryClient {
@@ -33,9 +33,7 @@ describe("ScreenerPage info-level annotations", () => {
 		await screen.findByText("贵州茅台");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("screener-main");
 		expect(l1UnitNames).toContain("screener-results");
@@ -50,9 +48,7 @@ describe("ScreenerPage info-level annotations", () => {
 		await screen.findByText("贵州茅台");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("screener-detail");
 		expect(l2UnitNames).toContain("screener-list");
@@ -66,9 +62,7 @@ describe("ScreenerPage info-level annotations", () => {
 		await screen.findByText("贵州茅台");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
-		const l3UnitNames = Array.from(l3Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l3UnitNames.filter((n) => n === "screener-result-item").length).toBeGreaterThan(0);
 		expect(l3Units.length).toBeGreaterThanOrEqual(3);

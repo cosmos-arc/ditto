@@ -209,11 +209,7 @@ export type GetInstrumentNewsResponse = {
 };
 
 /** 关联标的 */
-export type RelationType =
-	| "same_industry"
-	| "supply_chain"
-	| "concept"
-	| "holding";
+export type RelationType = "same_industry" | "supply_chain" | "concept" | "holding";
 
 export type RelatedInstrument = {
 	readonly id: string;

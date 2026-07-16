@@ -18,19 +18,9 @@ interface StudioLayoutProps {
  * Grid: optional modes bar (full width) + sources + main + inspector + optional logs.
  * When `modes` is provided, an additional row is inserted above the content columns.
  */
-export function StudioLayout({
-	modes,
-	source,
-	main,
-	inspector,
-	logs,
-	className,
-	style,
-}: StudioLayoutProps) {
+export function StudioLayout({ modes, source, main, inspector, logs, className, style }: StudioLayoutProps) {
 	const hasModes = Boolean(modes);
-	const rows = hasModes
-		? "grid-rows-[auto_1fr_auto]"
-		: "grid-rows-[1fr_auto]";
+	const rows = hasModes ? "grid-rows-[auto_1fr_auto]" : "grid-rows-[1fr_auto]";
 	const areas = hasModes
 		? '[grid-template-areas:"modes_modes_modes""sources_main_inspector""logs_logs_logs"]'
 		: '[grid-template-areas:"sources_main_inspector""logs_logs_logs"]';
@@ -51,12 +41,24 @@ export function StudioLayout({
 					{modes}
 				</div>
 			)}
-			{source && <div className="min-h-0 overflow-hidden [grid-area:sources]" data-slot="source">{source}</div>}
-			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">{main}</div>
-			{inspector && (
-				<div className="min-h-0 overflow-hidden [grid-area:inspector]" data-slot="inspector">{inspector}</div>
+			{source && (
+				<div className="min-h-0 overflow-hidden [grid-area:sources]" data-slot="source">
+					{source}
+				</div>
 			)}
-			{logs && <div className="min-h-0 overflow-hidden [grid-area:logs]" data-slot="logs">{logs}</div>}
+			<div className="min-h-0 overflow-hidden [grid-area:main]" data-slot="main">
+				{main}
+			</div>
+			{inspector && (
+				<div className="min-h-0 overflow-hidden [grid-area:inspector]" data-slot="inspector">
+					{inspector}
+				</div>
+			)}
+			{logs && (
+				<div className="min-h-0 overflow-hidden [grid-area:logs]" data-slot="logs">
+					{logs}
+				</div>
+			)}
 		</div>
 	);
 }

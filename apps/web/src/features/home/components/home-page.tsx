@@ -1,18 +1,18 @@
 import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
-import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
 import { CommandCenterLayout } from "@/features/shell";
-import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
-import { PulseSection } from "./pulse-section";
-import { BannerSection } from "./banner-section";
-import { PriorityQueueSection } from "./priority-queue-section";
-import { ResearchProgressSection } from "./research-progress-section";
+import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
+import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
 import { AgentFindingsSection } from "./agent-findings-section";
-import { WorkspacePlaceholder } from "./workspace-placeholder";
-import { MarketPulseSection } from "./market-pulse-section";
-import { GlobalAlertsSection } from "./global-alerts-section";
+import { BannerSection } from "./banner-section";
 import { DataHealthSection } from "./data-health-section";
+import { GlobalAlertsSection } from "./global-alerts-section";
 import { HomeCollapsedSidebar } from "./home-collapsed-sidebar";
+import { MarketPulseSection } from "./market-pulse-section";
+import { PriorityQueueSection } from "./priority-queue-section";
+import { PulseSection } from "./pulse-section";
+import { ResearchProgressSection } from "./research-progress-section";
+import { WorkspacePlaceholder } from "./workspace-placeholder";
 
 /**
  * HomePage — Command Center layout.

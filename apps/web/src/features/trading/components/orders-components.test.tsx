@@ -34,9 +34,7 @@ beforeEach(() => server.use(...tradingHandlers, ...ordersHandlers));
 describe("OrdersList", () => {
 	it("渲染订单列表标题", async () => {
 		render(<OrdersList />, { wrapper: createWrapper() });
-		await expect(
-			screen.findByText("订单台账"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("订单台账")).resolves.toBeInTheDocument();
 	});
 
 	it("显示订单列表", async () => {
@@ -89,9 +87,7 @@ describe("OrderDetailPanel", () => {
 			wrapper: createWrapper(),
 		});
 
-		await expect(
-			screen.findByText("300750.SZ"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("300750.SZ")).resolves.toBeInTheDocument();
 	});
 
 	it("渲染订单追踪时间线", async () => {
@@ -99,9 +95,7 @@ describe("OrderDetailPanel", () => {
 			wrapper: createWrapper(),
 		});
 
-		await expect(
-			screen.findByText("信号确认"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("信号确认")).resolves.toBeInTheDocument();
 		expect(screen.getByText("风控校验通过")).toBeInTheDocument();
 		expect(screen.getByText("部分成交")).toBeInTheDocument();
 	});
@@ -119,9 +113,7 @@ describe("OrderDetailPanel", () => {
 			wrapper: createWrapper(),
 		});
 
-		await expect(
-			screen.findByText("路由选择"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("路由选择")).resolves.toBeInTheDocument();
 		expect(screen.getByText("券商回报")).toBeInTheDocument();
 	});
 });
@@ -184,25 +176,19 @@ describe("OrdersPage", () => {
 	it("渲染健康条（health slot）", async () => {
 		render(<OrdersPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("待提交"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("待提交")).resolves.toBeInTheDocument();
 	});
 
 	it("渲染订单列表（main slot）", async () => {
 		render(<OrdersPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("订单台账"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("订单台账")).resolves.toBeInTheDocument();
 	});
 
 	it("默认不显示订单详情 Drawer", async () => {
 		render(<OrdersPage />, { wrapper: createWrapper() });
 
-		await expect(
-			screen.findByText("订单台账"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("订单台账")).resolves.toBeInTheDocument();
 
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 	});
@@ -219,9 +205,7 @@ describe("OrdersPage", () => {
 
 		// Drawer should open with order detail
 		await expect(screen.findByRole("dialog")).resolves.toBeInTheDocument();
-		await expect(
-			screen.findByText("信号确认"),
-		).resolves.toBeInTheDocument();
+		await expect(screen.findByText("信号确认")).resolves.toBeInTheDocument();
 	});
 
 	it("关闭 Drawer 后回到全宽表格", async () => {

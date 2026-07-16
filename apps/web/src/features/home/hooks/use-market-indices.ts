@@ -5,7 +5,6 @@ import type { GetMarketIndicesResponse } from "@/types";
 export function useMarketIndices() {
 	return useQuery({
 		queryKey: ["market", "indices"],
-		queryFn: () =>
-			apiClient.get<GetMarketIndicesResponse>("/market/indices"),
+		queryFn: () => apiClient.get<GetMarketIndicesResponse>("/market/indices"),
 	});
 }

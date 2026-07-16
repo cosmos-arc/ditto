@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { Metric } from "./metric";
 
 describe("Metric", () => {
@@ -81,14 +81,7 @@ describe("Metric", () => {
 	});
 
 	it("renders variant=equity sub as multiple lines", () => {
-		render(
-			<Metric
-				label="Fund"
-				value={100}
-				sub={["+5.2%", "YTD"]}
-				variant="equity"
-			/>,
-		);
+		render(<Metric label="Fund" value={100} sub={["+5.2%", "YTD"]} variant="equity" />);
 		expect(screen.getByText("+5.2%")).toBeInTheDocument();
 		expect(screen.getByText("YTD")).toBeInTheDocument();
 	});

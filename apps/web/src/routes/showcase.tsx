@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { StatusDot } from "@/components/status";
-import { StatusBadge } from "@/components/status";
-import { Sparkline } from "@/components/data";
-import { Metric } from "@/components/data";
-import { LoadingSkeleton } from "@/components/data";
-import { ErrorState, DittoErrorBoundary } from "@/lib/error-boundary";
+import { LoadingSkeleton, Metric, Sparkline } from "@/components/data";
+import { StatusBadge, StatusDot } from "@/components/status";
+import { DittoErrorBoundary, ErrorState } from "@/lib/error-boundary";
 import { StaleIndicator } from "@/lib/stale-indicator";
 
 export const Route = createFileRoute("/showcase")({
@@ -12,16 +9,7 @@ export const Route = createFileRoute("/showcase")({
 	staticData: { title: "组件展示" },
 });
 
-const STATUS_VARIANTS = [
-	"healthy",
-	"degraded",
-	"warning",
-	"critical",
-	"live",
-	"idle",
-	"error",
-	"info",
-] as const;
+const STATUS_VARIANTS = ["healthy", "degraded", "warning", "critical", "live", "idle", "error", "info"] as const;
 
 const BADGE_VARIANTS = [
 	"default",
@@ -52,9 +40,7 @@ const SPARKLINE_DATA_FLAT = [30, 32, 28, 31, 29, 30, 32, 28, 31, 30];
 function Section({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
 	return (
 		<section className="mb-8">
-			<h2 className="mb-4 text-[var(--text-lg)] font-semibold text-[var(--color-foreground)]">
-				{title}
-			</h2>
+			<h2 className="mb-4 text-[var(--text-lg)] font-semibold text-[var(--color-foreground)]">{title}</h2>
 			{children}
 		</section>
 	);
@@ -65,9 +51,7 @@ function ShowcasePage() {
 		<div className="mx-auto max-w-4xl space-y-6 p-6">
 			<StaleIndicator isStale />
 
-			<h1 className="text-[var(--text-2xl)] font-bold text-[var(--color-foreground)]">
-				Phase 1 共享组件展示
-			</h1>
+			<h1 className="text-[var(--text-2xl)] font-bold text-[var(--color-foreground)]">Phase 1 共享组件展示</h1>
 
 			{/* StatusDot */}
 			<Section title="StatusDot 状态指示灯">
@@ -78,21 +62,15 @@ function ShowcasePage() {
 								<StatusDot variant={v} size="sm" />
 								<StatusDot variant={v} size="md" />
 								<StatusDot variant={v} size="lg" />
-								<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)]">
-									{v}
-								</span>
+								<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)]">{v}</span>
 							</div>
 						))}
 					</div>
 					<div className="flex items-center gap-4">
-						<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)]">
-							live + pulse:
-						</span>
+						<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)]">live + pulse:</span>
 						<StatusDot variant="live" pulse />
 						<StatusDot variant="healthy" pulse />
-						<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)]">
-							(non-live ignores pulse)
-						</span>
+						<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)]">(non-live ignores pulse)</span>
 					</div>
 				</div>
 			</Section>
@@ -108,9 +86,7 @@ function ShowcasePage() {
 					{(["healthy", "error", "live", "trade"] as const).map((v) => (
 						<StatusBadge key={v} variant={v} label={v} size="sm" />
 					))}
-					<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)] leading-5">
-						(sm size)
-					</span>
+					<span className="text-[var(--text-xs)] text-[var(--color-foreground-muted)] leading-5">(sm size)</span>
 				</div>
 			</Section>
 
@@ -152,14 +128,7 @@ function ShowcasePage() {
 					<Metric label="夏普比率" value={1.82} trend="flat" size="md" variant="standard" />
 				</div>
 				<div className="mt-4 grid grid-cols-3 gap-4">
-					<Metric
-						label="沪深 300"
-						value={3842.56}
-						trend="up"
-						size="md"
-						variant="strip"
-						sparkline={SPARKLINE_DATA_UP}
-					/>
+					<Metric label="沪深 300" value={3842.56} trend="up" size="md" variant="strip" sparkline={SPARKLINE_DATA_UP} />
 					<Metric
 						label="中证 500"
 						value={5210.33}
@@ -171,22 +140,8 @@ function ShowcasePage() {
 					<Metric label="波动率" value="12.5%" size="sm" variant="strip" />
 				</div>
 				<div className="mt-4 grid grid-cols-2 gap-4">
-					<Metric
-						label="贵州茅台"
-						value={1688.00}
-						trend="up"
-						size="lg"
-						variant="equity"
-						sub={["+2.34%", "+38.50"]}
-					/>
-					<Metric
-						label="宁德时代"
-						value={215.60}
-						trend="down"
-						size="lg"
-						variant="equity"
-						sub={["-1.28%", "-2.80"]}
-					/>
+					<Metric label="贵州茅台" value={1688.0} trend="up" size="lg" variant="equity" sub={["+2.34%", "+38.50"]} />
+					<Metric label="宁德时代" value={215.6} trend="down" size="lg" variant="equity" sub={["-1.28%", "-2.80"]} />
 				</div>
 			</Section>
 

@@ -1,7 +1,7 @@
-import { useStrategyVersions } from "../hooks/use-strategy-versions";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ContextSection } from "@/components/domain/context-section";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useStrategyVersions } from "../hooks/use-strategy-versions";
 
 interface StrategyEditorProps {
 	readonly id: string;

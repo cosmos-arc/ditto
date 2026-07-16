@@ -1,20 +1,13 @@
-import { useAgentFindings, useDataHealth } from "../hooks";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useAgentFindings, useDataHealth } from "../hooks";
 
 export function FindingsAndHealthSection() {
-		const {
-			data: findingsData,
-			isLoading: findingsLoading,
-			refetch: refetchFindings,
-		} = useAgentFindings();
+	const { data: findingsData, isLoading: findingsLoading, refetch: refetchFindings } = useAgentFindings();
 
-	const {
-		data: healthData,
-		isLoading: healthLoading,
-	} = useDataHealth();
+	const { data: healthData, isLoading: healthLoading } = useDataHealth();
 
 	return (
 		<div className="grid grid-cols-2 gap-4">
@@ -37,9 +30,7 @@ export function FindingsAndHealthSection() {
 									<div className="mt-1 flex items-center gap-2 text-xs text-(--color-foreground-tertiary)">
 										<span>{finding.source}</span>
 										<StatusBadge
-											variant={
-												finding.icon === "warning" ? "warning" : "default"
-											}
+											variant={finding.icon === "warning" ? "warning" : "default"}
 											label={finding.icon}
 											size="sm"
 										/>
@@ -64,11 +55,7 @@ export function FindingsAndHealthSection() {
 									<span className="font-medium">{provider.label}</span>
 									<StatusBadge
 										variant={
-											provider.status === "healthy"
-												? "healthy"
-												: provider.status === "degraded"
-													? "degraded"
-													: "error"
+											provider.status === "healthy" ? "healthy" : provider.status === "degraded" ? "degraded" : "error"
 										}
 										label={provider.statusText}
 										size="sm"

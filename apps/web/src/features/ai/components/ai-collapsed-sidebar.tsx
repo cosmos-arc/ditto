@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
+import { cn } from "@/lib/utils";
 
 interface CollapsedItem {
 	readonly icon: React.ReactNode;
@@ -31,7 +31,13 @@ export function AiCollapsedSidebar({
 			icon: (
 				<svg className="size-5" viewBox="0 0 20 20" fill="none">
 					<circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
-					<path d="M10 6V10L13 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+					<path
+						d="M10 6V10L13 12"
+						stroke="currentColor"
+						strokeWidth="1.5"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
 				</svg>
 			),
 			indicator: agentStatus,
@@ -40,7 +46,13 @@ export function AiCollapsedSidebar({
 		{
 			icon: (
 				<svg className="size-5" viewBox="0 0 20 20" fill="none">
-					<path d="M3 10L7 14L13 6L17 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+					<path
+						d="M3 10L7 14L13 6L17 10"
+						stroke="currentColor"
+						strokeWidth="1.5"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
 				</svg>
 			),
 			"aria-label": "置信度分布",
@@ -98,10 +110,7 @@ export function AiCollapsedSidebar({
 						)}
 						{item.indicator && (
 							<span
-								className={cn(
-									"absolute bottom-0.5 right-0.5 size-2 rounded-full",
-									INDICATOR_COLORS[item.indicator],
-								)}
+								className={cn("absolute bottom-0.5 right-0.5 size-2 rounded-full", INDICATOR_COLORS[item.indicator])}
 							/>
 						)}
 					</button>

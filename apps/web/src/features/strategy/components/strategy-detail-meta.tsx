@@ -1,7 +1,7 @@
-import { useStrategy } from "../hooks";
-import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useStrategy } from "../hooks";
 
 const STATUS_VARIANT: Record<string, "healthy" | "warning" | "error" | "default"> = {
 	completed: "healthy",
@@ -33,11 +33,7 @@ export function StrategyDetailMeta({ id }: StrategyDetailMetaProps) {
 							v{data.version} · {data.universe}
 						</span>
 					</div>
-					<StatusBadge
-						variant={STATUS_VARIANT[data.status] ?? "default"}
-						label={data.status}
-						size="sm"
-					/>
+					<StatusBadge variant={STATUS_VARIANT[data.status] ?? "default"} label={data.status} size="sm" />
 					<div className="flex gap-2">
 						{data.factors.map((f) => (
 							<span

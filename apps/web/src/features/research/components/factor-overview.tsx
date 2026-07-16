@@ -1,7 +1,7 @@
-import { useFactorDetail } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ContextSection } from "@/components/domain/context-section";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useFactorDetail } from "../hooks";
 
 const RESULT_STYLE: Record<string, string> = {
 	pass: "bg-green-600",
@@ -57,10 +57,11 @@ export function FactorOverview({ id }: FactorOverviewProps) {
 										["coverage", data.factor.coverage],
 									] as const
 								).map(([key, value]) => (
-									<div key={key} className="flex justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1">
-										<dt className="text-(--color-foreground-tertiary)">
-											{ATTR_LABELS[key]}
-										</dt>
+									<div
+										key={key}
+										className="flex justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1"
+									>
+										<dt className="text-(--color-foreground-tertiary)">{ATTR_LABELS[key]}</dt>
 										<dd>{formatAttrValue(key, value)}</dd>
 									</div>
 								))}
@@ -96,9 +97,7 @@ export function FactorOverview({ id }: FactorOverviewProps) {
 										className="flex items-center justify-between hover:bg-(--color-interaction-hover-subtle-bg) rounded px-2 py-1"
 									>
 										<span className="flex items-center gap-2">
-											<span
-												className={`inline-block size-2 rounded-full ${RESULT_STYLE[diag.result]}`}
-											/>
+											<span className={`inline-block size-2 rounded-full ${RESULT_STYLE[diag.result]}`} />
 											{diag.name}
 										</span>
 										<span className="text-(--color-foreground-tertiary)">

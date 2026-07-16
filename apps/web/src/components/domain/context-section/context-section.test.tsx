@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
 import { ContextSection } from "./context-section";
 
 describe("ContextSection", () => {
@@ -17,7 +17,11 @@ describe("ContextSection", () => {
 	});
 
 	it("hides children when defaultOpen=false", () => {
-		render(<ContextSection title="Section" defaultOpen={false}>Hidden</ContextSection>);
+		render(
+			<ContextSection title="Section" defaultOpen={false}>
+				Hidden
+			</ContextSection>,
+		);
 		expect(screen.queryByText("Hidden")).not.toBeInTheDocument();
 	});
 
@@ -29,12 +33,20 @@ describe("ContextSection", () => {
 	// ── Count & Action ──
 
 	it("renders count when provided", () => {
-		render(<ContextSection title="Alerts" count={5}>Content</ContextSection>);
+		render(
+			<ContextSection title="Alerts" count={5}>
+				Content
+			</ContextSection>,
+		);
 		expect(screen.getByText("5")).toBeInTheDocument();
 	});
 
 	it("renders action element", () => {
-		render(<ContextSection title="Alerts" action={<button>View All</button>}>Content</ContextSection>);
+		render(
+			<ContextSection title="Alerts" action={<button>View All</button>}>
+				Content
+			</ContextSection>,
+		);
 		expect(screen.getByText("View All")).toBeInTheDocument();
 	});
 
@@ -70,7 +82,9 @@ describe("ContextSection", () => {
 
 	it("merges custom className", () => {
 		render(
-			<ContextSection title="Test" className="extra-class">Content</ContextSection>,
+			<ContextSection title="Test" className="extra-class">
+				Content
+			</ContextSection>,
 		);
 		const section = document.querySelector("[data-slot='context-section']") as HTMLElement;
 		expect(section.classList.contains("extra-class")).toBe(true);

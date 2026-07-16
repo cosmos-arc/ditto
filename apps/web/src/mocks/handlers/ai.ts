@@ -1,13 +1,13 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
+import { HttpResponse, http, type RequestHandler } from "msw";
 import {
-	mockAiPulse,
+	mockAgentFindings,
+	mockAgentPlans,
 	mockAgentQuickView,
+	mockAgentRuns,
+	mockAiPulse,
+	mockCopilotMessages,
 	mockCopilotQuickView,
 	mockCopilotSessions,
-	mockCopilotMessages,
-	mockAgentPlans,
-	mockAgentRuns,
-	mockAgentFindings,
 } from "../fixtures/ai";
 
 export const aiHandlers: RequestHandler[] = [

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { ContextBar, ContextBarItem, ContextBarSep } from "./context-bar";
 
 describe("ContextBar", () => {
@@ -194,9 +194,7 @@ describe("ContextBarItem", () => {
 	// ── data-slot ──
 
 	it("renders with data-slot attribute", () => {
-		const { container } = render(
-			<ContextBarItem label="Price" value="100" />,
-		);
+		const { container } = render(<ContextBarItem label="Price" value="100" />);
 		const item = container.querySelector("[data-slot='context-bar-item']");
 		expect(item).toBeInTheDocument();
 	});
@@ -204,9 +202,7 @@ describe("ContextBarItem", () => {
 	// ── className merging ──
 
 	it("merges custom className", () => {
-		const { container } = render(
-			<ContextBarItem label="Price" value="100" className="extra" />,
-		);
+		const { container } = render(<ContextBarItem label="Price" value="100" className="extra" />);
 		const item = container.querySelector("[data-slot='context-bar-item']");
 		expect(item!.classList.contains("extra")).toBe(true);
 	});

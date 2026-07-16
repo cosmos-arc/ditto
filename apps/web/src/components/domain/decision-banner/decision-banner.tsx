@@ -1,9 +1,9 @@
-import { cn } from "@/lib/utils";
-import { Metric } from "@/components/data";
-import { StatusBadge } from "@/components/status";
-import type { BadgeVariant } from "@/components/status";
-import { Button } from "@/components/ui/button";
 import type { TrendDirection } from "@/components/data";
+import { Metric } from "@/components/data";
+import type { BadgeVariant } from "@/components/status";
+import { StatusBadge } from "@/components/status";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /* ── Types ── */
 
@@ -33,13 +33,7 @@ interface DecisionBannerProps extends React.HTMLAttributes<HTMLDivElement> {
 
 /* ── Component ── */
 
-function DecisionBanner({
-	primary,
-	judgment,
-	actions,
-	className,
-	...props
-}: DecisionBannerProps) {
+function DecisionBanner({ primary, judgment, actions, className, ...props }: DecisionBannerProps) {
 	return (
 		<div
 			data-slot="decision-banner"
@@ -69,9 +63,7 @@ function DecisionBanner({
 				className="flex flex-col gap-3 md:border-l md:border-(--color-border-subtle) md:pl-4"
 			>
 				<div className="flex items-center gap-2">
-					{judgment.regime && (
-						<StatusBadge label={judgment.regime.label} variant={judgment.regime.variant} size="sm" />
-					)}
+					{judgment.regime && <StatusBadge label={judgment.regime.label} variant={judgment.regime.variant} size="sm" />}
 				</div>
 				<p className="[font-size:var(--text-md)] font-semibold text-(--color-foreground) leading-relaxed">
 					{judgment.text}
@@ -83,16 +75,8 @@ function DecisionBanner({
 							<div className="flex gap-3">
 								{judgment.metrics.slice(0, 2).map((metric) => (
 									<div key={metric.label} className="flex flex-col gap-px">
-										<span className="text-sm text-(--color-foreground-tertiary)">
-											{metric.label}
-										</span>
-										<Metric
-											label=""
-											value={metric.value}
-											trend={metric.trend}
-											variant="strip"
-											size="sm"
-										/>
+										<span className="text-sm text-(--color-foreground-tertiary)">{metric.label}</span>
+										<Metric label="" value={metric.value} trend={metric.trend} variant="strip" size="sm" />
 									</div>
 								))}
 							</div>
@@ -102,16 +86,8 @@ function DecisionBanner({
 							<div className="flex gap-3">
 								{judgment.metrics.slice(2).map((metric) => (
 									<div key={metric.label} className="flex flex-col gap-px">
-										<span className="text-sm text-(--color-foreground-tertiary)">
-											{metric.label}
-										</span>
-										<Metric
-											label=""
-											value={metric.value}
-											trend={metric.trend}
-											variant="strip"
-											size="sm"
-										/>
+										<span className="text-sm text-(--color-foreground-tertiary)">{metric.label}</span>
+										<Metric label="" value={metric.value} trend={metric.trend} variant="strip" size="sm" />
 									</div>
 								))}
 							</div>
@@ -134,7 +110,13 @@ function DecisionBanner({
 								variant={action.variant === "ghost" ? "ghost" : "outline"}
 								size="sm"
 								onClick={action.onClick}
-								className={action.variant === "primary" ? "border-(--color-accent) text-(--color-accent) hover:bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]" : action.variant === "secondary" ? "opacity-70" : undefined}
+								className={
+									action.variant === "primary"
+										? "border-(--color-accent) text-(--color-accent) hover:bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]"
+										: action.variant === "secondary"
+											? "opacity-70"
+											: undefined
+								}
 							>
 								{action.label}
 							</Button>
@@ -146,5 +128,5 @@ function DecisionBanner({
 	);
 }
 
-export { DecisionBanner };
 export type { DecisionBannerProps };
+export { DecisionBanner };

@@ -1,9 +1,9 @@
-import { useMarketPulseMetrics } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
-import { Sparkline } from "@/components/data/sparkline";
-import type { SparklineColor } from "@/components/data/sparkline";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import type { SparklineColor } from "@/components/data/sparkline";
+import { Sparkline } from "@/components/data/sparkline";
+import { ContextSection } from "@/components/domain/context-section";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { useMarketPulseMetrics } from "../hooks";
 
 /** Derive sparkline color from the change string. */
 function changeToColor(change: string): SparklineColor {
@@ -45,16 +45,9 @@ export function MarketPulseSection() {
 									className={`flex items-center gap-1.5 font-data text-xs tabular-nums ${changeTextColor(metric.change)}`}
 								>
 									{metric.value}
-									{metric.change && (
-										<span>{metric.change}</span>
-									)}
+									{metric.change && <span>{metric.change}</span>}
 									{metric.sparkline && metric.sparkline.length >= 2 && (
-										<Sparkline
-											data={metric.sparkline}
-											color={changeToColor(metric.change)}
-											width={48}
-											height={16}
-										/>
+										<Sparkline data={metric.sparkline} color={changeToColor(metric.change)} width={48} height={16} />
 									)}
 								</span>
 							</div>

@@ -7,11 +7,12 @@ afterEach(() => {
 
 describe("updateIntentStatus", () => {
 	it("updates intent status through the live trade command endpoint", async () => {
-		const fetchMock = vi.fn<typeof fetch>(async () =>
-			new Response(JSON.stringify({ data: true }), {
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-			}),
+		const fetchMock = vi.fn<typeof fetch>(
+			async () =>
+				new Response(JSON.stringify({ data: true }), {
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				}),
 		);
 		vi.stubGlobal("fetch", fetchMock);
 

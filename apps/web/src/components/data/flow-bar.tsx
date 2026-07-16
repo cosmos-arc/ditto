@@ -24,12 +24,7 @@ interface FlowBarProps {
 	readonly className?: string;
 }
 
-export function FlowBar({
-	segments,
-	height = DEFAULT_HEIGHT,
-	trackClassName,
-	className,
-}: FlowBarProps) {
+export function FlowBar({ segments, height = DEFAULT_HEIGHT, trackClassName, className }: FlowBarProps) {
 	if (segments.length === 0) return null;
 
 	const total = segments.reduce((sum, s) => sum + s.value, 0);
@@ -39,11 +34,7 @@ export function FlowBar({
 		<div data-slot="flow-bar" data-testid="flow-bar" className={className}>
 			<div
 				data-testid="flow-bar-track"
-				className={cn(
-					"rounded-full overflow-hidden",
-					"bg-(--color-border-subtle)",
-					trackClassName,
-				)}
+				className={cn("rounded-full overflow-hidden", "bg-(--color-border-subtle)", trackClassName)}
 				style={{ height: `${height}px` }}
 			>
 				{segments.map((segment, index) => {

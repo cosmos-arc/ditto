@@ -1,7 +1,7 @@
-import { useIntelligenceFlow } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useIntelligenceFlow } from "../hooks";
 
 export function IntelligenceFlowView() {
 	const { data, isLoading, refetch } = useIntelligenceFlow();
@@ -39,13 +39,8 @@ export function IntelligenceFlowView() {
 						<div className="flex flex-col gap-1">
 							<span className="text-xs text-(--color-foreground-tertiary)">北向资金（亿元）</span>
 							{data.northbound.slice(0, 3).map((n) => (
-								<div
-									key={n.date}
-									className="flex items-center justify-between py-0.5"
-								>
-									<span className="text-xs text-(--color-foreground-tertiary) font-data">
-										{n.date}
-									</span>
+								<div key={n.date} className="flex items-center justify-between py-0.5">
+									<span className="text-xs text-(--color-foreground-tertiary) font-data">{n.date}</span>
 									<span
 										className={`text-sm font-data ${n.total >= 0 ? "text-(--color-market-up)" : "text-(--color-market-down)"}`}
 									>

@@ -1,8 +1,8 @@
-import { useMarketOverview } from "../hooks";
-import { MarketCard } from "@/components/domain/market-card/market-card";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { MarketCard } from "@/components/domain/market-card/market-card";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useMarketOverview } from "../hooks";
 
 function normalizeRegimeTag(regimeTag: string): "on" | "off" | "mixed" {
 	if (regimeTag === "on" || regimeTag === "off" || regimeTag === "mixed") {
@@ -27,7 +27,7 @@ export function MarketCardGrid() {
 	return (
 		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 			{data && (
-			<div className="grid grid-cols-3 gap-3" data-info-level="l1" data-info-unit="market-cards">
+				<div className="grid grid-cols-3 gap-3" data-info-level="l1" data-info-unit="market-cards">
 					{data.cards.map((card, index) => (
 						<ScrollReveal key={card.indexCode} stagger={index % 3}>
 							<MarketCard

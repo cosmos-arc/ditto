@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
-import { ErrorState, DittoErrorBoundary } from "./error-boundary";
+import { DittoErrorBoundary, ErrorState } from "./error-boundary";
 
 function ThrowingChild({ shouldThrow }: { readonly shouldThrow: boolean }) {
 	if (shouldThrow) {
@@ -120,9 +120,7 @@ describe("DittoErrorBoundary", () => {
 
 	it("renders custom ErrorState props when provided via fallbackProps", () => {
 		render(
-			<DittoErrorBoundary
-				fallbackProps={{ title: "自定义错误", description: "出错了" }}
-			>
+			<DittoErrorBoundary fallbackProps={{ title: "自定义错误", description: "出错了" }}>
 				<ThrowingChild shouldThrow />
 			</DittoErrorBoundary>,
 		);

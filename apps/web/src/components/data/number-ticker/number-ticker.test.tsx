@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NumberTicker } from "./number-ticker";
 
 /* ── IntersectionObserver mock ── */
@@ -51,10 +51,7 @@ describe("NumberTicker", () => {
 
 	it("renders with data-slot='number-ticker' on root element", () => {
 		render(<NumberTicker value={1234.56} />);
-		expect(screen.getByTestId("number-ticker-root")).toHaveAttribute(
-			"data-slot",
-			"number-ticker",
-		);
+		expect(screen.getByTestId("number-ticker-root")).toHaveAttribute("data-slot", "number-ticker");
 	});
 
 	it("renders initial value as 0.00 before animation", () => {

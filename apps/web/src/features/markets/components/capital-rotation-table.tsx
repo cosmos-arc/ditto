@@ -1,9 +1,9 @@
-import { useCapitalRotation } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { FlowBar } from "@/components/data";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { cn } from "@/lib/utils";
+import { useCapitalRotation } from "../hooks";
 
 const NUMERIC = "font-data tabular-nums";
 
@@ -24,21 +24,13 @@ export function CapitalRotationTable() {
 								<div className="flex items-center justify-between text-sm">
 									<span className="font-medium">{sector.name}</span>
 									<div className="flex items-center gap-4 text-(--color-foreground-tertiary)">
-										<span className={cn(NUMERIC, "text-(--color-system-healthy)")}>
-											+{sector.netFlow.toFixed(1)}亿
-										</span>
-										<span className={NUMERIC}>
-											流入 {sector.inflow.toFixed(1)}亿
-										</span>
-										<span className={NUMERIC}>
-											流出 {sector.outflow.toFixed(1)}亿
-										</span>
+										<span className={cn(NUMERIC, "text-(--color-system-healthy)")}>+{sector.netFlow.toFixed(1)}亿</span>
+										<span className={NUMERIC}>流入 {sector.inflow.toFixed(1)}亿</span>
+										<span className={NUMERIC}>流出 {sector.outflow.toFixed(1)}亿</span>
 										{sector.rankChange !== 0 && (
 											<span
 												className={cn(
-													sector.rankChange > 0
-														? "text-(--color-system-healthy)"
-														: "text-(--color-system-down)",
+													sector.rankChange > 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)",
 												)}
 											>
 												{sector.rankChange > 0 ? "↑" : "↓"}

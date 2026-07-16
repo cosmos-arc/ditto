@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { homeHandlers } from "@/mocks/handlers/home";
+import { server } from "@/mocks/server";
 import { HomePage } from "./home-page";
 
 function createQueryClient(): QueryClient {
@@ -33,9 +33,7 @@ describe("HomePage info-level annotations", () => {
 		await screen.findByText("今日盈亏");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("decision-banner");
 		expect(l1UnitNames).toContain("priority-queue");
@@ -51,9 +49,7 @@ describe("HomePage info-level annotations", () => {
 		await screen.findByText("今日盈亏");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("research-progress");
 		expect(l2UnitNames).toContain("agent-findings");

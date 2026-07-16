@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { marketsHandlers } from "@/mocks/handlers/markets";
+import { server } from "@/mocks/server";
 
 import { ASharesOverview } from "./a-shares-overview";
 import { ASharesPage } from "./a-shares-page";

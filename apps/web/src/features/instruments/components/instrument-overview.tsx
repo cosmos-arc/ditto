@@ -1,7 +1,7 @@
-import { useInstrumentFundamentals } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useInstrumentFundamentals } from "../hooks";
 
 interface InstrumentOverviewProps {
 	readonly id: string;

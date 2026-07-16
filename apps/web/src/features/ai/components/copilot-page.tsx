@@ -1,7 +1,7 @@
-import { StudioLayout, StatusBar } from "@/features/shell";
-import { CopilotSessionList } from "./copilot-session-list";
+import { StatusBar, StudioLayout } from "@/features/shell";
 import { CopilotChatView } from "./copilot-chat-view";
 import { CopilotContextPanel } from "./copilot-context-panel";
+import { CopilotSessionList } from "./copilot-session-list";
 
 export function CopilotPage() {
 	return (

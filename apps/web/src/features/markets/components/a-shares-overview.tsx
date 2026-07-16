@@ -1,7 +1,7 @@
-import { useAShares } from "../hooks";
-import { ContextSection } from "@/components/domain/context-section";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { useAShares } from "../hooks";
 
 function formatVolume(volume: number): string {
 	if (volume >= 1e12) return `${(volume / 1e12).toFixed(1)}万亿`;
@@ -36,17 +36,11 @@ export function ASharesOverview() {
 								className="flex items-center justify-between py-2 border-b border-(--color-border) last:border-b-0"
 							>
 								<div className="flex flex-col gap-0.5">
-									<span className="text-sm font-medium text-(--color-foreground)">
-										{idx.index}
-									</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										成交 {formatVolume(idx.volume)}
-									</span>
+									<span className="text-sm font-medium text-(--color-foreground)">{idx.index}</span>
+									<span className="text-xs text-(--color-foreground-tertiary)">成交 {formatVolume(idx.volume)}</span>
 								</div>
 								<div className="text-right flex flex-col gap-0.5">
-									<span className="text-sm font-data text-(--color-foreground)">
-										{idx.price.toLocaleString()}
-									</span>
+									<span className="text-sm font-data text-(--color-foreground)">{idx.price.toLocaleString()}</span>
 									<span
 										className={`text-xs font-data ${idx.changePercent >= 0 ? "text-(--color-market-up)" : "text-(--color-market-down)"}`}
 									>
@@ -66,9 +60,7 @@ export function ASharesOverview() {
 							>
 								<span className="text-sm text-(--color-foreground)">{s.sector}</span>
 								<div className="flex items-center gap-3">
-									<span className="text-xs text-(--color-foreground-tertiary)">
-										{s.topStock}
-									</span>
+									<span className="text-xs text-(--color-foreground-tertiary)">{s.topStock}</span>
 									<span
 										className={`text-sm font-data ${s.change >= 0 ? "text-(--color-market-up)" : "text-(--color-market-down)"}`}
 									>

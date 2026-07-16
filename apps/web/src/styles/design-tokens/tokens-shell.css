@@ -5,42 +5,42 @@
  * ───────────────────────────────────────────── */
 
 :root {
-  /* ── Base Shell ── */
-  --shell-rail-width:        56px;
-  --shell-rail-collapsed:    0px;
-  --shell-header-height:     68px;
-  --shell-sidebar-width:     320px;
-  --shell-sidebar-collapsed-width: 56px;
-  --shell-detail-width:      340px;
-  --shell-drawer-width:      440px;
+	/* ── Base Shell ── */
+	--shell-rail-width: 56px;
+	--shell-rail-collapsed: 0px;
+	--shell-header-height: 68px;
+	--shell-sidebar-width: 320px;
+	--shell-sidebar-collapsed-width: 56px;
+	--shell-detail-width: 340px;
+	--shell-drawer-width: 440px;
 
-  /* ── Context Bar ── */
-  --shell-context-bar-height: 2rem;
+	/* ── Context Bar ── */
+	--shell-context-bar-height: 2rem;
 
-  /* ── Scope Strip ── */
-  --shell-scope-strip-height: 2rem;
+	/* ── Scope Strip ── */
+	--shell-scope-strip-height: 2rem;
 
-  /* ── Sidebar Collapse Animation ── */
-  --shell-sidebar-collapse-duration: 200ms;
-  --shell-sidebar-collapse-easing: cubic-bezier(0.4, 0, 0.2, 1);
+	/* ── Sidebar Collapse Animation ── */
+	--shell-sidebar-collapse-duration: 200ms;
+	--shell-sidebar-collapse-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* ── Status Bar ── */
-  --shell-status-bar-height: 1.5rem;
+	/* ── Status Bar ── */
+	--shell-status-bar-height: 1.5rem;
 
-  /* ── Per-Shell Overrides ── */
-  /* Screener */
-  --shell-screener-sidebar-width: 280px;
-  /* Signals */
-  --shell-signals-detail-width: 380px;
-  /* Research */
-  --shell-research-detail-width: 340px;
-  /* Analytical */
-  --shell-analytical-activity-width: 300px;
-  --shell-analytical-band-height: 220px;
-  /* Radar (Cross-market) */
-  --shell-radar-right-rail-width: 300px;
-  /* Catalog */
-  --shell-catalog-detail-width: 320px;
-  /* Ops */
-  --shell-ops-detail-width: 340px;
+	/* ── Per-Shell Overrides ── */
+	/* Screener */
+	--shell-screener-sidebar-width: 280px;
+	/* Signals */
+	--shell-signals-detail-width: 380px;
+	/* Research */
+	--shell-research-detail-width: 340px;
+	/* Analytical */
+	--shell-analytical-activity-width: 300px;
+	--shell-analytical-band-height: 220px;
+	/* Radar (Cross-market) */
+	--shell-radar-right-rail-width: 300px;
+	/* Catalog */
+	--shell-catalog-detail-width: 320px;
+	/* Ops */
+	--shell-ops-detail-width: 340px;
 }

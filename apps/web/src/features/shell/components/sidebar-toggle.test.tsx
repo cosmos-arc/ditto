@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SidebarToggle } from "./sidebar-toggle";
+import { beforeEach, describe, expect, it } from "vitest";
 import { useUIPreferences } from "../hooks/use-ui-preferences";
+import { SidebarToggle } from "./sidebar-toggle";
 
 describe("SidebarToggle", () => {
 	beforeEach(() => {
@@ -29,9 +29,6 @@ describe("SidebarToggle", () => {
 
 	it("has data-slot attribute", () => {
 		render(<SidebarToggle />);
-		expect(screen.getByLabelText("折叠侧边栏")).toHaveAttribute(
-			"data-slot",
-			"sidebar-toggle",
-		);
+		expect(screen.getByLabelText("折叠侧边栏")).toHaveAttribute("data-slot", "sidebar-toggle");
 	});
 });

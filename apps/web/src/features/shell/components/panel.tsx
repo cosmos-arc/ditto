@@ -1,4 +1,4 @@
-import type { ReactNode, HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 /* ------------------------------------------------------------------ */
@@ -51,20 +51,11 @@ interface PanelHeaderProps {
  */
 export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProps) {
 	return (
-		<div
-			className={[
-				"flex shrink-0 items-center",
-				"border-b border-(--color-border-subtle)",
-				"px-3 py-2",
-			].join(" ")}
-		>
+		<div className={["flex shrink-0 items-center", "border-b border-(--color-border-subtle)", "px-3 py-2"].join(" ")}>
 			<span className="flex min-w-0 flex-1 items-baseline gap-2 text-sm font-medium text-(--color-foreground)">
 				{title}
 				{subtitle && (
-					<span
-						data-testid="panel-subtitle"
-						className="font-normal text-(--color-foreground-tertiary)"
-					>
+					<span data-testid="panel-subtitle" className="font-normal text-(--color-foreground-tertiary)">
 						{subtitle}
 					</span>
 				)}
@@ -79,10 +70,7 @@ export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProp
 			</span>
 
 			{actions && (
-				<div
-					data-testid="panel-actions"
-					className="ml-2 flex items-center gap-1"
-				>
+				<div data-testid="panel-actions" className="ml-2 flex items-center gap-1">
 					{actions}
 				</div>
 			)}
@@ -108,12 +96,7 @@ export function PanelBody({ className, children, ...rest }: PanelBodyProps) {
 	return (
 		<div
 			ref={ref}
-			className={[
-				"flex-1 overflow-y-auto overflow-x-hidden",
-				"reveal-up",
-				isVisible && "is-visible",
-				className,
-			]
+			className={["flex-1 overflow-y-auto overflow-x-hidden", "reveal-up", isVisible && "is-visible", className]
 				.filter(Boolean)
 				.join(" ")}
 			{...rest}

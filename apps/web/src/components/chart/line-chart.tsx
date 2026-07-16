@@ -1,6 +1,6 @@
-import { ResponsiveContainer, LineChart as RechartsLineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-import type { SparklinePoint } from "@/types";
+import { Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
+import type { SparklinePoint } from "@/types";
 
 type LineChartProps = {
 	readonly data: readonly SparklinePoint[];

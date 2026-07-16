@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { CopilotSidecar } from "@/features/copilot";
-import { Rail } from "./rail";
-import { ShellHeader } from "./header";
-import { NoiseLayer } from "./noise-layer";
 import { useActiveDomain } from "../hooks/use-active-domain";
 import { useAtmosphere } from "../hooks/use-atmosphere";
+import { ShellHeader } from "./header";
+import { NoiseLayer } from "./noise-layer";
+import { Rail } from "./rail";
 
 interface AppShellProps {
 	children: ReactNode;
@@ -34,9 +34,7 @@ export function AppShell({ children }: AppShellProps) {
 			<div className="col-start-2">
 				<ShellHeader onOpenCopilot={() => setIsCopilotOpen(true)} />
 			</div>
-			<div className="relative col-start-2 row-start-2 min-h-0 overflow-hidden">
-				{children}
-			</div>
+			<div className="relative col-start-2 row-start-2 min-h-0 overflow-hidden">{children}</div>
 			<CopilotSidecar open={isCopilotOpen} onOpenChange={setIsCopilotOpen} />
 			<NoiseLayer />
 		</div>

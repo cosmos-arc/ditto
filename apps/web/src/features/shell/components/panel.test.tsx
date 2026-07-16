@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Panel, PanelHeader, PanelBody } from "./panel";
+import { describe, expect, it } from "vitest";
+import { Panel, PanelBody, PanelHeader } from "./panel";
 
 describe("Panel", () => {
 	it("renders with correct background, border, and border-radius", () => {
@@ -57,12 +57,7 @@ describe("PanelHeader", () => {
 	});
 
 	it("renders actions slot when provided", () => {
-		render(
-			<PanelHeader
-				title="Market Overview"
-				actions={<button type="button">Settings</button>}
-			/>,
-		);
+		render(<PanelHeader title="Market Overview" actions={<button type="button">Settings</button>} />);
 		expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
 	});
 

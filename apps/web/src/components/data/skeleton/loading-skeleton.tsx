@@ -24,9 +24,7 @@ const skeletonVariants = cva("w-full", {
 	},
 });
 
-interface LoadingSkeletonProps
-	extends React.HTMLAttributes<HTMLDivElement>,
-		VariantProps<typeof skeletonVariants> {
+interface LoadingSkeletonProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof skeletonVariants> {
 	readonly rows?: number;
 	readonly columns?: number;
 }
@@ -41,13 +39,7 @@ function ShimmerBar({
 	return <div data-testid={testId} className={cn(shimmerBase, className)} />;
 }
 
-function LoadingSkeleton({
-	variant = "panel",
-	rows,
-	columns,
-	className,
-	...props
-}: LoadingSkeletonProps) {
+function LoadingSkeleton({ variant = "panel", rows, columns, className, ...props }: LoadingSkeletonProps) {
 	return (
 		<div
 			data-slot="loading-skeleton"
@@ -58,10 +50,7 @@ function LoadingSkeleton({
 		>
 			{variant === "panel" && <PanelSkeleton rows={rows ?? DEFAULT_PANEL_ROWS} />}
 			{variant === "table" && (
-				<TableSkeleton
-					columns={columns ?? DEFAULT_TABLE_COLUMNS}
-					rows={rows ?? DEFAULT_TABLE_ROWS}
-				/>
+				<TableSkeleton columns={columns ?? DEFAULT_TABLE_COLUMNS} rows={rows ?? DEFAULT_TABLE_ROWS} />
 			)}
 			{variant === "card" && <CardSkeleton />}
 			{variant === "metric" && <MetricSkeleton />}
@@ -73,16 +62,9 @@ function LoadingSkeleton({
 function PanelSkeleton({ rows }: { readonly rows: number }) {
 	return (
 		<>
-			<ShimmerBar
-				data-testid="skeleton-header"
-				className="w-[40%] h-4"
-			/>
+			<ShimmerBar data-testid="skeleton-header" className="w-[40%] h-4" />
 			{Array.from({ length: rows }, (_, i) => (
-				<ShimmerBar
-					key={i}
-					data-testid="skeleton-row"
-					className="w-full h-3"
-				/>
+				<ShimmerBar key={i} data-testid="skeleton-row" className="w-full h-3" />
 			))}
 		</>
 	);
@@ -93,20 +75,13 @@ function TableSkeleton({ columns, rows }: { readonly columns: number; readonly r
 		<>
 			<div data-testid="skeleton-table-header" className="flex gap-2">
 				{Array.from({ length: columns }, (_, i) => (
-					<ShimmerBar
-						key={`header-${i}`}
-						data-testid="skeleton-table-header-cell"
-						className="flex-1 h-3"
-					/>
+					<ShimmerBar key={`header-${i}`} data-testid="skeleton-table-header-cell" className="flex-1 h-3" />
 				))}
 			</div>
 			{Array.from({ length: rows }, (_, i) => (
 				<div key={`row-${i}`} data-testid="skeleton-table-row" className="flex gap-2">
 					{Array.from({ length: columns }, (_, j) => (
-						<ShimmerBar
-							key={`row-${i}-cell-${j}`}
-							className="flex-1 h-3"
-						/>
+						<ShimmerBar key={`row-${i}-cell-${j}`} className="flex-1 h-3" />
 					))}
 				</div>
 			))}
@@ -117,14 +92,8 @@ function TableSkeleton({ columns, rows }: { readonly columns: number; readonly r
 function CardSkeleton() {
 	return (
 		<>
-			<ShimmerBar
-				data-testid="skeleton-card-title"
-				className="w-[40%] h-4"
-			/>
-			<ShimmerBar
-				data-testid="skeleton-card-content"
-				className="w-full h-24"
-			/>
+			<ShimmerBar data-testid="skeleton-card-title" className="w-[40%] h-4" />
+			<ShimmerBar data-testid="skeleton-card-content" className="w-full h-24" />
 		</>
 	);
 }
@@ -132,25 +101,14 @@ function CardSkeleton() {
 function MetricSkeleton() {
 	return (
 		<>
-			<ShimmerBar
-				data-testid="skeleton-metric-label"
-				className="w-[60%] h-[10px]"
-			/>
-			<ShimmerBar
-				data-testid="skeleton-metric-value"
-				className="w-[40%] h-4"
-			/>
+			<ShimmerBar data-testid="skeleton-metric-label" className="w-[60%] h-[10px]" />
+			<ShimmerBar data-testid="skeleton-metric-value" className="w-[40%] h-4" />
 		</>
 	);
 }
 
 function ChartSkeleton() {
-	return (
-		<ShimmerBar
-			data-testid="skeleton-chart"
-			className="w-full h-40"
-		/>
-	);
+	return <ShimmerBar data-testid="skeleton-chart" className="w-full h-40" />;
 }
 
 export { LoadingSkeleton, skeletonVariants };

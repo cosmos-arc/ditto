@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { server } from "@/mocks/server";
 
 /* ── IntersectionObserver stub (jsdom lacks native support) ── */

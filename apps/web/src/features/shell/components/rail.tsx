@@ -1,7 +1,7 @@
-import { useLocation, Link } from "@tanstack/react-router";
-import { DOMAINS } from "@/features/navigation/types";
+import { Link, useLocation } from "@tanstack/react-router";
 import { DomainIcon } from "@/features/navigation/components/domain-icon";
 import type { DomainId } from "@/features/navigation/types";
+import { DOMAINS } from "@/features/navigation/types";
 
 /**
  * Checks if a domain is active based on the current pathname.

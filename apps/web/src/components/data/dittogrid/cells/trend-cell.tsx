@@ -27,5 +27,5 @@ function TrendCell({ value, className }: TrendCellProps) {
 	);
 }
 
-export { TrendCell };
 export type { TrendCellProps };
+export { TrendCell };

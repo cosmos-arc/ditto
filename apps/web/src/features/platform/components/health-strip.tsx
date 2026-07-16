@@ -1,7 +1,7 @@
 import { Metric } from "@/components/data/metric";
-import { usePlatformHealth } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { usePlatformHealth } from "../hooks";
 
 export function HealthStrip() {
 	const { data, isLoading, refetch } = usePlatformHealth();

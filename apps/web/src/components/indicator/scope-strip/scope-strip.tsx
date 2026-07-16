@@ -4,12 +4,7 @@ interface ScopeStripProps extends React.HTMLAttributes<HTMLDivElement> {
 	readonly children: React.ReactNode;
 }
 
-function ScopeStrip({
-	children,
-	role = "status",
-	className,
-	...props
-}: ScopeStripProps) {
+function ScopeStrip({ children, role = "status", className, ...props }: ScopeStripProps) {
 	return (
 		<div
 			data-slot="scope-strip"
@@ -25,5 +20,5 @@ function ScopeStrip({
 	);
 }
 
-export { ScopeStrip };
 export type { ScopeStripProps };
+export { ScopeStrip };

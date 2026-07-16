@@ -1,10 +1,5 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
-import {
-	mockRegimeCurrent,
-	mockRegimeDrivers,
-	mockRegimeHistory,
-	mockRegimeStrategyImpact,
-} from "../fixtures/regime";
+import { HttpResponse, http, type RequestHandler } from "msw";
+import { mockRegimeCurrent, mockRegimeDrivers, mockRegimeHistory, mockRegimeStrategyImpact } from "../fixtures/regime";
 
 export const regimeHandlers: RequestHandler[] = [
 	http.get("/api/research/regime/current", () => {

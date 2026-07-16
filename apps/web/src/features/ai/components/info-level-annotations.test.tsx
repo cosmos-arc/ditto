@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { aiHandlers } from "@/mocks/handlers/ai";
-import { AiMainContent } from "./ai-main-content";
+import { server } from "@/mocks/server";
 import { AgentsPage } from "./agents-page";
+import { AiMainContent } from "./ai-main-content";
 import { CopilotPage } from "./copilot-page";
 
 function createQueryClient(): QueryClient {
@@ -36,9 +36,7 @@ describe("AiMainContent info-level annotations", () => {
 		await screen.findByText("Agent 计划");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("ai-overview");
 		expect(l1Units).toHaveLength(1);
@@ -78,9 +76,7 @@ describe("AgentsPage info-level annotations", () => {
 		await screen.findByText("目标");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("agent-objective");
 		expect(l1UnitNames).toContain("agent-constraints");
@@ -95,9 +91,7 @@ describe("AgentsPage info-level annotations", () => {
 		await screen.findByText("目标");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("agent-related-findings");
 		expect(l2UnitNames).toContain("agent-findings-list");
@@ -116,9 +110,7 @@ describe("CopilotPage info-level annotations", () => {
 		await screen.findByText("会话列表");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
-		const l1UnitNames = Array.from(l1Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l1UnitNames).toContain("copilot-session-list");
 		expect(l1UnitNames).toContain("copilot-chat");
@@ -131,9 +123,7 @@ describe("CopilotPage info-level annotations", () => {
 		await screen.findByText("会话列表");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
-		const l2UnitNames = Array.from(l2Units).map(
-			(el) => el.getAttribute("data-info-unit"),
-		);
+		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("copilot-context-panel");
 		expect(l2Units).toHaveLength(1);

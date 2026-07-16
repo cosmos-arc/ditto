@@ -1,7 +1,7 @@
-import { useRiskSummary } from "../hooks";
+import { Metric } from "@/components/data/metric/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { Metric } from "@/components/data/metric/metric";
+import { useRiskSummary } from "../hooks";
 
 export function RiskScopeStrip() {
 	const { data, isLoading, refetch } = useRiskSummary();
@@ -30,33 +30,16 @@ export function RiskScopeStrip() {
 					value={`${data?.var ?? "—"}%`}
 					trend={(data?.var ?? 0) <= 5 ? "up" : "down"}
 				/>
-				<Metric
-					variant="strip"
-					label="最大回撤"
-					value={`${data?.maxDD ?? "—"}%`}
-					trend="down"
-				/>
-				<Metric
-					variant="strip"
-					label="Beta"
-					value={data?.beta?.toFixed(2) ?? "—"}
-				/>
+				<Metric variant="strip" label="最大回撤" value={`${data?.maxDD ?? "—"}%`} trend="down" />
+				<Metric variant="strip" label="Beta" value={data?.beta?.toFixed(2) ?? "—"} />
 				<Metric
 					variant="strip"
 					label="总敞口"
 					value={`${data?.grossExposure ?? "—"}%`}
 					trend={(data?.grossExposure ?? 0) <= 150 ? "up" : "down"}
 				/>
-				<Metric
-					variant="strip"
-					label="净敞口"
-					value={`${data?.netExposure ?? "—"}%`}
-				/>
-				<Metric
-					variant="strip"
-					label="逼近限额"
-					value={data?.nearLimit ? "是" : "否"}
-				/>
+				<Metric variant="strip" label="净敞口" value={`${data?.netExposure ?? "—"}%`} />
+				<Metric variant="strip" label="逼近限额" value={data?.nearLimit ? "是" : "否"} />
 				<Metric
 					variant="strip"
 					label="违规次数"

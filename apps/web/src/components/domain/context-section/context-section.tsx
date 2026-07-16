@@ -1,10 +1,6 @@
 import { useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 interface ContextSectionProps extends React.HTMLAttributes<HTMLDivElement> {
 	readonly title: string;
@@ -47,8 +43,7 @@ function ContextSection({
 
 					<div className="flex items-center gap-2">
 						{count !== undefined && (
-							<span className="font-data text-sm tabular-nums text-(--color-foreground-tertiary) bg-(--color-surface-strip) rounded-[4px] flex items-center px-1.5 h-[18px]"
-							>
+							<span className="font-data text-sm tabular-nums text-(--color-foreground-tertiary) bg-(--color-surface-strip) rounded-[4px] flex items-center px-1.5 h-[18px]">
 								{count}
 							</span>
 						)}
@@ -63,17 +58,20 @@ function ContextSection({
 							fill="none"
 							xmlns="http://www.w3.org/2000/svg"
 						>
-							<path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+							<path
+								d="M4.5 2L8.5 6L4.5 10"
+								stroke="currentColor"
+								strokeWidth="1.5"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
 						</svg>
 					</div>
 				</CollapsibleTrigger>
 
 				{/* Body */}
 				<CollapsibleContent>
-					<div
-						data-slot="context-section-body"
-						className="flex-1 overflow-y-auto px-3"
-					>
+					<div data-slot="context-section-body" className="flex-1 overflow-y-auto px-3">
 						{children}
 					</div>
 				</CollapsibleContent>
@@ -82,5 +80,5 @@ function ContextSection({
 	);
 }
 
-export { ContextSection };
 export type { ContextSectionProps };
+export { ContextSection };

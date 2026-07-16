@@ -1,11 +1,11 @@
 import type {
 	EquityPoint,
-	GetSignalDetailResponse,
-	GetSignalsResponse,
 	GetOrdersSummaryResponse,
+	GetSignalDetailResponse,
+	GetSignalsQueueResponse,
+	GetSignalsResponse,
 	Position,
 	RiskSummaryResponse,
-	GetSignalsQueueResponse,
 	TradingSessionResponse,
 } from "@/types";
 

@@ -1,17 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { researchHandlers } from "@/mocks/handlers/research";
-
-import { ResearchPulseStrip } from "./research-pulse-strip";
+import { server } from "@/mocks/server";
+import { ExperimentListPage } from "./experiment-list-page";
+import { ExperimentQueue } from "./experiment-queue";
+import { FactorListPage } from "./factor-list-page";
 import { FactorTable } from "./factor-table";
 import { RecentRuns } from "./recent-runs";
-import { ExperimentQueue } from "./experiment-queue";
 import { ResearchPage } from "./research-page";
-import { FactorListPage } from "./factor-list-page";
-import { ExperimentListPage } from "./experiment-list-page";
+import { ResearchPulseStrip } from "./research-pulse-strip";
 import { UniverseListPage } from "./universe-list-page";
 
 function createQueryClient(): QueryClient {

@@ -1,9 +1,5 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
-import {
-	mockInstrumentChart,
-	mockInstrumentDetail,
-	mockInstrumentFundamentals,
-} from "../fixtures/instruments";
+import { HttpResponse, http, type RequestHandler } from "msw";
+import { mockInstrumentChart, mockInstrumentDetail, mockInstrumentFundamentals } from "../fixtures/instruments";
 
 export const instrumentsHandlers: RequestHandler[] = [
 	http.get("/api/instruments/:id", () => {

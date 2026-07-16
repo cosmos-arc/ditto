@@ -1,7 +1,7 @@
-import { useInstrumentChart } from "../hooks/use-instrument-chart";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { ErrorState } from "@/lib/error-boundary";
 import { ContextSection } from "@/components/domain/context-section";
+import { ErrorState } from "@/lib/error-boundary";
+import { useInstrumentChart } from "../hooks/use-instrument-chart";
 
 interface InstrumentChartViewProps {
 	readonly id: string;

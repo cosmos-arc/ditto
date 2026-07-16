@@ -1,8 +1,4 @@
-import type {
-	StrategyDetail,
-	GetStrategyVersionsResponse,
-	GetFactorLibraryResponse,
-} from "@/types";
+import type { GetFactorLibraryResponse, GetStrategyVersionsResponse, StrategyDetail } from "@/types";
 
 // === 策略详情 ===
 

@@ -1,13 +1,13 @@
 import type { ColumnDef } from "@/components/data";
 import { DataTable } from "@/components/data";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { ConfidenceBar, type ConfidenceColor } from "@/components/indicator";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { cn } from "@/lib/utils";
-import { useFactors } from "../hooks";
 import type { Factor } from "@/types";
+import { useFactors } from "../hooks";
 
 const HEALTH_VARIANT: Record<string, "healthy" | "warning" | "error" | "default"> = {
 	completed: "healthy",
@@ -104,10 +104,7 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 			<div
 				data-slot="status-bar"
 				data-health={row.healthStatus}
-				className={cn(
-					"h-full w-1 min-h-4 rounded-full",
-					STATUS_BAR_COLORS[row.healthStatus] ?? "bg-transparent",
-				)}
+				className={cn("h-full w-1 min-h-4 rounded-full", STATUS_BAR_COLORS[row.healthStatus] ?? "bg-transparent")}
 			/>
 		),
 		className: "!p-0 w-1",
@@ -118,12 +115,8 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 		width: "20%",
 		accessor: (row) => (
 			<div className="flex items-center gap-2">
-				<span className="font-medium text-(--color-foreground)">
-					{row.name}
-				</span>
-				<span className="text-xs text-(--color-foreground-tertiary)">
-					{row.family}
-				</span>
+				<span className="font-medium text-(--color-foreground)">{row.name}</span>
+				<span className="text-xs text-(--color-foreground-tertiary)">{row.family}</span>
 			</div>
 		),
 	},
@@ -135,9 +128,7 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 			const level = getIcLevel(row.ic);
 			return (
 				<div data-testid={`ic-${row.id}`} data-level={level} className="flex flex-col gap-0.5">
-					<span className={cn("font-data tabular-nums", LEVEL_COLORS[level])}>
-						{row.ic.toFixed(3)}
-					</span>
+					<span className={cn("font-data tabular-nums", LEVEL_COLORS[level])}>{row.ic.toFixed(3)}</span>
 					<ConfidenceBar
 						data-testid={`ic-bar-${row.id}`}
 						value={Math.abs(row.ic)}
@@ -228,11 +219,7 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 		header: "状态",
 		width: "10%",
 		accessor: (row) => (
-			<StatusBadge
-				variant={HEALTH_VARIANT[row.healthStatus] ?? "default"}
-				label={row.healthStatus}
-				size="sm"
-			/>
+			<StatusBadge variant={HEALTH_VARIANT[row.healthStatus] ?? "default"} label={row.healthStatus} size="sm" />
 		),
 	},
 ] as const;
@@ -246,12 +233,7 @@ export function FactorTable() {
 			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
 				{data && (
 					<div data-slot="factor-table">
-						<DataTable<Factor>
-							columns={COLUMNS}
-							data={data.items}
-							rowKey="id"
-							density="dense"
-						/>
+						<DataTable<Factor> columns={COLUMNS} data={data.items} rowKey="id" density="dense" />
 					</div>
 				)}
 			</DittoErrorBoundary>

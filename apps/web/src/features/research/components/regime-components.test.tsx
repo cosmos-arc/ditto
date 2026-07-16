@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
+import { beforeEach, describe, expect, it } from "vitest";
 import { regimeHandlers } from "@/mocks/handlers/regime";
+import { server } from "@/mocks/server";
 
 import { RegimeCurrentView } from "./regime-current-view";
 import { RegimeHistoryList } from "./regime-history-list";

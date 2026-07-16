@@ -1,10 +1,10 @@
 import { useParams } from "@tanstack/react-router";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout } from "@/features/shell";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
-import { BacktestTrades } from "./backtest-trades";
 import { BacktestOverview } from "./backtest-overview";
 import { BacktestReturnsView } from "./backtest-returns-view";
+import { BacktestTrades } from "./backtest-trades";
 
 export function BacktestPage() {
 	const { id } = useParams({ strict: false }) as { id: string };

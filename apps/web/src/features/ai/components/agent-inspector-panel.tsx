@@ -1,8 +1,8 @@
-import { useAgentPlans, useAgentRuns, useAgentFindings } from "../hooks";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import type { RunStatus } from "@/types";
+import { useAgentFindings, useAgentPlans, useAgentRuns } from "../hooks";
 
 interface AgentInspectorPanelProps {
 	readonly planId?: string;
@@ -41,9 +41,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 				<PanelHeader title="计划详情" />
 				<PanelBody>
 					<div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-						<span className="text-(length:--text-sm) text-(--color-foreground-tertiary)">
-							选择一个计划查看详情
-						</span>
+						<span className="text-(length:--text-sm) text-(--color-foreground-tertiary)">选择一个计划查看详情</span>
 					</div>
 				</PanelBody>
 			</Panel>
@@ -52,9 +50,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 
 	const plan = plansData?.items.find((p) => p.id === planId);
 	const relatedRuns = runsData?.items.filter((r) => r.planId === planId) ?? [];
-	const relatedFindings = findingsData?.items.filter((f) =>
-		relatedRuns.some((r) => r.id === f.runId),
-	) ?? [];
+	const relatedFindings = findingsData?.items.filter((f) => relatedRuns.some((r) => r.id === f.runId)) ?? [];
 
 	if (!plan) {
 		return (
@@ -62,9 +58,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 				<PanelHeader title="计划详情" />
 				<PanelBody>
 					<div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-						<span className="text-(length:--text-sm) text-(--color-foreground-tertiary)">
-							计划未找到
-						</span>
+						<span className="text-(length:--text-sm) text-(--color-foreground-tertiary)">计划未找到</span>
 					</div>
 				</PanelBody>
 			</Panel>
@@ -78,25 +72,16 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 				<PanelBody>
 					<div className="flex flex-col gap-(--density-gutter) p-3">
 						<section data-info-level="l1" data-info-unit="agent-objective">
-							<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-								目标
-							</h4>
-							<p className="text-(length:--text-sm) text-(--color-foreground)">
-								{plan.objective}
-							</p>
+							<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">目标</h4>
+							<p className="text-(length:--text-sm) text-(--color-foreground)">{plan.objective}</p>
 						</section>
 
 						{plan.constraints.length > 0 && (
 							<section data-info-level="l1" data-info-unit="agent-constraints">
-								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-									约束条件
-								</h4>
+								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">约束条件</h4>
 								<ul className="flex flex-col gap-0.5">
 									{plan.constraints.map((c) => (
-										<li
-											key={c}
-											className="text-(length:--text-sm) text-(--color-foreground-tertiary)"
-										>
+										<li key={c} className="text-(length:--text-sm) text-(--color-foreground-tertiary)">
 											• {c}
 										</li>
 									))}
@@ -106,9 +91,7 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 
 						{plan.scope.length > 0 && (
 							<section data-info-level="l1" data-info-unit="agent-scope">
-								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-									范围
-								</h4>
+								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">范围</h4>
 								<div className="flex flex-wrap gap-1">
 									{plan.scope.map((s) => (
 										<span
@@ -124,27 +107,18 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 
 						{relatedRuns.length > 0 && (
 							<section data-info-level="l1" data-info-unit="agent-run-status">
-								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-									运行状态
-								</h4>
+								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">运行状态</h4>
 								<ul className="flex flex-col gap-1">
 									{relatedRuns.map((run) => (
-										<li
-											key={run.id}
-											className="flex items-center gap-2 text-(length:--text-sm)"
-										>
+										<li key={run.id} className="flex items-center gap-2 text-(length:--text-sm)">
 											<span
 												className={[
 													"h-1.5 w-1.5 shrink-0 rounded-full",
 													STATUS_DOT[run.status as RunStatus] ?? STATUS_DOT.pending,
 												].join(" ")}
 											/>
-											<span className="text-(--color-foreground)">
-												{run.stage}
-											</span>
-											<span className="ml-auto font-data text-(--color-foreground-tertiary)">
-												{run.progress}%
-											</span>
+											<span className="text-(--color-foreground)">{run.stage}</span>
+											<span className="ml-auto font-data text-(--color-foreground-tertiary)">{run.progress}%</span>
 										</li>
 									))}
 								</ul>
@@ -153,15 +127,10 @@ export function AgentInspectorPanel({ planId }: AgentInspectorPanelProps) {
 
 						{relatedFindings.length > 0 && (
 							<section data-info-level="l2" data-info-unit="agent-related-findings">
-								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-									相关发现
-								</h4>
+								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">相关发现</h4>
 								<ul className="flex flex-col gap-1">
 									{relatedFindings.slice(0, 5).map((finding) => (
-										<li
-											key={finding.id}
-											className="text-(length:--text-sm) text-(--color-foreground-tertiary)"
-										>
+										<li key={finding.id} className="text-(length:--text-sm) text-(--color-foreground-tertiary)">
 											{finding.text.slice(0, 80)}
 											{finding.text.length > 80 ? "…" : ""}
 										</li>

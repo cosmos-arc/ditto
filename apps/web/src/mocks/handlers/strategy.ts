@@ -1,9 +1,5 @@
-import { http, HttpResponse, type RequestHandler } from "msw";
-import {
-	mockStrategyDetail,
-	mockStrategyVersions,
-	mockFactorLibrary,
-} from "../fixtures/strategy";
+import { HttpResponse, http, type RequestHandler } from "msw";
+import { mockFactorLibrary, mockStrategyDetail, mockStrategyVersions } from "../fixtures/strategy";
 
 export const strategyHandlers: RequestHandler[] = [
 	http.get("/api/strategies/:id", () => {

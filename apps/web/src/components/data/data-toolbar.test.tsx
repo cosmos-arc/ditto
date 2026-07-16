@@ -15,26 +15,11 @@ describe("DataToolbar", () => {
 			/>,
 		);
 
-		expect(screen.getByRole("toolbar", { name: "数据表工具栏" })).toHaveAttribute(
-			"data-table-toolbar",
-			"root",
-		);
-		expect(screen.getByRole("button", { name: "搜索标的" })).toHaveAttribute(
-			"data-table-toolbar",
-			"search",
-		);
-		expect(screen.getByRole("button", { name: "筛选" })).toHaveAttribute(
-			"data-table-toolbar",
-			"filter",
-		);
-		expect(screen.getByRole("button", { name: "列配置" })).toHaveAttribute(
-			"data-table-toolbar",
-			"columns",
-		);
-		expect(screen.getByRole("button", { name: "导出" })).toHaveAttribute(
-			"data-table-toolbar",
-			"export",
-		);
+		expect(screen.getByRole("toolbar", { name: "数据表工具栏" })).toHaveAttribute("data-table-toolbar", "root");
+		expect(screen.getByRole("button", { name: "搜索标的" })).toHaveAttribute("data-table-toolbar", "search");
+		expect(screen.getByRole("button", { name: "筛选" })).toHaveAttribute("data-table-toolbar", "filter");
+		expect(screen.getByRole("button", { name: "列配置" })).toHaveAttribute("data-table-toolbar", "columns");
+		expect(screen.getByRole("button", { name: "导出" })).toHaveAttribute("data-table-toolbar", "export");
 		expect(screen.getByText("已选 3 项")).toBeInTheDocument();
 	});
 

@@ -31,18 +31,11 @@ function UtilityIconButton({
 	);
 }
 
-export function HeaderUtilityBar({
-	onOpenCommand,
-	onOpenCopilot,
-}: HeaderUtilityBarProps) {
+export function HeaderUtilityBar({ onOpenCommand, onOpenCopilot }: HeaderUtilityBarProps) {
 	return (
 		<div className="flex items-center gap-[var(--spacing-2)]" data-slot="header-utility-bar">
 			<GlobalCommandButton onOpenCommand={onOpenCommand} />
-			<UtilityIconButton
-				aria-label="打开 Copilot"
-				utility="copilot"
-				onClick={onOpenCopilot}
-			>
+			<UtilityIconButton aria-label="打开 Copilot" utility="copilot" onClick={onOpenCopilot}>
 				<svg width={16} height={16} viewBox="0 0 20 20" fill="none" aria-hidden="true">
 					<path
 						d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"
@@ -61,12 +54,7 @@ export function HeaderUtilityBar({
 						strokeLinecap="round"
 						strokeLinejoin="round"
 					/>
-					<path
-						d="M8 16a2 2 0 004 0"
-						stroke="currentColor"
-						strokeWidth={1.5}
-						strokeLinecap="round"
-					/>
+					<path d="M8 16a2 2 0 004 0" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
 				</svg>
 				<span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--color-red-400)]" />
 			</UtilityIconButton>
