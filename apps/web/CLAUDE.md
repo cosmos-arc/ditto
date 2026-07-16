@@ -48,6 +48,17 @@
 
 ## 📋 项目规范
 
+### 设计系统描述
+
+`DESIGN.md` 是 Ditto 设计系统的 **AI 可读入口**。所有 AI agent 在参与 Ditto 的设计或编码工作前，应先阅读此文件以理解：
+- 调色板体系（OKLCH + 域签名色）
+- 排版系统（4 角色字体）
+- 间距/圆角/阴影规范
+- 组件 token 映射
+- 设计哲学和禁止事项
+
+**注意**：`DESIGN.md` 是描述层，不是 token 的 SSOT。token 的唯一真理源仍是 `src/styles/design-tokens/`。
+
 ### 代码风格 — TypeScript strict + Biome
 - **语言**：中文回复/文档，UTF-8 编码
 - **TypeScript**：详见 [core.md](.claude/rules/core.md)
@@ -117,7 +128,7 @@ bunx biome check --write . # lint + format 自动修复
 |---------|-----------|
 | `any` 类型 | 使用 `unknown` + type guard |
 | `@ts-ignore` / `@ts-expect-error` | 修正类型（详见 no-any-ignore.md） |
-| inline styles | 使用 Tailwind CSS |
+| inline styles | 使用 Tailwind CSS / CSS class（详见 no-inline-style.md） |
 | `@apply`（非 globals.css/shadcn） | 使用 utility classes |
 | 直接提交 main | 必须通过 PR |
 | 绕过 biome/tsc/vitest | 必须通过检测 |
@@ -198,7 +209,20 @@ bun run check    # lint + type + test
 - CI/CD 配置修改
 - 修改架构边界
 - 修改环境配置文件
-- Design Token 变更（需与架构文档同步）
+- Design Token 新增档位（字号/间距等需先在 prototype 中定义，详见 [design-tokens.md](.claude/rules/design-tokens.md)）
+
+### Design Token 变更规则
+
+> Token 值的**唯一修改入口**：`src/styles/design-tokens/tokens-*.css`。修改后 Prototype 和 React 同时生效。
+
+| 操作 | 需要审批？ | 说明 |
+|------|:---:|------|
+| 修改已有 token 值（如 `--brand-500` 颜色） | ❌ | 直接改 design-tokens/ |
+| 新增 token 变量 | ❌ | 在 design-tokens/ 中新增 `:root` 变量 |
+| 新增 @theme inline 映射 | ❌ | 在 globals.css 中新增映射行 |
+| 新增字号/间距档位 | ⚠️ | 需同步更新 design-tokens.md 映射表 |
+| 修改 token 文件架构（增删文件） | ✅ | 涉及架构变更 |
+| 修改 @theme inline → :root 引用关系 | ✅ | 涉及 Tailwind v4 内部机制 |
 
 ### 🚫 Never do（硬性禁止）
 - **使用 `any` 类型**（必须用 `unknown` + type guard）
@@ -226,9 +250,13 @@ ditto-app/
 │   ├── components/ui/  # 共享 UI 组件（shadcn/ui）
 │   ├── lib/            # 工具函数 + API 层
 │   ├── styles/         # Design Tokens + 全局样式
+│   │   ├── design-tokens/  # ← 唯一真理源（Prototype + React 共享）
+│   │   ├── themes/         # 主题覆盖（dark/light/market-intl）
+│   │   ├── globals.css     # @import 共享 token + @theme inline 映射
+│   │   └── fonts.css       # 字体声明
 │   └── routes/         # 路由定义
-├── public/             # 静态资源
-└── docs/               # 文档
+├── docs/               # 文档 + Prototype
+└── public/             # 静态资源
 ```
 
 ### 工具链

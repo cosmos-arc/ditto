@@ -1,0 +1,79 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Density Layer
+ * Layer 8: Three density presets
+ * Default: compact
+ * ───────────────────────────────────────────── */
+
+:root {
+  /* ── Layout density ── */
+  --density-panel-padding:     var(--space-12);
+  --density-section-gap:       var(--space-12);
+  --density-gutter:            var(--space-16);
+  --density-strip-height:      2.25rem;
+  --density-toolbar-height:    2.25rem;
+
+  /* ── Table density ── */
+  --density-row-height:        2.25rem;
+  --density-cell-padding-x:    var(--space-12);
+  --density-cell-padding-y:    var(--space-6);
+  --density-header-height:     2rem;
+
+  /* ── Input / Action density ── */
+  --density-input-height:      2rem;
+  --density-action-height:     2rem;
+
+  /* ── Chart density ── */
+  --density-chart-header:      2rem;
+  --density-chart-padding:     var(--space-12);
+
+  /* ── Font delta ── */
+  --density-font-delta:        0;
+}
+
+/* ── Comfortable preset ── */
+[data-density="comfortable"] {
+  --density-panel-padding:     var(--space-16);
+  --density-section-gap:       var(--space-16);
+  --density-strip-height:      2.5rem;
+  --density-row-height:        2.625rem;     /* 42px per design decision */
+  --density-cell-padding-x:    var(--space-16);
+  --density-cell-padding-y:    var(--space-8);
+  --density-header-height:     2.25rem;
+  --density-input-height:      2.25rem;
+  --density-action-height:     2.25rem;
+  --density-chart-header:      2.25rem;
+  --density-chart-padding:     var(--space-16);
+  --density-font-delta:        0;
+}
+
+/* ── Compact preset (default) ── */
+[data-density="compact"] {
+  --density-panel-padding:     var(--space-12);
+  --density-section-gap:       var(--space-12);
+  --density-strip-height:      2.25rem;
+  --density-row-height:        2.25rem;
+  --density-cell-padding-x:    var(--space-12);
+  --density-cell-padding-y:    var(--space-6);
+  --density-header-height:     2rem;
+  --density-input-height:      2rem;
+  --density-action-height:     2rem;
+  --density-chart-header:      2rem;
+  --density-chart-padding:     var(--space-12);
+  --density-font-delta:        0;
+}
+
+/* ── Dense preset ── */
+[data-density="dense"] {
+  --density-panel-padding:     var(--space-8);
+  --density-section-gap:       var(--space-8);
+  --density-strip-height:      2rem;
+  --density-row-height:        2.125rem;     /* 34px per design decision */
+  --density-cell-padding-x:    var(--space-8);
+  --density-cell-padding-y:    var(--space-4);
+  --density-header-height:     1.75rem;
+  --density-input-height:      1.75rem;
+  --density-action-height:     1.75rem;
+  --density-chart-header:      1.75rem;
+  --density-chart-padding:     var(--space-8);
+  --density-font-delta:        -1;
+}

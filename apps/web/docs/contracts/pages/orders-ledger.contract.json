@@ -1,0 +1,179 @@
+{
+  "id": "orders-ledger",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-04-28",
+  "route": "/trading/orders",
+  "pagePattern": "ledger-execution-console",
+  "shellFamily": "ops-console",
+  "prototypeRef": "docs/designs/specs/prototypes/page-orders-ledger.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/trading",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "verified",
+    "reactTestRefs": [
+      "src/features/trading/components/orders-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "OrdersPage"
+    ]
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "health",
+      "required": true,
+      "prototypeSelector": ".ops-health",
+      "reactSelector": "[data-slot='health']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".ops-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "detail",
+      "required": true,
+      "prototypeSelector": ".ops-detail",
+      "reactSelector": "[data-slot='detail']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "selected-row",
+      "order-active"
+    ]
+  },
+  "overlays": [
+    {
+      "id": "orders-ledger.cancel-confirm",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-cancel-confirm",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "orders-ledger.retry-submit",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-retry-submit",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "orders.order-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "select-order"
+      },
+      "prototypeSelector": "#overlay-order-detail",
+      "reactComponent": "OrderDetailPanel",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "orders.batch-cancel",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "health",
+        "action": "batch-cancel"
+      },
+      "prototypeSelector": "#overlay-batch-cancel",
+      "reactComponent": "BatchCancelDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ],
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "health": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1110,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "detail": {
+        "width": 360,
+        "height": 720,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  }
+}

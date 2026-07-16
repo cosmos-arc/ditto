@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-strategies-detail
+  Edition: v1
+  Generated: 2026-04-12
+
+  Tabs: 5 (radio tab system)
+  - strat-overview (概览) [covered]
+  - strat-config (配置) [covered]
+  - strat-backtests (回测历史) [covered]
+  - strat-signals (信号) [covered]
+  - strat-versions (版本) [covered]
+
+  Overlays: 5
+  - overlay-delete-strategy (Modal: 删除策略) [covered]
+  - overlay-submit-backtest (Sheet: 提交回测) [covered]
+  - overlay-copy-strategy (Modal: 复制策略) [covered]
+  - overlay-version-rollback (Modal: 版本回滚) [covered]
+  - overlay-edit-strategy (跳转: 编辑策略) [covered]
+
+  State Variants: 12 components × multi-state
+  - strategy-header: default[covered] loading[covered] failed[covered] stale[covered]
+  - meta-strip: default[covered] loading[covered] stale[covered]
+  - kpi-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - status-summary: default[covered] loading[covered] stale[covered]
+  - trend-sparkline: default[covered] loading[covered] failed[covered]
+  - backtest-cards: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - compare-view: default[covered] loading[covered] failed[covered] stale[covered]
+  - factor-list: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - weight-chart: default[covered] loading[covered] failed[covered] stale[covered]
+  - signal-stats: default[covered] loading[covered] failed[covered] stale[covered]
+  - signal-list: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - version-timeline: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动量因子增强策略 v3.2 — Ditto</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> component -> data-viz -> style) -->
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ══════════════════════════════════════════════
+     * Object Hub Shell — Strategy Detail Page
+     * ══════════════════════════════════════════════ */
+
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    .btn:focus-visible,
+    .hub-tab:focus-visible,
+    .header-action-btn:focus-visible,
+    .meta-chip:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    .object-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .object-identity {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .object-name-row {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-8);
+    }
+
+    .object-name {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .object-code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+
+    .object-answer-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .object-answer-row strong {
+      font-family: var(--font-family-numeric);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .object-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      white-space: nowrap;
+    }
+
+    .object-status.active {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+
+    .object-status-dot {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .object-status.active .object-status-dot {
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .header-ctas {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      flex-shrink: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: var(--btn-height);
+      padding: 0 var(--btn-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size);
+      font-weight: var(--font-weight-medium);
+      border: 1px solid var(--border-default);
+      border-radius: var(--btn-radius);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .btn.btn-primary {
+      background: var(--brand-accent);
+      border-color: var(--brand-accent);
+      color: var(--text-inverse);
+    }
+    .btn.btn-primary:hover {
+      background: var(--brand-accent-hover);
+      border-color: var(--brand-accent-hover);
+    }
+    .btn.btn-danger {
+      color: var(--market-down-fg);
+      border-color: color-mix(in oklch, var(--market-down-fg) 30%, var(--border-default));
+    }
+    .btn.btn-danger:hover {
+      background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);
+      border-color: var(--market-down-fg);
+    }
+
+    .btn.btn-icon-danger {
+      width: var(--btn-height);
+      min-width: var(--btn-height);
+      padding: 0;
+      justify-content: center;
+      color: var(--market-down-fg);
+      border-color: color-mix(in oklch, var(--market-down-fg) 30%, var(--border-default));
+    }
+
+    .btn.btn-icon-danger:hover {
+      background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);
+      border-color: var(--market-down-fg);
+    }
+
+    .btn svg {
+      width: var(--btn-icon-size);
+      height: var(--btn-icon-size);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Meta Strip
+     * ══════════════════════════════════════════════ */
+    .hub-meta {
+      grid-area: meta;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-8);
+      height: var(--density-strip-height);
+      overflow: hidden;
+    }
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      padding: 0 var(--space-8);
+      white-space: nowrap;
+      cursor: default;
+      border-radius: var(--radius-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .meta-chip:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .meta-chip-label {
+      color: var(--text-tertiary);
+    }
+    .meta-chip-value {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+    .meta-chip-value.numeric {
+      font-family: var(--font-family-numeric);
+    }
+
+    .meta-separator {
+      width: 1px;
+      height: var(--meta-sep-height);
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+    .meta-tag.brand {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Band
+     * ══════════════════════════════════════════════ */
+    .hub-tabs {
+      grid-area: tabs;
+      background: var(--surface-app);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: 0;
+      position: relative;
+    }
+    .hub-tabs::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: var(--overlay-2);
+      pointer-events: none;
+    }
+
+    .hub-tab {
+      font-size: var(--tab-font-size);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--tab-underline-padding-x) var(--tab-pill-padding-x);
+      cursor: pointer;
+      border-bottom: var(--tab-indicator-width) solid transparent;
+      border-radius: var(--tab-pill-radius) var(--tab-pill-radius) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-4);
+      position: relative;
+      user-select: none;
+    }
+    .hub-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .hub-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .hub-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .hub-tab:nth-child(1) { animation-delay: 30ms; }
+    .hub-tab:nth-child(2) { animation-delay: 60ms; }
+    .hub-tab:nth-child(3) { animation-delay: 90ms; }
+    .hub-tab:nth-child(4) { animation-delay: 120ms; }
+    .hub-tab:nth-child(5) { animation-delay: 150ms; }
+
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Main Content Area
+     * ══════════════════════════════════════════════ */
+    .hub-main {
+      grid-area: main;
+      display: grid;
+      grid-template-columns: 1fr var(--shell-detail-width);
+      gap: var(--rhythm-breath-gap);
+      padding: var(--density-gutter);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .hub-object-view {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── KPI Strip ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-12);
+      flex-shrink: 0;
+    }
+
+    .metric-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--space-8) var(--space-10);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--brand-accent);
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card:hover {
+      border-color: var(--border-default);
+      background: var(--surface-panel-elevated);
+      box-shadow: 0 1px 4px color-mix(in oklch, var(--text-primary) 8%, transparent);
+    }
+    .metric-card:hover::before { opacity: 0.6; }
+
+    .metric-card::after { display: none; }
+
+    .metric-label {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+    .metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-change {
+      display: inline-flex;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-3);
+      align-self: flex-start;
+      gap: var(--space-4);
+    }
+    .metric-change-time {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+    }
+    .metric-change.up {
+      color: var(--market-up-fg);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .metric-change.down {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow: auto;
+      padding: var(--space-10) var(--space-12);
+    }
+    .data-table tr:hover td {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .data-table .numeric {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chart-axis-label {
+      fill: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+    }
+
+    /* ── Status Badge ── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-3);
+      white-space: nowrap;
+    }
+    .status-badge.success {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+    .status-badge.warning {
+      color: var(--system-degraded-fg);
+      background: var(--system-degraded-bg);
+    }
+    .status-badge.error {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);
+    }
+    .status-badge.neutral {
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Sidebar ── */
+    .hub-sidebar {
+      border-left: 1px solid var(--border-subtle);
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 18%, var(--border-subtle));
+      background: color-mix(in oklch, var(--surface-panel-base) 97%, var(--brand-accent));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+      position: relative;
+    }
+    .hub-sidebar > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .sidebar-section {
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-10) var(--space-12);
+    }
+    .sidebar-section:last-child {
+      border-bottom: none;
+      flex: 1;
+    }
+
+    .sidebar-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Tab Panels ── */
+    .tab-group {
+      display: contents;
+    }
+
+    .tab-panels {
+      display: contents;
+    }
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .tab-panel > .hub-main {
+      flex: 1;
+    }
+
+    @keyframes tab-panel-enter {
+      from { opacity: 0; transform: translateY(3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .tab-group:has(#strat-overview:checked) [data-panel="strat-overview"],
+    .tab-group:has(#strat-config:checked) [data-panel="strat-config"],
+    .tab-group:has(#strat-backtests:checked) [data-panel="strat-backtests"],
+    .tab-group:has(#strat-signals:checked) [data-panel="strat-signals"],
+    .tab-group:has(#strat-versions:checked) [data-panel="strat-versions"] {
+      display: flex;
+      animation: tab-panel-enter 180ms var(--motion-easing-emphasis) both;
+    }
+
+    /* Tab active label */
+    .tab-group:has(#strat-overview:checked) [for="strat-overview"],
+    .tab-group:has(#strat-config:checked) [for="strat-config"],
+    .tab-group:has(#strat-backtests:checked) [for="strat-backtests"],
+    .tab-group:has(#strat-signals:checked) [for="strat-signals"],
+    .tab-group:has(#strat-versions:checked) [for="strat-versions"] {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Bottom Area
+     * ══════════════════════════════════════════════ */
+    .hub-bottom {
+      grid-area: bottom;
+      background: var(--surface-strip);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-12);
+      height: var(--density-strip-height);
+      overflow: hidden;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .bottom-item {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .bottom-item-label {
+      color: var(--text-tertiary);
+    }
+    .bottom-item-value {
+      font-weight: var(--font-weight-medium);
+      font-family: var(--font-family-numeric);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Strategy-specific: Compare View (inline in backtests tab)
+     * ══════════════════════════════════════════════ */
+    .compare-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+      background: var(--surface-panel-elevated);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .compare-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .compare-chip:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .compare-chip.selected {
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+    }
+
+    .compare-metric-row {
+      display: grid;
+      grid-template-columns: 120px repeat(3, 1fr) 80px;
+      gap: 0;
+      font-size: var(--font-size-12);
+    }
+    .compare-metric-row.header {
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-medium);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .compare-metric-cell {
+      padding: var(--space-6) var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      color: var(--text-secondary);
+    }
+    .compare-metric-cell.best {
+      color: var(--market-up-fg);
+      font-weight: var(--font-weight-semibold);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .compare-best-dot {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--market-up-fg);
+      margin-left: var(--space-4);
+      vertical-align: middle;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Strategy-specific: Version Timeline
+     * ══════════════════════════════════════════════ */
+    .version-timeline {
+      position: relative;
+      padding-left: var(--space-20);
+    }
+    .version-timeline::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--border-subtle) 0px,
+        var(--border-subtle) 4px,
+        transparent 4px,
+        transparent 8px
+      );
+    }
+    .version-item {
+      position: relative;
+      padding-bottom: var(--space-12);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .version-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .version-item::before {
+      content: '';
+      position: absolute;
+      left: calc(-1 * var(--space-16) + 2px);
+      top: 8px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      background: var(--surface-app);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .version-item.current::before {
+      width: 11px;
+      height: 11px;
+      left: calc(-1 * var(--space-16) + 1px);
+      top: 7px;
+      border-color: var(--brand-accent);
+      background: var(--brand-accent);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 40%, transparent);
+    }
+    .version-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .version-meta {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-top: var(--space-2);
+    }
+    .version-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      margin-top: var(--space-4);
+      padding: var(--space-6) var(--space-8);
+      background: var(--interaction-hover-subtle-bg);
+      border-radius: var(--radius-3);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-delete-strategy:checked)
+      [data-overlay="overlay-delete-strategy"] { display: flex; }
+    :root:has(#overlay-submit-backtest:checked)
+      [data-overlay="overlay-submit-backtest"] { display: flex; }
+    :root:has(#overlay-copy-strategy:checked)
+      [data-overlay="overlay-copy-strategy"] { display: flex; }
+    :root:has(#overlay-version-rollback:checked)
+      [data-overlay="overlay-version-rollback"] { display: flex; }
+
+    /* ══════════════════════════════════════════════
+     * Chart placeholder (SVG sparkline)
+     * ══════════════════════════════════════════════ */
+    .sparkline-placeholder {
+      width: 80px;
+      height: 28px;
+      opacity: 0.5;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card:hover .sparkline-placeholder {
+      opacity: 0.8;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Strategy-specific: Weight bar
+     * ══════════════════════════════════════════════ */
+    .weight-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--brand-accent);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .weight-bar-track {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--interaction-hover-subtle-bg);
+      width: 100%;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Nav chart (mini area)
+     * ══════════════════════════════════════════════ */
+    .nav-chart {
+      width: 100%;
+      height: 48px;
+      opacity: 0.7;
+    }
+
+    /* Inline style cleanup */
+    .sd-panel-merge { margin-top: var(--rhythm-merge-gap); flex: 0 0 auto; }
+    .sd-panel-body-flex { display: flex; gap: var(--space-12); padding: var(--space-8) var(--space-12); }
+    .sd-flex-center-gap4-text12 { display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12); }
+    .sd-flex-between-center { display: flex; align-items: center; justify-content: space-between; }
+    .sd-flex-col-gap6 { display: flex; flex-direction: column; gap: var(--space-6); }
+    .sd-flex-col-gap10 { display: flex; flex-direction: column; gap: var(--space-10); }
+    .sd-flex-col-gap4 { display: flex; flex-direction: column; gap: var(--space-4); }
+    .sd-flex-center-gap8 { display: flex; align-items: center; gap: var(--space-8); }
+    .sd-flex-baseline-gap4 { display: flex; align-items: baseline; gap: var(--space-4); }
+    .sd-flex-center-justify { display: flex; align-items: center; justify-content: center; }
+    .sd-flex-gap12-shrink0 { display: flex; gap: var(--space-12); flex-shrink: 0; }
+    .sd-flex-gap6-flex1 { display: flex; gap: var(--space-6); flex: 1; }
+    .sd-label-tertiary-mb4 { font-size: var(--font-size-12); color: var(--text-tertiary); margin-bottom: var(--space-4); }
+    .sd-label-secondary-mb4 { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-4); }
+    .sd-text12-secondary-col-gap6 { font-size: var(--font-size-12); color: var(--text-secondary); display: flex; flex-direction: column; gap: var(--space-6); }
+    .sd-label-secondary-w80 { font-size: var(--font-size-12); color: var(--text-secondary); width: 80px; }
+    .sd-numeric-tertiary-w30-right { font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-tertiary); width: 30px; text-align: right; }
+    .sd-numeric-value-lg { font-family: var(--font-family-numeric); font-size: var(--font-size-16); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+    .sd-date-input { font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary); padding: var(--space-4) var(--space-8); background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-3); }
+    .sd-weight-medium-primary { font-weight: var(--font-weight-medium); color: var(--text-primary); }
+    .sd-text12-tertiary-center-pad8 { font-size: var(--font-size-12); color: var(--text-tertiary); text-align: center; padding: var(--space-8); }
+    .sd-text12-secondary-center { font-size: var(--font-size-12); color: var(--text-secondary); text-align: center; }
+    .sd-text12-pad2-8 { font-size: var(--font-size-12); padding: var(--space-2) var(--space-8); }
+    .sd-text10-tertiary-mb2 { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+    .sd-text12-tertiary-mt4 { font-size: var(--font-size-12); color: var(--text-tertiary); margin-top: var(--space-4); }
+    .sd-text12-secondary-mb8 { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8); }
+    .sd-text10-tertiary { font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .sd-text12-tertiary { font-size: var(--font-size-12); color: var(--text-tertiary); }
+    .sd-text12-secondary { font-size: var(--font-size-12); color: var(--text-secondary); }
+    .sd-tertiary-text10 { color: var(--text-tertiary); font-size: var(--font-size-10); }
+    .sd-color-tertiary { color: var(--text-tertiary); }
+    .sd-color-primary { color: var(--text-primary); }
+    .sd-color-secondary { color: var(--text-secondary); }
+    .sd-color-up { color: var(--market-up-fg); }
+    .sd-color-down { color: var(--market-down-fg); }
+    .sd-color-healthy { color: var(--system-healthy-fg); }
+    .sd-color-degraded { color: var(--system-degraded-fg); }
+    .sd-stat-card { flex: 1; background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--space-10) var(--space-12); display: flex; align-items: center; gap: var(--space-8); transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard); cursor: default; }
+    .sd-stat-card:hover { border-color: var(--border-default); background: var(--surface-panel-elevated); }
+    .sd-divider-v { width: 1px; background: var(--border-subtle); }
+    .sd-font-numeric { font-family: var(--font-family-numeric); }
+    .sd-text10 { font-size: var(--font-size-10); }
+    .sd-shrink0 { flex: 0 0 auto; }
+    .sd-flex1 { flex: 1; }
+    .sd-flex1-minh0 { flex: 1; min-height: 0; }
+    .sd-flex1-merge { flex: 1; margin-top: var(--rhythm-merge-gap); }
+    .sd-justify-between { justify-content: space-between; }
+    .sd-overflow-auto { overflow: auto; }
+    .sd-overflow-auto-flex1 { overflow: auto; flex: 1; }
+    .sd-w-full-opacity80 { width: 100%; opacity: 0.8; }
+    .sd-w-full-justify-center { width: 100%; justify-content: center; }
+    .sd-w-full-mb10 { width: 100%; margin-bottom: var(--space-10); }
+    .sd-w-full { width: 100%; }
+    .sd-icon-sm { width: 14px; height: 14px; }
+    .sd-icon-lg-centered { width: 32px; height: 32px; margin: 0 auto var(--space-8); display: block; }
+    .sd-btn-sm { height: auto; padding: var(--space-2) var(--space-6); font-size: var(--font-size-12); }
+    .sd-mt8-text12-tertiary { margin-top: var(--space-8); font-size: var(--font-size-12); color: var(--text-tertiary); }
+    .sd-center-mb12 { text-align: center; margin-bottom: var(--space-12); }
+    .sd-flex-gap8-mb8 { display: flex; gap: var(--space-8); margin-bottom: var(--space-8); }
+    .sd-pad6-8-center { padding: var(--space-6) var(--space-8); text-align: center; }
+    .sd-pad6-8 { padding: var(--space-6) var(--space-8); }
+    .sd-btn-danger { background: var(--market-down-fg); color: white; }
+    .sd-btn-warning { background: var(--system-degraded-fg); color: white; }
+    .sd-alert-box { padding: var(--space-8); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); margin-bottom: var(--space-8); }
+    .sd-wbar-20-neutral { width: 20%; background: color-mix(in oklch, var(--brand-accent) 50%, transparent); }
+    .sd-wbar-15-neutral { width: 15%; background: color-mix(in oklch, var(--brand-accent) 35%, transparent); }
+    .sd-wbar-10-neutral { width: 10%; background: color-mix(in oklch, var(--brand-accent) 25%, transparent); }
+    .sd-w-35 { width: 35%; }
+    .sd-w-20 { width: 20%; }
+    .sd-w-15 { width: 15%; }
+    .sd-w-10 { width: 10%; }
+
+    .data-table th:nth-child(2),
+    .data-table td:nth-child(2) { min-width: 9rem; }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter -->
+  <svg class="noise-svg-source" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Strategy Detail · Compact · 多因子</div>
+
+  <div class="shell-hub object-shell">
+    <!-- ══════════════════════════════════════════════
+         Rail
+         ══════════════════════════════════════════════ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon active" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+
+    </nav>
+
+    <!-- ══════════════════════════════════════════════
+         Strategy Header
+         ══════════════════════════════════════════════ -->
+    <header class="shell-header shell-header--solid">
+      <div class="object-header" data-primary-answer-equivalent data-primary-weight="dominant" role="banner" aria-label="影响范围：动量因子增强策略对象状态">
+        <div class="object-identity">
+          <div class="object-name-row">
+            <h1 class="object-name">动量因子增强策略</h1>
+            <span class="object-code">多因子 · v3.2</span>
+            <span class="object-status active" role="status" aria-label="活跃">
+              <span class="object-status-dot"></span>
+              活跃
+            </span>
+          </div>
+          <div class="object-answer-row">
+            <span data-answer-judgment>策略可继续运行</span>
+            <span data-answer-metric>Sharpe <strong>1.82</strong></span>
+            <span data-answer-evidence>年化 <strong>+18.2%</strong></span>
+            <span data-answer-evidence>最大回撤 <strong>-12.3%</strong></span>
+          </div>
+          <div class="object-answer-row" data-object-consequence-preview aria-label="动作后果预览">
+            <span data-consequence-impact>编辑: 生成草稿</span>
+            <span data-consequence-impact>回测: 队列 +1 / 风控预检</span>
+            <span data-consequence-destination-action>复制 -> Clone lineage</span>
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="header-actions" role="toolbar" aria-label="页面操作">
+          <div class="meta-sep-line"></div>
+
+        </div>
+
+        <div class="header-ctas">
+          <button class="btn btn-primary" aria-label="编辑策略" data-answer-action>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 3.5l3 3L6 17H3v-3L13.5 3.5z"/></svg>
+            编辑策略
+          </button>
+          <label for="overlay-submit-backtest" class="btn cursor-pointer" aria-label="提交回测">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            提交回测
+          </button>
+          <label for="overlay-copy-strategy" class="btn cursor-pointer" aria-label="复制策略">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M14 6V4a1 1 0 00-1-1H4a1 1 0 00-1 1v9a1 1 0 001 1h2"/></svg>
+            复制
+          </button>
+          <label for="overlay-delete-strategy" class="btn btn-icon-danger cursor-pointer" aria-label="删除策略" title="删除策略">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h12M8 6V4a1 1 0 011-1h2a1 1 0 011 1v2m2 0v10a1 1 0 01-1 1H7a1 1 0 01-1-1V6h8z"/></svg>
+          </label>
+        </div>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════
+         Meta Strip
+         ══════════════════════════════════════════════ -->
+    <div class="hub-meta" role="complementary" aria-label="策略元信息">
+      <div class="meta-chip">
+        <span class="meta-chip-label">创建</span>
+        <span class="meta-chip-value numeric">2025-11-15</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">最后修改</span>
+        <span class="meta-chip-value numeric">2026-04-10</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">因子</span>
+        <span class="meta-chip-value numeric">5</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">Universe</span>
+        <span class="meta-chip-value numeric">沪深300</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">风控规则</span>
+        <span class="meta-chip-value numeric">3</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-tag">动量</span>
+        <span class="meta-tag">反转</span>
+        <span class="meta-tag brand">低波动</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         Tab Band
+         ══════════════════════════════════════════════ -->
+    <div class="tab-group" data-tab-group="strat">
+      <div class="hub-tabs" role="tablist" aria-label="策略详情导航" data-tabs="strat-tabs">
+        <input type="radio" name="strat" id="strat-overview" checked class="tab-radio sr-only">
+        <label for="strat-overview" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-overview" id="tab-strat-overview" aria-selected="true" aria-controls="panel-strat-overview">概览</label>
+        <input type="radio" name="strat" id="strat-config" class="tab-radio sr-only">
+        <label for="strat-config" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-config" id="tab-strat-config" aria-selected="false" aria-controls="panel-strat-config">配置</label>
+        <input type="radio" name="strat" id="strat-backtests" class="tab-radio sr-only">
+        <label for="strat-backtests" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-backtests" id="tab-strat-backtests" aria-selected="false" aria-controls="panel-strat-backtests">回测历史</label>
+        <input type="radio" name="strat" id="strat-signals" class="tab-radio sr-only">
+        <label for="strat-signals" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-signals" id="tab-strat-signals" aria-selected="false" aria-controls="panel-strat-signals">信号</label>
+        <input type="radio" name="strat" id="strat-versions" class="tab-radio sr-only">
+        <label for="strat-versions" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-versions" id="tab-strat-versions" aria-selected="false" aria-controls="panel-strat-versions">版本</label>
+      </div>
+
+      <div class="tab-panels" id="main-content">
+
+        <!-- ══════════════════════════════════════════════
+             Tab 1: Overview
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="strat-overview" data-tab-panel="strat-overview" id="panel-strat-overview" role="tabpanel" aria-labelledby="tab-strat-overview" aria-hidden="false">
+          <div class="hub-main" data-contract-slot="main" data-secondary-context>
+            <div class="hub-object-view">
+
+              <!-- KPI Strip: 5 metrics -->
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <span class="metric-label">Sharpe</span>
+                  <span class="metric-value">1.82</span>
+                  <span class="metric-change up">
+                    <svg aria-hidden="true" class="sparkline-placeholder" viewBox="0 0 80 28"><path d="M0 24 L12 20 L24 16 L36 14 L48 10 L60 6 L72 8 L80 4" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.6"/></svg>
+                  </span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">年化收益</span>
+                  <span class="metric-value">+18.2%</span>
+                  <span class="metric-change up">▲ +2.3% <span class="metric-change-time">30D</span></span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">最大回撤</span>
+                  <span class="metric-value">-12.3%</span>
+                  <span class="metric-change down">▼ -1.8% <span class="metric-change-time">30D</span></span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">胜率</span>
+                  <span class="metric-value">58.2%</span>
+                  <span class="metric-change up">▲ +1.5% <span class="metric-change-time">30D</span></span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">换手率</span>
+                  <span class="metric-value">3.2x</span>
+                  <span class="metric-change down">▼ +0.4x <span class="metric-change-time">30D</span></span>
+                </div>
+              </div>
+
+              <!-- Status Summary -->
+              <div class="panel sd-panel-merge">
+                <div class="panel-header">
+                  <span class="panel-title">策略状态</span>
+                </div>
+                <div class="panel-body sd-panel-body-flex">
+                  <div class="sd-flex1">
+                    <div class="sd-label-tertiary-mb4">活跃因子</div>
+                    <div class="sd-flex-baseline-gap4">
+                      <span class="sd-numeric-value-lg">5</span>
+                      <span class="sd-text12-tertiary">/ 5</span>
+                    </div>
+                  </div>
+                  <div class="sd-divider-v"></div>
+                  <div class="sd-flex1">
+                    <div class="sd-label-tertiary-mb4">Universe 规模</div>
+                    <div class="sd-flex-baseline-gap4">
+                      <span class="sd-numeric-value-lg">300</span>
+                      <span class="sd-text12-tertiary">标的</span>
+                    </div>
+                  </div>
+                  <div class="sd-divider-v"></div>
+                  <div class="sd-flex1">
+                    <div class="sd-label-tertiary-mb4">风控状态</div>
+                    <span class="status-badge success">✓ 3/3 通过</span>
+                  </div>
+                  <div class="sd-divider-v"></div>
+                  <div class="sd-flex1">
+                    <div class="sd-label-tertiary-mb4">最近回测</div>
+                    <span class="status-badge neutral sd-font-numeric">2026-04-08</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 30D Trend Chart -->
+              <div class="panel sd-flex1-minh0">
+                <div class="panel-header">
+                  <span class="panel-title">30日净值趋势</span>
+                  <span class="sd-text10-tertiary">最近回测 v3.2</span>
+                </div>
+                <div class="panel-body sd-flex-center-justify">
+                  <svg viewBox="0 0 420 120" class="sd-w-full-opacity80">
+                    <defs>
+                      <linearGradient id="nav-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.2"/>
+                        <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <!-- Y-axis labels -->
+                    <text x="0" y="14" class="chart-axis-label">1.08</text>
+                    <text x="0" y="64" class="chart-axis-label">1.04</text>
+                    <text x="0" y="94" class="chart-axis-label">1.02</text>
+                    <!-- Grid lines -->
+                    <line x1="28" y1="15" x2="400" y2="15" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <line x1="28" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <line x1="28" y1="90" x2="400" y2="90" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <!-- Area fill -->
+                    <path d="M28 90 L48 85 L68 80 L88 75 L108 70 L128 65 L148 60 L168 55 L188 50 L208 48 L228 42 L248 40 L268 35 L288 32 L308 30 L328 28 L348 25 L368 22 L388 20 L400 18 L400 120 L28 120 Z" fill="url(#nav-gradient)"/>
+                    <!-- Line -->
+                    <path d="M28 90 L48 85 L68 80 L88 75 L108 70 L128 65 L148 60 L168 55 L188 50 L208 48 L228 42 L248 40 L268 35 L288 32 L308 30 L328 28 L348 25 L368 22 L388 20 L400 18" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
+                    <!-- Peak dot -->
+                    <circle cx="400" cy="18" r="2.5" fill="var(--brand-accent)"/>
+                    <!-- Benchmark -->
+                    <path d="M28 85 L68 82 L108 80 L148 78 L188 76 L228 74 L268 72 L308 70 L348 68 L388 66 L400 65" fill="none" stroke="var(--text-tertiary)" stroke-width="1" stroke-dasharray="3"/>
+                    <!-- Benchmark label -->
+                    <text x="398" y="68" class="chart-axis-label" text-anchor="end">HS300</text>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Top 3 Backtests -->
+              <div class="panel sd-shrink0">
+                <div class="panel-header">
+                  <span class="panel-title">近期回测</span>
+                </div>
+                <div class="sd-overflow-auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>版本</th>
+                        <th>区间</th>
+                        <th class="numeric">Sharpe</th>
+                        <th class="numeric">年化收益</th>
+                        <th class="numeric">MDD</th>
+                        <th>状态</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="sd-weight-medium-primary">v3.2</td>
+                        <td class="numeric">2025-01 → 2026-03</td>
+                        <td class="numeric">1.82</td>
+                        <td class="numeric sd-color-up">+18.2%</td>
+                        <td class="numeric">-12.3%</td>
+                        <td><span class="status-badge success">完成</span></td>
+                      </tr>
+                      <tr>
+                        <td class="sd-weight-medium-primary">v3.1</td>
+                        <td class="numeric">2025-01 → 2026-03</td>
+                        <td class="numeric">1.65</td>
+                        <td class="numeric sd-color-up">+15.8%</td>
+                        <td class="numeric">-14.1%</td>
+                        <td><span class="status-badge success">完成</span></td>
+                      </tr>
+                      <tr>
+                        <td class="sd-weight-medium-primary">v3.0</td>
+                        <td class="numeric">2024-06 → 2025-12</td>
+                        <td class="numeric">1.58</td>
+                        <td class="numeric sd-color-up">+14.5%</td>
+                        <td class="numeric">-16.2%</td>
+                        <td><span class="status-badge success">完成</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Sidebar -->
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">关联 Universe</div>
+                <div class="sd-label-secondary-mb4">沪深300 指数成分股</div>
+                <div class="sd-text12-tertiary">300 标的 · 市值加权</div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">最近信号</div>
+                <div class="sd-flex-col-gap6">
+                  <div class="sd-flex-between-center">
+                    <div>
+                      <div class="sd-text12-secondary">贵州茅台</div>
+                      <div class="sd-text10-tertiary">买入 · <span class="sd-color-healthy">置信 82%</span> · 04-10 09:45</div>
+                    </div>
+                    <span class="status-badge success">已确认</span>
+                  </div>
+                  <div class="sd-flex-between-center">
+                    <div>
+                      <div class="sd-text12-secondary">宁德时代</div>
+                      <div class="sd-text10-tertiary">买入 · <span class="sd-color-secondary">置信 67%</span> · 04-10 14:32</div>
+                    </div>
+                    <span class="status-badge warning">待复核</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">风控状态</div>
+                <div class="sd-flex-col-gap4">
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">✓</span>
+                    <span class="sd-color-secondary">个股集中度</span>
+                    <span class="sd-font-numeric sd-color-tertiary">8.2%</span>
+                  </div>
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">✓</span>
+                    <span class="sd-color-secondary">行业集中度</span>
+                    <span class="sd-font-numeric sd-color-tertiary">22.5%</span>
+                  </div>
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">✓</span>
+                    <span class="sd-color-secondary">最大换手率</span>
+                    <span class="sd-font-numeric sd-color-tertiary">3.2x</span>
+                  </div>
+                </div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 2: Config
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="strat-config" data-tab-panel="strat-config" id="panel-strat-config" role="tabpanel" aria-labelledby="tab-strat-config" aria-hidden="true">
+          <div class="hub-main" data-contract-slot="main">
+            <div class="hub-object-view">
+
+              <!-- Factor List -->
+              <div class="panel sd-shrink0">
+                <div class="panel-header sd-justify-between">
+                  <span class="panel-title">因子配置</span>
+                  <button class="btn sd-btn-sm">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="sd-icon-sm"><path d="M13.5 3.5l3 3L6 17H3v-3L13.5 3.5z"/></svg>
+                    编辑
+                  </button>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>因子名称</th>
+                      <th>家族</th>
+                      <th class="numeric">权重</th>
+                      <th class="numeric">IC (20D)</th>
+                      <th>预处理</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="sd-weight-medium-primary">动量 (20D)</td>
+                      <td>动量</td>
+                      <td class="numeric">0.35</td>
+                      <td class="numeric sd-color-up">0.082</td>
+                      <td><span class="meta-tag">MAD去极值</span> <span class="meta-tag">行业中性</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-weight-medium-primary">反转 (5D)</td>
+                      <td>反转</td>
+                      <td class="numeric">0.20</td>
+                      <td class="numeric sd-color-up">0.054</td>
+                      <td><span class="meta-tag">分位截断</span> <span class="meta-tag">Z-Score</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-weight-medium-primary">波动率因子</td>
+                      <td>风险</td>
+                      <td class="numeric">0.20</td>
+                      <td class="numeric sd-color-up">0.041</td>
+                      <td><span class="meta-tag">MAD去极值</span> <span class="meta-tag">行业+市值中性</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-weight-medium-primary">换手率因子</td>
+                      <td>流动性</td>
+                      <td class="numeric">0.15</td>
+                      <td class="numeric sd-color-down">0.018</td>
+                      <td><span class="meta-tag">MAD去极值</span> <span class="meta-tag">行业中性</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-weight-medium-primary">质量因子</td>
+                      <td>基本面</td>
+                      <td class="numeric">0.10</td>
+                      <td class="numeric sd-color-up">0.032</td>
+                      <td><span class="meta-tag">Z-Score</span> <span class="meta-tag">行业中性</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Weight Distribution -->
+              <div class="panel sd-shrink0">
+                <div class="panel-header">
+                  <span class="panel-title">权重分配</span>
+                  <span class="sd-text10-tertiary">手动配置</span>
+                </div>
+                <div class="panel-body sd-flex-col-gap10">
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">动量</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-w-35"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">35%</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">反转</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-20-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">20%</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">波动率</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-20-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">20%</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">换手率</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-15-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">15%</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">质量</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-10-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">10%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Risk Rules -->
+              <div class="panel sd-shrink0">
+                <div class="panel-header">
+                  <span class="panel-title">风控规则</span>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>规则</th>
+                      <th>阈值</th>
+                      <th class="numeric">当前值</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="sd-color-primary">个股集中度</td>
+                      <td class="numeric">≤ 10%</td>
+                      <td class="numeric">8.2%</td>
+                      <td><span class="status-badge success">通过</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-color-primary">行业集中度</td>
+                      <td class="numeric">≤ 30%</td>
+                      <td class="numeric">22.5%</td>
+                      <td><span class="status-badge success">通过</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-color-primary">最大换手率</td>
+                      <td class="numeric">≤ 5x/月</td>
+                      <td class="numeric">3.2x</td>
+                      <td><span class="status-badge success">通过</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">Universe 详情</div>
+                <div class="sd-label-secondary-mb4">沪深300 指数</div>
+                <div class="sd-text12-tertiary">300 标的 · 市值加权</div>
+                <div class="sd-mt8-text12-tertiary">筛选条件: 剔除 ST/*ST, 上市满 60 天</div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">预处理管道</div>
+                <div class="sd-flex-col-gap6">
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">1</span>
+                    <span class="sd-color-secondary">去极值</span>
+                    <span class="sd-color-tertiary">·</span>
+                    <span class="sd-color-tertiary">MAD 法 (3×MAD)</span>
+                  </div>
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">2</span>
+                    <span class="sd-color-secondary">标准化</span>
+                    <span class="sd-color-tertiary">·</span>
+                    <span class="sd-color-tertiary">Z-Score</span>
+                  </div>
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge success sd-text10">3</span>
+                    <span class="sd-color-secondary">中性化</span>
+                    <span class="sd-color-tertiary">·</span>
+                    <span class="sd-color-tertiary">行业中性</span>
+                  </div>
+                  <div class="sd-flex-center-gap4-text12">
+                    <span class="status-badge neutral sd-text10">4</span>
+                    <span class="sd-color-tertiary">正交化</span>
+                    <span class="sd-color-tertiary">·</span>
+                    <span class="sd-color-tertiary">不处理</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 3: Backtests (with inline compare)
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="strat-backtests" data-tab-panel="strat-backtests" id="panel-strat-backtests" role="tabpanel" aria-labelledby="tab-strat-backtests" aria-hidden="true">
+          <div class="hub-main" data-contract-slot="main">
+            <div class="hub-object-view">
+
+              <!-- Compare selection bar -->
+              <div class="compare-bar">
+                <span class="sd-text12-tertiary">选择 2-5 个版本进行对比：</span>
+                <div class="sd-flex-gap6-flex1">
+                  <span class="compare-chip selected">v3.2</span>
+                  <span class="compare-chip selected">v3.1</span>
+                  <span class="compare-chip selected">v3.0</span>
+                  <span class="compare-chip">v2.5</span>
+                  <span class="compare-chip">v2.0</span>
+                </div>
+                <span class="sd-text10-tertiary">已选 3/5</span>
+              </div>
+
+              <!-- Compare Table -->
+              <div class="panel sd-flex1">
+                <div class="panel-header sd-justify-between">
+                  <span class="panel-title">版本对比</span>
+                  <span class="sd-text10-tertiary">勾选版本自动展开</span>
+                </div>
+                <div class="sd-overflow-auto-flex1">
+                  <div class="compare-metric-row header">
+                    <div class="sd-pad6-8">指标</div>
+                    <div class="sd-pad6-8-center">v3.2</div>
+                    <div class="sd-pad6-8-center">v3.1</div>
+                    <div class="sd-pad6-8-center">v3.0</div>
+                    <div class="sd-pad6-8-center">最优</div>
+                  </div>
+                  <div class="compare-metric-row">
+                    <div class="compare-metric-cell sd-color-tertiary">Sharpe</div>
+                    <div class="compare-metric-cell best">1.82 <span class="compare-best-dot"></span></div>
+                    <div class="compare-metric-cell">1.65</div>
+                    <div class="compare-metric-cell">1.58</div>
+                    <div class="compare-metric-cell sd-color-tertiary">v3.2</div>
+                  </div>
+                  <div class="compare-metric-row">
+                    <div class="compare-metric-cell sd-color-tertiary">年化收益</div>
+                    <div class="compare-metric-cell best">+18.2% <span class="compare-best-dot"></span></div>
+                    <div class="compare-metric-cell">+15.8%</div>
+                    <div class="compare-metric-cell">+14.5%</div>
+                    <div class="compare-metric-cell sd-color-tertiary">v3.2</div>
+                  </div>
+                  <div class="compare-metric-row">
+                    <div class="compare-metric-cell sd-color-tertiary">最大回撤</div>
+                    <div class="compare-metric-cell">-12.3%</div>
+                    <div class="compare-metric-cell">-14.1%</div>
+                    <div class="compare-metric-cell best">-11.5% <span class="compare-best-dot"></span></div>
+                    <div class="compare-metric-cell sd-color-tertiary">v3.0</div>
+                  </div>
+                  <div class="compare-metric-row">
+                    <div class="compare-metric-cell sd-color-tertiary">换手率</div>
+                    <div class="compare-metric-cell">3.2x</div>
+                    <div class="compare-metric-cell">2.8x</div>
+                    <div class="compare-metric-cell best">2.5x <span class="compare-best-dot"></span></div>
+                    <div class="compare-metric-cell sd-color-tertiary">v3.0</div>
+                  </div>
+                  <div class="compare-metric-row">
+                    <div class="compare-metric-cell sd-color-tertiary">胜率</div>
+                    <div class="compare-metric-cell best">58.2% <span class="compare-best-dot"></span></div>
+                    <div class="compare-metric-cell">56.1%</div>
+                    <div class="compare-metric-cell">54.8%</div>
+                    <div class="compare-metric-cell sd-color-tertiary">v3.2</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Full backtest list -->
+              <div class="panel sd-shrink0">
+                <div class="panel-header">
+                  <span class="panel-title">全部回测记录</span>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>名称</th>
+                      <th>版本</th>
+                      <th>区间</th>
+                      <th class="numeric">Sharpe</th>
+                      <th class="numeric">年化收益</th>
+                      <th class="numeric">MDD</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="sd-color-primary">动量增强优化</td>
+                      <td>v3.2</td>
+                      <td class="numeric">2025-01 → 2026-03</td>
+                      <td class="numeric">1.82</td>
+                      <td class="numeric sd-color-up">+18.2%</td>
+                      <td class="numeric">-12.3%</td>
+                      <td><span class="status-badge success">完成</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-color-primary">波动率因子调整</td>
+                      <td>v3.1</td>
+                      <td class="numeric">2025-01 → 2026-03</td>
+                      <td class="numeric">1.65</td>
+                      <td class="numeric sd-color-up">+15.8%</td>
+                      <td class="numeric">-14.1%</td>
+                      <td><span class="status-badge success">完成</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-color-primary">中性化升级</td>
+                      <td>v3.0</td>
+                      <td class="numeric">2024-06 → 2025-12</td>
+                      <td class="numeric">1.58</td>
+                      <td class="numeric sd-color-up">+14.5%</td>
+                      <td class="numeric">-16.2%</td>
+                      <td><span class="status-badge success">完成</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-color-primary">反转因子引入</td>
+                      <td>v2.5</td>
+                      <td class="numeric">2024-06 → 2025-06</td>
+                      <td class="numeric">1.42</td>
+                      <td class="numeric sd-color-up">+12.1%</td>
+                      <td class="numeric">-18.5%</td>
+                      <td><span class="status-badge success">完成</span></td>
+                    </tr>
+                    <tr>
+                      <td class="sd-color-primary">基线版本</td>
+                      <td>v2.0</td>
+                      <td class="numeric">2023-06 → 2024-12</td>
+                      <td class="numeric">1.28</td>
+                      <td class="numeric sd-color-up">+9.8%</td>
+                      <td class="numeric">-21.3%</td>
+                      <td><span class="status-badge success">完成</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">配置差异摘要</div>
+                <div class="sd-text12-secondary-col-gap6">
+                  <div>
+                    <div class="sd-tertiary-text10">v3.2 → v3.1</div>
+                    <div>波动率因子权重 15% → 20%</div>
+                  </div>
+                  <div>
+                    <div class="sd-tertiary-text10">v3.1 → v3.0</div>
+                    <div>新增行业+市值中性化</div>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">快速操作</div>
+                <div class="sd-flex-col-gap4">
+                  <label for="overlay-submit-backtest" class="btn cursor-pointer sd-w-full-justify-center">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="sd-icon-sm"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                    提交回测
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 4: Signals
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="strat-signals" data-tab-panel="strat-signals" id="panel-strat-signals" role="tabpanel" aria-labelledby="tab-strat-signals" aria-hidden="true">
+          <div class="hub-main" data-contract-slot="main">
+            <div class="hub-object-view">
+
+              <!-- Signal Stats -->
+              <div class="sd-flex-gap12-shrink0">
+                <div class="sd-stat-card">
+                  <span class="sd-text10-tertiary">待复核</span>
+                  <span class="sd-numeric-value-lg sd-color-degraded">3</span>
+                </div>
+                <div class="sd-stat-card">
+                  <span class="sd-text10-tertiary">已确认</span>
+                  <span class="sd-numeric-value-lg sd-color-healthy">12</span>
+                </div>
+                <div class="sd-stat-card">
+                  <span class="sd-text10-tertiary">已忽略</span>
+                  <span class="sd-numeric-value-lg sd-color-tertiary">5</span>
+                </div>
+                <div class="sd-stat-card">
+                  <span class="sd-text10-tertiary">已转订单</span>
+                  <span class="sd-numeric-value-lg sd-color-healthy">8</span>
+                </div>
+              </div>
+
+              <!-- Signal List -->
+              <div class="panel sd-flex1-merge">
+                <div class="panel-header sd-justify-between">
+                  <span class="panel-title">信号列表</span>
+                  <span class="sd-text10-tertiary">最近 10 条</span>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>时间</th>
+                      <th>标的</th>
+                      <th>方向</th>
+                      <th class="numeric">置信度</th>
+                      <th>状态</th>
+                      <th>来源</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="numeric">04-10 14:32</td>
+                      <td class="sd-color-primary">宁德时代</td>
+                      <td><span class="sd-color-up">● 买入</span></td>
+                      <td class="numeric">67%</td>
+                      <td><span class="status-badge warning">待复核</span></td>
+                      <td class="sd-color-tertiary">策略</td>
+                    </tr>
+                    <tr>
+                      <td class="numeric">04-10 09:45</td>
+                      <td class="sd-color-primary">比亚迪</td>
+                      <td><span class="sd-color-up">● 买入</span></td>
+                      <td class="numeric">82%</td>
+                      <td><span class="status-badge success">已确认</span></td>
+                      <td class="sd-color-tertiary">策略</td>
+                    </tr>
+                    <tr>
+                      <td class="numeric">04-09 15:20</td>
+                      <td class="sd-color-primary">招商银行</td>
+                      <td><span class="sd-color-down">● 卖出</span></td>
+                      <td class="numeric">45%</td>
+                      <td><span class="status-badge neutral">已忽略</span></td>
+                      <td class="sd-color-tertiary">策略</td>
+                    </tr>
+                    <tr>
+                      <td class="numeric">04-09 10:10</td>
+                      <td class="sd-color-primary">中国平安</td>
+                      <td><span class="sd-color-up">● 买入</span></td>
+                      <td class="numeric">91%</td>
+                      <td><span class="status-badge success">已转订单</span></td>
+                      <td class="sd-color-tertiary">策略</td>
+                    </tr>
+                    <tr>
+                      <td class="numeric">04-08 14:55</td>
+                      <td class="sd-color-primary">恒瑞医药</td>
+                      <td><span class="sd-color-up">● 买入</span></td>
+                      <td class="numeric">73%</td>
+                      <td><span class="status-badge warning">待复核</span></td>
+                      <td class="sd-color-tertiary">策略</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">置信度分布</div>
+                <div class="sd-flex-col-gap6">
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">高 (≥80%)</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-w-35"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">5</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">中 (50-79%)</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-20-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">2</span>
+                  </div>
+                  <div class="sd-flex-center-gap8">
+                    <span class="sd-label-secondary-w80">低 (&lt;50%)</span>
+                    <div class="weight-bar-track sd-flex1"><div class="weight-bar sd-wbar-10-neutral"></div></div>
+                    <span class="sd-numeric-tertiary-w30-right">1</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 5: Versions
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="strat-versions" data-tab-panel="strat-versions" id="panel-strat-versions" role="tabpanel" aria-labelledby="tab-strat-versions" aria-hidden="true">
+          <div class="hub-main" data-contract-slot="main">
+            <div class="hub-object-view">
+
+              <!-- Version Timeline -->
+              <div class="panel sd-flex1">
+                <div class="panel-header sd-justify-between">
+                  <span class="panel-title">版本历史</span>
+                  <span class="sd-text10-tertiary">5 个版本</span>
+                </div>
+                <div class="panel-body">
+                  <div class="version-timeline">
+                    <div class="version-item current">
+                      <div class="version-label">v3.2 — 动量增强优化</div>
+                      <div class="version-meta">2026-04-10 · 陈 · 活跃版本</div>
+                      <div class="version-desc">波动率因子权重提升至 20%，加入换手率因子约束。回测 Sharpe 1.82。</div>
+                    </div>
+                    <div class="version-item">
+                      <div class="version-label">v3.1 — 波动率因子调整</div>
+                      <div class="version-meta">2026-03-22 · 陈</div>
+                      <div class="version-desc">引入波动率因子替代市值因子，调整中性化方式。</div>
+                    </div>
+                    <div class="version-item">
+                      <div class="version-label">v3.0 — 中性化升级</div>
+                      <div class="version-meta">2026-02-15 · 陈</div>
+                      <div class="version-desc">升级为行业+市值双重中性化，回测区间扩展。</div>
+                    </div>
+                    <div class="version-item">
+                      <div class="version-label">v2.5 — 反转因子引入</div>
+                      <div class="version-meta">2025-12-01 · 陈</div>
+                      <div class="version-desc">新增短期反转因子（5D），权重 20%。</div>
+                    </div>
+                    <div class="version-item">
+                      <div class="version-label">v2.0 — 基线版本</div>
+                      <div class="version-meta">2025-11-15 · 陈</div>
+                      <div class="version-desc">初始策略：纯动量因子 + 行业中性化。</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">版本对比</div>
+                <div class="sd-text12-secondary-col-gap6">
+                  <div>
+                    <div class="sd-tertiary-text10">v3.2 相较 v3.1</div>
+                    <div class="sd-flex-center-gap4-text12">
+                      <span class="sd-color-up">+5%</span>
+                      <span class="sd-color-tertiary">波动率权重</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="sd-tertiary-text10">v3.1 相较 v3.0</div>
+                    <div class="sd-flex-center-gap4-text12">
+                      <span class="sd-color-secondary">新增</span>
+                      <span class="sd-color-tertiary">行业+市值中性化</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="sd-tertiary-text10">v3.0 相较 v2.5</div>
+                    <div class="sd-flex-center-gap4-text12">
+                      <span class="sd-color-secondary">新增</span>
+                      <span class="sd-color-tertiary">反转因子 5D</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">操作</div>
+                <div class="sd-flex-col-gap4">
+                  <label for="overlay-version-rollback" class="btn cursor-pointer sd-w-full-justify-center">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="sd-icon-sm"><path d="M3 10h10m-5-5l5 5-5 5"/><path d="M13 3a5 5 0 014 4v6a5 5 0 01-4 4H7a5 5 0 01-4-4V7"/></svg>
+                    回滚到 v3.1
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-panels -->
+    </div><!-- /tab-group -->
+
+    <!-- ══════════════════════════════════════════════
+         Bottom Area
+         ══════════════════════════════════════════════ -->
+    <div class="hub-bottom">
+      <div class="bottom-item">
+        <span class="bottom-item-label">Universe</span>
+        <span class="bottom-item-value">沪深300</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="bottom-item">
+        <span class="bottom-item-label">最近信号</span>
+        <span class="bottom-item-value sd-color-up">宁德时代 · 买入</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="bottom-item">
+        <span class="bottom-item-label">风控</span>
+        <span class="bottom-item-value sd-color-healthy">✓ 3/3 通过</span>
+      </div>
+    </div>
+
+    <section class="danger-confirmation-summary" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete" aria-label="高风险操作确认">
+      <div class="overlay-header">
+        <span class="overlay-title"><span data-danger-marker aria-hidden="true">!</span> 删除策略复核</span>
+      </div>
+      <p data-risk-object>对象：动量因子增强策略 v3.2</p>
+      <div class="risk-confirmation-grid">
+        <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+          <div class="risk-confirmation-title">影响预览</div>
+          <p class="risk-confirmation-copy">删除后会停止新回测、保留历史回测和信号审计，不影响已成交订单。</p>
+        </div>
+        <div class="risk-confirmation-block" data-before-after>
+          <div class="risk-confirmation-title">操作前后</div>
+          <p class="risk-confirmation-copy">策略详情从可编辑状态移入删除记录，后续信号不会再引用该策略。</p>
+        </div>
+        <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+          <div class="risk-confirmation-title">对象清单</div>
+          <p class="risk-confirmation-copy">策略 v3.2、最近版本快照、关联回测、信号审计和删除原因。</p>
+        </div>
+        <div class="risk-confirmation-block" data-audit-record>
+          <div class="risk-confirmation-title">审计记录</div>
+          <p class="risk-confirmation-copy">记录操作人、策略 id、版本号、依赖清单、删除原因和确认时间。</p>
+        </div>
+        <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+          <div class="risk-confirmation-title">恢复路径</div>
+          <p class="risk-confirmation-copy">删除记录进入审计日志，可从最近版本克隆恢复；恢复后需重新校验发布。</p>
+        </div>
+      </div>
+      <div class="overlay-actions">
+        <button type="button" class="overlay-btn sd-btn-danger" data-confirm-control data-danger-action aria-label="确认删除策略">确认删除策略</button>
+        <button type="button" class="overlay-btn overlay-btn-secondary" data-cancel-control aria-label="取消并保留策略">取消，保留策略</button>
+      </div>
+    </section>
+
+  </div><!-- /shell-hub -->
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Zone 2: States Gallery
+       ══════════════════════════════════════════════ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+
+      <!-- Group: KPI Strip -->
+      <div class="gallery-group" data-component="kpi-strip">
+        <div class="gallery-group__label">KPI 指标条</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📊</div>
+                  <div class="state-empty-title">暂无回测数据</div>
+                  <div class="state-empty-desc">提交首次回测以查看 KPI</div>
+                  <button class="state-empty-cta">提交回测</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">KPI 加载失败</div>
+                  <div class="state-error-desc">回测数据获取失败，请稍后重试</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: Factor List -->
+      <div class="gallery-group" data-component="factor-list">
+        <div class="gallery-group__label">因子列表</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">因子列表 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">因子列表 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">🧩</div>
+                  <div class="state-empty-title">未配置因子</div>
+                  <div class="state-empty-desc">请在策略编辑器中添加因子</div>
+                  <button class="state-empty-cta">编辑策略</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">因子列表 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">加载失败</div>
+                  <div class="state-error-desc">因子配置获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: Backtest Cards -->
+      <div class="gallery-group" data-component="backtest-cards">
+        <div class="gallery-group__label">回测列表</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">回测列表 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">回测列表 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📈</div>
+                  <div class="state-empty-title">暂无回测记录</div>
+                  <div class="state-empty-desc">提交首次回测以查看历史</div>
+                  <button class="state-empty-cta">提交回测</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">回测列表 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">加载失败</div>
+                  <div class="state-error-desc">回测记录获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: Signal List -->
+      <div class="gallery-group" data-component="signal-list">
+        <div class="gallery-group__label">信号列表</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">信号列表 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">信号列表 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📡</div>
+                  <div class="state-empty-title">暂无信号产出</div>
+                  <div class="state-empty-desc">策略运行后信号将在此显示</div>
+                  <button class="state-empty-cta">查看全部信号</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">信号列表 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">加载失败</div>
+                  <div class="state-error-desc">信号数据获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: Version Timeline -->
+      <div class="gallery-group" data-component="version-timeline">
+        <div class="gallery-group__label">版本时间线</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">版本时间线 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">版本时间线 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📋</div>
+                  <div class="state-empty-title">暂无版本记录</div>
+                  <div class="state-empty-desc">策略创建后将在此显示版本历史</div>
+                  <button class="state-empty-cta">保存版本</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">版本时间线 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">加载失败</div>
+                  <div class="state-error-desc">版本历史获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Zone 3: Overlays Gallery
+       ══════════════════════════════════════════════ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层设计</div>
+        <div class="gallery-cards">
+
+          <!-- Overlay 1: Delete Strategy (Modal) -->
+          <div class="gallery-card" data-overlay-ref="overlay-delete-strategy">
+            <div class="gallery-card__label">删除策略 (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="删除策略">
+                <div class="overlay-header">
+                  <span class="overlay-title sd-color-down">⚠ 确认删除</span>
+                </div>
+                <div class="overlay-body">
+                  <div class="sd-center-mb12">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="var(--market-down-fg)" stroke-width="1.5" class="sd-icon-lg-centered"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM10 7v4m0 0v4"/></svg>
+                  </div>
+                  <p class="sd-text12-secondary-center">
+                    确认删除策略 <strong class="sd-color-primary">动量因子增强策略</strong> 及其所有版本和回测记录？<br>
+                    <span class="sd-color-tertiary">此操作不可撤销</span>
+                  </p>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn sd-btn-danger">确认删除</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 2: Submit Backtest (Sheet) -->
+          <div class="gallery-card" data-overlay-ref="overlay-submit-backtest">
+            <div class="gallery-card__label">提交回测 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="提交回测">
+                <div class="overlay-header">
+                  <span class="overlay-title">回测参数配置</span>
+                </div>
+                <div class="overlay-body">
+                  <h2>时间区间</h2>
+                  <div class="sd-flex-gap8-mb8">
+                    <div class="sd-flex1">
+                      <div class="sd-text10-tertiary-mb2">起始日期</div>
+                      <div class="sd-date-input">2025-01-02</div>
+                    </div>
+                    <div class="sd-flex1">
+                      <div class="sd-text10-tertiary-mb2">结束日期</div>
+                      <div class="sd-date-input">2026-04-10</div>
+                    </div>
+                  </div>
+                  <h2>基准与参数</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">基准指数</span>
+                    <span class="overlay-field-value">沪深300</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">初始资金</span>
+                    <span class="overlay-field-value numeric">¥10,000,000</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">调仓频率</span>
+                    <span class="overlay-field-value">月度</span>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">提交回测</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 3: Copy Strategy (Modal) -->
+          <div class="gallery-card" data-overlay-ref="overlay-copy-strategy">
+            <div class="gallery-card__label">复制策略 (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="复制策略">
+                <div class="overlay-header">
+                  <span class="overlay-title">复制策略</span>
+                </div>
+                <div class="overlay-body">
+                  <h2>新策略名称</h2>
+                  <input type="text" class="form-input sd-w-full-mb10" placeholder="动量因子增强策略 (副本)">
+                  <h2>描述</h2>
+                  <textarea placeholder="可选：描述此副本的用途..." class="form-textarea sd-w-full"></textarea>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">确认复制</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 4: Version Rollback (Modal) -->
+          <div class="gallery-card" data-overlay-ref="overlay-version-rollback">
+            <div class="gallery-card__label">版本回滚 (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="版本回滚">
+                <div class="overlay-header">
+                  <span class="overlay-title sd-color-degraded">⚠ 版本回滚</span>
+                </div>
+                <div class="overlay-body">
+                  <p class="sd-text12-secondary-mb8">
+                    确认回滚到版本 <strong class="sd-color-primary">v3.1</strong>？当前版本配置将被覆盖。
+                  </p>
+                  <div class="sd-alert-box">
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">v3.1 修改</span>
+                      <span class="overlay-field-value sd-color-tertiary">波动率因子权重 20% → 15%</span>
+                    </div>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn sd-btn-warning">确认回滚</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-delete-strategy" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-submit-backtest" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-copy-strategy" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-version-rollback" class="overlay-radio sr-only">
+
+  <!-- Scripts -->
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+</body>
+</html>

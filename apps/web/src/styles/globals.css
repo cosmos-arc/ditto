@@ -1,123 +1,746 @@
-/*
- * Ditto App — 全局样式入口
- *
- * Tailwind CSS v4 (CSS-first) + Ditto Design Token 体系。
- * 暗色优先，浅色一等公民。
- */
-
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "./tokens/primitives.css";
-@import "./tokens/semantic-core.css";
-@import "./tokens/semantic-market.css";
-@import "./tokens/semantic-risk.css";
-@import "./tokens/semantic-status.css";
-@import "./tokens/charts.css";
-@import "./tokens/grid.css";
-@import "./tokens/typography.css";
-@import "./tokens/motion.css";
 
-/* ── 暗色模式：class-based（.dark class on <html>） ── */
 @custom-variant dark (&:is(.dark *));
 
-/* ── @theme inline — shadcn/ui 桥接表 ── */
-/*
- * 保留 shadcn 原生 token 名，值指向 Ditto Semantic Token。
- * 组件继续使用 bg-background、text-foreground 等 shadcn 工具类。
- */
+/* ══════════════════════════════════════════════════════════
+ * 共享 Design Tokens（唯一真理源 — Single Source of Truth）
+ * 文件位置: src/styles/design-tokens/tokens-*.css
+ * Prototype 和 React 消费同一份 CSS 变量值
+ * ══════════════════════════════════════════════════════════ */
+@import "./design-tokens/tokens-base.css";
+@import "./design-tokens/tokens-semantic.css";
+@import "./design-tokens/tokens-atmosphere.css";
+@import "./design-tokens/tokens-shell.css";
+@import "./design-tokens/tokens-data-viz.css";
+@import "./design-tokens/tokens-component.css";
+@import "./design-tokens/tokens-interaction.css";
+@import "./design-tokens/tokens-domain.css";
+@import "./design-tokens/tokens-density.css";
+
+/* ══════════════════════════════════════════════════════════
+ * Tailwind v4 Utility 注册层
+ * 将 :root 共享 token 映射到 Tailwind namespace
+ * 使 bg-brand-500、text-sm、p-4 等 utility classes 可用
+ * ══════════════════════════════════════════════════════════ */
 @theme inline {
-	/* shadcn Core */
-	--color-background: var(--color-surface-app);
-	--color-foreground: var(--color-text-primary);
-	--color-card: var(--color-surface-panel);
-	--color-card-foreground: var(--color-text-primary);
-	--color-popover: var(--color-surface-elevated);
-	--color-popover-foreground: var(--color-text-primary);
-	--color-primary: var(--color-accent-primary);
-	--color-primary-foreground: var(--color-text-on-accent);
-	--color-secondary: var(--color-surface-hover);
-	--color-secondary-foreground: var(--color-text-primary);
-	--color-muted: var(--color-surface-hover);
-	--color-muted-foreground: var(--color-text-secondary);
-	--color-accent: var(--color-surface-selected);
-	--color-accent-foreground: var(--color-text-primary);
-	--color-destructive: var(--color-status-error-fg);
-	--color-destructive-foreground: var(--color-text-on-status-error);
-	--color-border: var(--color-border-default);
-	--color-input: var(--color-border-input);
-	--color-ring: var(--color-ring-focus);
+  /* ── 品牌色 ── */
+  --color-brand-50:  var(--brand-300);
+  --color-brand-200: var(--brand-400);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
 
-	/* shadcn Sidebar */
-	--color-sidebar: var(--color-surface-panel);
-	--color-sidebar-foreground: var(--color-text-primary);
-	--color-sidebar-primary: var(--color-accent-primary);
-	--color-sidebar-primary-foreground: var(--color-text-on-accent);
-	--color-sidebar-accent: var(--color-surface-selected);
-	--color-sidebar-accent-foreground: var(--color-text-primary);
-	--color-sidebar-border: var(--color-border-default);
-	--color-sidebar-ring: var(--color-ring-focus);
+  /* ── 中性色板 ── */
+  --color-neutral-0:   var(--neutral-0);
+  --color-neutral-25:  var(--neutral-25);
+  --color-neutral-50:  var(--neutral-50);
+  --color-neutral-75:  var(--neutral-75);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-150: var(--neutral-150);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-950: var(--neutral-950);
 
-	/* shadcn Chart (基础色板，映射到 Ditto 通用多曲线色板) */
-	--color-chart-1: var(--chart-series-1);
-	--color-chart-2: var(--chart-series-2);
-	--color-chart-3: var(--chart-series-3);
-	--color-chart-4: var(--chart-series-4);
-	--color-chart-5: var(--chart-series-5);
+  /* ── 功能色 ── */
+  --color-red-400:    var(--red-400);
+  --color-red-500:    var(--red-500);
+  --color-red-600:    var(--red-600);
+  --color-green-400:  var(--green-400);
+  --color-green-500:  var(--green-500);
+  --color-green-600:  var(--green-600);
+  --color-amber-400:  var(--amber-400);
+  --color-amber-500:  var(--amber-500);
+  --color-amber-600:  var(--amber-600);
+  --color-cyan-400:   var(--cyan-400);
+  --color-cyan-500:   var(--cyan-500);
+  --color-cyan-600:   var(--cyan-600);
+  --color-purple-400: var(--purple-400);
+  --color-purple-500: var(--purple-500);
+  --color-purple-600: var(--purple-600);
 
-	/* Ditto 语义色 — 注册为 Tailwind utility */
-	--color-market-up: var(--color-market-up-fg);
-	--color-market-down: var(--color-market-down-fg);
-	--color-market-flat: var(--color-market-flat-fg);
-	--color-risk-low: var(--color-risk-low-fg);
-	--color-risk-medium: var(--color-risk-medium-fg);
-	--color-risk-high: var(--color-risk-high-fg);
-	--color-risk-critical: var(--color-risk-critical-fg);
-	--color-status-success: var(--color-status-success-fg);
-	--color-status-warning: var(--color-status-warning-fg);
-	--color-status-error: var(--color-status-error-fg);
-	--color-status-pending: var(--color-status-pending-fg);
-	--color-signal-buy: var(--color-signal-buy-fg);
-	--color-signal-sell: var(--color-signal-sell-fg);
-	--color-signal-hold: var(--color-signal-hold-fg);
+  /* ── 表面层级 ── */
+  --color-surface-0:            var(--surface-app);
+  --color-surface-1:            var(--surface-panel-base);
+  --color-surface-2:            var(--surface-panel-elevated);
+  --color-surface-3:            var(--surface-overlay);
+  --color-surface-4:            var(--surface-modal);
+  --color-surface-5:            var(--surface-modal);
+  --color-surface-app:          var(--surface-app);
+  --color-surface-panel-base:   var(--surface-panel-base);
+  --color-surface-panel-elevated: var(--surface-panel-elevated);
+  --color-surface-strip:        var(--surface-strip);
+  --color-surface-overlay:      var(--surface-overlay);
+  --color-surface-modal:        var(--surface-modal);
+  --color-surface-frosted:      var(--surface-frosted);
+  --color-surface-muted:        var(--surface-muted);
+  --color-surface-elevated:     var(--surface-elevated);
 
-	/* Ditto Surface — 注册为 Tailwind utility */
-	--color-surface-app: var(--color-surface-app);
-	--color-surface-panel: var(--color-surface-panel);
-	--color-surface-elevated: var(--color-surface-elevated);
-	--color-surface-hover: var(--color-surface-hover);
-	--color-surface-selected: var(--color-surface-selected);
+  /* ── 文本层级 ── */
+  --color-foreground:            var(--text-primary);
+  --color-foreground-primary:    var(--text-primary);
+  --color-foreground-secondary:  var(--text-secondary);
+  --color-foreground-tertiary:   var(--text-tertiary);
+  --color-foreground-muted:      var(--text-quaternary);
+  --color-foreground-disabled:   var(--text-disabled);
 
-	/* Ditto Text — 注册为 Tailwind utility */
-	--color-text-primary: var(--color-text-primary);
-	--color-text-secondary: var(--color-text-secondary);
-	--color-text-muted: var(--color-text-muted);
+  /* ── 边框 ── */
+  --color-border:        var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-border-default:var(--border-default);
 
-	/* 字体 */
-	--font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-	--font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+  /* ── 品牌强调 ── */
+  --color-accent:       var(--brand-accent);
+  --color-accent-fg:    var(--brand-accent-fg);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-primary:var(--brand-accent);
 
-	/* 圆角 */
-	--radius-sm: calc(var(--radius, 0.375rem) - 2px);
-	--radius-md: var(--radius, 0.375rem);
-	--radius-lg: calc(var(--radius, 0.375rem) + 2px);
-	--radius-xl: calc(var(--radius, 0.375rem) + 6px);
+  /* ── 签名色 Brass ── */
+  --color-brass-300:    oklch(84% 0.04 74);
+  --color-brass-400:    var(--brand-signature-muted);
+  --color-brass-500:    var(--brand-signature-fg);
+  --color-signature-fg:     var(--brand-signature-fg);
+  --color-signature-muted:  var(--brand-signature-muted);
+  --color-signature-line:   var(--brand-signature-line);
+  --color-signature-subtle: var(--brand-signature-subtle);
+  --color-signature-glow:   oklch(from var(--brand-signature-fg) l c h / 0.60);
+
+  /* ── 代码 / 滚动条 / 分割线 ── */
+  --color-code-bg:           var(--code-bg);
+  --color-code-fg:           var(--code-text);
+  --color-scrollbar:         var(--scrollbar-thumb);
+  --color-scrollbar-hover:   var(--scrollbar-thumb-hover);
+  --color-divider:           var(--divider-default);
+
+  /* ── 遮罩 ── */
+  --opacity-overlay:       0.5;
+  --opacity-overlay-heavy: 0.75;
+  --opacity-hover:         0.08;
+  --opacity-active:        0.12;
+  --opacity-selected:      0.16;
+
+  /* ── 毛玻璃 ── */
+  --blur-frosted: 12px;
+
+  /* ── 市场域 ── */
+  --color-market-up:         var(--market-up-fg);
+  --color-market-up-fg:      var(--market-up-fg);
+  --color-market-up-bg:      var(--market-up-bg);
+  --color-market-down:       var(--market-down-fg);
+  --color-market-down-fg:    var(--market-down-fg);
+  --color-market-down-bg:    var(--market-down-bg);
+  --color-market-flat:       var(--neutral-500);
+  --color-market-flat-fg:    var(--neutral-500);
+  --color-market-limit-up:   var(--market-strong-fg);
+  --color-market-limit-down: var(--market-weak-fg);
+
+  /* ── 风控域 ── */
+  --color-risk-critical:    var(--risk-critical-fg);
+  --color-risk-critical-fg: var(--risk-critical-fg);
+  --color-risk-critical-bg: var(--risk-critical-bg);
+  --color-risk-high:        var(--risk-high-fg);
+  --color-risk-high-fg:     var(--risk-high-fg);
+  --color-risk-high-bg:     var(--risk-high-bg);
+  --color-risk-warning:     var(--risk-medium-fg);
+  --color-risk-moderate:    var(--risk-medium-fg);
+  --color-risk-normal:      var(--risk-low-fg);
+  --color-risk-info:        var(--neutral-500);
+
+  /* ── 执行域 ── */
+  --color-execution-filled:    var(--execution-filled-fg);
+  --color-execution-partial:   var(--execution-partial-fg);
+  --color-execution-pending:   var(--execution-pending-fg);
+  --color-execution-cancelled: var(--execution-cancelled-fg);
+  --color-execution-rejected:  var(--execution-rejected-fg);
+
+  /* ── AI Agent 域 ── */
+  --color-agent-running:  var(--agent-running-fg);
+  --color-agent-idle:     var(--agent-idle-fg);
+  --color-agent-error:    var(--agent-failed-fg);
+  --color-agent-success:  var(--execution-filled-fg);
+  --color-agent-thinking: var(--cyan-500);
+
+  /* ── 系统域 ── */
+  --color-system-healthy:     var(--system-healthy-fg);
+  --color-system-healthy-fg:  var(--system-healthy-fg);
+  --color-system-healthy-bg:  var(--system-healthy-bg);
+  --color-system-degraded:    var(--system-degraded-fg);
+  --color-system-degraded-fg: var(--system-degraded-fg);
+  --color-system-degraded-bg: var(--system-degraded-bg);
+  --color-system-down:        var(--system-down-fg);
+  --color-system-down-fg:     var(--system-down-fg);
+  --color-system-down-bg:     var(--system-down-bg);
+
+  /* ── 数据质量域 ── */
+  --color-quality-good:    var(--data-quality-fresh-fg);
+  --color-quality-delayed: var(--data-quality-delayed-fg);
+  --color-quality-stale:   var(--data-quality-missing-fg);
+
+  /* ── 信号域 ── */
+  --color-signal-buy:  var(--market-up-fg);
+  --color-signal-sell: var(--market-down-fg);
+  --color-signal-hold: var(--risk-medium-fg);
+
+  /* ── 数据可视化 ── */
+  --color-data-fresh:  oklch(0.920 0.004 253);
+  --color-data-recent: oklch(0.920 0.004 253 / 0.8);
+  --color-data-stale:  oklch(0.920 0.004 253 / 0.5);
+  --color-chart-1: oklch(0.623 0.127 252);
+  --color-chart-2: oklch(0.753 0.157 75);
+  --color-chart-3: oklch(0.591 0.142 153);
+  --color-chart-4: oklch(0.634 0.197 327);
+  --color-chart-5: oklch(0.702 0.137 199);
+  --color-chart-6: oklch(0.746 0.165 50);
+  --color-heatmap-0: oklch(0.30 0.04 253);
+  --color-heatmap-1: oklch(0.45 0.08 235);
+  --color-heatmap-2: oklch(0.55 0.12 235);
+  --color-heatmap-3: oklch(0.65 0.16 235);
+  --color-heatmap-4: oklch(0.72 0.18 235);
+  --color-sparkline:          oklch(0.60 0.18 235);
+  --color-sparkline-negative: oklch(0.65 0.20 25);
+  --color-asset-equity:     var(--asset-equity);
+  --color-asset-bond:       var(--asset-fixed-income);
+  --color-asset-commodity:  var(--asset-commodity);
+  --color-asset-fx:         var(--asset-fx);
+  --color-asset-crypto:     var(--asset-crypto);
+  --color-asset-derivative: var(--asset-alternative);
+
+  /* ── LED / StatusDot ── */
+  --color-led-active:  oklch(0.70 0.16 155);
+  --color-led-idle:    oklch(0.55 0.03 253);
+  --color-led-error:   oklch(0.65 0.20 25);
+  --color-led-success: oklch(0.70 0.16 155);
+  --color-status-led-healthy:  oklch(0.72 0.17 155);
+  --color-status-led-degraded: oklch(0.78 0.14 65);
+  --color-status-led-warning:  oklch(0.80 0.16 90);
+  --color-status-led-critical: oklch(0.60 0.22 25);
+  --color-status-led-live:     oklch(0.75 0.15 195);
+  --color-status-led-idle:     oklch(0.55 0.03 253);
+  --color-status-led-error:    oklch(0.65 0.20 25);
+  --color-status-led-info:     oklch(0.68 0.12 253);
+
+  /* ── 交互反馈 ── */
+  --color-focus-ring:    var(--interaction-focus-ring);
+  --color-focus-border:  var(--interaction-focus-border);
+  --width-focus-ring:    2px;
+  --color-interaction-hover-subtle-bg: var(--interaction-hover-subtle-bg);
+  --color-interaction-hover-strong-bg: var(--interaction-hover-strong-bg);
+  --color-interaction-active-bg:       var(--interaction-active-bg);
+  --color-interaction-selected-bg:     var(--interaction-selected-bg);
+  --color-interaction-selected-border: var(--interaction-selected-border);
+  --color-toast-info:    oklch(0.58 0.012 253);
+  --color-toast-success: var(--green-500);
+  --color-toast-warning: var(--amber-500);
+  --color-toast-error:   var(--red-500);
+  --color-progress:      var(--brand-500);
+  --height-progress:     2px;
+
+  /* ── 字号 ── */
+  --text-xs:   var(--font-size-10);
+  --text-sm:   var(--font-size-12);
+  --text-base: var(--font-size-13);
+  --text-md:   var(--font-size-14);
+  --text-lg:   var(--font-size-16);
+  --text-xl:   var(--font-size-18);
+  --text-2xl:  var(--font-size-20);
+  --text-3xl:  var(--font-size-24);
+  --text-4xl:  var(--font-size-24);
+
+  /* ── 间距（prototype 4pt base → Tailwind step） ── */
+  --spacing-0-5: 2px;
+  --spacing-1:   4px;
+  --spacing-1-5: 6px;
+  --spacing-2:   8px;
+  --spacing-2-5: 10px;
+  --spacing-3:   12px;
+  --spacing-4:   16px;
+  --spacing-5:   20px;
+  --spacing-6:   24px;
+  --spacing-8:   32px;
+  --spacing-10:  40px;
+  --spacing-12:  48px;
+
+  /* ── 圆角 ── */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  /* ── 动效 ── */
+  --duration-fast:   var(--motion-duration-fast);
+  --duration-normal: var(--motion-duration-normal);
+  --duration-slow:             var(--motion-duration-slow);
+  --duration-sidebar-collapse: var(--shell-sidebar-collapse-duration);
+  --ease-default:              var(--motion-easing-standard);
+  --ease-in:         var(--motion-easing-emphasis);
+  --ease-out:        var(--motion-easing-standard);
+
+  /* ── 字重 ── */
+  --font-weight-normal:   var(--font-weight-regular);
+  --font-weight-medium:   var(--font-weight-medium);
+  --font-weight-semibold: var(--font-weight-semibold);
+
+  /* ── 字体族 ── */
+  --font-body:    var(--font-family-ui);
+  --font-heading: var(--font-family-heading);
+  --font-data:    var(--font-family-numeric);
+  --font-code:    var(--font-family-code);
+
+  /* ── 行高 ── */
+  --line-height-compact: 1.25;
+  --line-height-normal:  1.5;
+  --line-height-relaxed: 1.60;
+
+  /* ── Shell 布局 ── */
+  --width-rail:           var(--shell-rail-width);
+  --width-rail-collapsed: var(--shell-rail-collapsed);
+  --width-sidebar:           var(--shell-sidebar-width);
+  --width-sidebar-collapsed: var(--shell-sidebar-collapsed-width);
+  --width-detail:            var(--shell-detail-width);
+  --width-drawer:            var(--shell-drawer-width);
+  --height-header:        var(--shell-header-height);
+  --height-context-bar:   var(--shell-context-bar-height);
+  --height-scope-strip:   var(--shell-scope-strip-height);
+  --height-status-bar:    var(--shell-status-bar-height);
+  --width-activity:       var(--shell-analytical-activity-width);
+  --height-analysis-band: var(--shell-analytical-band-height);
+  --width-radar-right-rail: var(--shell-radar-right-rail-width);
+  --width-catalog-detail: var(--shell-catalog-detail-width);
+  --width-ops-detail:     var(--shell-ops-detail-width);
+  --width-signals-detail: var(--shell-signals-detail-width);
+  --width-studio-source:    240px;
+  --width-studio-inspector: 300px;
+  --width-copilot-session:  220px;
+  --width-copilot-context:  280px;
+
+  /* ── 组件结构 ── */
+  --height-btn-sm: 28px;
+  --height-btn-md: 34px;
+  --height-btn-lg: 40px;
+  --radius-btn:    var(--radius-md);
+  --height-badge:  20px;
+  --radius-badge:  var(--radius-full);
+  --radius-card:   var(--radius-lg);
+  --padding-card:  var(--spacing-4);
+  --height-input:  34px;
+  --radius-input:  var(--radius-md);
+  --height-tab:    36px;
+  --radius-tab:    var(--radius-sm);
+  --size-checkbox: 16px;
 }
 
-/* ── 基础样式 ── */
-@layer base {
-	* {
-		@apply border-border;
-	}
+/* ── React 兼容别名（桥接旧代码 → 共享 token） ──
+ * 注意：@theme inline 不生成 :root 变量，所以这里必须用具体值，
+ *       不能用 var(--spacing-*) 等 @theme inline 内部变量。
+ */
+:root {
+  /* 间距兼容（旧 --space-* → 新 --spacing-*） */
+  --space-6:  6px;
+  --space-8:  8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-16: 16px;
 
-	body {
-		@apply bg-background text-foreground font-sans antialiased;
-		font-feature-settings: "cv11", "ss01";
-		font-variation-settings: "opsz" 14;
-	}
+  /* 字号兼容（旧 --font-size-* → 新 --text-*） */
+  --font-size-10: 10px;
+  --font-size-12: 12px;
+  --font-size-13: 13px;
+  --font-size-14: 14px;
 
-	/* tabular-nums 默认开启 — 数字等宽对齐 */
-	.tabular-nums,
-	:is(td, th, [data-slot="kpi"]) {
-		font-variant-numeric: tabular-nums lining-nums;
-	}
+  /* 密度兼容（旧短名 → 新 prototype 标准名） */
+  --row-height:            var(--density-row-height);
+  --cell-gap:              var(--density-cell-padding-x);
+  --cell-padding-y:        var(--density-cell-padding-y);
+  --cell-padding-x:        var(--density-cell-padding-x);
+  --font-delta:            var(--density-font-delta);
+  --section-gap:           var(--density-section-gap);
+  --list-gap:              var(--density-section-gap);
+  /* 注意：--density-gutter/--density-strip-height/--density-action-height/--density-panel-padding
+     由 tokens-density.css :root 定义，此处不可重复声明（自引用会导致循环引用，运行时 undefined） */
+
+  /* 表面/边框兼容别名 */
+  --color-surface-hover:    var(--interaction-hover-subtle-bg);
+  --color-surface-base:     var(--surface-panel-base);
+  --color-surface-elevated: var(--surface-panel-elevated);
+  --color-status-success:   var(--system-healthy-fg);
+  --color-status-error:     var(--system-down-fg);
+  --color-status-warning:   var(--risk-medium-fg);
+  --color-border-primary:   var(--border-strong);
+
+  /* ── Sidebar Collapse (v3) ── */
+  --sidebar-width: var(--shell-sidebar-width);
+  --activity-width: var(--shell-analytical-activity-width);
+}
+
+/* Theme overrides — 最后加载 */
+@import "./themes/dark.css";
+@import "./themes/light.css";
+@import "./themes/market-intl.css";
+
+/* Tailwind v4 Preflight 已包含 * { box-sizing/margin/padding/border } reset
+ * ❌ 勿在此添加自定义 reset — unlayered CSS 会覆盖 @layer utilities 中的
+ *    spacing utilities (p-3, py-3, px-4, gap-4 等)
+ */
+
+html {
+  height: 100%;
+  transition: background 60s linear;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-surface-0);
+  color: var(--color-foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) var(--color-surface-0);
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface-0);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+  border-radius: var(--radius-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover);
+}
+
+/* ── Animations ── */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Sparkline entry animation ── */
+@keyframes sparkline-draw {
+  from { stroke-dashoffset: 200; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.animate-sparkline {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: sparkline-draw 0.6s ease-out forwards;
+}
+
+/* ── Panel hover glow (per prototype R4) ── */
+[data-slot="panel"],
+[data-slot="decision-banner"] {
+  transition: box-shadow var(--duration-normal) var(--ease-default);
+}
+[data-slot="panel"]:hover,
+[data-slot="decision-banner"]:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--color-brand-500) 6%, transparent),
+    0 1px 3px color-mix(in oklch, var(--color-brand-500) 3%, transparent);
+}
+
+/* ── Critical alert dot pulse ── */
+@keyframes dot-critical-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Live status dot: opacity pulse (matches prototype) ── */
+@keyframes dot-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ── Entry & feedback animations ── */
+/* value-flash / conclusion-appear / tab-reveal share the same keyframes;
+   consumers pick semantic name via animation-name alias */
+@keyframes reveal-up {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scroll reveal entrance ── */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.reveal-up.is-visible {
+  animation: reveal-up 400ms ease-out forwards;
+}
+
+@keyframes status-breathe {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ── Focus-visible ring system ── */
+[data-slot="panel"] button:focus-visible,
+[data-slot="rail"] button:focus-visible,
+[data-slot="header"] button:focus-visible,
+[data-slot="decision-banner"] button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1.5px var(--color-accent), 0 0 0 4px oklch(from var(--color-accent) l c h / 0.25);
+  border-radius: var(--radius-sm);
+}
+
+/* ══════════════════════════════════════════════
+ * Phase 5 — Stagger entrance
+ * ══════════════════════════════════════════════ */
+
+.reveal-up.stagger-1 { animation-delay: 60ms; }
+.reveal-up.stagger-2 { animation-delay: 120ms; }
+
+/* ── Market card hover: inset accent glow ── */
+[data-slot="market-card"] {
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+[data-slot="market-card"]:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-accent) 20%, transparent);
+}
+
+/* ── Queue item hover: negative-margin expansion ── */
+[data-slot="queue-item"] {
+  transition:
+    margin var(--duration-fast) var(--ease-out),
+    padding var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+[data-slot="queue-item"]:hover {
+  margin-left: calc(var(--spacing-1) * -1);
+  margin-right: calc(var(--spacing-1) * -1);
+  padding-left: calc(var(--spacing-3) + var(--spacing-1));
+  padding-right: calc(var(--spacing-3) + var(--spacing-1));
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.12);
+}
+/* Priority bar micro-glow on hover (per prototype) */
+[data-slot="queue-item"]:hover > div:first-child {
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+  box-shadow: 0 0 6px 1px oklch(0 0 0 / 0.3);
+}
+
+/* ── Secondary panel child hover (per prototype) ── */
+[data-slot="home-secondary"] > * {
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+[data-slot="home-secondary"] > *:hover {
+  border-color: color-mix(in oklch, var(--color-accent) 10%, transparent);
+  box-shadow: 0 1px 4px -1px color-mix(in oklch, var(--color-accent) 4%, transparent);
+}
+
+/* ── Context section: dual-line separator via sidebar divide ── */
+[data-slot="sidebar-rail"] > [data-slot="collapsible"] {
+  position: relative;
+}
+[data-slot="sidebar-rail"] > [data-slot="collapsible"] + [data-slot="collapsible"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in oklch, var(--color-foreground) 3%, transparent);
+  pointer-events: none;
+}
+
+[data-slot="rail-right-light"] {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in oklch, var(--color-accent) 12%, transparent) 20%,
+      color-mix(in oklch, var(--color-accent) 20%, transparent) 50%,
+      color-mix(in oklch, var(--color-accent) 12%, transparent) 80%,
+      transparent 100%
+    );
+}
+
+/* ── Status badge hover glow (per prototype) ── */
+[data-slot="status-badge"] {
+  transition:
+    box-shadow var(--duration-normal) var(--ease-default),
+    transform var(--duration-fast) var(--ease-out);
+}
+[data-slot="status-badge"]:hover {
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-foreground-secondary) 12%, transparent);
+}
+
+/* ── Data typography: monospace + tabular alignment ── */
+.font-data {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* ── Positions summary: header accent border ── */
+[data-slot="positions-summary"] thead tr {
+  border-bottom: 2px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
+}
+
+/* ── Missing keyframes from prototype ── */
+@keyframes value-flash {
+  0%   { opacity: 0.85; transform: translateY(0.5px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes value-flash-up {
+  0% {
+    text-shadow: 0 3px 6px oklch(from var(--market-up-fg) l c h / 0.08);
+    opacity: 0.85;
+  }
+  100% {
+    text-shadow: none;
+    opacity: 1;
+  }
+}
+
+@keyframes value-flash-down {
+  0% {
+    text-shadow: 0 -3px 6px oklch(from var(--market-down-fg) l c h / 0.08);
+    opacity: 0.85;
+  }
+  100% {
+    text-shadow: none;
+    opacity: 1;
+  }
+}
+
+@keyframes panel-breathe {
+  0%, 100% { border-color: var(--border-subtle); }
+  50% { border-color: color-mix(in oklch, var(--border-subtle) 90%, var(--color-signature-line) 10%); }
+}
+
+@keyframes task-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.88; }
+}
+
+@keyframes conclusion-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tab-reveal {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Active / pressed micro-feedback ── */
+[data-slot="decision-banner"] button:active {
+  transform: scale(0.97);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+[data-slot="queue-item"]:active {
+  background: var(--color-interaction-hover-strong-bg);
+}
+
+/* ── Pulse strip / Context bar brand glow ── */
+[data-slot="pulse-strip"],
+[data-slot="session-strip"],
+[data-slot="context-bar"] {
+  position: relative;
+  border-bottom: 1px solid color-mix(in oklch, var(--color-accent) 8%, var(--color-border-subtle));
+  box-shadow: 0 1px 4px -1px color-mix(in oklch, var(--color-accent) 6%, transparent);
+}
+
+/* ── Pulse item hover micro-feedback (per prototype) ── */
+[data-slot="pulse-strip"] > div {
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-default);
+}
+[data-slot="pulse-strip"] > div:hover {
+  background: var(--color-interaction-hover-subtle-bg);
+}
+
+/* ── Decision banner brand left border ── */
+[data-slot="decision-banner"] {
+  border-left: 2px solid color-mix(in oklch, var(--color-accent) 35%, transparent);
+}
+
+/* ── Home main-primary ambient glow (per prototype) ── */
+[data-slot="home-primary"] {
+  position: relative;
+}
+[data-slot="home-primary"]::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: 20%;
+  right: 20%;
+  height: 80px;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--color-accent) 3%, transparent) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+[data-slot="home-primary"] > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Sidebar Collapse Transition (v3) ── */
+[data-sidebar-collapsed] {
+  --sidebar-width: var(--shell-sidebar-collapsed-width);
+  --activity-width: var(--shell-sidebar-collapsed-width);
+}
+
+/* ── Panel breathe: sub-perceptual border color animation ── */
+[data-slot="panel"] {
+  animation: panel-breathe var(--atmosphere-breathe-duration, 45s) ease-in-out infinite;
+}
+
+/* Sidebar grid-template-columns transition */
+.grid-sidebar-transition {
+  transition: grid-template-columns var(--duration-sidebar-collapse) var(--ease-default);
+}
+
+/* ── Respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Header accent line: 5-stop gradient (per prototype) ── */
+[data-slot="header"]::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-signature-line) 15%,
+    var(--color-signature-line) 25%,
+    color-mix(in oklch, var(--color-signature-line) 15%, transparent) 60%,
+    transparent 100%
+  );
 }

@@ -1,0 +1,185 @@
+{
+  "id": "platform-settings",
+  "version": 2,
+  "status": "draft",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-05-02",
+  "route": "/platform/settings",
+  "pagePattern": "config-integration-console",
+  "shellFamily": "ops-console",
+  "prototypeRef": "docs/designs/specs/prototypes/page-platform-settings.html",
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#26-platform-settings轻量"
+  ],
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/platform",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "verified",
+    "reactTestRefs": [
+      "src/features/platform/components/platform-components.test.tsx",
+      "src/features/platform/hooks/platform-hooks.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "PlatformSettingsPage"
+    ]
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "health",
+      "required": true,
+      "prototypeSelector": ".ops-health",
+      "reactSelector": "[data-slot='health']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".ops-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "detail",
+      "required": true,
+      "prototypeSelector": ".ops-detail",
+      "reactSelector": "[data-slot='detail']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "settings-dirty",
+      "ai-policy-dirty",
+      "guardrail-failed",
+      "tool-permission-selected"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "health": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1110,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "detail": {
+        "width": 360,
+        "height": 720,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  },
+  "overlays": [
+    {
+      "id": "platform-settings.datasource-test",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-datasource-test",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "platform-settings.broker-test",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-broker-test",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "platform-settings.save-config",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-save-config",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "platform-settings.reset-config",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-reset-config",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

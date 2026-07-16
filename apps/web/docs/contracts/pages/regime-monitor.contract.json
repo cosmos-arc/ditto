@@ -1,0 +1,143 @@
+{
+  "id": "regime-monitor",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-04-28",
+  "route": "/research/regime",
+  "pagePattern": "analytical-overview",
+  "shellFamily": "analytical",
+  "prototypeRef": "docs/designs/specs/prototypes/page-regime-monitor.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/research",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "verified",
+    "reactTestRefs": [
+      "src/features/research/components/info-level-annotations.test.tsx",
+      "src/features/research/components/regime-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "RegimePage"
+    ]
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "strip",
+      "required": true,
+      "prototypeSelector": ".shell-strip",
+      "reactSelector": "[data-slot='strip']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".shell-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "activity",
+      "required": true,
+      "prototypeSelector": ".shell-activity",
+      "reactSelector": "[data-slot='activity']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "analysis",
+      "required": true,
+      "prototypeSelector": ".shell-analysis",
+      "reactSelector": "[data-slot='analysis']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "regime-transition"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "strip": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 980,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "activity": {
+        "width": 280,
+        "height": 720,
+        "strategy": "fixed-width"
+      },
+      "analysis": {
+        "width": 280,
+        "height": 720,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  },
+  "overlays": [
+    {
+      "id": "regime-monitor.ai-regime",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-ai-regime",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

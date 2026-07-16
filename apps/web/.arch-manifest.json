@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "status": "completed",
+  "mode": "create",
+  "startedAt": "2026-04-18T00:00:00Z",
+  "lastAudit": {
+    "date": "2026-04-27",
+    "score": "remediated",
+    "previousDate": "2026-04-20",
+    "previousScore": "9.5/10",
+    "improvement": "route / contract / overlay drift closed",
+    "routeCoverageStatus": "PASS: 27/27 IA routes covered by React routes and scripts/audit-route-coverage.mjs",
+    "generatedContractCount": 27,
+    "overlayRegistryStatus": "PASS: contract schema, generated runtime types, and OverlayProvider are aligned for declared required overlays",
+    "domainModelStatus": "PASS: five product domains; AI is embedded intelligence plus global Copilot sidecar",
+    "coreUiTokenStatus": "PASS: Button, Badge, Tabs, Dialog, and Sheet use Ditto semantic tokens",
+    "constitutionCompliance": "20 PASS / 3 SHOULD / 0 FAIL",
+    "p0Issues": 0,
+    "p0Fixed": 0,
+    "p1Issues": 2,
+    "p1Fixed": 11,
+    "p2Suggestions": 6,
+    "stateCoverage": { "loading": "28/28", "empty": "28/28", "failed": "28/28" },
+    "confirmDialogCoverage": "17/17 (100%)",
+    "docsModified": [
+      "01_product_information_architecture.md (route count 25→27, +/research/strategies/[id])",
+      "02_core_page_blueprints.md (v2.0→v2.2, P1-1 a-shares→radar, +§27 AI Copilot Sidecar, +Signal confirm overlay)",
+      "04_interaction_state_spec.md (+§15 Signal 8-state + rollback rules)",
+      "06_core_user_flows.md (v1.3→v1.4, +§5.3 Signal 8-state table + §15 reference)",
+      "10_ditto_shell_family_spec.md (v1.3→v1.4, §5/§6 七类, §4.7 Radar独立, §10.3 two route mappings)",
+      "16_ditto_glossary.md (+Instrument Hub term)"
+    ],
+    "rootCause": "上次 11 P1 全部修复落地。7 文件未提交变更质量良好。仅发现 2 个低级 P1（watchlist Shell 归属分歧、00 文档壳层数描述）+ 6 个 P2。",
+    "crossDocContracts": "C1-C6 全部 PASS",
+    "skillImprovements": []
+  },
+  "consistencyRemediation": {
+    "plan": "docs/plans/2026-04-27-consistency-remediation-plan.md",
+    "completedAt": "2026-04-27",
+    "iaRouteCount": 27,
+    "generatedContractCount": 27,
+    "generatedArtifactStatus": "idempotent after regeneration; artifacts remain modified until the remediation branch is committed",
+    "routeCoverageStatus": "audited",
+    "editionPrototypeCount": 29,
+    "deprecatedPrototypePages": ["ai-overview", "ai-copilot"],
+    "overlayRegistryStatus": "contract-driven",
+    "verificationCommands": [
+      "bun run check",
+      "bun run audit:routes",
+      "bun run generate-contracts",
+      "git diff --exit-code src/features/shell/page-contracts.generated.ts scripts/visual-audit.config.generated.mjs"
+    ]
+  },
+  "prototypeInventory": {
+    "activeRoutePrototypeCount": 27,
+    "archivedSpecimenCount": 2,
+    "auxiliarySpecimenCount": 1,
+    "archivedPrototypePages": ["ai-overview", "ai-copilot"],
+    "auxiliaryPrototypePages": ["token-showcase"]
+  },
+  "upstream": {
+    "discovery": {
+      "status": "completed",
+      "completedAt": "2026-04-17T23:30:00Z",
+      "entities": 18,
+      "capabilities": 6,
+      "actors": 8,
+      "events": 6,
+      "integrations": 5,
+      "constitutionConstraints": 23,
+      "highRiskAssumptions": 3,
+      "mediumRiskAssumptions": 3,
+      "validatedAssumptions": 2
+    },
+    "existingSpecs": {
+      "totalSpecs": 18,
+      "iaPages": 27,
+      "blueprintPages": 28,
+      "iaCompleteness": "97%",
+      "blueprintCompleteness": "97%"
+    }
+  },
+  "phases": {
+    "0": { "name": "CONTEXT", "status": "done", "completedAt": "2026-04-18T00:00:00Z" },
+    "1": { "name": "RESEARCH", "status": "done", "completedAt": "2026-04-18T00:30:00Z" },
+    "2": { "name": "DESIGN", "status": "done", "completedAt": "2026-04-18T01:00:00Z" },
+    "3": { "name": "SYNTHESIS", "status": "done", "completedAt": "2026-04-18T01:30:00Z" },
+    "4": { "name": "DOCUMENT", "status": "done", "completedAt": "2026-04-18T02:00:00Z" },
+    "5": { "name": "VALIDATE", "status": "done", "completedAt": "2026-04-20T03:00:00Z" }
+  },
+  "gates": {
+    "0-to-1": { "status": "done", "completedAt": "2026-04-18T00:15:00Z" },
+    "2-to-3": { "status": "done", "completedAt": "2026-04-18T01:15:00Z" },
+    "4-to-5": { "status": "done", "completedAt": "2026-04-18T02:30:00Z" }
+  },
+  "artifacts": {
+    "ia": "docs/designs/specs/01_product_information_architecture.md",
+    "blueprints": "docs/designs/specs/02_core_page_blueprints.md",
+    "auditReport": "docs/designs/specs/audit-2026-04-20.md",
+    "previousAudit": {
+      "score": "9.3/10",
+      "constitutionCompliance": "23/23 PASS, 0 FAIL",
+      "p0Issues": 0,
+      "p1Issues": 11,
+      "p0Fixed": 3,
+      "p1Fixed": 11,
+      "docsSynced": [
+        "01_product_information_architecture.md (v2.0)",
+        "02_core_page_blueprints.md (v2.2)",
+        "00_ditto_product_criteria.md",
+        "04_interaction_state_spec.md",
+        "06_core_user_flows.md (v1.4)",
+        "10_ditto_shell_family_spec.md (v1.4)",
+        "16_ditto_glossary.md (v2.5)"
+      ]
+    }
+  }
+}

@@ -1,0 +1,256 @@
+{
+  "capturedAt": "2026-07-16T11:02:21.828Z",
+  "scope": {
+    "runtime": "VITE_USE_MOCK=false",
+    "apiData": "Playwright route fixtures for DailyDecision V2, raw/effective fills, adjustments, and correction mutations",
+    "proves": "frontend state, visual, append-only correction interaction, accessibility, and scroll behavior only",
+    "doesNotProve": "Task6 live backend persistence/E2E or production data correctness"
+  },
+  "options": {
+    "reactBase": "http://127.0.0.1:5173",
+    "outDir": "docs/review/r1-trading-acceptance"
+  },
+  "records": [
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1536,
+        "height": 900
+      },
+      "scenario": "blocked",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/desktop/blocked.png",
+      "assertions": [
+        "live mode verified without prototype/MSW fallback",
+        "body has no horizontal overflow",
+        "blocked readiness label is visible",
+        "blocked reason is announced and trade suggestions stay hidden",
+        "Trading main content responds to vertical wheel scrolling",
+        "page title, session strip, and readiness label remain in the captured viewport"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1536,
+        "height": 900
+      },
+      "scenario": "review",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/desktop/review.png",
+      "assertions": [
+        "live mode verified without prototype/MSW fallback",
+        "body has no horizontal overflow",
+        "review readiness label is visible",
+        "wide action table is horizontally scrollable and keyboard focusable",
+        "Trading main content responds to vertical wheel scrolling",
+        "page title, session strip, and readiness label remain in the captured viewport"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1536,
+        "height": 900
+      },
+      "scenario": "review-fills",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/desktop/review-fills.png",
+      "assertions": [
+        "two effective fills are visible for one intent",
+        "remaining quantity and PnL come from the Playwright network fixture response"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1536,
+        "height": 900
+      },
+      "scenario": "ready",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/desktop/ready.png",
+      "assertions": [
+        "live mode verified without prototype/MSW fallback",
+        "body has no horizontal overflow",
+        "ready readiness label is visible",
+        "wide action table is horizontally scrollable and keyboard focusable",
+        "Trading main content responds to vertical wheel scrolling",
+        "page title, session strip, and readiness label remain in the captured viewport"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1536,
+        "height": 900
+      },
+      "scenario": "fill-review",
+      "route": "/trading/signals",
+      "screenshot": "docs/review/r1-trading-acceptance/desktop/fill-review.png",
+      "assertions": [
+        "keyboard focus enters the dialog",
+        "review reason, filled quantity, and remaining quantity are visible",
+        "submission is gated until review confirmation",
+        "the submit action stays reachable and overflow states scroll when needed",
+        "captured dialog starts with its title, intent, and instrument context",
+        "Escape closes the dialog and restores trigger focus"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1536,
+        "height": 900
+      },
+      "scenario": "multi-fill-ledger",
+      "route": "/trading/orders",
+      "screenshot": "docs/review/r1-trading-acceptance/desktop/multi-fill-ledger.png",
+      "assertions": [
+        "two fills for one intent are visible",
+        "fill ledger is keyboard focusable"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1536,
+        "height": 900
+      },
+      "scenario": "fill-correction",
+      "route": "/trading/orders",
+      "screenshot": "docs/review/r1-trading-acceptance/desktop/fill-correction.png",
+      "assertions": [
+        "live mode uses Playwright API fixtures without MSW or prototype fallback",
+        "correction Sheet keeps immutable raw evidence visible",
+        "replacement fields are prefilled and remain usable on this viewport",
+        "captured Sheet starts at its title and immutable evidence",
+        "generated idempotency keys and replacement payload are posted",
+        "fixture refetch keeps the raw original visible as replaced and links the effective replacement",
+        "this evidence does not assert live backend persistence"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844
+      },
+      "scenario": "blocked",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/mobile/blocked.png",
+      "assertions": [
+        "live mode verified without prototype/MSW fallback",
+        "body has no horizontal overflow",
+        "blocked readiness label is visible",
+        "blocked reason is announced and trade suggestions stay hidden",
+        "Trading main content responds to vertical wheel scrolling",
+        "mobile signal queue is a separate grid row and does not overlap the scrollable main region",
+        "page title, session strip, and readiness label remain in the captured viewport"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844
+      },
+      "scenario": "review",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/mobile/review.png",
+      "assertions": [
+        "live mode verified without prototype/MSW fallback",
+        "body has no horizontal overflow",
+        "review readiness label is visible",
+        "wide action table is horizontally scrollable and keyboard focusable",
+        "Trading main content responds to vertical wheel scrolling",
+        "mobile signal queue is a separate grid row and does not overlap the scrollable main region",
+        "page title, session strip, and readiness label remain in the captured viewport"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844
+      },
+      "scenario": "review-fills",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/mobile/review-fills.png",
+      "assertions": [
+        "two effective fills are visible for one intent",
+        "remaining quantity and PnL come from the Playwright network fixture response"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844
+      },
+      "scenario": "ready",
+      "route": "/trading",
+      "screenshot": "docs/review/r1-trading-acceptance/mobile/ready.png",
+      "assertions": [
+        "live mode verified without prototype/MSW fallback",
+        "body has no horizontal overflow",
+        "ready readiness label is visible",
+        "wide action table is horizontally scrollable and keyboard focusable",
+        "Trading main content responds to vertical wheel scrolling",
+        "mobile signal queue is a separate grid row and does not overlap the scrollable main region",
+        "page title, session strip, and readiness label remain in the captured viewport"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844
+      },
+      "scenario": "fill-review",
+      "route": "/trading/signals",
+      "screenshot": "docs/review/r1-trading-acceptance/mobile/fill-review.png",
+      "assertions": [
+        "keyboard focus enters the dialog",
+        "review reason, filled quantity, and remaining quantity are visible",
+        "submission is gated until review confirmation",
+        "the submit action stays reachable and overflow states scroll when needed",
+        "captured dialog starts with its title, intent, and instrument context",
+        "Escape closes the dialog and restores trigger focus"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844
+      },
+      "scenario": "multi-fill-ledger",
+      "route": "/trading/orders",
+      "screenshot": "docs/review/r1-trading-acceptance/mobile/multi-fill-ledger.png",
+      "assertions": [
+        "two fills for one intent are visible",
+        "fill ledger is keyboard focusable"
+      ]
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844
+      },
+      "scenario": "fill-correction",
+      "route": "/trading/orders",
+      "screenshot": "docs/review/r1-trading-acceptance/mobile/fill-correction.png",
+      "assertions": [
+        "live mode uses Playwright API fixtures without MSW or prototype fallback",
+        "correction Sheet keeps immutable raw evidence visible",
+        "replacement fields are prefilled and remain usable on this viewport",
+        "captured Sheet starts at its title and immutable evidence",
+        "generated idempotency keys and replacement payload are posted",
+        "fixture refetch keeps the raw original visible as replaced and links the effective replacement",
+        "this evidence does not assert live backend persistence"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "id": "strategy-studio",
+  "version": 2,
+  "status": "draft",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-05-02",
+  "route": "/research/strategies/$id/studio",
+  "pagePattern": "studio-builder",
+  "shellFamily": "studio",
+  "prototypeRef": "docs/designs/specs/prototypes/page-strategy-studio.html",
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#7-strategy-studio"
+  ],
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/strategy",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "verified",
+    "reactTestRefs": [
+      "src/features/strategy/components/info-level-annotations.test.tsx",
+      "src/features/strategy/components/strategy-components.test.tsx",
+      "src/features/strategy/components/studio-mode-bar.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "StrategyPage"
+    ]
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "source",
+      "required": true,
+      "prototypeSelector": ".studio-source",
+      "reactSelector": "[data-slot='source']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".studio-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "inspector",
+      "required": true,
+      "prototypeSelector": ".studio-inspector",
+      "reactSelector": "[data-slot='inspector']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    },
+    {
+      "name": "modes",
+      "required": true,
+      "prototypeSelector": ".studio-modes",
+      "reactSelector": "[data-slot='modes']",
+      "a11yRole": "navigation",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "no-session",
+      "running",
+      "guided",
+      "agent-running",
+      "waiting-approval",
+      "blocked"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "source": {
+        "width": 280,
+        "height": 720,
+        "strategy": "fixed-width"
+      },
+      "main": {
+        "width": 900,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "inspector": {
+        "width": 320,
+        "height": 720,
+        "strategy": "fixed-width"
+      },
+      "modes": {
+        "width": 1536,
+        "height": 56,
+        "strategy": "content-driven"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  },
+  "overlays": [
+    {
+      "id": "strategy-studio.delete-strategy",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-delete-strategy",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategy-studio.save-strategy",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-save-strategy",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategy-studio.validation-toast",
+      "kind": "toast",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-validation-toast",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategy-studio.backtest-config",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-backtest-config",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategy-studio.factor-preview",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-factor-preview",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

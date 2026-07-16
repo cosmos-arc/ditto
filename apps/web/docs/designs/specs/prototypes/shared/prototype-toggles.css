@@ -1,0 +1,784 @@
+/* ─────────────────────────────────────────────
+ * Ditto Prototype — Three-Zone Architecture
+ * Pure CSS zone navigation + gallery grid.
+ * Loaded after all token & layout layers.
+ * ─────────────────────────────────────────────
+ *
+ * Architecture:
+ *   Zone 1: Default View     — 纯净默认状态
+ *   Zone 2: States Gallery   — 状态变体画廊
+ *   Zone 3: Overlays Gallery — 弹层设计画廊
+ *
+ * Mechanisms:
+ *   1. Zone switching   — input[type="radio"] + :has()
+ *   2. Tab panels       — input[type="radio"] + :has()
+ *   3. Gallery grid     — CSS Grid layout
+ *   4. State patterns   — skeleton / empty / error
+ *
+ * No JavaScript required.
+ * ───────────────────────────────────────────── */
+
+/* ── 0. Shared Utilities ── */
+
+.sr-only {
+  position: absolute;
+  width:   1px;
+  height:  1px;
+  padding: 0;
+  margin:  -1px;
+  overflow: hidden;
+  clip:    rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border:  0;
+}
+
+/* ── 1. View-Level Zone Navigation ─────────────
+ *
+ * HTML pattern:
+ *   <input type="radio" id="view-default"
+ *          name="proto-view" checked class="sr-only">
+ *   <input type="radio" id="view-states"
+ *          name="proto-view" class="sr-only">
+ *   <input type="radio" id="view-overlays"
+ *          name="proto-view" class="sr-only">
+ *
+ *   <nav class="proto-nav">
+ *     <label for="view-default" class="proto-nav__tab">主视图</label>
+ *     <label for="view-states" class="proto-nav__tab">状态画廊</label>
+ *     <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+ *   </nav>
+ *
+ *   <section id="default-view" class="proto-section">...</section>
+ *   <section id="states-gallery" class="proto-section">...</section>
+ *   <section id="overlays-gallery" class="proto-section">...</section>
+ *
+ * Convention: radio id = label for = section id prefix
+ * Zone switching is global — one zone visible at a time.
+ */
+
+.proto-section {
+  display: none;
+}
+
+/* ── 1a. Zone Switch Fade Transition ──────────
+ *
+ * When a zone becomes active, play a sub-200ms fade-in.
+ * Uses CSS animation (not transition) because zones switch
+ * via display: none → display: block/flex, which prevents
+ * normal opacity transitions.
+ *
+ * Duration: 150ms ease-out (sub-200ms per spec).
+ * Respects prefers-reduced-motion (see § 7 below).
+ */
+@keyframes proto-section-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Proto-nav is always visible for zone switching */
+
+/* Hide style-label when default-view is active */
+:root:has(#view-default:checked) #default-view > .style-label {
+  display: none !important;
+}
+
+/* Hide proto-nav when default-view is active (Gate 0: prototype tooling must not pollute product view) */
+:root:has(#view-default:checked) .proto-nav {
+  display: none !important;
+}
+
+/* Default view: flex column, constrained to the dynamic viewport */
+:root:has(#view-default:checked) #default-view {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  animation: proto-section-enter 150ms ease-out both;
+}
+
+/* Gallery views: auto height, scrollable */
+:root:has(#view-states:checked)   #states-gallery,
+:root:has(#view-overlays:checked) #overlays-gallery {
+  display: block;
+  overflow-y: auto;
+  animation: proto-section-enter 150ms ease-out both;
+}
+
+/* Override layout-base.css body { height:100%; overflow:hidden } for gallery scroll */
+:root:has(#view-states:checked) body,
+:root:has(#view-overlays:checked) body {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-y: auto !important;
+}
+
+/* When gallery views are active, hide body-level shell/status/overlays
+   that sit outside #default-view due to HTML structure.
+   Matches: .shell-xxx, .xxx-shell, .ai-shell, .intel-shell, etc. */
+:root:has(#view-states:checked) body > :not(.proto-nav):not(.proto-section):not(.sr-only):not(link):not(style):not(script):not(meta),
+:root:has(#view-overlays:checked) body > :not(.proto-nav):not(.proto-section):not(.sr-only):not(link):not(style):not(script):not(meta) {
+  display: none !important;
+}
+
+/* Style label takes natural height */
+.proto-section > .style-label {
+  flex-shrink: 0;
+}
+
+/* Only the shell element in default-view fills remaining space */
+#default-view > [class*="shell-"],
+#default-view > .intel-shell,
+#default-view > .risk-shell,
+#root:has(#view-default:checked) #risk-shell {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
+}
+
+/* Overlays/status-bar must not consume flex space */
+#default-view > .overlays,
+#default-view > .status-bar {
+  flex: 0 0 auto !important;
+  height: 0 !important;
+  overflow: visible !important;
+}
+
+/* Status bar: keep visible at bottom via absolute positioning */
+#default-view > .status-bar {
+  position: sticky;
+  bottom: 0;
+  height: 24px !important;
+  flex-shrink: 0;
+  overflow: visible !important;
+}
+
+/* ── 2. Proto Nav Bar ──────────────────────────
+ *
+ * Sticky navigation bar for switching between zones.
+ * Positioned below the shell header.
+ */
+
+.proto-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 2px);
+  padding: var(--space-4, 6px) var(--space-8, 12px);
+  background: var(--surface-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.proto-nav__tab {
+  padding: var(--space-4, 6px) var(--space-12, 16px);
+  font-size: var(--font-size-12, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-6, 6px);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.proto-nav__tab:hover {
+  color: var(--text-secondary);
+  background: var(--surface-strip);
+}
+
+/* Active tab states */
+:root:has(#view-default:checked)  [for="view-default"],
+:root:has(#view-states:checked)   [for="view-states"],
+:root:has(#view-overlays:checked) [for="view-overlays"] {
+  color: var(--text-primary);
+  background: var(--surface-app);
+}
+
+/* ── 3. Gallery Grid System ────────────────────
+ *
+ * Zone 2 & 3 shared layout:
+ *   .gallery-header   — section title + summary
+ *   .gallery-grid     — responsive card grid
+ *   .gallery-group    — component-level grouping
+ *   .gallery-cards    — card grid within a group
+ *   .gallery-card     — individual state/overlay card
+ */
+
+.gallery-header {
+  padding: var(--space-10, 16px) var(--space-16, 24px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.gallery-header h2 {
+  font-size: var(--font-size-16, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.gallery-summary {
+  font-size: var(--font-size-12, 12px);
+  color: var(--text-tertiary);
+  margin-top: var(--space-2, 2px);
+}
+
+/* Grid layout */
+.gallery-grid {
+  display: grid;
+  gap: var(--space-6, 8px);
+  padding: var(--space-8, 12px);
+}
+
+/* Component grouping */
+.gallery-group {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-8, 8px);
+  overflow: hidden;
+}
+
+.gallery-group__label {
+  padding: var(--space-6, 8px) var(--space-10, 16px);
+  font-size: var(--font-size-12, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-elevated);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Card grid within group */
+.gallery-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-8, 12px);
+  padding: var(--space-8, 12px);
+}
+
+/* Individual card */
+.gallery-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-6, 6px);
+  overflow: hidden;
+  background: var(--surface-secondary);
+}
+
+.gallery-card__label {
+  display: block;
+  padding: var(--space-3, 4px) var(--space-6, 8px);
+  font-size: var(--font-size-10, 10px);
+  font-weight: var(--font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-muted);
+}
+
+.gallery-card__preview {
+  padding: var(--space-6, 8px);
+  min-height: 120px;
+  background: var(--surface-app);
+}
+
+/* Overlay-specific card variants */
+.gallery-card__trigger {
+  display: block;
+  padding: var(--space-1, 1px) var(--space-6, 8px);
+  font-size: var(--font-size-10, 10px);
+  color: var(--text-quaternary);
+  font-style: italic;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.gallery-card__preview--overlay {
+  min-height: 200px;
+  position: relative;
+  background: var(--surface-overlay);
+}
+
+/* Overlay gallery — wider cards */
+.gallery-grid--overlays .gallery-cards {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+/* ── 4. Tab Panel System ───────────────────────
+ *
+ * Used within default-view for page-level tabs.
+ * HTML pattern unchanged from v1.
+ *
+ * HTML pattern:
+ *   <div class="tab-group" data-tab-group="hub">
+ *     <input type="radio" name="hub" id="hub-overview"
+ *            checked class="tab-radio sr-only">
+ *     <label for="hub-overview" class="hub-tab" role="tab">
+ *       概览
+ *     </label>
+ *     <div class="tab-panels">
+ *       <div class="tab-panel" data-panel="hub-overview">
+ *         ... overview content ...
+ *       </div>
+ *     </div>
+ *   </div>
+ *
+ * CSS activation rule (add per-page in <style>):
+ *   .tab-group:has(#hub-overview:checked)
+ *     [data-panel="hub-overview"] { display: block; }
+ */
+
+.tab-group {
+  display: contents;
+}
+
+.tab-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.tab-panel {
+  display: none;
+}
+
+/* ── 5. Overlay Visual Styles ──────────────────
+ *
+ * Used inside gallery-card__preview--overlay
+ * to render overlay components directly.
+ *
+ * Note: Overlays are no longer toggled via
+ * checkbox + :has() — they render directly
+ * inside gallery cards.
+ */
+
+/* ═══ Overlay Backdrop — default hidden ═══
+ *
+ * Overlay containers are hidden by default.
+ * Each page activates them via :root:has() rules:
+ *   :root:has(#overlay-xxx:checked) [data-overlay="overlay-xxx"] { display: flex; }
+ *
+ * Inside overlays-gallery, gallery cards may render
+ * overlay components directly without toggle.
+ */
+.overlay-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: var(--overlay-z-index, 1100);
+  background: color-mix(in oklch, var(--surface-app) 72%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-backdrop .overlay-dismiss {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.overlay-close {
+  cursor: pointer;
+  font-size: var(--font-size-14);
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+}
+
+/* Shared overlay grammar */
+.overlay-surface {
+  position: relative;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--panel-radius) !important;
+  background: var(--surface-modal) !important;
+  color: var(--text-secondary);
+  box-shadow: 0 0 0 1px var(--border-subtle) !important;
+  padding: var(--space-16);
+}
+
+/* Nested elevated panels inside overlays get explicit border for dark theme clarity.
+ * Surface-modal (oklch 0.290) and surface-panel-elevated (oklch 0.215) have
+ * noticeable contrast, but explicit borders ensure unambiguous boundary definition
+ * in dark theme where color differences alone can feel ambiguous. */
+.overlay-surface .panel-elevated {
+  border: 1px solid var(--border-subtle);
+}
+
+.overlay-surface--drawer {
+  margin-left: auto;
+  width: var(--shell-drawer-width, 440px);
+  height: 100%;
+  max-height: 100%;
+  border-radius: var(--panel-radius, 8px) 0 0 var(--panel-radius, 8px);
+  animation: overlay-drawer-enter var(--motion-duration-normal, 200ms) var(--motion-easing-emphasis, ease-out) both;
+}
+
+.overlay-surface--sheet {
+  width: min(520px, calc(100vw - var(--space-32, 48px)));
+  max-height: calc(100dvh - var(--space-32, 48px));
+  animation: overlay-sheet-enter var(--motion-duration-normal, 200ms) var(--motion-easing-emphasis, ease-out) both;
+}
+
+.overlay-surface--modal {
+  width: min(440px, calc(100vw - var(--space-32, 48px)));
+  max-height: calc(100dvh - var(--space-32, 48px));
+  animation: overlay-modal-enter var(--motion-duration-normal, 200ms) var(--motion-easing-emphasis, ease-out) both;
+}
+
+@keyframes overlay-drawer-enter {
+  from {
+    opacity: 0;
+    transform: translateX(var(--space-16, 24px));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes overlay-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-12, 16px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overlay-modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding-bottom: var(--space-10);
+  margin-bottom: var(--space-10);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.overlay-title {
+  color: var(--text-primary);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-semibold);
+}
+
+.overlay-body {
+  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+  line-height: 1.6;
+}
+
+.overlay-body :is(h2, h4) {
+  margin: var(--space-10) 0 var(--space-4);
+  color: var(--text-primary);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+}
+
+.overlay-body :is(h2, h4):first-child {
+  margin-top: 0;
+}
+
+.overlay-body-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+  line-height: 1.65;
+}
+
+.overlay-body-text.tight {
+  line-height: 1.55;
+}
+
+.overlay-field {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.overlay-field-label {
+  color: var(--text-tertiary);
+}
+
+.overlay-field-value {
+  color: var(--text-primary);
+  font-family: var(--font-family-numeric);
+}
+
+.overlay-confirm-box {
+  padding: var(--space-8);
+  margin-bottom: var(--space-8);
+  border-radius: var(--radius-4);
+  background: var(--interaction-hover-subtle-bg);
+}
+
+.overlay-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-6);
+  margin-top: var(--space-12);
+}
+
+.overlay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-height, 1.75rem);
+  padding: 0 var(--btn-padding-x, var(--space-10));
+  border: 1px solid var(--border-default);
+  border-radius: var(--btn-radius, var(--radius-4));
+  background: var(--surface-panel-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-family-ui);
+  font-size: var(--btn-font-size, var(--font-size-12));
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.overlay-btn-primary {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent);
+  color: var(--text-inverse);
+}
+
+.overlay-btn-secondary,
+.overlay-btn-default {
+  background: var(--surface-panel-base);
+  color: var(--text-secondary);
+}
+
+.overlay-btn-danger {
+  border-color: var(--risk-high-fg);
+  background: transparent;
+  color: var(--risk-high-fg);
+}
+
+.toast-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--panel-radius, var(--radius-8));
+  background: var(--surface-panel-elevated);
+  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+  animation: overlay-sheet-enter var(--motion-duration-normal, 200ms) var(--motion-easing-emphasis, ease-out) both;
+}
+
+.toast-link {
+  margin-left: auto;
+  color: var(--brand-accent);
+  cursor: pointer;
+}
+
+/* Contained overlay preview in gallery */
+.gallery-card__preview--overlay .overlay-surface {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
+}
+
+/* ── 6. State Content Patterns ─────────────────
+ *
+ * Reusable content patterns for gallery cards.
+ * These are NOT wrapped in <details> anymore —
+ * they render directly inside .gallery-card__preview.
+ */
+
+/* Empty state */
+.state-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8, 12px);
+  padding: var(--space-16, 24px) var(--space-12, 16px);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.state-empty-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--brand-signature-fg) 8%, var(--surface-muted));
+  border: 1px solid color-mix(in oklch, var(--brand-signature-fg) 20%, var(--border-subtle));
+  color: var(--brand-signature-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.state-empty-title {
+  font-size: var(--font-size-13, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-secondary);
+}
+
+.state-empty-desc {
+  font-size: var(--font-size-12, 12px);
+  color: var(--text-tertiary);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.state-empty-cta {
+  margin-top: var(--space-4, 6px);
+  padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
+  font-size: var(--font-size-12, 12px);
+  border-radius: var(--btn-radius, 4px);
+  background: var(--brand-accent-subtle);
+  color: var(--brand-accent);
+  border: 1px solid var(--brand-accent);
+  cursor: pointer;
+}
+
+/* Loading / Skeleton state */
+.state-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6, 8px);
+  padding: var(--space-12, 16px);
+}
+
+/* Error state */
+.state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8, 12px);
+  padding: var(--space-16, 24px) var(--space-12, 16px);
+  text-align: center;
+}
+
+.state-error-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--danger-subtle-bg);
+  color: var(--risk-critical-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.state-error-title {
+  font-size: var(--font-size-13, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-secondary);
+}
+
+.state-error-desc {
+  font-size: var(--font-size-12, 12px);
+  color: var(--text-tertiary);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.state-error-retry {
+  margin-top: var(--space-4, 6px);
+  padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
+  font-size: var(--font-size-12, 12px);
+  border-radius: var(--btn-radius, 4px);
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+}
+
+/* Stale data state */
+.state-stale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8, 12px);
+  padding: var(--space-16, 24px) var(--space-12, 16px);
+  text-align: center;
+}
+
+.state-stale-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--risk-near-limit-fg, oklch(0.680 0.150 55)) 10%, transparent);
+  color: var(--risk-near-limit-fg, oklch(0.680 0.150 55));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.state-stale-title {
+  font-size: var(--font-size-13, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--text-secondary);
+}
+
+.state-stale-desc {
+  font-size: var(--font-size-12, 12px);
+  color: var(--text-tertiary);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.state-stale-retry {
+  margin-top: var(--space-4, 6px);
+  padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
+  font-size: var(--font-size-12, 12px);
+  border-radius: var(--btn-radius, 4px);
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+}
+
+.state-stale-retry:hover {
+  background: var(--surface-overlay);
+}
+
+/* ── 7. Reduced Motion ──────────────────────────
+ *
+ * Skip zone-switch fade animation when the user prefers
+ * reduced motion. Covers both the media query and the
+ * data-reduced-motion attribute set by prototype-interactions.js.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root:has(#view-default:checked)  #default-view,
+  :root:has(#view-states:checked)   #states-gallery,
+  :root:has(#view-overlays:checked) #overlays-gallery {
+    animation: none;
+  }
+}
+
+:root[data-reduced-motion]:has(#view-default:checked)  #default-view,
+:root[data-reduced-motion]:has(#view-states:checked)   #states-gallery,
+:root[data-reduced-motion]:has(#view-overlays:checked) #overlays-gallery {
+  animation: none;
+}

@@ -1,0 +1,138 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import { server } from "@/mocks/server";
+import { researchHandlers } from "@/mocks/handlers/research";
+
+import { ResearchPulseStrip } from "./research-pulse-strip";
+import { FactorTable } from "./factor-table";
+import { RecentRuns } from "./recent-runs";
+import { ExperimentQueue } from "./experiment-queue";
+import { ResearchPage } from "./research-page";
+import { FactorListPage } from "./factor-list-page";
+import { ExperimentListPage } from "./experiment-list-page";
+import { UniverseListPage } from "./universe-list-page";
+
+function createQueryClient(): QueryClient {
+	return new QueryClient({
+		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+	});
+}
+
+function createWrapper() {
+	const qc = createQueryClient();
+	return function Wrapper({ children }: { children: ReactNode }) {
+		return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+	};
+}
+
+beforeEach(() => server.use(...researchHandlers));
+
+describe("Research route page contract handoffs", () => {
+	it("live 模式显示 prototype only 空态", () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		render(<ResearchPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("prototype only")).toBeInTheDocument();
+		expect(screen.getByText("prototype only，请切 VITE_USE_MOCK=true 查看原型数据。")).toBeInTheDocument();
+	});
+
+	it("covers ResearchPage route composition", async () => {
+		render(<ResearchPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("因子监控")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("近期运行")).resolves.toBeInTheDocument();
+		await expect(screen.findAllByText("实验")).resolves.not.toHaveLength(0);
+	});
+
+	it("covers FactorListPage route composition", () => {
+		render(<FactorListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("因子库")).toBeInTheDocument();
+		expect(screen.getByText("Factors")).toBeInTheDocument();
+		expect(screen.getByText("Factor Detail")).toBeInTheDocument();
+	});
+
+	it("covers ExperimentListPage route composition", () => {
+		render(<ExperimentListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("实验队列")).toBeInTheDocument();
+		expect(screen.getByText("Experiments")).toBeInTheDocument();
+		expect(screen.getByText("Run Detail")).toBeInTheDocument();
+	});
+
+	it("covers UniverseListPage route composition", () => {
+		render(<UniverseListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("股票池")).toBeInTheDocument();
+		expect(screen.getByText("Universes")).toBeInTheDocument();
+		expect(screen.getByText("Rules")).toBeInTheDocument();
+	});
+});
+
+describe("ResearchPulseStrip", () => {
+	it("渲染 4 个脉动指标", async () => {
+		render(<ResearchPulseStrip />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("活跃因子")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("衰减因子")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("失败因子")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("审核队列")).resolves.toBeInTheDocument();
+	});
+
+	it("显示正确的数值", async () => {
+		render(<ResearchPulseStrip />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText(/42/)).resolves.toBeInTheDocument();
+	});
+});
+
+describe("FactorTable", () => {
+	it("渲染因子监控标题", async () => {
+		render(<FactorTable />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("因子监控")).resolves.toBeInTheDocument();
+	});
+
+	it("显示因子列表", async () => {
+		render(<FactorTable />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("动量因子")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("价值因子")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("RecentRuns", () => {
+	it("渲染近期运行标题", async () => {
+		render(<RecentRuns />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("近期运行")).resolves.toBeInTheDocument();
+	});
+
+	it("显示运行列表", async () => {
+		render(<RecentRuns />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("动量策略 v3 回测")).resolves.toBeInTheDocument();
+	});
+});
+
+describe("ExperimentQueue", () => {
+	it("渲染实验标题", async () => {
+		render(<ExperimentQueue />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("实验")).resolves.toBeInTheDocument();
+	});
+
+	it("渲染审核队列标题", async () => {
+		render(<ExperimentQueue />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("审核队列")).resolves.toBeInTheDocument();
+	});
+
+	it("显示审核项目", async () => {
+		render(<ExperimentQueue />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("情绪因子 v2")).resolves.toBeInTheDocument();
+	});
+});
