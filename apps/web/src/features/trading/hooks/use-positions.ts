@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type { GetPositionsResponse } from "@/types";
-import { mapPositionsResponse } from "../api/mappers";
+import { mapDailyDecisionV2ToLegacy, mapPositionsResponse } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { useDailyDecision } from "./use-daily-decision";
+import { useDailyDecisionV2 } from "./use-daily-decision-v2";
 
 export function usePositions() {
 	const usePrototypeMocks = shouldUsePrototypeMocks();
-	const liveQuery = useDailyDecision(undefined, mapPositionsResponse, {
-		enabled: !usePrototypeMocks,
-	});
+	const liveQuery = useDailyDecisionV2(
+		undefined,
+		(report) => mapPositionsResponse(mapDailyDecisionV2ToLegacy(report)),
+		{
+			enabled: !usePrototypeMocks,
+		},
+	);
 	const mockQuery = useQuery({
 		queryKey: ["trading", "positions"],
 		queryFn: () => apiClient.get<GetPositionsResponse>("/trading/positions"),

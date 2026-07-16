@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
-import { tradingHandlers } from "@/mocks/handlers/trading";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ordersHandlers } from "@/mocks/handlers/orders";
-
-import { OrdersList } from "./orders-list";
-import { OrdersHealthStrip } from "./orders-health-strip";
+import { tradingHandlers } from "@/mocks/handlers/trading";
+import { server } from "@/mocks/server";
 import { OrderDetailPanel } from "./order-detail-panel";
+import { OrdersHealthStrip } from "./orders-health-strip";
+import { OrdersList } from "./orders-list";
 import { OrdersPage } from "./orders-page";
 
 function createQueryClient(): QueryClient {
@@ -138,6 +138,47 @@ describe("OrdersPage", () => {
 		expect(screen.getByText("manual / paper")).toBeInTheDocument();
 		await expect(screen.findByText("fill-159915-001")).resolves.toBeInTheDocument();
 		expect(screen.getByText("intent-159915")).toBeInTheDocument();
+	});
+
+	it("live 模式明确呈现同一 intent 的多笔分批成交", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		server.use(
+			http.get("/api/v1/trade/fills", () =>
+				HttpResponse.json({
+					data: [
+						{
+							fill_id: "fill-split-1",
+							intent_id: "intent-split",
+							strategy_id: "seed_etf_industry_rotation",
+							trade_date: "2026-07-02",
+							instrument_id: 510300,
+							direction: "buy",
+							quantity: 500,
+							fill_price: 4.31,
+							fee: 1,
+							slippage: 0,
+						},
+						{
+							fill_id: "fill-split-2",
+							intent_id: "intent-split",
+							strategy_id: "seed_etf_industry_rotation",
+							trade_date: "2026-07-02",
+							instrument_id: 510300,
+							direction: "buy",
+							quantity: 500,
+							fill_price: 4.32,
+							fee: 1,
+							slippage: 0,
+						},
+					],
+					pagination: { total: 2, limit: 2, offset: 0, has_more: false },
+				}),
+			),
+		);
+
+		render(<OrdersPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findAllByText("intent-split · 分批 2 笔")).resolves.toHaveLength(2);
 	});
 
 	it("渲染健康条（health slot）", async () => {

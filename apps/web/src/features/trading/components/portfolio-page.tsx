@@ -1,8 +1,10 @@
-import { AnalyticalLayout, Panel, PanelBody, PanelHeader, StatusBar } from "@/features/shell";
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { Button } from "@/components/ui/button";
+import { AnalyticalLayout, Panel, PanelBody, PanelHeader, StatusBar } from "@/features/shell";
+import { mapDailyDecisionV2ToLegacy } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { useComparisonAttribution, useDailyDecision } from "../hooks";
+import { useComparisonAttribution, useDailyDecisionV2 } from "../hooks";
 import { FillLedgerList } from "./fill-ledger-list";
 import { PositionsSummary } from "./positions-summary";
 import { SignalToOrderPipelineStrip } from "./signal-to-order-pipeline-strip";
@@ -19,10 +21,7 @@ interface PortfolioPageProps {
 
 function AttributionPanel({ comparisonRunId }: PortfolioPageProps) {
 	const hasRunId = Boolean(comparisonRunId);
-	const { data, isLoading } = useComparisonAttribution(
-		{ runId: comparisonRunId ?? "" },
-		{ enabled: hasRunId },
-	);
+	const { data, isLoading } = useComparisonAttribution({ runId: comparisonRunId ?? "" }, { enabled: hasRunId });
 
 	if (!hasRunId) {
 		return (
@@ -63,7 +62,12 @@ function AttributionPanel({ comparisonRunId }: PortfolioPageProps) {
 
 export function PortfolioPage({ comparisonRunId }: PortfolioPageProps = {}) {
 	const liveMode = !shouldUsePrototypeMocks();
-	const { data: dailyDecision } = useDailyDecision(undefined, undefined, {
+	const {
+		data: dailyDecision,
+		isLoading,
+		isError,
+		refetch,
+	} = useDailyDecisionV2(undefined, mapDailyDecisionV2ToLegacy, {
 		enabled: liveMode,
 	});
 
@@ -83,31 +87,31 @@ export function PortfolioPage({ comparisonRunId }: PortfolioPageProps = {}) {
 					}
 					main={
 						<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+							{isError && (
+								<div
+									role="alert"
+									className="flex items-center justify-between rounded-(--radius-sm) border border-(--color-risk-critical-fg) px-3 py-2 text-sm"
+								>
+									<span>组合实盘数据加载失败，未使用原型数据替代。</span>
+									<Button variant="outline" size="sm" onClick={() => void refetch()}>
+										重试
+									</Button>
+								</div>
+							)}
 							<Panel>
 								<PanelHeader title="P&L" />
 								<PanelBody className="p-3">
+									{isLoading && <LoadingSkeleton variant="metric" />}
 									<div className="grid grid-cols-2 gap-3">
 										<Metric
 											label="净盈亏"
-											value={
-												dailyDecision?.pnl
-													? `¥${dailyDecision.pnl.net_pnl.toLocaleString()}`
-													: "—"
-											}
-											trend={
-												dailyDecision?.pnl && dailyDecision.pnl.net_pnl >= 0
-													? "up"
-													: "down"
-											}
+											value={dailyDecision?.pnl ? `¥${dailyDecision.pnl.net_pnl.toLocaleString()}` : "—"}
+											trend={dailyDecision?.pnl && dailyDecision.pnl.net_pnl >= 0 ? "up" : "down"}
 											variant="equity"
 										/>
 										<Metric
 											label="累计手续费"
-											value={
-												dailyDecision?.pnl
-													? `¥${dailyDecision.pnl.total_fees.toLocaleString()}`
-													: "—"
-											}
+											value={dailyDecision?.pnl ? `¥${dailyDecision.pnl.total_fees.toLocaleString()}` : "—"}
 											variant="standard"
 										/>
 									</div>

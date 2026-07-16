@@ -1,5 +1,7 @@
 export { useTradingSession } from "./use-trading-session";
+export { useCorrectFill } from "./use-correct-fill";
 export { useDailyDecision } from "./use-daily-decision";
+export { useDailyDecisionV2 } from "./use-daily-decision-v2";
 export { useEquity } from "./use-equity";
 export { usePositions } from "./use-positions";
 export { useRiskSummary } from "./use-risk-summary";

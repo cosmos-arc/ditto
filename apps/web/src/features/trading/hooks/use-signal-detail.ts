@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type { GetSignalDetailResponse } from "@/types";
-import { mapDailyDecisionToSignalDetail } from "../api/mappers";
+import { mapDailyDecisionToSignalDetail, mapDailyDecisionV2ToLegacy } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { useDailyDecision } from "./use-daily-decision";
+import { useDailyDecisionV2 } from "./use-daily-decision-v2";
 
 export function useSignalDetail(id: string) {
 	const usePrototypeMocks = shouldUsePrototypeMocks();
-	const liveQuery = useDailyDecision(
+	const liveQuery = useDailyDecisionV2(
 		undefined,
-		(report) => mapDailyDecisionToSignalDetail(report, id),
+		(report) => mapDailyDecisionToSignalDetail(mapDailyDecisionV2ToLegacy(report), id),
 		{ enabled: !usePrototypeMocks },
 	);
 	const mockQuery = useQuery({

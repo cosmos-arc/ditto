@@ -1,17 +1,20 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
-import { server } from "@/mocks/server";
-import { http, HttpResponse } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { tradingHandlers } from "@/mocks/handlers/trading";
-
-import { TradingSessionStrip } from "./trading-session-strip";
+import { server } from "@/mocks/server";
+import type { components } from "@/types/generated/api";
 import { EquityPnlBlock } from "./equity-pnl-block";
+import { PortfolioPage } from "./portfolio-page";
 import { PositionsSummary } from "./positions-summary";
 import { RiskAlertsBlock } from "./risk-alerts-block";
 import { TradingPage } from "./trading-page";
-import { PortfolioPage } from "./portfolio-page";
+import { TradingSessionStrip } from "./trading-session-strip";
+
+type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
+type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -26,7 +29,10 @@ function createWrapper() {
 	};
 }
 
-beforeEach(() => server.use(...tradingHandlers));
+beforeEach(() => {
+	server.use(...tradingHandlers);
+	window.history.replaceState({}, "", "/trading");
+});
 
 const liveDailyDecision = {
 	strategy_id: "seed_etf_industry_rotation",
@@ -84,7 +90,105 @@ const liveDailyDecision = {
 		total_fees: 3,
 		net_pnl: 197,
 	},
-} as const;
+} satisfies DailyDecisionReportResponse;
+
+const liveDailyDecisionV2 = {
+	identity: {
+		strategy_id: "seed_etf_industry_rotation",
+		strategy_version: "1",
+		account_id: "paper-a",
+		sleeve_id: "manual-paper-a-seed_etf_industry_rotation",
+		signal_date: "2026-07-02",
+		decision_date: "2026-07-02",
+		intended_trade_date: "2026-07-03",
+	},
+	readiness: {
+		status: "review",
+		reason_codes: ["RISK_WARNING"],
+		details: ["risk review"],
+	},
+	data: {
+		required_datasets: ["etf_daily"],
+		snapshot_ids: { etf_daily: "sha256:etf-daily" },
+		dataset_states: [
+			{
+				dataset: "etf_daily",
+				status: "ready",
+				snapshot_id: "sha256:etf-daily",
+				reason: "",
+			},
+		],
+		freshness: "ready",
+		dq_state: "passed",
+	},
+	run_package: {
+		outcome: "completed",
+		batch_key: "eod-2026-07-02-seed_etf_industry_rotation-1",
+		artifact_id: "signal-package-1",
+		checksum: "sha256:package-1",
+		checksum_valid: true,
+		no_rebalance: false,
+		factor_evidence: {},
+		risk_evidence: ["RISK_WARNING"],
+	},
+	account_positions: {
+		baseline_id: "baseline-1",
+		account_id: "paper-a",
+		sleeve_id: "manual-paper-a-seed_etf_industry_rotation",
+		cash_available: 60_000,
+		cash_settled: 60_000,
+		cash_frozen: 0,
+		total_value: 100_000,
+		nav: 1,
+		exposure: 40_000,
+		as_of: "2026-07-02",
+		positions: liveDailyDecision.positions,
+	},
+	actions: [
+		{
+			intent_id: "intent-510300",
+			instrument_id: 510300,
+			direction: "buy",
+			target_weight: 0.3,
+			current_weight: 0.12,
+			delta_weight: 0.18,
+			raw_quantity: 1_050,
+			rounded_quantity: 1_000,
+			suggested_quantity: 1000,
+			reference_price: 4.31,
+			lot_size: 100,
+			cash_impact: -4_310,
+			reason: "rounded_down_to_board_lot",
+			sizing_readiness: "ready",
+			risk_flags: ["RISK_WARNING"],
+			intent_status: "pending",
+			filled_quantity: 400,
+			remaining_quantity: 600,
+		},
+	],
+	execution_review: {
+		deviation: liveDailyDecision.deviation,
+		pnl: liveDailyDecision.pnl,
+		effective_fills: [
+			{
+				fill_id: "fill-510300-001",
+				intent_id: "intent-510300",
+				strategy_id: "seed_etf_industry_rotation",
+				trade_date: "2026-07-03",
+				instrument_id: 510300,
+				direction: "buy",
+				quantity: 400,
+				fill_price: 4.32,
+				fee: 1.2,
+				slippage: 0.01,
+				notes: "manual paper fill",
+				settlement_date: "2026-07-06",
+			},
+		],
+		exceptions: [],
+		unresolved_conflicts: [],
+	},
+} satisfies DailyDecisionV2Response;
 
 describe("Trading route page contract handoffs", () => {
 	it("covers PortfolioPage route composition", () => {
@@ -98,9 +202,8 @@ describe("Trading route page contract handoffs", () => {
 	it("live 模式展示真实 positions/pnl、归因空态与 Pipeline Strip", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
-			http.get("/api/v1/trade/daily-decision", () =>
-				HttpResponse.json({ data: liveDailyDecision }),
-			),
+			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
+			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 		);
 
 		render(<PortfolioPage />, { wrapper: createWrapper() });
@@ -120,9 +223,8 @@ describe("Trading route page contract handoffs", () => {
 	it("live 模式 Portfolio 带 run_id 时渲染 comparison 归因数据", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
-			http.get("/api/v1/trade/daily-decision", () =>
-				HttpResponse.json({ data: liveDailyDecision }),
-			),
+			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
+			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 			http.get("/api/v1/trade/comparison", () =>
 				HttpResponse.json({
 					data: {
@@ -231,36 +333,115 @@ describe("RiskAlertsBlock", () => {
 		render(<RiskAlertsBlock />, { wrapper: createWrapper() });
 		await expect(screen.findByText(/15 已成交/)).resolves.toBeInTheDocument();
 	});
+
+	it("live 模式只展示 Daily Decision 风险证据，不请求 prototype 风险摘要", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		const legacyRiskHandler = vi.fn(() => HttpResponse.json({}));
+		server.use(
+			http.get("/api/trading/risk/summary", legacyRiskHandler),
+			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
+		);
+
+		render(<RiskAlertsBlock />, { wrapper: createWrapper() });
+
+		await expect(screen.findAllByText("RISK_WARNING")).resolves.not.toHaveLength(0);
+		expect(screen.queryByText("VaR")).not.toBeInTheDocument();
+		expect(legacyRiskHandler).not.toHaveBeenCalled();
+	});
 });
 
 describe("TradingPage - DecisionBanner", () => {
+	it("live 桌面主工作区由 TradingPage 局部提供纵向滚动", () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+
+		const { container } = render(<TradingPage />, { wrapper: createWrapper() });
+
+		const mainContent = container.querySelector("[data-slot='main'] > div");
+		expect(mainContent).toHaveClass("md:h-full");
+		expect(mainContent).toHaveClass("md:overflow-y-auto");
+	});
+
+	it("live 模式提供显式可提交的 strategy/account/date 执行范围", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		window.history.replaceState({}, "", "/trading?strategy_id=strategy-x&account_id=paper-x&trade_date=2026-07-02");
+
+		render(<TradingPage />, { wrapper: createWrapper() });
+
+		const form = await screen.findByRole("form", { name: "执行范围" });
+		expect(within(form).getByLabelText("策略 ID")).toHaveValue("strategy-x");
+		expect(within(form).getByLabelText("账户 ID")).toHaveValue("paper-x");
+		expect(within(form).getByLabelText("信号日期")).toHaveValue("2026-07-02");
+		expect(within(form).getByRole("button", { name: "加载决策" })).toBeInTheDocument();
+	});
+
 	it("live 模式从 daily-decision 渲染 primary answer", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
-			http.get("/api/v1/trade/daily-decision", () =>
-				HttpResponse.json({ data: liveDailyDecision }),
-			),
+			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
+			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 		);
 
 		const { container } = render(<TradingPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("需复核")).resolves.toBeInTheDocument();
-		expect(screen.getByText("信号 1 条")).toBeInTheDocument();
-		expect(screen.getByText("偏差 125 bps")).toBeInTheDocument();
+		await expect(screen.findAllByText("需复核")).resolves.not.toHaveLength(0);
+		const banner = screen.getByTestId("decision-banner");
+		expect(within(banner).getByText("1 条")).toBeInTheDocument();
+		expect(within(banner).getByText("1 项提示")).toBeInTheDocument();
 		expect(container.querySelector("[data-primary-answer='true']")).toBeInTheDocument();
 	});
 
-	it("live 模式 Overview 信号队列使用 daily-decision 而非 mock 常量", async () => {
+	it("blocked 状态关闭决策横幅中的交易动作", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
-			http.get("/api/v1/trade/daily-decision", () =>
-				HttpResponse.json({ data: liveDailyDecision }),
+			http.get("/api/v1/trade/daily-decision/v2", () =>
+				HttpResponse.json({
+					data: {
+						...liveDailyDecisionV2,
+						readiness: {
+							status: "blocked",
+							reason_codes: ["ACCOUNT_BASELINE_MISSING"],
+						},
+					},
+				}),
 			),
 		);
 
 		render(<TradingPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("信号 1 条")).resolves.toBeInTheDocument();
+		await expect(screen.findAllByText("阻塞")).resolves.not.toHaveLength(0);
+		const banner = screen.getByTestId("decision-banner");
+		expect(within(banner).queryByText("打开信号")).not.toBeInTheDocument();
+		expect(within(banner).queryByText("复核证据")).not.toBeInTheDocument();
+		expect(within(banner).queryByText(/^[▲▼] 阻塞$/)).not.toBeInTheDocument();
+		expect(within(banner).getByText("关闭")).toBeInTheDocument();
+		expect(within(banner).queryByText("1 条")).not.toBeInTheDocument();
+	});
+
+	it("live 契约失败时显示可重试错误且不回退原型净值", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		server.use(
+			http.get("/api/v1/trade/daily-decision/v2", () =>
+				HttpResponse.json({ detail: "temporary failure" }, { status: 503 }),
+			),
+		);
+
+		render(<TradingPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("加载失败")).resolves.toBeInTheDocument();
+		expect(within(screen.getByTestId("decision-banner")).getByRole("button", { name: "重试" })).toBeInTheDocument();
+		expect(screen.queryByText("1.0842")).not.toBeInTheDocument();
+	});
+
+	it("live 模式 Overview 信号队列使用 daily-decision 而非 mock 常量", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		server.use(
+			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
+			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
+		);
+
+		render(<TradingPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("1 条")).resolves.toBeInTheDocument();
 		const signalsQueue = document.querySelector("[data-info-unit='signals-queue']");
 		expect(signalsQueue).toBeInTheDocument();
 		expect(within(signalsQueue as HTMLElement).getByText("#510300")).toBeInTheDocument();
@@ -271,14 +452,13 @@ describe("TradingPage - DecisionBanner", () => {
 	it("live 模式 Overview 订单区使用手工执行流水而非 mock 委托", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
-			http.get("/api/v1/trade/daily-decision", () =>
-				HttpResponse.json({ data: liveDailyDecision }),
-			),
+			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
+			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 		);
 
 		render(<TradingPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("信号 1 条")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("1 条")).resolves.toBeInTheDocument();
 		const ordersPanel = document.querySelector("[data-info-unit='orders-panel']");
 		expect(ordersPanel).toBeInTheDocument();
 		await within(ordersPanel as HTMLElement).findByText("manual / paper");
@@ -352,8 +532,8 @@ describe("TradingPage - OrdersPanel", () => {
 		await screen.findByText("委托订单");
 
 		fireEvent.click(screen.getByRole("button", { name: "已成交" }));
-			expect(screen.getAllByText("宁德时代").length).toBeGreaterThanOrEqual(1);
-			expect(screen.getAllByText("平安银行").length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText("宁德时代").length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText("平安银行").length).toBeGreaterThanOrEqual(1);
 	});
 
 	it("切换到已撤单标签显示撤单订单", async () => {

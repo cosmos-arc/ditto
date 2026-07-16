@@ -1,30 +1,14 @@
-import { useState, type FormEvent } from "react";
-import { useSignalDetail } from "../hooks/use-signal-detail";
-import { useRecordFill } from "../hooks/use-record-fill";
-import { useUpdateIntentStatus } from "../hooks/use-update-intent-status";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell";
+import { type FormEvent, useRef, useState } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { ApiError } from "@/lib/api-client";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import type { RecordFillRequest } from "../api/fills";
-import type { IntentStatus } from "../api/intents";
 import type { SignalExecutionIntent } from "@/types";
+import type { RecordFillRequest } from "../api/fills";
+import { classifyMutationFailure } from "../api/mutation-result";
+import { useRecordFill } from "../hooks/use-record-fill";
+import { useSignalDetail } from "../hooks/use-signal-detail";
 
 type RiskCheckStatus = "pass" | "warn" | "fail";
 
@@ -45,6 +29,8 @@ interface SignalDetailPanelProps {
 }
 
 interface FillFormState {
+	readonly fillId: string;
+	readonly tradeDate: string;
 	readonly quantity: string;
 	readonly fillPrice: string;
 	readonly fee: string;
@@ -53,6 +39,8 @@ interface FillFormState {
 }
 
 const EMPTY_FILL_FORM: FillFormState = {
+	fillId: "",
+	tradeDate: "",
 	quantity: "",
 	fillPrice: "",
 	fee: "0",
@@ -60,20 +48,12 @@ const EMPTY_FILL_FORM: FillFormState = {
 	notes: "",
 };
 
-const INTENT_STATUS_OPTIONS = [
-	{ value: "pending", label: "待复核" },
-	{ value: "filled", label: "成交" },
-	{ value: "partially_filled", label: "部分成交" },
-	{ value: "cancelled", label: "取消" },
-	{ value: "expired", label: "过期" },
-] as const satisfies ReadonlyArray<{
-	readonly value: IntentStatus;
-	readonly label: string;
-}>;
-
 function createFillFormState(execution: SignalExecutionIntent): FillFormState {
+	const defaultQuantity = execution.remainingQuantity ?? execution.quantity;
 	return {
-		quantity: execution.quantity > 0 ? String(execution.quantity) : "",
+		fillId: `fill-${execution.intentId}-${globalThis.crypto.randomUUID()}`,
+		tradeDate: execution.tradeDate,
+		quantity: defaultQuantity > 0 ? String(defaultQuantity) : "",
 		fillPrice: "",
 		fee: "0",
 		slippage: "0",
@@ -93,10 +73,19 @@ function buildRecordFillRequest(
 	if (!execution?.intentId) {
 		return { error: "缺少 intent_id，无法录入成交" };
 	}
+	if (!form.fillId) {
+		return { error: "缺少 fill_id，无法保证成交录入幂等" };
+	}
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(form.tradeDate)) {
+		return { error: "实际成交日必须使用 YYYY-MM-DD" };
+	}
 
 	const quantity = parseFiniteNumber(form.quantity);
 	if (quantity == null || quantity <= 0) {
 		return { error: "成交数量必须大于 0" };
+	}
+	if (execution.remainingQuantity != null && quantity > execution.remainingQuantity) {
+		return { error: `成交数量不能超过剩余数量 ${execution.remainingQuantity.toLocaleString("en-US")}` };
 	}
 
 	const fillPrice = parseFiniteNumber(form.fillPrice);
@@ -116,10 +105,10 @@ function buildRecordFillRequest(
 
 	return {
 		payload: {
-			fill_id: `fill-${execution.intentId}-${execution.tradeDate}`,
+			fill_id: form.fillId,
 			intent_id: execution.intentId,
 			strategy_id: execution.strategyId,
-			trade_date: execution.tradeDate,
+			trade_date: form.tradeDate,
 			instrument_id: execution.instrumentId,
 			direction: execution.direction,
 			quantity,
@@ -133,32 +122,28 @@ function buildRecordFillRequest(
 
 function describeMutationError(error: unknown): string | null {
 	if (!error) return null;
+	const failureKind = classifyMutationFailure(error);
+	if (failureKind === "unknown") {
+		return "提交结果未知；重试将复用同一 fill_id 与成交内容，避免重复录入。";
+	}
+	if (failureKind === "conflict" && error instanceof ApiError) return `成交冲突：${error.message}`;
 	if (error instanceof ApiError) {
 		return error.errorCode ? `${error.message}（${error.errorCode}）` : error.message;
 	}
-	return "手工成交录入失败，请稍后重试";
-}
-
-function toIntentStatus(value: string): IntentStatus {
-	return INTENT_STATUS_OPTIONS.find((option) => option.value === value)?.value ?? "filled";
-}
-
-function intentStatusLabel(status: IntentStatus): string {
-	return INTENT_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+	return null;
 }
 
 export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 	const { data, isLoading, isError, refetch } = useSignalDetail(signalId);
 	const recordFillMutation = useRecordFill();
-	const updateIntentStatusMutation = useUpdateIntentStatus();
+	const recordFillTriggerRef = useRef<HTMLButtonElement>(null);
 	const [fillSheetOpen, setFillSheetOpen] = useState(false);
 	const [fillForm, setFillForm] = useState<FillFormState>(EMPTY_FILL_FORM);
+	const [reviewConfirmed, setReviewConfirmed] = useState(false);
 	const [fillValidationError, setFillValidationError] = useState<string | null>(null);
 	const [fillSuccessMessage, setFillSuccessMessage] = useState<string | null>(null);
-	const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-	const [targetStatus, setTargetStatus] = useState<IntentStatus>("filled");
-	const [statusValidationError, setStatusValidationError] = useState<string | null>(null);
-	const [statusSuccessMessage, setStatusSuccessMessage] = useState<string | null>(null);
+	const [lastFillPayload, setLastFillPayload] = useState<RecordFillRequest | null>(null);
+	const reviewReasons = data?.execution?.reviewReasons.filter((reason) => reason !== "READY_FOR_REVIEW") ?? [];
 
 	if (isLoading) {
 		return (
@@ -177,15 +162,16 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 		return (
 			<Panel>
 				<PanelHeader title="信号详情" />
-				<PanelBody>
-					<DittoErrorBoundary
-						fallbackProps={{
-							title: "信号详情加载失败",
-							onRetry: () => void refetch(),
-						}}
+				<PanelBody className="p-3">
+					<div
+						role="alert"
+						className="flex flex-col items-start gap-2 rounded-(--radius-sm) border border-(--color-risk-critical-fg) px-3 py-3 text-sm text-(--color-foreground-secondary) sm:flex-row sm:items-center sm:justify-between"
 					>
-						<div />
-					</DittoErrorBoundary>
+						<span>信号详情加载失败</span>
+						<Button variant="outline" size="sm" onClick={() => void refetch()}>
+							重试
+						</Button>
+					</div>
 				</PanelBody>
 			</Panel>
 		);
@@ -198,23 +184,21 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 		}
 
 		recordFillMutation.reset();
+		setLastFillPayload(null);
 		setFillSuccessMessage(null);
 		setFillValidationError(null);
+		setReviewConfirmed(false);
 		setFillForm(createFillFormState(data.execution));
 		setFillSheetOpen(true);
 	}
 
-	function openStatusDialog() {
-		if (!data?.execution?.intentId) {
-			setStatusValidationError("缺少 intent_id，无法更新状态");
-			return;
-		}
-
-		updateIntentStatusMutation.reset();
-		setStatusSuccessMessage(null);
-		setStatusValidationError(null);
-		setTargetStatus("filled");
-		setStatusDialogOpen(true);
+	function executeRecordFill(payload: RecordFillRequest) {
+		recordFillMutation.mutate(payload, {
+			onSuccess: () => {
+				setFillSheetOpen(false);
+				setFillSuccessMessage("手工成交已录入");
+			},
+		});
 	}
 
 	function submitRecordFill(event: FormEvent<HTMLFormElement>) {
@@ -226,31 +210,13 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 			setFillValidationError(result.error);
 			return;
 		}
-
-		recordFillMutation.mutate(result.payload, {
-			onSuccess: () => {
-				setFillSheetOpen(false);
-				setFillSuccessMessage("手工成交已录入");
-			},
-		});
-	}
-
-	function submitIntentStatus() {
-		if (!data?.execution?.intentId) {
-			setStatusValidationError("缺少 intent_id，无法更新状态");
+		if (reviewReasons.length > 0 && !reviewConfirmed) {
+			setFillValidationError("请先确认已复核后端返回的原因");
 			return;
 		}
 
-		setStatusValidationError(null);
-		updateIntentStatusMutation.mutate(
-			{ intentId: data.execution.intentId, status: targetStatus },
-			{
-				onSuccess: () => {
-					setStatusDialogOpen(false);
-					setStatusSuccessMessage(`状态已更新为${intentStatusLabel(targetStatus)}`);
-				},
-			},
-		);
+		setLastFillPayload(result.payload);
+		executeRecordFill(result.payload);
 	}
 
 	function updateFillForm(field: keyof FillFormState, value: string) {
@@ -260,17 +226,25 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 	function handleAction(actionType: string) {
 		if (actionType === "record_fill") {
 			openRecordFillSheet();
-			return;
-		}
-		if (actionType === "update_status") {
-			openStatusDialog();
 		}
 	}
 
 	const fillErrorMessage = fillValidationError ?? describeMutationError(recordFillMutation.error);
-	const statusErrorMessage =
-		statusValidationError ?? describeMutationError(updateIntentStatusMutation.error);
-	const isActionPending = recordFillMutation.isPending || updateIntentStatusMutation.isPending;
+	const isActionPending = recordFillMutation.isPending;
+	const fillFailureKind = classifyMutationFailure(recordFillMutation.error);
+	const isFillConflict = fillFailureKind === "conflict";
+	const canRetryFill = recordFillMutation.isError && fillFailureKind === "unknown" && lastFillPayload !== null;
+	const mustPreserveFillCommand = recordFillMutation.isPending || canRetryFill;
+
+	function handleFillSheetOpenChange(nextOpen: boolean) {
+		if (!nextOpen && mustPreserveFillCommand) return;
+		setFillSheetOpen(nextOpen);
+	}
+
+	function closeFillAndRefresh() {
+		setFillSheetOpen(false);
+		void refetch();
+	}
 
 	return (
 		<>
@@ -279,34 +253,21 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 				<PanelBody>
 					<div className="flex flex-col gap-(--density-gutter) p-3">
 						<section>
-							<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-								AI 解读
-							</h4>
-							<p className="text-(length:--text-sm) leading-relaxed text-(--color-foreground)">
-								{data?.explanation}
-							</p>
+							<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">决策依据</h4>
+							<p className="text-(length:--text-sm) leading-relaxed text-(--color-foreground)">{data?.explanation}</p>
 						</section>
 
 						<section>
-							<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-								风控检查
-							</h4>
+							<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">风控检查</h4>
 							<ul className="flex flex-col gap-1">
 								{data?.riskChecks.map((check) => (
-									<li
-										key={check.name}
-										className="flex items-start gap-2 text-(length:--text-sm)"
-									>
+									<li key={check.name} className="flex items-start gap-2 text-(length:--text-sm)">
 										<span className={STATUS_STYLE[check.status as RiskCheckStatus]}>
 											{STATUS_ICON[check.status as RiskCheckStatus]}
 										</span>
 										<div>
-											<span className="font-medium text-(--color-foreground)">
-												{check.name}
-											</span>
-											<span className="ml-1 text-(--color-foreground-tertiary)">
-												{check.message}
-											</span>
+											<span className="font-medium text-(--color-foreground)">{check.name}</span>
+											<span className="ml-1 text-(--color-foreground-tertiary)">{check.message}</span>
 										</div>
 									</li>
 								))}
@@ -315,9 +276,7 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 
 						{data?.portfolioImpact && (
 							<section>
-								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">
-									组合影响
-								</h4>
+								<h4 className="mb-1 text-xs font-medium text-(--color-foreground-secondary)">组合影响</h4>
 								<div className="grid grid-cols-3 gap-2 text-(length:--text-sm)">
 									<div>
 										<span className="text-(--color-foreground-tertiary)">集中度变化</span>
@@ -342,21 +301,20 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 						)}
 
 						{fillSuccessMessage && (
-							<p className="rounded-(--radius-sm) bg-(--color-system-healthy)/8 px-2 py-1 text-(length:--text-sm) text-(--color-system-healthy-fg)">
+							<p
+								role="status"
+								aria-live="polite"
+								className="rounded-(--radius-sm) bg-(--color-system-healthy)/8 px-2 py-1 text-(length:--text-sm) text-(--color-system-healthy-fg)"
+							>
 								{fillSuccessMessage}
 							</p>
 						)}
-						{statusSuccessMessage && (
-							<p className="rounded-(--radius-sm) bg-(--color-system-healthy)/8 px-2 py-1 text-(length:--text-sm) text-(--color-system-healthy-fg)">
-								{statusSuccessMessage}
-							</p>
-						)}
-
 						{data?.actions && data.actions.length > 0 && (
 							<section className="flex flex-wrap gap-2">
 								{data.actions.map((action) => (
 									<button
 										key={action.type}
+										ref={action.type === "record_fill" ? recordFillTriggerRef : undefined}
 										type="button"
 										disabled={!action.enabled || isActionPending}
 										className={[
@@ -376,44 +334,68 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 					</div>
 				</PanelBody>
 			</Panel>
-			<Sheet open={fillSheetOpen} onOpenChange={setFillSheetOpen}>
+			<Sheet open={fillSheetOpen} onOpenChange={handleFillSheetOpenChange}>
 				<SheetContent
 					side="right"
 					aria-label="订单确认"
 					aria-describedby={undefined}
-					className="w-(--width-drawer) max-w-(--width-drawer)"
+					onCloseAutoFocus={(event) => {
+						event.preventDefault();
+						recordFillTriggerRef.current?.focus();
+					}}
+					className="w-full overflow-y-auto sm:max-w-(--width-drawer)"
 				>
-					<form className="flex h-full flex-col gap-4 p-4" onSubmit={submitRecordFill}>
+					<form className="flex min-h-full flex-col gap-4 p-4" onSubmit={submitRecordFill}>
 						<SheetHeader>
 							<SheetTitle>订单确认</SheetTitle>
 							<SheetDescription>
-								manual / paper 手工成交录入，不触发自动交易。
+								manual / paper 手工成交录入；每次提交追加一笔，可分批重复录入，不触发自动交易。
 							</SheetDescription>
 						</SheetHeader>
-						<div className="grid grid-cols-2 gap-3 text-(length:--text-sm)">
+						<div className="grid grid-cols-1 gap-3 text-(length:--text-sm) sm:grid-cols-2">
 							<div>
-								<span className="text-(--color-foreground-tertiary)">intent_id</span>
+								<span className="text-(--color-foreground-secondary)">intent_id</span>
 								<div className="font-data text-(--color-foreground)">{data?.execution?.intentId ?? "—"}</div>
 							</div>
 							<div>
-								<span className="text-(--color-foreground-tertiary)">标的</span>
+								<span className="text-(--color-foreground-secondary)">标的</span>
 								<div className="font-data text-(--color-foreground)">#{data?.execution?.instrumentId ?? "—"}</div>
 							</div>
 							<div>
-								<span className="text-(--color-foreground-tertiary)">方向</span>
+								<span className="text-(--color-foreground-secondary)">方向</span>
 								<div className="font-data text-(--color-foreground)">{data?.execution?.direction ?? "—"}</div>
 							</div>
 							<div>
-								<span className="text-(--color-foreground-tertiary)">交易日</span>
+								<span className="text-(--color-foreground-secondary)">建议交易日</span>
 								<div className="font-data text-(--color-foreground)">{data?.execution?.tradeDate ?? "—"}</div>
 							</div>
 						</div>
+						<section
+							aria-label="成交进度"
+							className="grid grid-cols-3 gap-2 rounded-(--radius-sm) bg-(--color-surface-2) px-3 py-2 font-data text-(length:--text-sm) text-(--color-foreground-secondary)"
+						>
+							<span>建议 {(data?.execution?.quantity ?? 0).toLocaleString("en-US")}</span>
+							<span>已成交 {data?.execution?.filledQuantity?.toLocaleString("en-US") ?? "—"}</span>
+							<span>剩余 {data?.execution?.remainingQuantity?.toLocaleString("en-US") ?? "—"}</span>
+						</section>
 						<div className="flex flex-col gap-3">
+							<label className="flex flex-col gap-1 text-(length:--text-sm)">
+								<span className="text-(--color-foreground-secondary)">实际成交日</span>
+								<input
+									type="date"
+									aria-label="实际成交日"
+									className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-(--color-foreground)"
+									disabled={mustPreserveFillCommand}
+									value={fillForm.tradeDate}
+									onChange={(event) => updateFillForm("tradeDate", event.target.value)}
+								/>
+							</label>
 							<label className="flex flex-col gap-1 text-(length:--text-sm)">
 								<span className="text-(--color-foreground-secondary)">成交数量</span>
 								<input
 									aria-label="成交数量"
 									className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-(--color-foreground)"
+									disabled={mustPreserveFillCommand}
 									inputMode="numeric"
 									value={fillForm.quantity}
 									onChange={(event) => updateFillForm("quantity", event.target.value)}
@@ -424,6 +406,7 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 								<input
 									aria-label="成交价格"
 									className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-(--color-foreground)"
+									disabled={mustPreserveFillCommand}
 									inputMode="decimal"
 									value={fillForm.fillPrice}
 									onChange={(event) => updateFillForm("fillPrice", event.target.value)}
@@ -434,6 +417,7 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 								<input
 									aria-label="手续费"
 									className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-(--color-foreground)"
+									disabled={mustPreserveFillCommand}
 									inputMode="decimal"
 									value={fillForm.fee}
 									onChange={(event) => updateFillForm("fee", event.target.value)}
@@ -444,6 +428,7 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 								<input
 									aria-label="滑点"
 									className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-(--color-foreground)"
+									disabled={mustPreserveFillCommand}
 									inputMode="decimal"
 									value={fillForm.slippage}
 									onChange={(event) => updateFillForm("slippage", event.target.value)}
@@ -454,13 +439,43 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 								<textarea
 									aria-label="备注"
 									className="min-h-20 resize-none rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 text-(--color-foreground)"
+									disabled={mustPreserveFillCommand}
 									value={fillForm.notes}
 									onChange={(event) => updateFillForm("notes", event.target.value)}
 								/>
 							</label>
 						</div>
+						{reviewReasons.length > 0 && (
+							<section
+								aria-labelledby="fill-review-reasons-title"
+								className="rounded-(--radius-sm) border border-(--color-risk-warning)/35 bg-(--color-risk-warning)/8 p-3 text-(length:--text-sm)"
+							>
+								<h3 id="fill-review-reasons-title" className="font-medium text-(--color-risk-warning-fg)">
+									提交前需复核
+								</h3>
+								<p className="mt-1 text-(--color-foreground-secondary)">后端将本次决策标记为 review，请逐项确认：</p>
+								<ul className="my-2 list-disc pl-5 font-data text-(--color-foreground)">
+									{reviewReasons.map((reason) => (
+										<li key={reason}>{reason}</li>
+									))}
+								</ul>
+								<label className="flex cursor-pointer items-start gap-2 text-(--color-foreground)">
+									<input
+										type="checkbox"
+										className="mt-0.5"
+										checked={reviewConfirmed}
+										disabled={mustPreserveFillCommand}
+										onChange={(event) => setReviewConfirmed(event.target.checked)}
+									/>
+									<span>我已复核以上原因</span>
+								</label>
+							</section>
+						)}
 						{fillErrorMessage && (
-							<p className="rounded-(--radius-sm) bg-(--color-status-led-error)/8 px-2 py-1.5 text-(length:--text-sm) text-(--color-status-led-error)">
+							<p
+								role="alert"
+								className="rounded-(--radius-sm) bg-(--color-status-led-error)/8 px-2 py-1.5 text-(length:--text-sm) text-(--color-status-led-error)"
+							>
 								{fillErrorMessage}
 							</p>
 						)}
@@ -468,91 +483,41 @@ export function SignalDetailPanel({ signalId }: SignalDetailPanelProps) {
 							<button
 								type="button"
 								className="rounded-(--radius-sm) border border-(--color-border-subtle) px-3 py-1.5 text-(length:--text-sm) text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg)"
-								onClick={() => setFillSheetOpen(false)}
+								disabled={mustPreserveFillCommand}
+								onClick={() => handleFillSheetOpenChange(false)}
 							>
 								取消
 							</button>
-							<button
-								type="submit"
-								disabled={recordFillMutation.isPending}
-								className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-accent-foreground) disabled:opacity-50"
-							>
-								{recordFillMutation.isPending ? "提交中" : "提交手工成交"}
-							</button>
+							{isFillConflict && (
+								<button
+									type="button"
+									className="rounded-(--radius-sm) border border-(--color-border-subtle) px-3 py-1.5 text-(length:--text-sm) text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg)"
+									onClick={closeFillAndRefresh}
+								>
+									关闭并刷新流水
+								</button>
+							)}
+							{canRetryFill ? (
+								<button
+									type="button"
+									className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-accent-foreground)"
+									onClick={() => executeRecordFill(lastFillPayload)}
+								>
+									使用同一标识重试
+								</button>
+							) : !isFillConflict ? (
+								<button
+									type="submit"
+									disabled={recordFillMutation.isPending}
+									className="rounded-(--radius-sm) bg-(--color-accent) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-accent-foreground) disabled:opacity-50"
+								>
+									{recordFillMutation.isPending ? "提交中" : "提交手工成交"}
+								</button>
+							) : null}
 						</SheetFooter>
 					</form>
 				</SheetContent>
 			</Sheet>
-			<Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-				<DialogContent aria-describedby={undefined}>
-					<DialogHeader>
-						<DialogTitle>高风险状态确认</DialogTitle>
-						<DialogDescription>
-							manual / paper 意图状态更新，仅记录状态机流转，不触发自动交易。
-						</DialogDescription>
-					</DialogHeader>
-					<div className="flex flex-col gap-3 text-(length:--text-sm)">
-						<p
-							data-impact-summary
-							className="rounded-(--radius-sm) bg-(--color-risk-warning)/8 px-2 py-1.5 text-(--color-foreground-secondary)"
-						>
-							将 intent {data?.execution?.intentId ?? "—"} 从 {data?.execution?.status ?? "—"} 更新为{" "}
-							{intentStatusLabel(targetStatus)}。
-						</p>
-						<label className="flex flex-col gap-1">
-							<span className="text-(--color-foreground-secondary)">目标状态</span>
-							<select
-								aria-label="目标状态"
-								className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 text-(--color-foreground)"
-								value={targetStatus}
-								onChange={(event) => setTargetStatus(toIntentStatus(event.target.value))}
-							>
-								{INTENT_STATUS_OPTIONS.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
-						</label>
-						<p
-							data-recovery-hint
-							className="text-xs text-(--color-foreground-tertiary)"
-						>
-							如需恢复，请再次通过后端状态机更新；无本地回滚或自动交易提交。
-						</p>
-						<span
-							data-danger-marker="intent-status-transition"
-							className="text-xs font-medium text-(--color-risk-warning-fg)"
-						>
-							状态机变更
-						</span>
-						{statusErrorMessage && (
-							<p className="rounded-(--radius-sm) bg-(--color-status-led-error)/8 px-2 py-1.5 text-(--color-status-led-error)">
-								{statusErrorMessage}
-							</p>
-						)}
-					</div>
-					<DialogFooter>
-						<button
-							type="button"
-							data-cancel-control
-							className="rounded-(--radius-sm) border border-(--color-border-subtle) px-3 py-1.5 text-(length:--text-sm) text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg)"
-							onClick={() => setStatusDialogOpen(false)}
-						>
-							取消
-						</button>
-						<button
-							type="button"
-							data-confirm-control
-							disabled={updateIntentStatusMutation.isPending}
-							className="rounded-(--radius-sm) bg-(--color-risk-warning) px-3 py-1.5 text-(length:--text-sm) font-medium text-(--color-risk-warning-fg) disabled:opacity-50"
-							onClick={submitIntentStatus}
-						>
-							{updateIntentStatusMutation.isPending ? "提交中" : "确认状态变更"}
-						</button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
 		</>
 	);
 }

@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+	isSuccessfulResponseStatus,
+	NAVIGATION_WAIT_UNTIL,
 	parseArgs,
 	renderReport,
 	resolvePages,
+	shouldIgnoreRequestFailure,
 	USAGE,
 	validateTargetKeyParity,
 } from "./visual-audit-core.mjs";
@@ -26,6 +29,22 @@ const pages = [
 ];
 
 describe("visual audit core", () => {
+	it("does not require network idle for live pages that poll", () => {
+		expect(NAVIGATION_WAIT_UNTIL).toBe("load");
+	});
+
+	it("accepts cache revalidation responses as successful", () => {
+		expect(isSuccessfulResponseStatus(200)).toBe(true);
+		expect(isSuccessfulResponseStatus(304)).toBe(true);
+		expect(isSuccessfulResponseStatus(404)).toBe(false);
+	});
+
+	it("ignores aborted speculative scripts but keeps real asset failures", () => {
+		expect(shouldIgnoreRequestFailure("script", "net::ERR_ABORTED")).toBe(true);
+		expect(shouldIgnoreRequestFailure("stylesheet", "net::ERR_ABORTED")).toBe(false);
+		expect(shouldIgnoreRequestFailure("script", "net::ERR_CONNECTION_REFUSED")).toBe(false);
+	});
+
 	it("parses route options and viewport", () => {
 		const options = parseArgs([
 			"--route",

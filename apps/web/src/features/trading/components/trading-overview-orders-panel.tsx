@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
+import { Button } from "@/components/ui/button";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useFillLedger, useOrdersSummary } from "../hooks";
 
@@ -26,9 +28,7 @@ const ORDERS: Record<OrderTab, readonly MockOrder[]> = {
 		{ code: "300750.SZ", name: "宁德时代", side: "buy", qty: 200, price: 210.5, time: "09:30" },
 		{ code: "000001.SZ", name: "平安银行", side: "sell", qty: 5000, price: 12.1, time: "09:35" },
 	],
-	cancelled: [
-		{ code: "601318.SH", name: "中国平安", side: "buy", qty: 1000, price: 45.0, time: "09:20" },
-	],
+	cancelled: [{ code: "601318.SH", name: "中国平安", side: "buy", qty: 1000, price: 45.0, time: "09:20" }],
 };
 
 const TAB_LABELS: Record<OrderTab, string> = {
@@ -79,18 +79,12 @@ function MockOrdersPanel() {
 						>
 							{order.side === "buy" ? "买" : "卖"}
 						</span>
-						<span className="flex-1 truncate text-xs font-medium text-(--color-foreground)">
-							{order.name}
-						</span>
-						<span className="font-data text-xs tabular-nums text-(--color-foreground-tertiary)">
-							{order.qty}股
-						</span>
+						<span className="flex-1 truncate text-xs font-medium text-(--color-foreground)">{order.name}</span>
+						<span className="font-data text-xs tabular-nums text-(--color-foreground-tertiary)">{order.qty}股</span>
 						<span className="font-data text-xs tabular-nums text-(--color-foreground-secondary)">
 							@{order.price.toFixed(2)}
 						</span>
-						<span className="font-data text-xs tabular-nums text-(--color-foreground-muted)">
-							{order.time}
-						</span>
+						<span className="font-data text-xs tabular-nums text-(--color-foreground-muted)">{order.time}</span>
 					</div>
 				))}
 			</div>
@@ -99,49 +93,78 @@ function MockOrdersPanel() {
 }
 
 function LiveOrdersPanel() {
-	const { data: orders } = useOrdersSummary();
-	const { data: ledger } = useFillLedger();
+	const ordersQuery = useOrdersSummary();
+	const ledgerQuery = useFillLedger();
+	const orders = ordersQuery.data;
+	const ledger = ledgerQuery.data;
 	const fills = ledger?.fills ?? [];
 	const total = orders
 		? orders.pending + orders.submitted + orders.partial + orders.filled + orders.failed
 		: fills.length;
+	const isError = ordersQuery.isError || ledgerQuery.isError;
+	const isLoading = !isError && (ordersQuery.isLoading || ledgerQuery.isLoading);
+
+	function retryLiveOrders() {
+		void Promise.all([ordersQuery.refetch(), ledgerQuery.refetch()]);
+	}
 
 	return (
 		<ContextSection title="委托订单" count={total}>
-			<div className="flex items-center justify-between py-2">
-				<span className="text-xs text-(--color-foreground-tertiary)">manual / paper</span>
-				<span className="font-data text-xs text-(--color-foreground-tertiary)">
-					成交 {fills.length}
-				</span>
-			</div>
-			{fills.length === 0 ? (
-				<div className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-3 py-4 text-sm text-(--color-foreground-secondary)">
-					尚未录入手工成交
+			{isLoading && (
+				<div role="status" aria-label="委托订单加载中" className="py-2">
+					<LoadingSkeleton variant="panel" rows={3} />
 				</div>
-			) : (
-				<div className="flex flex-col gap-0.5">
-					{fills.map((fill) => (
+			)}
+			{isError && (
+				<div
+					role="alert"
+					className="my-2 flex flex-col items-start gap-2 rounded-(--radius-sm) border border-(--color-risk-critical-fg) px-3 py-3 text-sm text-(--color-foreground-secondary) sm:flex-row sm:items-center sm:justify-between"
+				>
+					<span>委托订单加载失败</span>
+					<Button variant="outline" size="sm" onClick={retryLiveOrders}>
+						重试
+					</Button>
+				</div>
+			)}
+			{!isLoading && !isError && (
+				<>
+					{fills.length > 0 && (
+						<span role="status" aria-label="委托订单加载完成" className="sr-only">
+							委托订单已加载，成交 {fills.length} 笔
+						</span>
+					)}
+					<div className="flex items-center justify-between py-2">
+						<span className="text-xs text-(--color-foreground-tertiary)">manual / paper</span>
+						<span className="font-data text-xs text-(--color-foreground-tertiary)">成交 {fills.length}</span>
+					</div>
+					{fills.length === 0 ? (
 						<div
-							key={fill.id}
-							className="flex items-center gap-2 rounded-(--radius-sm) px-2 py-1.5 hover:bg-(--color-interaction-hover-subtle-bg)"
+							role="status"
+							aria-label="委托订单状态"
+							className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-3 py-4 text-sm text-(--color-foreground-secondary)"
 						>
-							<StatusBadge
-								variant={DIRECTION_VARIANT[fill.direction]}
-								label={fill.direction}
-								size="sm"
-							/>
-							<span className="min-w-0 flex-1 truncate font-data text-xs text-(--color-foreground)">
-								{fill.id}
-							</span>
-							<span className="font-data text-xs tabular-nums text-(--color-foreground-tertiary)">
-								{fill.quantity.toLocaleString()}
-							</span>
-							<span className="font-data text-xs tabular-nums text-(--color-foreground-secondary)">
-								@{fill.fillPrice.toFixed(2)}
-							</span>
+							尚未录入手工成交
 						</div>
-					))}
-				</div>
+					) : (
+						<div className="flex flex-col gap-0.5">
+							{fills.map((fill) => (
+								<div
+									key={fill.id}
+									className="flex items-center gap-2 rounded-(--radius-sm) px-2 py-1.5 hover:bg-(--color-interaction-hover-subtle-bg)"
+								>
+									<StatusBadge variant={DIRECTION_VARIANT[fill.direction]} label={fill.direction} size="sm" />
+									<span className="min-w-0 flex-1 truncate font-data text-xs text-(--color-foreground)">{fill.id}</span>
+									<span className="font-data text-xs tabular-nums text-(--color-foreground-tertiary)">
+										{fill.quantity.toLocaleString()}
+									</span>
+									<span className="font-data text-xs tabular-nums text-(--color-foreground-secondary)">
+										@{fill.fillPrice.toFixed(2)}
+									</span>
+								</div>
+							))}
+						</div>
+					)}
+				</>
 			)}
 		</ContextSection>
 	);

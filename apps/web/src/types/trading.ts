@@ -253,7 +253,7 @@ export type Signal = {
 	readonly source: string;
 	readonly direction: SignalDirection;
 	readonly weight: number;
-	readonly confidence: number;
+	readonly confidence: number | null;
 	readonly status: SignalStatus;
 	readonly limitUpDownCheck: {
 		readonly limitUp: boolean;
@@ -290,13 +290,16 @@ export type SignalExecutionIntent = {
 	readonly instrumentId: number;
 	readonly direction: "buy" | "sell";
 	readonly quantity: number;
+	readonly filledQuantity: number | null;
+	readonly remainingQuantity: number | null;
+	readonly reviewReasons: readonly string[];
 	readonly status: string;
 };
 
 export type GetSignalDetailResponse = {
 	readonly explanation: string;
 	readonly riskChecks: readonly RiskCheck[];
-	readonly portfolioImpact: PortfolioImpact;
+	readonly portfolioImpact?: PortfolioImpact;
 	readonly actions: readonly SignalAction[];
 	readonly execution?: SignalExecutionIntent;
 };
@@ -351,6 +354,36 @@ export type Order = {
 
 export type GetOrdersResponse = PaginatedResponse<Order>;
 
+export type FillLedgerState = "effective" | "voided" | "replaced" | "unresolved";
+
+export type FillLedgerIdentityField = "intent_id" | "strategy_id" | "instrument_id" | "direction";
+
+export type FillLedgerConsistencyIssue =
+	| "effective_with_adjustment"
+	| "missing_effective_and_adjustment"
+	| "replacement_missing_raw"
+	| "replacement_not_resolved"
+	| "replacement_cycle"
+	| "orphan_adjustment"
+	| "ghost_effective"
+	| "replacement_identity_mismatch";
+
+export type FillLedgerIssue = {
+	readonly code: FillLedgerConsistencyIssue;
+	readonly fillId: string;
+	readonly relatedFillId: string | null;
+	readonly adjustmentId: string | null;
+	readonly mismatchedFields: readonly FillLedgerIdentityField[];
+};
+
+export type FillLedgerAdjustment = {
+	readonly id: string;
+	readonly type: "void" | "replace";
+	readonly reason: string;
+	readonly createdAt: string;
+	readonly replacementFillId: string | null;
+};
+
 export type FillLedgerEntry = {
 	readonly id: string;
 	readonly intentId: string;
@@ -362,10 +395,14 @@ export type FillLedgerEntry = {
 	readonly fee: number;
 	readonly slippage: number;
 	readonly notes: string;
+	readonly state: FillLedgerState;
+	readonly consistencyIssue?: FillLedgerConsistencyIssue;
+	readonly adjustment: FillLedgerAdjustment | null;
 };
 
 export type GetFillLedgerResponse = {
 	readonly fills: readonly FillLedgerEntry[];
+	readonly issues: readonly FillLedgerIssue[];
 };
 
 /** 订单追踪 */

@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type { GetSignalsQueueResponse } from "@/types";
-import { mapDailyDecisionToSignalsQueue } from "../api/mappers";
+import { mapDailyDecisionToSignalsQueue, mapDailyDecisionV2ToLegacy } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { useDailyDecision } from "./use-daily-decision";
+import { useDailyDecisionV2 } from "./use-daily-decision-v2";
 
 export function useSignalsQueue() {
 	const usePrototypeMocks = shouldUsePrototypeMocks();
-	const liveQuery = useDailyDecision(undefined, mapDailyDecisionToSignalsQueue, {
-		enabled: !usePrototypeMocks,
-	});
+	const liveQuery = useDailyDecisionV2(
+		undefined,
+		(report) => mapDailyDecisionToSignalsQueue(mapDailyDecisionV2ToLegacy(report)),
+		{
+			enabled: !usePrototypeMocks,
+		},
+	);
 	const mockQuery = useQuery({
 		queryKey: ["trading", "signals", "queue"],
 		queryFn: () => apiClient.get<GetSignalsQueueResponse>("/trading/signals/queue"),
