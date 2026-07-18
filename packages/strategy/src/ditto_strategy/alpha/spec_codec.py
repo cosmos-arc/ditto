@@ -121,22 +121,25 @@ def _canonical_value(
     )
 
 
-def _parameter_payload(parameter: ParamConstraint) -> dict[str, object]:
-    parameter.validate_canonical_identity()
+def _parameter_payload(
+    parameter: ParamConstraint,
+    numeric_identity: tuple[float | None, float | None, float | None],
+) -> dict[str, object]:
+    min_value, max_value, step = numeric_identity
     return {
         "allowed_values": list(parameter.allowed_values),
         "dtype": parameter.dtype,
         "max_value": _canonical_value(
-            parameter.max_value,
+            max_value,
             field_name=f"parameter_schema.{parameter.name}.max_value",
         ),
         "min_value": _canonical_value(
-            parameter.min_value,
+            min_value,
             field_name=f"parameter_schema.{parameter.name}.min_value",
         ),
         "name": parameter.name,
         "step": _canonical_value(
-            parameter.step,
+            step,
             field_name=f"parameter_schema.{parameter.name}.step",
         ),
     }
@@ -161,13 +164,15 @@ def canonical_spec_payload(spec: StrategySpecV2) -> dict[str, object]:
         }
         for node in ordered_nodes
     ]
-    for parameter in spec.parameter_schema:
-        parameter.validate_canonical_identity()
+    validated_parameters = [
+        (parameter, parameter.validate_canonical_identity())
+        for parameter in spec.parameter_schema
+    ]
     parameter_payloads = [
-        _parameter_payload(parameter)
-        for parameter in sorted(
-            spec.parameter_schema,
-            key=lambda item: item.name,
+        _parameter_payload(parameter, numeric_identity)
+        for parameter, numeric_identity in sorted(
+            validated_parameters,
+            key=lambda item: item[0].name,
         )
     ]
     return {

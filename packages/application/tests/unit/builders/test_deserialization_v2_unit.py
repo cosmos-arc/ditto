@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 from ditto_application.exceptions import AppBuilderError
@@ -107,6 +108,20 @@ def _replace_pipeline_field(
     pipeline[field_name] = value
 
 
+def _persisted_v2_payload(spec: object) -> dict[str, object]:
+    from ditto_strategy.alpha.spec_codec import canonical_spec_payload
+    from ditto_strategy.alpha.specs import StrategySpecV2
+
+    assert isinstance(spec, StrategySpecV2)
+    payload = canonical_spec_payload(spec)
+    payload.update(
+        name=spec.name,
+        metadata={"description": "UI-only round-trip field"},
+        tags=["research", "round-trip"],
+    )
+    return payload
+
+
 class TestDeserializeStrategySpecV2:
     """新入口只接受 schema_version=2 的完整、类型化 payload。"""
 
@@ -129,6 +144,99 @@ class TestDeserializeStrategySpecV2:
         assert spec.parameter_schema[0].dtype == "int"
         assert spec.metadata == {"description": "UI only"}
         assert spec.tags == ("research",)
+
+    @pytest.mark.parametrize(
+        "numeric_values",
+        [
+            pytest.param((10, 20, 5), id="integer-inputs"),
+            pytest.param((10.0, 20.0, 5.0), id="float-inputs"),
+        ],
+    )
+    def test_direct_v2_payload_and_hash_survive_strict_round_trip(
+        self,
+        numeric_values: tuple[int | float, int | float, int | float],
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_hash,
+            canonical_spec_payload,
+        )
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        scaffold = deserialize_strategy_spec_v2(_record(_v2_payload()))
+        minimum, maximum, step = numeric_values
+        direct = replace(
+            scaffold,
+            parameter_schema=(
+                ParamConstraint(
+                    name="pipeline.nodes.factors.config.lookback",
+                    dtype="int",
+                    min_value=minimum,
+                    max_value=maximum,
+                    step=step,
+                ),
+            ),
+        )
+        payload_before = canonical_spec_payload(direct)
+        hash_before = canonical_spec_hash(direct)
+
+        restored = deserialize_strategy_spec_v2(
+            _record(_persisted_v2_payload(direct)),
+        )
+
+        assert canonical_spec_payload(restored) == payload_before
+        assert canonical_spec_hash(restored) == hash_before
+
+    @pytest.mark.parametrize(
+        "numeric_values",
+        [
+            pytest.param((10, 20, 5), id="integer-inputs"),
+            pytest.param((10.0, 20.0, 5.0), id="float-inputs"),
+        ],
+    )
+    def test_legacy_adapter_payload_and_hash_survive_strict_round_trip(
+        self,
+        numeric_values: tuple[int | float, int | float, int | float],
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+        from ditto_strategy.alpha.spec_codec import (
+            adapt_legacy_strategy_spec,
+            canonical_spec_hash,
+            canonical_spec_payload,
+        )
+        from ditto_strategy.alpha.specs import ParamConstraint, StrategySpec
+
+        minimum, maximum, step = numeric_values
+        legacy = StrategySpec(
+            strategy_id="legacy-etf-alpha",
+            name="Legacy ETF Alpha",
+            template="etf_rotation",
+            universe="csi_etf_broad",
+            asset_class="etf",
+            param_constraints=(
+                ParamConstraint(
+                    name="lookback",
+                    dtype="int",
+                    min_value=minimum,
+                    max_value=maximum,
+                    step=step,
+                ),
+            ),
+        )
+        adapted = adapt_legacy_strategy_spec(legacy)
+        payload_before = canonical_spec_payload(adapted)
+        hash_before = canonical_spec_hash(adapted)
+
+        restored = deserialize_strategy_spec_v2(
+            _record(_persisted_v2_payload(adapted)),
+        )
+
+        assert canonical_spec_payload(restored) == payload_before
+        assert canonical_spec_hash(restored) == hash_before
 
     def test_rejects_legacy_payload_without_using_implicit_adapter(self) -> None:
         from ditto_application.builders.deserialization import (

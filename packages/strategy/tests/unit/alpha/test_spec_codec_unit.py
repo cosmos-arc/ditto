@@ -304,6 +304,24 @@ class TestCanonicalSpecCodec:
                 "non_finite_parameter_identity",
                 id="huge-integer-minimum",
             ),
+            pytest.param(
+                "min_value",
+                2**53 + 1,
+                "non_finite_parameter_identity",
+                id="lossy-integer-minimum",
+            ),
+            pytest.param(
+                "max_value",
+                2**53 + 1,
+                "non_finite_parameter_identity",
+                id="lossy-integer-maximum",
+            ),
+            pytest.param(
+                "step",
+                2**53 + 1,
+                "non_finite_parameter_identity",
+                id="lossy-integer-step",
+            ),
         ],
     )
     def test_codec_revalidates_parameter_identity_after_domain_bypass(
@@ -323,6 +341,46 @@ class TestCanonicalSpecCodec:
 
         assert exc_info.value.details["field_name"] == field_name
         assert exc_info.value.details["reason"] == expected_reason
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    @pytest.mark.parametrize(
+        "integer_value",
+        [
+            pytest.param(10, id="small-integer"),
+            pytest.param(2**53, id="exact-float-boundary"),
+        ],
+    )
+    def test_codec_converges_legal_integer_after_domain_bypass(
+        self,
+        field_name: str,
+        integer_value: int,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_hash,
+            canonical_spec_payload,
+        )
+
+        bypassed = _make_v2_spec()
+        bypassed_parameter = bypassed.parameter_schema[0]
+        object.__setattr__(bypassed_parameter, field_name, integer_value)
+
+        canonical = _make_v2_spec()
+        canonical_parameter = replace(
+            canonical.parameter_schema[0],
+            **{field_name: float(integer_value)},
+        )
+        canonical = replace(
+            canonical,
+            parameter_schema=(canonical_parameter,),
+        )
+
+        payload = canonical_spec_payload(bypassed)
+        spec_hash = canonical_spec_hash(bypassed)
+
+        assert payload == canonical_spec_payload(canonical)
+        assert spec_hash == canonical_spec_hash(canonical)
+        assert getattr(bypassed_parameter, field_name) == integer_value
+        assert type(getattr(bypassed_parameter, field_name)) is int
 
     def test_payload_validates_parameter_identity_before_sorting(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_payload

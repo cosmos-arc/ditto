@@ -23,6 +23,82 @@ class TestParamConstraint:
         assert param.min_value == 10
         assert param.step == 10
 
+    @pytest.mark.parametrize(
+        "numeric_values",
+        [
+            pytest.param((10, 20, 5), id="integer-inputs"),
+            pytest.param((10.0, 20.0, 5.0), id="float-inputs"),
+        ],
+    )
+    def test_normalizes_numeric_identity_fields_to_floats(
+        self,
+        numeric_values: tuple[int | float, int | float, int | float],
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        minimum, maximum, step = numeric_values
+        param = ParamConstraint(
+            name="lookback",
+            dtype="int",
+            min_value=minimum,
+            max_value=maximum,
+            step=step,
+        )
+
+        assert param.min_value == 10.0
+        assert param.max_value == 20.0
+        assert param.step == 5.0
+        assert type(param.min_value) is float
+        assert type(param.max_value) is float
+        assert type(param.step) is float
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_accepts_exact_float_integer_boundary_and_rejects_lossy_integer(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        exact_integer = 2**53
+        lossy_integer = exact_integer + 1
+        assert float(exact_integer) == float(lossy_integer)
+
+        exact = constructor(
+            name="lookback",
+            dtype="int",
+            **{field_name: exact_integer},
+        )
+        exact_value = getattr(exact, field_name)
+        assert exact_value == float(exact_integer)
+        assert type(exact_value) is float
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(
+                name="lookback",
+                dtype="int",
+                **{field_name: lossy_integer},
+            )
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "non_finite_parameter_identity"
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_rejects_bool_numeric_identity_fields(self, field_name: str) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(
+                name="lookback",
+                dtype="int",
+                **{field_name: True},
+            )
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "non_finite_parameter_identity"
+
     def test_create_enum_param(self) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 

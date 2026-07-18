@@ -149,13 +149,34 @@ def _validated_parameter_allowed_values(
     return tuple(item for item in items if isinstance(item, str))
 
 
-def _is_finite_parameter_number(value: object) -> bool:
+def _canonical_parameter_number(value: object, *, field_name: str) -> float:
+    """Return one stable JSON numeric identity or fail closed."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return False
+        _raise_spec_error(
+            f"ParamConstraint.{field_name} must be a finite canonical number",
+            field_name=field_name,
+            reason="non_finite_parameter_identity",
+            actual_value=value,
+        )
     try:
-        return math.isfinite(value)
+        normalized = float(value)
     except OverflowError:
-        return False
+        _raise_spec_error(
+            f"ParamConstraint.{field_name} must be a finite canonical number",
+            field_name=field_name,
+            reason="non_finite_parameter_identity",
+            actual_value=value,
+        )
+    if not math.isfinite(normalized) or (
+        isinstance(value, int) and int(normalized) != value
+    ):
+        _raise_spec_error(
+            f"ParamConstraint.{field_name} must be a finite canonical number",
+            field_name=field_name,
+            reason="non_finite_parameter_identity",
+            actual_value=value,
+        )
+    return normalized
 
 
 def _is_non_empty_string(value: object) -> TypeGuard[str]:
@@ -195,10 +216,15 @@ class ParamConstraint:
             allow_list=True,
         )
         object.__setattr__(self, "allowed_values", allowed_values)
-        self.validate_canonical_identity()
+        min_value, max_value, step = self.validate_canonical_identity()
+        object.__setattr__(self, "min_value", min_value)
+        object.__setattr__(self, "max_value", max_value)
+        object.__setattr__(self, "step", step)
 
-    def validate_canonical_identity(self) -> None:
-        """Reject identity values that cannot participate in a stable hash."""
+    def validate_canonical_identity(
+        self,
+    ) -> tuple[float | None, float | None, float | None]:
+        """Return canonical numeric identity without mutating this value object."""
         if not _is_non_empty_string(self.name):
             _raise_spec_error(
                 "ParamConstraint.name must be a non-empty canonical string",
@@ -217,15 +243,19 @@ class ParamConstraint:
             self.allowed_values,
             allow_list=False,
         )
+        normalized_values: list[float | None] = []
         for field_name in ("min_value", "max_value", "step"):
             value = getattr(self, field_name)
-            if value is not None and not _is_finite_parameter_number(value):
-                _raise_spec_error(
-                    f"ParamConstraint.{field_name} must be a finite canonical number",
+            normalized_values.append(
+                None
+                if value is None
+                else _canonical_parameter_number(
+                    value,
                     field_name=field_name,
-                    reason="non_finite_parameter_identity",
-                    actual_value=value,
                 )
+            )
+        min_value, max_value, step = normalized_values
+        return min_value, max_value, step
 
 
 @dataclass(frozen=True)
