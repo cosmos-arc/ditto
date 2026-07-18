@@ -226,7 +226,10 @@ def _deserialize_pipeline_v2(raw_value: object) -> PipelineSpec:
         optional=set(),
     )
     raw_nodes = as_sequence(
-        read_required_value(payload, "nodes"),
+        _require_v2_non_null(
+            read_required_value(payload, "nodes"),
+            field_name="pipeline.nodes",
+        ),
         field_name="pipeline.nodes",
     )
     nodes = tuple(
@@ -234,7 +237,10 @@ def _deserialize_pipeline_v2(raw_value: object) -> PipelineSpec:
         for index, raw_node in enumerate(raw_nodes)
     )
     sequence = as_str_tuple(
-        read_required_value(payload, "sequence"),
+        _require_v2_non_null(
+            read_required_value(payload, "sequence"),
+            field_name="pipeline.sequence",
+        ),
         field_name="pipeline.sequence",
     )
     return PipelineSpec(nodes=nodes, sequence=sequence)

@@ -40,6 +40,7 @@ __all__ = [
 ]
 
 STRATEGY_SPEC_V2_SCHEMA_VERSION = 2
+_PARAMETER_DTYPES = frozenset({"int", "float", "str"})
 
 
 def _validate_v2_schema_version(value: object) -> None:
@@ -103,6 +104,10 @@ def _is_object_tuple(value: object) -> TypeGuard[tuple[object, ...]]:
     return isinstance(value, tuple)
 
 
+def _is_object_list(value: object) -> TypeGuard[list[object]]:
+    return isinstance(value, list)
+
+
 def _raise_spec_error(
     message: str,
     *,
@@ -117,6 +122,48 @@ def _raise_spec_error(
     }
     payload.update(details)
     raise StrategySpecError(message, details=payload)
+
+
+def _validated_parameter_allowed_values(
+    value: object,
+    *,
+    allow_list: bool,
+) -> tuple[str, ...]:
+    if _is_object_tuple(value):
+        items = value
+    elif allow_list and _is_object_list(value):
+        items = tuple(value)
+    else:
+        _raise_spec_error(
+            "ParamConstraint.allowed_values must be a canonical string sequence",
+            field_name="allowed_values",
+            reason="invalid_parameter_allowed_values",
+            actual_type=type(value).__name__,
+        )
+    if not all(isinstance(item, str) for item in items):
+        _raise_spec_error(
+            "ParamConstraint.allowed_values must contain only strings",
+            field_name="allowed_values",
+            reason="invalid_parameter_allowed_values",
+        )
+    return tuple(item for item in items if isinstance(item, str))
+
+
+def _is_finite_parameter_number(value: object) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def _is_non_empty_string(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and value != ""
+
+
+def _is_supported_parameter_dtype(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and value in _PARAMETER_DTYPES
 
 
 @dataclass(frozen=True)
@@ -142,16 +189,39 @@ class ParamConstraint:
     allowed_values: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        """Canonical numeric identity fields must be finite real values."""
+        """Normalize mutable inputs, then validate the complete identity."""
+        allowed_values = _validated_parameter_allowed_values(
+            self.allowed_values,
+            allow_list=True,
+        )
+        object.__setattr__(self, "allowed_values", allowed_values)
+        self.validate_canonical_identity()
+
+    def validate_canonical_identity(self) -> None:
+        """Reject identity values that cannot participate in a stable hash."""
+        if not _is_non_empty_string(self.name):
+            _raise_spec_error(
+                "ParamConstraint.name must be a non-empty canonical string",
+                field_name="name",
+                reason="invalid_parameter_name",
+                actual_type=type(self.name).__name__,
+            )
+        if not _is_supported_parameter_dtype(self.dtype):
+            _raise_spec_error(
+                "ParamConstraint.dtype must be one of int, float, or str",
+                field_name="dtype",
+                reason="invalid_parameter_dtype",
+                actual_value=self.dtype,
+            )
+        _validated_parameter_allowed_values(
+            self.allowed_values,
+            allow_list=False,
+        )
         for field_name in ("min_value", "max_value", "step"):
             value = getattr(self, field_name)
-            if value is not None and (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-            ):
+            if value is not None and not _is_finite_parameter_number(value):
                 _raise_spec_error(
-                    f"ParamConstraint.{field_name} must be finite",
+                    f"ParamConstraint.{field_name} must be a finite canonical number",
                     field_name=field_name,
                     reason="non_finite_parameter_identity",
                     actual_value=value,

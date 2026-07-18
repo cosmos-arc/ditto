@@ -63,6 +63,80 @@ class TestParamConstraint:
                 **{field_name: invalid_value},
             )
 
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value", "expected_reason"),
+        [
+            pytest.param("name", "", "invalid_parameter_name", id="empty-name"),
+            pytest.param("name", True, "invalid_parameter_name", id="bool-name"),
+            pytest.param("name", None, "invalid_parameter_name", id="null-name"),
+            pytest.param("dtype", True, "invalid_parameter_dtype", id="bool-dtype"),
+            pytest.param(
+                "dtype",
+                "decimal",
+                "invalid_parameter_dtype",
+                id="unsupported-dtype",
+            ),
+            pytest.param(
+                "allowed_values",
+                "equal_weight",
+                "invalid_parameter_allowed_values",
+                id="string-is-not-container",
+            ),
+            pytest.param(
+                "allowed_values",
+                None,
+                "invalid_parameter_allowed_values",
+                id="null-allowed-values",
+            ),
+            pytest.param(
+                "allowed_values",
+                ("equal_weight", True),
+                "invalid_parameter_allowed_values",
+                id="bool-allowed-value",
+            ),
+        ],
+    )
+    def test_rejects_invalid_canonical_identity_shapes(
+        self,
+        field_name: str,
+        invalid_value: object,
+        expected_reason: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        values: dict[str, object] = {
+            "name": "allocation_method",
+            "dtype": "str",
+            "allowed_values": ("equal_weight",),
+        }
+        values[field_name] = invalid_value
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(**values)
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == expected_reason
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_huge_integer_identity_raises_typed_spec_error(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(
+                name="lookback",
+                dtype="int",
+                **{field_name: 10**1000},
+            )
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "non_finite_parameter_identity"
+
 
 class TestExecutionSpec:
     def test_create_calendar_trigger(self) -> None:

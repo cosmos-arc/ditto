@@ -122,6 +122,7 @@ def _canonical_value(
 
 
 def _parameter_payload(parameter: ParamConstraint) -> dict[str, object]:
+    parameter.validate_canonical_identity()
     return {
         "allowed_values": list(parameter.allowed_values),
         "dtype": parameter.dtype,

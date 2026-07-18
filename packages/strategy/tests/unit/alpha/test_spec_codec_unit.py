@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import replace
 from typing import cast
 
@@ -178,6 +179,26 @@ class TestCanonicalSpecCodec:
 
         assert canonical_spec_hash(spec) == original_hash
 
+    def test_parameter_allowed_values_snapshot_prevents_source_hash_drift(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_hash
+
+        source = ["equal_weight", "score_weight"]
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        parameter = constructor(
+            name="allocation_method",
+            dtype="str",
+            allowed_values=source,
+        )
+        spec = replace(_make_v2_spec(), parameter_schema=(parameter,))
+        original_hash = canonical_spec_hash(spec)
+
+        source.append("risk_parity")
+
+        assert parameter.allowed_values == ("equal_weight", "score_weight")
+        assert canonical_spec_hash(spec) == original_hash
+
     def test_hash_is_full_lowercase_sha256(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_hash
 
@@ -254,6 +275,54 @@ class TestCanonicalSpecCodec:
 
         with pytest.raises(StrategySpecError, match="canonical"):
             canonical_spec_bytes(spec)
+
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value", "expected_reason"),
+        [
+            pytest.param("name", True, "invalid_parameter_name", id="bool-name"),
+            pytest.param(
+                "dtype",
+                "decimal",
+                "invalid_parameter_dtype",
+                id="unsupported-dtype",
+            ),
+            pytest.param(
+                "allowed_values",
+                ("equal_weight", True),
+                "invalid_parameter_allowed_values",
+                id="bool-allowed-value",
+            ),
+            pytest.param(
+                "min_value",
+                True,
+                "non_finite_parameter_identity",
+                id="bool-minimum",
+            ),
+            pytest.param(
+                "min_value",
+                10**1000,
+                "non_finite_parameter_identity",
+                id="huge-integer-minimum",
+            ),
+        ],
+    )
+    def test_codec_revalidates_parameter_identity_after_domain_bypass(
+        self,
+        field_name: str,
+        invalid_value: object,
+        expected_reason: str,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        spec = _make_v2_spec()
+        parameter = spec.parameter_schema[0]
+        object.__setattr__(parameter, field_name, invalid_value)
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            canonical_spec_bytes(spec)
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == expected_reason
 
     def test_codec_rejects_non_string_mapping_key_after_domain_bypass(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_bytes

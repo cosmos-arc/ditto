@@ -97,6 +97,16 @@ def _replace_node_field(
     node[field_name] = value
 
 
+def _replace_pipeline_field(
+    payload: dict[str, object],
+    field_name: str,
+    value: object,
+) -> None:
+    pipeline = payload.get("pipeline")
+    assert isinstance(pipeline, dict)
+    pipeline[field_name] = value
+
+
 class TestDeserializeStrategySpecV2:
     """新入口只接受 schema_version=2 的完整、类型化 payload。"""
 
@@ -181,6 +191,35 @@ class TestDeserializeStrategySpecV2:
 
         with pytest.raises(AppBuilderError, match=field_name):
             deserialize_strategy_spec_v2(_record(payload))
+
+    @pytest.mark.parametrize("field_name", ["nodes", "sequence"])
+    def test_rejects_null_canonical_pipeline_collections(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+
+        payload = _v2_payload()
+        _replace_pipeline_field(payload, field_name, None)
+
+        with pytest.raises(AppBuilderError, match=rf"pipeline\.{field_name}"):
+            deserialize_strategy_spec_v2(_record(payload))
+
+    def test_accepts_explicit_empty_canonical_pipeline_collections(self) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+
+        payload = _v2_payload()
+        _replace_pipeline_field(payload, "nodes", [])
+        _replace_pipeline_field(payload, "sequence", [])
+
+        spec = deserialize_strategy_spec_v2(_record(payload))
+
+        assert spec.pipeline.nodes == ()
+        assert spec.pipeline.sequence == ()
 
     @pytest.mark.parametrize(
         ("field_name", "mutate"),
