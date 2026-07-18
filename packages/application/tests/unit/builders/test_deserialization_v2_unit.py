@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Callable
 from copy import deepcopy
@@ -188,6 +189,107 @@ class TestDeserializeStrategySpecV2:
 
         assert canonical_spec_payload(restored) == payload_before
         assert canonical_spec_hash(restored) == hash_before
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_negative_zero_round_trip_uses_positive_zero_identity(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_bytes,
+            canonical_spec_hash,
+        )
+
+        scaffold = deserialize_strategy_spec_v2(_record(_v2_payload()))
+        negative_parameter = replace(
+            scaffold.parameter_schema[0],
+            **{field_name: -0.0},
+        )
+        direct = replace(
+            scaffold,
+            parameter_schema=(negative_parameter,),
+        )
+        positive_parameter = replace(
+            scaffold.parameter_schema[0],
+            **{field_name: 0.0},
+        )
+        canonical = replace(
+            scaffold,
+            parameter_schema=(positive_parameter,),
+        )
+
+        restored = deserialize_strategy_spec_v2(
+            _record(_persisted_v2_payload(direct)),
+        )
+        restored_value = getattr(restored.parameter_schema[0], field_name)
+
+        assert math.copysign(1.0, restored_value) == 1.0
+        assert canonical_spec_bytes(restored) == canonical_spec_bytes(canonical)
+        assert canonical_spec_hash(restored) == canonical_spec_hash(canonical)
+
+    def test_nested_node_config_round_trip_uses_positive_zero_identity(
+        self,
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_bytes,
+            canonical_spec_hash,
+        )
+
+        scaffold = deserialize_strategy_spec_v2(_record(_v2_payload()))
+        negative_factor = next(
+            node for node in scaffold.pipeline.nodes if node.node_id == "factors"
+        )
+        negative_factor = replace(
+            negative_factor,
+            config={"outer": [{"inner": (-0.0, {"values": [-0.0, -5.0]})}]},
+        )
+        direct = replace(
+            scaffold,
+            pipeline=replace(
+                scaffold.pipeline,
+                nodes=tuple(
+                    negative_factor if node.node_id == "factors" else node
+                    for node in scaffold.pipeline.nodes
+                ),
+            ),
+        )
+        positive_factor = replace(
+            negative_factor,
+            config={"outer": [{"inner": (0.0, {"values": [0.0, -5.0]})}]},
+        )
+        canonical = replace(
+            scaffold,
+            pipeline=replace(
+                scaffold.pipeline,
+                nodes=tuple(
+                    positive_factor if node.node_id == "factors" else node
+                    for node in scaffold.pipeline.nodes
+                ),
+            ),
+        )
+
+        restored = deserialize_strategy_spec_v2(
+            _record(_persisted_v2_payload(direct)),
+        )
+        restored_factor = next(
+            node for node in restored.pipeline.nodes if node.node_id == "factors"
+        )
+        outer = restored_factor.config["outer"]
+        assert isinstance(outer, tuple)
+        inner = outer[0]["inner"]
+        values = inner[1]["values"]
+
+        assert math.copysign(1.0, inner[0]) == 1.0
+        assert math.copysign(1.0, values[0]) == 1.0
+        assert math.copysign(1.0, values[1]) == -1.0
+        assert canonical_spec_bytes(restored) == canonical_spec_bytes(canonical)
+        assert canonical_spec_hash(restored) == canonical_spec_hash(canonical)
 
     @pytest.mark.parametrize(
         "numeric_values",

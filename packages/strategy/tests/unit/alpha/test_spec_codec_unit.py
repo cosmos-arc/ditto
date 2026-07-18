@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Callable
 from dataclasses import replace
@@ -151,6 +152,88 @@ class TestCanonicalSpecCodec:
 
         assert canonical_spec_bytes(first) == canonical_spec_bytes(second)
         assert canonical_spec_hash(first) == canonical_spec_hash(second)
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_equal_signed_zero_specs_have_identical_canonical_identity(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_bytes,
+            canonical_spec_hash,
+        )
+
+        positive = _make_v2_spec()
+        positive_parameter = replace(
+            positive.parameter_schema[0],
+            **{field_name: 0.0},
+        )
+        positive = replace(
+            positive,
+            parameter_schema=(positive_parameter,),
+        )
+        negative = _make_v2_spec()
+        negative_parameter = replace(
+            negative.parameter_schema[0],
+            **{field_name: -0.0},
+        )
+        negative = replace(
+            negative,
+            parameter_schema=(negative_parameter,),
+        )
+
+        assert positive == negative
+        assert canonical_spec_bytes(positive) == canonical_spec_bytes(negative)
+        assert canonical_spec_hash(positive) == canonical_spec_hash(negative)
+
+    def test_equal_nested_node_configs_have_identical_canonical_identity(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_bytes,
+            canonical_spec_hash,
+        )
+
+        positive = _make_v2_spec()
+        positive_factor = next(
+            node for node in positive.pipeline.nodes if node.node_id == "factors"
+        )
+        positive_factor = replace(
+            positive_factor,
+            config={"outer": [{"inner": (0.0, {"values": [0.0, -5.0]})}]},
+        )
+        positive = replace(
+            positive,
+            pipeline=replace(
+                positive.pipeline,
+                nodes=tuple(
+                    positive_factor if node.node_id == "factors" else node
+                    for node in positive.pipeline.nodes
+                ),
+            ),
+        )
+        negative = _make_v2_spec()
+        negative_factor = next(
+            node for node in negative.pipeline.nodes if node.node_id == "factors"
+        )
+        negative_factor = replace(
+            negative_factor,
+            config={"outer": [{"inner": (-0.0, {"values": [-0.0, -5.0]})}]},
+        )
+        negative = replace(
+            negative,
+            pipeline=replace(
+                negative.pipeline,
+                nodes=tuple(
+                    negative_factor if node.node_id == "factors" else node
+                    for node in negative.pipeline.nodes
+                ),
+            ),
+        )
+
+        assert positive == negative
+        assert canonical_spec_bytes(positive) == canonical_spec_bytes(negative)
+        assert canonical_spec_hash(positive) == canonical_spec_hash(negative)
 
     def test_source_mutation_after_construction_cannot_drift_hash(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_hash
@@ -381,6 +464,142 @@ class TestCanonicalSpecCodec:
         assert spec_hash == canonical_spec_hash(canonical)
         assert getattr(bypassed_parameter, field_name) == integer_value
         assert type(getattr(bypassed_parameter, field_name)) is int
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_codec_canonicalizes_bypassed_negative_zero_without_mutation(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_bytes,
+            canonical_spec_hash,
+            canonical_spec_payload,
+        )
+
+        bypassed = _make_v2_spec()
+        bypassed_parameter = bypassed.parameter_schema[0]
+        object.__setattr__(bypassed_parameter, field_name, -0.0)
+        canonical = _make_v2_spec()
+        canonical_parameter = replace(
+            canonical.parameter_schema[0],
+            **{field_name: 0.0},
+        )
+        canonical = replace(
+            canonical,
+            parameter_schema=(canonical_parameter,),
+        )
+
+        payload = canonical_spec_payload(bypassed)
+        spec_bytes = canonical_spec_bytes(bypassed)
+        spec_hash = canonical_spec_hash(bypassed)
+        parameter_schema = payload["parameter_schema"]
+        assert isinstance(parameter_schema, list)
+        parameter_payload = parameter_schema[0]
+        assert isinstance(parameter_payload, dict)
+        payload_value = parameter_payload[field_name]
+        assert isinstance(payload_value, float)
+
+        assert math.copysign(1.0, payload_value) == 1.0
+        assert spec_bytes == canonical_spec_bytes(canonical)
+        assert spec_hash == canonical_spec_hash(canonical)
+        bypassed_value = getattr(bypassed_parameter, field_name)
+        assert math.copysign(1.0, bypassed_value) == -1.0
+
+    def test_codec_canonicalizes_bypassed_nested_config_without_mutation(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_bytes,
+            canonical_spec_hash,
+            canonical_spec_payload,
+        )
+
+        bypassed = _make_v2_spec()
+        bypassed_factor = next(
+            node for node in bypassed.pipeline.nodes if node.node_id == "factors"
+        )
+        source: dict[str, object] = {
+            "outer": [{"inner": (-0.0, {"values": [-0.0, -5.0]})}],
+        }
+        object.__setattr__(bypassed_factor, "config", source)
+        canonical = _make_v2_spec()
+        canonical_factor = next(
+            node for node in canonical.pipeline.nodes if node.node_id == "factors"
+        )
+        canonical_factor = replace(
+            canonical_factor,
+            config={"outer": [{"inner": (0.0, {"values": [0.0, -5.0]})}]},
+        )
+        canonical = replace(
+            canonical,
+            pipeline=replace(
+                canonical.pipeline,
+                nodes=tuple(
+                    canonical_factor if node.node_id == "factors" else node
+                    for node in canonical.pipeline.nodes
+                ),
+            ),
+        )
+
+        payload = canonical_spec_payload(bypassed)
+        spec_bytes = canonical_spec_bytes(bypassed)
+        spec_hash = canonical_spec_hash(bypassed)
+        pipeline_payload = payload["pipeline"]
+        assert isinstance(pipeline_payload, dict)
+        nodes_payload = pipeline_payload["nodes"]
+        assert isinstance(nodes_payload, list)
+        factor_payload = next(
+            node
+            for node in nodes_payload
+            if isinstance(node, dict) and node.get("node_id") == "factors"
+        )
+        config_payload = factor_payload["config"]
+        assert isinstance(config_payload, dict)
+        outer_payload = config_payload["outer"]
+        assert isinstance(outer_payload, list)
+        inner_payload = outer_payload[0]["inner"]
+        values_payload = inner_payload[1]["values"]
+
+        assert math.copysign(1.0, inner_payload[0]) == 1.0
+        assert math.copysign(1.0, values_payload[0]) == 1.0
+        assert math.copysign(1.0, values_payload[1]) == -1.0
+        assert spec_bytes == canonical_spec_bytes(canonical)
+        assert spec_hash == canonical_spec_hash(canonical)
+        source_outer = source["outer"]
+        assert isinstance(source_outer, list)
+        source_inner = source_outer[0]["inner"]
+        assert math.copysign(1.0, source_inner[0]) == -1.0
+
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            pytest.param(float("nan"), id="nan"),
+            pytest.param(float("inf"), id="positive-infinity"),
+            pytest.param(float("-inf"), id="negative-infinity"),
+        ],
+    )
+    def test_codec_rejects_bypassed_nested_non_finite_config(
+        self,
+        invalid_value: float,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_payload
+
+        spec = _make_v2_spec()
+        factor = next(node for node in spec.pipeline.nodes if node.node_id == "factors")
+        object.__setattr__(
+            factor,
+            "config",
+            {"outer": [{"threshold": invalid_value}]},
+        )
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            canonical_spec_payload(spec)
+
+        assert (
+            exc_info.value.details["field_name"]
+            == "pipeline.nodes.factors.config.outer[0].threshold"
+        )
+        assert exc_info.value.details["reason"] == "non_canonical_value"
 
     def test_payload_validates_parameter_identity_before_sorting(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_payload

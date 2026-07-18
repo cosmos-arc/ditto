@@ -1,5 +1,6 @@
 """Tests for StrategySpec and related types."""
 
+import math
 import operator
 from collections.abc import Callable, Mapping
 from dataclasses import FrozenInstanceError
@@ -51,6 +52,47 @@ class TestParamConstraint:
         assert type(param.min_value) is float
         assert type(param.max_value) is float
         assert type(param.step) is float
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_normalizes_signed_zero_identity_to_positive_zero(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        positive = constructor(
+            name="lookback",
+            dtype="float",
+            **{field_name: 0.0},
+        )
+        negative = constructor(
+            name="lookback",
+            dtype="float",
+            **{field_name: -0.0},
+        )
+
+        assert positive == negative
+        assert math.copysign(1.0, getattr(positive, field_name)) == 1.0
+        assert math.copysign(1.0, getattr(negative, field_name)) == 1.0
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_preserves_negative_nonzero_numeric_identity(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        parameter = constructor(
+            name="lookback",
+            dtype="float",
+            **{field_name: -5.0},
+        )
+        value = getattr(parameter, field_name)
+
+        assert value == -5.0
+        assert math.copysign(1.0, value) == -1.0
 
     @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
     def test_accepts_exact_float_integer_boundary_and_rejects_lossy_integer(

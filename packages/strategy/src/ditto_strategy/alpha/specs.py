@@ -18,7 +18,10 @@ from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
 
-from ditto_strategy.alpha._canonical_values import freeze_json_mapping
+from ditto_strategy.alpha._canonical_values import (
+    canonicalize_float_identity,
+    freeze_json_mapping,
+)
 from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.production_guard import (
     UnsafeProductionFactorExpressionError,
@@ -176,7 +179,7 @@ def _canonical_parameter_number(value: object, *, field_name: str) -> float:
             reason="non_finite_parameter_identity",
             actual_value=value,
         )
-    return normalized
+    return canonicalize_float_identity(normalized)
 
 
 def _is_non_empty_string(value: object) -> TypeGuard[str]:

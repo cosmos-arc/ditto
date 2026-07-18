@@ -9,7 +9,12 @@ from typing import NoReturn, TypeGuard
 
 from ditto_strategy.errors import StrategySpecError
 
-__all__ = ["freeze_json_mapping"]
+__all__ = ["canonicalize_float_identity", "freeze_json_mapping"]
+
+
+def canonicalize_float_identity(value: float) -> float:
+    """Collapse signed zero spellings that compare equal in domain identity."""
+    return 0.0 if value == 0.0 else value
 
 
 def _raise_canonical_value_error(
@@ -48,7 +53,7 @@ def _freeze_json_value(value: object, *, field_name: str) -> object:
                 field_name=field_name,
                 value=value,
             )
-        return value
+        return canonicalize_float_identity(value)
     if _is_object_mapping(value):
         return _freeze_mapping(value, field_name=field_name)
     if _is_object_sequence(value):

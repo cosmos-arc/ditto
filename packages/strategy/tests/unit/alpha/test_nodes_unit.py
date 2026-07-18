@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import operator
 from collections.abc import Callable, Mapping
 from dataclasses import FrozenInstanceError
@@ -235,3 +236,64 @@ class TestNodeInstanceCanonicalConfig:
         )
 
         assert node.config["factor_ids"] == ("momentum", "value")
+
+    def test_nested_config_normalizes_signed_zero_at_every_sequence_depth(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.nodes import NodeCategory, NodeInstance, NodeRef
+
+        source: dict[str, object] = {
+            "outer": [
+                {
+                    "inner": (
+                        -0.0,
+                        {"deeper": [-0.0, -5.0]},
+                    ),
+                },
+            ],
+        }
+        node = NodeInstance(
+            node_id="factors",
+            ref=NodeRef("builtin.factor_set", "1"),
+            category=NodeCategory.FACTOR_SET,
+            config=source,
+        )
+        outer = node.config["outer"]
+        assert isinstance(outer, tuple)
+        nested = outer[0]
+        assert isinstance(nested, Mapping)
+        inner = nested["inner"]
+        assert isinstance(inner, tuple)
+        deeper = inner[1]
+        assert isinstance(deeper, Mapping)
+        values = deeper["deeper"]
+        assert isinstance(values, tuple)
+
+        assert math.copysign(1.0, inner[0]) == 1.0
+        assert math.copysign(1.0, values[0]) == 1.0
+        assert math.copysign(1.0, values[1]) == -1.0
+
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            pytest.param(float("nan"), id="nan"),
+            pytest.param(float("inf"), id="positive-infinity"),
+            pytest.param(float("-inf"), id="negative-infinity"),
+        ],
+    )
+    def test_nested_config_rejects_non_finite_float_with_typed_error(
+        self,
+        invalid_value: float,
+    ) -> None:
+        from ditto_strategy.alpha.nodes import NodeCategory, NodeInstance, NodeRef
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            NodeInstance(
+                node_id="factors",
+                ref=NodeRef("builtin.factor_set", "1"),
+                category=NodeCategory.FACTOR_SET,
+                config={"outer": [{"threshold": invalid_value}]},
+            )
+
+        assert exc_info.value.details["field_name"] == "config.outer[0].threshold"
+        assert exc_info.value.details["reason"] == "invalid_canonical_json_value"

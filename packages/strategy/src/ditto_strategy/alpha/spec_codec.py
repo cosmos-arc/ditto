@@ -9,6 +9,7 @@ from typing import TypeGuard
 
 import orjson
 
+from ditto_strategy.alpha._canonical_values import canonicalize_float_identity
 from ditto_strategy.alpha.nodes import (
     NodeCategory,
     NodeInstance,
@@ -94,7 +95,7 @@ def _canonical_value(
                 field_name=field_name,
                 value=value,
             )
-        return value
+        return canonicalize_float_identity(value)
     if _is_object_mapping(value):
         result: dict[str, object] = {}
         for key, item in value.items():
