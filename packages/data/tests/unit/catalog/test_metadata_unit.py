@@ -430,3 +430,112 @@ class TestDefaultMetadataStorageLocationPolicy:
                 schema_version="market.test.v1",
                 storage_uri_prefixes=(" lake://market/test/",),
             )
+
+
+class TestR2DataProductContracts:
+    """R2 scope and product semantics must be frozen in the data catalog."""
+
+    HARD_SCOPE: ClassVar[frozenset[str]] = frozenset(
+        {
+            "calendar",
+            "stock_basic",
+            "etf_basic",
+            "index_basic",
+            "stock_daily",
+            "etf_daily",
+            "index_daily",
+            "adj_factor",
+            "fund_adj",
+            "stock_status",
+            "index_weight",
+            "corporate_actions",
+            "balance_sheet",
+            "income_statement",
+            "cash_flow",
+            "dividend",
+            "valuation_metrics",
+            "macro_indicators",
+            "commodity_daily",
+        }
+    )
+    DEFERRED_SCOPE: ClassVar[frozenset[str]] = frozenset(
+        {"margin_trading", "pledge_ratio", "fx_daily"}
+    )
+
+    def test_freezes_exact_r2_scope(self) -> None:
+        registry = default_dataset_metadata()
+
+        hard_scope = {
+            dataset_id
+            for dataset_id, metadata in registry.items()
+            if metadata.product_contract.r2_scope == "hard"
+        }
+        deferred_scope = {
+            dataset_id
+            for dataset_id, metadata in registry.items()
+            if metadata.product_contract.r2_scope == "deferred"
+        }
+
+        assert hard_scope == self.HARD_SCOPE
+        assert deferred_scope == self.DEFERRED_SCOPE
+
+    def test_every_dataset_freezes_operational_product_fields(self) -> None:
+        registry = default_dataset_metadata()
+
+        for dataset_id, metadata in registry.items():
+            contract = metadata.product_contract
+            assert contract.dataset_id == dataset_id
+            assert contract.owner == "data-platform"
+            assert contract.primary_key
+            assert contract.partition_keys
+            assert contract.provider_datasets
+            assert contract.bootstrap_chunk in {
+                "month",
+                "quarter",
+                "year",
+                "source_defined",
+            }
+            assert contract.coverage_start_rule
+            assert contract.fallback_mode in {"automatic", "manual", "none"}
+            assert contract.revision_policy in {
+                "append_only",
+                "effective_dated",
+                "not_applicable",
+            }
+            assert contract.runbook.startswith("docs/operations/")
+            assert contract.license_policy == "provider_ledger_required"
+
+    def test_hard_scope_freezes_coverage_targets(self) -> None:
+        registry = default_dataset_metadata()
+
+        for dataset_id in self.HARD_SCOPE:
+            contract = registry[dataset_id].product_contract
+            assert contract.raw_target_from is not None
+            assert contract.certified_target_from is not None
+
+        assert registry["stock_daily"].product_contract.raw_target_from == "2015-01-01"
+        assert (
+            registry["stock_status"].product_contract.certified_target_from
+            == "2016-01-01"
+        )
+        assert (
+            registry["macro_indicators"].product_contract.knowledge_date_field
+            == "knowledge_date"
+        )
+        assert (
+            registry["index_weight"].product_contract.revision_policy
+            == "effective_dated"
+        )
+
+    def test_product_contract_dataset_id_must_match_metadata(self) -> None:
+        stock_contract = default_dataset_metadata()["stock_daily"].product_contract
+
+        with pytest.raises(ValueError, match=r"product_contract\.dataset_id"):
+            DatasetMetadata(
+                dataset_id="other",
+                domain="market",
+                maturity="experimental",
+                schedule="trading_days",
+                schema_version="market.other.v1",
+                product_contract=stock_contract,
+            )

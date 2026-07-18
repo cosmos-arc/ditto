@@ -21,6 +21,8 @@ from ditto_data.catalog.fallback_policy import (
 from ditto_data.catalog.fallback_policy_store import (
     SQLiteCatalogSourceFallbackPolicyStore,
 )
+from ditto_data.catalog.license import DatasetLicenseReader, DatasetLicenseWriter
+from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
@@ -38,6 +40,11 @@ from ditto_data.catalog.remediation import (
     CatalogRemediationApprovalWriter,
 )
 from ditto_data.catalog.remediation_store import SQLiteCatalogRemediationApprovalStore
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshotReader,
+    ProviderSnapshotWriter,
+)
+from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
 from ditto_data.catalog.sqlite_store import SQLiteDataCatalog
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.freeze_store import (
@@ -49,6 +56,11 @@ from ditto_data.ingestion.ingestion_cursor_store import (
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_data.ingestion.partition_state import (
+    PartitionLifecycleReader,
+    PartitionLifecycleWriter,
+)
+from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
 )
@@ -125,6 +137,78 @@ class RuntimeProvider(Provider):
     ) -> DataCatalogReader:
         """DataCatalog 读取端口."""
         return data_catalog_store
+
+    @provide
+    def provider_snapshot_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteProviderSnapshotStore:
+        """Append-only provider snapshot evidence store."""
+        return SQLiteProviderSnapshotStore(sqlite_client)
+
+    @provide
+    def provider_snapshot_writer(
+        self,
+        provider_snapshot_store: SQLiteProviderSnapshotStore,
+    ) -> ProviderSnapshotWriter:
+        """Provider snapshot write port."""
+        return provider_snapshot_store
+
+    @provide
+    def provider_snapshot_reader(
+        self,
+        provider_snapshot_store: SQLiteProviderSnapshotStore,
+    ) -> ProviderSnapshotReader:
+        """Provider snapshot read port."""
+        return provider_snapshot_store
+
+    @provide
+    def dataset_license_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDatasetLicenseStore:
+        """Append-only provider license ledger."""
+        return SQLiteDatasetLicenseStore(sqlite_client)
+
+    @provide
+    def dataset_license_writer(
+        self,
+        dataset_license_store: SQLiteDatasetLicenseStore,
+    ) -> DatasetLicenseWriter:
+        """Dataset license write port."""
+        return dataset_license_store
+
+    @provide
+    def dataset_license_reader(
+        self,
+        dataset_license_store: SQLiteDatasetLicenseStore,
+    ) -> DatasetLicenseReader:
+        """Dataset license read port."""
+        return dataset_license_store
+
+    @provide
+    def partition_lifecycle_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLitePartitionLifecycleStore:
+        """Durable ingestion partition lifecycle store."""
+        return SQLitePartitionLifecycleStore(sqlite_client)
+
+    @provide
+    def partition_lifecycle_writer(
+        self,
+        partition_lifecycle_store: SQLitePartitionLifecycleStore,
+    ) -> PartitionLifecycleWriter:
+        """Partition lifecycle write port."""
+        return partition_lifecycle_store
+
+    @provide
+    def partition_lifecycle_reader(
+        self,
+        partition_lifecycle_store: SQLitePartitionLifecycleStore,
+    ) -> PartitionLifecycleReader:
+        """Partition lifecycle read port."""
+        return partition_lifecycle_store
 
     @provide
     def dataset_promotion_evidence_store(
