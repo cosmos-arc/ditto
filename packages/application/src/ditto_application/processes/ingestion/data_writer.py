@@ -218,6 +218,7 @@ class IngestionDataWriter:
         WriteKind.INSTRUMENT_CODE_BARS: "_handler_instrument_code_bars",
         WriteKind.STOCK_STATUS: "_handler_stock_status",
         WriteKind.ADJ_FACTOR: "_handler_adj_factor",
+        WriteKind.FUND_ADJ: "_handler_fund_adj",
         WriteKind.FUNDAMENTAL: "_handler_fundamental",
         WriteKind.CAPITAL: "_handler_capital",
         WriteKind.MACRO: "_handler_macro",
@@ -263,6 +264,11 @@ class IngestionDataWriter:
 
     def _handler_adj_factor(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_adj_factor(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
+    def _handler_fund_adj(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_fund_adj(
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
         )
 
@@ -390,6 +396,23 @@ class IngestionDataWriter:
             enriched_df,
             rows_written,
         )
+
+    def _write_fund_adj(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write ETF adjustment factors through the dedicated ETF storage port."""
+        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
+        rows_written = self._market_write_service.save_fund_adj(
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(dataset, year, enriched_df, rows_written)
 
     def _enrich_and_filter_fk_dataframe(
         self,

@@ -26,6 +26,7 @@ def mock_writers() -> dict[str, MagicMock]:
         "stock_adj": MagicMock(),
         "etf_bars": MagicMock(),
         "etf_status": MagicMock(),
+        "etf_adj": MagicMock(),
     }
 
 
@@ -44,6 +45,7 @@ def market_write_service(
         stock_adj=mock_writers["stock_adj"],
         etf_bars=mock_writers["etf_bars"],
         etf_status=mock_writers["etf_status"],
+        etf_adj=mock_writers["etf_adj"],
     )
 
     return MarketWriteService(
@@ -151,6 +153,31 @@ class TestMarketWriteServiceSaveAdjFactor:
         # Assert
         assert rows_written == 1
         mock_writers["stock_adj"].write.assert_called_once()
+
+    def test_save_fund_adj_uses_etf_adj_writer(
+        self,
+        market_write_service: MarketWriteService,
+        mock_writers: dict[str, MagicMock],
+    ) -> None:
+        df = pl.DataFrame(
+            {
+                "instrument_id": [2_000_001],
+                "trade_date": ["2024-01-01"],
+                "adj_factor": [1.2],
+            }
+        )
+        result = MagicMock(added=1, updated=0)
+        mock_writers["etf_adj"].write.return_value = result
+
+        rows_written = market_write_service.save_fund_adj(
+            df=df,
+            year=2024,
+            on_duplicate=OnDuplicate.ERROR,
+        )
+
+        assert rows_written == 1
+        mock_writers["etf_adj"].write.assert_called_once()
+        mock_writers["stock_adj"].write.assert_not_called()
 
 
 class TestMarketWriteServiceSaveStockStatus:

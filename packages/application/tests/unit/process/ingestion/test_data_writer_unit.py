@@ -65,8 +65,33 @@ def mock_market_write_service(mocker):
     service = mocker.Mock()
     service.save_bars.return_value = 1
     service.save_adj_factor.return_value = 1
+    service.save_fund_adj.return_value = 1
     service.save_stock_status.return_value = 1
     return service
+
+
+@pytest.mark.unit
+def test_fund_adj_uses_etf_writer_and_logical_catalog_uri(
+    data_writer,
+    mock_metadata_service,
+    mock_market_write_service,
+) -> None:
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "510300.SH": 2_000_001
+    }
+    df = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"],
+            "trade_date": [date(2024, 12, 27)],
+            "adj_factor": [1.25],
+        }
+    )
+
+    result = data_writer.write_data("fund_adj", df, "2024-12-27")
+
+    assert result.file_path == "fund_adj/2024"
+    mock_market_write_service.save_fund_adj.assert_called_once()
+    mock_market_write_service.save_adj_factor.assert_not_called()
 
 
 @pytest.fixture

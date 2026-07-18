@@ -109,6 +109,12 @@ class TestDefaultDatasetRegistry:
         assert registration.instrument_fetch_factory is None
         assert registration.supports_instrument_ingestion is False
 
+    def test_fund_adj_has_a_dedicated_etf_write_route(self) -> None:
+        registration = default_dataset_registry().require(Dataset.FUND_ADJ)
+
+        assert registration.write_kind is WriteKind.FUND_ADJ
+        assert registration.write_kind is not WriteKind.ADJ_FACTOR
+
 
 @pytest.mark.unit
 class TestDatasetRegistryConformance:

@@ -63,6 +63,7 @@ class WriteKind(StrEnum):
     INSTRUMENT_CODE_BARS = "instrument_code_bars"
     STOCK_STATUS = "stock_status"
     ADJ_FACTOR = "adj_factor"
+    FUND_ADJ = "fund_adj"
     FUNDAMENTAL = "fundamental"
     CAPITAL = "capital"
     MACRO = "macro"
@@ -333,7 +334,7 @@ _ADJ_FACTOR_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     ),
     DatasetRegistration(
         dataset=Dataset.FUND_ADJ,
-        write_kind=WriteKind.ADJ_FACTOR,
+        write_kind=WriteKind.FUND_ADJ,
         daily_fetch_factory=_daily_fetch("market", "fetch_fund_adj"),
         instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_adj"),
     ),
