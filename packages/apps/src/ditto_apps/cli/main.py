@@ -5,6 +5,7 @@ from __future__ import annotations
 import typer
 
 from ditto_apps.cli.commands.backfill import app as backfill_app
+from ditto_apps.cli.commands.data_products import app as data_products_app
 from ditto_apps.cli.commands.ingest import app as ingest_app
 from ditto_apps.cli.commands.init import app as init_app
 from ditto_apps.cli.commands.ops import app as ops_app
@@ -22,6 +23,7 @@ app = typer.Typer(
 app.add_typer(init_app, name="init")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(backfill_app, name="backfill")
+app.add_typer(data_products_app, name="data-products")
 app.add_typer(query_app, name="query")
 app.add_typer(strategy_app, name="strategy")
 app.add_typer(ops_app, name="ops")

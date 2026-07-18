@@ -35,14 +35,15 @@ from tests.e2e.parquet_helpers import market_parquet_store
 def _make_instrument_id(df: pl.DataFrame) -> pl.DataFrame:
     """从 source_ticker 生成安全的 instrument_id.
 
-    使用 hash % 10^9 确保 ID 在 i64 范围内且唯一。
+    将稳定哈希限制在 Ditto 的股票 instrument_id 百万段。
     """
     return df.with_columns(
         pl.col("source_ticker")
         .str.split(".")
         .list.get(0)
         .hash()
-        .mod(1_000_000_000)  # 保持在 10^9 范围内，确保 i64 安全
+        .mod(1_000_000)
+        .add(1_000_000)
         .cast(pl.Int64)
         .alias("instrument_id")
     )

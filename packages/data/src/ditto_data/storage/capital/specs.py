@@ -51,7 +51,7 @@ PLEDGE_RATIO_SPEC = SqliteTableSpec(
 )
 
 INDEX_COMPOSITION_SPEC = SqliteTableSpec(
-    table="index_composition",
+    table="index_weight",
     columns=("instrument_id", "weight"),
     id_column="index_id",
     date_column=None,

@@ -255,7 +255,12 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         description="指数成分股权重",
         typical_available_time=time(19, 0),
         depends_on=[_Dataset.INDEX_BASIC],
-        critical_fields=["index_code", "con_code", "weight", "trade_date"],
+        critical_fields=[
+            "index_id",
+            "instrument_id",
+            "weight",
+            "effective_from",
+        ],
         task_name="ingest_index_weight",
         priority=50,
     ),

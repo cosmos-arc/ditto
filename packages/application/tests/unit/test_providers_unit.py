@@ -62,6 +62,7 @@ from ditto_application.queries.remediation import CatalogRemediationQueryFacade
 from ditto_application.queries.source import SourceDataPort
 from ditto_application.settings import TradingSettings
 from ditto_data.catalog import InMemoryDataCatalog
+from ditto_data.config.data_source import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
     CapitalProvider,
@@ -113,6 +114,11 @@ class _TestConfigProvider(Provider):
     def data_store_settings(self) -> DataStoreSettings:
         """提供测试用数据存储配置."""
         return DataStoreSettings(data_root=self._data_root)
+
+    @provide
+    def data_source_settings(self) -> DataSourceSettings:
+        """提供无外部凭据的测试数据源配置。"""
+        return DataSourceSettings()
 
     @provide
     def data_root(self) -> Path:
@@ -493,14 +499,17 @@ class TestAppProviderStructure:
         """MarketQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
         provider = AppMarketQueryProvider()
         market_service = MagicMock()
+        capital_store = MagicMock()
         maturity_promotion_reader = MagicMock()
 
         facade = provider.market_query_facade(
             market_service=market_service,
+            capital_store=capital_store,
             maturity_promotion_reader=maturity_promotion_reader,
         )
 
         assert facade._service is market_service
+        assert facade._capital_store is capital_store
         assert facade._maturity_promotion_reader is maturity_promotion_reader
 
     def test_source_query_facade_receives_maturity_promotion_reader(self) -> None:

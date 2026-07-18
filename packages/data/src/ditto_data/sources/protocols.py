@@ -182,6 +182,14 @@ class CapitalFetcher(Protocol):
         """获取股权质押比例."""
         ...
 
+    def fetch_index_weight(
+        self,
+        index_code: str,
+        trade_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch effective index constituent weights."""
+        ...
+
 
 class MacroFetcher(Protocol):
     """Macro indicators, FX, commodities, and metals."""

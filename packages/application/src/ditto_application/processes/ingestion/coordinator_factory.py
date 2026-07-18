@@ -41,6 +41,9 @@ from ditto_application.processes.ingestion.coordinator import (
     SourceFetchers,
 )
 from ditto_application.processes.ingestion.date_range import list_ingestion_dates
+from ditto_application.processes.ingestion.evidence_commit import (
+    IngestionEvidenceCommitter,
+)
 from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.source_selection import (
     AUTO_SOURCE_NAME,
@@ -83,6 +86,8 @@ class CoordinatorRuntimeContext:
     catalog_reader: DataCatalogReader | None = None
     catalog_writer: DataCatalogWriter | None = None
     source_fallback_policy_reader: CatalogSourceFallbackPolicyReader | None = None
+    evidence_committer: IngestionEvidenceCommitter | None = None
+    license_record_id: str | None = None
 
 
 def _registered_source_or_default[FetcherT](
@@ -240,6 +245,8 @@ def _build_coordinator(
             lineage_recorder=runtime.lineage_recorder,
             catalog_reader=runtime.catalog_reader,
             catalog_writer=runtime.catalog_writer,
+            evidence_committer=runtime.evidence_committer,
+            license_record_id=runtime.license_record_id,
         ),
     )
 

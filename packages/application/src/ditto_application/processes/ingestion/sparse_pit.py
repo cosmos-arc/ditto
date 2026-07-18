@@ -55,10 +55,13 @@ def validate_sparse_pit_cutoff(
         cutoff = date.fromisoformat(trade_date)
     except ValueError:
         return "PIT_CUTOFF_DATE_INVALID"
-    if "knowledge_date" not in df.columns:
+    knowledge_date_column = (
+        "effective_from" if dataset == "index_weight" else "knowledge_date"
+    )
+    if knowledge_date_column not in df.columns:
         return "PIT_KNOWLEDGE_DATE_MISSING"
 
-    raw_dates = df.get_column("knowledge_date")
+    raw_dates = df.get_column(knowledge_date_column)
     if raw_dates.null_count() > 0:
         return "PIT_KNOWLEDGE_DATE_INVALID"
     knowledge_dates = _normalized_knowledge_dates(raw_dates)

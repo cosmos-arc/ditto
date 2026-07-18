@@ -224,6 +224,46 @@ class MarketWriteService:
 
         return rows_written
 
+    @traced("market.save_fund_adj")
+    def save_fund_adj(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Save ETF adjustment factors through the ETF-owned writer."""
+        writer = self._write_ports.etf_adj
+        if writer is None:
+            raise ValueError("fund_adj writer not configured")
+        logger.info(
+            "Writing ETF adjustment factor data",
+            event="market_write_fund_adj_start",
+            dataset="fund_adj",
+            year=year,
+            row_count=len(df),
+        )
+        storage_df = self._to_storage_columns(df)
+        lock_name = f"adj_factor_write_fund_adj_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = writer.write(
+                storage_df,
+                year,
+                on_duplicate=self._map_on_duplicate(on_duplicate),
+            )
+        rows_written = write_result.added + write_result.updated
+        Metrics.data_records.add(
+            len(storage_df),
+            {"dataset": "fund_adj", "operation": "write"},
+        )
+        logger.info(
+            "ETF adjustment factor data written",
+            event="market_write_fund_adj_complete",
+            dataset="fund_adj",
+            year=year,
+            rows_written=rows_written,
+        )
+        return rows_written
+
     @traced("market.save_stock_status")
     def save_stock_status(
         self,

@@ -25,6 +25,7 @@ from datetime import date  # noqa: E402
 import polars as pl  # noqa: E402
 import pytest  # noqa: E402
 from ditto_data.config import DataSourceSettings  # noqa: E402
+from ditto_data.observability import register_metrics  # noqa: E402
 from ditto_data.quality import GoldenDatasetSpec  # noqa: E402
 from ditto_data.sources.tdx import TdxSource  # noqa: E402
 from ditto_data.sources.tushare.tushare_source import TushareSource  # noqa: E402
@@ -39,6 +40,17 @@ from tests.e2e.reporter import E2EReporter  # noqa: E402
 # ==============================================================================
 # 数据完整性验证
 # ==============================================================================
+
+
+@pytest.fixture(autouse=True)
+def register_e2e_metrics() -> None:
+    """Restore data metrics before each E2E test.
+
+    The full suite mixes package tests on each xdist worker.  Some observability
+    tests intentionally reset the process-global metric registry, so a
+    session-scoped registration can disappear before a later E2E source call.
+    """
+    register_metrics()
 
 
 @pytest.fixture(scope="session")

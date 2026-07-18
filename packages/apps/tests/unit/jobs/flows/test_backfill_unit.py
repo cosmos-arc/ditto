@@ -11,6 +11,7 @@ startup during unit tests.
 from __future__ import annotations
 
 import pytest
+from ditto_application.exceptions import AppCommandError
 
 # Import functions and models directly
 # The @flow decorator is mocked in conftest.py, so these are plain functions
@@ -19,6 +20,8 @@ from ditto_apps.jobs.flows.backfill import (
     BackfillFlowResult,
     backfill_flow,
     backfill_missing_flow,
+    r2_data_product_bootstrap_flow,
+    r2_data_product_repair_flow,
 )
 from pydantic import ValidationError
 
@@ -29,6 +32,8 @@ def _prefect_runner(entrypoint):
 
 BACKFILL_FLOW_RUNNER = _prefect_runner(backfill_flow)
 BACKFILL_MISSING_FLOW_RUNNER = _prefect_runner(backfill_missing_flow)
+R2_BOOTSTRAP_FLOW_RUNNER = _prefect_runner(r2_data_product_bootstrap_flow)
+R2_REPAIR_FLOW_RUNNER = _prefect_runner(r2_data_product_repair_flow)
 
 
 def _create_mock_bundle(mocker, mock_backfill_manager):
@@ -505,3 +510,50 @@ class TestBackfillMissingFlow:
         # Verify context manager cleanup still happened
         mock_context_mgr.__enter__.assert_called_once()
         mock_context_mgr.__exit__.assert_called_once()
+
+
+@pytest.mark.unit
+class TestR2DataProductBackfillGuards:
+    """R2 job entrypoints must share the exact CLI confirmation boundary."""
+
+    def test_bootstrap_rejects_wrong_confirmation_before_opening_bundle(
+        self,
+        mocker,
+    ):
+        create_bundle = mocker.patch(
+            "ditto_apps.jobs.flows.backfill.create_ingestion_bundle"
+        )
+        config = BackfillFlowConfig(
+            dataset="stock_daily",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
+
+        with pytest.raises(AppCommandError, match="confirmation does not match"):
+            R2_BOOTSTRAP_FLOW_RUNNER(config, "yes")
+
+        create_bundle.assert_not_called()
+
+    def test_repair_executes_after_exact_confirmation(self, mocker):
+        mock_manager = mocker.MagicMock()
+        mock_manager.backfill_missing.return_value = _create_mock_backfill_result(
+            mocker,
+            total_dates=2,
+            success_count=2,
+        )
+        _setup_bundle_mock(mocker, mock_manager)
+
+        result = R2_REPAIR_FLOW_RUNNER(
+            "stock_daily",
+            "data-product:repair:stock_daily:confirm",
+        )
+
+        assert result["success_count"] == 2
+        assert result["confirmation_phrase"] == (
+            "data-product:repair:stock_daily:confirm"
+        )
+        mock_manager.backfill_missing.assert_called_once_with(
+            dataset="stock_daily",
+            source="tushare",
+            parallel=1,
+        )

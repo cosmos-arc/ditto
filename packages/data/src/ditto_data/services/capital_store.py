@@ -152,3 +152,7 @@ class CapitalStore:
 
         """
         return self._write_ports.index_composition.write(df)
+
+    def save_index_weight(self, df: pl.DataFrame) -> int:
+        """Save canonical effective-dated index weights."""
+        return self._write_ports.index_composition.write(df)

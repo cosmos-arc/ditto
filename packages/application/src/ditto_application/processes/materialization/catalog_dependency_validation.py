@@ -12,11 +12,32 @@ from ditto_features.materialization.dependency_registry import DependencyContrac
 from ditto_application.exceptions import AppProcessError
 
 __all__ = [
+    "CertifiedCatalogDependencySelection",
     "DependencyCatalogCompatibilityError",
     "DependencyCatalogCompatibilityIssue",
     "DependencyCatalogCompatibilityReport",
+    "validate_certified_catalog_dependencies",
     "validate_dependency_catalog_compatibility",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class CertifiedCatalogDependencySelection:
+    """Exact provider snapshots selected for one certified input dataset."""
+
+    dataset_id: str
+    source_snapshot_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        """Validate the dataset identity and non-empty unique snapshot set."""
+        if not self.dataset_id or self.dataset_id.strip() != self.dataset_id:
+            raise AppProcessError(f"invalid certified dataset_id: {self.dataset_id!r}")
+        if not self.source_snapshot_ids or len(set(self.source_snapshot_ids)) != len(
+            self.source_snapshot_ids
+        ):
+            raise AppProcessError(
+                "certified catalog source snapshot IDs must be non-empty and unique"
+            )
 
 
 @dataclass(frozen=True)
@@ -82,6 +103,74 @@ class DependencyCatalogCompatibilityError(AppProcessError):
             + f"{list(issue.missing_source_ticker_dates)}"
         )
         super().__init__(message)
+
+
+def validate_certified_catalog_dependencies(
+    *,
+    selections: Iterable[CertifiedCatalogDependencySelection],
+    catalog_reader: DataCatalogReader,
+) -> DependencyCatalogCompatibilityReport:
+    """Prove exact certified snapshots resolve to canonical catalog assets."""
+    selected_snapshot_ids: list[str] = []
+    for selection in selections:
+        metadata = default_dataset_metadata().get(selection.dataset_id)
+        if metadata is None:
+            raise DependencyCatalogCompatibilityError(
+                DependencyCatalogCompatibilityIssue(
+                    dataset_ref=selection.dataset_id,
+                    reason="unknown_certified_dataset",
+                    catalog_dataset_id=selection.dataset_id,
+                    catalog_namespace="unknown",
+                )
+            )
+        entries = tuple(
+            entry
+            for entry in catalog_reader.list_assets()
+            if entry.asset.dataset_id == selection.dataset_id
+        )
+        namespace = entries[0].asset.namespace if entries else metadata.domain
+        for snapshot_id in selection.source_snapshot_ids:
+            matching = tuple(
+                entry for entry in entries if entry.source_snapshot_id == snapshot_id
+            )
+            if not matching:
+                raise DependencyCatalogCompatibilityError(
+                    DependencyCatalogCompatibilityIssue(
+                        dataset_ref=selection.dataset_id,
+                        reason="certified_source_snapshot_missing",
+                        catalog_dataset_id=selection.dataset_id,
+                        catalog_namespace=namespace,
+                        expected_source_snapshot_id=snapshot_id,
+                    )
+                )
+            entry = _latest_catalog_entry(matching)
+            if not entry.schema.schema_version:
+                raise DependencyCatalogCompatibilityError(
+                    DependencyCatalogCompatibilityIssue(
+                        dataset_ref=selection.dataset_id,
+                        reason="missing_schema_version",
+                        catalog_dataset_id=selection.dataset_id,
+                        catalog_namespace=entry.asset.namespace,
+                        source=entry.source,
+                        actual_source_snapshot_id=entry.source_snapshot_id,
+                    )
+                )
+            if not metadata.supports_source(entry.source):
+                raise DependencyCatalogCompatibilityError(
+                    DependencyCatalogCompatibilityIssue(
+                        dataset_ref=selection.dataset_id,
+                        reason="unsupported_source",
+                        catalog_dataset_id=selection.dataset_id,
+                        catalog_namespace=entry.asset.namespace,
+                        actual_schema_version=entry.schema.schema_version,
+                        source=entry.source,
+                        actual_source_snapshot_id=entry.source_snapshot_id,
+                    )
+                )
+            selected_snapshot_ids.append(snapshot_id)
+    return DependencyCatalogCompatibilityReport(
+        source_snapshot_ids=tuple(selected_snapshot_ids)
+    )
 
 
 def validate_dependency_catalog_compatibility(

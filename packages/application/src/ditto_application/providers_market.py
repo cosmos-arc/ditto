@@ -8,6 +8,7 @@ from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionHistoryReader,
@@ -32,6 +33,7 @@ from ditto_features.services import (
 from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
+from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.evaluation import FactorEvaluationFacade
 from ditto_application.queries.forward_return_service import ForwardReturnService
@@ -53,6 +55,14 @@ class AppMarketQueryProvider(Provider):
     """App Query 层 DI Provider — 市场数据查询服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def data_products_query_facade(
+        self,
+        certification_reader: CertificationReader,
+    ) -> DataProductsQueryFacade:
+        """R2 data-product workbench read models."""
+        return DataProductsQueryFacade(certification_reader=certification_reader)
 
     @provide
     def forward_return_service(
@@ -92,11 +102,13 @@ class AppMarketQueryProvider(Provider):
     def market_query_facade(
         self,
         market_service: MarketService,
+        capital_store: CapitalStore,
         maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> MarketQueryFacade:
         """行情数据查询 facade — 隐藏内部查询类型."""
         return MarketQueryFacade(
             market_service=market_service,
+            capital_store=capital_store,
             maturity_promotion_reader=maturity_promotion_reader,
         )
 

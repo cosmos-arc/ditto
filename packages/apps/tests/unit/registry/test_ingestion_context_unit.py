@@ -6,10 +6,15 @@ from contextlib import contextmanager
 from typing import cast
 from unittest.mock import MagicMock
 
+from ditto_application.commands.data_product_certification import (
+    DataProductCertificationCommands,
+)
+from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorRuntimeContext,
     CoordinatorServices,
 )
+from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_apps.registry.contexts import ingestion as ingestion_context
 from ditto_data.catalog import (
     DataCatalogReader,
@@ -57,6 +62,9 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
         DataCatalogReader: catalog,
         DataCatalogWriter: catalog,
         CatalogSourceFallbackPolicyReader: source_fallback_policy_reader,
+        BootstrapPlanner: MagicMock(),
+        DataProductsQueryFacade: MagicMock(),
+        DataProductCertificationCommands: MagicMock(),
     }
     container = _FakeContainer(services)
     coordinator = MagicMock()

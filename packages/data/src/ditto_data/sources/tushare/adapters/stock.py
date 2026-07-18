@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
-from ditto_data.sources.base import (
-    SourceAuthenticationError,
-    SourceFetchError,
-    SourceRateLimitError,
-)
+from ditto_data.sources.base import SourceFetchError
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors import StatusMerger
 from ditto_data.sources.tushare.processors.error_handler import (
@@ -31,6 +29,8 @@ _STOCK_BASIC_RAW_COLUMNS = (
     "delist_date",
     "list_status",
 )
+_STOCK_STATUS_HISTORY_START = date(2016, 1, 1)
+_ST_NAME_PATTERN = r"^(?:S\*ST|SST|\*ST|ST)"
 
 
 class StockTushareAdapter(BaseTushareAdapter):
@@ -398,10 +398,10 @@ class StockTushareAdapter(BaseTushareAdapter):
         """
         获取股票状态信息 (B.3).
 
-        Combines data from multiple Tushare APIs:
+        Combines date-scoped data from multiple Tushare APIs:
         - suspend_d: 停牌信息
-        - stock_st: ST状态
-        - stock_basic: list_status
+        - stock_st: ST 每日状态
+        - bak_basic: 2016+ 历史每日股票列表和名称
 
         Args:
             trade_date: Trade date (YYYY-MM-DD).
@@ -420,6 +420,21 @@ class StockTushareAdapter(BaseTushareAdapter):
             SourceFetchError: If fetch fails.
 
         """
+        try:
+            cutoff = date.fromisoformat(trade_date)
+        except ValueError as error:
+            raise SourceFetchError(
+                message=f"Invalid stock_status trade date: {trade_date}",
+                source="tushare",
+                cause=error,
+            ) from error
+        if cutoff < _STOCK_STATUS_HISTORY_START:
+            raise SourceFetchError(
+                message="stock_status provider history starts at 2016-01-01",
+                source="tushare",
+                details={"trade_date": trade_date},
+            )
+
         logger.info(
             "Fetching Tushare stock status",
             event="tushare_stock_status_fetch_start",
@@ -432,11 +447,13 @@ class StockTushareAdapter(BaseTushareAdapter):
             # 1. Fetch suspension data from suspend_d API
             suspend_df = self._fetch_suspend_data(ts_date)
 
-            # 2. Fetch ST status from stock_st API
-            st_df = self._fetch_st_data()
+            # 2. Reconstruct the date-scoped active universe from bak_basic.
+            universe_df = self._fetch_historical_universe(ts_date)
 
-            # 3. Fetch list_status from stock_basic API (historical snapshot)
-            list_status_df = self._fetch_list_status_data(trade_date=trade_date)
+            # 3. Fetch the same-date ST snapshot; historical names are a
+            # provider-native fallback when the daily endpoint has no rows.
+            st_df = self._fetch_st_data(ts_date, universe_df)
+            list_status_df = universe_df.select("ts_code", "list_status")
 
             # 4. 使用 Processor 合并数据
             merger = StatusMerger()
@@ -552,103 +569,74 @@ class StockTushareAdapter(BaseTushareAdapter):
             ts_date: 交易日期 (YYYYMMDD 格式)
 
         Returns:
-            DataFrame with columns: ts_code, suspend_timing
-            如果获取失败返回空 DataFrame
+            DataFrame with columns: ts_code, suspend_timing. An empty provider
+            response means no suspensions; provider errors propagate.
 
         """
-        suspend_df = pl.DataFrame(
-            schema={"ts_code": pl.String, "suspend_timing": pl.String}
+        suspend_response = self._client.query(
+            api_name="suspend_d",
+            suspend_date=ts_date,
+            fields="ts_code,suspend_timing",
         )
-        try:
-            suspend_response = self._client.query(
-                api_name="suspend_d",
-                suspend_date=ts_date,
-                fields="ts_code,suspend_timing",
+        if suspend_response.is_empty():
+            return pl.DataFrame(
+                schema={"ts_code": pl.String, "suspend_timing": pl.String}
             )
-            if len(suspend_response) > 0:
-                suspend_df = suspend_response
-        except (
-            SourceFetchError,
-            SourceAuthenticationError,
-            SourceRateLimitError,
-        ) as e:
-            logger.warning(
-                "Failed to fetch suspend_d data",
-                event="tushare_suspend_d_fetch_error",
-                error=str(e),
-            )
-        return suspend_df
+        return suspend_response.select("ts_code", "suspend_timing")
 
-    def _fetch_st_data(self) -> pl.DataFrame:
+    def _fetch_st_data(
+        self,
+        ts_date: str,
+        universe_df: pl.DataFrame,
+    ) -> pl.DataFrame:
         """
         获取 ST 状态数据（从 stock_st API）.
 
-        Returns:
-            DataFrame with columns: ts_code, name
-            如果获取失败返回空 DataFrame
-
-        Note:
-            stock_st API 不需要日期参数，返回所有当前 ST 股票.
-
-        """
-        st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
-        try:
-            st_response = self._client.query(
-                api_name="stock_st",
-                fields="ts_code,name",
-            )
-            if len(st_response) > 0:
-                st_df = st_response
-        except (
-            SourceFetchError,
-            SourceAuthenticationError,
-            SourceRateLimitError,
-        ) as e:
-            logger.warning(
-                "Failed to fetch stock_st data",
-                event="tushare_stock_st_fetch_error",
-                error=str(e),
-            )
-        return st_df
-
-    def _fetch_list_status_data(self, trade_date: str | None = None) -> pl.DataFrame:
-        """
-        获取上市状态数据（从 stock_basic API）.
-
         Args:
-            trade_date: 交易日期 (YYYY-MM-DD). 当提供时，使用 list_date 参数
-                获取该日期的股票上市状态快照；为 None 时返回当前全量快照.
+            ts_date: 目标交易日（YYYYMMDD）.
+            universe_df: 当日 bak_basic 历史 universe.
 
         Returns:
-            DataFrame with columns: ts_code, list_status
-            如果获取失败返回空 DataFrame
-
-        Note:
-            list_status: L=正常, D=退市, P=暂停.
-            trade_date 为 None 时返回当前全量快照，传入日期时返回该日期的历史快照.
+            DataFrame with columns: ts_code, name. An empty daily ST response
+            falls back to ST markers in the same-date historical names.
 
         """
-        list_status_df = pl.DataFrame(
-            schema={"ts_code": pl.String, "list_status": pl.String}
+        st_response = self._client.query(
+            api_name="stock_st",
+            trade_date=ts_date,
+            fields="ts_code,name",
         )
-        try:
-            params: dict[str, str] = {
-                "api_name": "stock_basic",
-                "fields": "ts_code,list_status",
-            }
-            if trade_date is not None:
-                params["list_date"] = trade_date.replace("-", "")
-            basic_response = self._client.query(**params)
-            if len(basic_response) > 0:
-                list_status_df = basic_response
-        except (
-            SourceFetchError,
-            SourceAuthenticationError,
-            SourceRateLimitError,
-        ) as e:
-            logger.warning(
-                "Failed to fetch stock_basic list_status",
-                event="tushare_stock_basic_fetch_error",
-                error=str(e),
+        if not st_response.is_empty():
+            return st_response.select("ts_code", "name")
+        return universe_df.filter(
+            pl.col("name").fill_null("").str.contains(_ST_NAME_PATTERN)
+        ).select("ts_code", "name")
+
+    def _fetch_historical_universe(self, ts_date: str) -> pl.DataFrame:
+        """Fetch the provider's 2016+ daily active-stock universe."""
+        response = self._client.query(
+            api_name="bak_basic",
+            trade_date=ts_date,
+            fields="ts_code,name,trade_date",
+        )
+        required = {"ts_code", "name"}
+        missing = required - set(response.columns)
+        if missing and not response.is_empty():
+            raise SourceFetchError(
+                message=f"bak_basic missing required columns: {sorted(missing)}",
+                source="tushare",
+                details={"trade_date": ts_date},
             )
-        return list_status_df
+        if response.is_empty():
+            return pl.DataFrame(
+                schema={
+                    "ts_code": pl.String,
+                    "name": pl.String,
+                    "list_status": pl.String,
+                }
+            )
+        return (
+            response.select("ts_code", "name")
+            .unique()
+            .with_columns(pl.lit("L").alias("list_status"))
+        )

@@ -4,19 +4,30 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+from ditto_application.commands.data_product_certification import (
+    DataProductCertificationCommands,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
+from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorRuntimeContext,
     CoordinatorServices,
     create_coordinator,
 )
+from ditto_application.processes.ingestion.evidence_commit import (
+    IngestionEvidenceCommitter,
+)
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.sparse_recovery import (
     SparsePITReattestationProcess,
 )
+from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
-from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
+from ditto_data.catalog import (
+    DataCatalogReader,
+    DataCatalogWriter,
+)
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
@@ -39,6 +50,8 @@ from ditto_apps.registry.contexts.bundle import IngestionBundle
 @contextmanager
 def create_ingestion_bundle(
     source: str = "tushare",
+    *,
+    license_record_id: str | None = None,
 ) -> Generator[IngestionBundle]:
     """
     创建摄入上下文组合包（单容器）.
@@ -48,6 +61,7 @@ def create_ingestion_bundle(
 
     Args:
         source: 数据源名称
+        license_record_id: 启用 R2 fail-closed 证据模式的已审核许可记录 ID。
 
     Yields:
         IngestionBundle: 包含协调器、管理器和查询 facade
@@ -78,6 +92,9 @@ def create_ingestion_bundle(
         catalog_reader = container.get(DataCatalogReader)
         catalog_writer = container.get(DataCatalogWriter)
         source_fallback_policy_reader = container.get(CatalogSourceFallbackPolicyReader)
+        evidence_committer: IngestionEvidenceCommitter | None = None
+        if license_record_id is not None:
+            evidence_committer = container.get(IngestionEvidenceCommitter)
 
         # 创建协调器
         with create_coordinator(
@@ -101,6 +118,8 @@ def create_ingestion_bundle(
                 catalog_reader=catalog_reader,
                 catalog_writer=catalog_writer,
                 source_fallback_policy_reader=source_fallback_policy_reader,
+                evidence_committer=evidence_committer,
+                license_record_id=license_record_id,
             ),
         ) as coordinator:
             # 创建管理器
@@ -108,6 +127,11 @@ def create_ingestion_bundle(
                 coordinator=coordinator,
                 metadata_service=metadata_service,
                 ingestion_log_store=ingestion_log_store,
+                bootstrap_planner=container.get(BootstrapPlanner),
+                evidence_verifier=PersistedIngestionEvidenceVerifier(
+                    reader=catalog_reader,
+                    ingestion_logs=ingestion_log_store,
+                ),
             )
             retry_manager = RetryManager(
                 coordinator=coordinator,
@@ -125,6 +149,8 @@ def create_ingestion_bundle(
             )
             # 创建查询 facade
             metadata_facade = MetadataQueryFacade(metadata_service=metadata_service)
+            data_products_query = container.get(DataProductsQueryFacade)
+            certification_commands = container.get(DataProductCertificationCommands)
 
             yield IngestionBundle(
                 coordinator=coordinator,
@@ -133,6 +159,8 @@ def create_ingestion_bundle(
                 sparse_pit_reattestation=sparse_pit_reattestation,
                 metadata_facade=metadata_facade,
                 exchange_transformers=exchange_transformers,
+                data_products_query=data_products_query,
+                certification_commands=certification_commands,
             )
     finally:
         container.close()

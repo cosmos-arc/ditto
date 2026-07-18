@@ -9,7 +9,7 @@ from ditto_data.catalog import DataCatalogWriter
 from ditto_data.catalog.metadata import dataset_asset_class
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models import Dataset
-from ditto_data.models.ingestion import IngestionResult
+from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
@@ -29,17 +29,23 @@ from ditto_application.processes.ingestion.coordinator_constants import (
     SUPPORTED_INSTRUMENT_DATASETS,
 )
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.evidence_commit import (
+    IngestionEvidenceCommitter,
+)
 from ditto_application.processes.ingestion.fetch_handlers import (
     build_instrument_fetch_handlers,
 )
+from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.post_ingest import (
     CatalogWriteContext,
     DataWriteContext,
+    build_evidence_commit_request,
     handle_fetch_error,
     record_data_catalog_entry,
     record_ingestion_lineage,
     write_data_safe,
 )
+from ditto_application.processes.ingestion.quality_gate import run_write_quality_gate
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
 from ditto_application.processes.ingestion.source_capability import (
     ensure_source_supported,
@@ -78,6 +84,9 @@ class InstrumentIngestContext:
     data_writer: IngestionDataWriter
     lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
+    quality_checker: QualityCheckerProtocol | None = None
+    evidence_committer: IngestionEvidenceCommitter | None = None
+    license_record_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -89,6 +98,9 @@ class InstrumentPostIngestContext:
     source_name: str
     lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
+    quality_checker: QualityCheckerProtocol | None = None
+    evidence_committer: IngestionEvidenceCommitter | None = None
+    license_record_id: str | None = None
 
 
 def ingest_by_instrument(
@@ -186,6 +198,9 @@ def _fetch_and_ingest_by_instrument(
             source_name=ctx.source_name,
             lineage_recorder=ctx.lineage_recorder,
             catalog_writer=ctx.catalog_writer,
+            quality_checker=ctx.quality_checker,
+            evidence_committer=ctx.evidence_committer,
+            license_record_id=ctx.license_record_id,
         ),
     )
 
@@ -215,7 +230,7 @@ def _try_fetch_data_by_instrument(
         )
 
 
-def _process_fetched_data_by_instrument(
+def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
     df: pl.DataFrame,
     dataset: str,
     source_ticker: str,
@@ -226,6 +241,28 @@ def _process_fetched_data_by_instrument(
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
         return ctx.result_handler.handle_empty_data(dataset, params.start_date)
+    if ctx.evidence_committer is not None and ctx.quality_checker is None:
+        return ctx.result_handler.handle_quality_check_required(
+            dataset, params.start_date
+        )
+    if ctx.evidence_committer is not None and not ctx.license_record_id:
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=params.start_date,
+            status="failed",
+            error="R2_LICENSE_RECORD_REQUIRED",
+            message="R2 证据模式缺少已审核 license record",
+        )
+
+    df, quality_failure = run_write_quality_gate(
+        df,
+        dataset=dataset,
+        trade_date=params.start_date,
+        quality_checker=ctx.quality_checker,
+        result_handler=ctx.result_handler,
+    )
+    if quality_failure is not None:
+        return quality_failure
 
     on_duplicate = OnDuplicate.KEEP_LAST
 
@@ -248,30 +285,66 @@ def _process_fetched_data_by_instrument(
         return ctx.result_handler.handle_dq_blocked(
             dataset, params.start_date, write_result
         )
-    result = ctx.result_handler.handle_success(
-        dataset, params.start_date, df, write_result
-    )
-    record_ingestion_lineage(
-        dataset,
-        params.start_date,
+    catalog_ctx = CatalogWriteContext(
+        dataset=dataset,
+        trade_date=params.start_date,
         source_name=ctx.source_name,
-        lineage_recorder=ctx.lineage_recorder,
         write_result=write_result,
+        df=df,
         source_ticker=source_ticker,
         end_date=params.end_date,
+        l1_l2_attested=ctx.quality_checker is not None,
     )
-    record_data_catalog_entry(
-        CatalogWriteContext(
-            dataset=dataset,
-            trade_date=params.start_date,
+    if ctx.evidence_committer is not None:
+        outcome = ctx.evidence_committer.commit(
+            build_evidence_commit_request(
+                catalog_ctx,
+                license_record_id=ctx.license_record_id,
+            )
+        )
+        if not outcome.completed:
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=params.start_date,
+                status="failed",
+                error=outcome.error_code or "R2_EVIDENCE_COMMIT_FAILED",
+                message="R2 摄取证据提交失败, 分区已进入可修复状态",
+            )
+
+    result = ctx.result_handler.handle_success(
+        dataset,
+        params.start_date,
+        df,
+        write_result,
+        quality_evidence=(
+            IngestionQualityEvidence(
+                kind="write_time_l1_l2",
+                status="passed",
+                source=ctx.source_name,
+                trade_date=params.start_date,
+                levels=("l1", "l2"),
+                row_count=write_result.rows_written,
+                checksum=write_result.checksum,
+            )
+            if ctx.quality_checker is not None
+            else None
+        ),
+        persist_log=ctx.evidence_committer is None,
+    )
+    if ctx.evidence_committer is None:
+        record_ingestion_lineage(
+            dataset,
+            params.start_date,
             source_name=ctx.source_name,
+            lineage_recorder=ctx.lineage_recorder,
             write_result=write_result,
-            df=df,
             source_ticker=source_ticker,
             end_date=params.end_date,
-        ),
-        catalog_writer=ctx.catalog_writer,
-    )
+        )
+        record_data_catalog_entry(
+            catalog_ctx,
+            catalog_writer=ctx.catalog_writer,
+        )
     return result
 
 

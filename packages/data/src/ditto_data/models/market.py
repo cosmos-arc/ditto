@@ -43,8 +43,19 @@ QUOTE_SCHEMA: dict[str, type[pl.DataType]] = {
     "ask1_volume": pl.Float64,
 }
 
+# Effective-dated index composition. ``instrument_id`` is the canonical
+# constituent identifier used by the storage and universe services.
+INDEX_WEIGHT_SCHEMA: dict[str, type[pl.DataType]] = {
+    "index_id": pl.Utf8,
+    "instrument_id": pl.Int64,
+    "effective_from": pl.Date,
+    "effective_to": pl.Date,
+    "weight": pl.Float64,
+}
+
 __all__ = [
     "BAR_ENRICHED_SCHEMA",
     "BAR_SCHEMA",
+    "INDEX_WEIGHT_SCHEMA",
     "QUOTE_SCHEMA",
 ]

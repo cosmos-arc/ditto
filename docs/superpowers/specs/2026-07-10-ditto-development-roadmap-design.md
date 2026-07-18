@@ -1,7 +1,7 @@
 # Ditto 后续发展规划与分阶段开发设计
 
 > **首次创建**：2026-07-10<br>
-> **最近复核**：2026-07-16<br>
+> **最近复核**：2026-07-17<br>
 > **状态**：母路线图（Roadmap Source of Truth）<br>
 > **北极星**：全球全品类、AI 原生、以证据驱动人工决策的量化平台；十个能力维度最终全部达到 10/10。
 
@@ -13,7 +13,8 @@
 |---|---|
 | `docs/plans/2026-07-10-capability-benchmark-design.md` | 当前能力、评分、对标、缺口和 10 分完成定义 |
 | 本文 | R0-R7 顺序、依赖、横向工程、发布 Gate 和投资重点 |
-| `docs/plans/2026-07-10-r1-implementation-plan.md` | R1 已完成的逐 task 施工与验收记录；R2 尚未创建正式施工图 |
+| `docs/plans/2026-07-10-r1-implementation-plan.md` | R1 已完成的逐 task 施工与验收记录 |
+| `docs/plans/2026-07-17-r2-data-product-design.md` | R2 已确认的范围、架构、历史区间、数据集矩阵与 Definition of Done；详细施工图待创建 |
 | `docs/plans/2026-07-10-phase-a-implementation-plan.md` | 已废弃施工属性的历史迁移索引 |
 
 事实冲突时，以验收证据、当前源码/OpenAPI/CLI、能力基准、母路线图、release 计划的顺序判定。
@@ -64,7 +65,7 @@
 |---|---|---|---|---:|
 | I 日频闭环 | R0 产品边界固化 | 目标、评分、文档职责和架构边界稳定 | 已完成，持续维护 | 1-2 人周/次复核 |
 | I 日频闭环 | R1 日频人工交易 MVP | 单操作者本机 Beta，从 EOD 到成交复盘闭环 | 已完成，G1 通过 | 8-12 人周 |
-| I 日频闭环 | R2 A 股日频数据与研究升级 | ETF/个股/宏观/商品日频数据可靠、可研究 | 未开始 | 8-14 人周 |
+| I 日频闭环 | R2 A 股日频数据产品 | 19 个核心数据集有区间认证、PIT、DQ、恢复和工作台 | 设计已确认，实施未开始 | 13-19 人周 |
 | II 研究产品化 | R3 回测、选股、策略管理 | 可复现研究工作台与基础策略治理 | 未开始 | 12-18 人周 |
 | II 研究产品化 | R4 组合、风险与复盘 | 组合优化、风险与执行后复盘产品化 | 未开始 | 12-18 人周 |
 | III AI 与盘中 | R5 AI Copilot / Agent v1 | grounded、可评测、HITL 的 AI 投研与建议 | 未开始 | 14-22 人周 |
@@ -143,33 +144,76 @@
 - 默认测试确定性通过，另有一次显式真实数据验收。
 - 无认证时只监听 loopback，数据库可备份和恢复。
 
-## 8. R2：A 股日频数据与研究升级
+## 8. R2：A 股日频数据产品
+
+**状态：设计已确认（2026-07-17），实施未开始。**
+
+详细设计事实源：`docs/plans/2026-07-17-r2-data-product-design.md`。本节只维护
+release 级范围和 Gate；数据集契约、失败状态、波次与测试以详细设计为准。
 
 ### 目标
 
-把 A 股 ETF、个股、宏观和商品日级数据从“能接入”提升到“可长期研究和决策”。
+把 A 股 ETF、个股、宏观和商品日级数据从“能接入”提升为具有明确历史区间、
+PIT、质量、来源、恢复和 promotion 证据的数据产品，服务本地单操作者的日频
+人工决策与后续研究。
+
+### 历史边界
+
+- 股票、ETF 和核心指数行情 raw 从 `2015-01-01` 开始；ETF 不早于自身上市日。
+- 个股 universe/status 从 `2016-01-01` 开始认证；更早状态不声明完整。
+- 策略可用起点由所需数据集认证区间、证券上市日和真实最大 lookback 动态计算。
+- 2015 年以前历史不是 R2 release gate；这不等于将其判定为噪音，也不把
+  2015 至今包装成完整市场周期。
 
 ### 数据范围
 
-- ETF/stock daily、复权因子、指数成分/权重、证券状态、交易日历。
-- 财务三表、估值、分红、拆并股、停复牌和退市等公司行动。
-- 国内外宏观指标的发布日、修订版本和 `knowledge_date`。
-- 商品指数/现货/主力连续的第一批明确数据产品；期货合约级留 R7。
+- P0 市场核心 12 个：`calendar`、`stock_basic`、`etf_basic`、`index_basic`、
+  `stock_daily`、`etf_daily`、`index_daily`、`adj_factor`、`fund_adj`、
+  `stock_status`、`index_weight`、`corporate_actions`。
+- P1 稀疏与跨市场参考 7 个：`balance_sheet`、`income_statement`、
+  `cash_flow`、`dividend`、`valuation_metrics`、`macro_indicators`、
+  `commodity_daily`。
+- `margin_trading`、`pledge_ratio` 延至 R4 或作为 R2 stretch；`fx_daily`
+  延至 R7 或出现明确消费闭环后再立项。
 
 ### 核心工作包
 
-1. 数据集逐一建立 owner、schema、source、历史深度、freshness、DQ、PIT 与许可记录。
-2. survivorship-bias-safe universe 和公司行动调整。
-3. source fallback 与 provider 差异对账，不因接入数量提升 maturity。
-4. 日级因子基础库、物化、IC/衰减/换手/稳定性诊断。
-5. 数据工作台展示覆盖、滞后、失败、修复和 promotion evidence。
+1. 在现有 metadata/catalog/promotion 主干上补齐产品契约、三类覆盖起点和
+   provider-specific snapshot identity。
+2. 建立 schedule-aware、分块、可 checkpoint/resume 的 bootstrap 与增量管线，
+   只把 DQ、payload、catalog、lineage 和 success evidence 全部闭环的 partition
+   判为完成。
+3. 修复 survivorship-bias-safe universe、公司行动、ETF 复权写入和
+   effective-dated 指数权重闭环。
+4. 为财务、分红和宏观修订建立 `knowledge_date`/revision-preserving PIT 语义。
+5. 记录 source 权限、许可、差异、fallback 和 unavailable policy，不因 provider
+   数量提升 maturity。
+6. 数据工作台展示 coverage、DQ、run/repair、certification 和 license evidence。
+7. 只以固定 seed 因子做输入、最大 lookback、物化和数据正确性 smoke；IC、衰减、
+   换手、参数比较、批量回测和策略治理全部留到 R3。
+
+### 严格非目标
+
+- auth/RBAC、多租户、公网部署、外部 Beta 和新付费 provider 前置采购。
+- 分钟/tick、盘中信号、券商自动交易、AI/Agent runtime。
+- 完整因子研究、回测与策略产品、组合优化和组合风险。
 
 ### 验收
 
-- 每个 promoted 数据集都有独立 evidence，不做批量口头提级。
-- 任意研究样本可还原当时可知数据、universe 和 source snapshot。
-- 供应商缺失/限流/修订可降级或阻塞，并有 runbook。
-- 数据使用权和再分发边界已记录；不明确的数据不得进入外部 Beta。
+- 19 个数据集逐一冻结产品契约并生成不可变 certification report；bundle readiness
+  不替代单数据集 promotion。
+- P0 行情 raw 自 2015 起，个股 PIT universe 自 2016 起认证；所有缺口可解释或有
+  带 owner/evidence 的批准例外。
+- 任意样本可还原当时可知数据、universe、source snapshot、schema 和 lineage；
+  point-in-time 语义缺失时 fail closed。
+- 历史 bootstrap 可恢复、幂等且确定；限流、schema drift、DQ/PIT、orphan payload、
+  catalog/lineage 失败均有补偿和 runbook。
+- promotion、revoke、recertification、backup/restore、性能、连续真实数据运行和
+  R1 ready/review/blocked 回归全部保留证据。
+- 固定 seed 因子在 certified snapshot 上通过输入、最大 lookback、确定性物化重放
+  和数据正确性 smoke；完整研究仍由 R3 验收。
+- 数据使用权、本地缓存、衍生计算、展示和再分发边界已记录；不明确的数据不得
+  进入外部 Beta。
 
 ## 9. R3：回测、选股与策略管理产品化
 
@@ -372,7 +416,8 @@ R0
 
 - R1 九个 task 与 G1 evidence 已完成，保持回归门禁和本机运行边界。
 - R1 过程中发现的非阻塞需求保留在 R2+ 候选池，不扩入已关闭的 R1。
-- R2 仍未开始；启动前重新做 code exploration、mini-design 与投入评估。
+- R2 已完成 code exploration、范围设计和投入评估；实施仍未开始，下一步创建
+  逐 task implementation plan。
 
 ### P1：G1 后
 
@@ -453,5 +498,5 @@ R1 已按以下顺序完成：
   → G1 evidence
 ```
 
-R1 已通过 G1；R2 仍处于未开始状态。AI runtime 和分钟级改造继续分别留在
-R5、R6，不因 G1 通过而提前进入当前范围。
+R1 已通过 G1；R2 设计已确认、实施仍处于未开始状态。AI runtime 和分钟级改造
+继续分别留在 R5、R6，不因 G1 通过而提前进入当前范围。

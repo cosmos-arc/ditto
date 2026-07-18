@@ -17,7 +17,10 @@ from ditto_features.factors.liquidity import LIQUIDITIES
 from ditto_features.factors.momentum import MOMENTUMS
 from ditto_features.factors.primitives import PRIMITIVES
 from ditto_features.factors.production_guard import (
+    R2_STOCK_SEED_FACTOR_CONTRACT,
+    CertifiedSeedFactorContract,
     UnsafeProductionFactorExpressionError,
+    validate_certified_seed_factor_contract,
     validate_production_factor_expression,
 )
 from ditto_features.factors.quality import QUALITIES
@@ -38,13 +41,16 @@ __all__ = [
     "MOMENTUMS",
     "PRIMITIVES",
     "QUALITIES",
+    "R2_STOCK_SEED_FACTOR_CONTRACT",
     "SIZES",
     "TECHNICALS",
     "VALUES",
     "VOLATILITIES",
+    "CertifiedSeedFactorContract",
     "FactorContext",
     "FactorSpec",
     "UnsafeProductionFactorExpressionError",
+    "validate_certified_seed_factor_contract",
     "validate_factor_specs",
     "validate_production_factor_expression",
 ]

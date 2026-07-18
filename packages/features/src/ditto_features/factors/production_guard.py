@@ -4,11 +4,19 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 
 from ditto_features.errors import FactorValidationError
+from ditto_features.expression.analyzer import analyze_expression
+from ditto_features.expression.lexer import tokenize
+from ditto_features.expression.parser import ExpressionParser
+from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 
 __all__ = [
+    "R2_STOCK_SEED_FACTOR_CONTRACT",
+    "CertifiedSeedFactorContract",
     "UnsafeProductionFactorExpressionError",
+    "validate_certified_seed_factor_contract",
     "validate_production_factor_expression",
 ]
 
@@ -19,9 +27,86 @@ _CROSS_SECTION_CALL = re.compile(
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _TIME_SERIES_CALL = re.compile(r"^ts_[A-Za-z0-9_]*\(")
 
+_R2_STOCK_SEED_FACTOR_IDS = ("quality_roe", "value_pe", "momentum_1m")
+_R2_STOCK_SEED_INPUT_DATASET_IDS = (
+    "stock_daily",
+    "adj_factor",
+    "balance_sheet",
+    "income_statement",
+)
+_R2_STOCK_SEED_MAX_LOOKBACK = 20
+_R2_CERTIFICATION_PROFILE = "r2-modern-a-share-v1"
+
+
+@dataclass(frozen=True, slots=True)
+class CertifiedSeedFactorContract:
+    """Frozen R2 input boundary for the designated R1 stock seed factors."""
+
+    factor_ids: tuple[str, ...]
+    input_dataset_ids: tuple[str, ...]
+    max_lookback: int
+    knowledge_date_required: bool
+    certification_profile: str
+
+    def __post_init__(self) -> None:
+        """Reject malformed or ambiguous seed contracts."""
+        for field_name in ("factor_ids", "input_dataset_ids"):
+            values = getattr(self, field_name)
+            if not values or len(set(values)) != len(values):
+                raise ValueError(f"invalid seed factor {field_name}: {values!r}")
+        if self.max_lookback < 0:
+            raise ValueError("seed factor max_lookback cannot be negative")
+        if not self.certification_profile.strip():
+            raise ValueError("seed factor certification profile cannot be empty")
+
+
+R2_STOCK_SEED_FACTOR_CONTRACT = CertifiedSeedFactorContract(
+    factor_ids=_R2_STOCK_SEED_FACTOR_IDS,
+    input_dataset_ids=_R2_STOCK_SEED_INPUT_DATASET_IDS,
+    max_lookback=_R2_STOCK_SEED_MAX_LOOKBACK,
+    knowledge_date_required=True,
+    certification_profile=_R2_CERTIFICATION_PROFILE,
+)
+
 
 class UnsafeProductionFactorExpressionError(FactorValidationError):
     """Raised when a production factor expression is unsafe to run inline."""
+
+
+def validate_certified_seed_factor_contract(
+    contract: CertifiedSeedFactorContract,
+) -> None:
+    """Fail closed when the fixed R2 stock-seed boundary has drifted."""
+    if contract.factor_ids != _R2_STOCK_SEED_FACTOR_IDS:
+        raise ValueError(f"R2 stock seed factor IDs changed: {contract.factor_ids!r}")
+    if contract.input_dataset_ids != _R2_STOCK_SEED_INPUT_DATASET_IDS:
+        raise ValueError(
+            f"R2 stock seed input dataset IDs changed: {contract.input_dataset_ids!r}"
+        )
+    if contract.max_lookback != _R2_STOCK_SEED_MAX_LOOKBACK:
+        raise ValueError(f"R2 stock seed max lookback changed: {contract.max_lookback}")
+    if not contract.knowledge_date_required:
+        raise ValueError("R2 stock seed requires a strict knowledge date")
+    if contract.certification_profile != _R2_CERTIFICATION_PROFILE:
+        profile = contract.certification_profile
+        raise ValueError(f"R2 stock seed certification profile changed: {profile!r}")
+    actual_max_lookback = 0
+    for factor_id in contract.factor_ids:
+        spec = ALL_FACTOR_SPECS.get(factor_id)
+        if spec is None:
+            raise ValueError(f"R2 stock seed factor is not registered: {factor_id}")
+        validate_production_factor_expression(spec.expression)
+        expression = ExpressionParser(
+            tokenize(spec.expression),
+            spec.expression,
+        ).parse()
+        actual_max_lookback = max(
+            actual_max_lookback,
+            analyze_expression(expression).lookback,
+        )
+    if actual_max_lookback != contract.max_lookback:
+        drift = f"{actual_max_lookback} != {contract.max_lookback}"
+        raise ValueError(f"R2 stock seed compiled max lookback drifted: {drift}")
 
 
 def validate_production_factor_expression(

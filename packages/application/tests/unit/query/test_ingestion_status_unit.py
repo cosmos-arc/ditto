@@ -335,7 +335,7 @@ class TestIngestionStatusCatalogOverlay:
             status=IngestionStatus.FAIL,
         )
 
-    def test_status_marks_dataset_without_runtime_sla_not_applicable(self) -> None:
+    def test_status_marks_newly_supported_dataset_missing_until_ingested(self) -> None:
         facade = IngestionStatusQueryFacade(
             ingestion_log_store=_log_store(),
             data_catalog_reader=InMemoryDataCatalog(),
@@ -345,8 +345,8 @@ class TestIngestionStatusCatalogOverlay:
 
         status = facade.get_status(["index_weight"])[0]
 
-        assert status.catalog_freshness_status == "not_applicable"
-        assert status.catalog_freshness_sla_hours is None
+        assert status.catalog_freshness_status == "missing"
+        assert status.catalog_freshness_sla_hours == 36
         assert status.dataset_maturity == "experimental"
 
 

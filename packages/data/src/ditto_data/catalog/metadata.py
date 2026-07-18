@@ -16,6 +16,11 @@ from dataclasses import dataclass
 from functools import cache
 from typing import Literal
 
+from ditto_data.catalog.product_contract import (
+    DatasetProductContract,
+    resolve_product_contract,
+)
+
 __all__ = [
     "DatasetAssetClass",
     "DatasetMetadata",
@@ -427,6 +432,7 @@ class DatasetMetadata:
     schema_version: str | None = None
     asset_class: DatasetAssetClass | None = None
     storage_uri_prefixes: tuple[str, ...] = ()
+    product_contract: DatasetProductContract | None = None
 
     def __post_init__(self) -> None:
         """验证域字段合法性。"""
@@ -468,6 +474,12 @@ class DatasetMetadata:
             storage_uri_prefixes=self.storage_uri_prefixes,
             ingestion_granularities=self.ingestion_granularities,
         )
+        if (
+            self.product_contract is not None
+            and self.product_contract.dataset_id != self.dataset_id
+        ):
+            msg = "product_contract.dataset_id must match dataset_id"
+            raise ValueError(msg)
 
     def supports_source(self, source: str) -> bool:
         """Return whether ``source`` may drive ingestion for this dataset."""
@@ -541,7 +553,7 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
     }
 )
 
-_UNSUPPORTED_INGESTION_DATASETS: frozenset[str] = frozenset({"index_weight"})
+_UNSUPPORTED_INGESTION_DATASETS: frozenset[str] = frozenset()
 
 _SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
     "stock_daily": "market.stock_daily.v1",
@@ -630,6 +642,7 @@ def default_dataset_metadata() -> dict[str, DatasetMetadata]:
             promotion_criteria=_resolve_promotion_criteria(dataset_id),
             schema_version=_resolve_schema_version(dataset_id),
             asset_class=_resolve_asset_class(dataset_id),
+            product_contract=resolve_product_contract(dataset_id),
         )
         for dataset_id in _ALL_DATASET_IDS
     }

@@ -2,16 +2,25 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_data.models.ingestion import BackfillResult, IngestionResult
+from ditto_data.models.ingestion import (
+    BackfillResult,
+    IngestionLog,
+    IngestionResult,
+    IngestionStatus,
+)
 from ditto_data.services.metadata_service import MetadataService
 from ditto_platform.foundation import logger
 
+from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+from ditto_application.processes.ingestion.bootstrap_planner import (
+    BootstrapPlan,
+    BootstrapPlanner,
+)
 from ditto_application.processes.ingestion.result_handler import count_results
 from ditto_application.processes.ingestion.source_selection import (
     IngestionCoordinatorLike,
@@ -26,6 +35,8 @@ class BackfillManager:
         coordinator: IngestionCoordinatorLike,
         metadata_service: MetadataService,
         ingestion_log_store: IngestionLogStore,
+        bootstrap_planner: BootstrapPlanner | None = None,
+        evidence_verifier: PersistedIngestionEvidenceVerifier | None = None,
     ) -> None:
         """
         初始化 BackfillManager。
@@ -34,11 +45,17 @@ class BackfillManager:
             coordinator: 摄取协调器端口。
             metadata_service: MetadataService 实例。
             ingestion_log_store: IngestionLogStore 实例。
+            bootstrap_planner: 日程和分块感知的持久回补规划器。
+            evidence_verifier: 可选的目录与摄取日志一致性校验器。
 
         """
         self._coordinator = coordinator
         self._metadata_service = metadata_service
         self._ingestion_log_store = ingestion_log_store
+        self._bootstrap_planner = bootstrap_planner or BootstrapPlanner(
+            metadata_service=metadata_service
+        )
+        self._evidence_verifier = evidence_verifier
 
     def backfill_range(
         self,
@@ -46,6 +63,7 @@ class BackfillManager:
         start_date: str,
         end_date: str,
         parallel: int = 1,
+        source: str = "tushare",
     ) -> BackfillResult:
         """
         全量回补指定日期范围。
@@ -55,6 +73,7 @@ class BackfillManager:
             start_date: 开始日期 (YYYY-MM-DD)。
             end_date: 结束日期 (YYYY-MM-DD)。
             parallel: 并行度，默认为 1（串行）。
+            source: 数据源标识符（默认: "tushare"）。
 
         Returns:
             BackfillResult: 回补结果。
@@ -69,8 +88,14 @@ class BackfillManager:
             parallel=parallel,
         )
 
-        trade_dates = self._metadata_service.list_trading_days(start_date, end_date)
-        if not trade_dates:
+        plan = self._bootstrap_planner.plan(
+            dataset_id=dataset,
+            source=source,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        partition_dates = _planned_dates(plan)
+        if not partition_dates:
             return BackfillResult(
                 dataset=dataset,
                 total_dates=0,
@@ -80,15 +105,9 @@ class BackfillManager:
                 results=(),
             )
 
-        # 按年份分组，并发度上限为 min(parallel, 年份数)
-        # 注意：同一年内的日期仍会并行执行，依赖 FileLockManager 避免冲突
-        dates_by_year: defaultdict[str, list[str]] = defaultdict(list)
-        for trade_date in trade_dates:
-            dates_by_year[trade_date[:4]].append(trade_date)
-
         result = self._execute_backfill(
             dataset=dataset,
-            trade_dates=trade_dates,
+            trade_dates=partition_dates,
             parallel=parallel,
             log_event="backfill_range_complete",
         )
@@ -131,11 +150,14 @@ class BackfillManager:
                 results=(),
             )
 
-        all_trade_dates = self._metadata_service.list_trading_days(
-            first_date,
-            last_date,
+        plan = self._bootstrap_planner.plan(
+            dataset_id=dataset,
+            source=source,
+            start_date=first_date,
+            end_date=last_date,
         )
-        if not all_trade_dates:
+        expected_dates = _planned_dates(plan)
+        if not expected_dates:
             return BackfillResult(
                 dataset=dataset,
                 total_dates=0,
@@ -148,8 +170,14 @@ class BackfillManager:
         ingested_dates = self._ingestion_log_store.list_ingested_dates(
             dataset,
             source,
+            IngestionStatus.SUCCESS,
         )
-        missing_dates = set(all_trade_dates) - set(ingested_dates)
+        evidenced_dates = self._evidenced_dates(
+            dataset=dataset,
+            source=source,
+            ingested_dates=ingested_dates,
+        )
+        missing_dates = set(expected_dates) - evidenced_dates
         if not missing_dates:
             return BackfillResult(
                 dataset=dataset,
@@ -168,6 +196,34 @@ class BackfillManager:
             parallel=parallel,
             log_event="backfill_missing_complete",
         )
+
+    def _evidenced_dates(
+        self,
+        *,
+        dataset: str,
+        source: str,
+        ingested_dates: list[str],
+    ) -> set[str]:
+        """Return dates whose success log is backed by exact catalog evidence."""
+        if self._evidence_verifier is None:
+            return set(ingested_dates)
+
+        evidenced: set[str] = set()
+        for trade_date in ingested_dates:
+            log = self._ingestion_log_store.get_log(dataset, source, trade_date)
+            payload = _verifiable_payload(log)
+            if payload is None:
+                continue
+            checksum, row_count = payload
+            if self._evidence_verifier.verify_exact_date(
+                dataset=dataset,
+                source=source,
+                trade_date=trade_date,
+                checksum=checksum,
+                row_count=row_count,
+            ):
+                evidenced.add(trade_date)
+        return evidenced
 
     def _execute_backfill(
         self,
@@ -224,6 +280,30 @@ class BackfillManager:
         )
 
         return backfill_result
+
+
+def _planned_dates(plan: BootstrapPlan) -> list[str]:
+    """Flatten deterministic planner chunks into unique ordered partitions."""
+    return sorted(
+        {
+            partition_date
+            for chunk in plan.chunks
+            for partition_date in chunk.partition_dates
+        }
+    )
+
+
+def _verifiable_payload(log: IngestionLog | None) -> tuple[str, int] | None:
+    if (
+        log is None
+        or log.status is not IngestionStatus.SUCCESS
+        or not isinstance(log.checksum, str)
+        or not log.checksum
+        or not isinstance(log.rows, int)
+        or log.rows < 0
+    ):
+        return None
+    return log.checksum, log.rows
 
 
 __all__ = ["BackfillManager"]

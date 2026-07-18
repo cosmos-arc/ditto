@@ -2,22 +2,16 @@
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, cast
 
 import httpx
-import orjson
 import polars as pl
 from ditto_data.catalog import (
-    DataAssetRef,
-    DataCatalogEntry,
     DataCatalogReader,
     DataCatalogWriter,
-    DataSchemaFingerprint,
-    default_dataset_metadata,
 )
 from ditto_data.errors import (
     NetworkError,
@@ -27,12 +21,7 @@ from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
-from ditto_data.lineage import (
-    DataLineageRecorder,
-    LineageEvent,
-    LineageInputRef,
-    LineageOutputRef,
-)
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models.ingestion import (
     IngestionQualityEvidence,
     IngestionResult,
@@ -40,9 +29,17 @@ from ditto_data.models.ingestion import (
 )
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
-from ditto_application.catalog_freshness import catalog_source_snapshot_id
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.evidence_commit import (
+    IngestionEvidenceCommitter,
+)
+from ditto_application.processes.ingestion.ingestion_evidence import (
+    CatalogWriteContext,
+    build_data_catalog_entry,
+    build_evidence_commit_request,
+    record_ingestion_lineage,
+)
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
@@ -59,6 +56,7 @@ __all__ = [
     "CatalogWriteContext",
     "DataWriteContext",
     "PostIngestContext",
+    "build_evidence_commit_request",
     "create_freeze_point",
     "handle_fetch_error",
     "is_sparse_pit_dataset",
@@ -72,20 +70,6 @@ __all__ = [
     "update_ingestion_cursor",
     "write_data_safe",
 ]
-
-
-@dataclass(frozen=True)
-class CatalogWriteContext:
-    """Catalog metadata context for one successful ingestion write."""
-
-    dataset: str
-    trade_date: str
-    source_name: str
-    write_result: WriteResult
-    df: pl.DataFrame
-    source_ticker: str | None = None
-    end_date: str | None = None
-    l1_l2_attested: bool = False
 
 
 @dataclass(frozen=True)
@@ -114,6 +98,8 @@ class PostIngestContext:
     freeze_store: FreezeStore | None = None
     lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
+    evidence_committer: IngestionEvidenceCommitter | None = None
+    license_record_id: str | None = None
 
 
 def run_list_date_inference(
@@ -177,7 +163,7 @@ def run_list_date_inference(
         )
 
 
-def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
+def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     df: pl.DataFrame,
     dataset: str,
     trade_date: str,
@@ -227,8 +213,18 @@ def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
             trade_date,
             error=cutoff_error,
         )
-    if sparse_pit and ctx.quality_checker is None:
+    if (
+        sparse_pit or ctx.evidence_committer is not None
+    ) and ctx.quality_checker is None:
         return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
+    if ctx.evidence_committer is not None and not ctx.license_record_id:
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="R2_LICENSE_RECORD_REQUIRED",
+            message="R2 证据模式缺少已审核 license record",
+        )
 
     df, quality_failure = run_write_quality_gate(
         df,
@@ -267,7 +263,34 @@ def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
         l1_l2_attested=ctx.quality_checker is not None,
     )
     snapshot_evidence: IngestionSnapshotEvidence | None = None
-    if sparse_pit:
+    if ctx.evidence_committer is not None:
+        outcome = ctx.evidence_committer.commit(
+            build_evidence_commit_request(
+                catalog_ctx,
+                license_record_id=ctx.license_record_id,
+            )
+        )
+        if not outcome.completed:
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error=outcome.error_code or "R2_EVIDENCE_COMMIT_FAILED",
+                message="R2 摄取证据提交失败, 分区已进入可修复状态",
+            )
+        if sparse_pit:
+            snapshot_evidence = resolve_sparse_asof_snapshot(
+                dataset=dataset,
+                trade_date=trade_date,
+                source_name=ctx.source_name,
+                catalog_reader=ctx.catalog_reader,
+            )
+            if snapshot_evidence is None:
+                return ctx.result_handler.handle_pit_snapshot_missing(
+                    dataset,
+                    trade_date,
+                )
+    elif sparse_pit:
         if not _record_required_data_catalog_entry(
             catalog_ctx,
             catalog_writer=ctx.catalog_writer,
@@ -315,231 +338,23 @@ def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
             if ctx.quality_checker is not None
             else None
         ),
+        persist_log=ctx.evidence_committer is None,
     )
-    record_ingestion_lineage(
-        dataset,
-        trade_date,
-        source_name=ctx.source_name,
-        lineage_recorder=ctx.lineage_recorder,
-        write_result=write_result,
-    )
-    if not sparse_pit:
-        record_data_catalog_entry(
-            catalog_ctx,
-            catalog_writer=ctx.catalog_writer,
+    if ctx.evidence_committer is None:
+        record_ingestion_lineage(
+            dataset,
+            trade_date,
+            source_name=ctx.source_name,
+            lineage_recorder=ctx.lineage_recorder,
+            write_result=write_result,
         )
+        if not sparse_pit:
+            record_data_catalog_entry(
+                catalog_ctx,
+                catalog_writer=ctx.catalog_writer,
+            )
     run_list_date_inference(ctx.list_date_inference, dataset)
     return result
-
-
-def _dataset_namespace(dataset: str) -> str:
-    metadata = default_dataset_metadata().get(dataset)
-    if metadata is None:
-        return "data"
-    return metadata.domain
-
-
-def _source_asset(
-    dataset: str,
-    trade_date: str,
-    source_name: str,
-    *,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> DataAssetRef:
-    if source_ticker is not None:
-        range_end = end_date or trade_date
-        return DataAssetRef(
-            dataset_id=dataset,
-            namespace="source",
-            partition_keys=(
-                f"source={source_name}",
-                f"source_ticker={source_ticker}",
-                f"start_date={trade_date}",
-                f"end_date={range_end}",
-            ),
-        )
-    return DataAssetRef(
-        dataset_id=dataset,
-        namespace="source",
-        partition_keys=(f"source={source_name}", f"trade_date={trade_date}"),
-    )
-
-
-def _output_asset(
-    dataset: str,
-    trade_date: str,
-    *,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> DataAssetRef:
-    if source_ticker is not None:
-        range_end = end_date or trade_date
-        return DataAssetRef(
-            dataset_id=dataset,
-            namespace=_dataset_namespace(dataset),
-            partition_keys=(
-                f"source_ticker={source_ticker}",
-                f"start_date={trade_date}",
-                f"end_date={range_end}",
-            ),
-        )
-    return DataAssetRef(
-        dataset_id=dataset,
-        namespace=_dataset_namespace(dataset),
-        partition_keys=(f"trade_date={trade_date}",),
-    )
-
-
-def _ingestion_run_id(
-    dataset: str,
-    trade_date: str,
-    source_name: str,
-    checksum: str,
-    *,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> str:
-    if source_ticker is not None:
-        return (
-            f"ingest:{source_name}:{dataset}:{source_ticker}:"
-            f"{trade_date}:{end_date or trade_date}:{checksum}"
-        )
-    return f"ingest:{source_name}:{dataset}:{trade_date}:{checksum}"
-
-
-def _source_snapshot_id(
-    dataset: str,
-    trade_date: str,
-    source_name: str,
-    checksum: str,
-    *,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-    l1_l2_attested: bool = False,
-) -> str:
-    if source_ticker is not None:
-        return (
-            f"snapshot:{source_name}:{dataset}:{source_ticker}:"
-            f"{trade_date}:{end_date or trade_date}:{checksum}"
-        )
-    return catalog_source_snapshot_id(
-        dataset=dataset,
-        trade_date=trade_date,
-        source=source_name,
-        checksum=checksum,
-        l1_l2_attested=l1_l2_attested,
-    )
-
-
-def record_ingestion_lineage(
-    dataset: str,
-    trade_date: str,
-    *,
-    source_name: str,
-    lineage_recorder: DataLineageRecorder | None,
-    write_result: WriteResult,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
-) -> None:
-    """记录源数据到落库资产的 lineage（失败仅记录警告，不影响摄取成功）。"""
-    if lineage_recorder is None:
-        return
-    recorder = lineage_recorder
-    safe_side_effect(
-        lambda: recorder.record_event(
-            LineageEvent(
-                run_id=_ingestion_run_id(
-                    dataset,
-                    trade_date,
-                    source_name,
-                    write_result.checksum,
-                    source_ticker=source_ticker,
-                    end_date=end_date,
-                ),
-                operation="ingest",
-                inputs=(
-                    LineageInputRef(
-                        asset=_source_asset(
-                            dataset,
-                            trade_date,
-                            source_name,
-                            source_ticker=source_ticker,
-                            end_date=end_date,
-                        ),
-                        role="source",
-                    ),
-                ),
-                outputs=(
-                    LineageOutputRef(
-                        asset=_output_asset(
-                            dataset,
-                            trade_date,
-                            source_ticker=source_ticker,
-                            end_date=end_date,
-                        ),
-                        role="dataset",
-                    ),
-                ),
-                timestamp=datetime.now(UTC),
-            )
-        ),
-        log_tag="lineage_record_failed",
-        event="lineage_record_error",
-        dataset=dataset,
-        trade_date=trade_date,
-    )
-
-
-def _schema_hash_from_dataframe(df: pl.DataFrame) -> str:
-    fields = [
-        (name, str(dtype)) for name, dtype in zip(df.columns, df.dtypes, strict=True)
-    ]
-    payload = orjson.dumps(fields).decode()
-    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
-    return f"schema:sha256:{digest}"
-
-
-def _dataset_schema_version(dataset: str) -> str:
-    metadata = default_dataset_metadata().get(dataset)
-    if metadata is None or metadata.schema_version is None:
-        msg = f"Missing DataCatalog schema_version for dataset={dataset!r}"
-        raise AppProcessError(msg)
-    return metadata.schema_version
-
-
-def _data_catalog_entry(
-    ctx: CatalogWriteContext,
-    *,
-    now: datetime,
-) -> DataCatalogEntry:
-    return DataCatalogEntry(
-        asset=_output_asset(
-            ctx.dataset,
-            ctx.trade_date,
-            source_ticker=ctx.source_ticker,
-            end_date=ctx.end_date,
-        ),
-        storage_uri=ctx.write_result.file_path,
-        schema=DataSchemaFingerprint(
-            schema_hash=_schema_hash_from_dataframe(ctx.df),
-            row_count=ctx.write_result.rows_written,
-            created_at=now,
-            schema_version=_dataset_schema_version(ctx.dataset),
-            columns=tuple(ctx.df.columns),
-        ),
-        source=ctx.source_name,
-        freshness_at=now,
-        source_snapshot_id=_source_snapshot_id(
-            ctx.dataset,
-            ctx.trade_date,
-            ctx.source_name,
-            ctx.write_result.checksum,
-            source_ticker=ctx.source_ticker,
-            end_date=ctx.end_date,
-            l1_l2_attested=ctx.l1_l2_attested,
-        ),
-    )
 
 
 def record_data_catalog_entry(
@@ -553,7 +368,7 @@ def record_data_catalog_entry(
     writer = catalog_writer
     safe_side_effect(
         lambda: writer.upsert_asset(
-            _data_catalog_entry(
+            build_data_catalog_entry(
                 ctx,
                 now=datetime.now(UTC),
             )
@@ -581,7 +396,7 @@ def _record_required_data_catalog_entry(
         return False
     try:
         catalog_writer.upsert_asset(
-            _data_catalog_entry(
+            build_data_catalog_entry(
                 ctx,
                 now=datetime.now(UTC),
             )

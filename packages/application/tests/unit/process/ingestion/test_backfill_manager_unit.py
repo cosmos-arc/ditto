@@ -2,7 +2,13 @@
 
 import pytest
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
-from ditto_data.models.ingestion import BackfillResult, IngestionResult
+from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
+from ditto_data.models.ingestion import (
+    BackfillResult,
+    IngestionLog,
+    IngestionResult,
+    IngestionStatus,
+)
 from ditto_platform.foundation import (
     Environment,
     ObservabilityConfig,
@@ -320,6 +326,82 @@ class TestBackfillRange:
         assert result.success_count == 3
         assert mock_coordinator.ingest_date.call_count == 3
 
+    def test_backfill_range_uses_natural_days_for_fx(
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_metadata_service,
+    ) -> None:
+        mock_coordinator.ingest_date.side_effect = [
+            IngestionResult(dataset="fx_daily", trade_date=value, status="success")
+            for value in (
+                "2026-01-30",
+                "2026-01-31",
+                "2026-02-01",
+                "2026-02-02",
+            )
+        ]
+
+        result = backfill_manager.backfill_range(
+            dataset="fx_daily",
+            start_date="2026-01-30",
+            end_date="2026-02-02",
+        )
+
+        assert result.total_dates == 4
+        ingested_dates = [
+            call.args[1] for call in mock_coordinator.ingest_date.call_args_list
+        ]
+        assert ingested_dates == [
+            "2026-01-30",
+            "2026-01-31",
+            "2026-02-01",
+            "2026-02-02",
+        ]
+        mock_metadata_service.list_trading_days.assert_not_called()
+
+    def test_backfill_range_uses_source_defined_release_dates(
+        self,
+        mock_coordinator,
+        mock_metadata_service,
+        mock_ingestion_log_store,
+        mocker,
+    ) -> None:
+        resolver = mocker.Mock(return_value=("2026-01-15", "2026-02-20"))
+        manager = BackfillManager(
+            coordinator=mock_coordinator,
+            metadata_service=mock_metadata_service,
+            ingestion_log_store=mock_ingestion_log_store,
+            bootstrap_planner=BootstrapPlanner(
+                metadata_service=mock_metadata_service,
+                source_schedule_resolver=resolver,
+            ),
+        )
+        mock_coordinator.ingest_date.side_effect = [
+            IngestionResult(
+                dataset="macro_indicators",
+                trade_date=value,
+                status="success",
+            )
+            for value in ("2026-01-15", "2026-02-20")
+        ]
+
+        result = manager.backfill_range(
+            dataset="macro_indicators",
+            start_date="2026-01-01",
+            end_date="2026-03-31",
+            source="fred",
+        )
+
+        assert result.total_dates == 2
+        ingested_dates = [
+            call.args[1] for call in mock_coordinator.ingest_date.call_args_list
+        ]
+        assert ingested_dates == [
+            "2026-01-15",
+            "2026-02-20",
+        ]
+
 
 @pytest.mark.unit
 class TestBackfillMissing:
@@ -489,7 +571,55 @@ class TestBackfillMissing:
         assert result.total_dates >= 0
         # 验证 source 参数被正确传递给 list_ingested_dates
         mock_ingestion_log_store.list_ingested_dates.assert_called_once_with(
-            "stock_daily", "tushare"
+            "stock_daily", "tushare", IngestionStatus.SUCCESS
+        )
+
+    def test_backfill_missing_retries_success_log_without_catalog_attestation(
+        self,
+        mock_coordinator,
+        mock_metadata_service,
+        mock_ingestion_log_store,
+        mocker,
+    ) -> None:
+        mock_metadata_service.list_trading_days.return_value = [
+            "2024-12-25",
+            "2024-12-26",
+        ]
+        mock_ingestion_log_store.list_ingested_dates.return_value = [
+            "2024-12-25",
+            "2024-12-26",
+        ]
+        mock_ingestion_log_store.get_log.side_effect = lambda _dataset, _source, day: (
+            IngestionLog(
+                dataset="stock_daily",
+                source="tushare",
+                trade_date=day,
+                status=IngestionStatus.SUCCESS,
+                checksum=f"checksum:{day}",
+                rows=10,
+            )
+        )
+        verifier = mocker.Mock()
+        verifier.verify_exact_date.side_effect = lambda **payload: (
+            payload["trade_date"] == "2024-12-25"
+        )
+        manager = BackfillManager(
+            coordinator=mock_coordinator,
+            metadata_service=mock_metadata_service,
+            ingestion_log_store=mock_ingestion_log_store,
+            evidence_verifier=verifier,
+        )
+        mock_coordinator.ingest_date.return_value = IngestionResult(
+            dataset="stock_daily",
+            trade_date="2024-12-26",
+            status="success",
+        )
+
+        result = manager.backfill_missing(dataset="stock_daily")
+
+        assert result.total_dates == 1
+        mock_coordinator.ingest_date.assert_called_once_with(
+            "stock_daily", "2024-12-26"
         )
 
     def test_backfill_range_year_level_parallel(

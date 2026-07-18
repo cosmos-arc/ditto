@@ -44,6 +44,7 @@ from ditto_apps.api.routes import (
     backtest,
     capital,
     commodity,
+    data_products,
     fundamental,
     fx,
     ingestion,
@@ -231,6 +232,7 @@ app.add_middleware(
 app.include_router(backtest.router, prefix="/api/v1")
 app.include_router(capital.router, prefix="/api/v1")
 app.include_router(commodity.router, prefix="/api/v1")
+app.include_router(data_products.router, prefix="/api/v1")
 app.include_router(fundamental.router, prefix="/api/v1")
 app.include_router(fx.router, prefix="/api/v1")
 app.include_router(ingestion.router, prefix="/api/v1")

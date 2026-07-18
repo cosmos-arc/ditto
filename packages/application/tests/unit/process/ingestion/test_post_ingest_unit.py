@@ -6,6 +6,10 @@ from typing import cast
 import polars as pl
 from ditto_application.contracts import CheckDataQualityCommand
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.evidence_commit import (
+    EvidenceCommitOutcome,
+    IngestionEvidenceCommitter,
+)
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
@@ -92,6 +96,16 @@ class _IngestionLogRecorder:
     def save_log(self, log: IngestionLog) -> IngestionLog:
         self.logs.append(log)
         return log
+
+
+class _EvidenceCommitRecorder:
+    def __init__(self, outcome: EvidenceCommitOutcome) -> None:
+        self.outcome = outcome
+        self.requests: list[object] = []
+
+    def commit(self, request: object) -> EvidenceCommitOutcome:
+        self.requests.append(request)
+        return self.outcome
 
 
 def test_record_data_catalog_entry_accepts_catalog_write_context() -> None:
@@ -195,6 +209,122 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
     assert result.quality_evidence.checksum == "checksum123"
     assert writer.calls == [("stock_daily", "2024-12-27", OnDuplicate.ERROR)]
     assert list_date_inference.asset_classes == []
+
+
+def test_r2_evidence_profile_requires_quality_checker_before_payload_write() -> None:
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="unused",
+            checksum="unused",
+            rows_written=0,
+            rows_total=0,
+            blocked=False,
+        )
+    )
+    committer = _EvidenceCommitRecorder(EvidenceCommitOutcome("unused", completed=True))
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+        evidence_committer=cast(IngestionEvidenceCommitter, committer),
+        license_record_id="license:tushare:stock_daily:reviewed",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame({"trade_date": ["2024-12-27"], "close": [10.2]}),
+        "stock_daily",
+        "2024-12-27",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "INGESTION_QUALITY_CHECK_REQUIRED"
+    assert writer.calls == []
+    assert committer.requests == []
+
+
+def test_r2_evidence_failure_never_returns_success() -> None:
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="stock_daily/2024",
+            checksum="checksum123",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        )
+    )
+    committer = _EvidenceCommitRecorder(
+        EvidenceCommitOutcome(
+            "partition:tushare:stock_daily:2024-12-27",
+            completed=False,
+            error_code="CATALOG_WRITE_FAILED",
+        )
+    )
+    logs = _IngestionLogRecorder()
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+        quality_checker=_PassingQualityChecker(),
+        evidence_committer=cast(IngestionEvidenceCommitter, committer),
+        license_record_id="license:tushare:stock_daily:reviewed",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame({"trade_date": ["2024-12-27"], "close": [10.2]}),
+        "stock_daily",
+        "2024-12-27",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "CATALOG_WRITE_FAILED"
+    assert len(committer.requests) == 1
+    assert logs.logs == []
+
+
+def test_r2_evidence_success_does_not_duplicate_success_log() -> None:
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="stock_daily/2024",
+            checksum="checksum123",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        )
+    )
+    committer = _EvidenceCommitRecorder(
+        EvidenceCommitOutcome(
+            "partition:tushare:stock_daily:2024-12-27",
+            completed=True,
+        )
+    )
+    logs = _IngestionLogRecorder()
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+        quality_checker=_PassingQualityChecker(),
+        evidence_committer=cast(IngestionEvidenceCommitter, committer),
+        license_record_id="license:tushare:stock_daily:reviewed",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame({"trade_date": ["2024-12-27"], "close": [10.2]}),
+        "stock_daily",
+        "2024-12-27",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "success"
+    assert len(committer.requests) == 1
+    assert logs.logs == []
 
 
 def test_process_fetched_data_rejects_sparse_empty_without_pit_snapshot() -> None:
@@ -458,6 +588,88 @@ def test_sparse_nonempty_requires_knowledge_date() -> None:
 
     assert result.status == "failed"
     assert result.error == "PIT_KNOWLEDGE_DATE_MISSING"
+    assert writer.calls == []
+
+
+def test_index_weight_uses_effective_from_as_pit_knowledge_date() -> None:
+    """Index weights are knowable from effective_from, not a synthetic trade date."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="index_weight/2025",
+            checksum="index-weight-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["index_code", "effective_from", "weight"],
+    )
+    catalog = InMemoryDataCatalog()
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=catalog,
+        catalog_writer=catalog,
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "index_code": ["000300.SH"],
+                "effective_from": ["2025-01-06"],
+                "weight": [100.0],
+            }
+        ),
+        "index_weight",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "success"
+    assert len(writer.calls) == 1
+
+
+def test_index_weight_rejects_future_effective_from() -> None:
+    """A future effective interval must never leak into an earlier as-of snapshot."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="index_weight/2025",
+            checksum="future-index-weight-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["index_code", "effective_from", "weight"],
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=InMemoryDataCatalog(),
+        catalog_writer=InMemoryDataCatalog(),
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "index_code": ["000300.SH"],
+                "effective_from": ["2025-01-07"],
+                "weight": [100.0],
+            }
+        ),
+        "index_weight",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "PIT_KNOWLEDGE_DATE_AFTER_CUTOFF"
     assert writer.calls == []
 
 

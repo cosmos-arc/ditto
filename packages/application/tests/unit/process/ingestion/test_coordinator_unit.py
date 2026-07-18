@@ -1911,6 +1911,22 @@ class TestTradingDayCheck:
         assert "非交易日" in result.message or "跳过" in result.message
         mock_source.fetch_stock_status.assert_not_called()
 
+    def test_index_weight_skips_on_non_trading_day(
+        self,
+        coordinator,
+        mock_ingestion_log_store,
+        mock_metadata_service,
+    ) -> None:
+        """index_weight only evaluates provider intervals on trading days."""
+        mock_ingestion_log_store.get_log.return_value = None
+        mock_metadata_service.reset_mock()
+        mock_metadata_service.is_trading_day.return_value = False
+
+        result = coordinator.ingest_date("index_weight", "2024-12-28")
+
+        assert result.status == "skipped"
+        mock_metadata_service.is_trading_day.assert_called_once_with("2024-12-28")
+
     def test_stock_daily_proceeds_on_trading_day(
         self,
         coordinator,
