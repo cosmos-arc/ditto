@@ -17,6 +17,7 @@ from ditto_application.processes.execution.manual_sizing import (
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBootstrap
+from ditto_application.queries.data_readiness import DataReadinessQueryFacade
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -75,6 +76,7 @@ def create_strategy_bundle() -> Generator[StrategyBundle]:
             signal_package_publisher=container.get(SignalPackagePublisher),
             sizing_context_builder=container.get(ManualSizingContextBuilder),
             trade_date_resolver=container.get(AShareTradeDateResolver),
+            data_readiness_query=container.get(DataReadinessQueryFacade),
             seed_bootstrap=SeedStrategyBootstrap(
                 catalog=catalog_service,
                 create_port=_SeedCreateAdapter(container.get(CreateStrategyHandler)),

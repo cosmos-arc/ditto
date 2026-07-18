@@ -7,6 +7,10 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.certification import (
+    CertificationReader as DataProductCertificationReader,
+)
+from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.lineage import DataLineageRecorder
@@ -73,6 +77,7 @@ from ditto_application.processes.quality import (
 )
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.account import AccountBaselineQuery
+from ditto_application.queries.data_readiness import DataReadinessQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.run import RunReadModel
@@ -110,6 +115,18 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def data_readiness_query_facade(
+        self,
+        certification_reader: DataProductCertificationReader,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
+    ) -> DataReadinessQueryFacade:
+        """R2 consumer readiness query with certification and maturity gates."""
+        return DataReadinessQueryFacade(
+            certification_reader=certification_reader,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
 
     @provide
     def persisted_ingestion_evidence_verifier(

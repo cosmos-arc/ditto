@@ -27,6 +27,7 @@ from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
 from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBootstrap
+from ditto_application.queries.data_readiness import DataReadinessQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
@@ -75,3 +76,4 @@ class StrategyBundle:
     sizing_context_builder: ManualSizingContextBuilder | None = None
     trade_date_resolver: AShareTradeDateResolver | None = None
     seed_bootstrap: SeedStrategyBootstrap | None = None
+    data_readiness_query: DataReadinessQueryFacade | None = None
