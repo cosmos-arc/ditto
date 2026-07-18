@@ -1,0 +1,334 @@
+{
+  "checked_at": "2026-07-18T11:51:38.530224+00:00",
+  "idempotency": {
+    "first": {
+      "durable_identity_count": 1,
+      "snapshot_ids": [
+        "snapshot:fixture:sha256:payload"
+      ],
+      "write_attempt_count": 1
+    },
+    "passed": true,
+    "reason_codes": [],
+    "second": {
+      "durable_identity_count": 1,
+      "snapshot_ids": [
+        "snapshot:fixture:sha256:payload"
+      ],
+      "write_attempt_count": 1
+    },
+    "second_run_write_attempts": 0
+  },
+  "mode": "fixture",
+  "preflight": {
+    "checked_at": "2026-07-18T11:51:38.530224+00:00",
+    "contract_count": 19,
+    "performance": {
+      "bootstrap_limit_seconds": 86400.0,
+      "bootstrap_passed": true,
+      "incremental_elapsed_seconds": 120.0,
+      "incremental_limit_seconds": 1800.0,
+      "incremental_passed": true,
+      "projected_bootstrap_seconds": 36000.0,
+      "reason_codes": [],
+      "representative_datasets": [
+        "adj_factor",
+        "fund_adj",
+        "index_daily",
+        "stock_daily"
+      ],
+      "workbench_query_limit_seconds": 5.0,
+      "workbench_query_passed": true,
+      "workbench_query_seconds": 0.4
+    },
+    "products": [
+      {
+        "dataset_id": "stock_basic",
+        "license_record_ids": [
+          "license:tushare:stock_basic:sha256:4e92d40cef152cd402c659b0f1eef264a7489527187278d477b92b53dbdc8934"
+        ],
+        "provider_datasets": [
+          "tushare:stock_basic",
+          "tushare:bak_basic"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:stock_basic"
+        ]
+      },
+      {
+        "dataset_id": "etf_basic",
+        "license_record_ids": [
+          "license:tushare:etf_basic:sha256:e411017a05d1db8f3649d3cd4aff3edf62230628eec51fa09bbb099efb8b97fc"
+        ],
+        "provider_datasets": [
+          "tushare:fund_basic"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:fund_basic"
+        ]
+      },
+      {
+        "dataset_id": "index_basic",
+        "license_record_ids": [
+          "license:tushare:index_basic:sha256:af3bf970d7bafb61fe6fd036788f2f9442e50270fdb1ae77f444629e74ea128b"
+        ],
+        "provider_datasets": [
+          "tushare:index_basic"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:index_basic"
+        ]
+      },
+      {
+        "dataset_id": "calendar",
+        "license_record_ids": [
+          "license:tushare:calendar:sha256:9a8e9330aa17c5ca5f1fe654e7175861f4fa9e2492fab56fccadecc2de3130ca"
+        ],
+        "provider_datasets": [
+          "tushare:trade_cal"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:trade_cal"
+        ]
+      },
+      {
+        "dataset_id": "stock_daily",
+        "license_record_ids": [
+          "license:tushare:stock_daily:sha256:3d91901261620085345ab592572ae8ddb327b854358184691b25641a38beb9b3"
+        ],
+        "provider_datasets": [
+          "tushare:daily",
+          "local_tdx:day"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:daily"
+        ]
+      },
+      {
+        "dataset_id": "etf_daily",
+        "license_record_ids": [
+          "license:tushare:etf_daily:sha256:c8c78aa837e910c4f495189632681073816eb30bcb3dc2866961f962ed96b13e"
+        ],
+        "provider_datasets": [
+          "tushare:fund_daily",
+          "local_tdx:day"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:fund_daily"
+        ]
+      },
+      {
+        "dataset_id": "index_daily",
+        "license_record_ids": [
+          "license:tushare:index_daily:sha256:c7826c849a13b87f96be1db66e3351917bd708d7269f1adf290bbec3cd91705b"
+        ],
+        "provider_datasets": [
+          "tushare:index_daily",
+          "local_tdx:day"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:index_daily"
+        ]
+      },
+      {
+        "dataset_id": "stock_status",
+        "license_record_ids": [
+          "license:tushare:stock_status:sha256:e3aec3dbd1035e934419e72c008179af39f22aa59b53226eb2bfdcd5b07b8a21"
+        ],
+        "provider_datasets": [
+          "tushare:stock_st",
+          "tushare:suspend_d",
+          "tushare:bak_basic"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:stock_st"
+        ]
+      },
+      {
+        "dataset_id": "adj_factor",
+        "license_record_ids": [
+          "license:tushare:adj_factor:sha256:8eba479370fa2216ad9b11df7d9a539a87a971417beb177b2be25ff08dfb5e88"
+        ],
+        "provider_datasets": [
+          "tushare:adj_factor"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:adj_factor"
+        ]
+      },
+      {
+        "dataset_id": "fund_adj",
+        "license_record_ids": [
+          "license:tushare:fund_adj:sha256:c22c4b5326b44a732c4bb4938e6bf547be5a60f484f516740e357181ed132025"
+        ],
+        "provider_datasets": [
+          "tushare:fund_adj"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:fund_adj"
+        ]
+      },
+      {
+        "dataset_id": "balance_sheet",
+        "license_record_ids": [
+          "license:tushare:balance_sheet:sha256:6a18848bb2854c7cae5e955cbce7283e3655b3df9d00e7ddd67427c9220b8dd2"
+        ],
+        "provider_datasets": [
+          "tushare:balancesheet"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:balancesheet"
+        ]
+      },
+      {
+        "dataset_id": "income_statement",
+        "license_record_ids": [
+          "license:tushare:income_statement:sha256:55fab65080fd44187cd12ac9ffb787c03cced71ee82398a561068f18c9bbe3eb"
+        ],
+        "provider_datasets": [
+          "tushare:income"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:income"
+        ]
+      },
+      {
+        "dataset_id": "cash_flow",
+        "license_record_ids": [
+          "license:tushare:cash_flow:sha256:158567b324d7d0f37f95a881a49b68b3c4d44c494bb2548a443abe4d1ce63f82"
+        ],
+        "provider_datasets": [
+          "tushare:cashflow"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:cashflow"
+        ]
+      },
+      {
+        "dataset_id": "dividend",
+        "license_record_ids": [
+          "license:tushare:dividend:sha256:7a5d05a6a2f519bc7f874ba119496a98f91a93c06fa66a3acec628468c3e9646"
+        ],
+        "provider_datasets": [
+          "tushare:dividend"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:dividend"
+        ]
+      },
+      {
+        "dataset_id": "valuation_metrics",
+        "license_record_ids": [
+          "license:tushare:valuation_metrics:sha256:8b973635d0f9894ac75342fc8764a4dea45d0941bdebfc5d092a364358b0c319"
+        ],
+        "provider_datasets": [
+          "tushare:daily_basic"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:daily_basic"
+        ]
+      },
+      {
+        "dataset_id": "macro_indicators",
+        "license_record_ids": [
+          "license:tushare:macro_indicators:sha256:b57ff51943e9e98e19905763befd4ce4df382184544689f2bd39ef95c37423f2"
+        ],
+        "provider_datasets": [
+          "tushare:cn_macro",
+          "fred:series_observations",
+          "alfred:vintages"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:cn_macro"
+        ]
+      },
+      {
+        "dataset_id": "commodity_daily",
+        "license_record_ids": [
+          "license:fred:commodity_daily:sha256:bf620d0573bc50ceb381456b90f0ddf7b5a94fc2fa73839b38d9e73bbaa03e76"
+        ],
+        "provider_datasets": [
+          "fred:commodity_series",
+          "tushare:commodity_reference"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "fred:commodity_series"
+        ]
+      },
+      {
+        "dataset_id": "corporate_actions",
+        "license_record_ids": [
+          "license:tushare:corporate_actions:sha256:c23ef9dd87eeac39ec49b3342a11b6b91a97c6490a3c26dd1344bd1f277133cb"
+        ],
+        "provider_datasets": [
+          "tushare:corporate_actions"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:corporate_actions"
+        ]
+      },
+      {
+        "dataset_id": "index_weight",
+        "license_record_ids": [
+          "license:tushare:index_weight:sha256:01726517e74be61495fb47a5043ef857a31afcd49f8eac70367dd23b8a2b50d4"
+        ],
+        "provider_datasets": [
+          "tushare:index_weight"
+        ],
+        "ready": true,
+        "reason_codes": [],
+        "usable_provider_datasets": [
+          "tushare:index_weight"
+        ]
+      }
+    ],
+    "reason_codes": [],
+    "status": "ready"
+  },
+  "reason_codes": [],
+  "recoverability": {
+    "passed": true,
+    "payload_root_sha256": "sha256:fa14e42da9370d0c573a3964e567bc086f83e4f0e0d4171904ab889be13255e1",
+    "reason_codes": [],
+    "sqlite_table_row_counts": {
+      "fixture_evidence": 1
+    }
+  },
+  "status": "ready"
+}

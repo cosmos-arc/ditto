@@ -1,7 +1,9 @@
 # R2：A 股日频数据产品设计
 
 > **首次创建**：2026-07-17<br>
-> **状态**：APPROVED DESIGN（详细施工图尚未创建）<br>
+> **状态**：DEVELOPMENT COMPLETE / RELEASE ACCEPTANCE BLOCKED<br>
+> **实施计划**：[2026-07-18 R2 implementation plan](2026-07-18-r2-data-product-implementation-plan.md)<br>
+> **最近对账**：2026-07-18；确定性实现与工程门禁通过，真实 provider、历史、性能和连续运行证据尚未完成<br>
 > **上游 Gate**：R1 / G1 已通过<br>
 > **目标结果**：把 A 股日频数据从“能接入”提升为具有明确历史区间、PIT、质量、来源、恢复和 promotion 证据的数据产品。
 
@@ -538,6 +540,32 @@ R2 只有在以下条件全部满足时才完成：
 12. 完整因子研究、回测和策略产品没有泄漏进 R2。
 13. 真实数据、性能、backup/restore 和连续运行证据完成。
 
+### 16.1 2026-07-18 开发完成与发布证据对账
+
+“开发完成”表示本设计对应的代码、测试、API、CLI、工作台、runbook 和
+fail-closed acceptance runner 已落地；它不等于 R2 已通过真实数据发布验收。
+
+| DoD | 开发证据 | 发布证据状态 |
+|---:|---|---|
+| 1 | 19 个 hard-scope 与 3 个 deferred contract 已冻结并通过 contract tests | **开发已完成**；部署 contract snapshot 待归档 |
+| 2 | raw/certified target、coverage query 与 certification boundary 已实现 | **阻塞**：尚无 2015 至今真实 P0 raw coverage artifact |
+| 3 | stock status 按目标交易日查询，PIT universe 规则与 golden tests 已实现 | **阻塞**：尚无 2016 至今真实 universe/status replay |
+| 4 | schedule-aware gap、exception 与 readiness fail-closed 已实现 | **阻塞**：尚无真实 gap/approved-exception report |
+| 5 | 每个 dataset 的 immutable certification store、command/query 已实现 | **阻塞**：尚无 19 个真实独立 report ID/content hash |
+| 6 | provider snapshot、canonical asset、lineage 与 ingestion evidence saga 已实现 | **阻塞**：尚无真实 lineage traversal artifact |
+| 7 | checkpoint/resume、补偿、联合 backup/restore 与连续幂等 fixture 通过 | **阻塞**：尚无真实区间中断恢复与连续运行 artifact |
+| 8 | promotion review、revoke、recertification 与审计查询闭环已实现 | **阻塞**：尚无真实 append-only 演练记录 |
+| 9 | 工作台五视图消费生成的 OpenAPI 类型和真实 API hooks；1942 个前端测试与 build 通过 | **阻塞**：尚无 `VITE_USE_MOCK=false` live UI artifact |
+| 10 | `DataReadinessQuery` 与 EOD/R1 preflight 强制 coverage/maturity gate | **阻塞**：尚无真实 promoted snapshot 下的三状态回归 |
+| 11 | 固定 seed 输入、最大 lookback、确定性 replay 与 smoke gate 已实现并测试 | **阻塞**：尚无真实 certified snapshot 机器报告 |
+| 12 | contract、API、路由与 UI 保持 R2 non-goals，架构契约全部通过 | **开发已完成**；release reviewer 尚未签署 |
+| 13 | fixture 报告通过性能外推、恢复与第二轮零写；live runner 正确 fail-closed | **阻塞**：缺 entitlement、真实 benchmark/backup/restore 和 5 日连续运行证据 |
+
+本次机器报告与 SHA-256 见
+[R2 evidence index](../evidence/r2/README.md#5-current-release-review)。由于上述
+真实证据 Gate 未关闭，本文件不将状态标为 `IMPLEMENTED`，也不宣称 R2 release
+已经完成。
+
 ## 17. 风险与缓解
 
 | 风险 | 缓解 |
@@ -567,6 +595,12 @@ R2 只有在以下条件全部满足时才完成：
 
 ## 19. 后续步骤
 
-本文件是已确认的 release 设计，不是逐 task 施工图。实施前应使用
-`superpowers:writing-plans` 基于本设计创建 R2 implementation plan；施工时按
-W0-W5 设独立检查点、测试和可回滚提交。
+开发任务已按
+[R2 implementation plan](2026-07-18-r2-data-product-implementation-plan.md)
+完成。剩余工作全部属于真实环境发布证据，不得用 fixture 或手写状态替代：
+
+1. 录入 19 项 provider entitlement 与 reviewer-approved license ledger 记录。
+2. 执行 2015/2016 起历史 bootstrap、20 日 replay，并生成 19 个独立 certification report。
+3. 在同一参考机器和 quota 下完成四类 benchmark、真实 backup/restore、同区间连续两次运行及 5 个连续交易日增量。
+4. 在真实 promoted snapshot 下完成 R1 三状态回归和 `VITE_USE_MOCK=false` 工作台验收。
+5. 使用运维手册的隔离路径重跑 live acceptance；只有 §16 十三项发布证据全部关闭后，才将状态改为 `IMPLEMENTED`。
