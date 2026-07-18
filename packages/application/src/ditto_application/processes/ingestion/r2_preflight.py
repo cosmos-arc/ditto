@@ -1,0 +1,323 @@
+"""Fail-closed R2 provider, license, contract, and performance preflight."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date, datetime
+from typing import Literal
+
+from ditto_data.catalog.license import DatasetLicenseRecord
+from ditto_data.catalog.metadata import DatasetProductContract, default_dataset_metadata
+
+__all__ = [
+    "ChunkBenchmark",
+    "PerformanceGateReport",
+    "ProductPreflightReport",
+    "ProviderAccessEvidence",
+    "R2IngestionPreflight",
+    "R2PreflightReport",
+]
+
+type R2PreflightStatus = Literal[
+    "ready",
+    "configuration_blocked",
+    "performance_blocked",
+]
+
+_EXPECTED_CONTRACT_COUNT = 19
+_REPRESENTATIVE_DATASETS = frozenset(
+    {"stock_daily", "index_daily", "adj_factor", "fund_adj"}
+)
+_BOOTSTRAP_LIMIT_SECONDS = 24 * 60 * 60
+_INCREMENTAL_LIMIT_SECONDS = 30 * 60
+_WORKBENCH_QUERY_LIMIT_SECONDS = 5.0
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderAccessEvidence:
+    """Non-secret result of one provider endpoint entitlement probe."""
+
+    provider_dataset: str
+    credential_configured: bool
+    entitled: bool
+    evidence_uri: str
+    checked_at: datetime
+
+    def __post_init__(self) -> None:
+        """Reject ambiguous or unauditable access observations."""
+        if ":" not in self.provider_dataset:
+            raise ValueError("provider_dataset must use source:dataset form")
+        if not self.evidence_uri.strip():
+            raise ValueError("provider access evidence_uri cannot be blank")
+        if self.checked_at.tzinfo is None:
+            raise ValueError("provider access checked_at must be timezone-aware")
+        if self.entitled and not self.credential_configured:
+            raise ValueError("entitled access requires configured credentials")
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkBenchmark:
+    """Measured representative chunk and target-size extrapolation input."""
+
+    dataset_id: str
+    sample_partitions: int
+    sample_rows: int
+    elapsed_seconds: float
+    target_partitions: int
+    observed_at: datetime
+    evidence_uri: str
+
+    def __post_init__(self) -> None:
+        """Require a positive, addressable benchmark sample."""
+        if self.dataset_id not in _REPRESENTATIVE_DATASETS:
+            raise ValueError(f"unsupported representative dataset: {self.dataset_id}")
+        if self.sample_partitions <= 0 or self.target_partitions <= 0:
+            raise ValueError("benchmark partition counts must be positive")
+        if self.sample_rows <= 0 or self.elapsed_seconds <= 0:
+            raise ValueError("benchmark rows and elapsed time must be positive")
+        if self.observed_at.tzinfo is None:
+            raise ValueError("benchmark observed_at must be timezone-aware")
+        if not self.evidence_uri.strip():
+            raise ValueError("benchmark evidence_uri cannot be blank")
+
+    @property
+    def projected_seconds(self) -> float:
+        """Linearly extrapolate the measured chunk to its declared target."""
+        return self.elapsed_seconds / self.sample_partitions * self.target_partitions
+
+
+@dataclass(frozen=True, slots=True)
+class ProductPreflightReport:
+    """Access and reviewed-license result for one independent data product."""
+
+    dataset_id: str
+    provider_datasets: tuple[str, ...]
+    usable_provider_datasets: tuple[str, ...]
+    license_record_ids: tuple[str, ...]
+    ready: bool
+    reason_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PerformanceGateReport:
+    """Extrapolated bootstrap and observed incremental/query release gates."""
+
+    representative_datasets: tuple[str, ...]
+    projected_bootstrap_seconds: float | None
+    bootstrap_limit_seconds: float
+    bootstrap_passed: bool
+    incremental_elapsed_seconds: float | None
+    incremental_limit_seconds: float
+    incremental_passed: bool
+    workbench_query_seconds: float | None
+    workbench_query_limit_seconds: float
+    workbench_query_passed: bool
+    reason_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class R2PreflightReport:
+    """Complete release preflight without credential or secret material."""
+
+    status: R2PreflightStatus
+    checked_at: datetime
+    contract_count: int
+    products: tuple[ProductPreflightReport, ...]
+    performance: PerformanceGateReport
+    reason_codes: tuple[str, ...]
+
+
+class R2IngestionPreflight:
+    """Evaluate frozen scope, provider access, license, and performance evidence."""
+
+    def run(
+        self,
+        *,
+        provider_access: tuple[ProviderAccessEvidence, ...],
+        license_records: tuple[DatasetLicenseRecord, ...],
+        benchmarks: tuple[ChunkBenchmark, ...],
+        incremental_elapsed_seconds: float | None,
+        workbench_query_seconds: float | None,
+        as_of: date,
+        checked_at: datetime,
+    ) -> R2PreflightReport:
+        """Return ready only after every declared release gate is proven."""
+        if checked_at.tzinfo is None:
+            raise ValueError("preflight checked_at must be timezone-aware")
+        contracts = _hard_contracts()
+        access_by_dataset = _access_by_provider_dataset(provider_access)
+        products = tuple(
+            _evaluate_product(
+                contract,
+                access_by_dataset=access_by_dataset,
+                license_records=license_records,
+                as_of=as_of,
+            )
+            for contract in contracts
+        )
+        configuration_reasons: list[str] = []
+        if len(contracts) != _EXPECTED_CONTRACT_COUNT:
+            configuration_reasons.append("contract_count_mismatch")
+        for product in products:
+            configuration_reasons.extend(product.reason_codes)
+
+        performance = _performance_report(
+            benchmarks,
+            incremental_elapsed_seconds=incremental_elapsed_seconds,
+            workbench_query_seconds=workbench_query_seconds,
+        )
+        missing_performance = "performance_evidence_missing" in (
+            performance.reason_codes
+        )
+        if missing_performance:
+            configuration_reasons.append("performance_evidence_missing")
+
+        if configuration_reasons:
+            status: R2PreflightStatus = "configuration_blocked"
+            reasons = _unique(configuration_reasons)
+        elif performance.reason_codes:
+            status = "performance_blocked"
+            reasons = performance.reason_codes
+        else:
+            status = "ready"
+            reasons = ()
+        return R2PreflightReport(
+            status=status,
+            checked_at=checked_at,
+            contract_count=len(contracts),
+            products=products,
+            performance=performance,
+            reason_codes=reasons,
+        )
+
+
+def _hard_contracts() -> tuple[DatasetProductContract, ...]:
+    return tuple(
+        metadata.product_contract
+        for metadata in default_dataset_metadata().values()
+        if metadata.product_contract is not None
+        and metadata.product_contract.r2_scope == "hard"
+    )
+
+
+def _access_by_provider_dataset(
+    values: tuple[ProviderAccessEvidence, ...],
+) -> dict[str, ProviderAccessEvidence]:
+    result: dict[str, ProviderAccessEvidence] = {}
+    for value in values:
+        if value.provider_dataset in result:
+            raise ValueError(
+                f"duplicate provider access evidence: {value.provider_dataset}"
+            )
+        result[value.provider_dataset] = value
+    return result
+
+
+def _evaluate_product(
+    contract: DatasetProductContract,
+    *,
+    access_by_dataset: dict[str, ProviderAccessEvidence],
+    license_records: tuple[DatasetLicenseRecord, ...],
+    as_of: date,
+) -> ProductPreflightReport:
+    observed = tuple(
+        access_by_dataset[item]
+        for item in contract.provider_datasets
+        if item in access_by_dataset
+    )
+    usable = tuple(
+        item.provider_dataset
+        for item in observed
+        if item.credential_configured and item.entitled
+    )
+    usable_sources = {item.partition(":")[0] for item in usable}
+    licenses = tuple(
+        record
+        for record in license_records
+        if record.dataset_id == contract.dataset_id
+        and record.source in usable_sources
+        and _license_allows_r2(record, as_of)
+    )
+    reasons: list[str] = []
+    if not observed:
+        reasons.append("entitlement_unverified")
+    if any(not item.credential_configured for item in observed):
+        reasons.append("credential_missing")
+    if observed and not usable:
+        reasons.append("entitlement_denied")
+    if usable and not licenses:
+        reasons.append("license_missing")
+    return ProductPreflightReport(
+        dataset_id=contract.dataset_id,
+        provider_datasets=contract.provider_datasets,
+        usable_provider_datasets=usable,
+        license_record_ids=tuple(record.record_id for record in licenses),
+        ready=not reasons,
+        reason_codes=tuple(reasons),
+    )
+
+
+def _license_allows_r2(record: DatasetLicenseRecord, as_of: date) -> bool:
+    return (
+        record.effective_from <= as_of
+        and (record.effective_to is None or as_of <= record.effective_to)
+        and record.local_cache == "allowed"
+        and record.derivative_compute == "allowed"
+    )
+
+
+def _performance_report(
+    benchmarks: tuple[ChunkBenchmark, ...],
+    *,
+    incremental_elapsed_seconds: float | None,
+    workbench_query_seconds: float | None,
+) -> PerformanceGateReport:
+    by_dataset = {benchmark.dataset_id: benchmark for benchmark in benchmarks}
+    if len(by_dataset) != len(benchmarks):
+        raise ValueError("duplicate representative benchmark dataset")
+    complete = frozenset(by_dataset) == _REPRESENTATIVE_DATASETS
+    projected = (
+        sum(item.projected_seconds for item in by_dataset.values())
+        if complete
+        else None
+    )
+    bootstrap_passed = projected is not None and projected <= _BOOTSTRAP_LIMIT_SECONDS
+    incremental_passed = (
+        incremental_elapsed_seconds is not None
+        and 0 <= incremental_elapsed_seconds <= _INCREMENTAL_LIMIT_SECONDS
+    )
+    query_passed = (
+        workbench_query_seconds is not None
+        and 0 <= workbench_query_seconds <= _WORKBENCH_QUERY_LIMIT_SECONDS
+    )
+    reasons: list[str] = []
+    if (
+        projected is None
+        or incremental_elapsed_seconds is None
+        or (workbench_query_seconds is None)
+    ):
+        reasons.append("performance_evidence_missing")
+    else:
+        if not bootstrap_passed:
+            reasons.append("bootstrap_over_24h")
+        if not incremental_passed:
+            reasons.append("incremental_over_30m")
+        if not query_passed:
+            reasons.append("workbench_query_over_5s")
+    return PerformanceGateReport(
+        representative_datasets=tuple(sorted(by_dataset)),
+        projected_bootstrap_seconds=projected,
+        bootstrap_limit_seconds=float(_BOOTSTRAP_LIMIT_SECONDS),
+        bootstrap_passed=bootstrap_passed,
+        incremental_elapsed_seconds=incremental_elapsed_seconds,
+        incremental_limit_seconds=float(_INCREMENTAL_LIMIT_SECONDS),
+        incremental_passed=incremental_passed,
+        workbench_query_seconds=workbench_query_seconds,
+        workbench_query_limit_seconds=_WORKBENCH_QUERY_LIMIT_SECONDS,
+        workbench_query_passed=query_passed,
+        reason_codes=tuple(reasons),
+    )
+
+
+def _unique(values: list[str]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(values))
