@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
 
@@ -151,7 +152,7 @@ class TestBootstrapPlannerCapabilitiesAndResume:
     def test_rejects_invalid_interval(self, mocker) -> None:
         planner = BootstrapPlanner(metadata_service=_metadata_service(mocker))
 
-        with pytest.raises(ValueError, match="end_date"):
+        with pytest.raises(AppProcessError, match="end_date"):
             planner.plan(
                 dataset_id="stock_daily",
                 source="tushare",

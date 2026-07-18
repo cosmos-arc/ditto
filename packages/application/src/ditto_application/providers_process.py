@@ -6,13 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.certification import (
     CertificationReader as DataProductCertificationReader,
 )
+from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotWriter
+from ditto_data.config.data_source import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+from ditto_data.ingestion.partition_state import (
+    PartitionLifecycleReader,
+    PartitionLifecycleWriter,
+)
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.quality import QualityEngine
 from ditto_data.services.market_service import MarketService
@@ -55,6 +62,14 @@ from ditto_application.processes.execution.replay_process import ReplayProcess
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
+from ditto_application.processes.ingestion.evidence_commit import (
+    EvidenceCommitPorts,
+    IngestionEvidenceCommitter,
+)
+from ditto_application.processes.ingestion.r2_preflight import (
+    R2AcceptanceRuntimeEvidence,
+)
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -115,6 +130,61 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def bootstrap_planner(
+        self,
+        metadata_service: MetadataService,
+        partition_lifecycle_reader: PartitionLifecycleReader,
+    ) -> BootstrapPlanner:
+        """Build resumable R2 chunks behind the application composition boundary."""
+        return BootstrapPlanner(
+            metadata_service=metadata_service,
+            partition_lifecycle_reader=partition_lifecycle_reader,
+        )
+
+    @provide
+    def ingestion_evidence_committer(
+        self,
+        partition_lifecycle_reader: PartitionLifecycleReader,
+        partition_lifecycle_writer: PartitionLifecycleWriter,
+        provider_snapshot_writer: ProviderSnapshotWriter,
+        dataset_license_reader: DatasetLicenseReader,
+        data_catalog_writer: DataCatalogWriter,
+        lineage_recorder: DataLineageRecorder,
+        ingestion_log_store: IngestionLogStore,
+    ) -> IngestionEvidenceCommitter:
+        """Assemble the fail-closed R2 evidence saga from application ports."""
+        return IngestionEvidenceCommitter(
+            ports=EvidenceCommitPorts(
+                lifecycle_reader=partition_lifecycle_reader,
+                lifecycle_writer=partition_lifecycle_writer,
+                snapshot_writer=provider_snapshot_writer,
+                license_reader=dataset_license_reader,
+                catalog_writer=data_catalog_writer,
+                lineage_recorder=lineage_recorder,
+                ingestion_log_store=ingestion_log_store,
+            )
+        )
+
+    @provide
+    def r2_acceptance_runtime_evidence(
+        self,
+        settings: DataSourceSettings,
+        license_reader: DatasetLicenseReader,
+    ) -> R2AcceptanceRuntimeEvidence:
+        """Resolve non-secret live acceptance inputs at the composition boundary."""
+        credential_sources: set[str] = set()
+        if settings.tushare_token.strip():
+            credential_sources.add("tushare")
+        if settings.fred_api_key.strip():
+            credential_sources.update({"fred", "alfred"})
+        if Path(settings.tdx_path).expanduser().is_dir():
+            credential_sources.add("local_tdx")
+        return R2AcceptanceRuntimeEvidence(
+            credential_sources=frozenset(credential_sources),
+            license_records=license_reader.list_licenses(),
+        )
 
     @provide
     def data_readiness_query_facade(

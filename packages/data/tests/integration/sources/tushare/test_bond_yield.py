@@ -6,10 +6,12 @@ import keyring
 import polars as pl
 import pytest
 from ditto_data.config import DataSourceSettings
+from ditto_data.errors import SourceFetchError
 from ditto_data.sources.tushare.adapters.bond_yield import (
     CN_BOND_YIELD_INDICATORS,
     BondYieldTushareAdapter,
 )
+from tenacity import RetryError
 
 
 def _get_tushare_token() -> str | None:
@@ -24,14 +26,48 @@ def _has_tushare_token() -> bool:
     return bool(_get_tushare_token())
 
 
-@pytest.fixture
+def _is_entitlement_denied(error: BaseException) -> bool:
+    """Inspect wrapped/retried provider failures for an endpoint permission denial."""
+    pending: list[BaseException] = [error]
+    seen: set[int] = set()
+    messages: list[str] = []
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        messages.append(str(current))
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+        if current.__context__ is not None:
+            pending.append(current.__context__)
+        if isinstance(current, RetryError):
+            retried = current.last_attempt.exception()
+            if retried is not None:
+                pending.append(retried)
+    text = " ".join(messages).lower()
+    return "没有接口" in text or "access permission" in text
+
+
+@pytest.fixture(scope="class")
 def tushare_adapter() -> BondYieldTushareAdapter:
     """创建配置好的 BondYieldTushareAdapter 实例."""
     token = _get_tushare_token()
     if not token:
         pytest.skip("TUSHARE_TOKEN not set (env or keyring)")
     settings = DataSourceSettings(tushare_token=token)
-    return BondYieldTushareAdapter(settings=settings)
+    adapter = BondYieldTushareAdapter(settings=settings)
+    try:
+        adapter.fetch_bond_yield(
+            codes=["CN_BOND_YIELD_10Y"],
+            start_date="2024-01-02",
+            end_date="2024-01-02",
+        )
+    except SourceFetchError as error:
+        if _is_entitlement_denied(error):
+            pytest.skip("Tushare yc_cb endpoint entitlement is not available")
+        raise
+    return adapter
 
 
 @pytest.mark.integration

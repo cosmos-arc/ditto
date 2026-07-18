@@ -6,14 +6,18 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
 
-from ditto_data.catalog.license import DatasetLicenseRecord
-from ditto_data.catalog.metadata import DatasetProductContract, default_dataset_metadata
+from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
+from ditto_data.catalog.metadata import default_dataset_metadata
+from ditto_data.catalog.product_contract import DatasetProductContract
+
+from ditto_application.exceptions import AppProcessError
 
 __all__ = [
     "ChunkBenchmark",
     "PerformanceGateReport",
     "ProductPreflightReport",
     "ProviderAccessEvidence",
+    "R2AcceptanceRuntimeEvidence",
     "R2IngestionPreflight",
     "R2PreflightReport",
 ]
@@ -34,6 +38,14 @@ _WORKBENCH_QUERY_LIMIT_SECONDS = 5.0
 
 
 @dataclass(frozen=True, slots=True)
+class R2AcceptanceRuntimeEvidence:
+    """Registry-resolved credentials and reviewed licenses without secret values."""
+
+    credential_sources: frozenset[str]
+    license_records: tuple[DatasetLicenseRecord, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ProviderAccessEvidence:
     """Non-secret result of one provider endpoint entitlement probe."""
 
@@ -46,13 +58,13 @@ class ProviderAccessEvidence:
     def __post_init__(self) -> None:
         """Reject ambiguous or unauditable access observations."""
         if ":" not in self.provider_dataset:
-            raise ValueError("provider_dataset must use source:dataset form")
+            raise AppProcessError("provider_dataset must use source:dataset form")
         if not self.evidence_uri.strip():
-            raise ValueError("provider access evidence_uri cannot be blank")
+            raise AppProcessError("provider access evidence_uri cannot be blank")
         if self.checked_at.tzinfo is None:
-            raise ValueError("provider access checked_at must be timezone-aware")
+            raise AppProcessError("provider access checked_at must be timezone-aware")
         if self.entitled and not self.credential_configured:
-            raise ValueError("entitled access requires configured credentials")
+            raise AppProcessError("entitled access requires configured credentials")
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,15 +82,17 @@ class ChunkBenchmark:
     def __post_init__(self) -> None:
         """Require a positive, addressable benchmark sample."""
         if self.dataset_id not in _REPRESENTATIVE_DATASETS:
-            raise ValueError(f"unsupported representative dataset: {self.dataset_id}")
+            raise AppProcessError(
+                f"unsupported representative dataset: {self.dataset_id}"
+            )
         if self.sample_partitions <= 0 or self.target_partitions <= 0:
-            raise ValueError("benchmark partition counts must be positive")
+            raise AppProcessError("benchmark partition counts must be positive")
         if self.sample_rows <= 0 or self.elapsed_seconds <= 0:
-            raise ValueError("benchmark rows and elapsed time must be positive")
+            raise AppProcessError("benchmark rows and elapsed time must be positive")
         if self.observed_at.tzinfo is None:
-            raise ValueError("benchmark observed_at must be timezone-aware")
+            raise AppProcessError("benchmark observed_at must be timezone-aware")
         if not self.evidence_uri.strip():
-            raise ValueError("benchmark evidence_uri cannot be blank")
+            raise AppProcessError("benchmark evidence_uri cannot be blank")
 
     @property
     def projected_seconds(self) -> float:
@@ -130,6 +144,49 @@ class R2PreflightReport:
 class R2IngestionPreflight:
     """Evaluate frozen scope, provider access, license, and performance evidence."""
 
+    def run_fixture(self, *, checked_at: datetime) -> R2PreflightReport:
+        """Run the deterministic 19-product acceptance fixture."""
+        contracts = _hard_contracts()
+        access = tuple(
+            ProviderAccessEvidence(
+                provider_dataset=contract.provider_datasets[0],
+                credential_configured=True,
+                entitled=True,
+                evidence_uri=f"evidence://fixture/access/{contract.dataset_id}",
+                checked_at=checked_at,
+            )
+            for contract in contracts
+        )
+        licenses = tuple(
+            _fixture_license(
+                contract.dataset_id,
+                contract.provider_datasets[0],
+                checked_at,
+            )
+            for contract in contracts
+        )
+        benchmarks = tuple(
+            ChunkBenchmark(
+                dataset_id=dataset_id,
+                sample_partitions=20,
+                sample_rows=100_000,
+                elapsed_seconds=60.0,
+                target_partitions=3_000,
+                observed_at=checked_at,
+                evidence_uri=f"evidence://fixture/benchmark/{dataset_id}",
+            )
+            for dataset_id in _REPRESENTATIVE_DATASETS
+        )
+        return self.run(
+            provider_access=access,
+            license_records=licenses,
+            benchmarks=benchmarks,
+            incremental_elapsed_seconds=120.0,
+            workbench_query_seconds=0.4,
+            as_of=checked_at.date(),
+            checked_at=checked_at,
+        )
+
     def run(
         self,
         *,
@@ -143,7 +200,7 @@ class R2IngestionPreflight:
     ) -> R2PreflightReport:
         """Return ready only after every declared release gate is proven."""
         if checked_at.tzinfo is None:
-            raise ValueError("preflight checked_at must be timezone-aware")
+            raise AppProcessError("preflight checked_at must be timezone-aware")
         contracts = _hard_contracts()
         access_by_dataset = _access_by_provider_dataset(provider_access)
         products = tuple(
@@ -200,13 +257,36 @@ def _hard_contracts() -> tuple[DatasetProductContract, ...]:
     )
 
 
+def _fixture_license(
+    dataset_id: str,
+    provider_dataset: str,
+    checked_at: datetime,
+) -> DatasetLicenseRecord:
+    return DatasetLicenseRecord.create(
+        DatasetLicenseDraft(
+            dataset_id=dataset_id,
+            source=provider_dataset.partition(":")[0],
+            terms_version="fixture-v1",
+            effective_from=checked_at.date(),
+            effective_to=None,
+            local_cache="allowed",
+            derivative_compute="allowed",
+            display="restricted",
+            redistribution="prohibited",
+            notes="Deterministic acceptance fixture review.",
+            reviewed_by="fixture-reviewer",
+            reviewed_at=checked_at,
+        )
+    )
+
+
 def _access_by_provider_dataset(
     values: tuple[ProviderAccessEvidence, ...],
 ) -> dict[str, ProviderAccessEvidence]:
     result: dict[str, ProviderAccessEvidence] = {}
     for value in values:
         if value.provider_dataset in result:
-            raise ValueError(
+            raise AppProcessError(
                 f"duplicate provider access evidence: {value.provider_dataset}"
             )
         result[value.provider_dataset] = value
@@ -274,7 +354,7 @@ def _performance_report(
 ) -> PerformanceGateReport:
     by_dataset = {benchmark.dataset_id: benchmark for benchmark in benchmarks}
     if len(by_dataset) != len(benchmarks):
-        raise ValueError("duplicate representative benchmark dataset")
+        raise AppProcessError("duplicate representative benchmark dataset")
     complete = frozenset(by_dataset) == _REPRESENTATIVE_DATASETS
     projected = (
         sum(item.projected_seconds for item in by_dataset.values())

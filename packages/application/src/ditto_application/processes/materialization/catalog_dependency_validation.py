@@ -31,11 +31,11 @@ class CertifiedCatalogDependencySelection:
     def __post_init__(self) -> None:
         """Validate the dataset identity and non-empty unique snapshot set."""
         if not self.dataset_id or self.dataset_id.strip() != self.dataset_id:
-            raise ValueError(f"invalid certified dataset_id: {self.dataset_id!r}")
+            raise AppProcessError(f"invalid certified dataset_id: {self.dataset_id!r}")
         if not self.source_snapshot_ids or len(set(self.source_snapshot_ids)) != len(
             self.source_snapshot_ids
         ):
-            raise ValueError(
+            raise AppProcessError(
                 "certified catalog source snapshot IDs must be non-empty and unique"
             )
 

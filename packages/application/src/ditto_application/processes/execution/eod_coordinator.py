@@ -73,9 +73,9 @@ class R2PreflightPolicy:
     def __post_init__(self) -> None:
         """Validate the explicit migration mode and certification profile."""
         if self.mode not in {"shadow", "required"}:
-            raise ValueError(f"invalid R2 preflight mode: {self.mode}")
+            raise AppProcessError(f"invalid R2 preflight mode: {self.mode}")
         if not self.certification_profile.strip():
-            raise ValueError("R2 certification profile cannot be empty")
+            raise AppProcessError("R2 certification profile cannot be empty")
 
 
 type EodOutcomeStatus = Literal[

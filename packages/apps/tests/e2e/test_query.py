@@ -208,6 +208,7 @@ def sample_adj_factors() -> pl.DataFrame:
     data = {
         "instrument_id": [],
         "trade_date": [],
+        "knowledge_date": [],
         "adj_factor": [],
     }
 
@@ -215,6 +216,7 @@ def sample_adj_factors() -> pl.DataFrame:
         for i, trade_date in enumerate(dates):
             data["instrument_id"].append(ticker)
             data["trade_date"].append(trade_date)
+            data["knowledge_date"].append(trade_date)
             # 模拟复权因子变化
             data["adj_factor"].append(1.0 + ticker % 10 * 0.01 + i * 0.001)
 
@@ -590,7 +592,7 @@ class TestQuery:
 
         # Act: 查询不存在的标的
         query = MarketBarsQuery(
-            instrument_ids=[9999999],  # 不存在的 instrument_id
+            instrument_ids=[1_999_999],  # 合法股票范围内但不存在的 instrument_id
             start="2024-06-01",
             end="2024-06-10",
         )

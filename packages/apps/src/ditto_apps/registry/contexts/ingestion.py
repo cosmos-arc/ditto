@@ -16,7 +16,6 @@ from ditto_application.processes.ingestion.coordinator_factory import (
     create_coordinator,
 )
 from ditto_application.processes.ingestion.evidence_commit import (
-    EvidenceCommitPorts,
     IngestionEvidenceCommitter,
 )
 from ditto_application.processes.ingestion.retry_manager import RetryManager
@@ -28,17 +27,11 @@ from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
-    DatasetLicenseReader,
-    ProviderSnapshotWriter,
 )
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
-from ditto_data.ingestion.partition_state import (
-    PartitionLifecycleReader,
-    PartitionLifecycleWriter,
-)
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
@@ -99,20 +92,9 @@ def create_ingestion_bundle(
         catalog_reader = container.get(DataCatalogReader)
         catalog_writer = container.get(DataCatalogWriter)
         source_fallback_policy_reader = container.get(CatalogSourceFallbackPolicyReader)
-        partition_lifecycle_reader = container.get(PartitionLifecycleReader)
         evidence_committer: IngestionEvidenceCommitter | None = None
         if license_record_id is not None:
-            evidence_committer = IngestionEvidenceCommitter(
-                ports=EvidenceCommitPorts(
-                    lifecycle_reader=partition_lifecycle_reader,
-                    lifecycle_writer=container.get(PartitionLifecycleWriter),
-                    snapshot_writer=container.get(ProviderSnapshotWriter),
-                    license_reader=container.get(DatasetLicenseReader),
-                    catalog_writer=catalog_writer,
-                    lineage_recorder=lineage_recorder,
-                    ingestion_log_store=ingestion_log_store,
-                )
-            )
+            evidence_committer = container.get(IngestionEvidenceCommitter)
 
         # 创建协调器
         with create_coordinator(
@@ -145,10 +127,7 @@ def create_ingestion_bundle(
                 coordinator=coordinator,
                 metadata_service=metadata_service,
                 ingestion_log_store=ingestion_log_store,
-                bootstrap_planner=BootstrapPlanner(
-                    metadata_service=metadata_service,
-                    partition_lifecycle_reader=partition_lifecycle_reader,
-                ),
+                bootstrap_planner=container.get(BootstrapPlanner),
                 evidence_verifier=PersistedIngestionEvidenceVerifier(
                     reader=catalog_reader,
                     ingestion_logs=ingestion_log_store,

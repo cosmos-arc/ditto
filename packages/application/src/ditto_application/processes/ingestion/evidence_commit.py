@@ -10,10 +10,9 @@ from typing import Protocol
 from ditto_data.catalog import (
     DataCatalogEntry,
     DataCatalogWriter,
-    DatasetLicenseReader,
-    ProviderSnapshot,
-    ProviderSnapshotWriter,
 )
+from ditto_data.catalog.license import DatasetLicenseReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotWriter
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
     PartitionLifecycleReader,
@@ -22,6 +21,8 @@ from ditto_data.ingestion.partition_state import (
 )
 from ditto_data.lineage import DataLineageRecorder, LineageEvent
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
+
+from ditto_application.exceptions import AppProcessError
 
 __all__ = [
     "EvidenceCommitOutcome",
@@ -221,11 +222,11 @@ class IngestionEvidenceCommitter:
     @staticmethod
     def _validate_request(request: EvidenceCommitRequest) -> None:
         if request.provider_snapshot.dataset_id != request.dataset_id:
-            raise ValueError("provider snapshot dataset does not match request")
+            raise AppProcessError("provider snapshot dataset does not match request")
         if request.provider_snapshot.source != request.source:
-            raise ValueError("provider snapshot source does not match request")
+            raise AppProcessError("provider snapshot source does not match request")
         if request.catalog_entry.asset != request.provider_snapshot.canonical_asset:
-            raise ValueError("catalog and provider snapshot assets do not match")
+            raise AppProcessError("catalog and provider snapshot assets do not match")
         if (
             request.success_log.dataset != request.dataset_id
             or request.success_log.source != request.source
@@ -234,7 +235,9 @@ class IngestionEvidenceCommitter:
             or request.success_log.checksum != request.provider_snapshot.checksum
             or request.success_log.rows != request.provider_snapshot.row_count
         ):
-            raise ValueError("success log does not match committed payload evidence")
+            raise AppProcessError(
+                "success log does not match committed payload evidence"
+            )
 
     def _prepare_checkpoint(
         self, request: EvidenceCommitRequest
@@ -366,7 +369,7 @@ class IngestionEvidenceCommitter:
     def _require_checkpoint(self, chunk_id: str) -> PartitionCheckpoint:
         checkpoint = self._ports.lifecycle_reader.get_checkpoint(chunk_id)
         if checkpoint is None:
-            raise ValueError(f"missing partition checkpoint: {chunk_id}")
+            raise AppProcessError(f"missing partition checkpoint: {chunk_id}")
         return checkpoint
 
 

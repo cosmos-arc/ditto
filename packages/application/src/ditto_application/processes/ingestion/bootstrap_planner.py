@@ -14,6 +14,8 @@ from ditto_data.ingestion.partition_state import (
     PartitionLifecycleStatus,
 )
 
+from ditto_application.exceptions import AppProcessError
+
 __all__ = [
     "BootstrapChunk",
     "BootstrapPlan",
@@ -91,14 +93,14 @@ class BootstrapPlanner:
         try:
             metadata = default_dataset_metadata()[dataset_id]
         except KeyError:
-            raise ValueError(f"unknown bootstrap dataset: {dataset_id}") from None
+            raise AppProcessError(f"unknown bootstrap dataset: {dataset_id}") from None
         if source not in metadata.supported_sources:
-            raise ValueError(
+            raise AppProcessError(
                 f"unsupported bootstrap source {source!r} for {dataset_id!r}"
             )
         normalized_instruments = tuple(sorted(set(instrument_ids)))
         if normalized_instruments and not metadata.supports_instrument_ingestion:
-            raise ValueError(
+            raise AppProcessError(
                 f"dataset does not support instrument bootstrap: {dataset_id}"
             )
 
@@ -107,7 +109,7 @@ class BootstrapPlanner:
         )
         product_contract = metadata.product_contract
         if product_contract is None:
-            raise ValueError(f"dataset has no bootstrap contract: {dataset_id}")
+            raise AppProcessError(f"dataset has no bootstrap contract: {dataset_id}")
         if (
             metadata.schedule == "source_defined"
             and self._source_schedule_resolver is None
@@ -196,7 +198,7 @@ def _validated_interval(start_date: str, end_date: str) -> tuple[date, date]:
     start = date.fromisoformat(start_date)
     end = date.fromisoformat(end_date)
     if end < start:
-        raise ValueError("bootstrap end_date precedes start_date")
+        raise AppProcessError("bootstrap end_date precedes start_date")
     return start, end
 
 
@@ -221,7 +223,7 @@ def _validated_partitions(
     for value in partitions:
         partition_date = date.fromisoformat(value)
         if partition_date < start or partition_date > end:
-            raise ValueError(f"source partition outside target interval: {value}")
+            raise AppProcessError(f"source partition outside target interval: {value}")
         normalized.add(partition_date.isoformat())
     return tuple(sorted(normalized))
 

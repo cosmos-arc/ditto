@@ -15,11 +15,9 @@ from ditto_data.catalog import (
     DataAssetRef,
     DataCatalogEntry,
     DataSchemaFingerprint,
-    DatasetLicenseDraft,
-    DatasetLicenseRecord,
-    ProviderSnapshot,
-    ProviderSnapshotDraft,
 )
+from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_data.lineage import LineageEvent, LineageInputRef, LineageOutputRef

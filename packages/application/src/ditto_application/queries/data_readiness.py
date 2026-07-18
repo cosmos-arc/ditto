@@ -11,6 +11,7 @@ from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 
 from ditto_application.catalog_maturity import blocked_catalog_datasets
+from ditto_application.exceptions import AppQueryError
 
 __all__ = [
     "R2_P0_DATASETS",
@@ -72,11 +73,11 @@ class DatasetReadinessRequirement:
     def __post_init__(self) -> None:
         """Validate the consumer interval and snapshot set."""
         if not self.dataset_id or self.dataset_id.strip() != self.dataset_id:
-            raise ValueError(f"invalid readiness dataset_id: {self.dataset_id!r}")
+            raise AppQueryError(f"invalid readiness dataset_id: {self.dataset_id!r}")
         if self.required_to < self.required_from:
-            raise ValueError("readiness required_to precedes required_from")
+            raise AppQueryError("readiness required_to precedes required_from")
         if len(set(self.expected_snapshot_ids)) != len(self.expected_snapshot_ids):
-            raise ValueError("readiness expected snapshot IDs must be unique")
+            raise AppQueryError("readiness expected snapshot IDs must be unique")
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,7 +162,7 @@ class DataReadinessQueryFacade:
     ) -> DataReadinessReport:
         """Assess the named P0/P1 aggregate while preserving per-product reasons."""
         if bundle not in {"market_core", "fundamental_macro"}:
-            raise ValueError(f"unknown R2 readiness bundle: {bundle}")
+            raise AppQueryError(f"unknown R2 readiness bundle: {bundle}")
         dataset_ids = R2_P0_DATASETS if bundle == "market_core" else R2_P1_DATASETS
         requirements = tuple(
             DatasetReadinessRequirement(

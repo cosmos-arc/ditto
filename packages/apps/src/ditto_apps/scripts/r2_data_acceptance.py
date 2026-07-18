@@ -17,16 +17,10 @@ import orjson
 from ditto_application.processes.ingestion.r2_preflight import (
     ChunkBenchmark,
     ProviderAccessEvidence,
+    R2AcceptanceRuntimeEvidence,
     R2IngestionPreflight,
     R2PreflightReport,
 )
-from ditto_data.catalog.license import (
-    DatasetLicenseDraft,
-    DatasetLicenseReader,
-    DatasetLicenseRecord,
-)
-from ditto_data.catalog.metadata import DatasetProductContract, default_dataset_metadata
-from ditto_data.config.data_source import DataSourceSettings
 from ditto_platform.foundation.storage.payload_backup import (
     PayloadBackupError,
     PayloadTreeReport,
@@ -227,46 +221,7 @@ def run_fixture_acceptance(
 ) -> R2AcceptanceReport:
     """Run deterministic preflight, recovery, and idempotency fixtures."""
     now = checked_at or datetime.now(UTC)
-    contracts = _hard_contracts()
-    access = tuple(
-        ProviderAccessEvidence(
-            provider_dataset=contract.provider_datasets[0],
-            credential_configured=True,
-            entitled=True,
-            evidence_uri=f"evidence://fixture/access/{contract.dataset_id}",
-            checked_at=now,
-        )
-        for contract in contracts
-    )
-    licenses = tuple(
-        _fixture_license(
-            contract.dataset_id,
-            contract.provider_datasets[0],
-            now,
-        )
-        for contract in contracts
-    )
-    benchmarks = tuple(
-        ChunkBenchmark(
-            dataset_id=dataset_id,
-            sample_partitions=20,
-            sample_rows=100_000,
-            elapsed_seconds=60.0,
-            target_partitions=3_000,
-            observed_at=now,
-            evidence_uri=f"evidence://fixture/benchmark/{dataset_id}",
-        )
-        for dataset_id in ("stock_daily", "index_daily", "adj_factor", "fund_adj")
-    )
-    preflight = R2IngestionPreflight().run(
-        provider_access=access,
-        license_records=licenses,
-        benchmarks=benchmarks,
-        incremental_elapsed_seconds=120.0,
-        workbench_query_seconds=0.4,
-        as_of=now.date(),
-        checked_at=now,
-    )
+    preflight = R2IngestionPreflight().run_fixture(checked_at=now)
     recoverability = _fixture_recoverability()
     idempotency = _fixture_idempotency()
     return _acceptance_report(
@@ -292,19 +247,15 @@ def run_live_acceptance(
     evidence = _read_live_evidence(evidence_path)
     container = make_app_container()
     try:
-        settings = container.get(DataSourceSettings)
-        license_reader = container.get(DatasetLicenseReader)
-        licenses = license_reader.list_licenses()
+        runtime = container.get(R2AcceptanceRuntimeEvidence)
     finally:
         container.close()
     access = tuple(
         ProviderAccessEvidence(
             provider_dataset=item.provider_dataset,
             credential_configured=(
-                credential_configured := _credential_configured(
-                    item.provider_dataset.partition(":")[0],
-                    settings,
-                )
+                credential_configured := item.provider_dataset.partition(":")[0]
+                in runtime.credential_sources
             ),
             entitled=item.entitled and credential_configured,
             evidence_uri=item.evidence_uri,
@@ -317,7 +268,7 @@ def run_live_acceptance(
     )
     preflight = R2IngestionPreflight().run(
         provider_access=access,
-        license_records=licenses,
+        license_records=runtime.license_records,
         benchmarks=benchmarks,
         incremental_elapsed_seconds=evidence.incremental_elapsed_seconds,
         workbench_query_seconds=evidence.workbench_query_seconds,
@@ -337,39 +288,6 @@ def run_live_acceptance(
         preflight=preflight,
         recoverability=recoverability,
         idempotency=idempotency,
-    )
-
-
-def _hard_contracts() -> tuple[DatasetProductContract, ...]:
-    return tuple(
-        metadata.product_contract
-        for metadata in default_dataset_metadata().values()
-        if metadata.product_contract is not None
-        and metadata.product_contract.r2_scope == "hard"
-    )
-
-
-def _fixture_license(
-    dataset_id: str,
-    provider_dataset: str,
-    checked_at: datetime,
-) -> DatasetLicenseRecord:
-    source = provider_dataset.partition(":")[0]
-    return DatasetLicenseRecord.create(
-        DatasetLicenseDraft(
-            dataset_id=dataset_id,
-            source=source,
-            terms_version="fixture-v1",
-            effective_from=checked_at.date(),
-            effective_to=None,
-            local_cache="allowed",
-            derivative_compute="allowed",
-            display="restricted",
-            redistribution="prohibited",
-            notes="Deterministic acceptance fixture review.",
-            reviewed_by="fixture-reviewer",
-            reviewed_at=checked_at,
-        )
     )
 
 
@@ -439,16 +357,6 @@ def _read_live_evidence(path: Path | None) -> _LiveEvidenceInput:
         return _LiveEvidenceInput.model_validate_json(path.read_bytes())
     except (OSError, ValueError) as exc:
         raise ValueError("invalid live acceptance evidence") from exc
-
-
-def _credential_configured(source: str, settings: DataSourceSettings) -> bool:
-    if source == "tushare":
-        return bool(settings.tushare_token.strip())
-    if source in {"fred", "alfred"}:
-        return bool(settings.fred_api_key.strip())
-    if source == "local_tdx":
-        return Path(settings.tdx_path).expanduser().is_dir()
-    return False
 
 
 def _live_recoverability(

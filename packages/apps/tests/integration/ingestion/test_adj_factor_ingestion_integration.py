@@ -88,8 +88,9 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify save_adj_factor was called
+        # Verify stock adjustment factors use the stock writer.
         mock_market_write_service.save_adj_factor.assert_called_once()
+        mock_market_write_service.save_fund_adj.assert_not_called()
         call_args = mock_market_write_service.save_adj_factor.call_args
         df_written = call_args.kwargs["df"]
 
@@ -134,7 +135,7 @@ class TestAdjFactorIngestion:
         mock_ingestion_log_store = mocker.MagicMock(spec=IngestionLogStore)
 
         # Mock return values
-        mock_market_write_service.save_adj_factor.return_value = 2
+        mock_market_write_service.save_fund_adj.return_value = 2
         mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
             "510300.SH": 2_000_001,
             "510500.SH": 2_000_002,
@@ -183,9 +184,10 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify save_adj_factor was called
-        mock_market_write_service.save_adj_factor.assert_called_once()
-        call_args = mock_market_write_service.save_adj_factor.call_args
+        # Verify fund adjustment factors use their independent append-only writer.
+        mock_market_write_service.save_fund_adj.assert_called_once()
+        mock_market_write_service.save_adj_factor.assert_not_called()
+        call_args = mock_market_write_service.save_fund_adj.call_args
         df_written = call_args.kwargs["df"]
 
         # Verify instrument_id/source_ticker columns exist in the written dataframe

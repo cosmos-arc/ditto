@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from dataclasses import asdict
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -23,6 +23,12 @@ from ditto_apps.jobs.flows.materialization import (
 )
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.contexts.bundle import MaterializationBundle
+from ditto_data.catalog import (
+    DataAssetRef,
+    DataCatalogEntry,
+    DataCatalogWriter,
+    DataSchemaFingerprint,
+)
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_features.derived_types import (
@@ -134,6 +140,45 @@ def _write_market_truth_layers(data_root: Path, *, close_values: list[float]) ->
     ).write_parquet(market_root / "status" / "2026.parquet")
 
 
+def _seed_market_catalog(
+    catalog: DataCatalogWriter,
+    *,
+    source_snapshot_id: str,
+) -> None:
+    """Register the two physical truth partitions used by this integration test."""
+    columns = (
+        "instrument_id",
+        "trade_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "volume",
+        "amount",
+    )
+    for trade_date in ("2026-03-10", "2026-03-11"):
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    namespace="market",
+                    dataset_id="stock_daily",
+                    partition_keys=(f"trade_date={trade_date}",),
+                ),
+                storage_uri=f"market/stock_daily/{trade_date}",
+                schema=DataSchemaFingerprint(
+                    schema_hash="sha256:integration-stock-daily-v1",
+                    row_count=1,
+                    schema_version="market.stock_daily.v1",
+                    columns=columns,
+                ),
+                source="tushare",
+                freshness_at=datetime(2026, 3, 12, tzinfo=UTC),
+                source_snapshot_id=source_snapshot_id,
+            )
+        )
+
+
 def _seed_series_spec(
     catalog_service: DerivedCatalogService,
     *,
@@ -193,6 +238,10 @@ class TestDerivedMaterializationQueryRepairIntegration:
         seed_container = _make_test_container()
         try:
             catalog_service = seed_container.get(DerivedCatalogService)
+            _seed_market_catalog(
+                seed_container.get(DataCatalogWriter),
+                source_snapshot_id="market:20260311-001",
+            )
             _seed_series_spec(
                 catalog_service,
                 derived_id="factor.alpha_repair",
@@ -227,6 +276,10 @@ class TestDerivedMaterializationQueryRepairIntegration:
                 )
             )
             _write_market_truth_layers(tmp_path, close_values=[10.0, 21.0])
+            _seed_market_catalog(
+                before_container.get(DataCatalogWriter),
+                source_snapshot_id="market:20260311-002",
+            )
             invalidation_service.propagate(
                 DerivedInvalidationEvent(
                     source_domain="market",

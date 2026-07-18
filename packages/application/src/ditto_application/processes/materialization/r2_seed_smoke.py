@@ -14,6 +14,7 @@ from ditto_features.factors.production_guard import (
     validate_certified_seed_factor_contract,
 )
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.materialization.catalog_dependency_validation import (
     CertifiedCatalogDependencySelection,
     validate_certified_catalog_dependencies,
@@ -39,11 +40,13 @@ class R2SeedDatasetSnapshots:
     def __post_init__(self) -> None:
         """Reject ambiguous dataset and snapshot evidence."""
         if not self.dataset_id or self.dataset_id.strip() != self.dataset_id:
-            raise ValueError(f"invalid seed smoke dataset_id: {self.dataset_id!r}")
+            raise AppProcessError(f"invalid seed smoke dataset_id: {self.dataset_id!r}")
         if not self.snapshot_ids or len(set(self.snapshot_ids)) != len(
             self.snapshot_ids
         ):
-            raise ValueError("seed smoke snapshot IDs must be non-empty and unique")
+            raise AppProcessError(
+                "seed smoke snapshot IDs must be non-empty and unique"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,7 +64,9 @@ class R2SeedSmokeRequest:
         """Require one uniquely identified snapshot selection per input dataset."""
         snapshot_datasets = tuple(item.dataset_id for item in self.dataset_snapshots)
         if len(set(snapshot_datasets)) != len(snapshot_datasets):
-            raise ValueError("seed smoke dataset snapshot selections must be unique")
+            raise AppProcessError(
+                "seed smoke dataset snapshot selections must be unique"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,7 +114,7 @@ class R2SeedSmokeRunner:
             for selection in request.dataset_snapshots
         }
         if tuple(snapshots_by_dataset) != request.input_dataset_ids:
-            raise ValueError(
+            raise AppProcessError(
                 "seed smoke dataset snapshot inputs do not match fixed input datasets"
             )
 
@@ -131,7 +136,7 @@ class R2SeedSmokeRunner:
         replay_checksum = _payload_checksum(self._materialize(request))
         if first_checksum != replay_checksum:
             mismatch = f"{first_checksum} != {replay_checksum}"
-            raise ValueError(
+            raise AppProcessError(
                 f"R2 seed deterministic materialization checksum mismatch: {mismatch}"
             )
         return R2SeedSmokeReport(
@@ -161,7 +166,7 @@ class R2SeedSmokeRunner:
             )
             if report is None:
                 product = f"{dataset_id}/{request.certification_profile}"
-                raise ValueError(f"R2 seed certification missing: {product}")
+                raise AppProcessError(f"R2 seed certification missing: {product}")
             complete_from = report.coverage.complete_from
             if (
                 complete_from is None
@@ -169,13 +174,13 @@ class R2SeedSmokeRunner:
                 or request.knowledge_date > report.coverage.target_to
             ):
                 point = f"{dataset_id}@{request.knowledge_date.isoformat()}"
-                raise ValueError(
+                raise AppProcessError(
                     f"R2 seed certification does not cover knowledge date: {point}"
                 )
             if not set(snapshots_by_dataset[dataset_id]).issubset(
                 report.evidence.snapshot_ids
             ):
-                raise ValueError(
+                raise AppProcessError(
                     f"R2 seed certification snapshot mismatch: {dataset_id}"
                 )
             report_ids.append(report.report_id)
@@ -184,5 +189,5 @@ class R2SeedSmokeRunner:
 
 def _payload_checksum(payload: object) -> str:
     if not isinstance(payload, bytes):
-        raise TypeError("R2 seed materialization must return canonical bytes")
+        raise AppProcessError("R2 seed materialization must return canonical bytes")
     return f"sha256:{sha256(payload).hexdigest()}"

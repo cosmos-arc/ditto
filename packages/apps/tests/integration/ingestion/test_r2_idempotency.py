@@ -5,13 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
+from ditto_application.processes.ingestion.r2_preflight import (
+    R2AcceptanceRuntimeEvidence,
+)
 from ditto_apps.scripts.r2_data_acceptance import (
     R2IdempotencySnapshot,
     run_fixture_acceptance,
     run_live_acceptance,
     verify_consecutive_idempotency,
 )
-from ditto_data.config.data_source import DataSourceSettings
 
 
 @dataclass
@@ -86,10 +88,11 @@ def test_deterministic_fixture_acceptance_covers_all_release_gates() -> None:
 def test_live_mode_without_credentials_or_evidence_is_configuration_blocked(
     mocker,
 ) -> None:
-    license_reader = mocker.MagicMock()
-    license_reader.list_licenses.return_value = ()
     container = mocker.MagicMock()
-    container.get.side_effect = [DataSourceSettings(), license_reader]
+    container.get.return_value = R2AcceptanceRuntimeEvidence(
+        credential_sources=frozenset(),
+        license_records=(),
+    )
     mocker.patch(
         "ditto_apps.scripts.r2_data_acceptance.make_app_container",
         return_value=container,

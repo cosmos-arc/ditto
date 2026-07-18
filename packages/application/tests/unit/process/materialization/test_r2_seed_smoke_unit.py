@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.materialization.r2_seed_smoke import (
     R2SeedDatasetSnapshots,
     R2SeedSmokeRequest,
@@ -122,7 +123,7 @@ def test_seed_smoke_fails_closed_when_materialization_replay_differs() -> None:
         materialize=MagicMock(side_effect=(b"first", b"different")),
     )
 
-    with pytest.raises(ValueError, match="deterministic materialization"):
+    with pytest.raises(AppProcessError, match="deterministic materialization"):
         runner.run(request)
 
 
@@ -137,5 +138,5 @@ def test_seed_smoke_fails_closed_when_certification_snapshot_is_missing() -> Non
         materialize=MagicMock(return_value=b"rows"),
     )
 
-    with pytest.raises(ValueError, match="certification"):
+    with pytest.raises(AppProcessError, match="certification"):
         runner.run(request)
