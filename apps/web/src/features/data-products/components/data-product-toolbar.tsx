@@ -19,15 +19,18 @@ interface DataProductToolbarProps {
 
 export function DataProductToolbar({ view, onViewChange, onRefresh }: DataProductToolbarProps) {
 	function moveTab(event: KeyboardEvent<HTMLButtonElement>, index: number): void {
-		const direction = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : undefined;
-		if (direction === undefined && event.key !== "Home" && event.key !== "End") return;
+		if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
 		event.preventDefault();
-		const targetIndex =
-			event.key === "Home"
-				? 0
-				: event.key === "End"
-					? WORKBENCH_VIEWS.length - 1
-					: (index + direction + WORKBENCH_VIEWS.length) % WORKBENCH_VIEWS.length;
+
+		let targetIndex: number;
+		if (event.key === "Home") {
+			targetIndex = 0;
+		} else if (event.key === "End") {
+			targetIndex = WORKBENCH_VIEWS.length - 1;
+		} else {
+			const direction = event.key === "ArrowLeft" ? -1 : 1;
+			targetIndex = (index + direction + WORKBENCH_VIEWS.length) % WORKBENCH_VIEWS.length;
+		}
 		const target = WORKBENCH_VIEWS[targetIndex];
 		if (!target) return;
 		onViewChange(target.id);

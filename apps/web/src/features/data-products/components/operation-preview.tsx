@@ -61,7 +61,7 @@ export function OperationPreview({ datasetId, operations }: OperationPreviewProp
 			{operation && (
 				<section
 					aria-label={`${operation} 操作预览`}
-					className="rounded-(--radius-sm) border border-(--color-border-default) bg-(--color-surface-muted) p-3"
+					className="rounded-(--radius-sm) border border-(--color-border) bg-(--color-surface-muted) p-3"
 				>
 					<p className="text-xs font-medium text-(--color-foreground)">仅生成本地操作指令，不会从浏览器直接执行</p>
 					<p className="mt-2 text-xs text-(--color-foreground-tertiary)">确认短语</p>
@@ -75,7 +75,7 @@ export function OperationPreview({ datasetId, operations }: OperationPreviewProp
 						onChange={(event) => setConfirmation(event.currentTarget.value)}
 						autoComplete="off"
 						spellCheck={false}
-						className="mt-1 h-(--height-input) w-full rounded-(--radius-sm) border border-(--color-border-default) bg-(--color-surface-panel-base) px-2 font-code text-xs text-(--color-foreground) outline-none focus-visible:border-(--color-focus-border) focus-visible:ring-3 focus-visible:ring-(--color-focus-ring)"
+						className="mt-1 h-(--height-input) w-full rounded-(--radius-sm) border border-(--color-border) bg-(--color-surface-panel-base) px-2 font-code text-xs text-(--color-foreground) outline-none focus-visible:border-(--color-focus-border) focus-visible:ring-3 focus-visible:ring-(--color-focus-ring)"
 					/>
 					<Button className="mt-3" type="button" size="sm" disabled={confirmation !== phrase} onClick={confirm}>
 						生成已确认指令
