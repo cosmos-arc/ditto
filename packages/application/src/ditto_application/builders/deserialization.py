@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import replace
 
+from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE, DEFAULT_SLIPPAGE_BPS
 from ditto_strategy.alpha.nodes import (
@@ -98,6 +99,19 @@ def _normalize_impact_model(raw: str | None) -> ImpactModel:
         return ImpactModel(raw)
     msg = f"非法 impact_model 值: {raw!r}, 合法值: 'none', 'volume_share'"
     raise AppBuilderError(msg)
+
+
+def _normalize_order_type(raw: str | None) -> OrderType:
+    """严格恢复持久化订单类型；只有缺失字段由调用方采用迁移默认。"""
+    if raw is None:
+        msg = "execution.default_order_type 必须是非空 OrderType 值"
+        raise AppBuilderError(msg)
+    try:
+        return OrderType(raw)
+    except ValueError as exc:
+        valid = ", ".join(repr(value.value) for value in OrderType)
+        msg = f"execution.default_order_type 不受支持: {raw!r}; 合法值: {valid}"
+        raise AppBuilderError(msg) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -421,10 +435,19 @@ def deserialize_selector(raw_value: object) -> SelectorSpec:
 def deserialize_execution(raw_value: object) -> ExecutionSpec:
     """恢复执行层配置。"""
     payload = as_object_dict(raw_value, field_name="execution")
+    default_order_type = OrderType.MARKET
+    if "default_order_type" in payload:
+        default_order_type = _normalize_order_type(
+            read_optional_str(
+                payload.get("default_order_type"),
+                field_name="execution.default_order_type",
+            ),
+        )
     return ExecutionSpec(
         frequency=read_optional_str(payload.get("frequency")) or "M",
         method=read_optional_str(payload.get("method")) or "calendar",
         cost_model=deserialize_cost_model(payload.get("cost_model")),
+        default_order_type=default_order_type,
     )
 
 

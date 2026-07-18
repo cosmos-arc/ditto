@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import ditto_application.builders as strategy_services
 import pytest
 from ditto_application.exceptions import AppBuilderError
+from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import (
@@ -24,7 +25,10 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 )
 
 
-def _make_rotation_spec() -> StrategySpec:
+def _make_rotation_spec(
+    *,
+    default_order_type: OrderType = OrderType.MARKET,
+) -> StrategySpec:
     """构造测试用 etf_rotation StrategySpec。"""
     return StrategySpec(
         strategy_id="momentum-etf",
@@ -42,6 +46,7 @@ def _make_rotation_spec() -> StrategySpec:
                 slippage_bps=7.5,
                 impact_model=ImpactModel.VOLUME_SHARE,
             ),
+            default_order_type=default_order_type,
         ),
         params={
             "top_k": 3,
@@ -112,6 +117,107 @@ class TestStrategyRuntimeBuilder:
         )
         assert len(runtime.spec_hash) == 64
         catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
+
+    @pytest.mark.parametrize(
+        ("default_order_type", "expected_hash"),
+        [
+            pytest.param(
+                OrderType.MARKET,
+                "2f7c1666b0588dca972cd5a39f96b8842c578a7390f4dde78afb83b326f73295",
+                id="market",
+            ),
+            pytest.param(
+                OrderType.LIMIT,
+                "0137d8876c30d2d3627ec3db246c5f3db17c07b931ad29b644badc75d15704b7",
+                id="limit",
+            ),
+        ],
+    )
+    def test_catalog_restores_default_order_type_into_canonical_identity(
+        self,
+        default_order_type: OrderType,
+        expected_hash: str,
+    ) -> None:
+        """持久化订单类型必须经真实 catalog 接缝进入 canonical identity。"""
+        spec = _make_rotation_spec(default_order_type=default_order_type)
+        record = _make_spec_record(spec, version=7)
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = record
+        builder = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        )
+
+        runtime = builder.build_published_runtime("momentum-etf", 7)
+
+        assert runtime.spec.execution.default_order_type is default_order_type
+        assert runtime.spec_hash == expected_hash
+
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            pytest.param("iceberg", id="unknown"),
+            pytest.param("", id="empty"),
+            pytest.param(None, id="null"),
+            pytest.param(42, id="non-string"),
+        ],
+    )
+    def test_catalog_rejects_invalid_default_order_type(
+        self,
+        invalid_value: object,
+    ) -> None:
+        """显式非法订单类型不得静默回落到 market。"""
+        record = _make_spec_record(_make_rotation_spec(), version=7)
+        spec_json = dict(record.spec_json)
+        execution = dict(spec_json["execution"])  # type: ignore[arg-type]
+        execution["default_order_type"] = invalid_value
+        spec_json["execution"] = execution
+        invalid_record = StrategySpecRecord(
+            strategy_id=record.strategy_id,
+            name=record.name,
+            spec_json=spec_json,
+            version=record.version,
+            status=record.status,
+            tags=record.tags,
+        )
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = invalid_record
+        builder = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        )
+
+        with pytest.raises(AppBuilderError, match="default_order_type"):
+            builder.build_published_runtime("momentum-etf", 7)
+
+    def test_catalog_missing_default_order_type_keeps_market_compatibility(
+        self,
+    ) -> None:
+        """旧 record 缺字段时保持既有 market 默认兼容。"""
+        record = _make_spec_record(_make_rotation_spec(), version=7)
+        spec_json = dict(record.spec_json)
+        execution = dict(spec_json["execution"])  # type: ignore[arg-type]
+        execution.pop("default_order_type")
+        spec_json["execution"] = execution
+        legacy_record = StrategySpecRecord(
+            strategy_id=record.strategy_id,
+            name=record.name,
+            spec_json=spec_json,
+            version=record.version,
+            status=record.status,
+            tags=record.tags,
+        )
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = legacy_record
+        builder = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        )
+
+        runtime = builder.build_published_runtime("momentum-etf", 7)
+
+        assert runtime.spec.execution.default_order_type is OrderType.MARKET
+        assert (
+            runtime.spec_hash
+            == "2f7c1666b0588dca972cd5a39f96b8842c578a7390f4dde78afb83b326f73295"
+        )
 
     def test_build_published_runtime_defaults_to_latest_published_version(
         self,
