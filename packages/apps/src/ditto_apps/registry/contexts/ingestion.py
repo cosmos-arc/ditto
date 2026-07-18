@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
+from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorRuntimeContext,
     CoordinatorServices,
@@ -21,6 +22,7 @@ from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
@@ -78,6 +80,7 @@ def create_ingestion_bundle(
         catalog_reader = container.get(DataCatalogReader)
         catalog_writer = container.get(DataCatalogWriter)
         source_fallback_policy_reader = container.get(CatalogSourceFallbackPolicyReader)
+        partition_lifecycle_reader = container.get(PartitionLifecycleReader)
 
         # 创建协调器
         with create_coordinator(
@@ -108,6 +111,14 @@ def create_ingestion_bundle(
                 coordinator=coordinator,
                 metadata_service=metadata_service,
                 ingestion_log_store=ingestion_log_store,
+                bootstrap_planner=BootstrapPlanner(
+                    metadata_service=metadata_service,
+                    partition_lifecycle_reader=partition_lifecycle_reader,
+                ),
+                evidence_verifier=PersistedIngestionEvidenceVerifier(
+                    reader=catalog_reader,
+                    ingestion_logs=ingestion_log_store,
+                ),
             )
             retry_manager = RetryManager(
                 coordinator=coordinator,
