@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 import ditto_application.builders as strategy_services
 import pytest
+from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
 from ditto_application.exceptions import AppBuilderError
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
@@ -117,6 +118,36 @@ class TestStrategyRuntimeBuilder:
         )
         assert len(runtime.spec_hash) == 64
         catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
+
+    def test_runtime_routes_legacy_catalog_through_node_pipeline_builder(self) -> None:
+        """legacy record 必须显式 adapt 后走 registry/compiler builder。"""
+        spec = _make_rotation_spec()
+        record = _make_spec_record(spec, version=7)
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = record
+        node_pipeline_builder = MagicMock(spec=NodePipelineBuilder)
+        expected_pipeline = StrategyPipeline(())
+        node_pipeline_builder.build.return_value = expected_pipeline
+        builder = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+            node_pipeline_builder=node_pipeline_builder,
+        )
+
+        runtime = builder.build_published_runtime("momentum-etf", 7)
+
+        assert runtime.pipeline is expected_pipeline
+        call = node_pipeline_builder.build.call_args
+        assert call.kwargs["legacy_spec"] is runtime.spec
+        assert call.kwargs["strategy_kind"].value == "etf_rotation"
+        assert tuple(node.ref.identity for node in call.kwargs["pipeline"].nodes) == (
+            "legacy.universe@1",
+            "legacy.factor_set@1",
+            "legacy.scorer@1",
+            "legacy.selector@1",
+            "legacy.allocator@1",
+            "legacy.execution_assumption@1",
+            "legacy.validation@1",
+        )
 
     @pytest.mark.parametrize(
         ("default_order_type", "expected_hash"),

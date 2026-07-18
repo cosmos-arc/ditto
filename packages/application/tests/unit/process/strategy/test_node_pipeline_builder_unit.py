@@ -1,0 +1,147 @@
+"""NodePipelineBuilder 的 constrained compiler 与 builtin adapter 测试。"""
+
+from __future__ import annotations
+
+from dataclasses import replace
+
+import polars as pl
+import pytest
+from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
+from ditto_application.exceptions import AppBuilderError
+from ditto_portfolio.rebalancing import AllocationStage
+from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
+from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
+from ditto_strategy.alpha.builtins.selection import SelectionStage
+from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.node_registry import (
+    NodeDescriptor,
+    NodeRegistry,
+    default_node_registry,
+)
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
+from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
+from ditto_strategy.alpha.specs import StrategySpec
+
+
+def _builder() -> NodePipelineBuilder:
+    return NodePipelineBuilder(registry=default_node_registry())
+
+
+def _build(spec: StrategySpec) -> StrategyPipeline:
+    resolved = adapt_legacy_strategy_spec(spec)
+    return _builder().build(
+        legacy_spec=spec,
+        pipeline=resolved.pipeline,
+        strategy_kind=resolved.strategy_kind,
+    )
+
+
+def test_all_seed_specs_compile_through_the_constrained_builder() -> None:
+    """三个 legacy seed 都必须通过 registry/compiler，而非旁路 template factory。"""
+    pipelines = {
+        strategy_id: _build(spec) for strategy_id, spec in SEED_STRATEGY_SPECS.items()
+    }
+
+    assert tuple(pipelines) == tuple(SEED_STRATEGY_SPECS)
+    assert all(
+        isinstance(pipeline, StrategyPipeline) for pipeline in pipelines.values()
+    )
+    assert all(pipeline._stages for pipeline in pipelines.values())
+
+
+def test_etf_seed_rank_then_combine_legacy_adapter_preserves_composite_scores() -> None:
+    """legacy alias 使用 RAW；不得二次 rank 后改变 score-weight 权重。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    spec = replace(
+        source,
+        selector=replace(source.selector, params={"k": 3}),
+        constraints=(),
+        params={
+            **source.params,
+            "top_k": 3,
+            "allocation_method": "score_weight",
+            "scoring_ascending": False,
+        },
+    )
+    pipeline = _build(spec)
+    scoring = next(
+        stage for stage in pipeline._stages if isinstance(stage, ScoringStage)
+    )
+
+    assert scoring.method is ScoringMethod.RAW
+
+    composite_values = [0.25, 0.65, 0.675, 0.925]
+    target = pipeline.run(
+        StrategyContext(),
+        StrategyInputBundle(
+            trade_date="2026-07-19",
+            strategy_id=spec.strategy_id,
+            run_id="seed-golden",
+            instruments=pl.DataFrame({"instrument_id": [1, 2, 3, 4]}),
+            market_data=pl.DataFrame({"instrument_id": [1, 2, 3, 4]}),
+            signal_values=pl.DataFrame(
+                {
+                    "instrument_id": [1, 2, 3, 4],
+                    "signal_value": composite_values,
+                },
+            ),
+        ),
+    )
+
+    assert set(target.positions) == {2, 3, 4}
+    assert target.positions[4] == pytest.approx(0.275 / 0.3)
+    assert target.positions[3] == pytest.approx(0.025 / 0.3)
+    assert target.positions[2] == pytest.approx(0.0)
+
+
+def test_stock_seed_pipeline_keeps_stable_builtin_stage_order() -> None:
+    """stock golden path 经 adapter 后仍复用现有 stage 类型与顺序。"""
+    pipeline = _build(SEED_STRATEGY_SPECS["seed_stock_selection_rotation"])
+    stage_names = tuple(type(stage).__name__ for stage in pipeline._stages)
+
+    assert stage_names[:5] == (
+        "MultiFactorSignalStage",
+        "TrendFilterStage",
+        "ScoringStage",
+        "RiskLockFilter",
+        "SelectionStage",
+    )
+    assert isinstance(pipeline._stages[5], AllocationStage)
+
+
+def test_selector_adapter_expands_system_guard_without_authoring_filter_node() -> None:
+    """RiskLock 是 selector 前系统 guard，不作为普通 Filter 暴露。"""
+    spec = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    resolved = adapt_legacy_strategy_spec(spec)
+
+    assert all(node.category.value != "filter" for node in resolved.pipeline.nodes)
+
+    pipeline = _build(spec)
+    scoring_index = next(
+        index
+        for index, stage in enumerate(pipeline._stages)
+        if isinstance(stage, ScoringStage)
+    )
+    assert isinstance(pipeline._stages[scoring_index + 1], RiskLockFilter)
+    assert isinstance(pipeline._stages[scoring_index + 2], SelectionStage)
+
+
+def test_unknown_implementation_key_fails_closed_without_dynamic_import() -> None:
+    spec = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    resolved = adapt_legacy_strategy_spec(spec)
+    descriptors = tuple(
+        replace(descriptor, implementation_key="os.system")
+        if descriptor.identity == "legacy.scorer@1"
+        else descriptor
+        for descriptor in default_node_registry().descriptors
+    )
+    assert all(isinstance(descriptor, NodeDescriptor) for descriptor in descriptors)
+    builder = NodePipelineBuilder(registry=NodeRegistry(descriptors))
+
+    with pytest.raises(AppBuilderError, match="implementation_key"):
+        builder.build(
+            legacy_spec=spec,
+            pipeline=resolved.pipeline,
+            strategy_kind=resolved.strategy_kind,
+        )

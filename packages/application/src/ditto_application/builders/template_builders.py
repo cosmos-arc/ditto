@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Mapping
+from dataclasses import replace
+from types import MappingProxyType
 from typing import cast
 
 from ditto_portfolio.rebalancing import (
@@ -62,6 +64,7 @@ __all__ = [
     "build_alpha_stages",
     "build_etf_rotation_config",
     "build_etf_trend_swing_config",
+    "build_legacy_node_stage_groups",
     "build_portfolio_stages",
     "build_stock_sector_rotation_config",
     "build_stock_selection_trend_config",
@@ -69,6 +72,17 @@ __all__ = [
     "resolve_scoring_method",
     "resolve_top_k",
 ]
+
+_LEGACY_RANK_THEN_COMBINE = "rank_then_combine"
+_LEGACY_STAGE_KEYS = (
+    "legacy.universe.v1",
+    "legacy.factor_set.v1",
+    "legacy.scorer.v1",
+    "legacy.selector.v1",
+    "legacy.allocator.v1",
+    "legacy.execution_assumption.v1",
+    "legacy.validation.v1",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +161,96 @@ def build_alpha_stages(spec: StrategySpec) -> list[DecisionStage]:
 
     msg = f"不支持的策略模板: {spec.template}"
     raise AppBuilderError(msg)
+
+
+def _legacy_runtime_spec(spec: StrategySpec) -> StrategySpec:
+    """只在 v1 adapter 内把已完成 factor composite 的 scorer 映射为 RAW。"""
+    scorer = spec.scorer
+    params = spec.params
+    changed = False
+    if scorer.method == _LEGACY_RANK_THEN_COMBINE:
+        scorer = replace(scorer, method=ScoringMethod.RAW.value)
+        changed = True
+    if params.get("scoring_method") == _LEGACY_RANK_THEN_COMBINE:
+        params = {**params, "scoring_method": ScoringMethod.RAW.value}
+        changed = True
+    if not changed:
+        return spec
+    return replace(spec, scorer=scorer, params=params)
+
+
+def _legacy_alpha_slices(
+    spec: StrategySpec,
+    alpha_stages: tuple[DecisionStage, ...],
+) -> tuple[
+    tuple[DecisionStage, ...],
+    tuple[DecisionStage, ...],
+    tuple[DecisionStage, ...],
+    tuple[DecisionStage, ...],
+]:
+    """按旧模板固定结构拆成 factor/scorer/selector/allocator expansions。"""
+    if spec.template == "etf_rotation":
+        return (
+            alpha_stages[:1],
+            alpha_stages[1:2],
+            alpha_stages[2:4],
+            alpha_stages[4:],
+        )
+    if spec.template == "etf_trend_swing":
+        return (
+            alpha_stages[:2],
+            alpha_stages[2:3],
+            alpha_stages[3:5],
+            alpha_stages[5:],
+        )
+    if spec.template == "stock_selection":
+        fusion = read_optional_str(spec.params.get("fusion")) or "simple"
+        if fusion == "composite":
+            return (
+                alpha_stages[:2],
+                (),
+                alpha_stages[2:4],
+                alpha_stages[4:],
+            )
+        return (
+            alpha_stages[:2],
+            alpha_stages[2:3],
+            alpha_stages[3:5],
+            alpha_stages[5:],
+        )
+    if spec.template == "stock_sector_rotation":
+        return (
+            alpha_stages[:1],
+            alpha_stages[1:2],
+            alpha_stages[2:4],
+            alpha_stages[4:],
+        )
+    msg = f"不支持的策略模板: {spec.template}"
+    raise AppBuilderError(msg)
+
+
+def build_legacy_node_stage_groups(
+    spec: StrategySpec,
+) -> Mapping[str, tuple[DecisionStage, ...]]:
+    """把 legacy template factory 结果按稳定 implementation key 分组。"""
+    runtime_spec = _legacy_runtime_spec(spec)
+    alpha_stages = tuple(build_alpha_stages(runtime_spec))
+    factor, scorer, selector, allocator_alpha = _legacy_alpha_slices(
+        runtime_spec,
+        alpha_stages,
+    )
+    groups: dict[str, tuple[DecisionStage, ...]] = dict.fromkeys(
+        _LEGACY_STAGE_KEYS,
+        (),
+    )
+    groups["legacy.factor_set.v1"] = factor
+    groups["legacy.scorer.v1"] = scorer
+    groups["legacy.selector.v1"] = selector
+    groups["legacy.allocator.v1"] = (
+        *allocator_alpha,
+        *build_portfolio_stages(runtime_spec),
+    )
+    return MappingProxyType(groups)
 
 
 # ---------------------------------------------------------------------------

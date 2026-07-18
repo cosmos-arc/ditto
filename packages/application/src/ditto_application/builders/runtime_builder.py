@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_strategy.alpha.node_registry import default_node_registry
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.spec_codec import (
     adapt_legacy_strategy_spec,
@@ -20,10 +21,7 @@ from ditto_strategy.models import StrategySpecRecord
 from ditto_application.builders.deserialization import (
     deserialize_strategy_spec,
 )
-from ditto_application.builders.template_builders import (
-    build_alpha_stages,
-    build_portfolio_stages,
-)
+from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
@@ -60,8 +58,16 @@ class PublishedStrategyRuntime:
 class StrategyRuntimeBuilder:
     """从 published StrategySpecRecord 组装 Core runtime 对象。"""
 
-    def __init__(self, *, catalog_service: StrategyCatalogReader) -> None:
+    def __init__(
+        self,
+        *,
+        catalog_service: StrategyCatalogReader,
+        node_pipeline_builder: NodePipelineBuilder | None = None,
+    ) -> None:
         self._catalog_service = catalog_service
+        self._node_pipeline_builder = node_pipeline_builder or NodePipelineBuilder(
+            registry=default_node_registry(),
+        )
 
     def build_published_runtime(
         self,
@@ -88,9 +94,14 @@ class StrategyRuntimeBuilder:
             raise AppBuilderError(msg)
 
         spec = deserialize_strategy_spec(record)
-        pipeline = _build_pipeline(spec)
+        resolved_spec = adapt_legacy_strategy_spec(spec)
+        pipeline = self._node_pipeline_builder.build(
+            legacy_spec=spec,
+            pipeline=resolved_spec.pipeline,
+            strategy_kind=resolved_spec.strategy_kind,
+        )
         compiled = _compile_signal_expressions(spec)
-        spec_hash = canonical_spec_hash(adapt_legacy_strategy_spec(spec))
+        spec_hash = canonical_spec_hash(resolved_spec)
         return PublishedStrategyRuntime(
             record=record,
             spec=spec,
@@ -116,10 +127,3 @@ def _compile_signal_expressions(
         expressions=spec.signal_expressions,
         weights=spec.signal_weights or (1.0,) * len(spec.signal_expressions),
     )
-
-
-def _build_pipeline(spec: StrategySpec) -> StrategyPipeline:
-    """根据模板类型构造对应的 ``StrategyPipeline``。"""
-    alpha_stages = build_alpha_stages(spec)
-    portfolio_stages = build_portfolio_stages(spec)
-    return StrategyPipeline([*alpha_stages, *portfolio_stages])

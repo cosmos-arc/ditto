@@ -13,6 +13,7 @@ from ditto_application.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
+from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
 from ditto_application.commands.account import ImportAccountBaselineHandler
 from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
@@ -88,6 +89,7 @@ from ditto_data.sources.tdx.source import TdxSource
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_platform.foundation import DataCache, Environment
 from ditto_platform.services.notification import AlertManager
+from ditto_strategy.alpha.node_registry import NodeRegistry
 
 _tdx_mock = MagicMock(spec=TdxSource)
 
@@ -448,10 +450,12 @@ class TestAppProviderStructure:
         assert hints["return"] is DerivedMaterializationOrchestrator
 
     def test_app_builder_factory_methods(self) -> None:
-        """AppBuilderFactory 应包含 5 个 provide 方法."""
+        """AppBuilderFactory 应包含 runtime 与 node compiler provide 方法."""
         provider = AppBuilderFactory()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
+            "node_registry",
+            "node_pipeline_builder",
             "strategy_runtime_builder",
             "backtest_runtime_builder",
             "strategy_slice_builder",
@@ -775,6 +779,11 @@ class TestAppProviderIntegration:
 
     def test_builder_services_resolved(self, app_container) -> None:
         """AppBuilderFactory 的服务应可从容器解析."""
+        assert isinstance(app_container.get(NodeRegistry), NodeRegistry)
+        assert isinstance(
+            app_container.get(NodePipelineBuilder),
+            NodePipelineBuilder,
+        )
         assert isinstance(
             app_container.get(StrategyRuntimeBuilder),
             StrategyRuntimeBuilder,
