@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,7 +11,9 @@ from ditto_application.builders import (
     PublishedStrategyRuntime,
 )
 from ditto_application.exceptions import AppBuilderError
-from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
+)
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import ProviderBackedDataFeed
 from ditto_backtest.result import (
@@ -77,6 +79,56 @@ class _MaturityPromotionReader:
 class TestBacktestRuntimeBuilder:
     """published backtest runtime 装配测试。"""
 
+    def test_catalog_resolution_preserves_every_request_field(self) -> None:
+        """Resolved config keeps the entire unresolved launch request intact."""
+        from ditto_application.builders import service_factory
+        from ditto_application.processes.execution import backtest_process
+
+        request_type = getattr(
+            backtest_process,
+            "BacktestCatalogRequestConfig",
+            None,
+        )
+        resolver = getattr(
+            service_factory,
+            "_resolve_backtest_catalog_request",
+            None,
+        )
+
+        assert isinstance(request_type, type)
+        assert callable(resolver)
+        request = request_type(
+            strategy_id="momentum-etf",
+            strategy_version="requested",
+            run_id="run-request",
+            parent_run_id="run-parent",
+            start_date="2026-01-10",
+            end_date="2026-01-13",
+            initial_cash=2_000_000.0,
+            parameter_overrides=("lookback=20",),
+            data_catalog_identities=("dataset:snapshot",),
+            recommendation_status="candidate",
+            participation_rate=0.02,
+            fill_mode="all_or_nothing",
+            resume_from_run_id="resume-source",
+        )
+
+        resolved = resolver(
+            request,
+            strategy_version="7",
+            benchmark_id=InstrumentId(3_000_001),
+            spec_hash="b" * 64,
+        )
+
+        request_fields = {field.name for field in fields(request)}
+        resolved_fields = {field.name for field in fields(resolved)}
+        assert resolved_fields == request_fields | {"spec_hash"}
+        for field_name in request_fields - {"strategy_version", "benchmark_id"}:
+            assert getattr(resolved, field_name) == getattr(request, field_name)
+        assert resolved.strategy_version == "7"
+        assert resolved.benchmark_id == InstrumentId(3_000_001)
+        assert resolved.spec_hash == "b" * 64
+
     def test_build_published_runtime_creates_minimal_backtest_components(self) -> None:
         """builder 应从 published runtime 构造可跑的 backtest 依赖。"""
         canonical_spec_hash = "b" * 64
@@ -112,7 +164,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-10",
                 end_date="2026-01-13",
@@ -177,7 +229,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-10",
                 end_date="2026-01-13",
@@ -274,7 +326,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-13",
                 end_date="2026-01-15",
@@ -335,7 +387,7 @@ class TestBacktestRuntimeBuilder:
 
         with pytest.raises(AppBuilderError, match="experimental dataset"):
             builder.build_published_runtime(
-                config=BacktestServiceConfig(
+                config=BacktestCatalogRequestConfig(
                     strategy_id="stock-alpha",
                     start_date="2026-01-10",
                     end_date="2026-01-13",
@@ -386,7 +438,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="stock-alpha",
                 start_date="2026-01-10",
                 end_date="2026-01-13",
@@ -440,7 +492,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="stock-alpha",
                 start_date="2026-01-10",
                 end_date="2026-01-13",

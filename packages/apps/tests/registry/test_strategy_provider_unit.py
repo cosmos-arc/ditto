@@ -12,6 +12,7 @@ from ditto_application.builders import (
     StrategySliceBuilder,
 )
 from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
     BacktestService,
     BacktestServiceConfig,
 )
@@ -188,6 +189,7 @@ class TestAppBuilderFactory:
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",
+                spec_hash="a" * 64,
             ),
             pipeline=MagicMock(spec=StrategyPipeline),
             planner=MagicMock(spec=ExecutionPlanner),
@@ -277,7 +279,7 @@ class TestAppBuilderFactory:
 
         factory = container.get(StrategyServiceFactory)
         service = factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",

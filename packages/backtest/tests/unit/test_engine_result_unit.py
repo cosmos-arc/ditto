@@ -311,6 +311,7 @@ class TestEngineResultBuilder:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-01T00:00:00Z",
+            spec_hash="a" * 64,
         )
         order = _sample_order()
         fill = _sample_fill()
@@ -370,6 +371,7 @@ class TestAssembleEngineResult:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-01T00:00:00Z",
+            spec_hash="a" * 64,
         )
         result = assemble_engine_result(
             EngineResultAssemblyContext(
@@ -400,6 +402,7 @@ class TestAssembleEngineResult:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-01T00:00:00Z",
+            spec_hash="a" * 64,
         )
         order = _sample_order()
         fill = _sample_fill()
@@ -441,6 +444,7 @@ class TestAssembleEngineResult:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-01T00:00:00Z",
+            spec_hash="a" * 64,
         )
         result = assemble_engine_result(
             EngineResultAssemblyContext(

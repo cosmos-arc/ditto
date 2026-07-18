@@ -1,5 +1,7 @@
 """Tests for StrategySpec and related types."""
 
+import operator
+from collections.abc import Callable, Mapping
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -37,6 +39,29 @@ class TestParamConstraint:
         param = ParamConstraint(name="k", dtype="int", min_value=1, max_value=10)
         with pytest.raises(FrozenInstanceError):
             param.max_value = 100  # type: ignore[misc]
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            pytest.param(float("nan"), id="nan"),
+            pytest.param(float("inf"), id="positive-infinity"),
+            pytest.param(float("-inf"), id="negative-infinity"),
+        ],
+    )
+    def test_rejects_non_finite_numeric_identity_fields(
+        self,
+        field_name: str,
+        invalid_value: float,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        with pytest.raises(StrategySpecError, match=field_name):
+            ParamConstraint(
+                name="lookback",
+                dtype="float",
+                **{field_name: invalid_value},
+            )
 
 
 class TestExecutionSpec:
@@ -570,3 +595,76 @@ class TestStrategySpecV2:
                 name="Stock Alpha",
                 pipeline=PipelineSpec(nodes=(), sequence=()),
             )
+
+    def test_metadata_is_a_recursive_immutable_snapshot(self) -> None:
+        from ditto_strategy.alpha.nodes import PipelineSpec
+        from ditto_strategy.alpha.specs import StrategyKind, StrategySpecV2
+
+        source: dict[str, object] = {"layout": {"columns": ["factor", "score"]}}
+        spec = StrategySpecV2(
+            schema_version=2,
+            strategy_family_id="stock-alpha",
+            strategy_kind=StrategyKind.STOCK_SELECTION,
+            name="Stock Alpha",
+            pipeline=PipelineSpec(nodes=(), sequence=()),
+            parameter_schema=(),
+            metadata=source,
+            tags=(),
+        )
+        layout = spec.metadata["layout"]
+        assert isinstance(layout, Mapping)
+        columns = layout["columns"]
+        assert isinstance(columns, tuple)
+
+        with pytest.raises(TypeError):
+            operator.setitem(spec.metadata, "added", True)
+        with pytest.raises(TypeError):
+            operator.setitem(layout, "added", True)
+        with pytest.raises(TypeError):
+            operator.setitem(columns, 0, "changed")
+
+        source_layout = source["layout"]
+        assert isinstance(source_layout, dict)
+        source_layout["columns"] = ["changed"]
+        assert layout["columns"] == ("factor", "score")
+
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value"),
+        [
+            pytest.param("parameter_schema", [], id="parameter-schema-list"),
+            pytest.param("parameter_schema", None, id="parameter-schema-none"),
+            pytest.param(
+                "parameter_schema",
+                (object(),),
+                id="parameter-schema-invalid-element",
+            ),
+            pytest.param("tags", [], id="tags-list"),
+            pytest.param("tags", None, id="tags-none"),
+            pytest.param("tags", (object(),), id="tags-invalid-element"),
+            pytest.param("metadata", [], id="metadata-list"),
+            pytest.param("metadata", None, id="metadata-none"),
+        ],
+    )
+    def test_programmatic_boundaries_require_canonical_container_types(
+        self,
+        field_name: str,
+        invalid_value: object,
+    ) -> None:
+        from ditto_strategy.alpha.nodes import PipelineSpec
+        from ditto_strategy.alpha.specs import StrategyKind, StrategySpecV2
+
+        values: dict[str, object] = {
+            "schema_version": 2,
+            "strategy_family_id": "stock-alpha",
+            "strategy_kind": StrategyKind.STOCK_SELECTION,
+            "name": "Stock Alpha",
+            "pipeline": PipelineSpec(nodes=(), sequence=()),
+            "parameter_schema": (),
+            "metadata": {},
+            "tags": (),
+        }
+        values[field_name] = invalid_value
+        constructor: Callable[..., StrategySpecV2] = StrategySpecV2
+
+        with pytest.raises(StrategySpecError, match=field_name):
+            constructor(**values)

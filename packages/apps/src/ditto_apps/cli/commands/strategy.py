@@ -5,7 +5,7 @@ from __future__ import annotations
 import typer
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.processes.execution.backtest_process import (
-    BacktestServiceConfig,
+    BacktestCatalogRequestConfig,
     BacktestServiceOptions,
 )
 from ditto_application.processes.execution.strategy_run_process import (
@@ -205,7 +205,7 @@ def backtest(
     ),
 ) -> None:
     """执行完整回测。"""
-    config = BacktestServiceConfig(
+    config = BacktestCatalogRequestConfig(
         strategy_id=strategy_id,
         start_date=start_date,
         end_date=end_date,

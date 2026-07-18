@@ -129,6 +129,7 @@ class TestFactorAwareBundleBuilder:
             strategy_id="test-strat",
             start_date="2024-01-02",
             end_date="2024-01-05",
+            spec_hash="a" * 64,
         )
 
         # BacktestService 需要 pipeline 等参数，但我们只需要测试
@@ -180,6 +181,7 @@ class TestFactorAwareBundleBuilder:
             strategy_id="test-strat",
             start_date="2024-01-02",
             end_date="2024-01-05",
+            spec_hash="a" * 64,
         )
 
         mock_pipeline = MagicMock()
@@ -247,6 +249,7 @@ class TestFactorAwareBundleBuilder:
                 strategy_id="pit-strat",
                 start_date="2026-04-08",
                 end_date="2026-04-10",
+                spec_hash="a" * 64,
             ),
             pipeline=MagicMock(),
             planner=MagicMock(),

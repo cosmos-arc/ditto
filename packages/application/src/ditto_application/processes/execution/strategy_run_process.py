@@ -29,8 +29,8 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
     BacktestService,
-    BacktestServiceConfig,
     BacktestServiceOptions,
 )
 from ditto_application.processes.execution.strategy_input import StrategyInputAssembler
@@ -345,7 +345,7 @@ class _StrategyServiceFactoryProto(Protocol):
     def build_backtest_service_from_catalog(
         self,
         *,
-        config: BacktestServiceConfig,
+        config: BacktestCatalogRequestConfig,
         version: int | None = None,
         options: BacktestServiceOptions | None = None,
         source: str = "tushare",
@@ -423,7 +423,7 @@ class StrategyFacade:
     def run_backtest_from_catalog(
         self,
         *,
-        config: BacktestServiceConfig,
+        config: BacktestCatalogRequestConfig,
         version: int | None = None,
         options: BacktestServiceOptions | None = None,
         source: str = "tushare",

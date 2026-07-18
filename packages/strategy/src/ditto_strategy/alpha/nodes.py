@@ -6,8 +6,9 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import NoReturn
+from typing import NoReturn, TypeGuard
 
+from ditto_strategy.alpha._canonical_values import freeze_json_mapping
 from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
@@ -99,8 +100,15 @@ def _validate_enabled(value: object) -> None:
 
 
 def _validated_pipeline_nodes(
-    value: tuple[object, ...],
+    value: object,
 ) -> tuple[NodeInstance, ...]:
+    if not _is_object_tuple(value):
+        _raise_node_error(
+            "PipelineSpec.nodes must be a tuple",
+            field_name="nodes",
+            reason="invalid_nodes_container",
+            actual_type=type(value).__name__,
+        )
     if not all(isinstance(node, NodeInstance) for node in value):
         _raise_node_error(
             "PipelineSpec.nodes must contain only NodeInstance values",
@@ -108,6 +116,23 @@ def _validated_pipeline_nodes(
             reason="invalid_node_value",
         )
     return tuple(node for node in value if isinstance(node, NodeInstance))
+
+
+def _validated_pipeline_sequence(value: object) -> tuple[str, ...]:
+    if not _is_object_tuple(value) or not all(
+        isinstance(node_id, str) for node_id in value
+    ):
+        _raise_node_error(
+            "PipelineSpec.sequence must be a tuple of node IDs",
+            field_name="sequence",
+            reason="invalid_sequence_container",
+            actual_type=type(value).__name__,
+        )
+    return tuple(node_id for node_id in value if isinstance(node_id, str))
+
+
+def _is_object_tuple(value: object) -> TypeGuard[tuple[object, ...]]:
+    return isinstance(value, tuple)
 
 
 @dataclass(frozen=True)
@@ -147,7 +172,11 @@ class NodeInstance:
         _validate_node_ref(self.ref)
         _validate_node_category(self.category)
         _validate_enabled(self.enabled)
-        object.__setattr__(self, "config", dict(self.config))
+        object.__setattr__(
+            self,
+            "config",
+            freeze_json_mapping(self.config, field_name="config"),
+        )
 
 
 @dataclass(frozen=True)
@@ -160,6 +189,7 @@ class PipelineSpec:
     def __post_init__(self) -> None:
         """校验 identity 完整性和类别单调顺序，不校验 cardinality。"""
         nodes = _validated_pipeline_nodes(self.nodes)
+        sequence = _validated_pipeline_sequence(self.sequence)
         node_ids = tuple(node.node_id for node in nodes)
         if len(set(node_ids)) != len(node_ids):
             _raise_node_error(
@@ -168,25 +198,25 @@ class PipelineSpec:
                 reason="duplicate_node_id",
                 node_ids=node_ids,
             )
-        if len(set(self.sequence)) != len(self.sequence):
+        if len(set(sequence)) != len(sequence):
             _raise_node_error(
                 "PipelineSpec.sequence must reference each node exactly once",
                 field_name="sequence",
                 reason="duplicate_sequence_node",
-                sequence=self.sequence,
+                sequence=sequence,
             )
-        if len(self.sequence) != len(node_ids) or set(self.sequence) != set(node_ids):
+        if len(sequence) != len(node_ids) or set(sequence) != set(node_ids):
             _raise_node_error(
                 "PipelineSpec.sequence must reference every node exactly once",
                 field_name="sequence",
                 reason="sequence_node_mismatch",
                 node_ids=node_ids,
-                sequence=self.sequence,
+                sequence=sequence,
             )
 
         nodes_by_id = {node.node_id: node for node in nodes}
         ordered_categories = tuple(
-            nodes_by_id[node_id].category for node_id in self.sequence
+            nodes_by_id[node_id].category for node_id in sequence
         )
         category_positions = tuple(
             _CATEGORY_ORDER[category] for category in ordered_categories

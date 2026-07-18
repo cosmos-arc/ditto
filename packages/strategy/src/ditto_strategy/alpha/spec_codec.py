@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import math
-from collections.abc import Mapping, Sequence
-from typing import cast
+from collections.abc import Mapping
+from typing import TypeGuard
 
 import orjson
 
@@ -69,6 +69,16 @@ def _require_legacy_spec(value: object) -> StrategySpec:
     return value
 
 
+def _is_object_mapping(value: object) -> TypeGuard[Mapping[object, object]]:
+    return isinstance(value, Mapping)
+
+
+def _is_object_sequence(
+    value: object,
+) -> TypeGuard[tuple[object, ...] | list[object]]:
+    return isinstance(value, (tuple, list))
+
+
 def _canonical_value(
     value: object,
     *,
@@ -85,20 +95,24 @@ def _canonical_value(
                 value=value,
             )
         return value
-    if isinstance(value, Mapping):
-        mapping = cast(Mapping[str, object], value)
-        return {
-            key: _canonical_value(
+    if _is_object_mapping(value):
+        result: dict[str, object] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise _codec_error(
+                    f"{field_name} keys must be strings for canonical JSON",
+                    field_name=field_name,
+                    value=key,
+                )
+            result[key] = _canonical_value(
                 item,
                 field_name=f"{field_name}.{key}",
             )
-            for key, item in mapping.items()
-        }
-    if isinstance(value, (tuple, list)):
-        sequence = cast(Sequence[object], value)
+        return result
+    if _is_object_sequence(value):
         return [
             _canonical_value(item, field_name=f"{field_name}[{index}]")
-            for index, item in enumerate(sequence)
+            for index, item in enumerate(value)
         ]
     raise _codec_error(
         f"{field_name} has no canonical JSON identity",
@@ -111,10 +125,19 @@ def _parameter_payload(parameter: ParamConstraint) -> dict[str, object]:
     return {
         "allowed_values": list(parameter.allowed_values),
         "dtype": parameter.dtype,
-        "max_value": parameter.max_value,
-        "min_value": parameter.min_value,
+        "max_value": _canonical_value(
+            parameter.max_value,
+            field_name=f"parameter_schema.{parameter.name}.max_value",
+        ),
+        "min_value": _canonical_value(
+            parameter.min_value,
+            field_name=f"parameter_schema.{parameter.name}.min_value",
+        ),
         "name": parameter.name,
-        "step": parameter.step,
+        "step": _canonical_value(
+            parameter.step,
+            field_name=f"parameter_schema.{parameter.name}.step",
+        ),
     }
 
 
@@ -158,10 +181,17 @@ def canonical_spec_payload(spec: StrategySpecV2) -> dict[str, object]:
 
 def canonical_spec_bytes(spec: StrategySpecV2) -> bytes:
     """返回 recursive key-sorted、无缩进的 canonical JSON bytes。"""
-    return orjson.dumps(
-        canonical_spec_payload(spec),
-        option=orjson.OPT_SORT_KEYS,
-    )
+    try:
+        return orjson.dumps(
+            canonical_spec_payload(spec),
+            option=orjson.OPT_SORT_KEYS,
+        )
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise _codec_error(
+            "spec has no canonical JSON identity",
+            field_name="spec",
+            value=spec,
+        ) from exc
 
 
 def canonical_spec_hash(spec: StrategySpecV2) -> str:
@@ -172,6 +202,9 @@ def canonical_spec_hash(spec: StrategySpecV2) -> str:
 def adapt_legacy_strategy_spec(spec: StrategySpec) -> StrategySpecV2:
     """把一个已验证 legacy spec 显式迁移为可哈希的 V2 值对象。"""
     spec = _require_legacy_spec(spec)
+    effective_signal_weights = spec.signal_weights or (1.0,) * len(
+        spec.signal_expressions
+    )
     strategy_kind = (
         StrategyKind.STOCK_SELECTION
         if spec.template in {"stock_selection", "stock_sector_rotation"}
@@ -196,7 +229,7 @@ def adapt_legacy_strategy_spec(spec: StrategySpec) -> StrategySpecV2:
                 "params": spec.params,
                 "required_datasets": spec.required_datasets,
                 "signal_expressions": spec.signal_expressions,
-                "signal_weights": spec.signal_weights,
+                "signal_weights": effective_signal_weights,
                 "template": spec.template,
             },
         ),

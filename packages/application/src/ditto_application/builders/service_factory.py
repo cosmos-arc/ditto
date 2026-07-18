@@ -62,6 +62,7 @@ from ditto_application.catalog_maturity import assert_strategy_runtime_data_allo
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
@@ -118,7 +119,7 @@ def _shift_back_calendar_days(date_str: str, days: int) -> str:
 
 
 def _load_account_state(
-    config: BacktestServiceConfig,
+    config: BacktestCatalogRequestConfig,
 ) -> BacktestAccountStateSnapshot | None:
     """Load verified account-state resume evidence from config."""
     if not config.resume_account_state_json:
@@ -139,7 +140,7 @@ def _load_account_state(
 
 
 def _load_settlement_state(
-    config: BacktestServiceConfig,
+    config: BacktestCatalogRequestConfig,
 ) -> BacktestSettlementStateSnapshot | None:
     """Load verified settlement-state resume evidence from config."""
     if not config.resume_settlement_state_json:
@@ -160,7 +161,7 @@ def _load_settlement_state(
 
 
 def _load_runtime_state(
-    config: BacktestServiceConfig,
+    config: BacktestCatalogRequestConfig,
 ) -> BacktestRuntimeStateSnapshot | None:
     """Load verified runtime-state resume evidence from config."""
     if not config.resume_runtime_state_json:
@@ -187,7 +188,7 @@ def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
         raise AppBuilderError(msg)
 
 
-def _build_fill_model(config: BacktestServiceConfig) -> AShareFillModel:
+def _build_fill_model(config: BacktestCatalogRequestConfig) -> AShareFillModel:
     """Build the configured A-share fill model for backtests."""
     participation_rate = (
         0.0 if config.fill_mode == "all_or_nothing" else config.participation_rate
@@ -285,6 +286,50 @@ class PublishedBacktestRuntime:
     compiled_expressions: CompiledExpressions | None = None
 
 
+def _resolve_backtest_catalog_request(
+    config: BacktestCatalogRequestConfig,
+    *,
+    strategy_version: str,
+    benchmark_id: InstrumentId | None,
+    spec_hash: str,
+) -> BacktestServiceConfig:
+    """Resolve a catalog launch request without dropping any request field."""
+    return BacktestServiceConfig(
+        strategy_id=config.strategy_id,
+        strategy_version=strategy_version,
+        run_id=config.run_id,
+        parent_run_id=config.parent_run_id,
+        start_date=config.start_date,
+        end_date=config.end_date,
+        initial_cash=config.initial_cash,
+        benchmark_id=benchmark_id,
+        parameter_overrides=config.parameter_overrides,
+        rebalance_freq=config.rebalance_freq,
+        engine_version=config.engine_version,
+        execution_delay=config.execution_delay,
+        code_version=config.code_version,
+        data_catalog_identities=config.data_catalog_identities,
+        factor_report_refs=config.factor_report_refs,
+        recommendation_status=config.recommendation_status,
+        participation_rate=config.participation_rate,
+        fill_mode=config.fill_mode,
+        resume_from_run_id=config.resume_from_run_id,
+        resume_checkpoint_trade_date=config.resume_checkpoint_trade_date,
+        resume_checkpoint_completed_days=config.resume_checkpoint_completed_days,
+        resume_checkpoint_total_days=config.resume_checkpoint_total_days,
+        resume_checkpoint_nav=config.resume_checkpoint_nav,
+        resume_checkpoint_order_count=config.resume_checkpoint_order_count,
+        resume_checkpoint_fill_count=config.resume_checkpoint_fill_count,
+        resume_account_state_json=config.resume_account_state_json,
+        resume_account_state_hash=config.resume_account_state_hash,
+        resume_settlement_state_json=config.resume_settlement_state_json,
+        resume_settlement_state_hash=config.resume_settlement_state_hash,
+        resume_runtime_state_json=config.resume_runtime_state_json,
+        resume_runtime_state_hash=config.resume_runtime_state_hash,
+        spec_hash=spec_hash,
+    )
+
+
 # ===========================================================================
 # BacktestRuntimeBuilder
 # ===========================================================================
@@ -313,7 +358,7 @@ class BacktestRuntimeBuilder:
     def build_published_runtime(
         self,
         *,
-        config: BacktestServiceConfig,
+        config: BacktestCatalogRequestConfig,
         version: int | None = None,
         source: str = "tushare",
         fee_model: FeeModel | None = None,
@@ -357,7 +402,7 @@ class BacktestRuntimeBuilder:
             config.start_date,
             config_benchmark=config.benchmark_id,
         )
-        resolved_config = replace(
+        resolved_config = _resolve_backtest_catalog_request(
             config,
             strategy_version=str(runtime.record.version),
             benchmark_id=benchmark_id,
@@ -524,7 +569,7 @@ class StrategyServiceFactory:
     def build_backtest_service_from_catalog(
         self,
         *,
-        config: BacktestServiceConfig,
+        config: BacktestCatalogRequestConfig,
         version: int | None = None,
         options: BacktestServiceOptions | None = None,
         source: str = "tushare",

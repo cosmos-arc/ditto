@@ -174,6 +174,7 @@ class TestWriteBacktestArtifacts:
             parameter_overrides=("top_k=3",),
             config_hash="cfg-123",
             engine_version="0.2.0",
+            spec_hash="a" * 64,
         )
 
     @patch("ditto_application.processes.execution.strategy_input.serialize_report")

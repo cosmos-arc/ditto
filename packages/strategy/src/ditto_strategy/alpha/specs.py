@@ -7,16 +7,18 @@ StrategySpec — 策略定义的核心语义契约.
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import NoReturn, cast
+from typing import NoReturn, TypeGuard, cast
 
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
 
+from ditto_strategy.alpha._canonical_values import freeze_json_mapping
 from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.production_guard import (
     UnsafeProductionFactorExpressionError,
@@ -73,22 +75,32 @@ def _validate_v2_pipeline(value: object) -> None:
         )
 
 
-def _validate_v2_parameter_schema(value: tuple[object, ...]) -> None:
-    if not all(isinstance(parameter, ParamConstraint) for parameter in value):
+def _validate_v2_parameter_schema(value: object) -> tuple[ParamConstraint, ...]:
+    if not _is_object_tuple(value) or not all(
+        isinstance(parameter, ParamConstraint) for parameter in value
+    ):
         _raise_spec_error(
-            "StrategySpecV2.parameter_schema must contain ParamConstraint values",
+            "StrategySpecV2.parameter_schema must be a tuple of ParamConstraint values",
             field_name="parameter_schema",
             reason="invalid_parameter_schema",
         )
+    return tuple(
+        parameter for parameter in value if isinstance(parameter, ParamConstraint)
+    )
 
 
-def _validate_v2_tags(value: tuple[object, ...]) -> None:
-    if not all(isinstance(tag, str) for tag in value):
+def _validate_v2_tags(value: object) -> tuple[str, ...]:
+    if not _is_object_tuple(value) or not all(isinstance(tag, str) for tag in value):
         _raise_spec_error(
             "StrategySpecV2.tags must be tuple[str, ...]",
             field_name="tags",
             reason="invalid_tags",
         )
+    return tuple(tag for tag in value if isinstance(tag, str))
+
+
+def _is_object_tuple(value: object) -> TypeGuard[tuple[object, ...]]:
+    return isinstance(value, tuple)
 
 
 def _raise_spec_error(
@@ -128,6 +140,22 @@ class ParamConstraint:
     max_value: float | None = None
     step: float | None = None
     allowed_values: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Canonical numeric identity fields must be finite real values."""
+        for field_name in ("min_value", "max_value", "step"):
+            value = getattr(self, field_name)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                _raise_spec_error(
+                    f"ParamConstraint.{field_name} must be finite",
+                    field_name=field_name,
+                    reason="non_finite_parameter_identity",
+                    actual_value=value,
+                )
 
 
 @dataclass(frozen=True)
@@ -249,7 +277,11 @@ class StrategySpecV2:
         _validate_v2_pipeline(self.pipeline)
         _validate_v2_parameter_schema(self.parameter_schema)
         _validate_v2_tags(self.tags)
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "metadata",
+            freeze_json_mapping(self.metadata, field_name="metadata"),
+        )
 
 
 @dataclass(frozen=True)

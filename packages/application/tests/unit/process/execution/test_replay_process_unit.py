@@ -15,7 +15,8 @@ from unittest.mock import MagicMock
 import orjson
 import polars as pl
 import pytest
-from ditto_backtest.manifest import RunManifest, RunMode
+from ditto_application.exceptions import AppProcessError
+from ditto_backtest.manifest import RunManifest
 from ditto_backtest.replay import ManifestDiff, ReplayValidationResult
 from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_backtest.statistics import BacktestReport
@@ -58,7 +59,7 @@ def _make_manifest_raw(
         "engine_version": engine_version,
         "rule_resolution_policy": "as_of_date",
         "universe_hash": "",
-        "spec_hash": "",
+        "spec_hash": "a" * 64,
         "dependency_versions": [],
         "random_seed": None,
     }
@@ -234,21 +235,46 @@ class TestLoadManifest:
         with pytest.raises(FileNotFoundError, match=r"manifest\.json not found"):
             ReplayProcess._load_manifest(tmp_path)
 
-    def test_load_manifest_defaults(self, tmp_path: Path) -> None:
-        """最小 manifest — 使用默认值."""
+    def test_load_manifest_rejects_missing_spec_hash(self, tmp_path: Path) -> None:
+        """历史 manifest 缺 identity 时必须明确 fail closed。"""
         from ditto_application.processes.execution.replay_process import ReplayProcess
 
-        raw = {}  # 空字典
+        raw = _make_manifest_raw()
+        raw.pop("spec_hash")
         manifest_path = tmp_path / "manifest.json"
         manifest_path.write_bytes(orjson.dumps(raw))
 
-        manifest = ReplayProcess._load_manifest(tmp_path)
+        with pytest.raises(AppProcessError, match="spec_hash") as exc_info:
+            ReplayProcess._load_manifest(tmp_path)
 
-        assert manifest.run_id == ""
-        assert manifest.mode == RunMode.BACKTEST
-        assert manifest.input_refs == ()
-        assert manifest.parameter_overrides == ()
-        assert manifest.random_seed is None
+        assert exc_info.value.details["field_name"] == "spec_hash"
+        assert exc_info.value.details["reason"] == "invalid_canonical_identity"
+
+    @pytest.mark.parametrize(
+        "invalid_hash",
+        [
+            pytest.param("", id="empty"),
+            pytest.param("a" * 16, id="short"),
+            pytest.param("A" * 64, id="uppercase"),
+            pytest.param("z" * 64, id="non-hex"),
+        ],
+    )
+    def test_load_manifest_rejects_invalid_spec_hash(
+        self,
+        tmp_path: Path,
+        invalid_hash: str,
+    ) -> None:
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        raw = _make_manifest_raw(spec_hash=invalid_hash)
+        manifest_path = tmp_path / "manifest.json"
+        manifest_path.write_bytes(orjson.dumps(raw))
+
+        with pytest.raises(AppProcessError, match="spec_hash") as exc_info:
+            ReplayProcess._load_manifest(tmp_path)
+
+        assert exc_info.value.details["field_name"] == "spec_hash"
+        assert exc_info.value.details["reason"] == "invalid_canonical_identity"
 
 
 # ---------------------------------------------------------------------------
@@ -295,6 +321,7 @@ class TestBuildConfig:
         manifest = MagicMock(spec=RunManifest)
         manifest.strategy_id = "strat-1"
         manifest.strategy_version = "3"
+        manifest.spec_hash = "a" * 64
         manifest.parameter_overrides = ()
         manifest.engine_version = "0.1.0"
 
@@ -308,6 +335,7 @@ class TestBuildConfig:
 
         assert config.strategy_id == "strat-1"
         assert config.strategy_version == "3"
+        assert config.spec_hash == "a" * 64
         assert config.parent_run_id == "run-orig"
         assert config.start_date == ""
         assert config.end_date == ""
@@ -321,6 +349,7 @@ class TestBuildConfig:
         manifest = MagicMock(spec=RunManifest)
         manifest.strategy_id = "strat-1"
         manifest.strategy_version = "3"
+        manifest.spec_hash = "a" * 64
         manifest.parameter_overrides = ("--lookback=20",)
         manifest.engine_version = "0.2.0"
 

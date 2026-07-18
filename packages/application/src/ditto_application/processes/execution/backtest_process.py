@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Literal
 
 import orjson
 from ditto_backtest.audit import ExecutionAuditCollector
-from ditto_backtest.config import EngineConfig, EngineMode
+from ditto_backtest.config import EngineConfig, EngineMode, validate_spec_hash
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.engine import (
     EngineLoop,
@@ -87,6 +87,7 @@ from ditto_application.processes.execution.strategy_types import (
 _ = write_backtest_artifacts
 
 __all__ = [
+    "BacktestCatalogRequestConfig",
     "BacktestService",
     "BacktestServiceConfig",
     "BacktestServiceOptions",
@@ -107,14 +108,17 @@ type FillMode = Literal["partial", "all_or_nothing"]
 
 
 @dataclass(frozen=True)
-class BacktestServiceConfig:
+class BacktestCatalogRequestConfig:
     """
-    BacktestService 配置 — frozen, 运行前确定.
+    Catalog-backed backtest launch request before strategy identity resolution.
+
+    This type deliberately has no ``spec_hash`` and must never reach
+    ``BacktestService`` or ``EngineConfig``. The catalog runtime builder resolves
+    it into ``BacktestServiceConfig`` after loading the published strategy.
 
     Attributes:
         strategy_id: 策略 ID
         strategy_version: 策略版本
-        spec_hash: canonical StrategySpec v2 SHA-256
         run_id: 运行 ID (空字符串时由服务预生成并传给引擎)
         start_date: 起始日期 (YYYY-MM-DD)
         end_date: 结束日期 (YYYY-MM-DD)
@@ -137,7 +141,6 @@ class BacktestServiceConfig:
 
     strategy_id: str = "default"
     strategy_version: str = ""
-    spec_hash: str = ""
     run_id: str = ""
     parent_run_id: str = ""
     start_date: str = ""
@@ -169,7 +172,7 @@ class BacktestServiceConfig:
     resume_runtime_state_hash: str = ""
 
     def __post_init__(self) -> None:
-        """Validate launch promotion recommendation status."""
+        """Validate catalog launch request fields unrelated to strategy identity."""
         if self.recommendation_status not in _ALLOWED_RECOMMENDATION_STATUSES:
             msg = (
                 "recommendation_status must be one of "
@@ -182,6 +185,35 @@ class BacktestServiceConfig:
         if self.fill_mode not in _ALLOWED_FILL_MODES:
             msg = f"fill_mode must be one of {sorted(_ALLOWED_FILL_MODES)}"
             raise AppProcessError(msg)
+
+
+@dataclass(frozen=True)
+class BacktestServiceConfig(BacktestCatalogRequestConfig):
+    """Resolved backtest service config with mandatory canonical strategy identity."""
+
+    spec_hash: str = field(kw_only=True)
+
+    def __post_init__(self) -> None:
+        """Reject unresolved or non-canonical strategy identity at construction."""
+        super().__post_init__()
+        try:
+            validate_spec_hash(self.spec_hash)
+        except ValueError as exc:
+            raise AppProcessError(
+                str(exc),
+                field_name="spec_hash",
+                reason="invalid_canonical_identity",
+            ) from exc
+
+
+def _require_resolved_backtest_config(value: object) -> BacktestServiceConfig:
+    if not isinstance(value, BacktestServiceConfig):
+        raise AppProcessError(
+            "BacktestService requires resolved BacktestServiceConfig",
+            field_name="config",
+            reason="unresolved_strategy_identity",
+        )
+    return value
 
 
 @dataclass(frozen=True)
@@ -299,7 +331,7 @@ class BacktestService:
         data_feed: DataFeed,
         options: BacktestServiceOptions = BacktestServiceOptions(),
     ) -> None:
-        self._config = config
+        self._config = _require_resolved_backtest_config(config)
         self._pipeline = pipeline
         self._planner = planner
         self._brokerage = brokerage

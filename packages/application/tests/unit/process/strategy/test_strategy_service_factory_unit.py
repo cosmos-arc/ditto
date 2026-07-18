@@ -10,6 +10,7 @@ from ditto_application.builders import (
     StrategyServiceFactory,
 )
 from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
@@ -69,6 +70,7 @@ def _make_runtime() -> PublishedBacktestRuntime:
             end_date="2026-03-01",
             initial_cash=1_000_000.0,
             benchmark_id=InstrumentId(3_000_001),
+            spec_hash="a" * 64,
         ),
     )
 
@@ -89,7 +91,7 @@ class TestStrategyServiceFactory:
         )
 
         service = factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",
@@ -184,7 +186,7 @@ class TestStrategyServiceFactory:
         )
 
         service = factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",
@@ -210,7 +212,7 @@ class TestStrategyServiceFactory:
         )
 
         factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",
@@ -260,7 +262,7 @@ class TestBuildPublishedRuntimeCostModels:
 
         custom_fee = AShareFeeModel()
         service = factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",
@@ -285,7 +287,7 @@ class TestBuildPublishedRuntimeCostModels:
         )
 
         service = factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",
@@ -312,7 +314,7 @@ class TestBuildPublishedRuntimeCostModels:
 
         custom_slippage = FixedBpsSlippage(bps=5.0)
         service = factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",

@@ -4,7 +4,9 @@ from unittest.mock import MagicMock, Mock
 
 import orjson
 import pytest
-from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
+)
 from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunServiceConfig,
@@ -363,7 +365,7 @@ class TestStrategyCommandIntegration:
         assert result.exit_code == 0
         kwargs = mock_facade.run_backtest_from_catalog.call_args.kwargs
         config = kwargs["config"]
-        assert isinstance(config, BacktestServiceConfig)
+        assert isinstance(config, BacktestCatalogRequestConfig)
         assert config.strategy_id == "alpha.strategy"
         assert config.start_date == "2024-01-02"
         assert config.end_date == "2024-01-31"

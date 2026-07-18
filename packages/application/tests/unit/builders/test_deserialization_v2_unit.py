@@ -73,6 +73,30 @@ def _add_unknown_node_field(payload: dict[str, object]) -> None:
     node["unexpected"] = "value"
 
 
+def _remove_node_field(payload: dict[str, object], field_name: str) -> None:
+    pipeline = payload.get("pipeline")
+    assert isinstance(pipeline, dict)
+    nodes = pipeline.get("nodes")
+    assert isinstance(nodes, list)
+    node = nodes[0]
+    assert isinstance(node, dict)
+    node.pop(field_name)
+
+
+def _replace_node_field(
+    payload: dict[str, object],
+    field_name: str,
+    value: object,
+) -> None:
+    pipeline = payload.get("pipeline")
+    assert isinstance(pipeline, dict)
+    nodes = pipeline.get("nodes")
+    assert isinstance(nodes, list)
+    node = nodes[0]
+    assert isinstance(node, dict)
+    node[field_name] = value
+
+
 class TestDeserializeStrategySpecV2:
     """新入口只接受 schema_version=2 的完整、类型化 payload。"""
 
@@ -111,6 +135,110 @@ class TestDeserializeStrategySpecV2:
 
         with pytest.raises(AppBuilderError, match="schema_version"):
             deserialize_strategy_spec_v2(legacy)
+
+    @pytest.mark.parametrize(
+        "field_name",
+        [
+            "schema_version",
+            "strategy_family_id",
+            "strategy_kind",
+            "name",
+            "pipeline",
+            "parameter_schema",
+            "metadata",
+            "tags",
+        ],
+    )
+    def test_requires_every_canonical_top_level_field(self, field_name: str) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+
+        payload = _v2_payload()
+        payload.pop(field_name)
+
+        with pytest.raises(AppBuilderError, match=field_name):
+            deserialize_strategy_spec_v2(_record(payload))
+
+    @pytest.mark.parametrize(
+        "field_name",
+        [
+            "node_id",
+            "node_type",
+            "node_version",
+            "category",
+            "config",
+            "enabled",
+        ],
+    )
+    def test_requires_every_canonical_node_field(self, field_name: str) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+
+        payload = _v2_payload()
+        _remove_node_field(payload, field_name)
+
+        with pytest.raises(AppBuilderError, match=field_name):
+            deserialize_strategy_spec_v2(_record(payload))
+
+    @pytest.mark.parametrize(
+        ("field_name", "mutate"),
+        [
+            pytest.param(
+                "parameter_schema",
+                lambda payload: payload.update(parameter_schema=None),
+                id="null-parameter-schema",
+            ),
+            pytest.param(
+                "metadata",
+                lambda payload: payload.update(metadata=None),
+                id="null-metadata",
+            ),
+            pytest.param(
+                "tags",
+                lambda payload: payload.update(tags=None),
+                id="null-tags",
+            ),
+            pytest.param(
+                "pipeline.nodes[0].config",
+                lambda payload: _replace_node_field(payload, "config", None),
+                id="null-node-config",
+            ),
+            pytest.param(
+                "pipeline.nodes[0].config",
+                lambda payload: _replace_node_field(
+                    payload,
+                    "config",
+                    {1: "non-string-key"},
+                ),
+                id="non-string-config-key",
+            ),
+            pytest.param(
+                "config.opaque",
+                lambda payload: _replace_node_field(
+                    payload,
+                    "config",
+                    {"opaque": object()},
+                ),
+                id="opaque-config-value",
+            ),
+        ],
+    )
+    def test_invalid_canonical_values_map_to_application_error(
+        self,
+        field_name: str,
+        mutate: Callable[[dict[str, object]], None],
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+
+        payload = _v2_payload()
+        mutate(payload)
+
+        with pytest.raises(AppBuilderError, match=re.escape(field_name)):
+            deserialize_strategy_spec_v2(_record(payload))
 
     @pytest.mark.parametrize(
         ("field_name", "mutate"),

@@ -204,6 +204,7 @@ class TestPitPolicyReporting:
             strategy_version="2026.01",
             mode=RunMode.BACKTEST,
             created_at="2026-01-31T00:00:00Z",
+            spec_hash="a" * 64,
             knowledge_lag_days=2,
         )
 

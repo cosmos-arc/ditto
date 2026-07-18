@@ -6,6 +6,9 @@ Phase 0.9 — RunManifest Enrichment (InputRef + data fingerprints).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from inspect import Parameter, signature
+
 import orjson
 import pytest
 from ditto_backtest.config import EngineConfig
@@ -115,6 +118,7 @@ def _make_manifest(
         config_hash="abc123",
         engine_version="0.1.0",
         rule_resolution_policy="as_of_date",
+        spec_hash=_CANONICAL_SPEC_HASH,
         created_at="2026-03-22T10:00:00Z",
     )
 
@@ -187,6 +191,7 @@ class TestRunManifestFrozen:
             strategy_version="v",
             mode=RunMode.RESEARCH,
             created_at="2026-03-22T10:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
         )
         assert manifest.input_refs == ()
         assert manifest.parameter_overrides == ()
@@ -199,6 +204,40 @@ class TestRunManifestFrozen:
         assert manifest.pit_policy == PIT_POLICY_FAIL_CLOSED
         assert manifest.unsafe_time_policy == ""
         assert manifest.knowledge_lag_days == 1
+
+    def test_spec_hash_is_required(self) -> None:
+        manifest_signature = signature(RunManifest)
+        constructor: Callable[..., RunManifest] = RunManifest
+
+        assert manifest_signature.parameters["spec_hash"].default is Parameter.empty
+        with pytest.raises(TypeError, match="spec_hash"):
+            constructor(
+                run_id="r",
+                strategy_id="s",
+                strategy_version="v",
+                mode=RunMode.RESEARCH,
+                created_at="2026-03-22T10:00:00Z",
+            )
+
+    @pytest.mark.parametrize(
+        "invalid_hash",
+        [
+            pytest.param("", id="empty"),
+            pytest.param("a" * 16, id="short"),
+            pytest.param("A" * 64, id="uppercase"),
+            pytest.param("z" * 64, id="non-hex"),
+        ],
+    )
+    def test_rejects_invalid_spec_hash(self, invalid_hash: str) -> None:
+        with pytest.raises(ValueError, match="spec_hash"):
+            RunManifest(
+                run_id="r",
+                strategy_id="s",
+                strategy_version="v",
+                mode=RunMode.RESEARCH,
+                created_at="2026-03-22T10:00:00Z",
+                spec_hash=invalid_hash,
+            )
 
 
 class TestRunManifestInputEvidence:
@@ -446,6 +485,7 @@ class TestSerializeManifest:
             config_hash="hash1",
             engine_version="0.2.0",
             rule_resolution_policy="as_of_date",
+            spec_hash=_CANONICAL_SPEC_HASH,
             created_at="2026-03-22T10:00:00Z",
         )
 
@@ -604,18 +644,19 @@ class TestInputRef:
 class TestRunManifestEnrichment:
     """Phase 0.9: RunManifest 新字段（向后兼容）."""
 
-    def test_new_fields_have_defaults(self) -> None:
-        """新字段均有默认值 — 向后兼容."""
+    def test_optional_enrichment_fields_have_defaults(self) -> None:
+        """可选 enrichment 字段保留稳定默认值。"""
         manifest = RunManifest(
             run_id="r",
             strategy_id="s",
             strategy_version="v",
             mode=RunMode.RESEARCH,
             created_at="2026-03-22T10:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
         )
         assert manifest.input_ref_details == ()
         assert manifest.universe_hash == ""
-        assert manifest.spec_hash == ""
+        assert manifest.spec_hash == _CANONICAL_SPEC_HASH
         assert manifest.dependency_versions == ()
         assert manifest.random_seed is None
         assert manifest.pit_time_column == DEFAULT_PIT_TIME_COLUMN
@@ -645,6 +686,7 @@ class TestRunManifestEnrichment:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
             input_ref_details=refs,
         )
         assert len(manifest.input_ref_details) == 2
@@ -660,10 +702,10 @@ class TestRunManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             universe_hash="uni_hash_123",
-            spec_hash="spec_hash_456",
+            spec_hash="b" * 64,
         )
         assert manifest.universe_hash == "uni_hash_123"
-        assert manifest.spec_hash == "spec_hash_456"
+        assert manifest.spec_hash == "b" * 64
 
     def test_dependency_versions_and_random_seed(self) -> None:
         """dependency_versions / random_seed 可正确赋值."""
@@ -673,6 +715,7 @@ class TestRunManifestEnrichment:
             strategy_version="v",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
             dependency_versions=("numpy==2.0", "polars==1.0"),
             random_seed=42,
         )
@@ -697,6 +740,7 @@ class TestSerializeManifestEnrichment:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
             input_ref_details=(ref,),
         )
         result = serialize_manifest(manifest)
@@ -721,12 +765,12 @@ class TestSerializeManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             universe_hash="uni_abc",
-            spec_hash="spec_def",
+            spec_hash="d" * 64,
         )
         result = serialize_manifest(manifest)
         parsed = orjson.loads(result)
         assert parsed["universe_hash"] == "uni_abc"
-        assert parsed["spec_hash"] == "spec_def"
+        assert parsed["spec_hash"] == "d" * 64
 
     def test_dependency_versions_in_serialized_output(self) -> None:
         """dependency_versions 出现在序列化输出中."""
@@ -736,6 +780,7 @@ class TestSerializeManifestEnrichment:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
             dependency_versions=("numpy==2.0",),
         )
         result = serialize_manifest(manifest)
@@ -750,6 +795,7 @@ class TestSerializeManifestEnrichment:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
             random_seed=42,
         )
         result = serialize_manifest(manifest)
@@ -764,6 +810,7 @@ class TestSerializeManifestEnrichment:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
         )
         result = serialize_manifest(manifest)
         parsed = orjson.loads(result)
@@ -777,6 +824,7 @@ class TestSerializeManifestEnrichment:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
             knowledge_lag_days=3,
         )
         result = serialize_manifest(manifest)
@@ -809,6 +857,7 @@ class TestSerializeManifestEnrichment:
             strategy_version="1.0",
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
+            spec_hash=_CANONICAL_SPEC_HASH,
             input_ref_details=refs,
         )
         result = serialize_manifest(manifest)
@@ -833,7 +882,7 @@ class TestSerializeManifestEnrichment:
             created_at="2026-04-11T00:00:00Z",
             input_ref_details=(ref,),
             universe_hash="uni",
-            spec_hash="spec",
+            spec_hash=_CANONICAL_SPEC_HASH,
             dependency_versions=("pkg==1.0",),
             random_seed=123,
         )
@@ -849,10 +898,10 @@ class TestSerializeManifestEnrichment:
         parsed = orjson.loads(result)
         # 旧字段仍存在
         assert parsed["input_refs"] == [1, 2]
-        # 新字段使用默认值
+        # 可选 enrichment 字段使用默认值，canonical identity 必须保留
         assert parsed["input_ref_details"] == []
         assert parsed["universe_hash"] == ""
-        assert parsed["spec_hash"] == ""
+        assert parsed["spec_hash"] == _CANONICAL_SPEC_HASH
         assert parsed["dependency_versions"] == []
         assert parsed["random_seed"] is None
 

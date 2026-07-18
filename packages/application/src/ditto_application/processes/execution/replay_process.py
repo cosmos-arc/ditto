@@ -15,6 +15,7 @@ from typing import Any, Protocol, cast
 
 import orjson
 import polars as pl
+from ditto_backtest.config import validate_spec_hash
 from ditto_backtest.manifest import InputRef, RuleRef, RunManifest, RunMode
 from ditto_backtest.replay import (
     AccountStateComparison,
@@ -218,6 +219,7 @@ class ReplayProcess:
         return BacktestServiceConfig(
             strategy_id=manifest.strategy_id,
             strategy_version=manifest.strategy_version,
+            spec_hash=manifest.spec_hash,
             parent_run_id=parent_run_id,
             start_date=period.get("start", ""),
             end_date=period.get("end", ""),
@@ -371,6 +373,16 @@ class ReplayProcess:
 
 def _deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
     """从 JSON dict 反序列化 RunManifest."""
+    raw_spec_hash = raw.get("spec_hash")
+    try:
+        spec_hash = validate_spec_hash(raw_spec_hash)
+    except ValueError as exc:
+        raise AppProcessError(
+            str(exc),
+            field_name="spec_hash",
+            reason="invalid_canonical_identity",
+        ) from exc
+
     input_ref_details = tuple(
         InputRef(
             instrument_id=ref["instrument_id"],
@@ -409,7 +421,7 @@ def _deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
         engine_version=raw.get("engine_version", ""),
         rule_resolution_policy=raw.get("rule_resolution_policy", "as_of_date"),
         universe_hash=raw.get("universe_hash", ""),
-        spec_hash=raw.get("spec_hash", ""),
+        spec_hash=spec_hash,
         dependency_versions=tuple(raw.get("dependency_versions", ())),
         random_seed=raw.get("random_seed"),
     )

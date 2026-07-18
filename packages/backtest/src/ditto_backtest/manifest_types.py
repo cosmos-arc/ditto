@@ -13,6 +13,8 @@ from enum import StrEnum
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
 
+from ditto_backtest.config import validate_spec_hash
+
 __all__ = [
     "InputRef",
     "RuleRef",
@@ -109,6 +111,7 @@ class RunManifest:
     strategy_version: str
     mode: RunMode
     created_at: str
+    spec_hash: str
     input_refs: tuple[InstrumentId, ...] = ()
     input_ref_details: tuple[InputRef, ...] = ()
     parameter_overrides: tuple[str, ...] = ()
@@ -118,10 +121,13 @@ class RunManifest:
     engine_version: str = ""
     rule_resolution_policy: str = "as_of_date"
     universe_hash: str = ""
-    spec_hash: str = ""
     dependency_versions: tuple[str, ...] = ()
     random_seed: int | None = None
     pit_time_column: str = DEFAULT_PIT_TIME_COLUMN
     pit_policy: str = PIT_POLICY_FAIL_CLOSED
     unsafe_time_policy: str = ""
     knowledge_lag_days: int = 1
+
+    def __post_init__(self) -> None:
+        """A persisted run manifest always has resolved canonical strategy identity."""
+        validate_spec_hash(self.spec_hash)

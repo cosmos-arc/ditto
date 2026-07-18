@@ -157,8 +157,11 @@ def deserialize_strategy_spec_v2(record: StrategySpecRecord) -> StrategySpecV2:
             "strategy_kind",
             "name",
             "pipeline",
+            "parameter_schema",
+            "metadata",
+            "tags",
         },
-        optional={"parameter_schema", "metadata", "tags"},
+        optional=set(),
     )
     schema_version = read_required_value(payload, "schema_version")
     if (
@@ -176,6 +179,19 @@ def deserialize_strategy_spec_v2(record: StrategySpecRecord) -> StrategySpecV2:
         msg = f"spec_json.strategy_kind 不受支持: {strategy_kind_raw!r}"
         raise AppBuilderError(msg) from exc
 
+    parameter_schema_raw = _require_v2_non_null(
+        read_required_value(payload, "parameter_schema"),
+        field_name="parameter_schema",
+    )
+    metadata_raw = _require_v2_non_null(
+        read_required_value(payload, "metadata"),
+        field_name="metadata",
+    )
+    tags_raw = _require_v2_non_null(
+        read_required_value(payload, "tags"),
+        field_name="tags",
+    )
+
     try:
         return StrategySpecV2(
             schema_version=schema_version,
@@ -186,10 +202,16 @@ def deserialize_strategy_spec_v2(record: StrategySpecRecord) -> StrategySpecV2:
                 read_required_value(payload, "pipeline"),
             ),
             parameter_schema=_deserialize_parameter_schema_v2(
-                payload.get("parameter_schema"),
+                parameter_schema_raw,
             ),
-            metadata=as_object_dict(payload.get("metadata"), field_name="metadata"),
-            tags=as_str_tuple(payload.get("tags"), field_name="tags"),
+            metadata=as_object_dict(
+                metadata_raw,
+                field_name="metadata",
+            ),
+            tags=as_str_tuple(
+                tags_raw,
+                field_name="tags",
+            ),
         )
     except StrategySpecError as exc:
         raise AppBuilderError(str(exc), details=exc.details) from exc
@@ -224,8 +246,15 @@ def _deserialize_node_v2(raw_value: object, *, index: int) -> NodeInstance:
     _require_exact_fields(
         payload,
         field_name=field_name,
-        required={"node_id", "node_type", "node_version", "category", "config"},
-        optional={"enabled"},
+        required={
+            "node_id",
+            "node_type",
+            "node_version",
+            "category",
+            "config",
+            "enabled",
+        },
+        optional=set(),
     )
     category_raw = read_required_str(payload, "category")
     try:
@@ -234,8 +263,12 @@ def _deserialize_node_v2(raw_value: object, *, index: int) -> NodeInstance:
         msg = f"{field_name}.category 不受支持: {category_raw!r}"
         raise AppBuilderError(msg) from exc
     enabled = read_bool(
-        payload.get("enabled", True),
+        read_required_value(payload, "enabled"),
         field_name=f"{field_name}.enabled",
+    )
+    config_raw = _require_v2_non_null(
+        read_required_value(payload, "config"),
+        field_name=f"{field_name}.config",
     )
     return NodeInstance(
         node_id=read_required_str(payload, "node_id"),
@@ -245,7 +278,7 @@ def _deserialize_node_v2(raw_value: object, *, index: int) -> NodeInstance:
         ),
         category=category,
         config=as_object_dict(
-            read_required_value(payload, "config"),
+            config_raw,
             field_name=f"{field_name}.config",
         ),
         enabled=enabled,
@@ -291,6 +324,13 @@ def _require_exact_fields(
         if unknown:
             msg += f"; unknown={unknown}"
         raise AppBuilderError(msg)
+
+
+def _require_v2_non_null(value: object, *, field_name: str) -> object:
+    if value is None:
+        msg = f"{field_name} 不能为 null"
+        raise AppBuilderError(msg)
+    return value
 
 
 def default_required_datasets_for_template(template: str) -> tuple[str, ...]:

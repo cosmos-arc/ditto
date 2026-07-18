@@ -38,7 +38,7 @@ def _make_manifest(
     input_refs: tuple[InstrumentId, ...] = (_IID_510300, _IID_510500),
     parameter_overrides: tuple[str, ...] = (),
     rule_refs: tuple[RuleRef, ...] = (),
-    spec_hash: str = "",
+    spec_hash: str = "a" * 64,
     random_seed: int | None = None,
     dependency_versions: tuple[str, ...] = (),
     input_ref_details: tuple[InputRef, ...] = (),
@@ -352,8 +352,8 @@ class TestCompareManifests:
         assert len(diff.seed_diffs) == 1
 
     def test_spec_hash_mismatch(self) -> None:
-        a = _make_manifest(spec_hash="spec_aaa")
-        b = _make_manifest(spec_hash="spec_bbb")
+        a = _make_manifest(spec_hash="a" * 64)
+        b = _make_manifest(spec_hash="b" * 64)
         diff = ReplayValidator.compare_manifests(a, b)
         assert diff.has_diff is True
         assert any("spec_hash" in d for d in diff.config_diffs)

@@ -72,6 +72,7 @@ def _make_manifest(run_id: str = "run-001") -> RunManifest:
         created_at="2026-04-11T00:00:00Z",
         config_hash="config",
         engine_version="engine",
+        spec_hash="a" * 64,
     )
 
 

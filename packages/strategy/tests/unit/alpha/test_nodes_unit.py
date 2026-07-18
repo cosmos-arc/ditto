@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import operator
+from collections.abc import Callable, Mapping
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -152,3 +154,84 @@ class TestPipelineSpec:
                 ),
                 sequence=("scorer", "late_filter"),
             )
+
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value"),
+        [
+            pytest.param("nodes", [], id="nodes-list"),
+            pytest.param("nodes", None, id="nodes-none"),
+            pytest.param("nodes", (object(),), id="nodes-invalid-element"),
+            pytest.param("sequence", [], id="sequence-list"),
+            pytest.param("sequence", None, id="sequence-none"),
+            pytest.param("sequence", (object(),), id="sequence-invalid-element"),
+        ],
+    )
+    def test_programmatic_boundaries_require_typed_tuples(
+        self,
+        field_name: str,
+        invalid_value: object,
+    ) -> None:
+        from ditto_strategy.alpha.nodes import (
+            NodeCategory,
+            NodeInstance,
+            NodeRef,
+            PipelineSpec,
+        )
+
+        node = NodeInstance(
+            node_id="universe",
+            ref=NodeRef("builtin.universe", "1"),
+            category=NodeCategory.UNIVERSE,
+        )
+        values: dict[str, object] = {
+            "nodes": (node,),
+            "sequence": ("universe",),
+        }
+        values[field_name] = invalid_value
+        constructor: Callable[..., PipelineSpec] = PipelineSpec
+
+        with pytest.raises(StrategySpecError, match=field_name):
+            constructor(**values)
+
+
+class TestNodeInstanceCanonicalConfig:
+    def test_config_is_a_recursive_immutable_snapshot(self) -> None:
+        from ditto_strategy.alpha.nodes import NodeCategory, NodeInstance, NodeRef
+
+        source: dict[str, object] = {
+            "nested": {"weights": [0.4, 0.6]},
+        }
+        node = NodeInstance(
+            node_id="factors",
+            ref=NodeRef("builtin.factor_set", "1"),
+            category=NodeCategory.FACTOR_SET,
+            config=source,
+        )
+        nested = node.config["nested"]
+        assert isinstance(nested, Mapping)
+        weights = nested["weights"]
+        assert isinstance(weights, tuple)
+
+        with pytest.raises(TypeError):
+            operator.setitem(node.config, "added", True)
+        with pytest.raises(TypeError):
+            operator.setitem(nested, "added", True)
+        with pytest.raises(TypeError):
+            operator.setitem(weights, 0, 1.0)
+
+        source_nested = source["nested"]
+        assert isinstance(source_nested, dict)
+        source_nested["weights"] = [1.0]
+        assert nested["weights"] == (0.4, 0.6)
+
+    def test_legal_mapping_and_json_sequence_values_are_preserved(self) -> None:
+        from ditto_strategy.alpha.nodes import NodeCategory, NodeInstance, NodeRef
+
+        node = NodeInstance(
+            node_id="factors",
+            ref=NodeRef("builtin.factor_set", "1"),
+            category=NodeCategory.FACTOR_SET,
+            config={"factor_ids": ["momentum", "value"]},
+        )
+
+        assert node.config["factor_ids"] == ("momentum", "value")

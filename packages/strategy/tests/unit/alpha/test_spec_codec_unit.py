@@ -151,6 +151,33 @@ class TestCanonicalSpecCodec:
         assert canonical_spec_bytes(first) == canonical_spec_bytes(second)
         assert canonical_spec_hash(first) == canonical_spec_hash(second)
 
+    def test_source_mutation_after_construction_cannot_drift_hash(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_hash
+
+        config: dict[str, object] = {"weights": {"momentum": [0.4, 0.6]}}
+        node = NodeInstance(
+            node_id="factors",
+            ref=NodeRef("builtin.factor_set", "1"),
+            category=NodeCategory.FACTOR_SET,
+            config=config,
+        )
+        spec = StrategySpecV2(
+            schema_version=2,
+            strategy_family_id="family-stock-alpha",
+            strategy_kind=StrategyKind.STOCK_SELECTION,
+            name="Stock Alpha",
+            pipeline=PipelineSpec(nodes=(node,), sequence=("factors",)),
+            parameter_schema=(),
+            metadata={},
+            tags=(),
+        )
+        original_hash = canonical_spec_hash(spec)
+        weights = config["weights"]
+        assert isinstance(weights, dict)
+        weights["momentum"] = [1.0]
+
+        assert canonical_spec_hash(spec) == original_hash
+
     def test_hash_is_full_lowercase_sha256(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_hash
 
@@ -191,6 +218,66 @@ class TestCanonicalSpecCodec:
         assert all(
             canonical_spec_hash(variant) != baseline_hash for variant in variants
         )
+
+    @pytest.mark.parametrize(
+        ("field_name", "legal_value"),
+        [
+            pytest.param("min_value", 10.0, id="minimum"),
+            pytest.param("max_value", 240.0, id="maximum"),
+            pytest.param("step", 10.0, id="step"),
+        ],
+    )
+    def test_each_legal_parameter_identity_field_changes_hash(
+        self,
+        field_name: str,
+        legal_value: float,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_hash
+
+        spec = _make_v2_spec()
+        changed_parameter = replace(
+            spec.parameter_schema[0],
+            **{field_name: legal_value},
+        )
+
+        assert canonical_spec_hash(
+            replace(spec, parameter_schema=(changed_parameter,)),
+        ) != canonical_spec_hash(spec)
+
+    def test_codec_rejects_non_finite_parameter_even_if_domain_is_bypassed(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        spec = _make_v2_spec()
+        object.__setattr__(spec.parameter_schema[0], "step", float("nan"))
+
+        with pytest.raises(StrategySpecError, match="canonical"):
+            canonical_spec_bytes(spec)
+
+    def test_codec_rejects_non_string_mapping_key_after_domain_bypass(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        spec = _make_v2_spec()
+        factor_node = next(
+            node for node in spec.pipeline.nodes if node.node_id == "factors"
+        )
+        object.__setattr__(factor_node, "config", {1: "not-canonical"})
+
+        with pytest.raises(StrategySpecError, match=r"key|canonical"):
+            canonical_spec_bytes(spec)
+
+    def test_orjson_serialization_failure_is_wrapped_as_domain_error(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        spec = _make_v2_spec()
+        factor_node = next(
+            node for node in spec.pipeline.nodes if node.node_id == "factors"
+        )
+        object.__setattr__(factor_node, "config", {"too_large": 1 << 128})
+
+        with pytest.raises(StrategySpecError, match="canonical"):
+            canonical_spec_bytes(spec)
 
     def test_ui_metadata_name_and_tags_do_not_change_execution_hash(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
@@ -235,18 +322,10 @@ class TestCanonicalSpecCodec:
         factor_node = next(
             node for node in spec.pipeline.nodes if node.node_id == "factors"
         )
-        changed_pipeline = replace(
-            spec.pipeline,
-            nodes=tuple(
-                replace(factor_node, config={"invalid": invalid_value})
-                if node.node_id == "factors"
-                else node
-                for node in spec.pipeline.nodes
-            ),
-        )
+        object.__setattr__(factor_node, "config", {"invalid": invalid_value})
 
         with pytest.raises(StrategySpecError, match="canonical"):
-            canonical_spec_bytes(replace(spec, pipeline=changed_pipeline))
+            canonical_spec_bytes(spec)
 
 
 class TestLegacyStrategySpecAdapter:
@@ -369,3 +448,65 @@ class TestLegacyStrategySpecAdapter:
         assert canonical_spec_hash(
             adapt_legacy_strategy_spec(renamed),
         ) == canonical_spec_hash(adapt_legacy_strategy_spec(base))
+
+    @pytest.mark.parametrize(
+        "signal_expressions",
+        [
+            pytest.param(("momentum",), id="single-signal"),
+            pytest.param(("momentum", "value"), id="multiple-signals"),
+        ],
+    )
+    def test_empty_weights_hash_like_runtime_effective_unit_weights(
+        self,
+        signal_expressions: tuple[str, ...],
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            adapt_legacy_strategy_spec,
+            canonical_spec_hash,
+        )
+
+        base = replace(
+            _make_legacy_spec(),
+            signal_expressions=signal_expressions,
+            signal_weights=(),
+        )
+        explicit = replace(
+            base,
+            signal_weights=(1.0,) * len(signal_expressions),
+        )
+
+        assert canonical_spec_hash(
+            adapt_legacy_strategy_spec(base),
+        ) == canonical_spec_hash(adapt_legacy_strategy_spec(explicit))
+
+    @pytest.mark.parametrize(
+        ("signal_expressions", "different_weights"),
+        [
+            pytest.param(("momentum",), (0.5,), id="single-signal"),
+            pytest.param(
+                ("momentum", "value"),
+                (1.0, 0.5),
+                id="multiple-signals",
+            ),
+        ],
+    )
+    def test_different_effective_weights_have_different_hashes(
+        self,
+        signal_expressions: tuple[str, ...],
+        different_weights: tuple[float, ...],
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            adapt_legacy_strategy_spec,
+            canonical_spec_hash,
+        )
+
+        unit_weights = replace(
+            _make_legacy_spec(),
+            signal_expressions=signal_expressions,
+            signal_weights=(1.0,) * len(signal_expressions),
+        )
+        changed = replace(unit_weights, signal_weights=different_weights)
+
+        assert canonical_spec_hash(
+            adapt_legacy_strategy_spec(unit_weights),
+        ) != canonical_spec_hash(adapt_legacy_strategy_spec(changed))

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import FrozenInstanceError
 from datetime import UTC, date, datetime, timedelta
+from inspect import Parameter, signature
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -115,22 +117,66 @@ def _make_minimal_service(
 class TestBacktestServiceConfig:
     """测试 BacktestServiceConfig frozen dataclass。"""
 
-    def test_default_values(self) -> None:
-        """默认值正确。"""
-        config = BacktestServiceConfig()
-        assert config.strategy_id == "default"
-        assert config.strategy_version == ""
-        assert config.run_id == ""
-        assert config.start_date == ""
-        assert config.end_date == ""
-        assert config.initial_cash == 1_000_000.0
-        assert config.spec_hash == ""
-        assert config.benchmark_id is None
-        assert config.rebalance_freq == "daily"
-        assert config.engine_version == "0.1.0"
-        assert config.parameter_overrides == ()
-        assert config.participation_rate == pytest.approx(0.05)
-        assert config.fill_mode == "partial"
+    def test_catalog_request_is_explicitly_unresolved(self) -> None:
+        """Catalog lookup request has no fake or sentinel spec hash."""
+        from ditto_application.processes.execution import backtest_process
+
+        request_type = getattr(
+            backtest_process,
+            "BacktestCatalogRequestConfig",
+            None,
+        )
+
+        assert isinstance(request_type, type)
+        request = request_type()
+        assert request.strategy_id == "default"
+        assert request.start_date == ""
+        assert request.initial_cash == 1_000_000.0
+        assert not hasattr(request, "spec_hash")
+
+    def test_resolved_config_requires_canonical_spec_hash(self) -> None:
+        """Resolved service config cannot represent an unresolved identity."""
+        config_signature = signature(BacktestServiceConfig)
+
+        assert config_signature.parameters["spec_hash"].default is Parameter.empty
+
+    @pytest.mark.parametrize(
+        "invalid_hash",
+        [
+            pytest.param("", id="empty"),
+            pytest.param("a" * 16, id="short"),
+            pytest.param("A" * 64, id="uppercase"),
+            pytest.param("z" * 64, id="non-hex"),
+        ],
+    )
+    def test_resolved_config_rejects_invalid_spec_hash(
+        self,
+        invalid_hash: str,
+    ) -> None:
+        with pytest.raises(AppProcessError, match="spec_hash"):
+            _make_service_config(spec_hash=invalid_hash)
+
+    def test_service_rejects_unresolved_catalog_request(self) -> None:
+        from ditto_application.processes.execution.backtest_process import (
+            BacktestCatalogRequestConfig,
+        )
+
+        constructor: Callable[..., BacktestService] = BacktestService
+        request = BacktestCatalogRequestConfig(
+            strategy_id="momentum-etf",
+            start_date="2026-01-01",
+            end_date="2026-03-01",
+        )
+
+        with pytest.raises(AppProcessError, match="resolved"):
+            constructor(
+                config=request,
+                pipeline=MagicMock(),
+                planner=MagicMock(),
+                brokerage=MagicMock(),
+                pre_trade_check=MagicMock(),
+                data_feed=MagicMock(),
+            )
 
     def test_custom_values(self) -> None:
         """自定义值正确。"""
@@ -418,6 +464,7 @@ class TestArtifactPersistence:
                 strategy_version="2026.03",
                 mode=RunMode.BACKTEST,
                 created_at="2026-03-24T10:00:00Z",
+                spec_hash="e" * 64,
             ),
         ),
     )
@@ -489,7 +536,7 @@ class TestArtifactPersistence:
                 parameter_overrides=("top_k=20", "max_weight=0.08"),
                 config_hash="config-sha",
                 engine_version="0.2.0",
-                spec_hash="spec-sha",
+                spec_hash="d" * 64,
             ),
         ),
     )
@@ -878,6 +925,7 @@ class TestArtifactPersistence:
             strategy_version="2026.03",
             mode=RunMode.BACKTEST,
             created_at="2026-03-24T10:00:00Z",
+            spec_hash="e" * 64,
             input_refs=("ETF-001",),
             parameter_overrides=("top_k=3",),
             config_hash="cfg-123",
@@ -919,6 +967,7 @@ class TestArtifactPersistence:
             strategy_version="2026.03",
             mode=RunMode.BACKTEST,
             created_at="2026-03-24T10:00:00+00:00",
+            spec_hash="e" * 64,
             input_ref_details=(
                 InputRef(
                     instrument_id=InstrumentId(510050),
