@@ -493,6 +493,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/data-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Data Products
+         * @description List the 19 independent R2 product contracts and active reports.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_list_data_products"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-products/{dataset_id}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Data Product Coverage
+         * @description Return frozen raw/complete/certified coverage and current gaps.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_get_data_product_coverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-products/{dataset_id}/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Data Product Quality
+         * @description Return DQ, PIT replay, freshness, recovery, and consumer checks.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_get_data_product_quality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-products/{dataset_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Data Product Runs
+         * @description Return immutable certification generations and review status.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_list_data_product_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-products/{dataset_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Data Product Evidence
+         * @description Return provider, schema, snapshot, fallback, and override evidence.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_get_data_product_evidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-products/{dataset_id}/license": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Data Product License
+         * @description Return reviewed license records bound to the latest report.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_get_data_product_license"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fundamental/financials/{report_type}": {
         parameters: {
             query?: never;
@@ -1525,7 +1657,7 @@ export interface paths {
          * Get Account Baseline
          * @description 返回不晚于信号日的最新账户基线及同日持仓。
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_account_baseline"];
         put?: never;
@@ -1533,7 +1665,7 @@ export interface paths {
          * Import Account Baseline
          * @description 幂等导入账户与持仓期初基线。
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["trade_import_account_baseline"];
         delete?: never;
@@ -1554,7 +1686,7 @@ export interface paths {
          * Update Intent Status
          * @description 更新交易意图状态.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         put: operations["trade_update_intent_status"];
         post?: never;
@@ -1575,7 +1707,7 @@ export interface paths {
          * List Fills
          * @description 列出成交记录.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_list_fills"];
         put?: never;
@@ -1583,7 +1715,7 @@ export interface paths {
          * Record Fill
          * @description 录入人工成交.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["trade_record_fill"];
         delete?: never;
@@ -1605,7 +1737,7 @@ export interface paths {
          * Void Fill
          * @description 追加作废事件；原始成交保持不可变。
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["trade_void_fill"];
         delete?: never;
@@ -1627,7 +1759,7 @@ export interface paths {
          * Replace Fill
          * @description 追加替换成交及链接事件；原始成交保持不可变。
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["trade_replace_fill"];
         delete?: never;
@@ -1647,7 +1779,7 @@ export interface paths {
          * Get Daily Decision
          * @description 获取每日决策驾驶舱报告.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_daily_decision"];
         put?: never;
@@ -1669,7 +1801,7 @@ export interface paths {
          * Get Daily Decision V2
          * @description 获取以持久化 Signal Package 为事实源的 Daily Decision V2。
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_daily_decision_v2"];
         put?: never;
@@ -1691,7 +1823,7 @@ export interface paths {
          * List Intents
          * @description 列出交易意图.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_list_intents"];
         put?: never;
@@ -1713,7 +1845,7 @@ export interface paths {
          * List Effective Fills
          * @description 列出排除已作废/被替换原记录后的有效成交。
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_list_effective_fills"];
         put?: never;
@@ -1735,7 +1867,7 @@ export interface paths {
          * List Fill Adjustments
          * @description 列出 append-only 成交修正证据。
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_list_fill_adjustments"];
         put?: never;
@@ -1757,7 +1889,7 @@ export interface paths {
          * List Positions
          * @description 列出实际持仓.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_list_positions"];
         put?: never;
@@ -1779,7 +1911,7 @@ export interface paths {
          * Compute Pnl
          * @description 计算 P&L 汇总.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_compute_pnl"];
         put?: never;
@@ -1801,7 +1933,7 @@ export interface paths {
          * Get Latest Signals
          * @description 获取最新信号日期的交易意图.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_latest_signals"];
         put?: never;
@@ -1823,7 +1955,7 @@ export interface paths {
          * Get Signal Intents
          * @description 获取指定信号日期的交易意图.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_signal_intents"];
         put?: never;
@@ -1845,7 +1977,7 @@ export interface paths {
          * Get Deviation
          * @description 信号-成交偏差报告.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_deviation"];
         put?: never;
@@ -1867,7 +1999,7 @@ export interface paths {
          * Get Comparison
          * @description 回测 vs 实际对比.
          *
-         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_comparison"];
         put?: never;
@@ -2208,6 +2340,34 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[DataProductCoverageResponse] */
+        APIResponse_DataProductCoverageResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["DataProductCoverageResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[DataProductEvidenceResponse] */
+        APIResponse_DataProductEvidenceResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["DataProductEvidenceResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[DataProductLicenseResponse] */
+        APIResponse_DataProductLicenseResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["DataProductLicenseResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[DataProductQualityResponse] */
+        APIResponse_DataProductQualityResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["DataProductQualityResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[DeviationResponse] */
         APIResponse_DeviationResponse_: {
             /** @description 响应数据 */
@@ -2455,6 +2615,26 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["DataLineageEventResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[DataProductOverviewResponse]] */
+        APIResponse_list_DataProductOverviewResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["DataProductOverviewResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[DataProductRunResponse]] */
+        APIResponse_list_DataProductRunResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["DataProductRunResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -5690,6 +5870,177 @@ export interface components {
             output_assets: components["schemas"]["DataLineageAssetResponse"][];
         };
         /**
+         * DataProductCheckResponse
+         * @description One evidence check with an addressable artifact.
+         */
+        DataProductCheckResponse: {
+            /** Name */
+            name: string;
+            /** Evidence Uri */
+            evidence_uri: string;
+            /** Passed */
+            passed: boolean;
+        };
+        /**
+         * DataProductCoverageResponse
+         * @description Coverage milestones and current partition gaps.
+         */
+        DataProductCoverageResponse: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Profile */
+            profile: string;
+            /** Raw From */
+            raw_from: string | null;
+            /** Complete From */
+            complete_from: string | null;
+            /** Certified From */
+            certified_from: string | null;
+            /** Expected Partitions */
+            expected_partitions: number;
+            /** Actual Partitions */
+            actual_partitions: number;
+            /** Gaps */
+            gaps: string[];
+            /** Unapproved Gaps */
+            unapproved_gaps: string[];
+        };
+        /**
+         * DataProductEvidenceResponse
+         * @description Source, schema, snapshot, fallback, and override evidence.
+         */
+        DataProductEvidenceResponse: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Profile */
+            profile: string;
+            /** Report Id */
+            report_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Source Ids */
+            source_ids: string[];
+            /** Schema Versions */
+            schema_versions: string[];
+            /** Snapshot Ids */
+            snapshot_ids: string[];
+            /** Fallback History */
+            fallback_history: string[];
+            /** Override History */
+            override_history: string[];
+        };
+        /**
+         * DataProductLicenseResponse
+         * @description Reviewed license identities bound to a certification.
+         */
+        DataProductLicenseResponse: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Profile */
+            profile: string;
+            /** Report Id */
+            report_id: string;
+            /** License Record Ids */
+            license_record_ids: string[];
+        };
+        /**
+         * DataProductOverviewResponse
+         * @description Static product contract plus active certification identity.
+         */
+        DataProductOverviewResponse: {
+            /**
+             * Dataset Id
+             * @description Canonical dataset identifier
+             */
+            dataset_id: string;
+            /**
+             * R2 Scope
+             * @description R2 scope classification
+             */
+            r2_scope: string;
+            /**
+             * Maturity
+             * @description Effective catalog maturity
+             */
+            maturity: string;
+            /**
+             * Schedule
+             * @description Expected partition schedule
+             */
+            schedule: string;
+            /**
+             * Owner
+             * @description Accountable data-product owner
+             */
+            owner: string;
+            /**
+             * Raw Target From
+             * @description Raw history target
+             */
+            raw_target_from: string | null;
+            /**
+             * Certified Target From
+             * @description Certification target
+             */
+            certified_target_from: string | null;
+            /**
+             * Active Certification Report Id
+             * @description Currently approved immutable report
+             */
+            active_certification_report_id: string | null;
+        };
+        /**
+         * DataProductQualityResponse
+         * @description Quality, PIT, freshness, recovery, and consumer evidence.
+         */
+        DataProductQualityResponse: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Profile */
+            profile: string;
+            /** Report Id */
+            report_id: string;
+            /** Dq Rule Version */
+            dq_rule_version: string;
+            /** Dq Results */
+            dq_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Pit Replay Results */
+            pit_replay_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Freshness Results */
+            freshness_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Recovery Results */
+            recovery_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Consumer Results */
+            consumer_results: components["schemas"]["DataProductCheckResponse"][];
+        };
+        /**
+         * DataProductRunResponse
+         * @description Immutable certification generation and review projection.
+         */
+        DataProductRunResponse: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Profile */
+            profile: string;
+            /** Report Id */
+            report_id: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Status */
+            status: string;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Revocation Reason */
+            revocation_reason: string | null;
+        };
+        /**
          * DatasetMaturitySummaryResponse
          * @description Maturity-aware dataset status summary.
          */
@@ -8872,6 +9223,208 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_CommodityBar__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    data_products_list_data_products: {
+        parameters: {
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_DataProductOverviewResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    data_products_get_data_product_coverage: {
+        parameters: {
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DataProductCoverageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    data_products_get_data_product_quality: {
+        parameters: {
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DataProductQualityResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    data_products_list_data_product_runs: {
+        parameters: {
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_DataProductRunResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    data_products_get_data_product_evidence: {
+        parameters: {
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DataProductEvidenceResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    data_products_get_data_product_license: {
+        parameters: {
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DataProductLicenseResponse_"];
                 };
             };
             /** @description Validation Error */

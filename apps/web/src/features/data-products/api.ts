@@ -1,0 +1,68 @@
+import { apiClient, withQueryParams } from "@/lib/api-client";
+import type { components } from "@/types/generated/api";
+
+export const DEFAULT_DATA_PRODUCT_PROFILE = "research_daily";
+
+export type DataProductOverview = components["schemas"]["DataProductOverviewResponse"];
+export type DataProductCoverage = components["schemas"]["DataProductCoverageResponse"];
+export type DataProductCheck = components["schemas"]["DataProductCheckResponse"];
+export type DataProductQuality = components["schemas"]["DataProductQualityResponse"];
+export type DataProductRun = components["schemas"]["DataProductRunResponse"];
+export type DataProductEvidence = components["schemas"]["DataProductEvidenceResponse"];
+export type DataProductLicense = components["schemas"]["DataProductLicenseResponse"];
+
+export const dataProductKeys = {
+	all: ["data-products"] as const,
+	list: (profile: string) => [...dataProductKeys.all, "list", profile] as const,
+	detail: (datasetId: string, profile: string) => [...dataProductKeys.all, datasetId, profile] as const,
+	coverage: (datasetId: string, profile: string) =>
+		[...dataProductKeys.detail(datasetId, profile), "coverage"] as const,
+	quality: (datasetId: string, profile: string) => [...dataProductKeys.detail(datasetId, profile), "quality"] as const,
+	runs: (datasetId: string, profile: string) => [...dataProductKeys.detail(datasetId, profile), "runs"] as const,
+	evidence: (datasetId: string, profile: string) =>
+		[...dataProductKeys.detail(datasetId, profile), "evidence"] as const,
+	license: (datasetId: string, profile: string) => [...dataProductKeys.detail(datasetId, profile), "license"] as const,
+};
+
+function productPath(datasetId: string, view: string, profile: string): string {
+	return withQueryParams(`/v1/data-products/${encodeURIComponent(datasetId)}/${view}`, { profile });
+}
+
+export function fetchDataProducts(profile = DEFAULT_DATA_PRODUCT_PROFILE): Promise<readonly DataProductOverview[]> {
+	return apiClient.get<readonly DataProductOverview[]>(withQueryParams("/v1/data-products", { profile }));
+}
+
+export function fetchDataProductCoverage(
+	datasetId: string,
+	profile = DEFAULT_DATA_PRODUCT_PROFILE,
+): Promise<DataProductCoverage> {
+	return apiClient.get<DataProductCoverage>(productPath(datasetId, "coverage", profile));
+}
+
+export function fetchDataProductQuality(
+	datasetId: string,
+	profile = DEFAULT_DATA_PRODUCT_PROFILE,
+): Promise<DataProductQuality> {
+	return apiClient.get<DataProductQuality>(productPath(datasetId, "quality", profile));
+}
+
+export function fetchDataProductRuns(
+	datasetId: string,
+	profile = DEFAULT_DATA_PRODUCT_PROFILE,
+): Promise<readonly DataProductRun[]> {
+	return apiClient.get<readonly DataProductRun[]>(productPath(datasetId, "runs", profile));
+}
+
+export function fetchDataProductEvidence(
+	datasetId: string,
+	profile = DEFAULT_DATA_PRODUCT_PROFILE,
+): Promise<DataProductEvidence> {
+	return apiClient.get<DataProductEvidence>(productPath(datasetId, "evidence", profile));
+}
+
+export function fetchDataProductLicense(
+	datasetId: string,
+	profile = DEFAULT_DATA_PRODUCT_PROFILE,
+): Promise<DataProductLicense> {
+	return apiClient.get<DataProductLicense>(productPath(datasetId, "license", profile));
+}
