@@ -23,7 +23,10 @@ from ditto_portfolio.rebalancing import (
     ScoreWeightAllocator,
     TradabilityConstraint,
 )
-from ditto_strategy.alpha.builtins.scoring import ScoringMethod
+from ditto_strategy.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
+from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
+from ditto_strategy.alpha.builtins.selection import SelectionStage
+from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.protocols import DecisionStage
 from ditto_strategy.alpha.specs import ConstraintSpec, StrategySpec
 from ditto_strategy.alpha.templates import (
@@ -179,6 +182,72 @@ def _legacy_runtime_spec(spec: StrategySpec) -> StrategySpec:
     return replace(spec, scorer=scorer, params=params)
 
 
+def _resolve_legacy_scoring_method(spec: StrategySpec) -> ScoringMethod:
+    """严格验证 scorer 与可选 override，再返回 adapter 的有效 method。"""
+
+    def _parse(raw_method: object, *, field_name: str) -> ScoringMethod:
+        method = read_str_value(raw_method, field_name=field_name)
+        try:
+            return ScoringMethod(method)
+        except ValueError as exc:
+            msg = f"不支持的 scoring_method: {method}"
+            raise AppBuilderError(
+                msg,
+                details={
+                    "reason": "invalid_scoring_method",
+                    "field_name": field_name,
+                    "actual_value": method,
+                },
+            ) from exc
+
+    override = spec.params.get("scoring_method")
+    if override is not None:
+        return _parse(override, field_name="params.scoring_method")
+    return _parse(spec.scorer.method, field_name="scorer.method")
+
+
+def _legacy_stock_selection_stage_groups(
+    spec: StrategySpec,
+    *,
+    scoring_method: ScoringMethod,
+) -> tuple[
+    tuple[DecisionStage, ...],
+    tuple[DecisionStage, ...],
+    tuple[DecisionStage, ...],
+    tuple[DecisionStage, ...],
+]:
+    """把 FactorBridge composite 接到 stock 既有 filter/selector/allocator。"""
+    config = build_stock_selection_trend_config(spec)
+    alpha_config = (
+        replace(config, allocation_method="equal_weight")
+        if config.allocation_method == "score_weight"
+        else config
+    )
+    validate_stock_selection_config(alpha_config)
+    alpha_stages = tuple(build_stock_selection_trend_pipeline(alpha_config))
+    _, _, _, allocator = _legacy_alpha_slices(spec, alpha_stages)
+    trend_filter = alpha_stages[1]
+    if not isinstance(trend_filter, TrendFilterStage):
+        msg = "stock legacy adapter requires TrendFilterStage at index 1"
+        raise AppBuilderError(
+            msg,
+            details={
+                "reason": "invalid_legacy_stage_shape",
+                "template": spec.template,
+                "actual_stage": type(trend_filter).__name__,
+            },
+        )
+    return (
+        (
+            SignalStage(source_column="signal_value"),
+            replace(trend_filter, signal_column="signal_value"),
+        ),
+        (ScoringStage(method=scoring_method, ascending=False),),
+        (RiskLockFilter(), SelectionStage(top_k=config.top_k)),
+        allocator,
+    )
+
+
 def _legacy_alpha_slices(
     spec: StrategySpec,
     alpha_stages: tuple[DecisionStage, ...],
@@ -234,11 +303,20 @@ def build_legacy_node_stage_groups(
 ) -> Mapping[str, tuple[DecisionStage, ...]]:
     """把 legacy template factory 结果按稳定 implementation key 分组。"""
     runtime_spec = _legacy_runtime_spec(spec)
-    alpha_stages = tuple(build_alpha_stages(runtime_spec))
-    factor, scorer, selector, allocator_alpha = _legacy_alpha_slices(
-        runtime_spec,
-        alpha_stages,
-    )
+    scoring_method = _resolve_legacy_scoring_method(runtime_spec)
+    if runtime_spec.template == "stock_selection":
+        factor, scorer, selector, allocator_alpha = (
+            _legacy_stock_selection_stage_groups(
+                runtime_spec,
+                scoring_method=scoring_method,
+            )
+        )
+    else:
+        alpha_stages = tuple(build_alpha_stages(runtime_spec))
+        factor, scorer, selector, allocator_alpha = _legacy_alpha_slices(
+            runtime_spec,
+            alpha_stages,
+        )
     groups: dict[str, tuple[DecisionStage, ...]] = dict.fromkeys(
         _LEGACY_STAGE_KEYS,
         (),

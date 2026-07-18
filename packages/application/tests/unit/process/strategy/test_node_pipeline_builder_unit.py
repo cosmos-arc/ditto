@@ -22,6 +22,7 @@ from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.errors import StrategySpecError
 
 
 def _builder() -> NodePipelineBuilder:
@@ -101,13 +102,100 @@ def test_stock_seed_pipeline_keeps_stable_builtin_stage_order() -> None:
     stage_names = tuple(type(stage).__name__ for stage in pipeline._stages)
 
     assert stage_names[:5] == (
-        "MultiFactorSignalStage",
+        "SignalStage",
         "TrendFilterStage",
         "ScoringStage",
         "RiskLockFilter",
         "SelectionStage",
     )
     assert isinstance(pipeline._stages[5], AllocationStage)
+
+
+def test_stock_seed_rank_then_combine_preserves_factor_bridge_scores() -> None:
+    """stock legacy adapter 不得再次 rank FactorBridge composite。"""
+    source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    params = {key: value for key, value in source.params.items() if key != "max_weight"}
+    params.update(
+        {
+            "allocation_method": "score_weight",
+            "top_k": 3,
+        },
+    )
+    spec = replace(
+        source,
+        selector=replace(source.selector, params={"k": 3}),
+        constraints=(),
+        params=params,
+    )
+    pipeline = _build(spec)
+
+    composite_values = [0.25, 0.65, 0.675, 0.925]
+    target = pipeline.run(
+        StrategyContext(),
+        StrategyInputBundle(
+            trade_date="2026-07-19",
+            strategy_id=spec.strategy_id,
+            run_id="stock-seed-golden",
+            instruments=pl.DataFrame({"instrument_id": [1, 2, 3, 4]}),
+            market_data=pl.DataFrame({"instrument_id": [1, 2, 3, 4]}),
+            signal_values=pl.DataFrame(
+                {
+                    "instrument_id": [1, 2, 3, 4],
+                    "signal_value": composite_values,
+                },
+            ),
+        ),
+    )
+
+    scoring = next(
+        stage for stage in pipeline._stages if isinstance(stage, ScoringStage)
+    )
+    assert scoring.method is ScoringMethod.RAW
+    assert set(target.positions) == {2, 3, 4}
+    assert target.positions[4] == pytest.approx(0.275 / 0.3)
+    assert target.positions[3] == pytest.approx(0.025 / 0.3)
+    assert target.positions[2] == pytest.approx(0.0)
+
+
+def test_stock_seed_unknown_scorer_fails_closed() -> None:
+    """stock legacy adapter 也必须严格解析 scorer，而非静默忽略。"""
+    source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    invalid = replace(
+        source,
+        scorer=replace(source.scorer, method="os.system"),
+    )
+
+    with pytest.raises(AppBuilderError, match="scoring_method"):
+        _build(invalid)
+
+
+def test_valid_scoring_override_precedes_legacy_default_scorer() -> None:
+    """有效 override 保留历史优先级，不解析被覆盖的旧默认值。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    spec = replace(
+        source,
+        scorer=replace(source.scorer, method="equal_weight"),
+        params={**source.params, "scoring_method": "rank"},
+    )
+
+    pipeline = _build(spec)
+
+    scoring = next(
+        stage for stage in pipeline._stages if isinstance(stage, ScoringStage)
+    )
+    assert scoring.method is ScoringMethod.RANK
+
+
+def test_stock_seed_unknown_allocation_method_still_fails_closed() -> None:
+    """legacy bridge 不得因隔离 alpha validation 而放宽 allocation enum。"""
+    source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    invalid = replace(
+        source,
+        params={**source.params, "allocation_method": "os.system"},
+    )
+
+    with pytest.raises(StrategySpecError, match="allocation_method"):
+        _build(invalid)
 
 
 def test_selector_adapter_expands_system_guard_without_authoring_filter_node() -> None:

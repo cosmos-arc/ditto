@@ -291,6 +291,34 @@ class TestNodeRegistry:
             ).manifest_hash
         )
 
+    def test_manifest_rejects_out_of_range_integer_with_typed_field_path(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.node_registry import (
+            NodeConfigType,
+            NodeRegistry,
+        )
+
+        descriptor = _descriptor(
+            node_type="builtin.factor_set",
+            category=NodeCategory.FACTOR_SET,
+            input_contract="universe_frame.v1",
+            output_contract="factor_frame.v1",
+        )
+        descriptor = replace(
+            descriptor,
+            config_schema={"lookback": NodeConfigType.INTEGER},
+            default_config={"lookback": 2**100},
+        )
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            NodeRegistry((descriptor,))
+
+        assert exc_info.value.details["reason"] == "invalid_descriptor_manifest_value"
+        assert exc_info.value.details["field_name"] == (
+            "descriptors.builtin.factor_set@1.default_config.lookback"
+        )
+
     def test_lookup_is_exact_and_unknown_node_or_version_fails_closed(self) -> None:
         from ditto_strategy.alpha.node_registry import default_node_registry
 

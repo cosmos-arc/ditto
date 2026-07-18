@@ -221,6 +221,36 @@ def _plain_json(value: object) -> object:
     return value
 
 
+def _validate_manifest_value(value: object, *, field_name: str) -> None:
+    """在 registry 编码前定位 orjson 不支持的整数路径。"""
+    if isinstance(value, Mapping):
+        mapping = cast("Mapping[object, object]", value)
+        for key, item in mapping.items():
+            _validate_manifest_value(
+                item,
+                field_name=f"{field_name}.{key}",
+            )
+        return
+    if isinstance(value, list):
+        items = cast("list[object]", value)
+        for index, item in enumerate(items):
+            _validate_manifest_value(
+                item,
+                field_name=f"{field_name}[{index}]",
+            )
+        return
+    if isinstance(value, int) and not isinstance(value, bool):
+        try:
+            orjson.dumps(value)
+        except (TypeError, ValueError, OverflowError):
+            _raise_registry_error(
+                "Node descriptor manifest contains an unsupported integer",
+                reason="invalid_descriptor_manifest_value",
+                field_name=field_name,
+                actual_type="int",
+            )
+
+
 def _validate_descriptor_category(value: object) -> None:
     if not isinstance(value, NodeCategory):
         _raise_registry_error(
@@ -407,10 +437,27 @@ class NodeRegistry:
         self._by_identity = MappingProxyType(
             {descriptor.identity: descriptor for descriptor in self._descriptors},
         )
-        manifest_bytes = orjson.dumps(
-            [descriptor.manifest_payload() for descriptor in self._descriptors],
-            option=orjson.OPT_SORT_KEYS,
-        )
+        manifest_payloads: list[dict[str, object]] = []
+        for descriptor in self._descriptors:
+            payload = descriptor.manifest_payload()
+            _validate_manifest_value(
+                payload,
+                field_name=f"descriptors.{descriptor.identity}",
+            )
+            manifest_payloads.append(payload)
+        try:
+            manifest_bytes = orjson.dumps(
+                manifest_payloads,
+                option=orjson.OPT_SORT_KEYS,
+            )
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise StrategySpecError(
+                "Node registry manifest has no canonical JSON identity",
+                details={
+                    "reason": "invalid_descriptor_manifest_value",
+                    "field_name": "descriptors",
+                },
+            ) from exc
         self._manifest_hash = hashlib.sha256(manifest_bytes).hexdigest()
 
     @property
