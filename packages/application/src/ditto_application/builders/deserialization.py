@@ -310,7 +310,13 @@ def _deserialize_parameter_schema_v2(
                 "allowed_values",
             },
         )
-        parameters.append(deserialize_param_constraint(payload, index=index))
+        parameters.append(
+            deserialize_param_constraint(
+                payload,
+                index=index,
+                collection_field_name="parameter_schema",
+            ),
+        )
     return tuple(parameters)
 
 
@@ -464,30 +470,32 @@ def deserialize_param_constraint(
     raw_value: object,
     *,
     index: int,
+    collection_field_name: str = "param_constraints",
 ) -> ParamConstraint:
     """恢复参数约束元数据。"""
+    item_field_name = f"{collection_field_name}[{index}]"
     payload = as_object_dict(
         raw_value,
-        field_name=f"param_constraints[{index}]",
+        field_name=item_field_name,
     )
     return ParamConstraint(
         name=read_required_str(payload, "name"),
         dtype=read_required_str(payload, "dtype"),
         min_value=read_optional_float(
             payload.get("min_value"),
-            field_name=f"param_constraints[{index}].min_value",
+            field_name=f"{item_field_name}.min_value",
         ),
         max_value=read_optional_float(
             payload.get("max_value"),
-            field_name=f"param_constraints[{index}].max_value",
+            field_name=f"{item_field_name}.max_value",
         ),
         step=read_optional_float(
             payload.get("step"),
-            field_name=f"param_constraints[{index}].step",
+            field_name=f"{item_field_name}.step",
         ),
         allowed_values=as_str_tuple(
             payload.get("allowed_values"),
-            field_name=f"param_constraints[{index}].allowed_values",
+            field_name=f"{item_field_name}.allowed_values",
         ),
     )
 

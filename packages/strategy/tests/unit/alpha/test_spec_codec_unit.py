@@ -324,6 +324,23 @@ class TestCanonicalSpecCodec:
         assert exc_info.value.details["field_name"] == field_name
         assert exc_info.value.details["reason"] == expected_reason
 
+    def test_payload_validates_parameter_identity_before_sorting(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_payload
+
+        spec = _make_v2_spec()
+        invalid_parameter = ParamConstraint(name="other", dtype="int")
+        object.__setattr__(invalid_parameter, "name", True)
+        spec = replace(
+            spec,
+            parameter_schema=(*spec.parameter_schema, invalid_parameter),
+        )
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            canonical_spec_payload(spec)
+
+        assert exc_info.value.details["field_name"] == "name"
+        assert exc_info.value.details["reason"] == "invalid_parameter_name"
+
     def test_codec_rejects_non_string_mapping_key_after_domain_bypass(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
 

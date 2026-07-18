@@ -242,7 +242,29 @@ def read_float(raw_value: object, *, field_name: str) -> float:
     if not isinstance(raw_value, (int, float)) or isinstance(raw_value, bool):
         msg = f"{field_name} 必须是数字"
         raise AppBuilderError(msg)
-    return float(raw_value)
+    try:
+        value = float(raw_value)
+    except OverflowError as exc:
+        msg = f"{field_name} 数值超出 float 可表示范围"
+        raise AppBuilderError(
+            msg,
+            details={
+                "field_name": field_name,
+                "reason": "numeric_overflow",
+                "actual_type": type(raw_value).__name__,
+            },
+        ) from exc
+    if isinstance(raw_value, int) and int(value) != raw_value:
+        msg = f"{field_name} 转换为 float 会丢失整数精度"
+        raise AppBuilderError(
+            msg,
+            details={
+                "field_name": field_name,
+                "reason": "numeric_precision_loss",
+                "actual_type": type(raw_value).__name__,
+            },
+        )
+    return value
 
 
 def _read_clamped_float(

@@ -221,6 +221,69 @@ class TestDeserializeStrategySpecV2:
         assert spec.pipeline.nodes == ()
         assert spec.pipeline.sequence == ()
 
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_huge_parameter_number_maps_float_overflow_to_application_error(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+
+        payload = _v2_payload()
+        parameter_schema = payload.get("parameter_schema")
+        assert isinstance(parameter_schema, list)
+        parameter = parameter_schema[0]
+        assert isinstance(parameter, dict)
+        parameter[field_name] = 1 << 20_000
+
+        with pytest.raises(AppBuilderError) as exc_info:
+            deserialize_strategy_spec_v2(_record(payload))
+
+        expected_field = f"parameter_schema[0].{field_name}"
+        assert expected_field in str(exc_info.value)
+        assert exc_info.value.details["field_name"] == expected_field
+        assert exc_info.value.details["reason"] == "numeric_overflow"
+        assert isinstance(exc_info.value.__cause__, OverflowError)
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_parameter_integer_that_would_collapse_in_float_fails_closed(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_application.builders.deserialization import (
+            deserialize_strategy_spec_v2,
+        )
+
+        exact_integer = 2**53
+        lossy_integer = exact_integer + 1
+        assert float(exact_integer) == float(lossy_integer)
+
+        exact_payload = _v2_payload()
+        exact_schema = exact_payload.get("parameter_schema")
+        assert isinstance(exact_schema, list)
+        exact_parameter = exact_schema[0]
+        assert isinstance(exact_parameter, dict)
+        exact_parameter[field_name] = exact_integer
+        exact_spec = deserialize_strategy_spec_v2(_record(exact_payload))
+        assert getattr(exact_spec.parameter_schema[0], field_name) == float(
+            exact_integer,
+        )
+
+        lossy_payload = _v2_payload()
+        lossy_schema = lossy_payload.get("parameter_schema")
+        assert isinstance(lossy_schema, list)
+        lossy_parameter = lossy_schema[0]
+        assert isinstance(lossy_parameter, dict)
+        lossy_parameter[field_name] = lossy_integer
+
+        with pytest.raises(AppBuilderError) as exc_info:
+            deserialize_strategy_spec_v2(_record(lossy_payload))
+
+        expected_field = f"parameter_schema[0].{field_name}"
+        assert exc_info.value.details["field_name"] == expected_field
+        assert exc_info.value.details["reason"] == "numeric_precision_loss"
+
     @pytest.mark.parametrize(
         ("field_name", "mutate"),
         [

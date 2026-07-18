@@ -161,6 +161,8 @@ def canonical_spec_payload(spec: StrategySpecV2) -> dict[str, object]:
         }
         for node in ordered_nodes
     ]
+    for parameter in spec.parameter_schema:
+        parameter.validate_canonical_identity()
     parameter_payloads = [
         _parameter_payload(parameter)
         for parameter in sorted(
