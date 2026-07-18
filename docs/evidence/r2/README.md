@@ -75,7 +75,7 @@ pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance \
 
 | Gate | Evidence | Current result |
 |---|---|---|
-| Backend focused/full quality | 2026-07-18 本地 fresh run：`pixi run -e dev check` 为 9041 passed / 1 xfailed；三包完整集合为 5383 passed / 43 skipped / 10 xfailed / 11 xpassed，coverage 89.79% | **DEVELOPMENT PASS**；skip/xfail 不作为 live evidence |
+| Backend focused/full quality | 2026-07-18 本地 fresh run：`pixi run -e dev check` 为 9041 passed / 1 xfailed；三包完整集合为 5383 passed / 43 skipped / 10 xfailed / 11 xpassed，coverage 89.79%；完成审计新增的 evidence-chain/index-weight 两项集成测试为 2 passed | **DEVELOPMENT PASS**；skip/xfail 不作为 live evidence |
 | Architecture/smell/pre-commit | 37 条 import contracts kept；architecture smell 0 issues；pre-commit 全部通过 | **DEVELOPMENT PASS** |
 | Frontend codegen/check/build | OpenAPI codegen 无 diff；Biome/TypeScript 通过；167 files / 1942 tests；生产 build 通过 | **DEVELOPMENT PASS**；尚无 live UI artifact |
 | Fixture acceptance | [`fixture-acceptance.json`](20260718T115126Z/fixture-acceptance.json)，SHA-256 `100157e100a37f6423f43d4a762c9b68d7632413820477f6ce436945e5451d3f`；另一次独立运行同样 `ready` | **PASS（仅确定性实现）**：19 contracts，36000s/120s/0.4s，restore 通过，second-run writes=0 |

@@ -8,6 +8,10 @@
 
 **Tech Stack:** Python 3.13、dataclass/Protocol、SQLite、Parquet、Polars、Dishka、FastAPI、Pytest；React 19、TypeScript strict、TanStack Query/Router、Tailwind v4、Vitest/RTL。
 
+> **执行状态（2026-07-18）**：16/16 项开发任务已完成并提交；文件清单已按
+> 实际仓库布局对账。确定性与工程门禁通过，真实 provider、历史、性能和连续
+> 运行仍是 release evidence Gate，不属于可由开发代码伪造关闭的任务。
+
 ---
 
 ## 实施约束
@@ -163,10 +167,10 @@ Expected: PASS。
 - Modify: `packages/application/src/ditto_application/processes/ingestion/dataset_registry.py`
 - Modify: `packages/application/src/ditto_application/processes/ingestion/data_writer.py`
 - Modify: `packages/data/src/ditto_data/services/market_write_service.py`
-- Modify: `packages/data/src/ditto_data/storage/market/etf/adj/writer.py`
+- Test: `packages/data/tests/unit/services/test_market_write_service.py`
 - Test: `packages/application/tests/unit/process/ingestion/test_data_writer_unit.py`
 - Test: `packages/application/tests/unit/process/ingestion/test_dataset_registry_unit.py`
-- Test: `packages/apps/tests/integration/ingestion/test_fund_adj_ingestion_integration.py`
+- Test: `packages/apps/tests/integration/ingestion/test_adj_factor_ingestion_integration.py`
 
 **Step 1: Write the failing tests**
 
@@ -190,14 +194,15 @@ Expected: PASS。
 
 **Files:**
 - Modify: `packages/data/src/ditto_data/models/market.py`
-- Modify: `packages/data/src/ditto_data/storage/capital/index_composition/reader.py`
-- Modify: `packages/data/src/ditto_data/storage/capital/index_composition/writer.py`
+- Modify: `packages/data/src/ditto_data/storage/capital/index_composition/index_composition_reader.py`
+- Modify: `packages/data/src/ditto_data/storage/capital/index_composition/index_composition_writer.py`
 - Modify: `packages/data/src/ditto_data/services/capital_store.py`
 - Modify: `packages/application/src/ditto_application/processes/ingestion/dataset_registry.py`
 - Modify: `packages/application/src/ditto_application/processes/ingestion/data_writer.py`
 - Modify: `packages/application/src/ditto_application/queries/market.py`
-- Test: `packages/data/tests/unit/storage/capital/test_index_composition_unit.py`
-- Test: `packages/application/tests/unit/process/ingestion/test_index_weight_ingestion_unit.py`
+- Test: `packages/data/tests/unit/storage/capital/index_composition/test_index_composition_reader_unit.py`
+- Test: `packages/data/tests/unit/storage/capital/index_composition/test_index_composition_writer_unit.py`
+- Test: `packages/application/tests/unit/process/ingestion/test_data_writer_unit.py`
 - Test: `packages/apps/tests/integration/ingestion/test_index_weight_ingestion_integration.py`
 
 **Step 1: Write the failing tests**
@@ -221,10 +226,10 @@ Expected: PASS。
 ### Task 8: 修复 PIT-safe `stock_status`
 
 **Files:**
-- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/market.py`
+- Modify: `packages/data/src/ditto_data/sources/tushare/adapters/stock.py`
 - Modify: `packages/data/src/ditto_data/sources/tushare/tushare_source.py`
 - Modify: `packages/application/src/ditto_application/processes/ingestion/dataset_registry.py`
-- Test: `packages/data/tests/unit/sources/tushare/test_market_adapter_unit.py`
+- Test: `packages/data/tests/unit/sources/tushare/adapters/test_stock_status_pit_unit.py`
 - Test: `packages/application/tests/unit/process/ingestion/test_stock_status_pit_unit.py`
 
 **Step 1: Write the failing tests**
@@ -280,11 +285,11 @@ Expected: PASS。
 
 **Files:**
 - Create: `packages/application/src/ditto_application/queries/data_readiness.py`
-- Modify: `packages/application/src/ditto_application/processes/trading/daily_decision.py`
+- Modify: `packages/application/src/ditto_application/processes/execution/eod_coordinator.py`
 - Modify: `packages/application/src/ditto_application/providers_process.py`
 - Test: `packages/application/tests/unit/query/test_data_readiness_unit.py`
-- Test: `packages/application/tests/unit/process/trading/test_daily_decision_r2_preflight_unit.py`
-- Test: `packages/apps/tests/e2e/test_r1_daily_decision.py`
+- Test: `packages/application/tests/unit/process/execution/test_eod_coordinator_r2_preflight_unit.py`
+- Test: `packages/apps/tests/e2e/test_r1_daily_manual_trading.py`
 
 **Step 1: Write the failing tests**
 
@@ -310,7 +315,7 @@ Expected: PASS。
 - Modify: `packages/features/src/ditto_features/factors/production_guard.py`
 - Modify: `packages/application/src/ditto_application/processes/materialization/catalog_dependency_validation.py`
 - Create: `packages/application/src/ditto_application/processes/materialization/r2_seed_smoke.py`
-- Test: `packages/features/tests/unit/factors/test_production_guard_unit.py`
+- Test: `packages/features/tests/unit/test_production_factor_guard_unit.py`
 - Test: `packages/application/tests/unit/process/materialization/test_r2_seed_smoke_unit.py`
 
 **Step 1: Write the failing tests**
@@ -337,7 +342,7 @@ Expected: PASS。
 - Create: `packages/apps/src/ditto_apps/models/data_products.py`
 - Create: `packages/apps/src/ditto_apps/api/routes/data_products.py`
 - Modify: `packages/apps/src/ditto_apps/api/routes/__init__.py`
-- Modify: `packages/apps/src/ditto_apps/api/app.py`
+- Modify: `packages/apps/src/ditto_apps/main.py`
 - Modify: `packages/apps/src/ditto_apps/registry/contexts/ingestion.py`
 - Modify: `packages/apps/src/ditto_apps/cli/main.py`
 - Modify: `packages/apps/src/ditto_apps/jobs/flows/backfill.py`
