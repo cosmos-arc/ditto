@@ -114,6 +114,7 @@ class BacktestServiceConfig:
     Attributes:
         strategy_id: 策略 ID
         strategy_version: 策略版本
+        spec_hash: canonical StrategySpec v2 SHA-256
         run_id: 运行 ID (空字符串时由服务预生成并传给引擎)
         start_date: 起始日期 (YYYY-MM-DD)
         end_date: 结束日期 (YYYY-MM-DD)
@@ -136,6 +137,7 @@ class BacktestServiceConfig:
 
     strategy_id: str = "default"
     strategy_version: str = ""
+    spec_hash: str = ""
     run_id: str = ""
     parent_run_id: str = ""
     start_date: str = ""
@@ -449,6 +451,7 @@ class BacktestService:
             start_date=self._config.start_date,
             end_date=self._config.end_date,
             initial_cash=self._config.initial_cash,
+            spec_hash=self._config.spec_hash,
             benchmark_id=self._config.benchmark_id,
             mode=EngineMode.BACKTEST,
             strategy_id=self._config.strategy_id,

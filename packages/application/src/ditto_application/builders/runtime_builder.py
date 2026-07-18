@@ -9,6 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.spec_codec import (
+    adapt_legacy_strategy_spec,
+    canonical_spec_hash,
+)
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.models import StrategySpecRecord
@@ -44,6 +48,7 @@ class PublishedStrategyRuntime:
     record: StrategySpecRecord
     spec: StrategySpec
     pipeline: StrategyPipeline
+    spec_hash: str
     compiled_expressions: CompiledExpressions | None = None
 
 
@@ -85,11 +90,13 @@ class StrategyRuntimeBuilder:
         spec = deserialize_strategy_spec(record)
         pipeline = _build_pipeline(spec)
         compiled = _compile_signal_expressions(spec)
+        spec_hash = canonical_spec_hash(adapt_legacy_strategy_spec(spec))
         return PublishedStrategyRuntime(
             record=record,
             spec=spec,
             pipeline=pipeline,
             compiled_expressions=compiled,
+            spec_hash=spec_hash,
         )
 
 

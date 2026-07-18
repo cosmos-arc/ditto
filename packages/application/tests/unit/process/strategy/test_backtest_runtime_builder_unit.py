@@ -79,6 +79,7 @@ class TestBacktestRuntimeBuilder:
 
     def test_build_published_runtime_creates_minimal_backtest_components(self) -> None:
         """builder 应从 published runtime 构造可跑的 backtest 依赖。"""
+        canonical_spec_hash = "b" * 64
         spec = _make_strategy_spec()
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
@@ -93,6 +94,7 @@ class TestBacktestRuntimeBuilder:
                 ),
                 spec=spec,
                 pipeline=MagicMock(spec=StrategyPipeline),
+                spec_hash=canonical_spec_hash,
             )
         )
         metadata_service = MagicMock(spec=MetadataService)
@@ -120,6 +122,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         assert runtime.config.strategy_version == "2"
+        assert runtime.config.spec_hash == canonical_spec_hash
         assert runtime.config.benchmark_id == 3_000_001
         # data_feed 是 ProviderBackedDataFeed 实例
         assert isinstance(runtime.data_feed, ProviderBackedDataFeed)
@@ -156,6 +159,7 @@ class TestBacktestRuntimeBuilder:
                 ),
                 spec=spec,
                 pipeline=MagicMock(spec=StrategyPipeline),
+                spec_hash="b" * 64,
             )
         )
         metadata_service = MagicMock(spec=MetadataService)
@@ -204,6 +208,7 @@ class TestBacktestRuntimeBuilder:
                 ),
                 spec=spec,
                 pipeline=MagicMock(spec=StrategyPipeline),
+                spec_hash="b" * 64,
             )
         )
         metadata_service = MagicMock(spec=MetadataService)
@@ -317,6 +322,7 @@ class TestBacktestRuntimeBuilder:
                 ),
                 spec=spec,
                 pipeline=MagicMock(spec=StrategyPipeline),
+                spec_hash="b" * 64,
             )
         )
         metadata_service = MagicMock(spec=MetadataService)
@@ -362,6 +368,7 @@ class TestBacktestRuntimeBuilder:
                 ),
                 spec=spec,
                 pipeline=MagicMock(spec=StrategyPipeline),
+                spec_hash="b" * 64,
             )
         )
         metadata_service = MagicMock(spec=MetadataService)
@@ -412,6 +419,7 @@ class TestBacktestRuntimeBuilder:
                 ),
                 spec=spec,
                 pipeline=MagicMock(spec=StrategyPipeline),
+                spec_hash="b" * 64,
             )
         )
         metadata_service = MagicMock(spec=MetadataService)

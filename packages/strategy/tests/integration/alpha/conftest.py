@@ -405,6 +405,7 @@ def build_snapshot_engine(
         start_date=start_date,
         end_date=end_date,
         initial_cash=initial_cash,
+        spec_hash="e" * 64,
         mode=EngineMode.BACKTEST,
         strategy_id=strategy_id,
         strategy_run_id=strategy_run_id,

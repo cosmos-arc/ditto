@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -15,7 +16,20 @@ from ditto_kernel.identity import InstrumentId
 __all__ = [
     "EngineConfig",
     "EngineMode",
+    "validate_spec_hash",
 ]
+
+_CANONICAL_SPEC_HASH_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def validate_spec_hash(spec_hash: object) -> str:
+    """校验并返回 StrategySpec codec 产生的完整小写 SHA-256。"""
+    if not isinstance(spec_hash, str) or not _CANONICAL_SPEC_HASH_RE.fullmatch(
+        spec_hash
+    ):
+        msg = "spec_hash must be a 64-character lowercase SHA-256 hex digest"
+        raise ValueError(msg)
+    return spec_hash
 
 
 class EngineMode(StrEnum):
@@ -51,6 +65,7 @@ class EngineConfig:
     start_date: str
     end_date: str
     initial_cash: float
+    spec_hash: str
     benchmark_id: InstrumentId | None = None
     mode: EngineMode = EngineMode.BACKTEST
     trade_matching: TradeMatchingMethod = TradeMatchingMethod.FIFO
@@ -62,3 +77,7 @@ class EngineConfig:
     engine_version: str = "0.1.0"
     execution_delay: int = 0
     knowledge_lag_days: int = 1
+
+    def __post_init__(self) -> None:
+        """执行边界必须携带完整 canonical StrategySpec hash。"""
+        validate_spec_hash(self.spec_hash)

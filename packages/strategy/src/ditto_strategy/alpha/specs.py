@@ -8,13 +8,16 @@ StrategySpec — 策略定义的核心语义契约.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import NoReturn, cast
 
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
 
+from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.production_guard import (
     UnsafeProductionFactorExpressionError,
     validate_production_factor_expression,
@@ -22,14 +25,70 @@ from ditto_strategy.alpha.production_guard import (
 from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
+    "STRATEGY_SPEC_V2_SCHEMA_VERSION",
     "ConstraintSpec",
     "CostModelSpec",
     "ExecutionSpec",
     "ParamConstraint",
     "ScorerSpec",
     "SelectorSpec",
+    "StrategyKind",
     "StrategySpec",
+    "StrategySpecV2",
 ]
+
+STRATEGY_SPEC_V2_SCHEMA_VERSION = 2
+
+
+def _validate_v2_schema_version(value: object) -> None:
+    if (
+        not isinstance(value, int)
+        or isinstance(value, bool)
+        or value != STRATEGY_SPEC_V2_SCHEMA_VERSION
+    ):
+        _raise_spec_error(
+            "StrategySpecV2.schema_version must be exactly 2",
+            field_name="schema_version",
+            reason="unsupported_schema_version",
+            actual_value=value,
+        )
+
+
+def _validate_v2_strategy_kind(value: object) -> None:
+    if not isinstance(value, StrategyKind):
+        _raise_spec_error(
+            "StrategySpecV2.strategy_kind must be a StrategyKind",
+            field_name="strategy_kind",
+            reason="invalid_strategy_kind",
+            actual_value=value,
+        )
+
+
+def _validate_v2_pipeline(value: object) -> None:
+    if not isinstance(value, PipelineSpec):
+        _raise_spec_error(
+            "StrategySpecV2.pipeline must be a PipelineSpec",
+            field_name="pipeline",
+            reason="invalid_pipeline",
+        )
+
+
+def _validate_v2_parameter_schema(value: tuple[object, ...]) -> None:
+    if not all(isinstance(parameter, ParamConstraint) for parameter in value):
+        _raise_spec_error(
+            "StrategySpecV2.parameter_schema must contain ParamConstraint values",
+            field_name="parameter_schema",
+            reason="invalid_parameter_schema",
+        )
+
+
+def _validate_v2_tags(value: tuple[object, ...]) -> None:
+    if not all(isinstance(tag, str) for tag in value):
+        _raise_spec_error(
+            "StrategySpecV2.tags must be tuple[str, ...]",
+            field_name="tags",
+            reason="invalid_tags",
+        )
 
 
 def _raise_spec_error(
@@ -152,6 +211,45 @@ class SelectorSpec:
 
     method: str = "top_k"
     params: dict[str, object] = field(default_factory=dict)
+
+
+class StrategyKind(StrEnum):
+    """R3 两条 canonical 策略黄金路径。"""
+
+    STOCK_SELECTION = "stock_selection"
+    ETF_ROTATION = "etf_rotation"
+
+
+@dataclass(frozen=True)
+class StrategySpecV2:
+    """R3 类型化策略规格；与 R1 legacy ``StrategySpec`` 显式分离。"""
+
+    schema_version: int
+    strategy_family_id: str
+    strategy_kind: StrategyKind
+    name: str
+    pipeline: PipelineSpec
+    parameter_schema: tuple[ParamConstraint, ...] = ()
+    metadata: Mapping[str, object] = field(default_factory=dict[str, object])
+    tags: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """校验 V2 顶层类型边界，拒绝隐式 legacy/松散 payload。"""
+        _validate_v2_schema_version(self.schema_version)
+        for field_name in ("strategy_family_id", "name"):
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not value.strip():
+                _raise_spec_error(
+                    f"StrategySpecV2.{field_name} must be non-empty",
+                    field_name=field_name,
+                    reason="empty_required_field",
+                    actual_value=value,
+                )
+        _validate_v2_strategy_kind(self.strategy_kind)
+        _validate_v2_pipeline(self.pipeline)
+        _validate_v2_parameter_schema(self.parameter_schema)
+        _validate_v2_tags(self.tags)
+        object.__setattr__(self, "metadata", dict(self.metadata))
 
 
 @dataclass(frozen=True)

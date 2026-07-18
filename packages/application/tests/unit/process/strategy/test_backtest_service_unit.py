@@ -59,6 +59,7 @@ def _make_service_config(
     run_id: str = "run-001",
     start_date: str = "2026-01-01",
     end_date: str = "2026-03-01",
+    spec_hash: str = "c" * 64,
     **overrides: object,
 ) -> BacktestServiceConfig:
     """创建 BacktestServiceConfig 测试辅助函数。"""
@@ -67,6 +68,7 @@ def _make_service_config(
         run_id=run_id,
         start_date=start_date,
         end_date=end_date,
+        spec_hash=spec_hash,
         **overrides,
     )
 
@@ -122,6 +124,7 @@ class TestBacktestServiceConfig:
         assert config.start_date == ""
         assert config.end_date == ""
         assert config.initial_cash == 1_000_000.0
+        assert config.spec_hash == ""
         assert config.benchmark_id is None
         assert config.rebalance_freq == "daily"
         assert config.engine_version == "0.1.0"
@@ -163,6 +166,7 @@ class TestBacktestServiceConfig:
             start_date=config.start_date,
             end_date=config.end_date,
             initial_cash=config.initial_cash,
+            spec_hash=config.spec_hash,
             benchmark_id=config.benchmark_id,
             strategy_id=config.strategy_id,
             strategy_run_id=config.run_id,
@@ -171,6 +175,16 @@ class TestBacktestServiceConfig:
         )
         assert engine_config.strategy_run_id == "run-xyz"
         assert engine_config.strategy_id == config.strategy_id
+
+    def test_canonical_spec_hash_propagates_to_engine_config(self) -> None:
+        """Service config 的 canonical hash 必须原样进入 EngineConfig。"""
+        canonical_spec_hash = "c" * 64
+        config = _make_service_config(spec_hash=canonical_spec_hash)
+        service = _make_minimal_service(config=config)
+
+        engine_config = service._build_engine_config("run-spec-hash")
+
+        assert engine_config.spec_hash == canonical_spec_hash
 
 
 # ---------------------------------------------------------------------------

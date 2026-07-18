@@ -15,6 +15,7 @@ from ditto_application.builders._spec_deserializer import (
     read_optional_int,
     read_optional_str,
     read_required_str,
+    read_required_value,
     read_str_value,
 )
 from ditto_application.exceptions import AppBuilderError
@@ -227,8 +228,21 @@ class TestReadBool:
 
 
 # ---------------------------------------------------------------------------
-# read_required_str
+# read_required_value / read_required_str
 # ---------------------------------------------------------------------------
+
+
+class TestReadRequiredValue:
+    @pytest.mark.unit
+    def test_preserves_typed_object_value(self) -> None:
+        value = {"nodes": []}
+
+        assert read_required_value({"pipeline": value}, "pipeline") is value
+
+    @pytest.mark.unit
+    def test_missing_key_raises_typed_app_error(self) -> None:
+        with pytest.raises(AppBuilderError, match="x"):
+            read_required_value({}, "x")
 
 
 class TestReadRequiredStr:

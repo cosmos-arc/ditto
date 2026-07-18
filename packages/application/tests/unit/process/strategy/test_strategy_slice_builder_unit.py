@@ -125,6 +125,7 @@ class TestStrategySliceBuilder:
             ),
             spec=spec,
             pipeline=MagicMock(spec=StrategyPipeline),
+            spec_hash="b" * 64,
         )
         builder = StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,
@@ -168,6 +169,7 @@ class TestStrategySliceBuilder:
             ),
             spec=spec,
             pipeline=MagicMock(spec=StrategyPipeline),
+            spec_hash="b" * 64,
         )
         data_provider = _make_data_provider()
         builder = StrategySliceBuilder(
@@ -206,6 +208,7 @@ class TestStrategySliceBuilder:
             ),
             spec=spec,
             pipeline=MagicMock(spec=StrategyPipeline),
+            spec_hash="b" * 64,
         )
         builder = StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,
@@ -243,6 +246,7 @@ class TestStrategySliceBuilder:
             ),
             spec=spec,
             pipeline=MagicMock(spec=StrategyPipeline),
+            spec_hash="b" * 64,
         )
         builder = StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,

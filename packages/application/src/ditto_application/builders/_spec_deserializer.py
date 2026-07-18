@@ -29,6 +29,7 @@ __all__ = [
     "read_optional_int",
     "read_optional_str",
     "read_required_str",
+    "read_required_value",
     "read_str_value",
 ]
 
@@ -189,9 +190,17 @@ def as_float_tuple(
     return tuple(result)
 
 
+def read_required_value(payload: dict[str, object], field_name: str) -> object:
+    """读取必填字段，并把缺失键转换为 typed application error。"""
+    if field_name not in payload:
+        msg = f"{field_name} 是必填字段"
+        raise AppBuilderError(msg)
+    return payload.get(field_name)
+
+
 def read_required_str(payload: dict[str, object], field_name: str) -> str:
     """读取必填字符串字段。"""
-    value = payload.get(field_name)
+    value = read_required_value(payload, field_name)
     if not isinstance(value, str) or value == "":
         msg = f"{field_name} 必须是非空字符串"
         raise AppBuilderError(msg)

@@ -36,6 +36,7 @@ def _make_service_config(
         strategy_version=strategy_version,
         start_date=start_date,
         end_date=end_date,
+        spec_hash="c" * 64,
     )
 
 

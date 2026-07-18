@@ -361,6 +361,7 @@ class BacktestRuntimeBuilder:
             config,
             strategy_version=str(runtime.record.version),
             benchmark_id=benchmark_id,
+            spec_hash=runtime.spec_hash,
         )
 
         # 解析 universe → tickers + id_map + display_map

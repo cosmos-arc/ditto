@@ -46,6 +46,21 @@ from ditto_strategy.alpha.models import TargetPortfolio
 
 
 DAYS = ["2026-03-01", "2026-03-02", "2026-03-03"]
+_CANONICAL_SPEC_HASH = "d" * 64
+
+
+def test_engine_config_requires_full_canonical_spec_hash() -> None:
+    """执行配置不得缺失或接受截断的 spec hash。"""
+    required: dict[str, object] = {
+        "start_date": "2026-03-01",
+        "end_date": "2026-03-03",
+        "initial_cash": 1_000_000.0,
+    }
+
+    with pytest.raises(TypeError, match="spec_hash"):
+        EngineConfig(**required)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="spec_hash"):
+        EngineConfig(**required, spec_hash="a" * 16)  # type: ignore[arg-type]
 
 
 def _make_cash(available: float = 500_000.0) -> CashBook:
@@ -140,6 +155,7 @@ def _make_config() -> EngineConfig:
         start_date="2026-03-01",
         end_date="2026-03-03",
         initial_cash=1_000_000.0,
+        spec_hash=_CANONICAL_SPEC_HASH,
         strategy_id="default",
         strategy_run_id="run-001",
     )

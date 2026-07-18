@@ -1,0 +1,371 @@
+"""StrategySpec v2 canonical codec 与 legacy migration adapter 测试。"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import replace
+from typing import cast
+
+import orjson
+import pytest
+from ditto_kernel.order import OrderType
+from ditto_strategy.alpha.nodes import (
+    NodeCategory,
+    NodeInstance,
+    NodeRef,
+    PipelineSpec,
+)
+from ditto_strategy.alpha.specs import (
+    ConstraintSpec,
+    CostModelSpec,
+    ExecutionSpec,
+    ParamConstraint,
+    ScorerSpec,
+    SelectorSpec,
+    StrategyKind,
+    StrategySpec,
+    StrategySpecV2,
+)
+from ditto_strategy.errors import StrategySpecError
+
+
+def _make_v2_spec(*, reversed_config: bool = False) -> StrategySpecV2:
+    factor_config = (
+        {"weights": {"value": 0.4, "momentum": 0.6}, "lookback": 60}
+        if not reversed_config
+        else {"lookback": 60, "weights": {"momentum": 0.6, "value": 0.4}}
+    )
+    nodes = (
+        NodeInstance(
+            node_id="universe",
+            ref=NodeRef("builtin.universe", "1"),
+            category=NodeCategory.UNIVERSE,
+            config={"universe_id": "csi_a_share", "asset_class": "stock"},
+        ),
+        NodeInstance(
+            node_id="factors",
+            ref=NodeRef("builtin.factor_set", "2"),
+            category=NodeCategory.FACTOR_SET,
+            config=factor_config,
+        ),
+        NodeInstance(
+            node_id="scorer",
+            ref=NodeRef("builtin.scorer", "1"),
+            category=NodeCategory.SCORER,
+            config={"method": "rank_then_combine"},
+        ),
+    )
+    return StrategySpecV2(
+        schema_version=2,
+        strategy_family_id="family-stock-alpha",
+        strategy_kind=StrategyKind.STOCK_SELECTION,
+        name="股票多因子",
+        pipeline=PipelineSpec(
+            nodes=nodes,
+            sequence=("universe", "factors", "scorer"),
+        ),
+        parameter_schema=(
+            ParamConstraint(
+                name="pipeline.nodes.factors.config.lookback",
+                dtype="int",
+                min_value=20,
+                max_value=120,
+                step=20,
+            ),
+        ),
+        metadata={"layout": {"x": 10, "y": 20}, "description": "UI only"},
+        tags=("draft", "research"),
+    )
+
+
+def _make_legacy_spec() -> StrategySpec:
+    return StrategySpec(
+        strategy_id="legacy-etf-alpha",
+        name="Legacy ETF Alpha",
+        template="etf_rotation",
+        universe="csi_etf_broad",
+        asset_class="etf",
+        scorer=ScorerSpec(method="rank_then_combine", params={"ascending": False}),
+        selector=SelectorSpec(method="top_k", params={"k": 3}),
+        execution=ExecutionSpec(
+            frequency="W",
+            method="calendar",
+            cost_model=CostModelSpec(
+                commission_rate=0.0003,
+                slippage_bps=3.0,
+            ),
+            default_order_type=OrderType.MARKET,
+        ),
+        constraints=(
+            ConstraintSpec(
+                type="max_weight_per_instrument",
+                params={"max_weight": 0.4},
+                priority=1,
+            ),
+        ),
+        benchmark="000300.SH",
+        params={"lookback": 60, "cash_target": 0.05},
+        param_constraints=(
+            ParamConstraint(
+                name="lookback",
+                dtype="int",
+                min_value=20,
+                max_value=120,
+                step=20,
+            ),
+        ),
+        tags=("legacy", "ui-tag"),
+        signal_expressions=("momentum_1m", "volatility_factor"),
+        signal_weights=(0.7, 0.3),
+        required_datasets=("etf_daily",),
+    )
+
+
+class TestCanonicalSpecCodec:
+    """Canonical bytes 只表达完整执行语义。"""
+
+    def test_bytes_use_recursive_canonical_key_ordering(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        canonical = canonical_spec_bytes(_make_v2_spec())
+        parsed = orjson.loads(canonical)
+
+        assert canonical == orjson.dumps(parsed, option=orjson.OPT_SORT_KEYS)
+
+    def test_same_semantics_have_identical_bytes_and_hash(self) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            canonical_spec_bytes,
+            canonical_spec_hash,
+        )
+
+        first = _make_v2_spec()
+        second = _make_v2_spec(reversed_config=True)
+        second = replace(
+            second,
+            pipeline=replace(
+                second.pipeline,
+                nodes=tuple(reversed(second.pipeline.nodes)),
+            ),
+        )
+
+        assert canonical_spec_bytes(first) == canonical_spec_bytes(second)
+        assert canonical_spec_hash(first) == canonical_spec_hash(second)
+
+    def test_hash_is_full_lowercase_sha256(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_hash
+
+        spec_hash = canonical_spec_hash(_make_v2_spec())
+
+        assert re.fullmatch(r"[0-9a-f]{64}", spec_hash)
+
+    def test_each_execution_field_change_changes_hash(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_hash
+        from ditto_strategy.alpha.specs import StrategyKind
+
+        spec = _make_v2_spec()
+        factor_node = next(
+            node for node in spec.pipeline.nodes if node.node_id == "factors"
+        )
+        changed_node = replace(
+            factor_node,
+            config={"lookback": 120, "weights": {"momentum": 0.6, "value": 0.4}},
+        )
+        changed_pipeline = replace(
+            spec.pipeline,
+            nodes=tuple(
+                changed_node if node.node_id == "factors" else node
+                for node in spec.pipeline.nodes
+            ),
+        )
+        variants = (
+            replace(spec, strategy_family_id="other-family"),
+            replace(spec, strategy_kind=StrategyKind.ETF_ROTATION),
+            replace(spec, pipeline=changed_pipeline),
+            replace(
+                spec,
+                parameter_schema=(replace(spec.parameter_schema[0], max_value=240),),
+            ),
+        )
+        baseline_hash = canonical_spec_hash(spec)
+
+        assert all(
+            canonical_spec_hash(variant) != baseline_hash for variant in variants
+        )
+
+    def test_ui_metadata_name_and_tags_do_not_change_execution_hash(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        spec = _make_v2_spec()
+        renamed = replace(
+            spec,
+            name="重命名不应影响执行",
+            metadata={"layout": {"x": 999}, "color": "blue"},
+            tags=("published", "favorite"),
+        )
+
+        canonical = canonical_spec_bytes(spec)
+        payload = orjson.loads(canonical)
+        assert canonical_spec_bytes(renamed) == canonical
+        assert "name" not in payload
+        assert "metadata" not in payload
+        assert "tags" not in payload
+
+    def test_codec_requires_explicit_legacy_adapter(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        legacy_as_v2 = cast(StrategySpecV2, _make_legacy_spec())
+
+        with pytest.raises(StrategySpecError, match="StrategySpecV2"):
+            canonical_spec_bytes(legacy_as_v2)
+
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            pytest.param(float("nan"), id="non-finite-float"),
+            pytest.param(object(), id="unsupported-object"),
+        ],
+    )
+    def test_rejects_values_without_a_canonical_json_identity(
+        self,
+        invalid_value: object,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_bytes
+
+        spec = _make_v2_spec()
+        factor_node = next(
+            node for node in spec.pipeline.nodes if node.node_id == "factors"
+        )
+        changed_pipeline = replace(
+            spec.pipeline,
+            nodes=tuple(
+                replace(factor_node, config={"invalid": invalid_value})
+                if node.node_id == "factors"
+                else node
+                for node in spec.pipeline.nodes
+            ),
+        )
+
+        with pytest.raises(StrategySpecError, match="canonical"):
+            canonical_spec_bytes(replace(spec, pipeline=changed_pipeline))
+
+
+class TestLegacyStrategySpecAdapter:
+    """Legacy seed 只能通过显式 adapter 获得完整 V2 执行身份。"""
+
+    def test_adapter_maps_semantics_to_typed_nodes_not_an_opaque_blob(self) -> None:
+        from ditto_strategy.alpha.nodes import NodeCategory
+        from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
+        from ditto_strategy.alpha.specs import StrategyKind, StrategySpecV2
+
+        adapted = adapt_legacy_strategy_spec(_make_legacy_spec())
+        categories = tuple(
+            node.category
+            for node in sorted(
+                adapted.pipeline.nodes,
+                key=lambda node: adapted.pipeline.sequence.index(node.node_id),
+            )
+        )
+
+        assert isinstance(adapted, StrategySpecV2)
+        assert adapted.strategy_kind is StrategyKind.ETF_ROTATION
+        assert categories == (
+            NodeCategory.UNIVERSE,
+            NodeCategory.FACTOR_SET,
+            NodeCategory.SCORER,
+            NodeCategory.SELECTOR,
+            NodeCategory.ALLOCATOR,
+            NodeCategory.EXECUTION_ASSUMPTION,
+            NodeCategory.VALIDATION,
+        )
+        assert all(
+            node.ref.node_type != "legacy.spec" for node in adapted.pipeline.nodes
+        )
+
+    def test_adapter_rejects_non_legacy_spec(self) -> None:
+        from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
+
+        v2_as_legacy = cast(StrategySpec, _make_v2_spec())
+
+        with pytest.raises(StrategySpecError, match="legacy"):
+            adapt_legacy_strategy_spec(v2_as_legacy)
+
+    def test_every_legacy_execution_field_participates_in_hash(self) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            adapt_legacy_strategy_spec,
+            canonical_spec_hash,
+        )
+
+        base = _make_legacy_spec()
+        variants = (
+            ("template", replace(base, template="etf_trend_swing")),
+            ("universe", replace(base, universe="other_universe")),
+            ("asset_class", replace(base, asset_class="stock")),
+            ("scorer", replace(base, scorer=ScorerSpec(method="zscore"))),
+            ("selector", replace(base, selector=SelectorSpec(params={"k": 5}))),
+            (
+                "execution",
+                replace(
+                    base,
+                    execution=replace(
+                        base.execution,
+                        default_order_type=OrderType.LIMIT,
+                    ),
+                ),
+            ),
+            (
+                "constraints",
+                replace(
+                    base,
+                    constraints=(
+                        replace(base.constraints[0], params={"max_weight": 0.2}),
+                    ),
+                ),
+            ),
+            ("benchmark", replace(base, benchmark="000905.SH")),
+            ("params", replace(base, params={"lookback": 120, "cash_target": 0.05})),
+            (
+                "param_constraints",
+                replace(
+                    base,
+                    param_constraints=(
+                        replace(base.param_constraints[0], max_value=240),
+                    ),
+                ),
+            ),
+            (
+                "signal_expressions",
+                replace(
+                    base,
+                    signal_expressions=("momentum_3m", "volatility_factor"),
+                ),
+            ),
+            ("signal_weights", replace(base, signal_weights=(0.6, 0.4))),
+            (
+                "required_datasets",
+                replace(base, required_datasets=("etf_daily", "adj_factor")),
+            ),
+        )
+        baseline_hash = canonical_spec_hash(adapt_legacy_strategy_spec(base))
+
+        for field_name, variant in variants:
+            assert (
+                canonical_spec_hash(adapt_legacy_strategy_spec(variant))
+                != baseline_hash
+            ), field_name
+
+    def test_legacy_name_and_tags_do_not_change_execution_hash(self) -> None:
+        from ditto_strategy.alpha.spec_codec import (
+            adapt_legacy_strategy_spec,
+            canonical_spec_hash,
+        )
+
+        base = _make_legacy_spec()
+        renamed = replace(
+            base,
+            name="仅 UI 重命名",
+            tags=("favorite", "published"),
+        )
+
+        assert canonical_spec_hash(
+            adapt_legacy_strategy_spec(renamed),
+        ) == canonical_spec_hash(adapt_legacy_strategy_spec(base))

@@ -517,3 +517,56 @@ class TestStrategySpecValidation:
         )
 
         assert spec.signal_expressions == ("cs_rank(ts_mean_close_20)",)
+
+
+class TestStrategySpecV2:
+    """V2 canonical spec 与 legacy runtime spec 保持显式类型边界。"""
+
+    def test_is_a_distinct_frozen_type_from_legacy_strategy_spec(self) -> None:
+        from ditto_strategy.alpha.nodes import (
+            NodeCategory,
+            NodeInstance,
+            NodeRef,
+            PipelineSpec,
+        )
+        from ditto_strategy.alpha.specs import (
+            StrategyKind,
+            StrategySpec,
+            StrategySpecV2,
+        )
+
+        pipeline = PipelineSpec(
+            nodes=(
+                NodeInstance(
+                    node_id="universe",
+                    ref=NodeRef("builtin.universe", "1"),
+                    category=NodeCategory.UNIVERSE,
+                    config={"universe_id": "csi_300"},
+                ),
+            ),
+            sequence=("universe",),
+        )
+        spec = StrategySpecV2(
+            schema_version=2,
+            strategy_family_id="stock-alpha",
+            strategy_kind=StrategyKind.STOCK_SELECTION,
+            name="Stock Alpha",
+            pipeline=pipeline,
+        )
+
+        assert not isinstance(spec, StrategySpec)
+        with pytest.raises(FrozenInstanceError):
+            spec.name = "Changed"  # type: ignore[misc]
+
+    def test_rejects_non_v2_schema_version(self) -> None:
+        from ditto_strategy.alpha.nodes import PipelineSpec
+        from ditto_strategy.alpha.specs import StrategyKind, StrategySpecV2
+
+        with pytest.raises(StrategySpecError, match="schema_version"):
+            StrategySpecV2(
+                schema_version=1,
+                strategy_family_id="stock-alpha",
+                strategy_kind=StrategyKind.STOCK_SELECTION,
+                name="Stock Alpha",
+                pipeline=PipelineSpec(nodes=(), sequence=()),
+            )

@@ -6,8 +6,6 @@ Phase 0.9 — RunManifest Enrichment (InputRef + data fingerprints).
 
 from __future__ import annotations
 
-import hashlib
-
 import orjson
 import pytest
 from ditto_backtest.config import EngineConfig
@@ -16,9 +14,9 @@ from ditto_backtest.manifest import (
     RuleRef,
     RuleRefCollector,
     RunManifest,
+    RunManifestInputEvidence,
     RunMode,
     build_run_manifest,
-    hash_spec,
     serialize_manifest,
 )
 from ditto_kernel.identity import InstrumentId
@@ -36,6 +34,8 @@ from ditto_kernel.trading import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+_CANONICAL_SPEC_HASH = "a" * 64
 
 
 def _make_definition(
@@ -199,6 +199,19 @@ class TestRunManifestFrozen:
         assert manifest.pit_policy == PIT_POLICY_FAIL_CLOSED
         assert manifest.unsafe_time_policy == ""
         assert manifest.knowledge_lag_days == 1
+
+
+class TestRunManifestInputEvidence:
+    """Manifest build input bundle is a frozen, typed transport value."""
+
+    def test_is_frozen(self) -> None:
+        evidence = RunManifestInputEvidence(
+            input_instruments=set(),
+            bar_fingerprints={},
+        )
+
+        with pytest.raises(AttributeError):
+            evidence.input_instruments = {InstrumentId(1)}  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------
@@ -844,58 +857,80 @@ class TestSerializeManifestEnrichment:
         assert parsed["random_seed"] is None
 
 
-class TestHashSpec:
-    """hash_spec 辅助函数 — 对策略规格做 SHA-256."""
+class TestCanonicalSpecHashManifest:
+    """Manifest 只接收 StrategySpec codec 产生的完整 canonical hash。"""
 
-    def test_deterministic(self) -> None:
-        """相同输入 → 相同输出."""
-        h1 = hash_spec(
-            strategy_id="momentum",
-            strategy_version="1.0",
-            rebalance_freq="weekly",
-        )
-        h2 = hash_spec(
-            strategy_id="momentum",
-            strategy_version="1.0",
-            rebalance_freq="weekly",
-        )
-        assert h1 == h2
+    def test_legacy_partial_hash_helper_is_not_exported(self) -> None:
+        from ditto_backtest import manifest
 
-    def test_different_input_different_hash(self) -> None:
-        """不同输入 → 不同输出."""
-        h1 = hash_spec(
-            strategy_id="momentum",
-            strategy_version="1.0",
-            rebalance_freq="weekly",
-        )
-        h2 = hash_spec(
-            strategy_id="mean_revert",
-            strategy_version="1.0",
-            rebalance_freq="weekly",
-        )
-        assert h1 != h2
+        assert not hasattr(manifest, "hash_spec")
 
-    def test_hash_length(self) -> None:
-        """返回前 16 位 hex."""
-        h = hash_spec(
-            strategy_id="test",
-            strategy_version="0.1",
-            rebalance_freq="daily",
+    @pytest.mark.parametrize(
+        "invalid_hash",
+        [
+            pytest.param("", id="missing"),
+            pytest.param("a" * 16, id="truncated"),
+            pytest.param("A" * 64, id="uppercase"),
+            pytest.param("z" * 64, id="non-hex"),
+        ],
+    )
+    def test_build_manifest_rejects_non_canonical_hash(
+        self,
+        invalid_hash: str,
+    ) -> None:
+        config = EngineConfig(
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+            initial_cash=1_000_000.0,
+            spec_hash=_CANONICAL_SPEC_HASH,
         )
-        assert len(h) == 16
-        # 验证是合法 hex
-        int(h, 16)
 
-    def test_matches_manual_sha256(self) -> None:
-        """与手动 SHA-256 计算一致."""
-        payload = "momentum|1.0|weekly"
-        expected = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
-        result = hash_spec(
-            strategy_id="momentum",
-            strategy_version="1.0",
-            rebalance_freq="weekly",
+        with pytest.raises(ValueError, match="spec_hash"):
+            build_run_manifest(
+                run_id="run-invalid-spec-hash",
+                config=config,
+                spec_hash=invalid_hash,
+                input_evidence=RunManifestInputEvidence(
+                    input_instruments=set(),
+                    bar_fingerprints={},
+                ),
+                rule_refs=(),
+                random_seed=7,
+            )
+
+    def test_build_manifest_preserves_hash_independent_of_audit_run_id(self) -> None:
+        config = EngineConfig(
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+            initial_cash=1_000_000.0,
+            spec_hash=_CANONICAL_SPEC_HASH,
         )
-        assert result == expected
+
+        first = build_run_manifest(
+            run_id="audit-run-one",
+            config=config,
+            spec_hash=_CANONICAL_SPEC_HASH,
+            input_evidence=RunManifestInputEvidence(
+                input_instruments=set(),
+                bar_fingerprints={},
+            ),
+            rule_refs=(),
+            random_seed=7,
+        )
+        second = build_run_manifest(
+            run_id="audit-run-two",
+            config=config,
+            spec_hash=_CANONICAL_SPEC_HASH,
+            input_evidence=RunManifestInputEvidence(
+                input_instruments=set(),
+                bar_fingerprints={},
+            ),
+            rule_refs=(),
+            random_seed=7,
+        )
+
+        assert first.run_id != second.run_id
+        assert first.spec_hash == second.spec_hash == _CANONICAL_SPEC_HASH
 
 
 class TestBuildRunManifestPitPolicy:
@@ -907,6 +942,7 @@ class TestBuildRunManifestPitPolicy:
             start_date="2026-01-01",
             end_date="2026-01-31",
             initial_cash=1_000_000.0,
+            spec_hash=_CANONICAL_SPEC_HASH,
             strategy_id="momentum-etf",
             strategy_version="2026.01",
             rebalance_freq="daily",
@@ -916,8 +952,11 @@ class TestBuildRunManifestPitPolicy:
         manifest = build_run_manifest(
             run_id="run-pit-policy",
             config=config,
-            input_instruments=set(),
-            bar_fingerprints={},
+            spec_hash=_CANONICAL_SPEC_HASH,
+            input_evidence=RunManifestInputEvidence(
+                input_instruments=set(),
+                bar_fingerprints={},
+            ),
             rule_refs=(),
             random_seed=7,
         )
@@ -937,6 +976,7 @@ class TestBuildRunManifestSourceSnapshots:
             start_date="2026-03-01",
             end_date="2026-03-01",
             initial_cash=1_000_000.0,
+            spec_hash=_CANONICAL_SPEC_HASH,
             strategy_id="momentum-etf",
             strategy_version="2026.03",
             rebalance_freq="daily",
@@ -946,9 +986,12 @@ class TestBuildRunManifestSourceSnapshots:
         manifest = build_run_manifest(
             run_id="run-source-snapshot",
             config=config,
-            input_instruments={InstrumentId(1)},
-            bar_fingerprints={InstrumentId(1): [("2026-03-01", 10.2)]},
-            source_snapshot_ids={InstrumentId(1): snapshot_id},
+            spec_hash=_CANONICAL_SPEC_HASH,
+            input_evidence=RunManifestInputEvidence(
+                input_instruments={InstrumentId(1)},
+                bar_fingerprints={InstrumentId(1): [("2026-03-01", 10.2)]},
+                source_snapshot_ids={InstrumentId(1): snapshot_id},
+            ),
             rule_refs=(),
             random_seed=7,
         )
@@ -963,6 +1006,7 @@ class TestBuildRunManifestSourceSnapshots:
             start_date="2026-03-01",
             end_date="2026-03-02",
             initial_cash=1_000_000.0,
+            spec_hash=_CANONICAL_SPEC_HASH,
             strategy_id="momentum-etf",
             strategy_version="2026.03",
             rebalance_freq="daily",
@@ -971,19 +1015,22 @@ class TestBuildRunManifestSourceSnapshots:
         manifest = build_run_manifest(
             run_id="run-source-snapshot-set",
             config=config,
-            input_instruments={InstrumentId(1)},
-            bar_fingerprints={
-                InstrumentId(1): [
-                    ("2026-03-01", 10.2),
-                    ("2026-03-02", 10.3),
-                ],
-            },
-            source_snapshot_ids={
-                InstrumentId(1): {
-                    "snapshot:tushare:stock_daily:2026-03-01:abc",
-                    "snapshot:tushare:stock_daily:2026-03-02:def",
+            spec_hash=_CANONICAL_SPEC_HASH,
+            input_evidence=RunManifestInputEvidence(
+                input_instruments={InstrumentId(1)},
+                bar_fingerprints={
+                    InstrumentId(1): [
+                        ("2026-03-01", 10.2),
+                        ("2026-03-02", 10.3),
+                    ],
                 },
-            },
+                source_snapshot_ids={
+                    InstrumentId(1): {
+                        "snapshot:tushare:stock_daily:2026-03-01:abc",
+                        "snapshot:tushare:stock_daily:2026-03-02:def",
+                    },
+                },
+            ),
             rule_refs=(),
             random_seed=7,
         )

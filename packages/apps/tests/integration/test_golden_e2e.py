@@ -223,6 +223,7 @@ def _build_engine(
         start_date=start_date,
         end_date=end_date,
         initial_cash=INITIAL_CASH,
+        spec_hash="e" * 64,
         mode=EngineMode.BACKTEST,
         strategy_id="synthetic-golden-e2e",
         strategy_run_id="synthetic-golden-e2e",

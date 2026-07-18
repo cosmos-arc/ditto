@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from inspect import Parameter, signature
 from unittest.mock import MagicMock
 
 import ditto_application.builders as strategy_services
@@ -76,6 +77,12 @@ def _make_spec_record(
 class TestStrategyRuntimeBuilder:
     """Published strategy runtime 解析测试。"""
 
+    def test_published_runtime_requires_canonical_spec_hash(self) -> None:
+        """运行时值对象不得以空 hash 作为隐式 fallback。"""
+        runtime_signature = signature(strategy_services.PublishedStrategyRuntime)
+
+        assert runtime_signature.parameters["spec_hash"].default is Parameter.empty
+
     def test_build_published_runtime_returns_spec_and_pipeline(self) -> None:
         """builder 应从 published spec 恢复 StrategySpec 并构造 Pipeline。"""
         spec = _make_rotation_spec()
@@ -95,6 +102,15 @@ class TestStrategyRuntimeBuilder:
         assert runtime.spec.selector.params == {"k": 3}
         assert isinstance(runtime.pipeline, StrategyPipeline)
         assert len(runtime.pipeline._stages) == 6
+        from ditto_strategy.alpha.spec_codec import (
+            adapt_legacy_strategy_spec,
+            canonical_spec_hash,
+        )
+
+        assert runtime.spec_hash == canonical_spec_hash(
+            adapt_legacy_strategy_spec(runtime.spec),
+        )
+        assert len(runtime.spec_hash) == 64
         catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
 
     def test_build_published_runtime_defaults_to_latest_published_version(

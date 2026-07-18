@@ -152,6 +152,7 @@ def _build_engine_with_audit(
         start_date=start_date,
         end_date=end_date,
         initial_cash=initial_cash,
+        spec_hash="e" * 64,
         mode=EngineMode.BACKTEST,
         strategy_id="e2e-smoke",
         strategy_run_id="e2e-smoke-run",

@@ -376,6 +376,7 @@ class _RuntimeBuilderStub:
             ),
             spec=self._spec,
             pipeline=StrategyPipeline((_AllCashStage(),)),
+            spec_hash="b" * 64,
         )
 
 

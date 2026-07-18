@@ -58,6 +58,7 @@ from ditto_backtest.engine_steps import (
 )
 from ditto_backtest.manifest import (
     RuleRefCollector,
+    RunManifestInputEvidence,
     build_run_manifest,
 )
 from ditto_backtest.result import (
@@ -286,9 +287,12 @@ class EngineLoop:
         manifest = build_run_manifest(
             run_id=run_id,
             config=self._config,
-            input_instruments=self._input_instruments,
-            bar_fingerprints=self._bar_fingerprints,
-            source_snapshot_ids=self._source_snapshot_ids,
+            spec_hash=self._config.spec_hash,
+            input_evidence=RunManifestInputEvidence(
+                input_instruments=self._input_instruments,
+                bar_fingerprints=self._bar_fingerprints,
+                source_snapshot_ids=self._source_snapshot_ids,
+            ),
             rule_refs=self._rule_ref_collector.rule_refs,
             random_seed=self._random_seed,
         )

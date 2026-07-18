@@ -741,6 +741,7 @@ def _make_engine_config() -> EngineConfig:
         start_date="2026-01-15",
         end_date="2026-01-17",
         initial_cash=1_000_000.0,
+        spec_hash="e" * 64,
         strategy_id="default",
         strategy_run_id="run-test",
     )

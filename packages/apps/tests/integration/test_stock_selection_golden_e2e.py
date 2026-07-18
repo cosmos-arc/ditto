@@ -234,6 +234,7 @@ def _build_engine(
         start_date=BACKTEST_START,
         end_date=BACKTEST_END,
         initial_cash=INITIAL_CASH,
+        spec_hash="e" * 64,
         mode=EngineMode.BACKTEST,
         strategy_id=STRATEGY_ID,
         strategy_run_id=STRATEGY_ID,
