@@ -4,6 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_platform.foundation import (
     Environment,
@@ -112,7 +113,70 @@ def mock_capital_store(mocker):
     service.save_valuation_metrics.return_value = 1
     service.save_margin_trading.return_value = 1
     service.save_pledge_ratio.return_value = 1
+    service.save_index_weight.return_value = 2
     return service
+
+
+@pytest.mark.unit
+def test_index_weight_writes_effective_dated_constituents(
+    data_writer,
+    mock_metadata_service,
+    mock_capital_store,
+) -> None:
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "600000.SH": 1_000_001,
+        "600036.SH": 1_000_002,
+    }
+    df = pl.DataFrame(
+        {
+            "index_code": ["000300.SH", "000300.SH"],
+            "source_ticker": ["600000.SH", "600036.SH"],
+            "effective_from": [date(2024, 12, 27), date(2024, 12, 27)],
+            "effective_to": [None, None],
+            "weight": [60.0, 40.0],
+        }
+    )
+
+    result = data_writer.write_data("index_weight", df, "2024-12-27")
+
+    assert result.file_path == "index_weight/2024"
+    written = mock_capital_store.save_index_weight.call_args.args[0]
+    assert written.select("index_id").to_series().to_list() == [
+        "000300.SH",
+        "000300.SH",
+    ]
+    assert written.select("instrument_id").to_series().to_list() == [
+        1_000_001,
+        1_000_002,
+    ]
+    assert "effective_from" in written.columns
+    assert "effective_to" in written.columns
+
+
+@pytest.mark.unit
+def test_index_weight_rejects_incomplete_weight_total(
+    data_writer,
+    mock_metadata_service,
+    mock_capital_store,
+) -> None:
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "600000.SH": 1_000_001,
+        "600036.SH": 1_000_002,
+    }
+    df = pl.DataFrame(
+        {
+            "index_code": ["000300.SH", "000300.SH"],
+            "source_ticker": ["600000.SH", "600036.SH"],
+            "effective_from": [date(2024, 12, 27), date(2024, 12, 27)],
+            "effective_to": [None, None],
+            "weight": [60.0, 30.0],
+        }
+    )
+
+    with pytest.raises(AppProcessError, match="outside 2% tolerance"):
+        data_writer.write_data("index_weight", df, "2024-12-27")
+
+    mock_capital_store.save_index_weight.assert_not_called()
 
 
 @pytest.fixture

@@ -493,14 +493,17 @@ class TestAppProviderStructure:
         """MarketQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
         provider = AppMarketQueryProvider()
         market_service = MagicMock()
+        capital_store = MagicMock()
         maturity_promotion_reader = MagicMock()
 
         facade = provider.market_query_facade(
             market_service=market_service,
+            capital_store=capital_store,
             maturity_promotion_reader=maturity_promotion_reader,
         )
 
         assert facade._service is market_service
+        assert facade._capital_store is capital_store
         assert facade._maturity_promotion_reader is maturity_promotion_reader
 
     def test_source_query_facade_receives_maturity_promotion_reader(self) -> None:

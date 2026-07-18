@@ -370,13 +370,13 @@ class TestDefaultMetadataSourceCapabilities:
         assert meta.supports_source("fred") is False
         assert meta.uses_auxiliary_source("fred") is True
 
-    def test_index_weight_has_no_runtime_source_or_granularity(self) -> None:
+    def test_index_weight_declares_tushare_date_ingestion(self) -> None:
         meta = default_dataset_metadata()["index_weight"]
 
-        assert meta.default_source is None
-        assert meta.supported_sources == ()
-        assert meta.ingestion_granularities == ()
-        assert meta.freshness_sla_hours is None
+        assert meta.default_source == "tushare"
+        assert meta.supported_sources == ("tushare",)
+        assert meta.ingestion_granularities == ("date",)
+        assert meta.freshness_sla_hours is not None
 
 
 class TestDefaultMetadataAssetClassPolicy:

@@ -1,5 +1,7 @@
 """Tests for CapitalTushareAdapter."""
 
+from datetime import date
+
 import polars as pl
 import pytest_mock
 from ditto_data.sources.tushare.adapters.capital import CapitalTushareAdapter
@@ -195,6 +197,36 @@ class TestCapitalTushareAdapterFetchIndexComposition:
         assert "index_id" in result.columns
         assert "source_ticker" in result.columns
         assert "effective_from" in result.columns
+
+    def test_fetch_index_weight_returns_effective_dated_canonical_rows(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "index_code": ["000300.SH", "000300.SH"],
+                "con_code": ["600000.SH", "600036.SH"],
+                "trade_date": ["20241227", "20241227"],
+                "weight": [60.0, 40.0],
+            }
+        )
+        adapter = CapitalTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_index_weight("000300.SH", "20241227")
+
+        assert result.columns == [
+            "index_code",
+            "source_ticker",
+            "effective_from",
+            "effective_to",
+            "weight",
+        ]
+        assert result["effective_from"].dtype == pl.Date
+        assert result["effective_from"].to_list() == [
+            date(2024, 12, 27),
+            date(2024, 12, 27),
+        ]
 
 
 class TestCapitalTushareAdapterFetchCorporateActions:

@@ -282,3 +282,85 @@ class TestMarketQueryFacadeGetConstituents:
 
         service.get_constituents.assert_called_once_with(5, "2024-06-30")
         assert len(result) == 2
+
+
+class TestMarketQueryFacadeGetIndexWeights:
+    """MarketQueryFacade.get_index_weights — explicit PIT and maturity gate."""
+
+    def test_requires_explicit_research_opt_in_for_experimental_dataset(self) -> None:
+        service = MagicMock()
+        capital_store = MagicMock()
+        facade = MarketQueryFacade(
+            market_service=service,
+            capital_store=capital_store,
+        )
+
+        with pytest.raises(AppQueryError, match="index_weight"):
+            facade.get_index_weights(
+                index_id="000300.SH",
+                as_of_date="2024-06-30",
+            )
+
+        capital_store.get_index_composition.assert_not_called()
+
+    def test_delegates_as_of_query_when_research_opted_in(self) -> None:
+        service = MagicMock()
+        capital_store = MagicMock()
+        capital_store.get_index_composition.return_value = pl.DataFrame(
+            {"instrument_id": [1, 2], "weight": [60.0, 40.0]}
+        )
+        facade = MarketQueryFacade(
+            market_service=service,
+            capital_store=capital_store,
+        )
+
+        result = facade.get_index_weights(
+            index_id="000300.SH",
+            as_of_date="2024-06-30",
+            allow_experimental_data=True,
+        )
+
+        capital_store.get_index_composition.assert_called_once()
+        assert capital_store.get_index_composition.call_args.args[0] == "000300.SH"
+        assert (
+            str(capital_store.get_index_composition.call_args.args[1]) == "2024-06-30"
+        )
+        assert len(result) == 2
+
+    def test_promoted_dataset_does_not_need_research_opt_in(self) -> None:
+        capital_store = MagicMock()
+        capital_store.get_index_composition.return_value = pl.DataFrame()
+        facade = MarketQueryFacade(
+            market_service=MagicMock(),
+            capital_store=capital_store,
+            maturity_promotion_reader=_MaturityPromotionReader(
+                {
+                    "index_weight": DatasetMaturityPromotion(
+                        dataset_id="index_weight",
+                        previous_maturity="experimental",
+                        promoted_maturity="initial-focus",
+                        promoted_by="data-product-certification",
+                    )
+                }
+            ),
+        )
+
+        facade.get_index_weights(
+            index_id="000300.SH",
+            as_of_date="2024-06-30",
+        )
+
+        capital_store.get_index_composition.assert_called_once()
+
+    def test_rejects_invalid_as_of_date(self) -> None:
+        facade = MarketQueryFacade(
+            market_service=MagicMock(),
+            capital_store=MagicMock(),
+        )
+
+        with pytest.raises(AppQueryError, match="as_of_date"):
+            facade.get_index_weights(
+                index_id="000300.SH",
+                as_of_date="not-a-date",
+                allow_experimental_data=True,
+            )

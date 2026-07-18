@@ -290,6 +290,7 @@ class IngestionCoordinator:
             Dataset.STOCK_DAILY,
             Dataset.ETF_DAILY,
             Dataset.INDEX_DAILY,
+            Dataset.INDEX_WEIGHT,
             Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,

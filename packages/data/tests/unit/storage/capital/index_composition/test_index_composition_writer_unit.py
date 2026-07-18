@@ -7,6 +7,9 @@ from unittest.mock import Mock
 
 import polars as pl
 import pytest
+from ditto_data.storage.capital.index_composition.index_composition_reader import (
+    IndexCompositionReader,
+)
 from ditto_data.storage.capital.index_composition.index_composition_writer import (
     IndexCompositionWriter,
 )
@@ -21,7 +24,7 @@ def in_memory_db() -> SQLiteClient:
     client = SQLiteClient(pool)
     # 创建表
     client.execute(
-        """CREATE TABLE IF NOT EXISTS index_composition (
+        """CREATE TABLE IF NOT EXISTS index_weight (
         index_id TEXT NOT NULL,
         instrument_id TEXT NOT NULL,
         weight REAL,
@@ -38,6 +41,12 @@ def in_memory_db() -> SQLiteClient:
 def writer(in_memory_db: SQLiteClient) -> IndexCompositionWriter:
     """创建 IndexCompositionWriter 实例."""
     return IndexCompositionWriter(INDEX_COMPOSITION_SPEC, in_memory_db)
+
+
+@pytest.fixture
+def reader(in_memory_db: SQLiteClient) -> IndexCompositionReader:
+    """Create an index composition PIT reader over the same database."""
+    return IndexCompositionReader(INDEX_COMPOSITION_SPEC, in_memory_db)
 
 
 def test_write_success(writer: IndexCompositionWriter) -> None:
@@ -106,7 +115,7 @@ def test_write_with_nullable_effective_date(
     assert count == 2
 
     # 验证数据写入正确
-    rows = in_memory_db.fetchall("SELECT * FROM index_composition")
+    rows = in_memory_db.fetchall("SELECT * FROM index_weight")
     assert len(rows) == 2
 
 
@@ -126,6 +135,7 @@ def test_write_failure_rollback(writer: IndexCompositionWriter) -> None:
     # 创建模拟客户端，模拟数据库错误
     mock_client = Mock(spec=SQLiteClient)
     mock_client.executemany.side_effect = RuntimeError("Database error")
+    mock_client.fetchone.return_value = None
     mock_client.commit = Mock()
     mock_client.rollback = Mock()
 
@@ -188,8 +198,72 @@ def test_write_multiple_instruments_same_index(
 
     # 验证数据写入正确
     rows = in_memory_db.fetchall(
-        "SELECT instrument_id, weight FROM index_composition "
+        "SELECT instrument_id, weight FROM index_weight "
         "WHERE index_id = ? ORDER BY instrument_id",
         ["000300.SH"],
     )
     assert len(rows) == 3
+
+
+def test_write_closes_previous_snapshot_interval(
+    writer: IndexCompositionWriter,
+    reader,
+) -> None:
+    first = pl.DataFrame(
+        {
+            "index_id": ["000300.SH", "000300.SH"],
+            "instrument_id": ["600000.SH", "600036.SH"],
+            "weight": [60.0, 40.0],
+            "effective_from": [date(2024, 1, 3), date(2024, 1, 3)],
+            "effective_to": [None, None],
+        }
+    )
+    second = pl.DataFrame(
+        {
+            "index_id": ["000300.SH"],
+            "instrument_id": ["601318.SH"],
+            "weight": [100.0],
+            "effective_from": [date(2024, 1, 10)],
+            "effective_to": [None],
+        }
+    )
+
+    writer.write(first)
+    writer.write(second)
+
+    before = reader.get("000300.SH", date(2024, 1, 9))
+    after = reader.get("000300.SH", date(2024, 1, 10))
+    assert set(before["instrument_id"].to_list()) == {"600000.SH", "600036.SH"}
+    assert after["instrument_id"].to_list() == ["601318.SH"]
+
+
+def test_out_of_order_backfill_uses_next_snapshot_as_effective_to(
+    writer: IndexCompositionWriter,
+    reader,
+) -> None:
+    later = pl.DataFrame(
+        {
+            "index_id": ["000300.SH"],
+            "instrument_id": ["601318.SH"],
+            "weight": [100.0],
+            "effective_from": [date(2024, 1, 10)],
+            "effective_to": [None],
+        }
+    )
+    earlier = pl.DataFrame(
+        {
+            "index_id": ["000300.SH"],
+            "instrument_id": ["600000.SH"],
+            "weight": [100.0],
+            "effective_from": [date(2024, 1, 3)],
+            "effective_to": [None],
+        }
+    )
+
+    writer.write(later)
+    writer.write(earlier)
+
+    before = reader.get("000300.SH", date(2024, 1, 9))
+    after = reader.get("000300.SH", date(2024, 1, 10))
+    assert before["instrument_id"].to_list() == ["600000.SH"]
+    assert after["instrument_id"].to_list() == ["601318.SH"]

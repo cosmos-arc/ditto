@@ -324,6 +324,17 @@ class _FundamentalFacade:
             end_date=end_date,
         )
 
+    def fetch_index_weight(
+        self,
+        index_code: str,
+        trade_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取 effective-dated 指数成分权重."""
+        return self._capital.fetch_index_weight(
+            index_code,
+            trade_date=trade_date,
+        )
+
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         """获取公司行为数据."""
         return fetch_corporate_actions(self._fundamental, trade_date)
@@ -683,6 +694,17 @@ class TushareSource:
             source_ticker=source_ticker,
             start_date=start_date,
             end_date=end_date,
+        )
+
+    def fetch_index_weight(
+        self,
+        index_code: str,
+        trade_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch effective-dated index weights from the capital adapter."""
+        return self._capital.fetch_index_weight(
+            index_code,
+            trade_date=trade_date,
         )
 
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:

@@ -591,6 +591,88 @@ def test_sparse_nonempty_requires_knowledge_date() -> None:
     assert writer.calls == []
 
 
+def test_index_weight_uses_effective_from_as_pit_knowledge_date() -> None:
+    """Index weights are knowable from effective_from, not a synthetic trade date."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="index_weight/2025",
+            checksum="index-weight-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["index_code", "effective_from", "weight"],
+    )
+    catalog = InMemoryDataCatalog()
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=catalog,
+        catalog_writer=catalog,
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "index_code": ["000300.SH"],
+                "effective_from": ["2025-01-06"],
+                "weight": [100.0],
+            }
+        ),
+        "index_weight",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "success"
+    assert len(writer.calls) == 1
+
+
+def test_index_weight_rejects_future_effective_from() -> None:
+    """A future effective interval must never leak into an earlier as-of snapshot."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="index_weight/2025",
+            checksum="future-index-weight-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["index_code", "effective_from", "weight"],
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=InMemoryDataCatalog(),
+        catalog_writer=InMemoryDataCatalog(),
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "index_code": ["000300.SH"],
+                "effective_from": ["2025-01-07"],
+                "weight": [100.0],
+            }
+        ),
+        "index_weight",
+        "2025-01-06",
+        False,
+        ctx=ctx,
+    )
+
+    assert result.status == "failed"
+    assert result.error == "PIT_KNOWLEDGE_DATE_AFTER_CUTOFF"
+    assert writer.calls == []
+
+
 def test_success_uses_persisted_rows_written_for_result_log_and_quality() -> None:
     """FK 过滤后的实际写入行数是所有持久化证据的权威口径。"""
     writer = _WriteDataRecorder(

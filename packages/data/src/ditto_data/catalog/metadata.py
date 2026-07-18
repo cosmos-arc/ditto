@@ -608,7 +608,7 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
     }
 )
 
-_UNSUPPORTED_INGESTION_DATASETS: frozenset[str] = frozenset({"index_weight"})
+_UNSUPPORTED_INGESTION_DATASETS: frozenset[str] = frozenset()
 
 _SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
     "stock_daily": "market.stock_daily.v1",

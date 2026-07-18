@@ -42,7 +42,10 @@ def create_query_context() -> Generator[QueryContext]:
 
         yield QueryContext(
             metadata=MetadataQueryFacade(metadata_service=metadata_service),
-            market=MarketQueryFacade(market_service=market_service),
+            market=MarketQueryFacade(
+                market_service=market_service,
+                capital_store=capital_store,
+            ),
             capital=CapitalQueryFacade(capital_store=capital_store),
             fundamental=FundamentalQueryFacade(fundamental_store=fundamental_store),
             macro=MacroQueryFacade(macro_service=macro_service),

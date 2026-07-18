@@ -46,7 +46,7 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
         params: dict[str, str] = {
             "api_name": "index_weight",
             "index_code": index_code,
-            "fields": "con_code,weight",
+            "fields": "index_code,con_code,trade_date,weight",
         }
         if trade_date:
             params["trade_date"] = trade_date
@@ -59,6 +59,29 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
                 "index_weight_empty",
                 index_code=index_code,
                 trade_date=trade_date,
+            )
+        else:
+            if "index_code" not in df.columns:
+                df = df.with_columns(pl.lit(index_code).alias("index_code"))
+            if "trade_date" not in df.columns and trade_date is not None:
+                df = df.with_columns(pl.lit(trade_date).alias("trade_date"))
+            df = (
+                df.rename({"con_code": "source_ticker"})
+                .with_columns(
+                    pl.col("trade_date")
+                    .cast(pl.Utf8)
+                    .str.replace_all("-", "")
+                    .str.to_date("%Y%m%d")
+                    .alias("effective_from"),
+                    pl.lit(None, dtype=pl.Date).alias("effective_to"),
+                )
+                .select(
+                    "index_code",
+                    "source_ticker",
+                    "effective_from",
+                    "effective_to",
+                    "weight",
+                )
             )
 
         Metrics.data_records.add(

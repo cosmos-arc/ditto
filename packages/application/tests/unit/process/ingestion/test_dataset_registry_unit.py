@@ -151,17 +151,18 @@ class TestDatasetRegistryConformance:
             Dataset.CORPORATE_ACTIONS,
             Dataset.FX_DAILY,
             Dataset.COMMODITY_DAILY,
+            Dataset.INDEX_WEIGHT,
         }
 
         for dataset in date_fetchable:
             assert registry.require(dataset).daily_fetch_factory is not None
 
-    def test_index_weight_is_registered_but_has_no_runtime_route(self) -> None:
+    def test_index_weight_has_a_daily_fetch_and_write_route(self) -> None:
         registration = default_dataset_registry().require(Dataset.INDEX_WEIGHT)
 
-        assert registration.daily_fetch_factory is None
+        assert registration.daily_fetch_factory is not None
         assert registration.instrument_fetch_factory is None
-        assert registration.write_kind is WriteKind.UNSUPPORTED
+        assert registration.write_kind is WriteKind.INDEX_WEIGHT
 
     def test_registrations_match_catalog_source_capabilities(self) -> None:
         registry = default_dataset_registry()

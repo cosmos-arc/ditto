@@ -20,7 +20,7 @@ def in_memory_db() -> SQLiteClient:
     client = SQLiteClient(pool)
     # 创建表
     client.execute(
-        """CREATE TABLE IF NOT EXISTS index_composition (
+        """CREATE TABLE IF NOT EXISTS index_weight (
         index_id TEXT NOT NULL,
         instrument_id TEXT NOT NULL,
         weight REAL,
@@ -45,7 +45,7 @@ def test_get_returns_data(
     """测试查询返回数据."""
     # 插入测试数据
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "600000.SH", 0.05, date(2024, 1, 2), None],
@@ -70,7 +70,7 @@ def test_get_no_data(
     """测试查询不存在的指数返回空 DataFrame."""
     # 插入其他指数的数据
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000905.SH", "600000.SH", 0.03, date(2024, 1, 2), None],
@@ -87,13 +87,13 @@ def test_get_pit_query(
     """测试 PIT 查询返回有效数据."""
     # 插入多个版本
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "600000.SH", 0.05, date(2024, 1, 3), date(2024, 1, 10)],
     )
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "600000.SH", 0.06, date(2024, 1, 12), None],
@@ -112,7 +112,7 @@ def test_get_pit_query_excludes_expired_version(
     """测试 PIT 查询排除已过期版本."""
     # 插入已过期的版本
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "600000.SH", 0.05, date(2024, 1, 3), date(2024, 1, 10)],
@@ -130,19 +130,19 @@ def test_get_ordering_by_instrument_id(
     """测试结果按 instrument_id 排序."""
     # 插入多条记录
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "600036.SH", 0.03, date(2024, 1, 3), None],
     )
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "600000.SH", 0.05, date(2024, 1, 3), None],
     )
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "601318.SH", 0.02, date(2024, 1, 3), None],
@@ -162,7 +162,7 @@ def test_get_handles_null_values(
 ) -> None:
     """测试处理空值."""
     in_memory_db.execute(
-        """INSERT INTO index_composition
+        """INSERT INTO index_weight
         (index_id, instrument_id, weight, effective_from, effective_to)
         VALUES (?, ?, ?, ?, ?)""",
         ["000300.SH", "600000.SH", None, date(2024, 1, 3), None],

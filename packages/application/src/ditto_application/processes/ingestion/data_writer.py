@@ -102,6 +102,34 @@ def _to_write_result(
     )
 
 
+def _validate_index_weight_totals(df: pl.DataFrame) -> None:
+    """Reject incomplete index snapshots using provider percentage tolerance."""
+    percentage_scale_threshold = 2.0
+    required = {"index_id", "instrument_id", "effective_from", "weight"}
+    missing = required - set(df.columns)
+    if missing:
+        raise AppProcessError(
+            f"index_weight missing required columns: {sorted(missing)}",
+            field="columns",
+            value=tuple(sorted(missing)),
+        )
+    totals = df.group_by("index_id", "effective_from").agg(
+        pl.col("weight").sum().alias("weight_total")
+    )
+    invalid: list[tuple[str, str, float]] = []
+    for row in totals.to_dicts():
+        total = float(row["weight_total"])
+        expected = 100.0 if total > percentage_scale_threshold else 1.0
+        if abs(total - expected) > expected * 0.02:
+            invalid.append((str(row["index_id"]), str(row["effective_from"]), total))
+    if invalid:
+        raise AppProcessError(
+            "index_weight total is outside 2% tolerance",
+            field="weight",
+            value=tuple(invalid),
+        )
+
+
 @dataclass(frozen=True)
 class _WriteContext:
     """Packed parameters for write handler dispatch."""
@@ -219,6 +247,7 @@ class IngestionDataWriter:
         WriteKind.STOCK_STATUS: "_handler_stock_status",
         WriteKind.ADJ_FACTOR: "_handler_adj_factor",
         WriteKind.FUND_ADJ: "_handler_fund_adj",
+        WriteKind.INDEX_WEIGHT: "_handler_index_weight",
         WriteKind.FUNDAMENTAL: "_handler_fundamental",
         WriteKind.CAPITAL: "_handler_capital",
         WriteKind.MACRO: "_handler_macro",
@@ -270,6 +299,11 @@ class IngestionDataWriter:
     def _handler_fund_adj(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
         return lambda: self._write_fund_adj(
             ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
+    def _handler_index_weight(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_index_weight(
+            ctx.dataset, ctx.df, ctx.year, ctx.source_ticker_col
         )
 
     def _handler_fundamental(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
@@ -412,6 +446,44 @@ class IngestionDataWriter:
             year=year,
             on_duplicate=on_duplicate,
         )
+        return _to_write_result(dataset, year, enriched_df, rows_written)
+
+    def _write_index_weight(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """Write effective-dated index composition without future leakage."""
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
+        if "index_id" not in enriched_df.columns:
+            if "index_code" not in enriched_df.columns:
+                raise AppProcessError(
+                    "index_weight requires index_code",
+                    field="index_code",
+                    value=None,
+                )
+            enriched_df = enriched_df.rename({"index_code": "index_id"})
+        if "effective_from" not in enriched_df.columns:
+            raise AppProcessError(
+                "index_weight requires effective_from",
+                field="effective_from",
+                value=None,
+            )
+        if "effective_to" not in enriched_df.columns:
+            enriched_df = enriched_df.with_columns(
+                pl.lit(None, dtype=pl.Date).alias("effective_to")
+            )
+        _validate_index_weight_totals(enriched_df)
+        rows_written = self._capital_store.save_index_weight(enriched_df)
         return _to_write_result(dataset, year, enriched_df, rows_written)
 
     def _enrich_and_filter_fk_dataframe(

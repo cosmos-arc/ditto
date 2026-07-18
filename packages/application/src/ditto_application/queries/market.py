@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import polars as pl
 from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.models import InstrumentIdRange
+from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 
 from ditto_application.catalog_maturity import blocked_catalog_datasets
@@ -34,9 +37,11 @@ class MarketQueryFacade:
     def __init__(
         self,
         market_service: MarketService,
+        capital_store: CapitalStore | None = None,
         maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._service = market_service
+        self._capital_store = capital_store
         self._maturity_promotion_reader = maturity_promotion_reader
 
     def find_bars(
@@ -144,6 +149,35 @@ class MarketQueryFacade:
 
         """
         return self._service.get_constituents(index_id, as_of_date)
+
+    def get_index_weights(
+        self,
+        *,
+        index_id: str,
+        as_of_date: str,
+        allow_experimental_data: bool = False,
+    ) -> pl.DataFrame:
+        """Query effective-dated index weights at an explicit PIT cutoff."""
+        blocked = blocked_catalog_datasets(
+            ("index_weight",),
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
+        )
+        if blocked:
+            msg = (
+                "index-weight query requires experimental dataset maturity: "
+                "index_weight"
+            )
+            raise AppQueryError(msg)
+        if self._capital_store is None:
+            raise AppQueryError("index-weight query store is not configured")
+        try:
+            cutoff = date.fromisoformat(as_of_date)
+        except ValueError as error:
+            raise AppQueryError(
+                f"as_of_date must be ISO YYYY-MM-DD, got '{as_of_date}'"
+            ) from error
+        return self._capital_store.get_index_composition(index_id, cutoff)
 
     def get_adj_factors(
         self,

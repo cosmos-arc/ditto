@@ -1003,3 +1003,26 @@ class TestTushareSourceFacadeProperties:
         assert source.etf_index is source.etf_index
         assert source.fundamental is source.fundamental
         assert source.macro is source.macro
+
+
+def test_fetch_index_weight_delegates_to_capital_adapter(mocker) -> None:
+    source = TushareSource(settings=_settings())
+    expected = pl.DataFrame(
+        {
+            "index_code": ["000300.SH"],
+            "source_ticker": ["600000.SH"],
+            "effective_from": [date(2024, 12, 27)],
+            "effective_to": [None],
+            "weight": [100.0],
+        }
+    )
+    capital = mocker.Mock()
+    capital.fetch_index_weight.return_value = expected
+    source._capital = capital
+
+    result = source.fetch_index_weight("000300.SH", trade_date="20241227")
+
+    capital.fetch_index_weight.assert_called_once_with(
+        "000300.SH", trade_date="20241227"
+    )
+    assert result.equals(expected)

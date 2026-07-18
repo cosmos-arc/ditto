@@ -6,6 +6,7 @@ import polars as pl
 from ditto_data.models.market import (
     BAR_ENRICHED_SCHEMA,
     BAR_SCHEMA,
+    INDEX_WEIGHT_SCHEMA,
     QUOTE_SCHEMA,
 )
 
@@ -85,6 +86,19 @@ class TestQuoteSchema:
         assert QUOTE_SCHEMA["ask1"] == pl.Float64
         assert QUOTE_SCHEMA["bid1_volume"] == pl.Float64
         assert QUOTE_SCHEMA["ask1_volume"] == pl.Float64
+
+
+class TestIndexWeightSchema:
+    """Effective-dated index weight schema tests."""
+
+    def test_declares_canonical_pit_key_and_interval(self) -> None:
+        assert {
+            "index_id": pl.Utf8,
+            "instrument_id": pl.Int64,
+            "effective_from": pl.Date,
+            "effective_to": pl.Date,
+            "weight": pl.Float64,
+        } == INDEX_WEIGHT_SCHEMA
 
 
 class TestSchemaValidation:

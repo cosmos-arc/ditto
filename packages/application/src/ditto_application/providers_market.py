@@ -92,11 +92,13 @@ class AppMarketQueryProvider(Provider):
     def market_query_facade(
         self,
         market_service: MarketService,
+        capital_store: CapitalStore,
         maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> MarketQueryFacade:
         """行情数据查询 facade — 隐藏内部查询类型."""
         return MarketQueryFacade(
             market_service=market_service,
+            capital_store=capital_store,
             maturity_promotion_reader=maturity_promotion_reader,
         )
 

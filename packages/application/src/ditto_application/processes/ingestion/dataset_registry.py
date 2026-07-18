@@ -64,6 +64,7 @@ class WriteKind(StrEnum):
     STOCK_STATUS = "stock_status"
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
+    INDEX_WEIGHT = "index_weight"
     FUNDAMENTAL = "fundamental"
     CAPITAL = "capital"
     MACRO = "macro"
@@ -239,6 +240,27 @@ def _property_fetch(group: str, method: str) -> DailyFetchFactory:
         return getattr(getattr(ctx.fetchers, group), method)
 
     return factory
+
+
+def _index_weight_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    """Fetch every configured index for one effective date."""
+
+    def fetch() -> pl.DataFrame:
+        frames = [
+            ctx.fetchers.capital.fetch_index_weight(
+                index_code,
+                trade_date=ctx.trade_date.replace("-", ""),
+            )
+            for index_code in ctx.get_cached_index_codes()
+        ]
+        non_empty = [frame for frame in frames if not frame.is_empty()]
+        return (
+            pl.concat(non_empty, how="diagonal_relaxed")
+            if non_empty
+            else pl.DataFrame()
+        )
+
+    return fetch
 
 
 # ---------------------------------------------------------------------------
@@ -442,7 +464,8 @@ _FX_COMMODITY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
 _PLACEHOLDER_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     DatasetRegistration(
         dataset=Dataset.INDEX_WEIGHT,
-        write_kind=WriteKind.UNSUPPORTED,
+        write_kind=WriteKind.INDEX_WEIGHT,
+        daily_fetch_factory=_index_weight_fetch,
     ),
 )
 
