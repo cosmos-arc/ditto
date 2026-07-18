@@ -13,6 +13,14 @@ from ditto_platform.foundation import (
     SQLitePool,
 )
 
+from ditto_data.catalog.certification import (
+    CertificationGovernanceStore,
+    CertificationReader,
+    CertificationReviewer,
+    CertificationRevoker,
+    CertificationWriter,
+)
+from ditto_data.catalog.certification_store import SQLiteCertificationStore
 from ditto_data.catalog.contracts import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.fallback_policy import (
     CatalogSourceFallbackPolicyReader,
@@ -185,6 +193,54 @@ class RuntimeProvider(Provider):
     ) -> DatasetLicenseReader:
         """Dataset license read port."""
         return dataset_license_store
+
+    @provide
+    def dataset_certification_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteCertificationStore:
+        """Append-only dataset certification report and review store."""
+        return SQLiteCertificationStore(sqlite_client)
+
+    @provide
+    def dataset_certification_governance_store(
+        self,
+        dataset_certification_store: SQLiteCertificationStore,
+    ) -> CertificationGovernanceStore:
+        """Combined certification governance command port."""
+        return dataset_certification_store
+
+    @provide
+    def dataset_certification_writer(
+        self,
+        dataset_certification_store: SQLiteCertificationStore,
+    ) -> CertificationWriter:
+        """Certification report freeze port."""
+        return dataset_certification_store
+
+    @provide
+    def dataset_certification_reader(
+        self,
+        dataset_certification_store: SQLiteCertificationStore,
+    ) -> CertificationReader:
+        """Certification report and event read port."""
+        return dataset_certification_store
+
+    @provide
+    def dataset_certification_reviewer(
+        self,
+        dataset_certification_store: SQLiteCertificationStore,
+    ) -> CertificationReviewer:
+        """Certification reviewer decision port."""
+        return dataset_certification_store
+
+    @provide
+    def dataset_certification_revoker(
+        self,
+        dataset_certification_store: SQLiteCertificationStore,
+    ) -> CertificationRevoker:
+        """Certification revocation port."""
+        return dataset_certification_store
 
     @provide
     def partition_lifecycle_store(
