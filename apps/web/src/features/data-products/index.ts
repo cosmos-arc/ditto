@@ -8,6 +8,7 @@ export type {
 	DataProductRun,
 } from "./api";
 export { DEFAULT_DATA_PRODUCT_PROFILE, dataProductKeys } from "./api";
+export { DataProductWorkbench } from "./components";
 export {
 	useDataProductCoverage,
 	useDataProductEvidence,

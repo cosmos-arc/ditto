@@ -197,6 +197,15 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		requiredStates: [...UNIVERSAL_STATES, "selected-row"],
 		// screener prototype has NO status bar
 	},
+	{
+		route: "/platform/data-products",
+		pagePattern: "catalog-screener",
+		shellFamily: "catalog",
+		prototypeSource: "spec-only",
+		requiredSlots: ["toolbar", "main", "detail"],
+		requiredStates: [...UNIVERSAL_STATES, "selected-row", "preview", "confirmation-required"],
+		hasStatusBar: true,
+	},
 
 	// 04 Object Hub
 	{
