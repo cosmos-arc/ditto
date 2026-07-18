@@ -17,6 +17,7 @@ from ditto_data.catalog import (
     InMemoryDataCatalog,
 )
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.lineage import DataLineageRecorder, InMemoryDataLineage
 from ditto_data.sources.registry import SourceRegistry
 
@@ -57,6 +58,7 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
         DataCatalogReader: catalog,
         DataCatalogWriter: catalog,
         CatalogSourceFallbackPolicyReader: source_fallback_policy_reader,
+        PartitionLifecycleReader: MagicMock(),
     }
     container = _FakeContainer(services)
     coordinator = MagicMock()

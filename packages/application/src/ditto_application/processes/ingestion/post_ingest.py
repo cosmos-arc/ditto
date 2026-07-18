@@ -17,6 +17,8 @@ from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
     DataSchemaFingerprint,
+    ProviderSnapshot,
+    ProviderSnapshotDraft,
     default_dataset_metadata,
 )
 from ditto_data.errors import (
@@ -34,15 +36,21 @@ from ditto_data.lineage import (
     LineageOutputRef,
 )
 from ditto_data.models.ingestion import (
+    IngestionLog,
     IngestionQualityEvidence,
     IngestionResult,
     IngestionSnapshotEvidence,
+    IngestionStatus,
 )
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
 from ditto_application.catalog_freshness import catalog_source_snapshot_id
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.evidence_commit import (
+    EvidenceCommitRequest,
+    IngestionEvidenceCommitter,
+)
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
@@ -59,6 +67,7 @@ __all__ = [
     "CatalogWriteContext",
     "DataWriteContext",
     "PostIngestContext",
+    "build_evidence_commit_request",
     "create_freeze_point",
     "handle_fetch_error",
     "is_sparse_pit_dataset",
@@ -114,6 +123,8 @@ class PostIngestContext:
     freeze_store: FreezeStore | None = None
     lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
+    evidence_committer: IngestionEvidenceCommitter | None = None
+    license_record_id: str | None = None
 
 
 def run_list_date_inference(
@@ -177,7 +188,7 @@ def run_list_date_inference(
         )
 
 
-def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
+def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     df: pl.DataFrame,
     dataset: str,
     trade_date: str,
@@ -227,8 +238,18 @@ def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
             trade_date,
             error=cutoff_error,
         )
-    if sparse_pit and ctx.quality_checker is None:
+    if (
+        sparse_pit or ctx.evidence_committer is not None
+    ) and ctx.quality_checker is None:
         return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
+    if ctx.evidence_committer is not None and not ctx.license_record_id:
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="R2_LICENSE_RECORD_REQUIRED",
+            message="R2 证据模式缺少已审核 license record",
+        )
 
     df, quality_failure = run_write_quality_gate(
         df,
@@ -267,7 +288,34 @@ def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
         l1_l2_attested=ctx.quality_checker is not None,
     )
     snapshot_evidence: IngestionSnapshotEvidence | None = None
-    if sparse_pit:
+    if ctx.evidence_committer is not None:
+        outcome = ctx.evidence_committer.commit(
+            build_evidence_commit_request(
+                catalog_ctx,
+                license_record_id=ctx.license_record_id,
+            )
+        )
+        if not outcome.completed:
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error=outcome.error_code or "R2_EVIDENCE_COMMIT_FAILED",
+                message="R2 摄取证据提交失败, 分区已进入可修复状态",
+            )
+        if sparse_pit:
+            snapshot_evidence = resolve_sparse_asof_snapshot(
+                dataset=dataset,
+                trade_date=trade_date,
+                source_name=ctx.source_name,
+                catalog_reader=ctx.catalog_reader,
+            )
+            if snapshot_evidence is None:
+                return ctx.result_handler.handle_pit_snapshot_missing(
+                    dataset,
+                    trade_date,
+                )
+    elif sparse_pit:
         if not _record_required_data_catalog_entry(
             catalog_ctx,
             catalog_writer=ctx.catalog_writer,
@@ -315,19 +363,21 @@ def process_fetched_data(  # noqa: C901, PLR0911 - staged fail-closed pipeline
             if ctx.quality_checker is not None
             else None
         ),
+        persist_log=ctx.evidence_committer is None,
     )
-    record_ingestion_lineage(
-        dataset,
-        trade_date,
-        source_name=ctx.source_name,
-        lineage_recorder=ctx.lineage_recorder,
-        write_result=write_result,
-    )
-    if not sparse_pit:
-        record_data_catalog_entry(
-            catalog_ctx,
-            catalog_writer=ctx.catalog_writer,
+    if ctx.evidence_committer is None:
+        record_ingestion_lineage(
+            dataset,
+            trade_date,
+            source_name=ctx.source_name,
+            lineage_recorder=ctx.lineage_recorder,
+            write_result=write_result,
         )
+        if not sparse_pit:
+            record_data_catalog_entry(
+                catalog_ctx,
+                catalog_writer=ctx.catalog_writer,
+            )
     run_list_date_inference(ctx.list_date_inference, dataset)
     return result
 
@@ -448,46 +498,67 @@ def record_ingestion_lineage(
     recorder = lineage_recorder
     safe_side_effect(
         lambda: recorder.record_event(
-            LineageEvent(
-                run_id=_ingestion_run_id(
-                    dataset,
-                    trade_date,
-                    source_name,
-                    write_result.checksum,
-                    source_ticker=source_ticker,
-                    end_date=end_date,
-                ),
-                operation="ingest",
-                inputs=(
-                    LineageInputRef(
-                        asset=_source_asset(
-                            dataset,
-                            trade_date,
-                            source_name,
-                            source_ticker=source_ticker,
-                            end_date=end_date,
-                        ),
-                        role="source",
-                    ),
-                ),
-                outputs=(
-                    LineageOutputRef(
-                        asset=_output_asset(
-                            dataset,
-                            trade_date,
-                            source_ticker=source_ticker,
-                            end_date=end_date,
-                        ),
-                        role="dataset",
-                    ),
-                ),
-                timestamp=datetime.now(UTC),
+            _lineage_event(
+                dataset,
+                trade_date,
+                source_name=source_name,
+                write_result=write_result,
+                source_ticker=source_ticker,
+                end_date=end_date,
+                now=datetime.now(UTC),
             )
         ),
         log_tag="lineage_record_failed",
         event="lineage_record_error",
         dataset=dataset,
         trade_date=trade_date,
+    )
+
+
+def _lineage_event(
+    dataset: str,
+    trade_date: str,
+    *,
+    source_name: str,
+    write_result: WriteResult,
+    now: datetime,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> LineageEvent:
+    return LineageEvent(
+        run_id=_ingestion_run_id(
+            dataset,
+            trade_date,
+            source_name,
+            write_result.checksum,
+            source_ticker=source_ticker,
+            end_date=end_date,
+        ),
+        operation="ingest",
+        inputs=(
+            LineageInputRef(
+                asset=_source_asset(
+                    dataset,
+                    trade_date,
+                    source_name,
+                    source_ticker=source_ticker,
+                    end_date=end_date,
+                ),
+                role="source",
+            ),
+        ),
+        outputs=(
+            LineageOutputRef(
+                asset=_output_asset(
+                    dataset,
+                    trade_date,
+                    source_ticker=source_ticker,
+                    end_date=end_date,
+                ),
+                role="dataset",
+            ),
+        ),
+        timestamp=now,
     )
 
 
@@ -539,6 +610,78 @@ def _data_catalog_entry(
             end_date=ctx.end_date,
             l1_l2_attested=ctx.l1_l2_attested,
         ),
+    )
+
+
+def build_evidence_commit_request(
+    ctx: CatalogWriteContext,
+    *,
+    license_record_id: str | None,
+) -> EvidenceCommitRequest:
+    """Build immutable provider/catalog/lineage/log evidence for one payload."""
+    if license_record_id is None:
+        raise AppProcessError("R2 evidence commit requires license_record_id")
+    now = datetime.now(UTC)
+    request_end = ctx.end_date or ctx.trade_date
+    catalog_entry = _data_catalog_entry(ctx, now=now)
+    request_payload = orjson.dumps(
+        [
+            ctx.dataset,
+            ctx.source_name,
+            ctx.trade_date,
+            request_end,
+            ctx.source_ticker,
+        ]
+    )
+    request_hash = hashlib.sha256(request_payload).hexdigest()
+    snapshot = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id=ctx.dataset,
+            source=ctx.source_name,
+            request_start=ctx.trade_date,
+            request_end=request_end,
+            schema_version=_dataset_schema_version(ctx.dataset),
+            checksum=ctx.write_result.checksum,
+            canonical_asset=catalog_entry.asset,
+            request_parameters_hash=f"sha256:{request_hash}",
+            response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
+            license_record_id=license_record_id,
+            row_count=ctx.write_result.rows_written,
+            payload_uri=ctx.write_result.file_path,
+            payload_retained=True,
+            created_at=now,
+        )
+    )
+    range_key = f":{ctx.source_ticker}" if ctx.source_ticker is not None else ""
+    return EvidenceCommitRequest(
+        chunk_id=(
+            f"partition:{ctx.source_name}:{ctx.dataset}{range_key}:"
+            f"{ctx.trade_date}:{request_end}"
+        ),
+        dataset_id=ctx.dataset,
+        source=ctx.source_name,
+        request_start=ctx.trade_date,
+        request_end=request_end,
+        provider_snapshot=snapshot,
+        catalog_entry=catalog_entry,
+        lineage_event=_lineage_event(
+            ctx.dataset,
+            ctx.trade_date,
+            source_name=ctx.source_name,
+            write_result=ctx.write_result,
+            source_ticker=ctx.source_ticker,
+            end_date=ctx.end_date,
+            now=now,
+        ),
+        success_log=IngestionLog(
+            dataset=ctx.dataset,
+            source=ctx.source_name,
+            trade_date=ctx.trade_date,
+            status=IngestionStatus.SUCCESS,
+            checksum=ctx.write_result.checksum,
+            rows=ctx.write_result.rows_written,
+        ),
+        quality_attested=ctx.l1_l2_attested,
     )
 
 

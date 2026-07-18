@@ -12,17 +12,29 @@ from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorServices,
     create_coordinator,
 )
+from ditto_application.processes.ingestion.evidence_commit import (
+    EvidenceCommitPorts,
+    IngestionEvidenceCommitter,
+)
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.sparse_recovery import (
     SparsePITReattestationProcess,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
-from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
+from ditto_data.catalog import (
+    DataCatalogReader,
+    DataCatalogWriter,
+    DatasetLicenseReader,
+    ProviderSnapshotWriter,
+)
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
-from ditto_data.ingestion.partition_state import PartitionLifecycleReader
+from ditto_data.ingestion.partition_state import (
+    PartitionLifecycleReader,
+    PartitionLifecycleWriter,
+)
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
@@ -41,6 +53,8 @@ from ditto_apps.registry.contexts.bundle import IngestionBundle
 @contextmanager
 def create_ingestion_bundle(
     source: str = "tushare",
+    *,
+    license_record_id: str | None = None,
 ) -> Generator[IngestionBundle]:
     """
     创建摄入上下文组合包（单容器）.
@@ -50,6 +64,7 @@ def create_ingestion_bundle(
 
     Args:
         source: 数据源名称
+        license_record_id: 启用 R2 fail-closed 证据模式的已审核许可记录 ID。
 
     Yields:
         IngestionBundle: 包含协调器、管理器和查询 facade
@@ -81,6 +96,19 @@ def create_ingestion_bundle(
         catalog_writer = container.get(DataCatalogWriter)
         source_fallback_policy_reader = container.get(CatalogSourceFallbackPolicyReader)
         partition_lifecycle_reader = container.get(PartitionLifecycleReader)
+        evidence_committer: IngestionEvidenceCommitter | None = None
+        if license_record_id is not None:
+            evidence_committer = IngestionEvidenceCommitter(
+                ports=EvidenceCommitPorts(
+                    lifecycle_reader=partition_lifecycle_reader,
+                    lifecycle_writer=container.get(PartitionLifecycleWriter),
+                    snapshot_writer=container.get(ProviderSnapshotWriter),
+                    license_reader=container.get(DatasetLicenseReader),
+                    catalog_writer=catalog_writer,
+                    lineage_recorder=lineage_recorder,
+                    ingestion_log_store=ingestion_log_store,
+                )
+            )
 
         # 创建协调器
         with create_coordinator(
@@ -104,6 +132,8 @@ def create_ingestion_bundle(
                 catalog_reader=catalog_reader,
                 catalog_writer=catalog_writer,
                 source_fallback_policy_reader=source_fallback_policy_reader,
+                evidence_committer=evidence_committer,
+                license_record_id=license_record_id,
             ),
         ) as coordinator:
             # 创建管理器

@@ -687,6 +687,7 @@ class IngestionResultHandler:
         *,
         snapshot_evidence: IngestionSnapshotEvidence | None = None,
         quality_evidence: IngestionQualityEvidence | None = None,
+        persist_log: bool = True,
     ) -> IngestionResult:
         """
         处理成功写入。
@@ -698,6 +699,7 @@ class IngestionResultHandler:
             write_result: 写入结果
             snapshot_evidence: 可选累计 PIT 快照证据
             quality_evidence: 可选写入时 L1/L2 质量门禁证据
+            persist_log: 是否由本 handler 保存成功日志；R2 saga 已保存时为 False
 
         Returns:
             IngestionResult: 成功结果
@@ -705,24 +707,23 @@ class IngestionResultHandler:
         """
         _ = df
         persisted_rows = write_result.rows_written
-        self._save_log(
-            IngestionLog(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.SUCCESS,
-                # 修复：统一使用 write_result.checksum（落盘后包含所有字段的 checksum）
-                checksum=write_result.checksum,
-                rows=persisted_rows,
+        if persist_log:
+            self._save_log(
+                IngestionLog(
+                    dataset=dataset,
+                    source=self._source_name,
+                    trade_date=trade_date,
+                    status=IngestionStatus.SUCCESS,
+                    checksum=write_result.checksum,
+                    rows=persisted_rows,
+                )
             )
-        )
 
         return IngestionResult(
             dataset=dataset,
             trade_date=trade_date,
             status="success",
             row_count=persisted_rows,
-            # 修复：统一使用 write_result.checksum（落盘后包含所有字段的 checksum）
             checksum=(None if snapshot_evidence is not None else write_result.checksum),
             message="数据摄取成功",
             snapshot_evidence=snapshot_evidence,
