@@ -11,6 +11,10 @@
 
 from __future__ import annotations
 
+from ditto_application.commands.data_product_operations import (
+    confirm_data_product_operation,
+    preview_data_product_operation,
+)
 from ditto_kernel import InstrumentIngestParams
 from prefect import flow
 from pydantic import BaseModel
@@ -127,6 +131,66 @@ def backfill_missing_flow(
                 else "没有缺失数据"
             ),
         }
+
+
+@flow(
+    name="r2-data-product-bootstrap",
+    description="显式确认后执行 R2 数据产品历史初始化",
+)
+def r2_data_product_bootstrap_flow(
+    config: BackfillFlowConfig,
+    confirmation: str,
+) -> dict[str, object]:
+    """Run a bounded bootstrap only after the canonical preview is confirmed."""
+    preview = preview_data_product_operation("bootstrap", config.dataset)
+    confirm_data_product_operation(preview, confirmation)
+    start_date = config.resume_from or config.start_date
+    with create_ingestion_bundle(source=config.source) as bundle:
+        result = bundle.backfill_manager.backfill_range(
+            dataset=config.dataset,
+            start_date=start_date,
+            end_date=config.end_date,
+            parallel=config.parallel,
+        )
+    return {
+        "dataset": result.dataset,
+        "start_date": start_date,
+        "end_date": config.end_date,
+        "total_dates": result.total_dates,
+        "success_count": result.success_count,
+        "skipped_count": result.skipped_count,
+        "failed_count": result.failed_count,
+        "confirmation_phrase": preview.confirmation_phrase,
+    }
+
+
+@flow(
+    name="r2-data-product-repair",
+    description="显式确认后修复 R2 数据产品缺失分区",
+)
+def r2_data_product_repair_flow(
+    dataset: str,
+    confirmation: str,
+    source: str = "tushare",
+    parallel: int = 1,
+) -> dict[str, object]:
+    """Run schedule-aware repair only after exact impact confirmation."""
+    preview = preview_data_product_operation("repair", dataset)
+    confirm_data_product_operation(preview, confirmation)
+    with create_ingestion_bundle(source=source) as bundle:
+        result = bundle.backfill_manager.backfill_missing(
+            dataset=dataset,
+            source=source,
+            parallel=parallel,
+        )
+    return {
+        "dataset": result.dataset,
+        "total_dates": result.total_dates,
+        "success_count": result.success_count,
+        "skipped_count": result.skipped_count,
+        "failed_count": result.failed_count,
+        "confirmation_phrase": preview.confirmation_phrase,
+    }
 
 
 # ============================================================================

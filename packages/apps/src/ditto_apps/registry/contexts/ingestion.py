@@ -4,6 +4,9 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+from ditto_application.commands.data_product_certification import (
+    DataProductCertificationCommands,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
@@ -20,6 +23,7 @@ from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.sparse_recovery import (
     SparsePITReattestationProcess,
 )
+from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_data.catalog import (
     DataCatalogReader,
@@ -166,6 +170,8 @@ def create_ingestion_bundle(
             )
             # 创建查询 facade
             metadata_facade = MetadataQueryFacade(metadata_service=metadata_service)
+            data_products_query = container.get(DataProductsQueryFacade)
+            certification_commands = container.get(DataProductCertificationCommands)
 
             yield IngestionBundle(
                 coordinator=coordinator,
@@ -174,6 +180,8 @@ def create_ingestion_bundle(
                 sparse_pit_reattestation=sparse_pit_reattestation,
                 metadata_facade=metadata_facade,
                 exchange_transformers=exchange_transformers,
+                data_products_query=data_products_query,
+                certification_commands=certification_commands,
             )
     finally:
         container.close()

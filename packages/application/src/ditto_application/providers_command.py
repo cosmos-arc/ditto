@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog.certification import CertificationGovernanceStore
 from ditto_data.catalog.fallback_policy import (
     CatalogSourceFallbackPolicyReader,
     CatalogSourceFallbackPolicyWriter,
@@ -68,6 +69,9 @@ from ditto_application.commands.catalog_remediation import (
     LineageCatalogAssetRemediationExecutor,
     RequestCatalogRemediationApprovalHandler,
 )
+from ditto_application.commands.data_product_certification import (
+    DataProductCertificationCommands,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
 from ditto_application.commands.source_fallback_policy import (
@@ -106,6 +110,14 @@ class AppCommandProvider(Provider):
     """App Command 层 DI Provider — Command Handler 注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def data_product_certification_commands(
+        self,
+        store: CertificationGovernanceStore,
+    ) -> DataProductCertificationCommands:
+        """R2 immutable certification review commands."""
+        return DataProductCertificationCommands(store=store)
 
     @provide
     def opening_baseline_resolver(
