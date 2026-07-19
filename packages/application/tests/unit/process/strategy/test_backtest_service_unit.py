@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, date, datetime, timedelta
 from inspect import Parameter, signature
 from pathlib import Path
@@ -166,6 +166,39 @@ class TestBacktestServiceConfig:
     ) -> None:
         with pytest.raises(AppProcessError, match="spec_hash"):
             _make_service_config(spec_hash=invalid_hash)
+
+    @pytest.mark.parametrize(
+        ("changes", "expected_field"),
+        [
+            pytest.param({"spec_hash": "bad"}, "spec_hash", id="spec"),
+            pytest.param(
+                {"base_spec_hash": "bad"},
+                "base_spec_hash",
+                id="base-spec",
+            ),
+            pytest.param(
+                {"parameter_hash": "bad"},
+                "parameter_hash",
+                id="parameters",
+            ),
+            pytest.param(
+                {"research_snapshot_id": "snapshot-without-hash"},
+                "research_snapshot",
+                id="research-snapshot",
+            ),
+        ],
+    )
+    def test_resolved_config_reports_the_failing_identity_field(
+        self,
+        changes: dict[str, object],
+        expected_field: str,
+    ) -> None:
+        """Identity validation errors name their actual boundary field."""
+        with pytest.raises(AppProcessError) as exc_info:
+            replace(_make_service_config(), **changes)
+
+        assert exc_info.value.details["field_name"] == expected_field
+        assert exc_info.value.details["reason"] == "invalid_canonical_identity"
 
     def test_service_rejects_unresolved_catalog_request(self) -> None:
         from ditto_application.processes.execution.backtest_process import (

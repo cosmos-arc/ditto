@@ -6,6 +6,7 @@ import hashlib
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from decimal import Decimal
 from enum import StrEnum
 from typing import NoReturn, cast
 
@@ -39,7 +40,6 @@ __all__ = [
 type ParameterValue = bool | int | float | str
 
 _MIN_PARAMETER_PATH_SEGMENTS = 5
-_STEP_QUOTIENT_ABS_TOL = 1e-9
 
 
 class ParameterValueType(StrEnum):
@@ -93,15 +93,40 @@ def _canonical_scalar(value: object, *, path: str) -> ParameterValue:
                 path=path,
                 actual_type="int",
             )
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            _spec_invalid(
+                "candidate parameter string has no canonical UTF-8 identity",
+                reason="invalid_parameter_value",
+                path=path,
+                actual_type="str",
+            )
     return cast(ParameterValue, value)
 
 
-def _require_nonempty_path(value: object, *, message: str) -> str:
+def _require_nonempty_path(
+    value: object,
+    *,
+    message: str,
+    location: str = "parameter.path",
+) -> str:
     if not isinstance(value, str) or not value:
         _spec_invalid(
             message,
             reason="invalid_parameter_path",
-            path=value,
+            path=location,
+            actual_type=type(value).__name__,
+        )
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        _spec_invalid(
+            "parameter path has no canonical UTF-8 identity",
+            reason="invalid_parameter_path",
+            path=location,
+            actual_type="str",
         )
     return value
 
@@ -118,6 +143,7 @@ class CandidateParameter:
         _require_nonempty_path(
             self.path,
             message="candidate parameter path must be non-empty",
+            location="candidate_parameter.path",
         )
         object.__setattr__(
             self,
@@ -138,6 +164,7 @@ class EffectiveParameter:
         _require_nonempty_path(
             self.path,
             message="effective parameter path must be non-empty",
+            location="effective_parameter.path",
         )
         object.__setattr__(
             self,
@@ -170,6 +197,7 @@ def _parse_parameter_path(path: str) -> tuple[str, tuple[str, ...]]:
     path = _require_nonempty_path(
         path,
         message="parameter schema names must be complete canonical paths",
+        location="parameter_schema.path",
     )
     if not path.startswith("/"):
         _spec_invalid(
@@ -367,6 +395,25 @@ def _matches_value_type(value: object, value_type: ParameterValueType) -> bool:
     return type(value) is str
 
 
+def _is_decimal_step_aligned(
+    value: float,
+    *,
+    origin: float | int,
+    step: float,
+) -> bool:
+    """Compare decimal spellings as exact rational numbers, without context loss."""
+    value_numerator, value_denominator = Decimal(str(value)).as_integer_ratio()
+    origin_numerator, origin_denominator = Decimal(str(origin)).as_integer_ratio()
+    step_numerator, step_denominator = Decimal(str(step)).as_integer_ratio()
+    delta_numerator = (
+        value_numerator * origin_denominator - origin_numerator * value_denominator
+    )
+    delta_denominator = value_denominator * origin_denominator
+    quotient_numerator = delta_numerator * step_denominator
+    quotient_denominator = delta_denominator * step_numerator
+    return quotient_numerator % quotient_denominator == 0
+
+
 @dataclass(frozen=True)
 class ParameterDefinition:
     """One resolved schema entry bound to an exact node implementation."""
@@ -444,12 +491,10 @@ class ParameterDefinition:
             if is_integer:
                 aligned = (cast(int, numeric) - cast(int, origin)) % int(self.step) == 0
             else:
-                quotient = (numeric - origin) / self.step
-                aligned = math.isclose(
-                    quotient,
-                    round(quotient),
-                    rel_tol=0.0,
-                    abs_tol=_STEP_QUOTIENT_ABS_TOL,
+                aligned = _is_decimal_step_aligned(
+                    cast(float, numeric),
+                    origin=origin,
+                    step=self.step,
                 )
             if not aligned:
                 _spec_invalid(
@@ -591,7 +636,17 @@ def _require_candidate_parameters(
                 path=f"candidate_parameters[{index}]",
                 actual_type=type(item).__name__,
             )
-        candidates.append(item)
+        path = _require_nonempty_path(
+            item.path,
+            message="candidate parameter path must be non-empty",
+            location=f"candidate_parameters[{index}].path",
+        )
+        candidates.append(
+            CandidateParameter(
+                path=path,
+                value=_canonical_scalar(item.value, path=path),
+            ),
+        )
     return tuple(candidates)
 
 
@@ -620,6 +675,7 @@ def canonical_parameter_hash(values: Sequence[EffectiveParameter]) -> str:
         path = _require_nonempty_path(
             item.path,
             message="effective parameter path must be non-empty",
+            location=f"effective_parameters[{index}].path",
         )
         canonical_values.append(
             (path, _canonical_scalar(item.value, path=path)),
@@ -635,9 +691,16 @@ def canonical_parameter_hash(values: Sequence[EffectiveParameter]) -> str:
         {"path": path, "value": value}
         for path, value in sorted(canonical_values, key=lambda item: item[0])
     ]
-    return hashlib.sha256(
-        orjson.dumps(payload, option=orjson.OPT_SORT_KEYS),
-    ).hexdigest()
+    try:
+        encoded = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+    except (TypeError, ValueError, OverflowError) as exc:
+        _spec_invalid(
+            "effective parameters have no canonical JSON identity",
+            reason="invalid_effective_parameters",
+            path="effective_parameters",
+            codec_error=type(exc).__name__,
+        )
+    return hashlib.sha256(encoded).hexdigest()
 
 
 class ParameterBinder:

@@ -18,14 +18,7 @@ from typing import Literal
 
 import orjson
 from ditto_backtest.audit import ExecutionAuditCollector
-from ditto_backtest.config import (
-    EngineConfig,
-    EngineMode,
-    validate_canonical_sha256,
-    validate_effective_parameter_identity,
-    validate_research_snapshot_identity,
-    validate_spec_hash,
-)
+from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.engine import (
     EngineLoop,
@@ -74,7 +67,9 @@ from ditto_application.processes.execution.backtest_audit import (
 )
 from ditto_application.processes.execution.backtest_config_validation import (
     require_candidate_parameters,
+    require_research_snapshot_identity,
     require_resolved_backtest_config,
+    require_resolved_strategy_identity,
 )
 from ditto_application.processes.execution.backtest_lineage import (
     record_backtest_lineage,
@@ -203,13 +198,10 @@ class BacktestCatalogRequestConfig:
                 reason="legacy_parameter_overrides_unresolved",
             )
         require_candidate_parameters(self.candidate_parameters)
-        try:
-            validate_research_snapshot_identity(
-                self.research_snapshot_id,
-                self.research_snapshot_manifest_hash,
-            )
-        except ValueError as exc:
-            raise AppProcessError(str(exc), field_name="research_snapshot") from exc
+        require_research_snapshot_identity(
+            self.research_snapshot_id,
+            self.research_snapshot_manifest_hash,
+        )
 
 
 @dataclass(frozen=True)
@@ -226,26 +218,12 @@ class BacktestServiceConfig(BacktestCatalogRequestConfig):
     def __post_init__(self) -> None:
         """Reject unresolved or non-canonical strategy identity at construction."""
         super().__post_init__()
-        try:
-            validate_spec_hash(self.spec_hash)
-            validate_canonical_sha256(
-                self.base_spec_hash,
-                field_name="base_spec_hash",
-            )
-            validate_effective_parameter_identity(
-                self.parameter_hash,
-                self.effective_parameters,
-            )
-            validate_research_snapshot_identity(
-                self.research_snapshot_id,
-                self.research_snapshot_manifest_hash,
-            )
-        except ValueError as exc:
-            raise AppProcessError(
-                str(exc),
-                field_name="spec_hash",
-                reason="invalid_canonical_identity",
-            ) from exc
+        require_resolved_strategy_identity(
+            spec_hash=self.spec_hash,
+            base_spec_hash=self.base_spec_hash,
+            parameter_hash=self.parameter_hash,
+            effective_parameters=self.effective_parameters,
+        )
 
 
 @dataclass(frozen=True)
