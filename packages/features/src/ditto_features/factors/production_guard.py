@@ -14,10 +14,12 @@ from ditto_features.factors.core_daily import (
     R3_CORE_FACTOR_CATALOG,
     CoreFactorCatalog,
     CoreFactorDescriptor,
+    CoreFactorSpecContract,
     PitRequirement,
     PreprocessingStep,
 )
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
+from ditto_features.factors.spec import FactorSpec
 
 __all__ = [
     "R2_STOCK_SEED_FACTOR_CONTRACT",
@@ -46,7 +48,9 @@ _R2_STOCK_SEED_MAX_LOOKBACK = 20
 _R2_CERTIFICATION_PROFILE = "r2-modern-a-share-v1"
 _R3_CORE_FACTOR_IDS = R3_CORE_FACTOR_CATALOG.factor_ids
 _R3_PREPROCESSING_STEPS = R3_CORE_FACTOR_CATALOG.preprocessing.steps
-_R3_CORE_PAYLOAD_HASH = R3_CORE_FACTOR_CATALOG.payload_hash
+_R3_CORE_PAYLOAD_HASH = (
+    "6cb5c709366b81cf9ef0243068d6e3f6cc128894978f170ca4947f3142128c42"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,20 +164,9 @@ def _validate_r3_core_descriptor(descriptor: CoreFactorDescriptor) -> None:
     spec = ALL_FACTOR_SPECS.get(descriptor.factor_id)
     if spec is None:
         raise ValueError(f"unregistered core factor: {descriptor.factor_id}")
-    if spec.id != descriptor.factor_id:
-        raise ValueError(f"core factor spec ID drifted: {descriptor.factor_id}")
-    if descriptor.pit_requirement is PitRequirement.ANNOUNCEMENT_KNOWN_AT and not any(
-        dataset_id in descriptor.required_datasets_for(lane)
-        for lane in descriptor.lanes
-        for dataset_id in (
-            "balance_sheet",
-            "income_statement",
-            "valuation_metrics",
-        )
-    ):
-        raise ValueError(
-            f"PIT core factor has no governed PIT dataset: {descriptor.factor_id}"
-        )
+    _validate_bound_factor_spec(descriptor, spec)
+    _validate_governed_leaf_dependencies(descriptor)
+    _validate_descriptor_pit_dataset(descriptor)
     if descriptor.benchmark_required:
         if spec.computation_type != "python" or spec.expression:
             raise ValueError(
@@ -189,6 +182,54 @@ def _validate_r3_core_descriptor(descriptor: CoreFactorDescriptor) -> None:
             item.column_id for item in descriptor.materialized_intermediates
         ),
     )
+
+
+def _validate_bound_factor_spec(
+    descriptor: CoreFactorDescriptor,
+    spec: FactorSpec,
+) -> None:
+    if spec.id != descriptor.factor_id:
+        raise ValueError(f"core factor spec ID drifted: {descriptor.factor_id}")
+    actual_contract = CoreFactorSpecContract.from_spec(spec, ALL_FACTOR_SPECS)
+    if actual_contract != descriptor.factor_spec:
+        raise ValueError(f"factor spec contract drifted: {descriptor.factor_id}")
+
+
+def _validate_governed_leaf_dependencies(
+    descriptor: CoreFactorDescriptor,
+) -> None:
+    for lane in descriptor.lanes:
+        governed_fields = {
+            field_id
+            for requirement in descriptor.input_requirements_for(lane)
+            for field_id in requirement.required_fields
+        }
+        if descriptor.benchmark_requirement is not None:
+            governed_fields.update(descriptor.benchmark_requirement.required_fields)
+        missing_dependencies = tuple(
+            dependency
+            for dependency in descriptor.factor_spec.leaf_dependencies
+            if dependency not in governed_fields
+        )
+        if missing_dependencies:
+            message = "factor spec dependencies lack governed input requirements"
+            message += f": {descriptor.factor_id}: {missing_dependencies!r}"
+            raise ValueError(message)
+
+
+def _validate_descriptor_pit_dataset(descriptor: CoreFactorDescriptor) -> None:
+    if descriptor.pit_requirement is PitRequirement.ANNOUNCEMENT_KNOWN_AT and not any(
+        dataset_id in descriptor.required_datasets_for(lane)
+        for lane in descriptor.lanes
+        for dataset_id in (
+            "balance_sheet",
+            "income_statement",
+            "valuation_metrics",
+        )
+    ):
+        raise ValueError(
+            f"PIT core factor has no governed PIT dataset: {descriptor.factor_id}"
+        )
 
 
 def _iter_cross_section_first_args(expression: str) -> Iterator[tuple[str, str]]:

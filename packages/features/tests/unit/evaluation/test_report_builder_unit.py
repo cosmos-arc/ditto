@@ -6,7 +6,9 @@ and assemble_report correct assembly of FactorEvaluationReport.
 
 from __future__ import annotations
 
+import math
 from datetime import date, timedelta
+from types import MappingProxyType
 
 import polars as pl
 import pytest
@@ -30,7 +32,47 @@ from ditto_features.evaluation.report import (
     ICSummary,
     LongShortResult,
     TailRiskMetrics,
+    project_r3_factor_diagnostics,
 )
+
+
+@pytest.mark.parametrize(
+    "bad_value",
+    [True, False, math.nan, math.inf, -math.inf, "0.5"],
+)
+def test_diagnostics_reject_invalid_scalar_shapes(bad_value: object) -> None:
+    with pytest.raises(ValueError, match=r"coverage.*finite number"):
+        project_r3_factor_diagnostics({"coverage": bad_value})
+
+
+def test_diagnostics_reject_wrong_metric_collection_shapes() -> None:
+    with pytest.raises(ValueError, match=r"decay.*pairs"):
+        project_r3_factor_diagnostics({"ic_decay": {"day": 0.1}})
+    with pytest.raises(ValueError, match=r"quantile_return.*numeric mapping"):
+        project_r3_factor_diagnostics({"quantile_annual_returns": [0.1, 0.2]})
+    with pytest.raises(ValueError, match=r"factor_contribution.*numeric mapping"):
+        project_r3_factor_diagnostics({"factor_contribution": {"value": True}})
+
+
+def test_diagnostics_projection_is_deeply_immutable_and_defensively_copied() -> None:
+    contribution = {"momentum": 0.3}
+    exposure = {"industry": {"bank": 0.2}}
+    source = {
+        "factor_contribution": contribution,
+        "factor_exposure": exposure,
+    }
+    projection = project_r3_factor_diagnostics(source)
+    contribution["momentum"] = 9.9
+    exposure["industry"]["bank"] = 9.9
+
+    assert isinstance(projection.values, MappingProxyType)
+    assert projection.values["factor_contribution"]["momentum"] == 0.3
+    assert projection.values["exposure"]["industry"]["bank"] == 0.2
+    with pytest.raises(TypeError):
+        projection.values["new"] = 1.0  # type: ignore[index]
+    with pytest.raises(TypeError):
+        projection.values["exposure"]["industry"]["bank"] = 1.0  # type: ignore[index]
+
 
 # ---------------------------------------------------------------------------
 # EvaluationConfig

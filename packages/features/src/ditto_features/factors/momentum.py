@@ -10,7 +10,7 @@ MOMENTUMS: dict[str, FactorSpec] = {
     "relative_strength_60d": FactorSpec(
         id="relative_strength_60d",
         expression="",
-        dependencies=("market.close",),
+        dependencies=("market.close", "benchmark.close"),
         description=("60-day return relative to a pre-registered certified benchmark"),
         computation_type="python",
     ),

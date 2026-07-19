@@ -20,7 +20,7 @@ from ditto_features.factors.spec import FactorSpec
 
 __all__ = ["validate_factor_specs"]
 
-_KNOWN_DATA_PREFIXES = ("market.", "fundamentals.", "capital.")
+_KNOWN_DATA_PREFIXES = ("market.", "fundamentals.", "capital.", "benchmark.")
 # 维护点: 新增数据域前缀时需同步更新此元组。
 # 长期方案: 从已注册 FactorSpec 的 dependencies 中自动提取前缀。
 

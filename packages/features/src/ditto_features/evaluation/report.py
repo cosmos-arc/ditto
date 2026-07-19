@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sized
+import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from types import MappingProxyType
+from typing import cast
 
 __all__ = [
     "AttributionContribution",
@@ -25,7 +28,14 @@ class R3FactorDiagnosticsProjection:
     """Honest projection of diagnostics that were actually computed."""
 
     computed_metrics: tuple[str, ...]
-    values: dict[str, object]
+    values: Mapping[str, object]
+
+    def __post_init__(self) -> None:
+        """Defensively copy and recursively freeze the projected evidence."""
+        copied = {key: _deep_freeze(value) for key, value in self.values.items()}
+        if self.computed_metrics != tuple(copied):
+            raise ValueError("computed metric IDs must match diagnostic values")
+        object.__setattr__(self, "values", MappingProxyType(copied))
 
 
 _R3_DIAGNOSTIC_SOURCES = (
@@ -69,7 +79,7 @@ def project_r3_factor_diagnostics(
     for metric_id, source_key in _R3_DIAGNOSTIC_SOURCES:
         value = raw.get(source_key)
         if _diagnostic_was_computed(value):
-            values[metric_id] = value
+            values[metric_id] = _normalize_diagnostic(metric_id, value)
     return R3FactorDiagnosticsProjection(
         computed_metrics=tuple(values),
         values=values,
@@ -79,9 +89,155 @@ def project_r3_factor_diagnostics(
 def _diagnostic_was_computed(value: object) -> bool:
     if value is None:
         return False
-    if isinstance(value, Sized):
-        return len(value) > 0
+    if isinstance(value, Mapping):
+        return len(cast(Mapping[object, object], value)) > 0
+    if isinstance(value, (list, tuple)):
+        return len(cast(Sequence[object], value)) > 0
     return True
+
+
+_SCALAR_DIAGNOSTICS = frozenset(
+    {"coverage", "missingness", "rank_ic", "icir", "turnover", "cost_drag"}
+)
+_STRING_NUMERIC_MAPPING_DIAGNOSTICS = frozenset(
+    {
+        "fold_stability",
+        "factor_contribution",
+        "parameter_neighborhood_stability",
+    }
+)
+_DIAGNOSTIC_PAIR_LENGTH = 2
+
+
+def _normalize_diagnostic(metric_id: str, value: object) -> object:
+    if metric_id in _SCALAR_DIAGNOSTICS:
+        return _require_finite_number(value, metric_id)
+    if metric_id == "decay":
+        return _normalize_decay(value)
+    if metric_id == "quantile_return":
+        return _normalize_numeric_mapping(value, metric_id, int)
+    if metric_id in _STRING_NUMERIC_MAPPING_DIAGNOSTICS:
+        return _normalize_numeric_mapping(value, metric_id, str)
+    if metric_id == "exposure":
+        return _normalize_exposure(value)
+    raise ValueError(f"unsupported R3 diagnostic metric: {metric_id}")
+
+
+def _require_finite_number(value: object, metric_id: str) -> float:
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(value)
+    ):
+        raise ValueError(f"{metric_id} diagnostic must be a finite number")
+    return float(value)
+
+
+def _normalize_decay(value: object) -> tuple[tuple[int, float], ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError("decay diagnostic must be a sequence of period/value pairs")
+    normalized: list[tuple[int, float]] = []
+    for item in cast(Sequence[object], value):
+        if not isinstance(item, Sequence) or isinstance(item, (str, bytes)):
+            raise ValueError(
+                "decay diagnostic must be a sequence of period/value pairs"
+            )
+        pair = cast(Sequence[object], item)
+        if len(pair) != _DIAGNOSTIC_PAIR_LENGTH:
+            raise ValueError(
+                "decay diagnostic must be a sequence of period/value pairs"
+            )
+        period, score = pair
+        if not isinstance(period, int) or isinstance(period, bool) or period < 1:
+            raise ValueError(
+                "decay diagnostic must be a sequence of period/value pairs"
+            )
+        normalized.append((period, _require_finite_number(score, "decay")))
+    return tuple(normalized)
+
+
+def _normalize_numeric_mapping(
+    value: object,
+    metric_id: str,
+    key_type: type[int] | type[str],
+) -> Mapping[object, float]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{metric_id} diagnostic must be a numeric mapping")
+    normalized: dict[object, float] = {}
+    for key, score in cast(Mapping[object, object], value).items():
+        if not isinstance(key, key_type) or isinstance(key, bool):
+            raise ValueError(f"{metric_id} diagnostic must be a numeric mapping")
+        try:
+            normalized[key] = _require_finite_number(score, metric_id)
+        except ValueError as exc:
+            raise ValueError(
+                f"{metric_id} diagnostic must be a numeric mapping"
+            ) from exc
+    return MappingProxyType(normalized)
+
+
+def _normalize_exposure(value: object) -> object:
+    if isinstance(value, FactorExposureResult):
+        return FactorExposureResult(
+            target_exposure=cast(
+                dict[str, float],
+                _normalize_numeric_mapping(value.target_exposure, "exposure", str),
+            ),
+            correlation_matrix=cast(
+                dict[str, dict[str, float]],
+                _normalize_nested_numeric_mapping(
+                    value.correlation_matrix,
+                    "exposure",
+                ),
+            ),
+            orthogonal_residual_stats=cast(
+                dict[str, float],
+                _normalize_numeric_mapping(
+                    value.orthogonal_residual_stats,
+                    "exposure",
+                    str,
+                ),
+            ),
+            n_factors=_require_non_negative_int(value.n_factors, "exposure"),
+            n_dates=_require_non_negative_int(value.n_dates, "exposure"),
+        )
+    return _normalize_nested_numeric_mapping(value, "exposure")
+
+
+def _normalize_nested_numeric_mapping(
+    value: object,
+    metric_id: str,
+) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{metric_id} diagnostic must be a numeric mapping")
+    normalized: dict[str, object] = {}
+    for key, item in cast(Mapping[object, object], value).items():
+        if not isinstance(key, str):
+            raise ValueError(f"{metric_id} diagnostic must be a numeric mapping")
+        if isinstance(item, Mapping):
+            normalized[key] = _normalize_nested_numeric_mapping(
+                cast(Mapping[object, object], item), metric_id
+            )
+        else:
+            normalized[key] = _require_finite_number(item, metric_id)
+    return MappingProxyType(normalized)
+
+
+def _require_non_negative_int(value: object, metric_id: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError(f"{metric_id} diagnostic count must be a non-negative int")
+    return value
+
+
+def _deep_freeze(value: object) -> object:
+    if isinstance(value, Mapping):
+        source = cast(Mapping[object, object], value)
+        return MappingProxyType(
+            {key: _deep_freeze(item) for key, item in source.items()}
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_deep_freeze(item) for item in cast(Sequence[object], value))
+    return value
 
 
 @dataclass(frozen=True)

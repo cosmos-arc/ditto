@@ -12,6 +12,7 @@ from typing import ClassVar
 import pytest
 from ditto_data.models import Dataset
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
+from ditto_features.factors.spec import FactorSpec
 from ditto_features.factors.validate import validate_factor_specs
 
 
@@ -31,6 +32,29 @@ class TestFactorSpecsCIGate:
             assert factor_id, "Empty factor ID"
             assert spec.id == factor_id, f"Spec ID mismatch: {spec.id} != {factor_id}"
 
+    def test_benchmark_prefix_is_exactly_scoped(self) -> None:
+        """Allow benchmark columns without opening arbitrary external prefixes."""
+        benchmark = FactorSpec(
+            id="benchmark_factor",
+            expression="",
+            dependencies=("benchmark.close",),
+            description="registered benchmark input",
+            computation_type="python",
+        )
+        assert validate_factor_specs({benchmark.id: benchmark}) == []
+
+        unregistered = FactorSpec(
+            id="unregistered_factor",
+            expression="",
+            dependencies=("vendor.close",),
+            description="unregistered external input",
+            computation_type="python",
+        )
+        assert any(
+            "unknown dependency 'vendor.close'" in error
+            for error in validate_factor_specs({unregistered.id: unregistered})
+        )
+
 
 class TestFactorDataAvailability:
     """验证核心因子依赖的数据集可用性."""
@@ -42,6 +66,7 @@ class TestFactorDataAvailability:
             "market.high",
             "market.low",
             "market.open",
+            "market.amount",
         }
     )
 
@@ -195,6 +220,7 @@ class TestFactorDependencyCoverage:
             "market.high",
             "market.low",
             "market.open",
+            "market.amount",
         }
         actual_market: set[str] = set()
         for spec in ALL_FACTOR_SPECS.values():

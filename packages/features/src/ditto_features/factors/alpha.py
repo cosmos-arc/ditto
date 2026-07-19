@@ -57,10 +57,10 @@ ALPHAS: dict[str, FactorSpec] = {
     ),
     "liquidity": FactorSpec(
         id="liquidity",
-        expression="cs_rank(ts_mean(market.volume, 20) * market.close)",
-        dependencies=("market.volume", "market.close"),
+        expression="cs_rank(ts_mean(market.amount, 20))",
+        dependencies=("market.amount",),
         description=(
-            "Liquidity factor: cross-sectional rank of 20-day average dollar volume"
+            "Liquidity factor: cross-sectional rank of 20-day average traded amount"
         ),
     ),
     "alpha_001": FactorSpec(
