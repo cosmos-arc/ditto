@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
     PublishedBacktestRuntime,
     StrategyServiceFactory,
 )
+from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestCatalogRequestConfig,
     BacktestService,
@@ -24,6 +26,7 @@ from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.parameters import canonical_parameter_hash
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
@@ -71,12 +74,42 @@ def _make_runtime() -> PublishedBacktestRuntime:
             initial_cash=1_000_000.0,
             benchmark_id=InstrumentId(3_000_001),
             spec_hash="a" * 64,
+            base_spec_hash="a" * 64,
+            parameter_hash=canonical_parameter_hash(()),
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         ),
     )
 
 
 class TestStrategyServiceFactory:
     """Port strategy factory 的 catalog-backed backtest 测试。"""
+
+    @pytest.mark.parametrize("strategy_version", ["", "latest", "0", "-1"])
+    def test_build_backtest_service_from_catalog_requires_exact_positive_version(
+        self,
+        strategy_version: str,
+    ) -> None:
+        runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+            backtest_runtime_builder=runtime_builder,
+        )
+
+        with pytest.raises(AppBuilderError, match="exact positive catalog version"):
+            factory.build_backtest_service_from_catalog(
+                config=BacktestCatalogRequestConfig(
+                    strategy_id="momentum-etf",
+                    strategy_version=strategy_version,
+                    start_date="2026-01-01",
+                    end_date="2026-03-01",
+                )
+            )
+
+        runtime_builder.build_published_runtime.assert_not_called()
 
     def test_build_backtest_service_from_catalog_uses_runtime_builder(self) -> None:
         """factory 应使用 BacktestRuntimeBuilder 组装 BacktestService。"""

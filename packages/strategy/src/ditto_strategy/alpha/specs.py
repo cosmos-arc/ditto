@@ -43,7 +43,7 @@ __all__ = [
 ]
 
 STRATEGY_SPEC_V2_SCHEMA_VERSION = 2
-_PARAMETER_DTYPES = frozenset({"int", "float", "str"})
+_PARAMETER_DTYPES = frozenset({"bool", "int", "float", "str"})
 
 
 def _validate_v2_schema_version(value: object) -> None:
@@ -237,7 +237,7 @@ class ParamConstraint:
             )
         if not _is_supported_parameter_dtype(self.dtype):
             _raise_spec_error(
-                "ParamConstraint.dtype must be one of int, float, or str",
+                "ParamConstraint.dtype must be one of bool, int, float, or str",
                 field_name="dtype",
                 reason="invalid_parameter_dtype",
                 actual_value=self.dtype,

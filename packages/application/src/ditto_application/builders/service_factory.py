@@ -43,6 +43,7 @@ from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_strategy.alpha.parameters import EffectiveParameter
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
@@ -291,7 +292,10 @@ def _resolve_backtest_catalog_request(
     *,
     strategy_version: str,
     benchmark_id: InstrumentId | None,
+    base_spec_hash: str,
     spec_hash: str,
+    parameter_hash: str,
+    effective_parameters: tuple[EffectiveParameter, ...],
 ) -> BacktestServiceConfig:
     """Resolve a catalog launch request without dropping any request field."""
     return BacktestServiceConfig(
@@ -303,7 +307,10 @@ def _resolve_backtest_catalog_request(
         end_date=config.end_date,
         initial_cash=config.initial_cash,
         benchmark_id=benchmark_id,
-        parameter_overrides=config.parameter_overrides,
+        parameter_overrides=(),
+        candidate_parameters=config.candidate_parameters,
+        research_snapshot_id=config.research_snapshot_id,
+        research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
         rebalance_freq=config.rebalance_freq,
         engine_version=config.engine_version,
         execution_delay=config.execution_delay,
@@ -326,7 +333,10 @@ def _resolve_backtest_catalog_request(
         resume_settlement_state_hash=config.resume_settlement_state_hash,
         resume_runtime_state_json=config.resume_runtime_state_json,
         resume_runtime_state_hash=config.resume_runtime_state_hash,
+        base_spec_hash=base_spec_hash,
         spec_hash=spec_hash,
+        parameter_hash=parameter_hash,
+        effective_parameters=effective_parameters,
     )
 
 
@@ -369,6 +379,7 @@ class BacktestRuntimeBuilder:
         runtime = self._strategy_runtime_builder.build_published_runtime(
             config.strategy_id,
             version,
+            candidate_parameters=config.candidate_parameters,
         )
         assert_strategy_runtime_data_allowed(
             runtime.spec,
@@ -406,7 +417,10 @@ class BacktestRuntimeBuilder:
             config,
             strategy_version=str(runtime.record.version),
             benchmark_id=benchmark_id,
+            base_spec_hash=runtime.base_spec_hash,
             spec_hash=runtime.spec_hash,
+            parameter_hash=runtime.parameter_hash,
+            effective_parameters=runtime.effective_parameters,
         )
 
         # 解析 universe → tickers + id_map + display_map
@@ -581,6 +595,11 @@ class StrategyServiceFactory:
         resolved_version = version
         if resolved_version is None:
             resolved_version = self._parse_catalog_version(config.strategy_version)
+        if resolved_version is None or resolved_version <= 0:
+            msg = (
+                "Backtest catalog execution requires an exact positive catalog version"
+            )
+            raise AppBuilderError(msg)
         resolved_options = options or BacktestServiceOptions()
         runtime = self._backtest_runtime_builder.build_published_runtime(
             config=config,

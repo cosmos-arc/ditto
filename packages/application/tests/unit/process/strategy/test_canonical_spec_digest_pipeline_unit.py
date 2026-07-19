@@ -32,10 +32,10 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 )
 
 _EXPECTED_MARKET_HASH = (
-    "2f7c1666b0588dca972cd5a39f96b8842c578a7390f4dde78afb83b326f73295"
+    "3d4383741997e61203b384ed755c06d8e05df64ea09d66af1cc36230d32b2ff1"
 )
 _EXPECTED_LIMIT_HASH = (
-    "0137d8876c30d2d3627ec3db246c5f3db17c07b931ad29b644badc75d15704b7"
+    "443189820bdb94b539ecc072cf8d8e21a891d0c7134d2ae06af0c2912c743177"
 )
 
 

@@ -32,6 +32,7 @@ from ditto_kernel.order import OrderSide
 from ditto_platform.foundation import atomic_bytes_write
 from ditto_portfolio.accounting import AccountView, CashBook, Position
 from ditto_portfolio.accounting.fills import FillEvent
+from ditto_strategy.alpha.parameters import CandidateParameter
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.runs.models import StrategyRunRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -41,6 +42,9 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.replay_manifest_codec import (
+    deserialize_effective_parameters,
+)
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.queries.artifact_utils import find_artifact
 
@@ -220,11 +224,20 @@ class ReplayProcess:
             strategy_id=manifest.strategy_id,
             strategy_version=manifest.strategy_version,
             spec_hash=manifest.spec_hash,
+            base_spec_hash=manifest.base_spec_hash,
+            parameter_hash=manifest.parameter_hash,
+            effective_parameters=manifest.effective_parameters,
+            research_snapshot_id=manifest.research_snapshot_id,
+            research_snapshot_manifest_hash=(manifest.research_snapshot_manifest_hash),
             parent_run_id=parent_run_id,
             start_date=period.get("start", ""),
             end_date=period.get("end", ""),
             initial_cash=_initial_cash_from_config_or_report(run_config, report),
-            parameter_overrides=manifest.parameter_overrides,
+            parameter_overrides=(),
+            candidate_parameters=tuple(
+                CandidateParameter(path=item.path, value=item.value)
+                for item in manifest.effective_parameters
+            ),
             rebalance_freq=_extract_rebalance_freq(report),
             engine_version=manifest.engine_version,
             execution_delay=_int_config_field(run_config, "execution_delay"),
@@ -373,7 +386,22 @@ class ReplayProcess:
 
 def _deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
     """从 JSON dict 反序列化 RunManifest."""
-    raw_spec_hash = raw.get("spec_hash")
+    required_identity_fields = (
+        "spec_hash",
+        "base_spec_hash",
+        "parameter_hash",
+        "effective_parameters",
+        "research_snapshot_id",
+        "research_snapshot_manifest_hash",
+    )
+    for field_name in required_identity_fields:
+        if field_name not in raw:
+            raise AppProcessError(
+                f"manifest missing required identity field: {field_name}",
+                field_name=field_name,
+                reason="missing_reproduction_identity",
+            )
+    raw_spec_hash = raw["spec_hash"]
     try:
         spec_hash = validate_spec_hash(raw_spec_hash)
     except ValueError as exc:
@@ -382,6 +410,8 @@ def _deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
             field_name="spec_hash",
             reason="invalid_canonical_identity",
         ) from exc
+
+    effective_parameters = deserialize_effective_parameters(raw["effective_parameters"])
 
     input_ref_details = tuple(
         InputRef(
@@ -406,25 +436,36 @@ def _deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
         for ref in raw.get("rule_refs", [])
     )
 
-    return RunManifest(
-        run_id=raw.get("run_id", ""),
-        strategy_id=raw.get("strategy_id", ""),
-        strategy_version=raw.get("strategy_version", ""),
-        mode=RunMode(raw.get("mode", "backtest")),
-        created_at=raw.get("created_at", ""),
-        input_refs=tuple(raw.get("input_refs", ())),
-        input_ref_details=input_ref_details,
-        parameter_overrides=tuple(raw.get("parameter_overrides", ())),
-        rule_refs=rule_refs,
-        artifacts=tuple(raw.get("artifacts", ())),
-        config_hash=raw.get("config_hash", ""),
-        engine_version=raw.get("engine_version", ""),
-        rule_resolution_policy=raw.get("rule_resolution_policy", "as_of_date"),
-        universe_hash=raw.get("universe_hash", ""),
-        spec_hash=spec_hash,
-        dependency_versions=tuple(raw.get("dependency_versions", ())),
-        random_seed=raw.get("random_seed"),
-    )
+    try:
+        return RunManifest(
+            run_id=raw.get("run_id", ""),
+            strategy_id=raw.get("strategy_id", ""),
+            strategy_version=raw.get("strategy_version", ""),
+            mode=RunMode(raw.get("mode", "backtest")),
+            created_at=raw.get("created_at", ""),
+            input_refs=tuple(raw.get("input_refs", ())),
+            input_ref_details=input_ref_details,
+            parameter_overrides=tuple(raw.get("parameter_overrides", ())),
+            rule_refs=rule_refs,
+            artifacts=tuple(raw.get("artifacts", ())),
+            config_hash=raw.get("config_hash", ""),
+            engine_version=raw.get("engine_version", ""),
+            rule_resolution_policy=raw.get("rule_resolution_policy", "as_of_date"),
+            universe_hash=raw.get("universe_hash", ""),
+            spec_hash=spec_hash,
+            base_spec_hash=raw["base_spec_hash"],
+            parameter_hash=raw["parameter_hash"],
+            effective_parameters=effective_parameters,
+            research_snapshot_id=raw["research_snapshot_id"],
+            research_snapshot_manifest_hash=raw["research_snapshot_manifest_hash"],
+            dependency_versions=tuple(raw.get("dependency_versions", ())),
+            random_seed=raw.get("random_seed"),
+        )
+    except (TypeError, ValueError) as exc:
+        raise AppProcessError(
+            str(exc),
+            reason="invalid_reproduction_identity",
+        ) from exc
 
 
 def _extract_rebalance_freq(report: dict[str, Any]) -> str:

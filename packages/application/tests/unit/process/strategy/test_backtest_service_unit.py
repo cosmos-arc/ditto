@@ -34,11 +34,17 @@ from ditto_data.catalog import DataAssetRef
 from ditto_data.lineage import InMemoryDataLineage
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_context import TimeContext
+from ditto_strategy.alpha.parameters import (
+    EffectiveParameter,
+    canonical_parameter_hash,
+)
 from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+_EMPTY_PARAMETER_HASH = canonical_parameter_hash(())
 
 
 def _make_engine_result(
@@ -71,6 +77,11 @@ def _make_service_config(
         start_date=start_date,
         end_date=end_date,
         spec_hash=spec_hash,
+        base_spec_hash=spec_hash,
+        parameter_hash=_EMPTY_PARAMETER_HASH,
+        effective_parameters=(),
+        research_snapshot_id=None,
+        research_snapshot_manifest_hash=None,
         **overrides,
     )
 
@@ -186,7 +197,6 @@ class TestBacktestServiceConfig:
             strategy_version="2026.03",
             initial_cash=5_000_000.0,
             benchmark_id=InstrumentId(3_000_001),
-            parameter_overrides=("top_k=5",),
             participation_rate=0.02,
             fill_mode="all_or_nothing",
         )
@@ -195,7 +205,7 @@ class TestBacktestServiceConfig:
         assert config.run_id == "run-123"
         assert config.initial_cash == 5_000_000.0
         assert config.benchmark_id == InstrumentId(3_000_001)
-        assert config.parameter_overrides == ("top_k=5",)
+        assert config.parameter_overrides == ()
         assert config.participation_rate == pytest.approx(0.02)
         assert config.fill_mode == "all_or_nothing"
 
@@ -213,6 +223,11 @@ class TestBacktestServiceConfig:
             end_date=config.end_date,
             initial_cash=config.initial_cash,
             spec_hash=config.spec_hash,
+            base_spec_hash=config.base_spec_hash,
+            parameter_hash=config.parameter_hash,
+            effective_parameters=config.effective_parameters,
+            research_snapshot_id=config.research_snapshot_id,
+            research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
             benchmark_id=config.benchmark_id,
             strategy_id=config.strategy_id,
             strategy_run_id=config.run_id,
@@ -465,6 +480,11 @@ class TestArtifactPersistence:
                 mode=RunMode.BACKTEST,
                 created_at="2026-03-24T10:00:00Z",
                 spec_hash="e" * 64,
+                base_spec_hash="e" * 64,
+                parameter_hash=_EMPTY_PARAMETER_HASH,
+                effective_parameters=(),
+                research_snapshot_id=None,
+                research_snapshot_manifest_hash=None,
             ),
         ),
     )
@@ -533,10 +553,34 @@ class TestArtifactPersistence:
                         source_snapshot_id="catalog-snap-20260621",
                     ),
                 ),
-                parameter_overrides=("top_k=20", "max_weight=0.08"),
+                effective_parameters=(
+                    EffectiveParameter(
+                        path="/pipeline/nodes/legacy_factor_set/config/params/max_weight",
+                        value=0.08,
+                    ),
+                    EffectiveParameter(
+                        path="/pipeline/nodes/legacy_factor_set/config/params/top_k",
+                        value=20,
+                    ),
+                ),
                 config_hash="config-sha",
                 engine_version="0.2.0",
                 spec_hash="d" * 64,
+                base_spec_hash="c" * 64,
+                parameter_hash=canonical_parameter_hash(
+                    (
+                        EffectiveParameter(
+                            path="/pipeline/nodes/legacy_factor_set/config/params/max_weight",
+                            value=0.08,
+                        ),
+                        EffectiveParameter(
+                            path="/pipeline/nodes/legacy_factor_set/config/params/top_k",
+                            value=20,
+                        ),
+                    ),
+                ),
+                research_snapshot_id="snapshot-stock-daily-20260621",
+                research_snapshot_manifest_hash="f" * 64,
             ),
         ),
     )
@@ -603,7 +647,15 @@ class TestArtifactPersistence:
                 "date_range": ["2026-01-01", "2026-06-21"],
             }
         ]
-        assert promotion["parameter_hash"].startswith("sha256:")
+        assert promotion["base_spec_hash"] == "c" * 64
+        assert promotion["spec_hash"] == "d" * 64
+        assert promotion["parameter_hash"] == canonical_parameter_hash(
+            tuple(
+                EffectiveParameter(**item) for item in promotion["effective_parameters"]
+            ),
+        )
+        assert promotion["research_snapshot_id"] == "snapshot-stock-daily-20260621"
+        assert promotion["research_snapshot_manifest_hash"] == "f" * 64
         assert promotion["benchmark"] == 3_000_001
         assert promotion["cost_model"]["total_fees"] == 128.0
         assert promotion["cost_model"]["cost_drag"] == 0.02
@@ -926,8 +978,12 @@ class TestArtifactPersistence:
             mode=RunMode.BACKTEST,
             created_at="2026-03-24T10:00:00Z",
             spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash=_EMPTY_PARAMETER_HASH,
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             input_refs=("ETF-001",),
-            parameter_overrides=("top_k=3",),
             config_hash="cfg-123",
             engine_version="0.2.0",
         )
@@ -968,6 +1024,11 @@ class TestArtifactPersistence:
             mode=RunMode.BACKTEST,
             created_at="2026-03-24T10:00:00+00:00",
             spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash=_EMPTY_PARAMETER_HASH,
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             input_ref_details=(
                 InputRef(
                     instrument_id=InstrumentId(510050),

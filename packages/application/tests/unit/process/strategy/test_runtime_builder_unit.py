@@ -154,12 +154,12 @@ class TestStrategyRuntimeBuilder:
         [
             pytest.param(
                 OrderType.MARKET,
-                "2f7c1666b0588dca972cd5a39f96b8842c578a7390f4dde78afb83b326f73295",
+                "3d4383741997e61203b384ed755c06d8e05df64ea09d66af1cc36230d32b2ff1",
                 id="market",
             ),
             pytest.param(
                 OrderType.LIMIT,
-                "0137d8876c30d2d3627ec3db246c5f3db17c07b931ad29b644badc75d15704b7",
+                "443189820bdb94b539ecc072cf8d8e21a891d0c7134d2ae06af0c2912c743177",
                 id="limit",
             ),
         ],
@@ -247,7 +247,7 @@ class TestStrategyRuntimeBuilder:
         assert runtime.spec.execution.default_order_type is OrderType.MARKET
         assert (
             runtime.spec_hash
-            == "2f7c1666b0588dca972cd5a39f96b8842c578a7390f4dde78afb83b326f73295"
+            == "3d4383741997e61203b384ed755c06d8e05df64ea09d66af1cc36230d32b2ff1"
         )
 
     def test_build_published_runtime_defaults_to_latest_published_version(

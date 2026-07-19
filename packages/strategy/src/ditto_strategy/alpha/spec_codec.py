@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 
 import orjson
 
 from ditto_strategy.alpha._canonical_values import canonical_json_value
+from ditto_strategy.alpha._parameter_paths import legacy_parameter_path
 from ditto_strategy.alpha.nodes import (
     NodeCategory,
     NodeInstance,
@@ -260,7 +262,13 @@ def adapt_legacy_strategy_spec(spec: StrategySpec) -> StrategySpecV2:
             nodes=nodes,
             sequence=tuple(node.node_id for node in nodes),
         ),
-        parameter_schema=tuple(spec.param_constraints),
+        parameter_schema=tuple(
+            replace(
+                parameter,
+                name=legacy_parameter_path(parameter.name),
+            )
+            for parameter in spec.param_constraints
+        ),
         metadata={
             "legacy_strategy_id": spec.strategy_id,
             "migration_source": "legacy_strategy_spec",

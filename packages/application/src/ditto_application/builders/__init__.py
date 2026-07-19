@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+    ResearchSnapshotIdentity,
+    ResearchStrategyRuntime,
+)
 from ditto_application.builders.runtime_builder import (
     PublishedStrategyRuntime,
     StrategyRuntimeBuilder,
@@ -17,6 +22,9 @@ __all__ = [
     "BacktestRuntimeBuilder",
     "PublishedBacktestRuntime",
     "PublishedStrategyRuntime",
+    "ResearchRuntimeBuilder",
+    "ResearchSnapshotIdentity",
+    "ResearchStrategyRuntime",
     "StrategyRuntimeBuilder",
     "StrategyServiceFactory",
     "StrategySliceBuilder",

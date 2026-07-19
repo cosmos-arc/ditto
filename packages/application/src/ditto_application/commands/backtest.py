@@ -15,7 +15,18 @@ from typing import cast
 
 import orjson
 from ditto_kernel.strategy import RunStatus
+from ditto_strategy.alpha.node_registry import default_node_registry
+from ditto_strategy.alpha.parameters import (
+    CandidateParameter,
+    EffectiveParameter,
+    ParameterBinder,
+    ParameterValue,
+    legacy_parameter_path,
+)
+from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.contracts import StrategyCatalogReader
+from ditto_strategy.errors import StrategySpecError
+from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunCheckpointReaderProtocol,
 )
@@ -25,6 +36,7 @@ from ditto_application.contracts import CostConfig
 from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.strategy_spec_deserialization import deserialize_strategy_spec
 
 __all__ = [
     "BacktestRunCommand",
@@ -37,6 +49,7 @@ __all__ = [
     "ResumeRunHandler",
     "RetryRunCommand",
     "RetryRunHandler",
+    "parse_candidate_parameters",
 ]
 
 
@@ -47,6 +60,7 @@ class BacktestRunCommand:
     strategy_id: str
     start_date: str
     end_date: str
+    strategy_version: int | None = None
     initial_cash: float = DEFAULT_INITIAL_CASH
     parameter_overrides: tuple[str, ...] = ()
     cost_config: CostConfig | None = None
@@ -60,6 +74,8 @@ class BacktestRunResult:
     run_id: str
     strategy_id: str
     status: str
+    strategy_version: int | None = None
+    candidate_parameters: tuple[CandidateParameter, ...] = ()
     cost_config: CostConfig | None = None
 
 
@@ -103,14 +119,11 @@ class BacktestRunHandler:
         # 1. 校验日期
         self._validate_dates(command.start_date, command.end_date)
 
-        # 2. 校验策略存在
-        spec_record = self._catalog_service.get_spec(command.strategy_id)
-        if spec_record is None:
-            msg = f"Strategy not found: {command.strategy_id}"
-            raise AppCommandError(msg)
+        # 2. Resolve published once, then lock the exact immutable version.
+        spec_record = self._resolve_exact_published_record(command)
 
         # 3. 预编译因子表达式（如果策略包含 signal_expressions）
-        spec_json = spec_record.spec_json if hasattr(spec_record, "spec_json") else {}
+        spec_json = spec_record.spec_json
         signal_expressions = _extract_signal_expressions(spec_json)
         signal_weights = _extract_signal_weights(spec_json, command.strategy_id)
 
@@ -122,12 +135,30 @@ class BacktestRunHandler:
                 )
             self._factor_bridge.compile_and_validate(signal_expressions, signal_weights)
 
-        # 4. 序列化回测配置为 config_json
+        # 4. Parse the legacy wire syntax once and bind it to the exact spec.
+        candidate_parameters = parse_candidate_parameters(command.parameter_overrides)
+        try:
+            legacy_spec = deserialize_strategy_spec(spec_record)
+            binding = ParameterBinder(registry=default_node_registry()).bind(
+                adapt_legacy_strategy_spec(legacy_spec),
+                candidate_parameters=candidate_parameters,
+            )
+        except StrategySpecError as exc:
+            raise AppCommandError(str(exc), details=exc.details) from exc
+
+        # 5. Persist only typed candidate/effective values and immutable identities.
         config_data: dict[str, object] = {
             "start_date": command.start_date,
             "end_date": command.end_date,
+            "strategy_version": spec_record.version,
             "initial_cash": command.initial_cash,
-            "parameter_overrides": list(command.parameter_overrides),
+            "candidate_parameters": _parameter_payload(candidate_parameters),
+            "effective_parameters": _parameter_payload(
+                binding.effective_parameters,
+            ),
+            "base_spec_hash": binding.base_spec_hash,
+            "spec_hash": binding.resolved_spec_hash,
+            "parameter_hash": binding.parameter_hash,
             "allow_experimental_data": command.allow_experimental_data,
         }
         if command.cost_config is not None:
@@ -140,11 +171,12 @@ class BacktestRunHandler:
             }
         config_json = orjson.dumps(config_data).decode("utf-8")
 
-        # 5. 创建 RunRecord
+        # 6. 创建 RunRecord with the same exact catalog version.
         run_id = uuid.uuid4().hex[:8]
         self._run_service.create_run(
             run_id=run_id,
             strategy_id=command.strategy_id,
+            strategy_version=str(spec_record.version),
             mode="backtest",
             config_json=config_json,
         )
@@ -153,8 +185,59 @@ class BacktestRunHandler:
             run_id=run_id,
             strategy_id=command.strategy_id,
             status="pending",
+            strategy_version=spec_record.version,
+            candidate_parameters=candidate_parameters,
             cost_config=command.cost_config,
         )
+
+    def _resolve_exact_published_record(
+        self,
+        command: BacktestRunCommand,
+    ) -> StrategySpecRecord:
+        expected_version: int | None
+        if command.strategy_version is not None:
+            if (
+                type(command.strategy_version) is not int
+                or command.strategy_version <= 0
+            ):
+                raise AppCommandError(
+                    "strategy_version must be a positive integer",
+                    details={"field": "strategy_version"},
+                )
+            expected_version = command.strategy_version
+            exact = self._catalog_service.get_spec(
+                command.strategy_id,
+                expected_version,
+            )
+        else:
+            selected = self._catalog_service.get_latest_published(command.strategy_id)
+            if selected is None:
+                expected_version = None
+                exact = None
+            else:
+                expected_version = selected.version
+                exact = self._catalog_service.get_spec(
+                    command.strategy_id,
+                    expected_version,
+                )
+        if exact is None:
+            msg = f"Strategy not found: {command.strategy_id}"
+            raise AppCommandError(msg)
+        if (
+            exact.strategy_id != command.strategy_id
+            or exact.version != expected_version
+            or exact.status != "published"
+        ):
+            raise AppCommandError(
+                "Backtest requires one exact published strategy version",
+                details={
+                    "strategy_id": command.strategy_id,
+                    "expected_strategy_version": expected_version,
+                    "actual_strategy_version": exact.version,
+                    "version_status": exact.status,
+                },
+            )
+        return exact
 
     @staticmethod
     def _validate_dates(start_date: str, end_date: str) -> None:
@@ -212,6 +295,93 @@ def _extract_signal_weights(
                 value=value,
             ) from None
     return tuple(weights)
+
+
+def _parameter_payload(
+    parameters: tuple[CandidateParameter, ...] | tuple[EffectiveParameter, ...],
+) -> list[dict[str, ParameterValue]]:
+    return [
+        {"path": parameter.path, "value": parameter.value} for parameter in parameters
+    ]
+
+
+def _require_override_strings(value: object) -> tuple[str, ...]:
+    if not isinstance(value, tuple):
+        raise AppCommandError(
+            "parameter_overrides must be tuple[str, ...]",
+            details={"field": "parameter_overrides"},
+        )
+    overrides: list[str] = []
+    for item in cast(tuple[object, ...], value):
+        if not isinstance(item, str):
+            raise AppCommandError(
+                "parameter_overrides must be tuple[str, ...]",
+                details={"field": "parameter_overrides"},
+            )
+        overrides.append(item)
+    return tuple(overrides)
+
+
+def parse_candidate_parameters(
+    parameter_overrides: tuple[str, ...],
+) -> tuple[CandidateParameter, ...]:
+    """Parse the legacy ``key=value`` syntax into strict typed candidates once."""
+    parameter_overrides = _require_override_strings(parameter_overrides)
+    candidates: list[CandidateParameter] = []
+    seen_paths: set[str] = set()
+    for index, raw in enumerate(parameter_overrides):
+        if "=" not in raw:
+            raise AppCommandError(
+                "parameter override must use key=value syntax",
+                details={"field": "parameter_overrides", "index": index},
+            )
+        raw_name, raw_value = raw.split("=", 1)
+        name = raw_name.strip()
+        value_text = raw_value.strip()
+        if not name or not value_text:
+            raise AppCommandError(
+                "parameter override key and value must be non-empty",
+                details={"field": "parameter_overrides", "index": index},
+            )
+        path = name if name.startswith("/") else legacy_parameter_path(name)
+        if path in seen_paths:
+            raise AppCommandError(
+                "duplicate parameter override path",
+                details={
+                    "field": "parameter_overrides",
+                    "index": index,
+                    "path": path,
+                },
+            )
+        try:
+            decoded = orjson.loads(value_text)
+        except orjson.JSONDecodeError:
+            if value_text in {"NaN", "Infinity", "-Infinity"}:
+                raise AppCommandError(
+                    "parameter override value is not a finite JSON scalar",
+                    details={
+                        "field": "parameter_overrides",
+                        "index": index,
+                        "path": path,
+                    },
+                ) from None
+            decoded = value_text
+        if decoded is None or type(decoded) not in {bool, int, float, str}:
+            raise AppCommandError(
+                "parameter override value must be a JSON scalar",
+                details={
+                    "field": "parameter_overrides",
+                    "index": index,
+                    "path": path,
+                },
+            )
+        try:
+            candidate = CandidateParameter(path=path, value=decoded)
+        except StrategySpecError as exc:
+            raise AppCommandError(str(exc), details=exc.details) from exc
+        seen_paths.add(path)
+        candidates.append(candidate)
+    return tuple(candidates)
 
 
 # ---------------------------------------------------------------------------

@@ -34,7 +34,7 @@ from ditto_strategy.alpha.specs import (
 _NATIVE_CANONICAL_BYTES = (
     b'{"parameter_schema":[{"allowed_values":[],"dtype":"int",'
     b'"max_value":120.0,"min_value":20.0,'
-    b'"name":"pipeline.nodes.factors.config.lookback","step":20.0}],'
+    b'"name":"/pipeline/nodes/factors/config/lookback","step":20.0}],'
     b'"pipeline":{"nodes":[{"category":"universe",'
     b'"config":{"asset_class":"stock","universe_id":"csi_a_share"},'
     b'"enabled":true,"node_id":"universe","node_type":"builtin.universe",'
@@ -50,12 +50,14 @@ _NATIVE_CANONICAL_BYTES = (
     b'"strategy_kind":"stock_selection"}'
 )
 _NATIVE_CANONICAL_SHA256 = (
-    "1a1ee761cf1994d6da92a95067cbd84fb08f4dc3fc2e172bfe70436c1e9d855e"
+    "98578fb8d4e4486b88339f0249fe3f6dff5db59623e0f2eef74088a4ba4dafd0"
 )
 
 _LEGACY_CANONICAL_BYTES = (
     b'{"parameter_schema":[{"allowed_values":[],"dtype":"int",'
-    b'"max_value":120.0,"min_value":20.0,"name":"lookback","step":20.0}],'
+    b'"max_value":120.0,"min_value":20.0,'
+    b'"name":"/pipeline/nodes/legacy_factor_set/config/params/lookback",'
+    b'"step":20.0}],'
     b'"pipeline":{"nodes":[{"category":"universe",'
     b'"config":{"asset_class":"etf","benchmark":"000300.SH",'
     b'"universe":"csi_etf_broad"},"enabled":true,'
@@ -93,7 +95,7 @@ _LEGACY_CANONICAL_BYTES = (
     b'"strategy_family_id":"legacy-etf-alpha","strategy_kind":"etf_rotation"}'
 )
 _LEGACY_CANONICAL_SHA256 = (
-    "78f80388e06ef267cd8bb34af2f9e8365aff395c7db8c0f898b61911a367ede0"
+    "b11f6eae781ae0618808947a7c5ceabc6d927b3ee55b9f7ad4274afd7c8ea763"
 )
 
 
@@ -134,7 +136,7 @@ def _make_native_spec(*, reverse_config_keys: bool = False) -> StrategySpecV2:
         ),
         parameter_schema=(
             ParamConstraint(
-                name="pipeline.nodes.factors.config.lookback",
+                name="/pipeline/nodes/factors/config/lookback",
                 dtype="int",
                 min_value=20,
                 max_value=120,

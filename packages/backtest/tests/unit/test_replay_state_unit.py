@@ -73,6 +73,11 @@ def _make_manifest(run_id: str = "run-001") -> RunManifest:
         config_hash="config",
         engine_version="engine",
         spec_hash="a" * 64,
+        base_spec_hash="b" * 64,
+        parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        effective_parameters=(),
+        research_snapshot_id=None,
+        research_snapshot_manifest_hash=None,
     )
 
 

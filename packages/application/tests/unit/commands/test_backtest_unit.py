@@ -7,6 +7,7 @@ error handling, and cancel/retry status guards.
 
 from __future__ import annotations
 
+from dataclasses import asdict, replace
 from unittest.mock import Mock
 
 import pytest
@@ -21,10 +22,19 @@ from ditto_application.commands.backtest import (
     ResumeRunHandler,
     RetryRunCommand,
     RetryRunHandler,
+    parse_candidate_parameters,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_kernel.strategy import ImpactModel
+from ditto_strategy.alpha.parameters import CandidateParameter, legacy_parameter_path
+from ditto_strategy.alpha.specs import (
+    ParamConstraint,
+    ScorerSpec,
+    SelectorSpec,
+    StrategySpec,
+)
+from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.runs.models import StrategyRunCheckpointRecord, StrategyRunRecord
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunCheckpointStore,
@@ -36,14 +46,57 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 def mock_catalog_service() -> Mock:
     """Mock StrategyCatalogService."""
     svc = Mock()
-    svc.get_spec.return_value = Mock(
+    record = _catalog_record(
         strategy_id="momentum-etf",
-        spec_json={
-            "signal_expressions": ["ts_mean(close, 20)"],
-            "signal_weights": [1.0],
-        },
+        signal_expressions=("ts_mean(close, 20)",),
+        signal_weights=(1.0,),
     )
+    svc.get_latest_published.return_value = record
+    svc.get_spec.return_value = record
     return svc
+
+
+def _catalog_record(
+    *,
+    strategy_id: str,
+    signal_expressions: tuple[str, ...] = (),
+    signal_weights: tuple[float | str, ...] = (),
+) -> StrategySpecRecord:
+    spec = StrategySpec(
+        strategy_id=strategy_id,
+        name=strategy_id,
+        template="etf_rotation",
+        universe="csi_etf_broad",
+        asset_class="etf",
+        scorer=ScorerSpec(method="rank"),
+        selector=SelectorSpec(method="top_k", params={"k": 3}),
+        params={"top_k": 3},
+        param_constraints=(
+            ParamConstraint(
+                name="top_k",
+                dtype="int",
+                min_value=1,
+                max_value=10,
+                step=1,
+            ),
+        ),
+        signal_expressions=signal_expressions,
+        signal_weights=tuple(
+            value for value in signal_weights if isinstance(value, float)
+        ),
+        required_datasets=("etf_daily",),
+    )
+    payload = asdict(spec)
+    payload["signal_expressions"] = list(signal_expressions)
+    if signal_weights:
+        payload["signal_weights"] = list(signal_weights)
+    return StrategySpecRecord(
+        strategy_id=strategy_id,
+        name=strategy_id,
+        spec_json=payload,
+        version=7,
+        status="published",
+    )
 
 
 @pytest.fixture
@@ -164,12 +217,27 @@ class TestBacktestRunHandler:
         mock_run_service.create_run.assert_called_once()
         call_kwargs = mock_run_service.create_run.call_args
         assert call_kwargs.kwargs["strategy_id"] == "momentum-etf"
+        assert call_kwargs.kwargs["strategy_version"] == "7"
         assert call_kwargs.kwargs["mode"] == "backtest"
 
         # Result has run_id
         assert isinstance(result, BacktestRunResult)
         assert result.run_id
         assert result.status == "pending"
+        assert result.strategy_version == 7
+
+        import orjson
+
+        config_data = orjson.loads(call_kwargs.kwargs["config_json"])
+        assert config_data["strategy_version"] == 7
+        assert config_data["candidate_parameters"] == []
+        assert config_data["effective_parameters"] == [
+            {
+                "path": legacy_parameter_path("top_k"),
+                "value": 3,
+            },
+        ]
+        assert "parameter_overrides" not in config_data
 
     def test_run_config_records_experimental_data_opt_in(
         self,
@@ -244,12 +312,82 @@ class TestBacktestRunHandler:
         handler: BacktestRunHandler,
         mock_run_service: Mock,
     ) -> None:
-        """Parameter overrides are forwarded to the result."""
+        """Legacy wire overrides are parsed once into typed canonical candidates."""
         cmd = _make_command(parameter_overrides=("lookback=30",))
+
+        with pytest.raises(AppCommandError, match="not registered"):
+            handler.handle(cmd)
+
+        mock_run_service.create_run.assert_not_called()
+
+    def test_registered_parameter_override_is_bound_before_run_creation(
+        self,
+        handler: BacktestRunHandler,
+        mock_run_service: Mock,
+    ) -> None:
+        """A valid typed candidate and its canonical identity are persisted."""
+        cmd = _make_command(parameter_overrides=("top_k=2",))
 
         result = handler.handle(cmd)
 
-        assert isinstance(result, BacktestRunResult)
+        assert result.candidate_parameters == (
+            CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
+        )
+        import orjson
+
+        config = orjson.loads(
+            mock_run_service.create_run.call_args.kwargs["config_json"]
+        )
+        assert config["candidate_parameters"] == [
+            {"path": legacy_parameter_path("top_k"), "value": 2}
+        ]
+        assert config["effective_parameters"] == [
+            {"path": legacy_parameter_path("top_k"), "value": 2}
+        ]
+        assert len(config["base_spec_hash"]) == 64
+        assert len(config["spec_hash"]) == 64
+        assert len(config["parameter_hash"]) == 64
+
+    def test_explicit_strategy_version_uses_exact_catalog_query(
+        self,
+        handler: BacktestRunHandler,
+        mock_catalog_service: Mock,
+    ) -> None:
+        """An explicit command version never resolves a moving latest pointer."""
+        handler.handle(_make_command(strategy_version=7))
+
+        mock_catalog_service.get_latest_published.assert_not_called()
+        mock_catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
+
+    def test_implicit_version_is_locked_by_exact_second_read(
+        self,
+        handler: BacktestRunHandler,
+        mock_catalog_service: Mock,
+    ) -> None:
+        """Latest published selection is immediately frozen by exact version read."""
+        handler.handle(_make_command())
+
+        mock_catalog_service.get_latest_published.assert_called_once_with(
+            "momentum-etf"
+        )
+        mock_catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
+
+    @pytest.mark.parametrize("explicit_version", [None, 7])
+    def test_exact_catalog_read_cannot_substitute_a_different_version(
+        self,
+        handler: BacktestRunHandler,
+        mock_catalog_service: Mock,
+        mock_run_service: Mock,
+        explicit_version: int | None,
+    ) -> None:
+        """The exact-read contract fails closed if a catalog returns another row."""
+        selected = mock_catalog_service.get_latest_published.return_value
+        mock_catalog_service.get_spec.return_value = replace(selected, version=8)
+
+        with pytest.raises(AppCommandError, match="exact published"):
+            handler.handle(_make_command(strategy_version=explicit_version))
+
+        mock_run_service.create_run.assert_not_called()
 
     def test_no_signal_expressions_skips_compile(
         self,
@@ -259,10 +397,9 @@ class TestBacktestRunHandler:
         mock_run_service: Mock,
     ) -> None:
         """Strategy without signal_expressions skips factor compilation."""
-        mock_catalog_service.get_spec.return_value = Mock(
-            strategy_id="simple-strategy",
-            spec_json={},  # No signal_expressions
-        )
+        record = _catalog_record(strategy_id="simple-strategy")
+        mock_catalog_service.get_latest_published.return_value = record
+        mock_catalog_service.get_spec.return_value = record
 
         cmd = _make_command(strategy_id="simple-strategy")
         result = handler.handle(cmd)
@@ -278,13 +415,13 @@ class TestBacktestRunHandler:
         mock_run_service: Mock,
     ) -> None:
         """Invalid signal weight values raise typed command errors."""
-        mock_catalog_service.get_spec.return_value = Mock(
+        record = _catalog_record(
             strategy_id="bad-weights",
-            spec_json={
-                "signal_expressions": ["close"],
-                "signal_weights": ["not-a-number"],
-            },
+            signal_expressions=("close",),
+            signal_weights=("not-a-number",),
         )
+        mock_catalog_service.get_latest_published.return_value = record
+        mock_catalog_service.get_spec.return_value = record
 
         with pytest.raises(AppCommandError, match="signal_weights") as exc_info:
             handler.handle(_make_command(strategy_id="bad-weights"))
@@ -317,8 +454,58 @@ class TestBacktestRunCommand:
         )
         assert cmd.initial_cash == 1_000_000.0
         assert cmd.parameter_overrides == ()
+        assert cmd.strategy_version is None
         assert cmd.cost_config is None
         assert cmd.allow_experimental_data is False
+
+
+class TestParseCandidateParameters:
+    """Legacy ``key=value`` syntax is normalized only at the command boundary."""
+
+    def test_parses_exact_json_scalar_types_and_legacy_paths(self) -> None:
+        assert parse_candidate_parameters(
+            (
+                "count=3",
+                "ratio=0.25",
+                "enabled=true",
+                'label="candidate"',
+                "method=score_weight",
+            )
+        ) == (
+            CandidateParameter(path=legacy_parameter_path("count"), value=3),
+            CandidateParameter(path=legacy_parameter_path("ratio"), value=0.25),
+            CandidateParameter(path=legacy_parameter_path("enabled"), value=True),
+            CandidateParameter(path=legacy_parameter_path("label"), value="candidate"),
+            CandidateParameter(
+                path=legacy_parameter_path("method"), value="score_weight"
+            ),
+        )
+
+    def test_preserves_full_canonical_path(self) -> None:
+        path = legacy_parameter_path("top/k")
+        assert parse_candidate_parameters((f"{path}=2",)) == (
+            CandidateParameter(path=path, value=2),
+        )
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "missing-separator",
+            "=1",
+            "name=",
+            "name=null",
+            "name=[]",
+            "name={}",
+            "name=NaN",
+        ],
+    )
+    def test_rejects_malformed_or_non_scalar_values(self, raw: str) -> None:
+        with pytest.raises(AppCommandError):
+            parse_candidate_parameters((raw,))
+
+    def test_rejects_duplicate_paths_after_normalization(self) -> None:
+        with pytest.raises(AppCommandError, match="duplicate"):
+            parse_candidate_parameters(("top_k=2", "top_k=3"))
 
 
 class TestBacktestRunResultCostConfig:

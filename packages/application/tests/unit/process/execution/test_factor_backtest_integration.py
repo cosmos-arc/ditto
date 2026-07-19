@@ -130,6 +130,11 @@ class TestFactorAwareBundleBuilder:
             start_date="2024-01-02",
             end_date="2024-01-05",
             spec_hash="a" * 64,
+            base_spec_hash="b" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         )
 
         # BacktestService 需要 pipeline 等参数，但我们只需要测试
@@ -182,6 +187,11 @@ class TestFactorAwareBundleBuilder:
             start_date="2024-01-02",
             end_date="2024-01-05",
             spec_hash="a" * 64,
+            base_spec_hash="b" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         )
 
         mock_pipeline = MagicMock()
@@ -250,6 +260,11 @@ class TestFactorAwareBundleBuilder:
                 start_date="2026-04-08",
                 end_date="2026-04-10",
                 spec_hash="a" * 64,
+                base_spec_hash="b" * 64,
+                parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                effective_parameters=(),
+                research_snapshot_id=None,
+                research_snapshot_manifest_hash=None,
             ),
             pipeline=MagicMock(),
             planner=MagicMock(),

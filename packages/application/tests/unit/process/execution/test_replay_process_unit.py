@@ -24,6 +24,11 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import AccountView, CashBook, Position
 from ditto_portfolio.accounting.fills import FillEvent
+from ditto_strategy.alpha.parameters import (
+    CandidateParameter,
+    EffectiveParameter,
+    canonical_parameter_hash,
+)
 from ditto_strategy.models import ArtifactKind
 from ditto_strategy.runs.models import StrategyRunRecord
 
@@ -60,6 +65,13 @@ def _make_manifest_raw(
         "rule_resolution_policy": "as_of_date",
         "universe_hash": "",
         "spec_hash": "a" * 64,
+        "base_spec_hash": "b" * 64,
+        "parameter_hash": (
+            "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        ),
+        "effective_parameters": [],
+        "research_snapshot_id": None,
+        "research_snapshot_manifest_hash": None,
         "dependency_versions": [],
         "random_seed": None,
     }
@@ -235,20 +247,35 @@ class TestLoadManifest:
         with pytest.raises(FileNotFoundError, match=r"manifest\.json not found"):
             ReplayProcess._load_manifest(tmp_path)
 
-    def test_load_manifest_rejects_missing_spec_hash(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        "field_name",
+        [
+            "spec_hash",
+            "base_spec_hash",
+            "parameter_hash",
+            "effective_parameters",
+            "research_snapshot_id",
+            "research_snapshot_manifest_hash",
+        ],
+    )
+    def test_load_manifest_rejects_missing_identity_field(
+        self,
+        tmp_path: Path,
+        field_name: str,
+    ) -> None:
         """历史 manifest 缺 identity 时必须明确 fail closed。"""
         from ditto_application.processes.execution.replay_process import ReplayProcess
 
         raw = _make_manifest_raw()
-        raw.pop("spec_hash")
+        raw.pop(field_name)
         manifest_path = tmp_path / "manifest.json"
         manifest_path.write_bytes(orjson.dumps(raw))
 
-        with pytest.raises(AppProcessError, match="spec_hash") as exc_info:
+        with pytest.raises(AppProcessError, match=field_name) as exc_info:
             ReplayProcess._load_manifest(tmp_path)
 
-        assert exc_info.value.details["field_name"] == "spec_hash"
-        assert exc_info.value.details["reason"] == "invalid_canonical_identity"
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "missing_reproduction_identity"
 
     @pytest.mark.parametrize(
         "invalid_hash",
@@ -322,6 +349,13 @@ class TestBuildConfig:
         manifest.strategy_id = "strat-1"
         manifest.strategy_version = "3"
         manifest.spec_hash = "a" * 64
+        manifest.base_spec_hash = "b" * 64
+        manifest.parameter_hash = (
+            "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        )
+        manifest.effective_parameters = ()
+        manifest.research_snapshot_id = None
+        manifest.research_snapshot_manifest_hash = None
         manifest.parameter_overrides = ()
         manifest.engine_version = "0.1.0"
 
@@ -350,6 +384,13 @@ class TestBuildConfig:
         manifest.strategy_id = "strat-1"
         manifest.strategy_version = "3"
         manifest.spec_hash = "a" * 64
+        manifest.base_spec_hash = "b" * 64
+        manifest.parameter_hash = (
+            "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        )
+        manifest.effective_parameters = ()
+        manifest.research_snapshot_id = None
+        manifest.research_snapshot_manifest_hash = None
         manifest.parameter_overrides = ("--lookback=20",)
         manifest.engine_version = "0.2.0"
 
@@ -370,8 +411,41 @@ class TestBuildConfig:
         assert config.end_date == "2026-06-30"
         assert config.initial_cash == pytest.approx(500_000.0)
         assert config.rebalance_freq == "monthly"
-        assert config.parameter_overrides == ("--lookback=20",)
+        assert config.parameter_overrides == ()
         assert config.engine_version == "0.2.0"
+
+    def test_build_config_replays_effective_values_as_typed_candidates(self) -> None:
+        """Complete manifest values rebuild the same resolved catalog runtime."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        effective_parameters = (
+            EffectiveParameter(
+                path="/pipeline/nodes/legacy_factor_set/config/params/top_k",
+                value=2,
+            ),
+        )
+        manifest = MagicMock(spec=RunManifest)
+        manifest.strategy_id = "strat-1"
+        manifest.strategy_version = "3"
+        manifest.spec_hash = "a" * 64
+        manifest.base_spec_hash = "b" * 64
+        manifest.parameter_hash = canonical_parameter_hash(effective_parameters)
+        manifest.effective_parameters = effective_parameters
+        manifest.research_snapshot_id = None
+        manifest.research_snapshot_manifest_hash = None
+        manifest.engine_version = "0.2.0"
+
+        config = ReplayProcess._build_config(
+            manifest,
+            _make_report_dict(),
+        )
+
+        assert config.candidate_parameters == (
+            CandidateParameter(
+                path="/pipeline/nodes/legacy_factor_set/config/params/top_k",
+                value=2,
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------

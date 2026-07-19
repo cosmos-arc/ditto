@@ -15,7 +15,10 @@ from ditto_application.exceptions import AppBuilderError
 from ditto_data.catalog.promotion import DatasetMaturityPromotion
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
+from ditto_strategy.alpha.node_registry import default_node_registry
+from ditto_strategy.alpha.parameters import ParameterBinder
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 
@@ -37,6 +40,35 @@ def _make_strategy_spec(
         benchmark="000300.SH",
         params={"top_k": 3},
         tags=("momentum", asset_class),
+    )
+
+
+def _make_published_runtime(
+    spec: StrategySpec,
+    *,
+    version: int,
+) -> PublishedStrategyRuntime:
+    binding = ParameterBinder(registry=default_node_registry()).bind(
+        adapt_legacy_strategy_spec(spec),
+        candidate_parameters=(),
+    )
+    return PublishedStrategyRuntime(
+        record=StrategySpecRecord(
+            strategy_id=spec.strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=version,
+            status="published",
+            tags=spec.tags,
+        ),
+        spec=spec,
+        base_spec=binding.base_spec,
+        resolved_spec=binding.resolved_spec,
+        pipeline=MagicMock(spec=StrategyPipeline),
+        base_spec_hash=binding.base_spec_hash,
+        spec_hash=binding.resolved_spec_hash,
+        parameter_hash=binding.parameter_hash,
+        effective_parameters=binding.effective_parameters,
     )
 
 
@@ -114,18 +146,9 @@ class TestStrategySliceBuilder:
     def test_build_published_slice_returns_single_day_slice(self) -> None:
         spec = _make_strategy_spec()
         runtime_builder = MagicMock()
-        runtime_builder.build_published_runtime.return_value = PublishedStrategyRuntime(
-            record=StrategySpecRecord(
-                strategy_id=spec.strategy_id,
-                name=spec.name,
-                spec_json=asdict(spec),
-                version=2,
-                status="published",
-                tags=spec.tags,
-            ),
-            spec=spec,
-            pipeline=MagicMock(spec=StrategyPipeline),
-            spec_hash="b" * 64,
+        runtime_builder.build_published_runtime.return_value = _make_published_runtime(
+            spec,
+            version=2,
         )
         builder = StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,
@@ -158,18 +181,9 @@ class TestStrategySliceBuilder:
             asset_class="stock",
         )
         runtime_builder = MagicMock()
-        runtime_builder.build_published_runtime.return_value = PublishedStrategyRuntime(
-            record=StrategySpecRecord(
-                strategy_id=spec.strategy_id,
-                name=spec.name,
-                spec_json=asdict(spec),
-                version=1,
-                status="published",
-                tags=spec.tags,
-            ),
-            spec=spec,
-            pipeline=MagicMock(spec=StrategyPipeline),
-            spec_hash="b" * 64,
+        runtime_builder.build_published_runtime.return_value = _make_published_runtime(
+            spec,
+            version=1,
         )
         data_provider = _make_data_provider()
         builder = StrategySliceBuilder(
@@ -197,18 +211,9 @@ class TestStrategySliceBuilder:
             asset_class="stock",
         )
         runtime_builder = MagicMock()
-        runtime_builder.build_published_runtime.return_value = PublishedStrategyRuntime(
-            record=StrategySpecRecord(
-                strategy_id=spec.strategy_id,
-                name=spec.name,
-                spec_json=asdict(spec),
-                version=1,
-                status="published",
-                tags=spec.tags,
-            ),
-            spec=spec,
-            pipeline=MagicMock(spec=StrategyPipeline),
-            spec_hash="b" * 64,
+        runtime_builder.build_published_runtime.return_value = _make_published_runtime(
+            spec,
+            version=1,
         )
         builder = StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,
@@ -235,18 +240,9 @@ class TestStrategySliceBuilder:
             asset_class="stock",
         )
         runtime_builder = MagicMock()
-        runtime_builder.build_published_runtime.return_value = PublishedStrategyRuntime(
-            record=StrategySpecRecord(
-                strategy_id=spec.strategy_id,
-                name=spec.name,
-                spec_json=asdict(spec),
-                version=1,
-                status="published",
-                tags=spec.tags,
-            ),
-            spec=spec,
-            pipeline=MagicMock(spec=StrategyPipeline),
-            spec_hash="b" * 64,
+        runtime_builder.build_published_runtime.return_value = _make_published_runtime(
+            spec,
+            version=1,
         )
         builder = StrategySliceBuilder(
             strategy_runtime_builder=runtime_builder,

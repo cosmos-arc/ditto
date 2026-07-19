@@ -12,8 +12,14 @@ from enum import StrEnum
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
+from ditto_strategy.alpha.parameters import EffectiveParameter
 
-from ditto_backtest.config import validate_spec_hash
+from ditto_backtest.config import (
+    validate_canonical_sha256,
+    validate_effective_parameter_identity,
+    validate_research_snapshot_identity,
+    validate_spec_hash,
+)
 
 __all__ = [
     "InputRef",
@@ -112,6 +118,11 @@ class RunManifest:
     mode: RunMode
     created_at: str
     spec_hash: str
+    base_spec_hash: str
+    parameter_hash: str
+    effective_parameters: tuple[EffectiveParameter, ...]
+    research_snapshot_id: str | None
+    research_snapshot_manifest_hash: str | None
     input_refs: tuple[InstrumentId, ...] = ()
     input_ref_details: tuple[InputRef, ...] = ()
     parameter_overrides: tuple[str, ...] = ()
@@ -131,3 +142,18 @@ class RunManifest:
     def __post_init__(self) -> None:
         """A persisted run manifest always has resolved canonical strategy identity."""
         validate_spec_hash(self.spec_hash)
+        validate_canonical_sha256(self.base_spec_hash, field_name="base_spec_hash")
+        validate_effective_parameter_identity(
+            self.parameter_hash,
+            self.effective_parameters,
+        )
+        validate_research_snapshot_identity(
+            self.research_snapshot_id,
+            self.research_snapshot_manifest_hash,
+        )
+        if self.parameter_overrides:
+            msg = (
+                "parameter_overrides cannot carry unresolved legacy values; "
+                "use effective_parameters"
+            )
+            raise ValueError(msg)

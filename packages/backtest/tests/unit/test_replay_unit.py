@@ -20,6 +20,10 @@ from ditto_backtest.replay import (
     ReplayValidator,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.parameters import (
+    EffectiveParameter,
+    canonical_parameter_hash,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -36,9 +40,12 @@ def _make_manifest(
     config_hash: str = "abc123",
     engine_version: str = "0.1.0",
     input_refs: tuple[InstrumentId, ...] = (_IID_510300, _IID_510500),
-    parameter_overrides: tuple[str, ...] = (),
     rule_refs: tuple[RuleRef, ...] = (),
     spec_hash: str = "a" * 64,
+    base_spec_hash: str = "b" * 64,
+    effective_parameters: tuple[EffectiveParameter, ...] = (),
+    research_snapshot_id: str | None = None,
+    research_snapshot_manifest_hash: str | None = None,
     random_seed: int | None = None,
     dependency_versions: tuple[str, ...] = (),
     input_ref_details: tuple[InputRef, ...] = (),
@@ -51,11 +58,16 @@ def _make_manifest(
         created_at="2026-04-11T00:00:00Z",
         input_refs=input_refs,
         input_ref_details=input_ref_details,
-        parameter_overrides=parameter_overrides,
+        parameter_overrides=(),
         rule_refs=rule_refs,
         config_hash=config_hash,
         engine_version=engine_version,
         spec_hash=spec_hash,
+        base_spec_hash=base_spec_hash,
+        parameter_hash=canonical_parameter_hash(effective_parameters),
+        effective_parameters=effective_parameters,
+        research_snapshot_id=research_snapshot_id,
+        research_snapshot_manifest_hash=research_snapshot_manifest_hash,
         random_seed=random_seed,
         dependency_versions=dependency_versions,
     )
@@ -254,12 +266,51 @@ class TestCompareManifests:
         assert diff.has_diff is True
         assert any("strategy_id" in d for d in diff.config_diffs)
 
-    def test_parameter_overrides_mismatch(self) -> None:
-        a = _make_manifest(parameter_overrides=("key1=val1",))
-        b = _make_manifest(parameter_overrides=("key1=val2",))
+    def test_base_spec_hash_mismatch(self) -> None:
+        a = _make_manifest(base_spec_hash="a" * 64)
+        b = _make_manifest(base_spec_hash="b" * 64)
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("base_spec_hash" in item for item in diff.config_diffs)
+
+    def test_strategy_version_mismatch(self) -> None:
+        a = _make_manifest(strategy_version="1")
+        b = _make_manifest(strategy_version="2")
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("strategy_version" in item for item in diff.version_diffs)
+
+    def test_research_snapshot_identity_mismatch(self) -> None:
+        a = _make_manifest(
+            research_snapshot_id="snapshot-a",
+            research_snapshot_manifest_hash="c" * 64,
+        )
+        b = _make_manifest(
+            research_snapshot_id="snapshot-b",
+            research_snapshot_manifest_hash="d" * 64,
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("research_snapshot_id" in item for item in diff.data_diffs)
+        assert any(
+            "research_snapshot_manifest_hash" in item for item in diff.data_diffs
+        )
+
+    def test_effective_parameters_mismatch(self) -> None:
+        path = "/pipeline/nodes/legacy_factor_set/config/params/key1"
+        a = _make_manifest(
+            effective_parameters=(EffectiveParameter(path=path, value="val1"),),
+        )
+        b = _make_manifest(
+            effective_parameters=(EffectiveParameter(path=path, value="val2"),),
+        )
         diff = ReplayValidator.compare_manifests(a, b)
         assert diff.has_diff is True
-        assert any("parameter_overrides" in d for d in diff.config_diffs)
+        assert any("effective_parameters" in d for d in diff.config_diffs)
+        assert any("parameter_hash" in d for d in diff.config_diffs)
 
     def test_input_refs_mismatch(self) -> None:
         a = _make_manifest(input_refs=(_IID_510300, _IID_510500))

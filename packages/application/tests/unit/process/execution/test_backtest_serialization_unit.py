@@ -205,6 +205,11 @@ class TestPitPolicyReporting:
             mode=RunMode.BACKTEST,
             created_at="2026-01-31T00:00:00Z",
             spec_hash="a" * 64,
+            base_spec_hash="b" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             knowledge_lag_days=2,
         )
 

@@ -18,7 +18,14 @@ from typing import Literal
 
 import orjson
 from ditto_backtest.audit import ExecutionAuditCollector
-from ditto_backtest.config import EngineConfig, EngineMode, validate_spec_hash
+from ditto_backtest.config import (
+    EngineConfig,
+    EngineMode,
+    validate_canonical_sha256,
+    validate_effective_parameter_identity,
+    validate_research_snapshot_identity,
+    validate_spec_hash,
+)
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.engine import (
     EngineLoop,
@@ -46,6 +53,7 @@ from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
 from ditto_risk.post_trade import PostTradeRiskGuard
 from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.parameters import CandidateParameter, EffectiveParameter
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -63,6 +71,10 @@ from ditto_application.processes.execution.backtest_audit import (
     persist_artifact,
     persist_audit,
     resolve_run_id,
+)
+from ditto_application.processes.execution.backtest_config_validation import (
+    require_candidate_parameters,
+    require_resolved_backtest_config,
 )
 from ditto_application.processes.execution.backtest_lineage import (
     record_backtest_lineage,
@@ -94,10 +106,6 @@ __all__ = [
     "FillMode",
 ]
 
-
-# ---------------------------------------------------------------------------
-# BacktestServiceConfig
-# ---------------------------------------------------------------------------
 
 _ALLOWED_RECOMMENDATION_STATUSES = frozenset(
     {"research", "candidate", "paper", "production"}
@@ -148,6 +156,9 @@ class BacktestCatalogRequestConfig:
     initial_cash: float = DEFAULT_INITIAL_CASH
     benchmark_id: InstrumentId | None = None
     parameter_overrides: tuple[str, ...] = ()
+    candidate_parameters: tuple[CandidateParameter, ...] = ()
+    research_snapshot_id: str | None = None
+    research_snapshot_manifest_hash: str | None = None
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
     execution_delay: int = 0
@@ -185,6 +196,20 @@ class BacktestCatalogRequestConfig:
         if self.fill_mode not in _ALLOWED_FILL_MODES:
             msg = f"fill_mode must be one of {sorted(_ALLOWED_FILL_MODES)}"
             raise AppProcessError(msg)
+        if self.parameter_overrides:
+            raise AppProcessError(
+                "non-empty legacy parameter_overrides are unresolved",
+                field_name="parameter_overrides",
+                reason="legacy_parameter_overrides_unresolved",
+            )
+        require_candidate_parameters(self.candidate_parameters)
+        try:
+            validate_research_snapshot_identity(
+                self.research_snapshot_id,
+                self.research_snapshot_manifest_hash,
+            )
+        except ValueError as exc:
+            raise AppProcessError(str(exc), field_name="research_snapshot") from exc
 
 
 @dataclass(frozen=True)
@@ -192,28 +217,35 @@ class BacktestServiceConfig(BacktestCatalogRequestConfig):
     """Resolved backtest service config with mandatory canonical strategy identity."""
 
     spec_hash: str = field(kw_only=True)
+    base_spec_hash: str = field(kw_only=True)
+    parameter_hash: str = field(kw_only=True)
+    effective_parameters: tuple[EffectiveParameter, ...] = field(kw_only=True)
+    research_snapshot_id: str | None = field(kw_only=True)  # pyright: ignore[reportGeneralTypeIssues]
+    research_snapshot_manifest_hash: str | None = field(kw_only=True)  # pyright: ignore[reportGeneralTypeIssues]
 
     def __post_init__(self) -> None:
         """Reject unresolved or non-canonical strategy identity at construction."""
         super().__post_init__()
         try:
             validate_spec_hash(self.spec_hash)
+            validate_canonical_sha256(
+                self.base_spec_hash,
+                field_name="base_spec_hash",
+            )
+            validate_effective_parameter_identity(
+                self.parameter_hash,
+                self.effective_parameters,
+            )
+            validate_research_snapshot_identity(
+                self.research_snapshot_id,
+                self.research_snapshot_manifest_hash,
+            )
         except ValueError as exc:
             raise AppProcessError(
                 str(exc),
                 field_name="spec_hash",
                 reason="invalid_canonical_identity",
             ) from exc
-
-
-def _require_resolved_backtest_config(value: object) -> BacktestServiceConfig:
-    if not isinstance(value, BacktestServiceConfig):
-        raise AppProcessError(
-            "BacktestService requires resolved BacktestServiceConfig",
-            field_name="config",
-            reason="unresolved_strategy_identity",
-        )
-    return value
 
 
 @dataclass(frozen=True)
@@ -331,7 +363,10 @@ class BacktestService:
         data_feed: DataFeed,
         options: BacktestServiceOptions = BacktestServiceOptions(),
     ) -> None:
-        self._config = _require_resolved_backtest_config(config)
+        self._config = require_resolved_backtest_config(
+            config,
+            expected_type=BacktestServiceConfig,
+        )
         self._pipeline = pipeline
         self._planner = planner
         self._brokerage = brokerage
@@ -360,7 +395,22 @@ class BacktestService:
                         "end_date": self._config.end_date,
                         "initial_cash": self._config.initial_cash,
                         "benchmark_id": self._config.benchmark_id,
-                        "parameter_overrides": list(self._config.parameter_overrides),
+                        "strategy_version": self._config.strategy_version,
+                        "candidate_parameters": [
+                            {"path": item.path, "value": item.value}
+                            for item in self._config.candidate_parameters
+                        ],
+                        "effective_parameters": [
+                            {"path": item.path, "value": item.value}
+                            for item in self._config.effective_parameters
+                        ],
+                        "base_spec_hash": self._config.base_spec_hash,
+                        "spec_hash": self._config.spec_hash,
+                        "parameter_hash": self._config.parameter_hash,
+                        "research_snapshot_id": self._config.research_snapshot_id,
+                        "research_snapshot_manifest_hash": (
+                            self._config.research_snapshot_manifest_hash
+                        ),
                         "rebalance_freq": self._config.rebalance_freq,
                         "execution_delay": self._config.execution_delay,
                         "resume_from_run_id": self._config.resume_from_run_id,
@@ -484,12 +534,19 @@ class BacktestService:
             end_date=self._config.end_date,
             initial_cash=self._config.initial_cash,
             spec_hash=self._config.spec_hash,
+            base_spec_hash=self._config.base_spec_hash,
+            parameter_hash=self._config.parameter_hash,
+            effective_parameters=self._config.effective_parameters,
+            research_snapshot_id=self._config.research_snapshot_id,
+            research_snapshot_manifest_hash=(
+                self._config.research_snapshot_manifest_hash
+            ),
             benchmark_id=self._config.benchmark_id,
             mode=EngineMode.BACKTEST,
             strategy_id=self._config.strategy_id,
             strategy_version=self._config.strategy_version,
             strategy_run_id=run_id,
-            parameter_overrides=self._config.parameter_overrides,
+            parameter_overrides=(),
             rebalance_freq=self._config.rebalance_freq,
             engine_version=self._config.engine_version,
             execution_delay=self._config.execution_delay,
@@ -694,10 +751,17 @@ class BacktestService:
                 rebalance_freq=self._config.rebalance_freq,
                 artifact_service=self._options.artifact_service,
                 write_fn=write_backtest_artifacts,
+                base_spec_hash=self._config.base_spec_hash,
+                spec_hash=self._config.spec_hash,
+                parameter_hash=self._config.parameter_hash,
+                effective_parameters=self._config.effective_parameters,
+                research_snapshot_id=self._config.research_snapshot_id,
+                research_snapshot_manifest_hash=(
+                    self._config.research_snapshot_manifest_hash
+                ),
                 artifact_dir=self._options.artifact_dir,
                 display_map=self._options.display_map,
                 benchmark_id=self._config.benchmark_id,
-                parameter_overrides=self._config.parameter_overrides,
                 code_version=self._config.code_version,
                 data_catalog_identities=self._config.data_catalog_identities,
                 factor_report_refs=self._config.factor_report_refs,

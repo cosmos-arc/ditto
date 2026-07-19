@@ -39,6 +39,24 @@ from ditto_kernel.trading import (
 # ---------------------------------------------------------------------------
 
 _CANONICAL_SPEC_HASH = "a" * 64
+_BASE_SPEC_HASH = "b" * 64
+_EMPTY_PARAMETER_HASH = (
+    "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+)
+
+
+def _baseline_manifest_identity() -> dict[str, object]:
+    return {
+        "base_spec_hash": _BASE_SPEC_HASH,
+        "parameter_hash": _EMPTY_PARAMETER_HASH,
+        "effective_parameters": (),
+        "research_snapshot_id": None,
+        "research_snapshot_manifest_hash": None,
+    }
+
+
+def _baseline_engine_identity() -> dict[str, object]:
+    return _baseline_manifest_identity()
 
 
 def _make_definition(
@@ -119,6 +137,11 @@ def _make_manifest(
         engine_version="0.1.0",
         rule_resolution_policy="as_of_date",
         spec_hash=_CANONICAL_SPEC_HASH,
+        base_spec_hash=_BASE_SPEC_HASH,
+        parameter_hash=_EMPTY_PARAMETER_HASH,
+        effective_parameters=(),
+        research_snapshot_id=None,
+        research_snapshot_manifest_hash=None,
         created_at="2026-03-22T10:00:00Z",
     )
 
@@ -192,6 +215,11 @@ class TestRunManifestFrozen:
             mode=RunMode.RESEARCH,
             created_at="2026-03-22T10:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            base_spec_hash=_BASE_SPEC_HASH,
+            parameter_hash=_EMPTY_PARAMETER_HASH,
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         )
         assert manifest.input_refs == ()
         assert manifest.parameter_overrides == ()
@@ -204,6 +232,77 @@ class TestRunManifestFrozen:
         assert manifest.pit_policy == PIT_POLICY_FAIL_CLOSED
         assert manifest.unsafe_time_policy == ""
         assert manifest.knowledge_lag_days == 1
+
+    @pytest.mark.parametrize(
+        "field_name",
+        [
+            "base_spec_hash",
+            "parameter_hash",
+            "effective_parameters",
+            "research_snapshot_id",
+            "research_snapshot_manifest_hash",
+        ],
+    )
+    def test_research_identity_fields_are_required(self, field_name: str) -> None:
+        manifest_signature = signature(RunManifest)
+        assert manifest_signature.parameters[field_name].default is Parameter.empty
+
+    def test_rejects_nonempty_legacy_parameter_overrides(self) -> None:
+        with pytest.raises(ValueError, match="parameter_overrides"):
+            RunManifest(
+                run_id="r",
+                strategy_id="s",
+                strategy_version="v",
+                mode=RunMode.RESEARCH,
+                created_at="2026-03-22T10:00:00Z",
+                spec_hash=_CANONICAL_SPEC_HASH,
+                base_spec_hash=_BASE_SPEC_HASH,
+                parameter_hash=_EMPTY_PARAMETER_HASH,
+                effective_parameters=(),
+                research_snapshot_id=None,
+                research_snapshot_manifest_hash=None,
+                parameter_overrides=("top_k=3",),
+            )
+
+    def test_rejects_noncanonical_research_snapshot_identity(self) -> None:
+        with pytest.raises(ValueError, match="research_snapshot_id"):
+            RunManifest(
+                run_id="r",
+                strategy_id="s",
+                strategy_version="v",
+                mode=RunMode.RESEARCH,
+                created_at="2026-03-22T10:00:00Z",
+                spec_hash=_CANONICAL_SPEC_HASH,
+                base_spec_hash=_BASE_SPEC_HASH,
+                parameter_hash=_EMPTY_PARAMETER_HASH,
+                effective_parameters=(),
+                research_snapshot_id=" snapshot ",
+                research_snapshot_manifest_hash="c" * 64,
+            )
+
+    @pytest.mark.parametrize(
+        ("snapshot_id", "manifest_hash"),
+        [("snapshot", None), (None, "c" * 64)],
+    )
+    def test_rejects_unpaired_research_snapshot_identity(
+        self,
+        snapshot_id: str | None,
+        manifest_hash: str | None,
+    ) -> None:
+        with pytest.raises(ValueError, match="research_snapshot"):
+            RunManifest(
+                run_id="r",
+                strategy_id="s",
+                strategy_version="v",
+                mode=RunMode.RESEARCH,
+                created_at="2026-03-22T10:00:00Z",
+                spec_hash=_CANONICAL_SPEC_HASH,
+                base_spec_hash=_BASE_SPEC_HASH,
+                parameter_hash=_EMPTY_PARAMETER_HASH,
+                effective_parameters=(),
+                research_snapshot_id=snapshot_id,
+                research_snapshot_manifest_hash=manifest_hash,
+            )
 
     def test_spec_hash_is_required(self) -> None:
         manifest_signature = signature(RunManifest)
@@ -237,6 +336,7 @@ class TestRunManifestFrozen:
                 mode=RunMode.RESEARCH,
                 created_at="2026-03-22T10:00:00Z",
                 spec_hash=invalid_hash,
+                **_baseline_manifest_identity(),
             )
 
 
@@ -479,13 +579,14 @@ class TestSerializeManifest:
             strategy_version="2.0",
             mode=RunMode.BACKTEST,
             input_refs=(1,),
-            parameter_overrides=("lookback=20",),
+            parameter_overrides=(),
             rule_refs=(ref1, ref2),
             artifacts=("trade_log.csv",),
             config_hash="hash1",
             engine_version="0.2.0",
             rule_resolution_policy="as_of_date",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             created_at="2026-03-22T10:00:00Z",
         )
 
@@ -495,7 +596,7 @@ class TestSerializeManifest:
         assert parsed["run_id"] == "run-001"
         assert parsed["mode"] == "backtest"
         assert parsed["input_refs"] == [1]
-        assert parsed["parameter_overrides"] == ["lookback=20"]
+        assert parsed["parameter_overrides"] == []
         assert parsed["artifacts"] == ["trade_log.csv"]
         assert len(parsed["rule_refs"]) == 2
         assert parsed["rule_refs"][1]["trading_rule_effective_to"] == "2025-12-31"
@@ -653,6 +754,7 @@ class TestRunManifestEnrichment:
             mode=RunMode.RESEARCH,
             created_at="2026-03-22T10:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
         )
         assert manifest.input_ref_details == ()
         assert manifest.universe_hash == ""
@@ -687,6 +789,7 @@ class TestRunManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             input_ref_details=refs,
         )
         assert len(manifest.input_ref_details) == 2
@@ -703,6 +806,7 @@ class TestRunManifestEnrichment:
             created_at="2026-04-11T00:00:00Z",
             universe_hash="uni_hash_123",
             spec_hash="b" * 64,
+            **_baseline_manifest_identity(),
         )
         assert manifest.universe_hash == "uni_hash_123"
         assert manifest.spec_hash == "b" * 64
@@ -716,6 +820,7 @@ class TestRunManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             dependency_versions=("numpy==2.0", "polars==1.0"),
             random_seed=42,
         )
@@ -741,6 +846,7 @@ class TestSerializeManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             input_ref_details=(ref,),
         )
         result = serialize_manifest(manifest)
@@ -766,6 +872,7 @@ class TestSerializeManifestEnrichment:
             created_at="2026-04-11T00:00:00Z",
             universe_hash="uni_abc",
             spec_hash="d" * 64,
+            **_baseline_manifest_identity(),
         )
         result = serialize_manifest(manifest)
         parsed = orjson.loads(result)
@@ -781,6 +888,7 @@ class TestSerializeManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             dependency_versions=("numpy==2.0",),
         )
         result = serialize_manifest(manifest)
@@ -796,6 +904,7 @@ class TestSerializeManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             random_seed=42,
         )
         result = serialize_manifest(manifest)
@@ -811,6 +920,7 @@ class TestSerializeManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
         )
         result = serialize_manifest(manifest)
         parsed = orjson.loads(result)
@@ -825,6 +935,7 @@ class TestSerializeManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             knowledge_lag_days=3,
         )
         result = serialize_manifest(manifest)
@@ -858,6 +969,7 @@ class TestSerializeManifestEnrichment:
             mode=RunMode.BACKTEST,
             created_at="2026-04-11T00:00:00Z",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             input_ref_details=refs,
         )
         result = serialize_manifest(manifest)
@@ -883,6 +995,7 @@ class TestSerializeManifestEnrichment:
             input_ref_details=(ref,),
             universe_hash="uni",
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_manifest_identity(),
             dependency_versions=("pkg==1.0",),
             random_seed=123,
         )
@@ -932,6 +1045,7 @@ class TestCanonicalSpecHashManifest:
             end_date="2026-01-31",
             initial_cash=1_000_000.0,
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_engine_identity(),
         )
 
         with pytest.raises(ValueError, match="spec_hash"):
@@ -953,6 +1067,7 @@ class TestCanonicalSpecHashManifest:
             end_date="2026-01-31",
             initial_cash=1_000_000.0,
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_engine_identity(),
         )
 
         first = build_run_manifest(
@@ -992,6 +1107,7 @@ class TestBuildRunManifestPitPolicy:
             end_date="2026-01-31",
             initial_cash=1_000_000.0,
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_engine_identity(),
             strategy_id="momentum-etf",
             strategy_version="2026.01",
             rebalance_freq="daily",
@@ -1026,6 +1142,7 @@ class TestBuildRunManifestSourceSnapshots:
             end_date="2026-03-01",
             initial_cash=1_000_000.0,
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_engine_identity(),
             strategy_id="momentum-etf",
             strategy_version="2026.03",
             rebalance_freq="daily",
@@ -1056,6 +1173,7 @@ class TestBuildRunManifestSourceSnapshots:
             end_date="2026-03-02",
             initial_cash=1_000_000.0,
             spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_engine_identity(),
             strategy_id="momentum-etf",
             strategy_version="2026.03",
             rebalance_freq="daily",

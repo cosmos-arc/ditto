@@ -142,6 +142,103 @@ class ReplayValidationResult:
 # ---------------------------------------------------------------------------
 
 
+def _manifest_diff_line(
+    field_name: str,
+    original_value: object,
+    replay_value: object,
+) -> str:
+    return f"{field_name}: {original_value} vs {replay_value}"
+
+
+def _compare_manifest_config(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    diffs: list[str] = []
+    scalar_fields = (
+        ("config_hash", original.config_hash, replay.config_hash),
+        ("strategy_id", original.strategy_id, replay.strategy_id),
+        ("base_spec_hash", original.base_spec_hash, replay.base_spec_hash),
+        ("spec_hash", original.spec_hash, replay.spec_hash),
+        ("parameter_hash", original.parameter_hash, replay.parameter_hash),
+    )
+    for field_name, original_value, replay_value in scalar_fields:
+        if original_value != replay_value:
+            diffs.append(_manifest_diff_line(field_name, original_value, replay_value))
+    if original.effective_parameters != replay.effective_parameters:
+        diffs.append("effective_parameters: mismatch")
+    if original.rule_refs != replay.rule_refs:
+        diffs.append("rule_refs: mismatch")
+    return tuple(diffs)
+
+
+def _compare_manifest_data(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    diffs: list[str] = []
+    if original.input_refs != replay.input_refs:
+        diffs.append(f"input_refs: {original.input_refs} vs {replay.input_refs}")
+    diffs.extend(
+        _compare_input_ref_details(
+            original.input_ref_details,
+            replay.input_ref_details,
+        )
+    )
+    if original.research_snapshot_id != replay.research_snapshot_id:
+        diffs.append(
+            _manifest_diff_line(
+                "research_snapshot_id",
+                original.research_snapshot_id,
+                replay.research_snapshot_id,
+            )
+        )
+    if (
+        original.research_snapshot_manifest_hash
+        != replay.research_snapshot_manifest_hash
+    ):
+        diffs.append(
+            _manifest_diff_line(
+                "research_snapshot_manifest_hash",
+                original.research_snapshot_manifest_hash,
+                replay.research_snapshot_manifest_hash,
+            )
+        )
+    return tuple(diffs)
+
+
+def _compare_manifest_versions(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    diffs: list[str] = []
+    scalar_fields = (
+        ("engine_version", original.engine_version, replay.engine_version),
+        ("strategy_version", original.strategy_version, replay.strategy_version),
+    )
+    for field_name, original_value, replay_value in scalar_fields:
+        if original_value != replay_value:
+            diffs.append(_manifest_diff_line(field_name, original_value, replay_value))
+    if original.dependency_versions != replay.dependency_versions:
+        diffs.append(
+            _manifest_diff_line(
+                "dependency_versions",
+                original.dependency_versions,
+                replay.dependency_versions,
+            )
+        )
+    return tuple(diffs)
+
+
+def _compare_manifest_seed(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    if original.random_seed == replay.random_seed:
+        return ()
+    return (f"random_seed: {original.random_seed} vs {replay.random_seed}",)
+
+
 class ReplayValidator:
     """回测运行复现性验证器 — 纯函数，无 I/O。"""
 
@@ -155,68 +252,11 @@ class ReplayValidator:
 
         跳过 run_id / created_at（这些在重放时必然不同）。
         """
-        config_diffs: list[str] = []
-        data_diffs: list[str] = []
-        version_diffs: list[str] = []
-        seed_diffs: list[str] = []
-
-        # -- config 类 --
-        if original.config_hash != replay.config_hash:
-            config_diffs.append(
-                f"config_hash: {original.config_hash} vs {replay.config_hash}",
-            )
-        if original.strategy_id != replay.strategy_id:
-            config_diffs.append(
-                f"strategy_id: {original.strategy_id} vs {replay.strategy_id}",
-            )
-        if original.parameter_overrides != replay.parameter_overrides:
-            a_str = original.parameter_overrides
-            b_str = replay.parameter_overrides
-            config_diffs.append(
-                f"parameter_overrides: {a_str} vs {b_str}",
-            )
-        if original.spec_hash != replay.spec_hash:
-            config_diffs.append(
-                f"spec_hash: {original.spec_hash} vs {replay.spec_hash}",
-            )
-        if original.rule_refs != replay.rule_refs:
-            config_diffs.append("rule_refs: mismatch")
-
-        # -- data 类 --
-        if original.input_refs != replay.input_refs:
-            data_diffs.append(
-                f"input_refs: {original.input_refs} vs {replay.input_refs}",
-            )
-        data_diffs.extend(
-            _compare_input_ref_details(
-                original.input_ref_details,
-                replay.input_ref_details,
-            ),
-        )
-
-        # -- version 类 --
-        if original.engine_version != replay.engine_version:
-            version_diffs.append(
-                f"engine_version: {original.engine_version} vs {replay.engine_version}",
-            )
-        if original.dependency_versions != replay.dependency_versions:
-            a_ver = original.dependency_versions
-            b_ver = replay.dependency_versions
-            version_diffs.append(
-                f"dependency_versions: {a_ver} vs {b_ver}",
-            )
-
-        # -- seed 类 --
-        if original.random_seed != replay.random_seed:
-            seed_diffs.append(
-                f"random_seed: {original.random_seed} vs {replay.random_seed}",
-            )
-
         return ManifestDiff(
-            config_diffs=tuple(config_diffs),
-            data_diffs=tuple(data_diffs),
-            version_diffs=tuple(version_diffs),
-            seed_diffs=tuple(seed_diffs),
+            config_diffs=_compare_manifest_config(original, replay),
+            data_diffs=_compare_manifest_data(original, replay),
+            version_diffs=_compare_manifest_versions(original, replay),
+            seed_diffs=_compare_manifest_seed(original, replay),
         )
 
     @staticmethod

@@ -32,7 +32,14 @@ from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.node_registry import default_node_registry
+from ditto_strategy.alpha.parameters import (
+    CandidateParameter,
+    ParameterBinder,
+    canonical_parameter_hash,
+)
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 
@@ -55,6 +62,36 @@ def _make_strategy_spec(
         benchmark="000300.SH",
         params={"top_k": 3},
         tags=("momentum", asset_class),
+    )
+
+
+def _make_published_strategy_runtime(
+    spec: StrategySpec,
+    *,
+    version: int,
+    spec_hash: str | None = None,
+) -> PublishedStrategyRuntime:
+    binding = ParameterBinder(registry=default_node_registry()).bind(
+        adapt_legacy_strategy_spec(spec),
+        candidate_parameters=(),
+    )
+    return PublishedStrategyRuntime(
+        record=StrategySpecRecord(
+            strategy_id=spec.strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=version,
+            status="published",
+            tags=spec.tags,
+        ),
+        spec=spec,
+        base_spec=binding.base_spec,
+        resolved_spec=binding.resolved_spec,
+        pipeline=MagicMock(spec=StrategyPipeline),
+        base_spec_hash=binding.base_spec_hash,
+        spec_hash=spec_hash or binding.resolved_spec_hash,
+        parameter_hash=binding.parameter_hash,
+        effective_parameters=binding.effective_parameters,
     )
 
 
@@ -105,7 +142,12 @@ class TestBacktestRuntimeBuilder:
             start_date="2026-01-10",
             end_date="2026-01-13",
             initial_cash=2_000_000.0,
-            parameter_overrides=("lookback=20",),
+            candidate_parameters=(
+                CandidateParameter(
+                    path="/pipeline/nodes/legacy_factor_set/config/params/lookback",
+                    value=20,
+                ),
+            ),
             data_catalog_identities=("dataset:snapshot",),
             recommendation_status="candidate",
             participation_rate=0.02,
@@ -117,12 +159,20 @@ class TestBacktestRuntimeBuilder:
             request,
             strategy_version="7",
             benchmark_id=InstrumentId(3_000_001),
+            base_spec_hash="a" * 64,
             spec_hash="b" * 64,
+            parameter_hash=canonical_parameter_hash(()),
+            effective_parameters=(),
         )
 
         request_fields = {field.name for field in fields(request)}
         resolved_fields = {field.name for field in fields(resolved)}
-        assert resolved_fields == request_fields | {"spec_hash"}
+        assert resolved_fields == request_fields | {
+            "base_spec_hash",
+            "spec_hash",
+            "parameter_hash",
+            "effective_parameters",
+        }
         for field_name in request_fields - {"strategy_version", "benchmark_id"}:
             assert getattr(resolved, field_name) == getattr(request, field_name)
         assert resolved.strategy_version == "7"
@@ -135,17 +185,9 @@ class TestBacktestRuntimeBuilder:
         spec = _make_strategy_spec()
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=2,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
+            _make_published_strategy_runtime(
+                spec,
+                version=2,
                 spec_hash=canonical_spec_hash,
             )
         )
@@ -193,6 +235,7 @@ class TestBacktestRuntimeBuilder:
         strategy_runtime_builder.build_published_runtime.assert_called_once_with(
             "momentum-etf",
             2,
+            candidate_parameters=(),
         )
 
     def test_all_or_nothing_fill_mode_disables_participation_cap(self) -> None:
@@ -200,19 +243,7 @@ class TestBacktestRuntimeBuilder:
         spec = _make_strategy_spec()
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=2,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-                spec_hash="b" * 64,
-            )
+            _make_published_strategy_runtime(spec, version=2, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
@@ -249,19 +280,7 @@ class TestBacktestRuntimeBuilder:
         spec = _make_strategy_spec()
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=2,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-                spec_hash="b" * 64,
-            )
+            _make_published_strategy_runtime(spec, version=2, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
@@ -363,19 +382,7 @@ class TestBacktestRuntimeBuilder:
         )
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=1,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-                spec_hash="b" * 64,
-            )
+            _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         data_provider = MagicMock(spec=DataProvider)
@@ -409,19 +416,7 @@ class TestBacktestRuntimeBuilder:
         )
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=1,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-                spec_hash="b" * 64,
-            )
+            _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
@@ -460,19 +455,7 @@ class TestBacktestRuntimeBuilder:
         )
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=1,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-                spec_hash="b" * 64,
-            )
+            _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001

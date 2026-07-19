@@ -26,6 +26,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
+    ResearchRuntimeBuilder,
     StrategyRuntimeBuilder,
     StrategyServiceFactory,
     StrategySliceBuilder,
@@ -69,11 +70,25 @@ class AppBuilderFactory(Provider):
     def strategy_runtime_builder(
         self,
         catalog_service: StrategyCatalogService,
+        node_registry: NodeRegistry,
         node_pipeline_builder: NodePipelineBuilder,
     ) -> StrategyRuntimeBuilder:
         """策略运行时构建器."""
         return StrategyRuntimeBuilder(
             catalog_service=catalog_service,
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+        )
+
+    @provide
+    def research_runtime_builder(
+        self,
+        node_registry: NodeRegistry,
+        node_pipeline_builder: NodePipelineBuilder,
+    ) -> ResearchRuntimeBuilder:
+        """Explicit-version research runtime with no catalog writer dependency."""
+        return ResearchRuntimeBuilder(
+            node_registry=node_registry,
             node_pipeline_builder=node_pipeline_builder,
         )
 

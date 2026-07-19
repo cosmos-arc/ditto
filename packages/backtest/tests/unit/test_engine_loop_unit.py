@@ -47,6 +47,9 @@ from ditto_strategy.alpha.models import TargetPortfolio
 
 DAYS = ["2026-03-01", "2026-03-02", "2026-03-03"]
 _CANONICAL_SPEC_HASH = "d" * 64
+_EMPTY_PARAMETER_HASH = (
+    "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+)
 
 
 def test_engine_config_requires_full_canonical_spec_hash() -> None:
@@ -55,6 +58,11 @@ def test_engine_config_requires_full_canonical_spec_hash() -> None:
         "start_date": "2026-03-01",
         "end_date": "2026-03-03",
         "initial_cash": 1_000_000.0,
+        "base_spec_hash": "b" * 64,
+        "parameter_hash": _EMPTY_PARAMETER_HASH,
+        "effective_parameters": (),
+        "research_snapshot_id": None,
+        "research_snapshot_manifest_hash": None,
     }
 
     with pytest.raises(TypeError, match="spec_hash"):
@@ -156,6 +164,11 @@ def _make_config() -> EngineConfig:
         end_date="2026-03-03",
         initial_cash=1_000_000.0,
         spec_hash=_CANONICAL_SPEC_HASH,
+        base_spec_hash=_CANONICAL_SPEC_HASH,
+        parameter_hash=_EMPTY_PARAMETER_HASH,
+        effective_parameters=(),
+        research_snapshot_id=None,
+        research_snapshot_manifest_hash=None,
         strategy_id="default",
         strategy_run_id="run-001",
     )

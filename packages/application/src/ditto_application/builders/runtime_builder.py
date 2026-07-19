@@ -8,24 +8,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_strategy.alpha.node_registry import default_node_registry
-from ditto_strategy.alpha.pipeline import StrategyPipeline
-from ditto_strategy.alpha.spec_codec import (
-    adapt_legacy_strategy_spec,
-    canonical_spec_hash,
+from ditto_strategy.alpha.node_registry import NodeRegistry, default_node_registry
+from ditto_strategy.alpha.parameters import (
+    CandidateParameter,
+    EffectiveParameter,
 )
-from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.specs import StrategySpec, StrategySpecV2
 from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.models import StrategySpecRecord
 
-from ditto_application.builders.deserialization import (
-    deserialize_strategy_spec,
+from ditto_application.builders._typed_runtime import (
+    build_typed_legacy_runtime,
 )
 from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
-    FactorBridge,
 )
 
 __all__ = [
@@ -45,8 +44,13 @@ class PublishedStrategyRuntime:
 
     record: StrategySpecRecord
     spec: StrategySpec
+    base_spec: StrategySpecV2
+    resolved_spec: StrategySpecV2
     pipeline: StrategyPipeline
+    base_spec_hash: str
     spec_hash: str
+    parameter_hash: str
+    effective_parameters: tuple[EffectiveParameter, ...]
     compiled_expressions: CompiledExpressions | None = None
 
 
@@ -62,17 +66,22 @@ class StrategyRuntimeBuilder:
         self,
         *,
         catalog_service: StrategyCatalogReader,
+        node_registry: NodeRegistry | None = None,
         node_pipeline_builder: NodePipelineBuilder | None = None,
     ) -> None:
         self._catalog_service = catalog_service
+        registry = node_registry or default_node_registry()
+        self._node_registry = registry
         self._node_pipeline_builder = node_pipeline_builder or NodePipelineBuilder(
-            registry=default_node_registry(),
+            registry=registry,
         )
 
     def build_published_runtime(
         self,
         strategy_id: str,
         version: int | None = None,
+        *,
+        candidate_parameters: tuple[CandidateParameter, ...] = (),
     ) -> PublishedStrategyRuntime:
         """读取 published spec 并构造 ``StrategySpec + StrategyPipeline``。"""
         record = (
@@ -93,37 +102,21 @@ class StrategyRuntimeBuilder:
             )
             raise AppBuilderError(msg)
 
-        spec = deserialize_strategy_spec(record)
-        resolved_spec = adapt_legacy_strategy_spec(spec)
-        pipeline = self._node_pipeline_builder.build(
-            legacy_spec=spec,
-            pipeline=resolved_spec.pipeline,
-            strategy_kind=resolved_spec.strategy_kind,
+        resolved = build_typed_legacy_runtime(
+            record=record,
+            candidate_parameters=candidate_parameters,
+            registry=self._node_registry,
+            node_pipeline_builder=self._node_pipeline_builder,
         )
-        compiled = _compile_signal_expressions(spec)
-        spec_hash = canonical_spec_hash(resolved_spec)
         return PublishedStrategyRuntime(
             record=record,
-            spec=spec,
-            pipeline=pipeline,
-            compiled_expressions=compiled,
-            spec_hash=spec_hash,
+            spec=resolved.legacy_spec,
+            base_spec=resolved.base_spec,
+            resolved_spec=resolved.resolved_spec,
+            pipeline=resolved.pipeline,
+            compiled_expressions=resolved.compiled_expressions,
+            base_spec_hash=resolved.base_spec_hash,
+            spec_hash=resolved.resolved_spec_hash,
+            parameter_hash=resolved.parameter_hash,
+            effective_parameters=resolved.effective_parameters,
         )
-
-
-# ---------------------------------------------------------------------------
-# Module-level helpers (private)
-# ---------------------------------------------------------------------------
-
-
-def _compile_signal_expressions(
-    spec: StrategySpec,
-) -> CompiledExpressions | None:
-    """若 spec 包含 signal_expressions 则编译并返回，否则返回 None。"""
-    if not spec.signal_expressions:
-        return None
-    bridge = FactorBridge()
-    return bridge.compile_and_validate(
-        expressions=spec.signal_expressions,
-        weights=spec.signal_weights or (1.0,) * len(spec.signal_expressions),
-    )
