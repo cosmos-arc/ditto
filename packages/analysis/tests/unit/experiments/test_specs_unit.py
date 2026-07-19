@@ -244,8 +244,19 @@ def test_candidate_count_must_not_exceed_128() -> None:
     assert exc_info.value.details["reason_code"] == "candidate_limit_exceeded"
 
 
-@pytest.mark.parametrize("value", [True, float("nan"), float("inf")])
-def test_deterministic_numeric_inputs_reject_bool_and_non_finite(value: object) -> None:
+def test_candidate_parameters_preserve_boolean_as_an_exact_scalar_type() -> None:
+    candidate = _candidate(
+        1,
+        baseline=True,
+        parameters={"enabled": True, "nested": {"disabled": False}},
+    )
+
+    assert candidate.parameters["enabled"] is True
+    assert candidate.parameters["nested"]["disabled"] is False
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf")])
+def test_deterministic_numeric_inputs_reject_non_finite(value: object) -> None:
     with pytest.raises(ExperimentSpecError):
         _launch(candidates=(_candidate(1, baseline=True, parameters={"x": value}),))
 

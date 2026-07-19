@@ -31,7 +31,7 @@ __all__ = [
     "FoldProtocolSpec",
 ]
 
-type FrozenScalar = str | int | float | None
+type FrozenScalar = str | bool | int | float | None
 type FrozenValue = FrozenScalar | tuple[FrozenValue, ...] | Mapping[str, FrozenValue]
 
 _MAX_CANDIDATES = 128
@@ -129,6 +129,8 @@ def _freeze_value(
     )
     if value is None or isinstance(value, str):
         return value
+    if type(value) is bool:
+        return value
     if type(value) is int:
         return value
     if type(value) is float:
@@ -139,12 +141,6 @@ def _freeze_value(
                 field=path,
             )
         return value
-    if type(value) is bool:
-        raise _spec_error(
-            f"{path} must not use bool as a numeric value",
-            "bool_is_not_numeric",
-            field=path,
-        )
     if isinstance(value, Mapping):
         mapping = cast("Mapping[object, object]", value)
         return _freeze_mapping_value(mapping, path, active_ids)
