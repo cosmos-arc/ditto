@@ -21,6 +21,7 @@ from ditto_strategy.alpha.builtins.scoring import ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.alpha.specs import ParamConstraint
 from ditto_strategy.alpha.templates.stock_selection_trend import (
     MultiFactorSignalStage,
@@ -31,6 +32,7 @@ from ditto_strategy.alpha.templates.stock_selection_trend import (
     validate_config,
 )
 from ditto_strategy.errors import StrategySpecError
+from polars.testing import assert_frame_equal
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -624,7 +626,121 @@ class TestMultiFactorSignalStagePreprocess:
         result = stage.process(frame, empty_context)
         assert "signal_value" in result.columns
         assert result["signal_value"].dtype == pl.Float64
-        assert "_prepped_factor" not in result.columns
+        assert all(not name.startswith("_prepped_") for name in result.columns)
+
+
+class TestMultiFactorContributionEvidence:
+    """Contribution evidence comes from the actual preprocess/rank path."""
+
+    def test_pipeline_emits_raw_processed_contribution_and_final_selection(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        ids = ["A", "B", "C"]
+        bundle = StrategyInputBundle(
+            trade_date="2026-03-22",
+            strategy_id="contribution-proof",
+            run_id="run-contribution",
+            instruments=pl.DataFrame({"instrument_id": ids}),
+            market_data=pl.DataFrame({"instrument_id": ids}),
+            signal_values=pl.DataFrame(
+                {"instrument_id": ids, "momentum": [1.0, 2.0, 3.0]},
+            ),
+        )
+        config = StockSelectionTrendConfig(
+            signal_factors=("momentum",),
+            signal_weights=(1.0,),
+            top_k=2,
+            zscore=True,
+        )
+        collector = SelectionEvidenceCollector()
+        stages = build_stock_selection_trend_pipeline(
+            config,
+            evidence_sink=collector,
+        )
+
+        target = StrategyPipeline(stages, evidence_sink=collector).run(
+            empty_context,
+            bundle,
+        )
+        snapshot = collector.snapshot()
+
+        assert target.positions == {"A": 0.5, "B": 0.5}
+        contributions = snapshot.factor_contributions
+        assert [item.instrument_id for item in contributions] == ["A", "B", "C"]
+        assert [
+            (
+                item.raw_value,
+                item.processed_value,
+                item.normalized_value,
+                item.weight,
+                item.contribution,
+                item.score,
+            )
+            for item in contributions
+        ] == pytest.approx(
+            [
+                (1.0, -1.0, 1 / 3, 1.0, 1 / 3, 1 / 3),
+                (2.0, 0.0, 2 / 3, 1.0, 2 / 3, 2 / 3),
+                (3.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+            ],
+        )
+        assert [(item.rank, item.selected) for item in contributions] == [
+            (1, True),
+            (2, True),
+            (3, False),
+        ]
+
+    def test_sink_path_preserves_exact_factor_output_and_drops_temp_columns(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        frame = pl.DataFrame(
+            {"instrument_id": [1, 2, 3], "factor": [10.0, 20.0, 30.0]},
+        )
+        plain_stage = MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            output_column="signal_value",
+            zscore=True,
+        )
+        collector = SelectionEvidenceCollector()
+        evidence_stage = MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            output_column="signal_value",
+            zscore=True,
+            evidence_sink=collector,
+        )
+
+        expected = plain_stage.process(frame, empty_context)
+        actual = evidence_stage.process(frame, empty_context)
+
+        assert_frame_equal(actual, expected)
+        assert all(not name.startswith("_prepped_") for name in actual.columns)
+        assert len(collector.snapshot().factor_contributions) == 3
+
+    def test_missing_factor_value_is_explicit_none_in_evidence(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        frame = pl.DataFrame(
+            {"instrument_id": [1, 2, 3], "factor": [10.0, None, 30.0]},
+        )
+        collector = SelectionEvidenceCollector()
+
+        MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+
+        missing = collector.snapshot().factor_contributions[1]
+        assert missing.raw_value is None
+        assert missing.processed_value is None
+        assert missing.normalized_value is None
+        assert missing.contribution is None
+        assert missing.score is None
 
 
 class TestStockSelectionTrendConfigPreprocess:

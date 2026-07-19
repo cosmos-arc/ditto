@@ -11,6 +11,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
@@ -107,6 +108,24 @@ class _ReplaceFrameStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         return self._result
+
+
+class _ObserveInitialEvidenceStage:
+    """Capture whether initial-universe evidence exists before any stage runs."""
+
+    def __init__(self, collector: SelectionEvidenceCollector) -> None:
+        self._collector = collector
+        self.observed_instrument_ids: tuple[int | str, ...] = ()
+
+    def process(
+        self,
+        frame: pl.DataFrame,
+        context: StrategyContext,
+    ) -> pl.DataFrame:
+        self.observed_instrument_ids = tuple(
+            event.instrument_id for event in self._collector.snapshot().initial_universe
+        )
+        return frame
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +262,31 @@ class TestStrategyInputBundle:
 
 
 class TestStrategyPipeline:
+    def test_initial_universe_evidence_is_emitted_before_join_and_stages(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+        sample_signal_values: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        observer = _ObserveInitialEvidenceStage(collector)
+        pipeline = StrategyPipeline(stages=[observer], evidence_sink=collector)
+        bundle = _make_input_bundle(
+            instruments=sample_instruments,
+            market_data=sample_market_data,
+            signal_values=sample_signal_values,
+        )
+
+        target = pipeline.run(empty_context, bundle)
+
+        assert observer.observed_instrument_ids == (1, 2, 3)
+        assert [
+            (event.instrument_id, event.ordinal)
+            for event in collector.snapshot().initial_universe
+        ] == [(1, 1), (2, 2), (3, 3)]
+        assert target.positions == {1: 1 / 3, 2: 1 / 3, 3: 1 / 3}
+
     def test_empty_pipeline_returns_empty_target(
         self,
         empty_context: StrategyContext,

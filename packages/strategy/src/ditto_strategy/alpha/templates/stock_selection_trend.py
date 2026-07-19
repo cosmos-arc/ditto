@@ -24,6 +24,7 @@ from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.protocols import DecisionStage
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.templates.stock_selection_trend_config import (
     StockSelectionTrendConfig,
     get_param_constraints,
@@ -51,6 +52,8 @@ __all__ = [
 
 def build_stock_selection_trend_pipeline(
     config: StockSelectionTrendConfig,
+    *,
+    evidence_sink: SelectionEvidenceSink | None = None,
 ) -> list[DecisionStage]:
     """
     组装 stock_selection_trend 的 alpha stages.
@@ -66,6 +69,7 @@ def build_stock_selection_trend_pipeline(
 
     Args:
         config: 运行时配置。
+        evidence_sink: 可选窄证据 sink；不参与业务排序或权重计算。
 
     Returns:
         alpha DecisionStage 列表。
@@ -81,6 +85,7 @@ def build_stock_selection_trend_pipeline(
                 winsorize_sigma=config.winsorize_sigma,
                 zscore=config.zscore,
                 neutralize_by=config.neutralize_by,
+                evidence_sink=evidence_sink,
             )
             for factor in config.signal_factors
         )
@@ -93,9 +98,10 @@ def build_stock_selection_trend_pipeline(
                 threshold=config.trend_threshold,
                 direction="long",
                 signal_column="score",
+                evidence_sink=evidence_sink,
             ),
-            RiskLockFilter(),
-            SelectionStage(top_k=config.top_k),
+            RiskLockFilter(evidence_sink=evidence_sink),
+            SelectionStage(top_k=config.top_k, evidence_sink=evidence_sink),
         ]
     else:
         # simple: 单 MultiFactorSignalStage 多因子 rank 加权产 signal_value
@@ -107,15 +113,17 @@ def build_stock_selection_trend_pipeline(
                 winsorize_sigma=config.winsorize_sigma,
                 zscore=config.zscore,
                 neutralize_by=config.neutralize_by,
+                evidence_sink=evidence_sink,
             ),
             TrendFilterStage(
                 threshold=config.trend_threshold,
                 direction="long",
                 signal_column="signal_value",
+                evidence_sink=evidence_sink,
             ),
             ScoringStage(method=ScoringMethod.RANK, ascending=False),
-            RiskLockFilter(),
-            SelectionStage(top_k=config.top_k),
+            RiskLockFilter(evidence_sink=evidence_sink),
+            SelectionStage(top_k=config.top_k, evidence_sink=evidence_sink),
         ]
 
     # Regime-aware allocation (optional, strategy-internal)

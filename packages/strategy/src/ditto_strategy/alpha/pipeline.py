@@ -52,6 +52,10 @@ from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.node_registry import NodeDescriptor, NodeRegistry
 from ditto_strategy.alpha.nodes import NodeCategory, PipelineSpec
 from ditto_strategy.alpha.protocols import DecisionStage
+from ditto_strategy.alpha.selection_evidence import (
+    InitialUniverseEvidence,
+    SelectionEvidenceSink,
+)
 from ditto_strategy.alpha.specs import StrategyKind
 from ditto_strategy.errors import StrategySpecError
 
@@ -318,8 +322,14 @@ class StrategyPipeline:
 
     """
 
-    def __init__(self, stages: Sequence[DecisionStage]) -> None:
+    def __init__(
+        self,
+        stages: Sequence[DecisionStage],
+        *,
+        evidence_sink: SelectionEvidenceSink | None = None,
+    ) -> None:
         self._stages = tuple(stages)
+        self._evidence_sink = evidence_sink
 
     @traced("engine.alpha.pipeline.process")
     def run(
@@ -346,6 +356,7 @@ class StrategyPipeline:
             (FrameCol.INSTRUMENT_ID,),
             boundary="input_bundle.instruments",
         )
+        self._emit_initial_universe(frame)
 
         # Step 2: 可选 signal_values join
         if input_bundle.signal_values is not None:
@@ -373,6 +384,19 @@ class StrategyPipeline:
 
         # Step 4: 从最终 frame 提取 TargetPortfolio
         return self._build_target_portfolio(frame, input_bundle)
+
+    def _emit_initial_universe(self, frame: pl.DataFrame) -> None:
+        """Emit the candidate pool before joins or stage transformations."""
+        if self._evidence_sink is None:
+            return
+        instrument_ids = frame.get_column(FrameCol.INSTRUMENT_ID).to_list()
+        for ordinal, instrument_id in enumerate(instrument_ids, start=1):
+            self._evidence_sink.emit(
+                InitialUniverseEvidence(
+                    instrument_id=instrument_id,
+                    ordinal=ordinal,
+                ),
+            )
 
     def _build_target_portfolio(
         self,

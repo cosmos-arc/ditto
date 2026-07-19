@@ -10,8 +10,10 @@ BacktestReportSerializer 单元测试 — JSON 输出格式兼容 replay 反序�
 from __future__ import annotations
 
 from types import MappingProxyType
+from typing import ClassVar
 
 import orjson
+import polars as pl
 from ditto_backtest.manifest import RunManifest, RunMode
 from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
@@ -24,6 +26,14 @@ from ditto_kernel.time_semantics import (
     PIT_POLICY_FAIL_CLOSED,
 )
 from ditto_portfolio.accounting import AccountView, CashBook, Position
+from ditto_strategy.alpha.selection_evidence import (
+    ExclusionEvidence,
+    ExclusionReason,
+    FactorContributionEvidence,
+    InitialUniverseEvidence,
+    SelectionEvidence,
+    SelectionEvidenceLog,
+)
 
 # ---------------------------------------------------------------------------
 # 辅助函数
@@ -407,3 +417,153 @@ class TestRoundTripCompatibility:
         nav_data_from_json = data.get("nav_series")
         assert nav_data_from_json is not None
         assert [float(v) for v in nav_data_from_json] == [1.0, 1.01, 1.02]
+
+
+class TestSelectionEvidenceTables:
+    """R3 selection evidence has stable optional columnar artifacts."""
+
+    _EXPECTED_SCHEMAS: ClassVar[dict[str, pl.Schema]] = {
+        "initial_universe_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "ordinal": pl.Int64,
+            },
+        ),
+        "exclusion_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "stage": pl.String,
+                "reason_code": pl.String,
+                "message": pl.String,
+            },
+        ),
+        "selection_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "score": pl.Float64,
+                "rank": pl.Int64,
+                "selected": pl.Boolean,
+            },
+        ),
+        "factor_contribution_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "factor_name": pl.String,
+                "raw_value": pl.Float64,
+                "processed_value": pl.Float64,
+                "normalized_value": pl.Float64,
+                "weight": pl.Float64,
+                "contribution": pl.Float64,
+                "score": pl.Float64,
+                "rank": pl.Int64,
+                "selected": pl.Boolean,
+            },
+        ),
+    }
+
+    def test_empty_evidence_log_emits_all_stable_empty_schemas(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        _, tables = serialize_report(
+            _make_report(),
+            selection_evidence=SelectionEvidenceLog(),
+        )
+
+        for table_name, expected_schema in self._EXPECTED_SCHEMAS.items():
+            assert table_name in tables
+            assert tables[table_name].is_empty()
+            assert tables[table_name].schema == expected_schema
+
+    def test_omitted_evidence_preserves_existing_table_surface(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        _, tables = serialize_report(_make_report())
+
+        assert set(tables) == {"nav"}
+        assert not (set(tables) & set(self._EXPECTED_SCHEMAS))
+
+    def test_populated_evidence_uses_stable_names_without_overwriting_report_tables(
+        self,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        log = SelectionEvidenceLog(
+            initial_universe=(
+                InitialUniverseEvidence(instrument_id=1, ordinal=1),
+                InitialUniverseEvidence(instrument_id="000002.SZ", ordinal=2),
+            ),
+            exclusions=(
+                ExclusionEvidence(
+                    instrument_id="000002.SZ",
+                    stage="selection",
+                    reason_code=ExclusionReason.BELOW_TOP_K,
+                ),
+            ),
+            selections=(
+                SelectionEvidence(
+                    instrument_id=1,
+                    score=0.9,
+                    rank=1,
+                    selected=True,
+                ),
+                SelectionEvidence(
+                    instrument_id="000002.SZ",
+                    score=0.5,
+                    rank=2,
+                    selected=False,
+                ),
+            ),
+            factor_contributions=(
+                FactorContributionEvidence(
+                    instrument_id=1,
+                    factor_name="momentum",
+                    raw_value=0.12,
+                    processed_value=1.1,
+                    normalized_value=1.0,
+                    weight=0.6,
+                    contribution=0.6,
+                    score=0.8,
+                    rank=1,
+                    selected=True,
+                ),
+            ),
+        )
+
+        _, tables = serialize_report(_make_report(), selection_evidence=log)
+
+        assert "nav" in tables
+        assert set(self._EXPECTED_SCHEMAS) <= set(tables)
+        assert tables["initial_universe_evidence"].to_dicts() == [
+            {
+                "run_id": "test-run-001",
+                "instrument_id": "1",
+                "instrument_id_kind": "integer",
+                "ordinal": 1,
+            },
+            {
+                "run_id": "test-run-001",
+                "instrument_id": "000002.SZ",
+                "instrument_id_kind": "string",
+                "ordinal": 2,
+            },
+        ]
+        assert tables["exclusion_evidence"]["reason_code"].to_list() == [
+            "below_top_k",
+        ]
+        assert tables["factor_contribution_evidence"]["selected"].to_list() == [
+            True,
+        ]

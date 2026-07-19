@@ -7,6 +7,11 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.frame import FrameCol
+from ditto_strategy.alpha.selection_evidence import (
+    FactorContributionEvidence,
+    SelectionEvidenceSink,
+)
 from ditto_strategy.errors import StrategySpecError
 
 __all__ = ["MultiFactorSignalStage", "preprocess_factor_column"]
@@ -88,6 +93,7 @@ class MultiFactorSignalStage:
     winsorize_sigma: float | None = None
     zscore: bool = False
     neutralize_by: str | None = None
+    evidence_sink: SelectionEvidenceSink | None = None
 
     def process(
         self,
@@ -109,58 +115,264 @@ class MultiFactorSignalStage:
         if weight_sum == 0.0:
             return frame.with_columns(pl.lit(0.0).alias(self.output_column))
 
-        # fail-closed: neutralize_by 指定但列缺失 → StrategySpecError
-        # (不泄漏 Polars 异常)
-        if self.neutralize_by is not None and self.neutralize_by not in frame.columns:
-            msg = (
-                f"MultiFactorSignalStage neutralize_by 列 "
-                f"'{self.neutralize_by}' 不存在于 frame"
+        self._ensure_neutralize_column(frame)
+        reserved_columns = set(frame.columns)
+        enriched, temporary_cols, factor_to_raw, factor_to_prepped = (
+            self._materialize_preprocessed(frame, reserved_columns)
+        )
+        ranked, factor_to_normalized = self._materialize_normalized(
+            enriched,
+            reserved_columns=reserved_columns,
+            temporary_cols=temporary_cols,
+            factor_to_prepped=factor_to_prepped,
+        )
+        result = ranked.with_columns(
+            (self._weighted_sum(factor_to_normalized) / pl.lit(weight_sum)).alias(
+                self.output_column
+            ),
+        )
+        if self.evidence_sink is not None:
+            result, factor_to_contribution = self._materialize_contributions(
+                result,
+                reserved_columns=reserved_columns,
+                temporary_cols=temporary_cols,
+                factor_to_normalized=factor_to_normalized,
+                weight_sum=weight_sum,
             )
-            raise StrategySpecError(
-                msg,
-                details={
-                    "neutralize_by": self.neutralize_by,
-                    "available_columns": tuple(frame.columns),
-                },
+            self._emit_factor_contributions(
+                result,
+                weight_sum=weight_sum,
+                factor_to_raw=factor_to_raw,
+                factor_to_prepped=factor_to_prepped,
+                factor_to_normalized=factor_to_normalized,
+                factor_to_contribution=factor_to_contribution,
             )
+        return result.drop(temporary_cols) if temporary_cols else result
 
-        # 对每个存在的因子列应用预处理,写入临时列,再 rank 加权(最后 drop 临时列)
-        prepped_cols: list[str] = []
-        prepped_exprs: list[pl.Expr] = []
+    def _ensure_neutralize_column(self, frame: pl.DataFrame) -> None:
+        """Fail closed with a strategy error when neutralization data is absent."""
+        if self.neutralize_by is None or self.neutralize_by in frame.columns:
+            return
+        msg = (
+            f"MultiFactorSignalStage neutralize_by 列 "
+            f"'{self.neutralize_by}' 不存在于 frame"
+        )
+        raise StrategySpecError(
+            msg,
+            details={
+                "neutralize_by": self.neutralize_by,
+                "available_columns": tuple(frame.columns),
+            },
+        )
+
+    def _materialize_preprocessed(
+        self,
+        frame: pl.DataFrame,
+        reserved_columns: set[str],
+    ) -> tuple[pl.DataFrame, list[str], dict[str, str], dict[str, str]]:
+        """Materialize raw evidence and the actual factor preprocessing outputs."""
+        temporary_cols: list[str] = []
+        expressions: list[pl.Expr] = []
+        factor_to_raw: dict[str, str] = {}
         factor_to_prepped: dict[str, str] = {}
-        for factor_name in self.signal_factors:
+        for factor_index, factor_name in enumerate(self.signal_factors):
             if factor_name not in frame.columns:
-                continue  # 缺失因子: rank 视为 0(不计入加权分子)
-            temp_col = f"_prepped_{factor_name}"
-            prepped_cols.append(temp_col)
-            factor_to_prepped[factor_name] = temp_col
-            prepped_exprs.append(
-                preprocess_factor_column(
-                    pl.col(factor_name),
-                    winsorize_sigma=self.winsorize_sigma,
-                    zscore=self.zscore,
-                    neutralize_by=self.neutralize_by,
-                ).alias(temp_col),
+                continue
+            prepped_col = _unused_temp_column(
+                reserved_columns,
+                f"_prepped_{factor_index}_{factor_name}",
             )
+            temporary_cols.append(prepped_col)
+            factor_to_prepped[factor_name] = prepped_col
+            expressions.append(self._preprocessed_expr(factor_name, prepped_col))
+            if self.evidence_sink is not None:
+                raw_col = _unused_temp_column(
+                    reserved_columns,
+                    f"_raw_{factor_index}_{factor_name}",
+                )
+                temporary_cols.append(raw_col)
+                factor_to_raw[factor_name] = raw_col
+                expressions.append(pl.col(factor_name).alias(raw_col))
+        enriched = frame.with_columns(expressions) if expressions else frame
+        return enriched, temporary_cols, factor_to_raw, factor_to_prepped
 
-        enriched = frame.with_columns(prepped_exprs) if prepped_exprs else frame
+    def _preprocessed_expr(self, factor_name: str, output_name: str) -> pl.Expr:
+        """Build the one preprocessing expression used by scoring and evidence."""
+        return preprocess_factor_column(
+            pl.col(factor_name),
+            winsorize_sigma=self.winsorize_sigma,
+            zscore=self.zscore,
+            neutralize_by=self.neutralize_by,
+        ).alias(output_name)
 
-        n = frame.height
+    def _materialize_normalized(
+        self,
+        frame: pl.DataFrame,
+        *,
+        reserved_columns: set[str],
+        temporary_cols: list[str],
+        factor_to_prepped: dict[str, str],
+    ) -> tuple[pl.DataFrame, dict[str, str]]:
+        """Materialize the rank values consumed by the weighted score."""
+        factor_to_normalized: dict[str, str] = {}
+        expressions: list[pl.Expr] = []
+        for factor_index, factor_name in enumerate(self.signal_factors):
+            prepped_col = factor_to_prepped.get(factor_name)
+            if prepped_col is None:
+                continue
+            normalized_col = _unused_temp_column(
+                reserved_columns,
+                f"_normalized_{factor_index}_{factor_name}",
+            )
+            temporary_cols.append(normalized_col)
+            factor_to_normalized[factor_name] = normalized_col
+            expressions.append(
+                (
+                    pl.col(prepped_col).rank(method="average", descending=False)
+                    / frame.height
+                ).alias(normalized_col),
+            )
+        ranked = frame.with_columns(expressions) if expressions else frame
+        return ranked, factor_to_normalized
+
+    def _weighted_sum(self, factor_to_normalized: dict[str, str]) -> pl.Expr:
+        """Build the existing weighted-sum expression from materialized ranks."""
         weighted_sum = pl.lit(0.0)
         for factor_name, weight in zip(
             self.signal_factors,
             self.signal_weights,
             strict=True,
         ):
-            temp_col = factor_to_prepped.get(factor_name)
-            if temp_col is None:
-                continue
-            rank_expr = pl.col(temp_col).rank(method="average", descending=False) / n
-            weighted_sum = weighted_sum + pl.lit(weight) * rank_expr
+            normalized_col = factor_to_normalized.get(factor_name)
+            if normalized_col is not None:
+                weighted_sum = weighted_sum + pl.lit(weight) * pl.col(normalized_col)
+        return weighted_sum
 
-        result = enriched.with_columns(
-            (weighted_sum / pl.lit(weight_sum)).alias(self.output_column),
+    def _materialize_contributions(
+        self,
+        result: pl.DataFrame,
+        *,
+        reserved_columns: set[str],
+        temporary_cols: list[str],
+        factor_to_normalized: dict[str, str],
+        weight_sum: float,
+    ) -> tuple[pl.DataFrame, dict[str, str]]:
+        """Materialize per-factor terms from the same normalized score columns."""
+        factor_to_contribution: dict[str, str] = {}
+        contribution_exprs: list[pl.Expr] = []
+        for factor_index, (factor_name, weight) in enumerate(
+            zip(self.signal_factors, self.signal_weights, strict=True),
+        ):
+            normalized_col = factor_to_normalized.get(factor_name)
+            if normalized_col is None:
+                continue
+            contribution_col = _unused_temp_column(
+                reserved_columns,
+                f"_contribution_{factor_index}_{factor_name}",
+            )
+            temporary_cols.append(contribution_col)
+            factor_to_contribution[factor_name] = contribution_col
+            contribution_exprs.append(
+                (pl.lit(weight) * pl.col(normalized_col) / pl.lit(weight_sum)).alias(
+                    contribution_col
+                ),
+            )
+        enriched = (
+            result.with_columns(contribution_exprs) if contribution_exprs else result
         )
-        if prepped_cols:
-            result = result.drop(prepped_cols)
-        return result
+        return enriched, factor_to_contribution
+
+    def _emit_factor_contributions(
+        self,
+        result: pl.DataFrame,
+        *,
+        weight_sum: float,
+        factor_to_raw: dict[str, str],
+        factor_to_prepped: dict[str, str],
+        factor_to_normalized: dict[str, str],
+        factor_to_contribution: dict[str, str],
+    ) -> None:
+        """Emit values materialized by this exact calculation path."""
+        if self.evidence_sink is None:
+            return
+        for factor_name, weight in zip(
+            self.signal_factors,
+            self.signal_weights,
+            strict=True,
+        ):
+            raw_col = factor_to_raw.get(factor_name)
+            prepped_col = factor_to_prepped.get(factor_name)
+            normalized_col = factor_to_normalized.get(factor_name)
+            contribution_col = factor_to_contribution.get(factor_name)
+            if raw_col is None:
+                self._emit_missing_factor_column(
+                    result,
+                    factor_name=factor_name,
+                    effective_weight=weight / weight_sum,
+                )
+                continue
+            evidence_frame = result.select(
+                FrameCol.INSTRUMENT_ID,
+                raw_col,
+                prepped_col,
+                normalized_col,
+                contribution_col,
+                self.output_column,
+            )
+            for values in evidence_frame.iter_rows():
+                self.evidence_sink.emit(
+                    FactorContributionEvidence(
+                        instrument_id=values[0],
+                        factor_name=factor_name,
+                        raw_value=_optional_float(values[1]),
+                        processed_value=_optional_float(values[2]),
+                        normalized_value=_optional_float(values[3]),
+                        weight=weight / weight_sum,
+                        contribution=_optional_float(values[4]),
+                        score=_optional_float(values[5]),
+                    ),
+                )
+
+    def _emit_missing_factor_column(
+        self,
+        result: pl.DataFrame,
+        *,
+        factor_name: str,
+        effective_weight: float,
+    ) -> None:
+        """Emit the algorithm's explicit zero contribution for an absent factor."""
+        if self.evidence_sink is None:
+            return
+        for instrument_id, score in result.select(
+            FrameCol.INSTRUMENT_ID,
+            self.output_column,
+        ).iter_rows():
+            self.evidence_sink.emit(
+                FactorContributionEvidence(
+                    instrument_id=instrument_id,
+                    factor_name=factor_name,
+                    raw_value=None,
+                    processed_value=None,
+                    normalized_value=None,
+                    weight=effective_weight,
+                    contribution=0.0,
+                    score=_optional_float(score),
+                ),
+            )
+
+
+def _unused_temp_column(reserved: set[str], candidate: str) -> str:
+    """Reserve a temporary column name without overwriting caller data."""
+    while candidate in reserved:
+        candidate = f"_{candidate}"
+    reserved.add(candidate)
+    return candidate
+
+
+def _optional_float(value: object) -> float | None:
+    """Convert a Polars numeric scalar while preserving explicit missing values."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise TypeError("factor evidence value must be a finite number or None")
+    return float(value)
