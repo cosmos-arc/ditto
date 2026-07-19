@@ -601,6 +601,48 @@ class TestCanonicalSpecCodec:
         )
         assert exc_info.value.details["reason"] == "non_canonical_value"
 
+    def test_codec_rejects_bypassed_config_cycle_with_typed_field_path(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_payload
+
+        spec = _make_v2_spec()
+        factor = next(node for node in spec.pipeline.nodes if node.node_id == "factors")
+        config: dict[str, object] = {}
+        config["items"] = [config]
+        object.__setattr__(factor, "config", config)
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            canonical_spec_payload(spec)
+
+        assert exc_info.value.details["reason"] == "cyclic_canonical_json_value"
+        assert exc_info.value.details["field_name"] == (
+            "pipeline.nodes.factors.config.items[0]"
+        )
+
+    def test_codec_allows_bypassed_non_cyclic_shared_aliases(self) -> None:
+        from ditto_strategy.alpha.spec_codec import canonical_spec_payload
+
+        spec = _make_v2_spec()
+        factor = next(node for node in spec.pipeline.nodes if node.node_id == "factors")
+        shared: dict[str, object] = {"weights": [0.4, 0.6]}
+        object.__setattr__(factor, "config", {"left": shared, "right": shared})
+
+        payload = canonical_spec_payload(spec)
+
+        pipeline = payload["pipeline"]
+        assert isinstance(pipeline, dict)
+        nodes = pipeline["nodes"]
+        assert isinstance(nodes, list)
+        factor_payload = next(
+            node
+            for node in nodes
+            if isinstance(node, dict) and node.get("node_id") == "factors"
+        )
+        config = factor_payload["config"]
+        assert isinstance(config, dict)
+        assert config["left"] == config["right"]
+
     def test_payload_validates_parameter_identity_before_sorting(self) -> None:
         from ditto_strategy.alpha.spec_codec import canonical_spec_payload
 

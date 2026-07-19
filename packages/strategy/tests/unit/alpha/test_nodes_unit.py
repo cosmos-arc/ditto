@@ -196,6 +196,23 @@ class TestPipelineSpec:
 
 
 class TestNodeInstanceCanonicalConfig:
+    def test_rejects_self_referential_config_with_typed_field_path(self) -> None:
+        from ditto_strategy.alpha.nodes import NodeCategory, NodeInstance, NodeRef
+
+        source: dict[str, object] = {}
+        source["self"] = source
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            NodeInstance(
+                node_id="factors",
+                ref=NodeRef("builtin.factor_set", "1"),
+                category=NodeCategory.FACTOR_SET,
+                config=source,
+            )
+
+        assert exc_info.value.details["reason"] == "cyclic_canonical_json_value"
+        assert exc_info.value.details["field_name"] == "config.self"
+
     def test_config_is_a_recursive_immutable_snapshot(self) -> None:
         from ditto_strategy.alpha.nodes import NodeCategory, NodeInstance, NodeRef
 

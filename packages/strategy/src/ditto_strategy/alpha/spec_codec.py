@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import math
-from collections.abc import Mapping
-from typing import TypeGuard
 
 import orjson
 
-from ditto_strategy.alpha._canonical_values import canonicalize_float_identity
+from ditto_strategy.alpha._canonical_values import canonical_json_value
 from ditto_strategy.alpha.nodes import (
     NodeCategory,
     NodeInstance,
@@ -70,56 +67,13 @@ def _require_legacy_spec(value: object) -> StrategySpec:
     return value
 
 
-def _is_object_mapping(value: object) -> TypeGuard[Mapping[object, object]]:
-    return isinstance(value, Mapping)
-
-
-def _is_object_sequence(
-    value: object,
-) -> TypeGuard[tuple[object, ...] | list[object]]:
-    return isinstance(value, (tuple, list))
-
-
 def _canonical_value(
     value: object,
     *,
     field_name: str,
 ) -> object:
     """把领域值收敛为 orjson 可稳定编码的 JSON value。"""
-    if value is None or isinstance(value, (str, bool, int)):
-        return value
-    if isinstance(value, float):
-        if not math.isfinite(value):
-            raise _codec_error(
-                f"{field_name} has no canonical JSON identity",
-                field_name=field_name,
-                value=value,
-            )
-        return canonicalize_float_identity(value)
-    if _is_object_mapping(value):
-        result: dict[str, object] = {}
-        for key, item in value.items():
-            if not isinstance(key, str):
-                raise _codec_error(
-                    f"{field_name} keys must be strings for canonical JSON",
-                    field_name=field_name,
-                    value=key,
-                )
-            result[key] = _canonical_value(
-                item,
-                field_name=f"{field_name}.{key}",
-            )
-        return result
-    if _is_object_sequence(value):
-        return [
-            _canonical_value(item, field_name=f"{field_name}[{index}]")
-            for index, item in enumerate(value)
-        ]
-    raise _codec_error(
-        f"{field_name} has no canonical JSON identity",
-        field_name=field_name,
-        value=value,
-    )
+    return canonical_json_value(value, field_name=field_name)
 
 
 def _parameter_payload(

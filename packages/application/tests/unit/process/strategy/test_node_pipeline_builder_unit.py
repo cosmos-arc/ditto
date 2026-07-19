@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import replace
 from typing import cast
 
@@ -9,20 +10,23 @@ import polars as pl
 import pytest
 from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
 from ditto_application.exceptions import AppBuilderError
-from ditto_portfolio.rebalancing import AllocationStage
+from ditto_portfolio.rebalancing import AllocationStage, ConstraintStage
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
+from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.node_registry import (
     NodeDescriptor,
     NodeRegistry,
     default_node_registry,
 )
+from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.alpha.templates import TrailingStopStage
 from ditto_strategy.errors import StrategySpecError
 
 
@@ -35,6 +39,36 @@ def _build(spec: StrategySpec) -> StrategyPipeline:
     return _builder().build(
         legacy_spec=spec,
         pipeline=resolved.pipeline,
+        strategy_kind=resolved.strategy_kind,
+    )
+
+
+def _build_with_node_config(
+    spec: StrategySpec,
+    *,
+    node_id: str,
+    config_update: dict[str, object],
+) -> StrategyPipeline:
+    resolved = adapt_legacy_strategy_spec(spec)
+    matched = False
+    nodes = []
+    for node in resolved.pipeline.nodes:
+        resolved_node = node
+        if node.node_id == node_id:
+            matched = True
+            resolved_node = replace(
+                node,
+                config={**node.config, **config_update},
+            )
+        nodes.append(resolved_node)
+    assert matched
+    pipeline = PipelineSpec(
+        nodes=tuple(nodes),
+        sequence=resolved.pipeline.sequence,
+    )
+    return _builder().build(
+        legacy_spec=spec,
+        pipeline=pipeline,
         strategy_kind=resolved.strategy_kind,
     )
 
@@ -254,6 +288,154 @@ def test_explicit_null_scorer_method_fails_closed_when_type_is_bypassed() -> Non
 
     assert exc_info.value.details["reason"] == "invalid_node_config_type"
     assert exc_info.value.details["config_key"] == "method"
+
+
+def test_compiled_factor_template_changes_legacy_stage_shape() -> None:
+    """factor_set.template 必须选择实际运行的 legacy factory。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+
+    pipeline = _build_with_node_config(
+        source,
+        node_id="legacy_factor_set",
+        config_update={"template": "etf_trend_swing"},
+    )
+
+    trailing_stop = next(
+        stage for stage in pipeline._stages if isinstance(stage, TrailingStopStage)
+    )
+    assert trailing_stop.trailing_stop_pct == pytest.approx(0.08)
+
+
+def test_compiled_factor_params_configure_runtime_signal_stage() -> None:
+    """factor_set.params 必须进入 factory，且不得反向修改 base spec。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    source_snapshot = deepcopy(source)
+
+    pipeline = _build_with_node_config(
+        source,
+        node_id="legacy_factor_set",
+        config_update={
+            "params": {**source.params, "signal_column": "compiled_signal"},
+        },
+    )
+
+    signal = pipeline._stages[0]
+    assert isinstance(signal, SignalStage)
+    assert signal.source_column == "compiled_signal"
+    assert source == source_snapshot
+
+
+def test_compiled_scorer_method_configures_runtime_scoring_stage() -> None:
+    """scorer.config.method 是 runner 的执行事实源。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+
+    pipeline = _build_with_node_config(
+        source,
+        node_id="legacy_scorer",
+        config_update={"method": "zscore"},
+    )
+
+    scoring = next(
+        stage for stage in pipeline._stages if isinstance(stage, ScoringStage)
+    )
+    assert scoring.method is ScoringMethod.ZSCORE
+
+
+def test_compiled_selector_params_configure_runtime_selection_stage() -> None:
+    """selector.config.params 必须决定 SelectionStage，而非 base spec。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+
+    pipeline = _build_with_node_config(
+        source,
+        node_id="legacy_selector",
+        config_update={"params": {"k": 2}},
+    )
+
+    selection = next(
+        stage for stage in pipeline._stages if isinstance(stage, SelectionStage)
+    )
+    assert selection.top_k == 2
+
+
+def test_compiled_allocator_constraints_configure_runtime_constraint_stage() -> None:
+    """allocator.config.constraints 必须真实约束 runner 输出。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    pipeline = _build_with_node_config(
+        source,
+        node_id="legacy_allocator",
+        config_update={
+            "constraints": (
+                {
+                    "type": "max_weight_per_instrument",
+                    "params": {"max_weight": 0.05},
+                    "priority": 1,
+                },
+            ),
+        },
+    )
+    constraint = next(
+        stage for stage in pipeline._stages if isinstance(stage, ConstraintStage)
+    )
+
+    adjusted = constraint.process(
+        pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "weight": [0.8, 0.2],
+            },
+        ),
+        object(),
+    )
+
+    assert adjusted["weight"].to_list() == pytest.approx([0.05, 0.05])
+
+
+@pytest.mark.parametrize(
+    ("node_id", "config_update"),
+    [
+        pytest.param(
+            "legacy_universe",
+            {"asset_class": "research_etf"},
+            id="universe-metadata",
+        ),
+        pytest.param(
+            "legacy_execution",
+            {
+                "cost_model": {
+                    "commission_rate": 0.0008,
+                    "impact_model": "volume_share",
+                    "slippage_bps": 9.0,
+                },
+                "default_order_type": "limit",
+                "frequency": "W",
+                "method": "calendar",
+            },
+            id="execution-assumptions",
+        ),
+        pytest.param(
+            "legacy_validation",
+            {"legacy_contract": "strategy_spec_v1.metadata"},
+            id="validation-metadata",
+        ),
+    ],
+)
+def test_compiled_metadata_only_nodes_do_not_emit_fake_decision_stages(
+    node_id: str,
+    config_update: dict[str, object],
+) -> None:
+    """无 DecisionStage 的 legacy 节点保持显式 metadata-only 语义。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    baseline = _build(source)
+
+    pipeline = _build_with_node_config(
+        source,
+        node_id=node_id,
+        config_update=config_update,
+    )
+
+    assert tuple(type(stage) for stage in pipeline._stages) == tuple(
+        type(stage) for stage in baseline._stages
+    )
 
 
 def test_stock_seed_unknown_allocation_method_still_fails_closed() -> None:

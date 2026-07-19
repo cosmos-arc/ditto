@@ -173,6 +173,31 @@ def _golden_pipeline(*, filter_count: int = 0) -> PipelineSpec:
 
 
 class TestNodeDescriptor:
+    def test_default_config_rejects_mapping_list_cycle_with_typed_path(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.node_registry import NodeConfigType, NodeDescriptor
+
+        default_config: dict[str, object] = {}
+        default_config["settings"] = [default_config]
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            NodeDescriptor(
+                node_type="builtin.factor_set",
+                version="1",
+                category=NodeCategory.FACTOR_SET,
+                display_name="Factor Set",
+                input_contract="universe_frame.v1",
+                output_contract="factor_frame.v1",
+                config_schema={"settings": NodeConfigType.JSON},
+                default_config=default_config,
+                supported_strategy_kinds=(StrategyKind.ETF_ROTATION,),
+                implementation_key="builtin.factor_set.v1",
+            )
+
+        assert exc_info.value.details["reason"] == "cyclic_canonical_json_value"
+        assert exc_info.value.details["field_name"] == "default_config.settings[0]"
+
     def test_is_frozen_and_owns_typed_immutable_schemas(self) -> None:
         from ditto_strategy.alpha.node_registry import NodeConfigType, NodeDescriptor
 

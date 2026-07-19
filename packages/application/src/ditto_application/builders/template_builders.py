@@ -78,13 +78,10 @@ __all__ = [
 
 _LEGACY_RANK_THEN_COMBINE = "rank_then_combine"
 _LEGACY_STAGE_KEYS = (
-    "legacy.universe.v1",
     "legacy.factor_set.v1",
     "legacy.scorer.v1",
     "legacy.selector.v1",
     "legacy.allocator.v1",
-    "legacy.execution_assumption.v1",
-    "legacy.validation.v1",
 )
 
 
