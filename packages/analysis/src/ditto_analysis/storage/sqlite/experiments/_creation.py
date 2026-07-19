@@ -30,11 +30,11 @@ from ditto_analysis.experiments.persistence import (
     CanonicalPayload,
     FoldProjection,
     ResearchCycleIdentity,
-    canonical_payload,
     encode_candidate_parameters,
     encode_launch_spec,
 )
 from ditto_analysis.experiments.specs import CandidateSpec, ExperimentLaunchSpec
+from ditto_analysis.storage.sqlite.experiments._events import event_values
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
 )
@@ -74,54 +74,6 @@ def _conflict(
 
 def _optional(value: object | None) -> str | None:
     return None if value is None else str(value)
-
-
-def _event_values(
-    *,
-    subject_type: str,
-    experiment_id: str,
-    candidate_id: str | None,
-    fold_id: str | None,
-    attempt_id: str | None,
-    revision: int,
-    previous_status: ExperimentStatus | None,
-    status: ExperimentStatus,
-    desired_state: ExperimentDesiredState | None,
-    stage: ExperimentStage | None,
-    failure_code: ExperimentFailureCode | None,
-    reason_code: str | None,
-    detail: Mapping[str, object],
-    occurred_at_epoch_us: int,
-) -> tuple[object, ...]:
-    payload = canonical_payload(detail)
-    event_identity = canonical_payload(
-        {
-            "attempt_id": attempt_id,
-            "candidate_id": candidate_id,
-            "experiment_id": experiment_id,
-            "fold_id": fold_id,
-            "revision": revision,
-            "subject_type": subject_type,
-        }
-    )
-    return (
-        f"status:{event_identity.content_hash}",
-        experiment_id,
-        candidate_id,
-        fold_id,
-        attempt_id,
-        subject_type,
-        revision,
-        _optional(previous_status),
-        status.value,
-        _optional(desired_state),
-        _optional(stage),
-        _optional(failure_code),
-        reason_code,
-        payload.json_bytes.decode("utf-8"),
-        str(payload.content_hash),
-        occurred_at_epoch_us,
-    )
 
 
 class SQLiteExperimentCreationMixin:
@@ -406,7 +358,7 @@ class SQLiteExperimentCreationMixin:
         occurred_at_epoch_us: int,
         replay_reason_code: str,
     ) -> None:
-        expected = _event_values(
+        expected = event_values(
             subject_type=subject_type,
             experiment_id=experiment_id,
             candidate_id=candidate_id,
@@ -455,7 +407,7 @@ class SQLiteExperimentCreationMixin:
         detail: Mapping[str, object],
         occurred_at: datetime,
     ) -> None:
-        values = _event_values(
+        values = event_values(
             subject_type=subject_type,
             experiment_id=experiment_id,
             candidate_id=candidate_id,

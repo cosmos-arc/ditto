@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
+from threading import Barrier
 from types import SimpleNamespace
 from typing import Any
 
@@ -222,22 +224,68 @@ def _dispatch_first_attempt(
     *,
     owner: str = "owner-attempt",
 ) -> Any:
-    lease = writer.try_claim_lease(
-        fold.key.experiment_id,
-        owner,
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease = _start_running_experiment(writer, owner=owner)
     writer.claim_fold_and_add_attempt(
         fold.key,
         _attempt_spec(api, fold.key),
         _attempt_projection(api),
         expected_fold_revision=0,
         lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    return lease
+
+
+def _claim_queued_experiment(
+    writer: Any,
+    *,
+    owner: str,
+    lease_until_epoch_us: int = NOW_US + 100,
+) -> Any:
+    queued = writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    assert queued.record.status is ExperimentStatus.QUEUED
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        owner,
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=lease_until_epoch_us,
+    )
+    assert lease is not None
+    return lease
+
+
+def _start_running_experiment(
+    writer: Any,
+    *,
+    owner: str,
+    lease_until_epoch_us: int = NOW_US + 100,
+) -> Any:
+    lease = _claim_queued_experiment(
+        writer,
+        owner=owner,
+        lease_until_epoch_us=lease_until_epoch_us,
+    )
+    writer.transition_scheduled_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.RUNNING,
+        target_stage=ExperimentStage.EXPLORATION,
+        failure_code=None,
+        expected_revision=1,
+        lease_fence=lease.fence,
         now_epoch_us=NOW_US + 1,
         occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="experiment_started",
+        detail={},
     )
     return lease
 
@@ -462,6 +510,100 @@ def test_experiment_create_replay_after_enqueue_is_noop(tmp_path: Path) -> None:
     assert database.get_connection().total_changes == before_changes
 
 
+def test_get_launch_spec_ignores_mutable_projection_intent_after_cancel_request(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    spec = _launch()
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-2026-h2", ContentHash("c" * 64)),
+        spec,
+        _record(),
+    )
+    queued = writer.enqueue_experiment(
+        spec.experiment_id,
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    writer.transition_experiment(
+        spec.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=ExperimentStage.PREFLIGHT,
+        failure_code=None,
+        expected_revision=queued.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancelled",
+        detail={},
+    )
+
+    assert reader.get_launch_spec(spec.experiment_id) == spec
+
+
+def test_get_launch_spec_rejects_relational_schema_version_drift(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    connection = database.get_connection()
+    connection.execute("DROP TRIGGER trg_experiment_guard_update")
+    connection.execute(
+        "UPDATE experiment SET launch_spec_schema_version=2 WHERE experiment_id=?",
+        ("experiment-1",),
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        reader.get_launch_spec(ExperimentId("experiment-1"))
+
+    assert exc_info.value.details["reason_code"] == "launch_schema_version_mismatch"
+
+
+def test_get_launch_spec_requires_exact_revision_zero_creation_event(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    connection = database.get_connection()
+    connection.execute("DROP TRIGGER trg_experiment_status_event_no_update")
+    connection.execute(
+        """
+        UPDATE experiment_status_event SET reason_code='forged_creation'
+        WHERE experiment_id='experiment-1' AND subject_type='experiment'
+          AND subject_revision=0
+        """
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        reader.get_launch_spec(ExperimentId("experiment-1"))
+
+    assert exc_info.value.details["reason_code"] == "launch_creation_event_drift"
+
+
+def test_reader_recomputes_canonical_status_event_id(tmp_path: Path) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    connection = database.get_connection()
+    connection.execute("DROP TRIGGER trg_experiment_status_event_no_update")
+    connection.execute(
+        """
+        UPDATE experiment_status_event SET event_id='forged-id'
+        WHERE event_id LIKE 'status:%'
+        """
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        reader.list_status_events(ExperimentId("experiment-1"))
+
+    assert exc_info.value.details["reason_code"] == "status_event_id_mismatch"
+
+
 def test_experiment_replay_requires_exact_revision_zero_event(tmp_path: Path) -> None:
     database, _reader, writer, api = _store(tmp_path)
     connection = database.get_connection()
@@ -525,6 +667,8 @@ def test_add_fold_and_attempt_round_trip_full_lineage_and_revision_zero_events(
     events = reader.list_status_events(ExperimentId("experiment-1"))
     assert [(event.subject_type.value, event.subject_revision) for event in events] == [
         ("experiment", 0),
+        ("experiment", 1),
+        ("experiment", 2),
         ("fold", 0),
         ("fold", 1),
         ("attempt", 0),
@@ -536,14 +680,7 @@ def test_fold_create_replay_after_claim_is_noop(tmp_path: Path) -> None:
     _create_experiment(writer, api)
     fold = _add_fold(writer, api)
     initial = _fold_projection(api, fold)
-    lease = writer.try_claim_lease(
-        fold.key.experiment_id,
-        "owner-replay",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease = _start_running_experiment(writer, owner="owner-replay")
     claimed = writer.claim_fold(
         fold.key,
         expected_revision=0,
@@ -559,6 +696,232 @@ def test_fold_create_replay_after_claim_is_noop(tmp_path: Path) -> None:
     assert reader.get_fold(fold.key).projection == claimed
     assert reader.list_status_events(fold.key.experiment_id) == before_events
     assert database.get_connection().total_changes == before_changes
+
+
+def test_add_fold_rejects_new_insert_after_enqueue_without_writes(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    fold = _fold_spec(api)
+    connection = database.get_connection()
+    before_events = reader.list_status_events(fold.key.experiment_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.add_fold(fold, _fold_projection(api, fold))
+
+    assert exc_info.value.details == {
+        "reason_code": "fold_creation_not_allowed",
+        "status": ExperimentStatus.QUEUED.value,
+        "desired_state": ExperimentDesiredState.RUN.value,
+    }
+    assert reader.get_fold(fold.key) is None
+    assert reader.list_status_events(fold.key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+def test_terminal_transition_serializes_with_exact_fold_replay_but_rejects_new_fold(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    queued = writer.enqueue_experiment(
+        fold.key.experiment_id,
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    cancel_requested = writer.transition_experiment(
+        fold.key.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=queued.record.stage,
+        failure_code=None,
+        expected_revision=queued.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    lease = writer.try_claim_lease(
+        fold.key.experiment_id,
+        "owner-drain",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    writer.transition_fold(
+        fold.key,
+        target_status=ExperimentStatus.CANCELLED,
+        claim_owner_token=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        occurred_at=NOW,
+        reason_code="cancel_queued_fold",
+        detail={},
+    )
+    initial = _fold_projection(api, fold)
+    barrier = Barrier(2)
+
+    def terminalize() -> Any:
+        barrier.wait()
+        return writer.transition_scheduled_experiment(
+            fold.key.experiment_id,
+            target_status=ExperimentStatus.CANCELLED,
+            target_stage=cancel_requested.record.stage,
+            failure_code=None,
+            expected_revision=cancel_requested.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 2,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="cancel_drained",
+            detail={},
+        )
+
+    def replay() -> None:
+        barrier.wait()
+        writer.add_fold(fold, initial)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        terminal_future = executor.submit(terminalize)
+        replay_future = executor.submit(replay)
+        terminal = terminal_future.result()
+        replay_future.result()
+
+    assert terminal.record.status is ExperimentStatus.CANCELLED
+    assert reader.get_fold(fold.key).projection.status is ExperimentStatus.CANCELLED
+    assert len(reader.list_folds(fold.key.experiment_id)) == 1
+    before_events = reader.list_status_events(fold.key.experiment_id)
+    before_changes = database.get_connection().total_changes
+    new_fold = _fold_spec(
+        api,
+        key=api.FoldKey(
+            fold.key.experiment_id,
+            fold.key.candidate_id,
+            FoldId("fold-2"),
+        ),
+        ordinal=2,
+    )
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.add_fold(new_fold, _fold_projection(api, new_fold))
+
+    assert exc_info.value.details == {
+        "reason_code": "fold_creation_not_allowed",
+        "status": ExperimentStatus.CANCELLED.value,
+        "desired_state": ExperimentDesiredState.CANCEL.value,
+    }
+    assert reader.get_fold(new_fold.key) is None
+    assert reader.list_status_events(fold.key.experiment_id) == before_events
+    assert database.get_connection().total_changes == before_changes
+    assert not database.get_connection().in_transaction
+
+
+def test_new_fold_and_terminal_transition_serialize_without_terminal_live_child(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    queued = writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    cancel_requested = writer.transition_experiment(
+        queued.record.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=queued.record.stage,
+        failure_code=None,
+        expected_revision=queued.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    lease = writer.try_claim_lease(
+        queued.record.experiment_id,
+        "owner-drain",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    fold = _fold_spec(api)
+    initial = _fold_projection(api, fold)
+    barrier = Barrier(2)
+
+    def add_new_fold() -> tuple[str, str | None]:
+        barrier.wait()
+        try:
+            writer.add_fold(fold, initial)
+        except ExperimentSpecError as exc:
+            return "rejected", exc.details["reason_code"]
+        return "added", None
+
+    def terminalize() -> tuple[str, str | None]:
+        barrier.wait()
+        try:
+            writer.transition_scheduled_experiment(
+                queued.record.experiment_id,
+                target_status=ExperimentStatus.CANCELLED,
+                target_stage=cancel_requested.record.stage,
+                failure_code=None,
+                expected_revision=cancel_requested.revision,
+                lease_fence=lease.fence,
+                now_epoch_us=NOW_US + 1,
+                occurred_at=NOW,
+                attempt_started=False,
+                precondition_repairable=False,
+                reason_code="cancel_drained",
+                detail={},
+            )
+        except ExperimentSpecError as exc:
+            return "rejected", exc.details["reason_code"]
+        return "terminal", None
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        add_future = executor.submit(add_new_fold)
+        terminal_future = executor.submit(terminalize)
+        add_result = add_future.result()
+        terminal_result = terminal_future.result()
+
+    parent = reader.get_experiment_projection(queued.record.experiment_id)
+    persisted_fold = reader.get_fold(fold.key)
+    assert not (
+        parent.record.status is ExperimentStatus.CANCELLED
+        and persisted_fold is not None
+        and persisted_fold.projection.status is ExperimentStatus.QUEUED
+    )
+    if add_result[0] == "added":
+        assert terminal_result == ("rejected", "experiment_live_child")
+        assert parent.record.status is ExperimentStatus.CANCEL_REQUESTED
+        assert persisted_fold is not None
+    else:
+        assert add_result == ("rejected", "fold_creation_not_allowed")
+        assert terminal_result == ("terminal", None)
+        assert parent.record.status is ExperimentStatus.CANCELLED
+        assert persisted_fold is None
 
 
 def test_fold_replay_requires_revision_zero_event(tmp_path: Path) -> None:
@@ -594,14 +957,7 @@ def test_attempt_create_replay_after_completion_is_unfenced_noop(
     database, reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)
     fold = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        fold.key.experiment_id,
-        "owner-replay",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease = _start_running_experiment(writer, owner="owner-replay")
     writer.claim_fold(
         fold.key,
         expected_revision=0,
@@ -674,14 +1030,7 @@ def test_attempt_replay_requires_revision_zero_event(tmp_path: Path) -> None:
     database, _reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)
     fold = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        fold.key.experiment_id,
-        "owner-replay",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease = _start_running_experiment(writer, owner="owner-replay")
     writer.claim_fold(
         fold.key,
         expected_revision=0,
@@ -1161,14 +1510,7 @@ def test_artifact_gate_and_holdout_are_typed_append_only_facts(tmp_path: Path) -
     _database, reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)
     fold = _add_fold(writer, api, role="holdout")
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-artifact",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease = _claim_queued_experiment(writer, owner="owner-artifact")
     artifact = api.ArtifactRecord(
         artifact_id="artifact-1",
         experiment_id=ExperimentId("experiment-1"),
@@ -1238,6 +1580,101 @@ def test_artifact_gate_and_holdout_are_typed_append_only_facts(tmp_path: Path) -
     assert replay == first == reader.get_holdout_claim("claim-1")
 
 
+def test_artifact_create_exact_replay_after_pin_is_unfenced_noop(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    queued = writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    assert queued.record.status is ExperimentStatus.QUEUED
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-artifact",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    assert lease is not None
+    artifact = replace(
+        _artifact(api),
+        candidate_id=None,
+        fold_id=None,
+        attempt_id=None,
+    )
+    writer.add_artifact(
+        artifact,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+    )
+    pinned = writer.pin_artifact(
+        artifact.artifact_id, expected_revision=0, pinned_at=NOW
+    )
+    before_changes = database.get_connection().total_changes
+
+    writer.add_artifact(
+        artifact,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 10,
+    )
+
+    assert reader.get_artifact(artifact.artifact_id) == pinned
+    assert database.get_connection().total_changes == before_changes
+
+
+def test_artifact_create_drift_after_pin_fails_closed_before_lease_validation(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-artifact",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    assert lease is not None
+    artifact = replace(
+        _artifact(api),
+        candidate_id=None,
+        fold_id=None,
+        attempt_id=None,
+    )
+    writer.add_artifact(
+        artifact,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+    )
+    pinned = writer.pin_artifact(
+        artifact.artifact_id, expected_revision=0, pinned_at=NOW
+    )
+    before_changes = database.get_connection().total_changes
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.add_artifact(
+            replace(artifact, byte_size=artifact.byte_size + 1),
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 10,
+        )
+
+    assert exc_info.value.details["reason_code"] == "artifact_replay_drift"
+    assert reader.get_artifact(artifact.artifact_id) == pinned
+    assert database.get_connection().total_changes == before_changes
+
+
 def test_holdout_claim_rejects_cycle_and_fold_role_lineage_drift(
     tmp_path: Path,
 ) -> None:
@@ -1302,14 +1739,7 @@ def test_artifact_path_validation_fails_before_sql(
 ) -> None:
     _database, _reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-artifact",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease = _claim_queued_experiment(writer, owner="owner-artifact")
     artifact = api.ArtifactRecord(
         artifact_id="artifact-bad",
         experiment_id=ExperimentId("experiment-1"),

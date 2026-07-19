@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -306,8 +307,15 @@ class TestImmutableArtifactPublication:
             return descriptor, temporary_name
 
         def observe_fsync(fd: int) -> None:
-            assert fd == descriptor
-            calls.append("fsync")
+            mode = os.fstat(fd).st_mode
+            if stat.S_ISREG(mode):
+                assert calls == []
+                calls.append("file_fsync")
+            elif stat.S_ISDIR(mode):
+                assert calls == ["file_fsync", "link"]
+                calls.append("directory_fsync")
+            else:  # pragma: no cover - defensive assertion for unexpected handles
+                pytest.fail("immutable publisher fsync used an unexpected file type")
             original_fsync(fd)
 
         def observe_link(
@@ -316,7 +324,7 @@ class TestImmutableArtifactPublication:
         ) -> None:
             source_path = Path(source)
             target_path = Path(target)
-            assert calls == ["fsync"]
+            assert calls == ["file_fsync"]
             assert descriptor is not None
             with pytest.raises(OSError):
                 os.fstat(descriptor)
@@ -335,7 +343,7 @@ class TestImmutableArtifactPublication:
         )
 
         assert digest == hashlib.sha256(payload).hexdigest()
-        assert calls == ["fsync", "link"]
+        assert calls == ["file_fsync", "link", "directory_fsync"]
         assert (tmp_path / "experiments/e-1/evidence.bin").read_bytes() == payload
         assert tuple((tmp_path / "experiments/e-1").glob("*.tmp")) == ()
 
@@ -343,6 +351,7 @@ class TestImmutableArtifactPublication:
         self,
         service: ResearchArtifactService,
         tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         relative_path = "experiments/e-1/evidence.bin"
         payload = b"same-evidence"
@@ -353,6 +362,15 @@ class TestImmutableArtifactPublication:
         )
         target = tmp_path / relative_path
         before = target.stat()
+        directory_fsyncs: list[Path] = []
+        original_fsync = os.fsync
+
+        def observe_replay_fsync(fd: int) -> None:
+            if stat.S_ISDIR(os.fstat(fd).st_mode):
+                directory_fsyncs.append(target.parent)
+            original_fsync(fd)
+
+        monkeypatch.setattr(os, "fsync", observe_replay_fsync)
 
         replay_digest = service.publish_immutable_artifact(relative_path, payload)
 
@@ -364,6 +382,7 @@ class TestImmutableArtifactPublication:
             before.st_size,
         )
         assert tuple(target.parent.glob("*.tmp")) == ()
+        assert directory_fsyncs == [target.parent]
 
     def test_conflicting_replay_preserves_existing_bytes_without_partial(
         self,

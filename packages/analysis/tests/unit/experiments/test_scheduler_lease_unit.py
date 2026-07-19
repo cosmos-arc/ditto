@@ -19,6 +19,7 @@ from ditto_analysis.experiments import (
     BacktestRunId,
     CandidateId,
     CandidateSpec,
+    CheckpointRef,
     ContentHash,
     ExperimentBudget,
     ExperimentDesiredState,
@@ -166,6 +167,70 @@ def _attempt(
     return spec, projection
 
 
+def _enqueue_experiment(
+    writer: Any,
+    experiment_id: ExperimentId = ExperimentId("experiment-1"),
+) -> Any:
+    return writer.enqueue_experiment(
+        experiment_id,
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+
+
+def _claim_queued_experiment(
+    writer: Any,
+    *,
+    experiment_id: ExperimentId = ExperimentId("experiment-1"),
+    owner: str = "owner-a",
+    expected_slot_revision: int = 0,
+    now_epoch_us: int = NOW_US,
+    lease_until_epoch_us: int = NOW_US + 100,
+) -> tuple[Any, Any]:
+    queued = _enqueue_experiment(writer, experiment_id)
+    lease = writer.try_claim_lease(
+        experiment_id,
+        owner,
+        expected_revision=expected_slot_revision,
+        now_epoch_us=now_epoch_us,
+        lease_until_epoch_us=lease_until_epoch_us,
+    )
+    assert lease is not None
+    return lease, queued
+
+
+def _start_running_experiment(
+    writer: Any,
+    *,
+    experiment_id: ExperimentId = ExperimentId("experiment-1"),
+    owner: str = "owner-a",
+    lease_until_epoch_us: int = NOW_US + 100,
+) -> tuple[Any, Any]:
+    lease, queued = _claim_queued_experiment(
+        writer,
+        experiment_id=experiment_id,
+        owner=owner,
+        lease_until_epoch_us=lease_until_epoch_us,
+    )
+    running = writer.transition_scheduled_experiment(
+        experiment_id,
+        target_status=ExperimentStatus.RUNNING,
+        target_stage=ExperimentStage.EXPLORATION,
+        failure_code=None,
+        expected_revision=queued.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="dispatch",
+        detail={},
+    )
+    return lease, running
+
+
 def _start_running_attempt(
     writer: Any,
     api: SimpleNamespace,
@@ -174,14 +239,12 @@ def _start_running_attempt(
     owner: str = "owner-a",
     lease_until_epoch_us: int = NOW_US + 10,
 ) -> tuple[Any, Any, Any]:
-    lease = writer.try_claim_lease(
-        key.experiment_id,
-        owner,
-        expected_revision=0,
-        now_epoch_us=NOW_US,
+    lease, _running_experiment = _start_running_experiment(
+        writer,
+        experiment_id=key.experiment_id,
+        owner=owner,
         lease_until_epoch_us=lease_until_epoch_us,
     )
-    assert lease is not None
     spec, projection = _attempt(api, key)
     writer.claim_fold_and_add_attempt(
         key,
@@ -189,7 +252,7 @@ def _start_running_attempt(
         projection,
         expected_fold_revision=0,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 1,
+        now_epoch_us=NOW_US + 2,
         occurred_at=NOW,
     )
     running = writer.transition_attempt(
@@ -200,7 +263,7 @@ def _start_running_attempt(
         failure_code=None,
         expected_revision=0,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 2,
+        now_epoch_us=NOW_US + 3,
         occurred_at=NOW,
         reason_code="attempt_started",
         detail={},
@@ -252,6 +315,514 @@ def test_enqueue_allocates_queue_ordinals_atomically_and_reader_orders_them(
     ]
 
 
+def test_unowned_queued_cancel_drains_then_allows_the_next_queue_item(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
+        _launch("experiment-2"),
+        _initial_record("experiment-2"),
+    )
+    queued_first = _enqueue_experiment(writer)
+    _enqueue_experiment(writer, ExperimentId("experiment-2"))
+    cancel_requested = writer.transition_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=queued_first.record.stage,
+        failure_code=None,
+        expected_revision=queued_first.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+
+    candidates = reader.list_dispatchable_experiments()
+    assert [candidate.record.experiment_id for candidate in candidates] == [
+        ExperimentId("experiment-1"),
+        ExperimentId("experiment-2"),
+    ]
+    assert [candidate.record.status for candidate in candidates] == [
+        ExperimentStatus.CANCEL_REQUESTED,
+        ExperimentStatus.QUEUED,
+    ]
+
+    drain_lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-drain",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert drain_lease is not None
+    writer.transition_scheduled_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.CANCELLED,
+        target_stage=cancel_requested.record.stage,
+        failure_code=None,
+        expected_revision=cancel_requested.revision,
+        lease_fence=drain_lease.fence,
+        now_epoch_us=NOW_US + 1,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="cancel_drained",
+        detail={},
+    )
+    released = writer.release_lease(
+        drain_lease.fence,
+        now_epoch_us=NOW_US + 2,
+    )
+
+    next_lease = writer.try_claim_lease(
+        ExperimentId("experiment-2"),
+        "owner-next",
+        expected_revision=released.revision,
+        now_epoch_us=NOW_US + 3,
+        lease_until_epoch_us=NOW_US + 200,
+    )
+    assert next_lease is not None
+
+
+def test_queued_origin_cancel_waits_for_queued_folds_before_terminal_release(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    queued = _enqueue_experiment(writer)
+    cancel_requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=queued.record.stage,
+        failure_code=None,
+        expected_revision=queued.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    lease = writer.try_claim_lease(
+        key.experiment_id,
+        "owner-drain",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    before_experiment = reader.get_experiment_projection(key.experiment_id)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_scheduled_experiment(
+            key.experiment_id,
+            target_status=ExperimentStatus.CANCELLED,
+            target_stage=cancel_requested.record.stage,
+            failure_code=None,
+            expected_revision=cancel_requested.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 1,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="cancel_before_fold_drain",
+            detail={},
+        )
+
+    assert exc_info.value.details == {
+        "reason_code": "experiment_live_child",
+        "target_status": ExperimentStatus.CANCELLED.value,
+        "child_type": "fold",
+        "child_status": ExperimentStatus.QUEUED.value,
+        "candidate_id": "candidate-1",
+        "fold_id": "fold-1",
+    }
+    assert reader.get_experiment_projection(key.experiment_id) == before_experiment
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+    cancelled_fold = writer.transition_fold(
+        key,
+        target_status=ExperimentStatus.CANCELLED,
+        claim_owner_token=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+        reason_code="cancel_queued_fold",
+        detail={},
+    )
+    cancelled = writer.transition_scheduled_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.CANCELLED,
+        target_stage=cancel_requested.record.stage,
+        failure_code=None,
+        expected_revision=cancel_requested.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="cancel_drained",
+        detail={},
+    )
+    released = writer.release_lease(lease.fence, now_epoch_us=NOW_US + 4)
+
+    assert cancelled_fold.status is ExperimentStatus.CANCELLED
+    assert cancelled.record.status is ExperimentStatus.CANCELLED
+    assert released.experiment_id is None
+
+
+def test_terminal_transition_waits_for_running_attempt_then_releases_after_drain(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, attempt_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    running_experiment = reader.get_experiment_projection(key.experiment_id)
+    cancel_requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=running_experiment.record.stage,
+        failure_code=None,
+        expected_revision=running_experiment.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_scheduled_experiment(
+            key.experiment_id,
+            target_status=ExperimentStatus.CANCELLED,
+            target_stage=cancel_requested.record.stage,
+            failure_code=None,
+            expected_revision=cancel_requested.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 4,
+            occurred_at=NOW,
+            attempt_started=True,
+            precondition_repairable=False,
+            reason_code="cancel_before_attempt_drain",
+            detail={},
+        )
+
+    assert exc_info.value.details == {
+        "reason_code": "experiment_live_child",
+        "target_status": ExperimentStatus.CANCELLED.value,
+        "child_type": "attempt",
+        "child_status": ExperimentStatus.RUNNING.value,
+        "attempt_id": str(attempt_spec.attempt_id),
+    }
+    assert reader.get_experiment_projection(key.experiment_id) == cancel_requested
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+    cancelled_attempt = writer.transition_attempt(
+        attempt_spec.attempt_id,
+        target_status=ExperimentStatus.CANCELLED,
+        backtest_run_id=running_attempt.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=running_attempt.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 5,
+        occurred_at=NOW,
+        reason_code="attempt_cancelled",
+        detail={},
+    )
+    running_fold = reader.get_fold(key).projection
+    cancelled_fold = writer.transition_fold(
+        key,
+        target_status=ExperimentStatus.CANCELLED,
+        claim_owner_token=None,
+        failure_code=None,
+        expected_revision=running_fold.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 6,
+        occurred_at=NOW,
+        reason_code="fold_cancelled",
+        detail={},
+    )
+    cancelled = writer.transition_scheduled_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.CANCELLED,
+        target_stage=cancel_requested.record.stage,
+        failure_code=None,
+        expected_revision=cancel_requested.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 7,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="cancel_drained",
+        detail={},
+    )
+    released = writer.release_lease(lease.fence, now_epoch_us=NOW_US + 8)
+
+    assert cancelled_attempt.status is ExperimentStatus.CANCELLED
+    assert cancelled_fold.status is ExperimentStatus.CANCELLED
+    assert cancelled.record.status is ExperimentStatus.CANCELLED
+    assert released.experiment_id is None
+
+
+def test_terminal_transition_rejects_running_fold_without_an_attempt(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    claimed_fold = writer.claim_fold(
+        key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    cancel_requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_scheduled_experiment(
+            key.experiment_id,
+            target_status=ExperimentStatus.CANCELLED,
+            target_stage=cancel_requested.record.stage,
+            failure_code=None,
+            expected_revision=cancel_requested.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="cancel_before_fold_drain",
+            detail={},
+        )
+
+    assert exc_info.value.details == {
+        "reason_code": "experiment_live_child",
+        "target_status": ExperimentStatus.CANCELLED.value,
+        "child_type": "fold",
+        "child_status": ExperimentStatus.RUNNING.value,
+        "candidate_id": "candidate-1",
+        "fold_id": "fold-1",
+    }
+    assert reader.get_experiment_projection(key.experiment_id) == cancel_requested
+    assert reader.get_fold(key).projection == claimed_fold
+
+
+def test_unowned_non_queued_origin_cancel_request_fails_closed(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    lease, running = _start_running_experiment(writer)
+    writer.transition_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment_scheduler_slot
+        SET experiment_id=NULL, owner_token=NULL, lease_until_epoch_us=NULL,
+            acquired_at_epoch_us=NULL, renewed_at_epoch_us=NULL,
+            revision=revision + 1
+        WHERE slot_id='global'
+        """
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(_api_ns.ExperimentIntegrityError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-1"),
+            "owner-invalid",
+            expected_revision=lease.fence.revision + 1,
+            now_epoch_us=NOW_US + 2,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "scheduler_active_experiment_without_slot"
+    )
+    assert reader.get_scheduler_slot() == before_slot
+
+
+def test_free_slot_rejects_out_of_order_queue_claim_without_occupying_slot(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
+        _launch("experiment-2"),
+        _initial_record("experiment-2"),
+    )
+    for experiment_id in ("experiment-1", "experiment-2"):
+        writer.enqueue_experiment(
+            ExperimentId(experiment_id),
+            expected_revision=0,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-2"),
+            "owner-b",
+            expected_revision=0,
+            now_epoch_us=NOW_US,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert exc_info.value.details["reason_code"] == "scheduler_queue_order_violation"
+    assert reader.get_scheduler_slot() == before_slot
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-a",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+
+
+def test_non_run_queue_head_blocks_all_free_slot_claims_without_being_skipped(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
+        _launch("experiment-2"),
+        _initial_record("experiment-2"),
+    )
+    for experiment_id in ("experiment-1", "experiment-2"):
+        writer.enqueue_experiment(
+            ExperimentId(experiment_id),
+            expected_revision=0,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET desired_state='pause', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-2"),
+            "owner-b",
+            expected_revision=0,
+            now_epoch_us=NOW_US,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert (
+        exc_info.value.details["reason_code"] == "scheduler_queue_head_intent_mismatch"
+    )
+    assert reader.get_scheduler_slot() == before_slot
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        ExperimentStatus.DRAFT,
+        ExperimentStatus.BLOCKED,
+        ExperimentStatus.COMPLETED,
+    ],
+)
+def test_free_slot_rejects_non_queued_experiment_lifecycle(
+    tmp_path: Path,
+    status: ExperimentStatus,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    if status is ExperimentStatus.BLOCKED:
+        writer.transition_experiment(
+            ExperimentId("experiment-1"),
+            target_status=status,
+            target_desired_state=ExperimentDesiredState.RUN,
+            target_stage=ExperimentStage.PREFLIGHT,
+            failure_code=None,
+            expected_revision=0,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=True,
+            reason_code="preflight_blocked",
+            detail={},
+        )
+    elif status is ExperimentStatus.COMPLETED:
+        writer.enqueue_experiment(
+            ExperimentId("experiment-1"),
+            expected_revision=0,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
+        connection = database.get_connection()
+        connection.execute(
+            """
+            UPDATE experiment SET status='completed', revision=revision + 1
+            WHERE experiment_id='experiment-1'
+            """
+        )
+        connection.commit()
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-1"),
+            "owner-a",
+            expected_revision=0,
+            now_epoch_us=NOW_US,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert exc_info.value.details["reason_code"] == "scheduler_experiment_not_eligible"
+    assert reader.get_scheduler_slot() == before_slot
+
+
 def test_claimable_fold_reader_orders_candidate_then_fold_ordinal(
     tmp_path: Path,
 ) -> None:
@@ -286,14 +857,10 @@ def test_claim_contention_and_expiry_boundary_have_precise_semantics(
     tmp_path: Path,
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
-    first = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
+    first, _queued = _claim_queued_experiment(
+        writer,
         lease_until_epoch_us=NOW_US + 100,
     )
-    assert first is not None
     assert first.fence.revision == 1
 
     assert (
@@ -322,18 +889,467 @@ def test_claim_contention_and_expiry_boundary_have_precise_semantics(
         writer.release_lease(first.fence, now_epoch_us=NOW_US + 101)
 
 
-def test_stale_claim_revision_is_not_reported_as_ordinary_contention(
+def test_expired_active_occupant_must_be_reclaimed_before_next_queue_item(
     tmp_path: Path,
 ) -> None:
-    _database, _reader, writer, api = _store(tmp_path)
+    _database, reader, writer, api = _store(tmp_path)
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
+        _launch("experiment-2"),
+        _initial_record("experiment-2"),
+    )
+    for experiment_id in ("experiment-1", "experiment-2"):
+        writer.enqueue_experiment(
+            ExperimentId(experiment_id),
+            expected_revision=0,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
     first = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-a",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    assert first is not None
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-2"),
+            "owner-b",
+            expected_revision=first.revision,
+            now_epoch_us=NOW_US + 10,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert exc_info.value.details["reason_code"] == "scheduler_reclaim_required"
+    assert reader.get_scheduler_slot() == before_slot
+
+
+def test_expired_occupant_intent_drift_fails_closed_without_slot_mutation(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    first = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-a",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    assert first is not None
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET desired_state='pause', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-1"),
+            "owner-b",
+            expected_revision=first.revision,
+            now_epoch_us=NOW_US + 10,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert exc_info.value.details["reason_code"] == "scheduler_occupant_intent_mismatch"
+    assert reader.get_scheduler_slot() == before_slot
+
+
+def test_expired_illegal_occupant_lifecycle_fails_closed(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment_scheduler_slot
+        SET experiment_id='experiment-1', owner_token='owner-a',
+            lease_until_epoch_us=?, acquired_at_epoch_us=?,
+            renewed_at_epoch_us=?, revision=1
+        WHERE slot_id='global' AND revision=0
+        """,
+        (NOW_US + 10, NOW_US, NOW_US),
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-1"),
+            "owner-b",
+            expected_revision=1,
+            now_epoch_us=NOW_US + 10,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert (
+        exc_info.value.details["reason_code"] == "scheduler_invalid_occupant_lifecycle"
+    )
+    assert reader.get_scheduler_slot() == before_slot
+
+
+def test_terminal_expired_occupant_allows_current_queue_head_to_take_slot(
+    tmp_path: Path,
+) -> None:
+    database, _reader, writer, api = _store(tmp_path)
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
+        _launch("experiment-2"),
+        _initial_record("experiment-2"),
+    )
+    for experiment_id in ("experiment-1", "experiment-2"):
+        writer.enqueue_experiment(
+            ExperimentId(experiment_id),
+            expected_revision=0,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
+    first = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-a",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    assert first is not None
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status='completed', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+
+    second = writer.try_claim_lease(
+        ExperimentId("experiment-2"),
+        "owner-b",
+        expected_revision=first.revision,
+        now_epoch_us=NOW_US + 10,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+
+    assert second is not None
+    assert second.experiment_id == ExperimentId("experiment-2")
+
+
+def test_terminal_expired_occupant_with_live_child_blocks_slot_handoff(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
+        _launch("experiment-2"),
+        _initial_record("experiment-2"),
+    )
+    key = _add_fold(writer, api)
+    first, attempt_spec, _running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    _enqueue_experiment(writer, ExperimentId("experiment-2"))
+    running_experiment = reader.get_experiment_projection(key.experiment_id)
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=running_experiment.record.stage,
+        failure_code=None,
+        expected_revision=running_experiment.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status='cancelled', revision=revision + 1
+        WHERE experiment_id=?
+        """,
+        (str(key.experiment_id),),
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+    before_fold = reader.get_fold(key)
+    before_attempt = reader.get_attempt(attempt_spec.attempt_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-2"),
+            "owner-b",
+            expected_revision=first.revision,
+            now_epoch_us=NOW_US + 10,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert exc_info.value.details == {
+        "reason_code": "scheduler_terminal_live_child",
+        "target_status": ExperimentStatus.CANCELLED.value,
+        "child_type": "attempt",
+        "child_status": ExperimentStatus.RUNNING.value,
+        "attempt_id": str(attempt_spec.attempt_id),
+    }
+    assert reader.get_scheduler_slot() == before_slot
+    assert reader.get_fold(key) == before_fold
+    assert reader.get_attempt(attempt_spec.attempt_id) == before_attempt
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+@pytest.mark.parametrize(
+    ("status", "desired_state"),
+    [
+        (ExperimentStatus.QUEUED, ExperimentDesiredState.RUN),
+        (ExperimentStatus.RUNNING, ExperimentDesiredState.RUN),
+        (ExperimentStatus.PAUSE_REQUESTED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.PAUSED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.CANCEL_REQUESTED, ExperimentDesiredState.CANCEL),
+    ],
+)
+def test_expired_active_occupant_can_reclaim_its_own_slot(
+    tmp_path: Path,
+    status: ExperimentStatus,
+    desired_state: ExperimentDesiredState,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    first = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-a",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    assert first is not None
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status=?, desired_state=?, revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """,
+        (status.value, desired_state.value),
+    )
+    connection.commit()
+
+    reclaimed = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-b",
+        expected_revision=first.revision,
+        now_epoch_us=NOW_US + 10,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+
+    assert reclaimed is not None
+    assert reclaimed.owner_token == "owner-b"
+    assert reader.get_scheduler_slot().revision == reclaimed.revision
+
+
+def test_terminal_experiment_cannot_renew_but_can_release_its_slot(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    lease = writer.try_claim_lease(
         ExperimentId("experiment-1"),
         "owner-a",
         expected_revision=0,
         now_epoch_us=NOW_US,
         lease_until_epoch_us=NOW_US + 100,
     )
-    assert first is not None
+    assert lease is not None
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status='completed', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.renew_lease(
+            lease.fence,
+            now_epoch_us=NOW_US + 1,
+            new_lease_until_epoch_us=NOW_US + 200,
+        )
+
+    assert exc_info.value.details["reason_code"] == "scheduler_renewal_not_allowed"
+    assert reader.get_scheduler_slot() == before_slot
+    released = writer.release_lease(lease.fence, now_epoch_us=NOW_US + 1)
+    assert released.experiment_id is None
+
+
+def test_release_rechecks_terminal_experiment_has_no_live_children(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, attempt_spec, _running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    running_experiment = reader.get_experiment_projection(key.experiment_id)
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=running_experiment.record.stage,
+        failure_code=None,
+        expected_revision=running_experiment.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status='cancelled', revision=revision + 1
+        WHERE experiment_id=?
+        """,
+        (str(key.experiment_id),),
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+    before_fold = reader.get_fold(key)
+    before_attempt = reader.get_attempt(attempt_spec.attempt_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.release_lease(lease.fence, now_epoch_us=NOW_US + 4)
+
+    assert exc_info.value.details == {
+        "reason_code": "scheduler_terminal_live_child",
+        "target_status": ExperimentStatus.CANCELLED.value,
+        "child_type": "attempt",
+        "child_status": ExperimentStatus.RUNNING.value,
+        "attempt_id": str(attempt_spec.attempt_id),
+    }
+    assert reader.get_scheduler_slot() == before_slot
+    assert reader.get_fold(key) == before_fold
+    assert reader.get_attempt(attempt_spec.attempt_id) == before_attempt
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+def test_active_experiment_cannot_release_its_slot(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, _api_ns = _store(tmp_path)
+    writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-a",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.release_lease(lease.fence, now_epoch_us=NOW_US + 1)
+
+    assert exc_info.value.details["reason_code"] == "scheduler_release_not_allowed"
+    assert reader.get_scheduler_slot() == before_slot
+
+
+def test_free_slot_fails_closed_when_an_active_experiment_has_no_slot(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-second", ContentHash("e" * 64)),
+        _launch("experiment-2"),
+        _initial_record("experiment-2"),
+    )
+    for experiment_id in ("experiment-1", "experiment-2"):
+        writer.enqueue_experiment(
+            ExperimentId(experiment_id),
+            expected_revision=0,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status='running', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.try_claim_lease(
+            ExperimentId("experiment-2"),
+            "owner-b",
+            expected_revision=0,
+            now_epoch_us=NOW_US,
+            lease_until_epoch_us=NOW_US + 100,
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "scheduler_active_experiment_without_slot"
+    )
+    assert reader.get_scheduler_slot() == before_slot
+    assert not connection.in_transaction
+
+
+def test_stale_claim_revision_is_not_reported_as_ordinary_contention(
+    tmp_path: Path,
+) -> None:
+    _database, _reader, writer, api = _store(tmp_path)
+    first, _queued = _claim_queued_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
 
     assert (
         writer.try_claim_lease(
@@ -361,6 +1377,7 @@ def test_concurrent_claims_have_exactly_one_winner(
     tmp_path: Path, owner_count: int
 ) -> None:
     database, _reader, writer, _api_ns = _store(tmp_path)
+    _enqueue_experiment(writer)
     barrier = Barrier(owner_count)
 
     def claim(index: int) -> Any:
@@ -407,14 +1424,10 @@ def test_concurrent_claims_have_exactly_one_winner(
 
 def test_renew_and_release_are_revisioned_and_fenced(tmp_path: Path) -> None:
     _database, reader, writer, api = _store(tmp_path)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
+    lease, queued = _claim_queued_experiment(
+        writer,
         lease_until_epoch_us=NOW_US + 100,
     )
-    assert lease is not None
 
     renewed = writer.renew_lease(
         lease.fence,
@@ -432,7 +1445,34 @@ def test_renew_and_release_are_revisioned_and_fenced(tmp_path: Path) -> None:
             new_lease_until_epoch_us=NOW_US + 300,
         )
 
-    released = writer.release_lease(renewed.fence, now_epoch_us=NOW_US + 12)
+    cancel_requested = writer.transition_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.CANCEL_REQUESTED,
+        target_desired_state=ExperimentDesiredState.CANCEL,
+        target_stage=queued.record.stage,
+        failure_code=None,
+        expected_revision=queued.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_cancel",
+        detail={},
+    )
+    writer.transition_scheduled_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.CANCELLED,
+        target_stage=cancel_requested.record.stage,
+        failure_code=None,
+        expected_revision=cancel_requested.revision,
+        lease_fence=renewed.fence,
+        now_epoch_us=NOW_US + 12,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="cancel_drained",
+        detail={},
+    )
+    released = writer.release_lease(renewed.fence, now_epoch_us=NOW_US + 13)
     assert released.owner_token is None
     assert released.revision == 3
     assert reader.get_scheduler_slot() == released
@@ -533,6 +1573,962 @@ def test_scheduler_experiment_transition_requires_the_current_lease_fence(
     assert terminal_exc.value.details["reason_code"] == "terminal_stage_not_evidence"
 
 
+@pytest.mark.parametrize(
+    ("current_status", "target_status", "source_desired", "wrong_target_desired"),
+    [
+        (
+            ExperimentStatus.DRAFT,
+            ExperimentStatus.BLOCKED,
+            ExperimentDesiredState.RUN,
+            ExperimentDesiredState.PAUSE,
+        ),
+        (
+            ExperimentStatus.QUEUED,
+            ExperimentStatus.CANCEL_REQUESTED,
+            ExperimentDesiredState.RUN,
+            ExperimentDesiredState.RUN,
+        ),
+        (
+            ExperimentStatus.RUNNING,
+            ExperimentStatus.PAUSE_REQUESTED,
+            ExperimentDesiredState.RUN,
+            ExperimentDesiredState.RUN,
+        ),
+        (
+            ExperimentStatus.RUNNING,
+            ExperimentStatus.CANCEL_REQUESTED,
+            ExperimentDesiredState.RUN,
+            ExperimentDesiredState.RUN,
+        ),
+        (
+            ExperimentStatus.PAUSED,
+            ExperimentStatus.QUEUED,
+            ExperimentDesiredState.PAUSE,
+            ExperimentDesiredState.PAUSE,
+        ),
+        (
+            ExperimentStatus.PAUSED,
+            ExperimentStatus.CANCEL_REQUESTED,
+            ExperimentDesiredState.PAUSE,
+            ExperimentDesiredState.PAUSE,
+        ),
+    ],
+)
+def test_every_operator_edge_requires_its_exact_target_intent(
+    tmp_path: Path,
+    current_status: ExperimentStatus,
+    target_status: ExperimentStatus,
+    source_desired: ExperimentDesiredState,
+    wrong_target_desired: ExperimentDesiredState,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    if current_status is ExperimentStatus.DRAFT:
+        expected_revision = 0
+    else:
+        queued = writer.enqueue_experiment(
+            ExperimentId("experiment-1"),
+            expected_revision=0,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
+        expected_revision = queued.revision
+        if current_status is not ExperimentStatus.QUEUED:
+            connection = database.get_connection()
+            connection.execute(
+                """
+                UPDATE experiment SET status=?, desired_state=?, revision=revision + 1
+                WHERE experiment_id='experiment-1'
+                """,
+                (current_status.value, source_desired.value),
+            )
+            connection.commit()
+            expected_revision += 1
+    before_projection = reader.get_experiment_projection(ExperimentId("experiment-1"))
+    before_events = reader.list_status_events(ExperimentId("experiment-1"))
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_experiment(
+            ExperimentId("experiment-1"),
+            target_status=target_status,
+            target_desired_state=wrong_target_desired,
+            target_stage=ExperimentStage.PREFLIGHT,
+            failure_code=None,
+            expected_revision=expected_revision,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=(target_status is ExperimentStatus.BLOCKED),
+            reason_code="wrong_operator_intent",
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_desired_state_mismatch"
+    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == (
+        before_projection
+    )
+    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
+
+
+def test_pause_allows_queued_fold_and_retains_the_scheduler_slot(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running = _start_running_experiment(writer)
+    pause_requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+
+    paused = writer.transition_scheduled_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSED,
+        target_stage=pause_requested.record.stage,
+        failure_code=None,
+        expected_revision=pause_requested.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="pause_drained",
+        detail={},
+    )
+
+    assert paused.record.status is ExperimentStatus.PAUSED
+    assert reader.get_fold(key).projection.status is ExperimentStatus.QUEUED
+    assert reader.get_scheduler_slot().experiment_id == key.experiment_id
+
+
+def test_pause_rejects_running_fold_after_attempt_drain_without_writes(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    attempt_spec, attempt_projection = _attempt(api, key)
+    running_fold, _queued_attempt = writer.claim_fold_and_add_attempt(
+        key,
+        attempt_spec,
+        attempt_projection,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    running_attempt = writer.transition_attempt(
+        attempt_spec.attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=BacktestRunId("backtest-run-1"),
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+        occurred_at=NOW,
+        reason_code="attempt_started",
+        detail={},
+    )
+    completed_attempt = writer.transition_attempt(
+        attempt_spec.attempt_id,
+        target_status=ExperimentStatus.COMPLETED,
+        backtest_run_id=running_attempt.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=running_attempt.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+        occurred_at=NOW,
+        reason_code="attempt_completed",
+        detail={},
+    )
+    pause_requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+
+    preserved_fold = reader.get_fold(key).projection
+    before_events = reader.list_status_events(key.experiment_id)
+    before_slot = reader.get_scheduler_slot()
+    connection = database.get_connection()
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_scheduled_experiment(
+            key.experiment_id,
+            target_status=ExperimentStatus.PAUSED,
+            target_stage=pause_requested.record.stage,
+            failure_code=None,
+            expected_revision=pause_requested.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 5,
+            occurred_at=NOW,
+            attempt_started=True,
+            precondition_repairable=False,
+            reason_code="pause_without_fold_requeue",
+            detail={},
+        )
+
+    assert exc_info.value.details == {
+        "reason_code": "experiment_live_child",
+        "target_status": ExperimentStatus.PAUSED.value,
+        "child_type": "fold",
+        "child_status": ExperimentStatus.RUNNING.value,
+        "candidate_id": "candidate-1",
+        "fold_id": "fold-1",
+    }
+    assert reader.get_experiment_projection(key.experiment_id) == pause_requested
+    assert reader.get_fold(key).projection == running_fold == preserved_fold
+    assert reader.get_attempt(attempt_spec.attempt_id).projection == completed_attempt
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert reader.get_scheduler_slot() == before_slot
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+@pytest.mark.parametrize(
+    ("child_state", "expected_child_type", "expected_child_status"),
+    [
+        ("queued_attempt", "attempt", ExperimentStatus.QUEUED),
+        ("running_attempt", "attempt", ExperimentStatus.RUNNING),
+    ],
+)
+def test_pause_rejects_live_child_without_writes(
+    tmp_path: Path,
+    child_state: str,
+    expected_child_type: str,
+    expected_child_status: ExperimentStatus,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    attempt_spec, attempt_projection = _attempt(api, key)
+    writer.claim_fold_and_add_attempt(
+        key,
+        attempt_spec,
+        attempt_projection,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    if child_state == "running_attempt":
+        writer.transition_attempt(
+            attempt_spec.attempt_id,
+            target_status=ExperimentStatus.RUNNING,
+            backtest_run_id=BacktestRunId("backtest-run-1"),
+            checkpoint_ref=None,
+            failure_code=None,
+            expected_revision=0,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            reason_code="attempt_started",
+            detail={},
+        )
+    pause_requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=(child_state == "running_attempt"),
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_attempt = reader.get_attempt(attempt_spec.attempt_id)
+    before_events = reader.list_status_events(key.experiment_id)
+    before_slot = reader.get_scheduler_slot()
+    connection = database.get_connection()
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_scheduled_experiment(
+            key.experiment_id,
+            target_status=ExperimentStatus.PAUSED,
+            target_stage=pause_requested.record.stage,
+            failure_code=None,
+            expected_revision=pause_requested.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 4,
+            occurred_at=NOW,
+            attempt_started=(child_state == "running_attempt"),
+            precondition_repairable=False,
+            reason_code="pause_before_child_drain",
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_live_child"
+    assert exc_info.value.details["target_status"] == ExperimentStatus.PAUSED.value
+    assert exc_info.value.details["child_type"] == expected_child_type
+    assert exc_info.value.details["child_status"] == expected_child_status.value
+    assert reader.get_experiment_projection(key.experiment_id) == pause_requested
+    assert reader.get_fold(key) == before_fold
+    assert reader.get_attempt(attempt_spec.attempt_id) == before_attempt
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert reader.get_scheduler_slot() == before_slot
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+@pytest.mark.parametrize(
+    "attempt_status",
+    [ExperimentStatus.QUEUED, ExperimentStatus.RUNNING],
+)
+def test_pause_requeue_rejects_live_attempt_without_writes(
+    tmp_path: Path,
+    attempt_status: ExperimentStatus,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running_experiment = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    attempt_spec, initial_attempt = _attempt(api, key)
+    _running_fold, live_attempt = writer.claim_fold_and_add_attempt(
+        key,
+        attempt_spec,
+        initial_attempt,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    if attempt_status is ExperimentStatus.RUNNING:
+        live_attempt = writer.transition_attempt(
+            attempt_spec.attempt_id,
+            target_status=ExperimentStatus.RUNNING,
+            backtest_run_id=BacktestRunId("backtest-run-1"),
+            checkpoint_ref=None,
+            failure_code=None,
+            expected_revision=live_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            reason_code="attempt_started",
+            detail={},
+        )
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running_experiment.record.stage,
+        failure_code=None,
+        expected_revision=running_experiment.revision,
+        occurred_at=NOW,
+        attempt_started=(attempt_status is ExperimentStatus.RUNNING),
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_attempt = reader.get_attempt(attempt_spec.attempt_id)
+    before_events = reader.list_status_events(key.experiment_id)
+    connection = database.get_connection()
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_fold_for_pause(
+            key,
+            expected_fold_revision=before_fold.projection.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 4,
+            occurred_at=NOW,
+            detail={"checkpoint": "pending"},
+        )
+
+    assert exc_info.value.details == {
+        "reason_code": "pause_requeue_live_attempt",
+        "attempt_id": str(attempt_spec.attempt_id),
+        "attempt_status": attempt_status.value,
+    }
+    assert reader.get_fold(key) == before_fold
+    assert reader.get_attempt(attempt_spec.attempt_id).projection == live_attempt
+    assert reader.get_attempt(attempt_spec.attempt_id) == before_attempt
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+def test_pause_requeue_requires_pause_requested_parent_without_writes(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, _running = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    running_fold = writer.claim_fold(
+        key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    before_events = reader.list_status_events(key.experiment_id)
+    connection = database.get_connection()
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_fold_for_pause(
+            key,
+            expected_fold_revision=running_fold.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert exc_info.value.details == {
+        "reason_code": "pause_requeue_not_requested",
+        "status": ExperimentStatus.RUNNING.value,
+        "desired_state": ExperimentDesiredState.RUN.value,
+    }
+    assert reader.get_fold(key).projection == running_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+@pytest.mark.parametrize(
+    ("fence_case", "expected_reason", "now_epoch_us"),
+    [
+        ("wrong_owner", "scheduler_lease_lost", NOW_US + 3),
+        ("expired", "scheduler_lease_expired", NOW_US + 10),
+    ],
+)
+def test_pause_requeue_rejects_invalid_fence_without_writes(
+    tmp_path: Path,
+    fence_case: str,
+    expected_reason: str,
+    now_epoch_us: int,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    running_fold = writer.claim_fold(
+        key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    fence = lease.fence
+    if fence_case == "wrong_owner":
+        fence = type(lease.fence)(
+            experiment_id=lease.fence.experiment_id,
+            owner_token="owner-b",
+            revision=lease.fence.revision,
+            lease_until_epoch_us=lease.fence.lease_until_epoch_us,
+        )
+    before_events = reader.list_status_events(key.experiment_id)
+    before_slot = reader.get_scheduler_slot()
+    connection = database.get_connection()
+    before_changes = connection.total_changes
+
+    with pytest.raises(api.ExperimentLeaseLostError) as exc_info:
+        writer.requeue_fold_for_pause(
+            key,
+            expected_fold_revision=running_fold.revision,
+            lease_fence=fence,
+            now_epoch_us=now_epoch_us,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == expected_reason
+    assert reader.get_fold(key).projection == running_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert reader.get_scheduler_slot() == before_slot
+    assert connection.total_changes == before_changes
+    assert not connection.in_transaction
+
+
+def test_pause_requeue_event_failure_rolls_back_fold_update(tmp_path: Path) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    running_fold = writer.claim_fold(
+        key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        CREATE TRIGGER abort_pause_requeue_fold_event
+        BEFORE INSERT ON experiment_status_event
+        WHEN NEW.subject_type='fold'
+          AND NEW.reason_code='pause_recovery_requeue'
+        BEGIN
+            SELECT RAISE(ABORT, 'injected pause requeue event failure');
+        END
+        """
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.requeue_fold_for_pause(
+            key,
+            expected_fold_revision=running_fold.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            detail={"must_rollback": True},
+        )
+
+    assert exc_info.value.details["reason_code"] == "invalid_pause_requeue"
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert not connection.in_transaction
+
+
+def test_pause_requeue_reclaim_resume_dispatches_checkpoint_successor(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    old_lease, parent_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 10,
+    )
+    running_experiment = reader.get_experiment_projection(key.experiment_id)
+    pause_requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running_experiment.record.stage,
+        failure_code=None,
+        expected_revision=running_experiment.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    checkpointed = writer.transition_attempt(
+        parent_spec.attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=running_attempt.backtest_run_id,
+        checkpoint_ref=CheckpointRef("checkpoint-1"),
+        failure_code=None,
+        expected_revision=running_attempt.revision,
+        lease_fence=old_lease.fence,
+        now_epoch_us=NOW_US + 4,
+        occurred_at=NOW,
+        reason_code="checkpoint_saved",
+        detail={},
+    )
+    terminal_attempt = writer.transition_attempt(
+        parent_spec.attempt_id,
+        target_status=ExperimentStatus.CANCELLED,
+        backtest_run_id=checkpointed.backtest_run_id,
+        checkpoint_ref=checkpointed.checkpoint_ref,
+        failure_code=None,
+        expected_revision=checkpointed.revision,
+        lease_fence=old_lease.fence,
+        now_epoch_us=NOW_US + 5,
+        occurred_at=NOW,
+        reason_code="pause_attempt_drained",
+        detail={},
+    )
+    old_claimed_fold = reader.get_fold(key).projection
+
+    new_lease = writer.try_claim_lease(
+        key.experiment_id,
+        "owner-b",
+        expected_revision=old_lease.revision,
+        now_epoch_us=NOW_US + 10,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert new_lease is not None
+    assert reader.get_fold(key).projection == old_claimed_fold
+    assert old_claimed_fold.claim_owner_token == old_lease.owner_token
+
+    requeued_fold = writer.requeue_fold_for_pause(
+        key,
+        expected_fold_revision=old_claimed_fold.revision,
+        lease_fence=new_lease.fence,
+        now_epoch_us=NOW_US + 11,
+        occurred_at=NOW,
+        detail={"reclaimed_from": old_lease.owner_token},
+    )
+    paused = writer.transition_scheduled_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSED,
+        target_stage=pause_requested.record.stage,
+        failure_code=None,
+        expected_revision=pause_requested.revision,
+        lease_fence=new_lease.fence,
+        now_epoch_us=NOW_US + 12,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="pause_drained",
+        detail={},
+    )
+    resumed = writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.QUEUED,
+        target_desired_state=ExperimentDesiredState.RUN,
+        target_stage=paused.record.stage,
+        failure_code=None,
+        expected_revision=paused.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_resume",
+        detail={},
+    )
+    rerunning = writer.transition_scheduled_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.RUNNING,
+        target_stage=ExperimentStage.EXPLORATION,
+        failure_code=None,
+        expected_revision=resumed.revision,
+        lease_fence=new_lease.fence,
+        now_epoch_us=NOW_US + 13,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="resume_dispatch",
+        detail={},
+    )
+    successor_spec, successor_initial = _attempt(
+        api,
+        key,
+        "attempt-2",
+        ordinal=2,
+        parent_attempt_id=parent_spec.attempt_id,
+        resume_from_run_id=checkpointed.backtest_run_id,
+    )
+    successor_fold, successor = writer.claim_fold_and_add_attempt(
+        key,
+        successor_spec,
+        successor_initial,
+        expected_fold_revision=requeued_fold.revision,
+        lease_fence=new_lease.fence,
+        now_epoch_us=NOW_US + 14,
+        occurred_at=NOW,
+    )
+
+    assert terminal_attempt.status is ExperimentStatus.CANCELLED
+    assert terminal_attempt.checkpoint_ref == CheckpointRef("checkpoint-1")
+    assert requeued_fold.status is ExperimentStatus.QUEUED
+    assert requeued_fold.claim_owner_token is None
+    assert paused.record.status is ExperimentStatus.PAUSED
+    assert rerunning.record.status is ExperimentStatus.RUNNING
+    assert successor_fold.status is ExperimentStatus.RUNNING
+    assert successor_fold.claim_owner_token == new_lease.owner_token
+    assert successor == successor_initial
+    assert reader.get_attempt(successor_spec.attempt_id).spec == successor_spec
+    assert reader.get_scheduler_slot().owner_token == new_lease.owner_token
+    assert "pause_recovery_requeue" in {
+        event.reason_code for event in reader.list_status_events(key.experiment_id)
+    }
+
+
+def test_operator_resume_is_paused_to_queued_run_and_preserves_queue_identity(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, _api_ns = _store(tmp_path)
+    lease, running = _start_running_experiment(writer)
+    pause_requested = writer.transition_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    paused = writer.transition_scheduled_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.PAUSED,
+        target_stage=pause_requested.record.stage,
+        failure_code=None,
+        expected_revision=pause_requested.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="pause_drained",
+        detail={},
+    )
+
+    resumed = writer.transition_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.QUEUED,
+        target_desired_state=ExperimentDesiredState.RUN,
+        target_stage=paused.record.stage,
+        failure_code=None,
+        expected_revision=paused.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_resume",
+        detail={},
+    )
+
+    assert resumed.record.status is ExperimentStatus.QUEUED
+    assert resumed.record.desired_state is ExperimentDesiredState.RUN
+    assert resumed.record.stage is ExperimentStage.EXPLORATION
+    assert resumed.queue_ordinal == 1
+    assert reader.list_status_events(ExperimentId("experiment-1"))[
+        -1
+    ].desired_state is (ExperimentDesiredState.RUN)
+
+
+def test_scheduler_cannot_execute_operator_owned_paused_to_queued_resume(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, _api_ns = _store(tmp_path)
+    lease, running = _start_running_experiment(writer)
+    pause_requested = writer.transition_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    paused = writer.transition_scheduled_experiment(
+        ExperimentId("experiment-1"),
+        target_status=ExperimentStatus.PAUSED,
+        target_stage=pause_requested.record.stage,
+        failure_code=None,
+        expected_revision=pause_requested.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="pause_drained",
+        detail={},
+    )
+    before_events = reader.list_status_events(ExperimentId("experiment-1"))
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_scheduled_experiment(
+            ExperimentId("experiment-1"),
+            target_status=ExperimentStatus.QUEUED,
+            target_stage=paused.record.stage,
+            failure_code=None,
+            expected_revision=paused.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="scheduler_resume_bypass",
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "operator_transition_requires_operator_command"
+    )
+    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == paused
+    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
+
+
+def test_enqueue_rejects_draft_with_non_run_intent_without_queue_allocation(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET desired_state='pause', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+    before_projection = reader.get_experiment_projection(ExperimentId("experiment-1"))
+    before_events = reader.list_status_events(ExperimentId("experiment-1"))
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.enqueue_experiment(
+            ExperimentId("experiment-1"),
+            expected_revision=1,
+            occurred_at=NOW,
+            reason_code="preflight_passed",
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_desired_state_mismatch"
+    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == (
+        before_projection
+    )
+    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
+
+
+def test_scheduler_dispatch_rejects_queued_projection_with_non_run_intent(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    queued = writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-a",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET desired_state='pause', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+    before_projection = reader.get_experiment_projection(ExperimentId("experiment-1"))
+    before_events = reader.list_status_events(ExperimentId("experiment-1"))
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_scheduled_experiment(
+            ExperimentId("experiment-1"),
+            target_status=ExperimentStatus.RUNNING,
+            target_stage=ExperimentStage.EXPLORATION,
+            failure_code=None,
+            expected_revision=queued.revision + 1,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 1,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="dispatch",
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_desired_state_mismatch"
+    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == (
+        before_projection
+    )
+    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
+
+
+def test_stage_advance_rejects_running_projection_with_non_run_intent(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, _api_ns = _store(tmp_path)
+    lease, running = _start_running_experiment(writer)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET desired_state='pause', revision=revision + 1
+        WHERE experiment_id='experiment-1'
+        """
+    )
+    connection.commit()
+    before_projection = reader.get_experiment_projection(ExperimentId("experiment-1"))
+    before_events = reader.list_status_events(ExperimentId("experiment-1"))
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.advance_experiment_stage(
+            ExperimentId("experiment-1"),
+            target_stage=ExperimentStage.WALK_FORWARD,
+            expected_revision=running.revision + 1,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 2,
+            occurred_at=NOW,
+            reason_code="exploration_complete",
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_desired_state_mismatch"
+    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == (
+        before_projection
+    )
+    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
+
+
 def test_running_experiment_stage_advances_are_fenced_ordered_and_evented(
     tmp_path: Path,
 ) -> None:
@@ -606,19 +2602,12 @@ def test_downstream_fold_and_attempt_cas_require_current_unexpired_fence(
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease, _running_experiment = _start_running_experiment(writer)
     claimed = writer.claim_fold(
         key,
         expected_revision=0,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 1,
+        now_epoch_us=NOW_US + 2,
         occurred_at=NOW,
     )
     assert claimed.status is ExperimentStatus.RUNNING
@@ -629,11 +2618,11 @@ def test_downstream_fold_and_attempt_cas_require_current_unexpired_fence(
         attempt_spec,
         attempt_projection,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 1,
+        now_epoch_us=NOW_US + 2,
     )
     renewed = writer.renew_lease(
         lease.fence,
-        now_epoch_us=NOW_US + 2,
+        now_epoch_us=NOW_US + 3,
         new_lease_until_epoch_us=NOW_US + 200,
     )
 
@@ -646,7 +2635,7 @@ def test_downstream_fold_and_attempt_cas_require_current_unexpired_fence(
             failure_code=None,
             expected_revision=0,
             lease_fence=lease.fence,
-            now_epoch_us=NOW_US + 3,
+            now_epoch_us=NOW_US + 4,
             occurred_at=NOW,
             reason_code="started",
             detail={},
@@ -661,7 +2650,7 @@ def test_downstream_fold_and_attempt_cas_require_current_unexpired_fence(
         failure_code=None,
         expected_revision=0,
         lease_fence=renewed.fence,
-        now_epoch_us=NOW_US + 3,
+        now_epoch_us=NOW_US + 4,
         occurred_at=NOW,
         reason_code="started",
         detail={},
@@ -669,29 +2658,333 @@ def test_downstream_fold_and_attempt_cas_require_current_unexpired_fence(
     assert running.revision == 1
 
 
+@pytest.mark.parametrize(
+    ("experiment_status", "desired_state"),
+    [
+        (ExperimentStatus.PAUSE_REQUESTED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.PAUSED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.CANCEL_REQUESTED, ExperimentDesiredState.CANCEL),
+        (ExperimentStatus.COMPLETED, ExperimentDesiredState.RUN),
+        (ExperimentStatus.RUNNING, ExperimentDesiredState.PAUSE),
+    ],
+)
+def test_claim_fold_rejects_non_dispatchable_experiment_without_writes(
+    tmp_path: Path,
+    experiment_status: ExperimentStatus,
+    desired_state: ExperimentDesiredState,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, _running = _start_running_experiment(writer)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status=?, desired_state=?, revision=revision + 1
+        WHERE experiment_id=?
+        """,
+        (experiment_status.value, desired_state.value, str(key.experiment_id)),
+    )
+    connection.commit()
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.claim_fold(
+            key,
+            expected_revision=0,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 2,
+            occurred_at=NOW,
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_not_dispatchable"
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+
+
+@pytest.mark.parametrize(
+    ("experiment_status", "desired_state"),
+    [
+        (ExperimentStatus.PAUSE_REQUESTED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.PAUSED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.CANCEL_REQUESTED, ExperimentDesiredState.CANCEL),
+        (ExperimentStatus.COMPLETED, ExperimentDesiredState.RUN),
+        (ExperimentStatus.RUNNING, ExperimentDesiredState.PAUSE),
+    ],
+)
+def test_atomic_dispatch_rejects_non_dispatchable_experiment_without_writes(
+    tmp_path: Path,
+    experiment_status: ExperimentStatus,
+    desired_state: ExperimentDesiredState,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    attempt_spec, attempt_projection = _attempt(api, key)
+    lease, _running = _start_running_experiment(writer)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        UPDATE experiment SET status=?, desired_state=?, revision=revision + 1
+        WHERE experiment_id=?
+        """,
+        (experiment_status.value, desired_state.value, str(key.experiment_id)),
+    )
+    connection.commit()
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.claim_fold_and_add_attempt(
+            key,
+            attempt_spec,
+            attempt_projection,
+            expected_fold_revision=0,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 2,
+            occurred_at=NOW,
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_not_dispatchable"
+    assert reader.get_fold(key) == before_fold
+    assert reader.get_attempt(attempt_spec.attempt_id) is None
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+
+
+def test_operator_pause_commit_blocks_atomic_dispatch_with_the_existing_fence(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    attempt_spec, attempt_projection = _attempt(api, key)
+    lease, running = _start_running_experiment(writer)
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    connection = database.get_connection()
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.claim_fold_and_add_attempt(
+            key,
+            attempt_spec,
+            attempt_projection,
+            expected_fold_revision=0,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 2,
+            occurred_at=NOW,
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_not_dispatchable"
+    assert reader.get_fold(key) == before_fold
+    assert reader.get_attempt(attempt_spec.attempt_id) is None
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+
+
+def test_operator_pause_blocks_new_attempt_insert_on_an_owned_fold(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, running = _start_running_experiment(writer)
+    writer.claim_fold(
+        key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    attempt_spec, attempt_projection = _attempt(api, key)
+    connection = database.get_connection()
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.add_attempt(
+            attempt_spec,
+            attempt_projection,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_not_dispatchable"
+    assert reader.get_fold(key) == before_fold
+    assert reader.get_attempt(attempt_spec.attempt_id) is None
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+
+
+def test_operator_pause_blocks_queued_attempt_from_starting(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    attempt_spec, attempt_projection = _attempt(api, key)
+    lease, running = _start_running_experiment(writer)
+    writer.claim_fold_and_add_attempt(
+        key,
+        attempt_spec,
+        attempt_projection,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=ExperimentStatus.PAUSE_REQUESTED,
+        target_desired_state=ExperimentDesiredState.PAUSE,
+        target_stage=running.record.stage,
+        failure_code=None,
+        expected_revision=running.revision,
+        occurred_at=NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="operator_pause",
+        detail={},
+    )
+    connection = database.get_connection()
+    before_attempt = reader.get_attempt(attempt_spec.attempt_id)
+    before_events = reader.list_status_events(key.experiment_id)
+    before_changes = connection.total_changes
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_attempt(
+            attempt_spec.attempt_id,
+            target_status=ExperimentStatus.RUNNING,
+            backtest_run_id=BacktestRunId("backtest-run-1"),
+            checkpoint_ref=None,
+            failure_code=None,
+            expected_revision=0,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            reason_code="attempt_started",
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "experiment_not_dispatchable"
+    assert reader.get_attempt(attempt_spec.attempt_id) == before_attempt
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert connection.total_changes == before_changes
+
+
+@pytest.mark.parametrize(
+    ("requested_status", "requested_desired_state"),
+    [
+        (ExperimentStatus.PAUSE_REQUESTED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.CANCEL_REQUESTED, ExperimentDesiredState.CANCEL),
+    ],
+)
+def test_running_attempt_can_checkpoint_and_finish_after_control_request(
+    tmp_path: Path,
+    requested_status: ExperimentStatus,
+    requested_desired_state: ExperimentDesiredState,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, attempt_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    running_experiment = reader.get_experiment_projection(key.experiment_id)
+    assert running_experiment is not None
+    writer.transition_experiment(
+        key.experiment_id,
+        target_status=requested_status,
+        target_desired_state=requested_desired_state,
+        target_stage=running_experiment.record.stage,
+        failure_code=None,
+        expected_revision=running_experiment.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_control_requested",
+        detail={},
+    )
+
+    checkpoint_ref = CheckpointRef("checkpoint-1")
+    checkpointed = writer.transition_attempt(
+        attempt_spec.attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=running_attempt.backtest_run_id,
+        checkpoint_ref=checkpoint_ref,
+        failure_code=None,
+        expected_revision=running_attempt.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+        occurred_at=NOW,
+        reason_code="checkpoint_saved",
+        detail={},
+    )
+    terminal = writer.transition_attempt(
+        attempt_spec.attempt_id,
+        target_status=ExperimentStatus.CANCELLED,
+        backtest_run_id=checkpointed.backtest_run_id,
+        checkpoint_ref=checkpointed.checkpoint_ref,
+        failure_code=None,
+        expected_revision=checkpointed.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 5,
+        occurred_at=NOW,
+        reason_code="control_request_drained",
+        detail={},
+    )
+
+    assert checkpointed.status is ExperimentStatus.RUNNING
+    assert checkpointed.checkpoint_ref == checkpoint_ref
+    assert terminal.status is ExperimentStatus.CANCELLED
+    assert terminal.checkpoint_ref == checkpoint_ref
+
+
 def test_add_attempt_rejects_a_stale_fence_before_inserting_any_rows(
     tmp_path: Path,
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease, _running_experiment = _start_running_experiment(writer)
     writer.claim_fold(
         key,
         expected_revision=0,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 1,
+        now_epoch_us=NOW_US + 2,
         occurred_at=NOW,
     )
     renewed = writer.renew_lease(
         lease.fence,
-        now_epoch_us=NOW_US + 2,
+        now_epoch_us=NOW_US + 3,
         new_lease_until_epoch_us=NOW_US + 200,
     )
     spec, projection = _attempt(api, key)
@@ -701,7 +2994,7 @@ def test_add_attempt_rejects_a_stale_fence_before_inserting_any_rows(
             spec,
             projection,
             lease_fence=lease.fence,
-            now_epoch_us=NOW_US + 3,
+            now_epoch_us=NOW_US + 4,
         )
     assert reader.get_attempt(AttemptId("attempt-1")) is None
 
@@ -709,7 +3002,7 @@ def test_add_attempt_rejects_a_stale_fence_before_inserting_any_rows(
         spec,
         projection,
         lease_fence=renewed.fence,
-        now_epoch_us=NOW_US + 3,
+        now_epoch_us=NOW_US + 4,
     )
     assert reader.get_attempt(AttemptId("attempt-1")) is not None
 
@@ -719,38 +3012,6 @@ def test_claim_fold_and_add_attempt_is_one_atomic_dispatch_transaction(
 ) -> None:
     database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
-    spec, projection = _attempt(api, key)
-
-    fold_projection, attempt_projection = writer.claim_fold_and_add_attempt(
-        key,
-        spec,
-        projection,
-        expected_fold_revision=0,
-        lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 1,
-        occurred_at=NOW,
-    )
-
-    assert fold_projection.status is ExperimentStatus.RUNNING
-    assert attempt_projection == projection
-    assert reader.get_fold(key).projection.revision == 1
-    assert reader.get_attempt(AttemptId("attempt-1")).projection == projection
-    events = reader.list_status_events(ExperimentId("experiment-1"))
-    assert [(event.subject_type.value, event.subject_revision) for event in events] == [
-        ("experiment", 0),
-        ("fold", 0),
-        ("fold", 1),
-        ("attempt", 0),
-    ]
-
     second_key = api.FoldKey(
         ExperimentId("experiment-1"), CandidateId("candidate-1"), FoldId("fold-2")
     )
@@ -767,6 +3028,34 @@ def test_claim_fold_and_add_attempt_is_one_atomic_dispatch_transaction(
         second_fold,
         api.FoldProjection(second_key, ExperimentStatus.QUEUED, None, NOW, NOW, 0),
     )
+    lease, _running_experiment = _start_running_experiment(writer)
+    spec, projection = _attempt(api, key)
+
+    fold_projection, attempt_projection = writer.claim_fold_and_add_attempt(
+        key,
+        spec,
+        projection,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+
+    assert fold_projection.status is ExperimentStatus.RUNNING
+    assert attempt_projection == projection
+    assert reader.get_fold(key).projection.revision == 1
+    assert reader.get_attempt(AttemptId("attempt-1")).projection == projection
+    events = reader.list_status_events(ExperimentId("experiment-1"))
+    assert [(event.subject_type.value, event.subject_revision) for event in events] == [
+        ("experiment", 0),
+        ("experiment", 1),
+        ("experiment", 2),
+        ("fold", 0),
+        ("fold", 1),
+        ("fold", 0),
+        ("attempt", 0),
+    ]
+
     database.get_connection().execute(
         """
         CREATE TRIGGER abort_attempt_dispatch
@@ -786,7 +3075,7 @@ def test_claim_fold_and_add_attempt_is_one_atomic_dispatch_transaction(
             second_projection,
             expected_fold_revision=0,
             lease_fence=lease.fence,
-            now_epoch_us=NOW_US + 2,
+            now_epoch_us=NOW_US + 3,
             occurred_at=NOW,
         )
 
@@ -800,14 +3089,7 @@ def test_atomic_successor_dispatch_rejects_missing_parent_without_mutating_fold(
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease, _running_experiment = _start_running_experiment(writer)
     retry = api.AttemptPersistenceSpec(
         AttemptId("attempt-retry"),
         key,
@@ -835,7 +3117,7 @@ def test_atomic_successor_dispatch_rejects_missing_parent_without_mutating_fold(
             projection,
             expected_fold_revision=0,
             lease_fence=lease.fence,
-            now_epoch_us=NOW_US + 1,
+            now_epoch_us=NOW_US + 2,
             occurred_at=NOW,
         )
 
@@ -1099,14 +3381,10 @@ def test_atomic_successor_dispatch_validates_parent_before_fold_claim(
 def test_expired_fence_cannot_claim_or_write_work(tmp_path: Path) -> None:
     _database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
+    lease, _running_experiment = _start_running_experiment(
+        writer,
         lease_until_epoch_us=NOW_US + 10,
     )
-    assert lease is not None
 
     with pytest.raises(api.ExperimentLeaseLostError) as exc_info:
         writer.claim_fold(
@@ -1164,14 +3442,7 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
-        lease_until_epoch_us=NOW_US + 100,
-    )
-    assert lease is not None
+    lease, _running_experiment = _start_running_experiment(writer)
     spec, projection = _attempt(api, key)
     writer.claim_fold_and_add_attempt(
         key,
@@ -1179,7 +3450,7 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
         projection,
         expected_fold_revision=0,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 1,
+        now_epoch_us=NOW_US + 2,
         occurred_at=NOW,
     )
     running = writer.transition_attempt(
@@ -1190,7 +3461,7 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
         failure_code=None,
         expected_revision=0,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 2,
+        now_epoch_us=NOW_US + 3,
         occurred_at=NOW,
         reason_code="started",
         detail={},
@@ -1203,7 +3474,7 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
         failure_code=None,
         expected_revision=running.revision,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 3,
+        now_epoch_us=NOW_US + 4,
         occurred_at=NOW,
         reason_code="completed",
         detail={},
@@ -1218,7 +3489,7 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
             failure_code=None,
             expected_revision=completed.revision,
             lease_fence=lease.fence,
-            now_epoch_us=NOW_US + 4,
+            now_epoch_us=NOW_US + 5,
             occurred_at=NOW,
             reason_code="illegal_restart",
             detail={},
@@ -1233,7 +3504,7 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
         failure_code=None,
         expected_revision=1,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 4,
+        now_epoch_us=NOW_US + 5,
         occurred_at=NOW,
         reason_code="completed",
         detail={},
@@ -1246,7 +3517,7 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
             failure_code=None,
             expected_revision=terminal_fold.revision,
             lease_fence=lease.fence,
-            now_epoch_us=NOW_US + 5,
+            now_epoch_us=NOW_US + 6,
             occurred_at=NOW,
             reason_code="illegal_restart",
             detail={},

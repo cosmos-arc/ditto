@@ -50,13 +50,19 @@ from ditto_analysis.storage.sqlite.experiments._experiment_control import (
     SQLiteExperimentControlMixin,
     validate_experiment_status_stage_transition,
 )
+from ditto_analysis.storage.sqlite.experiments._experiment_rules import (
+    validate_operator_experiment_transition,
+)
 from ditto_analysis.storage.sqlite.experiments._facts import (
     SQLiteExperimentFactsMixin,
 )
 from ditto_analysis.storage.sqlite.experiments._work_rules import (
     validate_attempt_fold_owner,
+    validate_attempt_start_dispatchable,
     validate_attempt_transition,
+    validate_experiment_dispatchable,
     validate_fold_transition,
+    validate_new_fold_creation_allowed,
 )
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
@@ -70,16 +76,6 @@ _WORK_STATUSES = frozenset(
         ExperimentStatus.CANCELLED,
         ExperimentStatus.COMPLETED,
         ExperimentStatus.FAILED,
-    }
-)
-
-_OPERATOR_EXPERIMENT_TRANSITIONS = frozenset(
-    {
-        (ExperimentStatus.DRAFT, ExperimentStatus.BLOCKED),
-        (ExperimentStatus.QUEUED, ExperimentStatus.CANCEL_REQUESTED),
-        (ExperimentStatus.RUNNING, ExperimentStatus.PAUSE_REQUESTED),
-        (ExperimentStatus.RUNNING, ExperimentStatus.CANCEL_REQUESTED),
-        (ExperimentStatus.PAUSED, ExperimentStatus.CANCEL_REQUESTED),
     }
 )
 
@@ -170,14 +166,13 @@ class SQLiteExperimentWriter(
                 attempt_started=attempt_started,
                 precondition_repairable=precondition_repairable,
             )
-            if (
+            current_desired_state = ExperimentDesiredState(row["desired_state"])
+            validate_operator_experiment_transition(
                 current_status,
+                current_desired_state,
                 target_status,
-            ) not in _OPERATOR_EXPERIMENT_TRANSITIONS:
-                raise ExperimentSpecError(
-                    "scheduler-owned experiment transition requires a lease fence",
-                    details={"reason_code": "scheduler_transition_requires_fence"},
-                )
+                target_desired_state,
+            )
             validate_experiment_status_stage_transition(
                 current_status,
                 ExperimentStage(row["stage"]),
@@ -291,6 +286,7 @@ class SQLiteExperimentWriter(
                 self._verify_fold_replay(connection, existing, values, initial)
                 connection.commit()
                 return
+            validate_new_fold_creation_allowed(connection, spec.key.experiment_id)
             connection.execute(
                 """
                 INSERT INTO experiment_fold(
@@ -321,7 +317,7 @@ class SQLiteExperimentWriter(
                 occurred_at=initial.created_at,
             )
             connection.commit()
-        except (ExperimentConflictError, ExperimentIntegrityError):
+        except AnalysisError:
             connection.rollback()
             raise
         except sqlite3.IntegrityError as exc:
@@ -418,6 +414,7 @@ class SQLiteExperimentWriter(
             self._validate_lease(
                 connection, lease_fence, now_epoch_us, spec.fold_key.experiment_id
             )
+            validate_experiment_dispatchable(connection, spec.fold_key.experiment_id)
             validate_attempt_fold_owner(
                 connection, spec.fold_key, lease_fence.owner_token
             )
@@ -564,6 +561,8 @@ class SQLiteExperimentWriter(
             self._validate_lease(
                 connection, lease_fence, now_epoch_us, key.experiment_id
             )
+            if target_status is ExperimentStatus.RUNNING:
+                validate_experiment_dispatchable(connection, key.experiment_id)
             row = connection.execute(
                 """
                 SELECT * FROM experiment_fold
@@ -686,8 +685,12 @@ class SQLiteExperimentWriter(
                 raise _conflict(
                     "attempt revision is stale", "stale_projection_revision"
                 )
-            validate_attempt_transition(
-                ExperimentStatus(row["status"]),
+            previous_status = ExperimentStatus(row["status"])
+            validate_attempt_transition(previous_status, target_status)
+            validate_attempt_start_dispatchable(
+                connection,
+                experiment_id,
+                previous_status,
                 target_status,
             )
             if (
@@ -740,7 +743,7 @@ class SQLiteExperimentWriter(
                 fold_id=row["fold_id"],
                 attempt_id=row["attempt_id"],
                 revision=new_revision,
-                previous_status=ExperimentStatus(row["status"]),
+                previous_status=previous_status,
                 status=target_status,
                 desired_state=None,
                 stage=None,

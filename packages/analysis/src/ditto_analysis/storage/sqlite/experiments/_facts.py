@@ -111,18 +111,21 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            self._validate_lease(
-                connection, lease_fence, now_epoch_us, record.experiment_id
-            )
             existing = connection.execute(
                 "SELECT * FROM research_artifact WHERE artifact_id=?",
                 (record.artifact_id,),
             ).fetchone()
             if existing is not None:
-                if tuple(existing) != values:
+                immutable_indexes = (*range(13), 15)
+                if tuple(existing[index] for index in immutable_indexes) != tuple(
+                    values[index] for index in immutable_indexes
+                ):
                     raise _conflict("artifact replay drift", "artifact_replay_drift")
                 connection.commit()
                 return
+            self._validate_lease(
+                connection, lease_fence, now_epoch_us, record.experiment_id
+            )
             connection.execute(
                 """
                 INSERT INTO research_artifact(

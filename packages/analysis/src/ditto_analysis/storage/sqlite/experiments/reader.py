@@ -53,11 +53,19 @@ from ditto_analysis.experiments.persistence import (
     canonical_payload,
     decode_launch_spec,
     encode_candidate_parameters,
+    encode_launch_spec,
 )
 from ditto_analysis.experiments.specs import (
     CandidateSpec,
     ExperimentLaunchSpec,
     FrozenValue,
+)
+from ditto_analysis.storage.sqlite.experiments._events import (
+    canonical_status_event_id,
+    event_values,
+)
+from ditto_analysis.storage.sqlite.experiments._scheduler_queue import (
+    scheduler_queue_candidates,
 )
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
@@ -142,18 +150,54 @@ class SQLiteExperimentReader:
             row["launch_spec_json"].encode("utf-8"),
             ContentHash(row["launch_spec_hash"]),
         )
+        canonical_launch = encode_launch_spec(spec)
+        if row["launch_spec_schema_version"] != canonical_launch.schema_version:
+            raise _integrity(
+                "relational launch schema version disagrees with its payload",
+                "launch_schema_version_mismatch",
+                experiment_id=str(experiment_id),
+            )
         if (
             spec.experiment_id != experiment_id
             or str(spec.strategy_version) != row["strategy_version"]
             or str(spec.strategy_spec_hash) != row["strategy_spec_hash"]
             or str(spec.snapshot_id) != row["snapshot_id"]
-            or spec.desired_state.value != row["desired_state"]
             or int(spec.created_at.timestamp() * 1_000_000)
             != row["created_at_epoch_us"]
         ):
             raise _integrity(
-                "launch payload disagrees with the experiment projection",
+                "launch payload disagrees with immutable relational fields",
                 "launch_projection_drift",
+                experiment_id=str(experiment_id),
+            )
+        expected_creation = event_values(
+            subject_type="experiment",
+            experiment_id=str(experiment_id),
+            candidate_id=None,
+            fold_id=None,
+            attempt_id=None,
+            revision=0,
+            previous_status=None,
+            status=ExperimentStatus.DRAFT,
+            desired_state=spec.desired_state,
+            stage=ExperimentStage.PREFLIGHT,
+            failure_code=None,
+            reason_code="experiment_created",
+            detail={},
+            occurred_at_epoch_us=int(spec.created_at.timestamp() * 1_000_000),
+        )
+        creation = self._one(
+            """
+            SELECT * FROM experiment_status_event
+            WHERE experiment_id=? AND subject_type='experiment'
+              AND subject_revision=0
+            """,
+            (str(experiment_id),),
+        )
+        if creation is None or tuple(creation) != expected_creation:
+            raise _integrity(
+                "launch creation event is missing or drifted",
+                "launch_creation_event_drift",
                 experiment_id=str(experiment_id),
             )
         persisted_candidates = self.list_candidates(experiment_id)
@@ -193,17 +237,7 @@ class SQLiteExperimentReader:
         )
 
     def list_dispatchable_experiments(self) -> tuple[ExperimentProjection, ...]:
-        rows = (
-            self._database.get_connection()
-            .execute(
-                """
-                SELECT * FROM experiment
-                WHERE status='queued'
-                ORDER BY queue_ordinal, experiment_id
-                """
-            )
-            .fetchall()
-        )
+        rows = scheduler_queue_candidates(self._database.get_connection())
         return tuple(self._experiment_projection(row) for row in rows)
 
     def list_candidates(self, experiment_id: ExperimentId) -> tuple[CandidateSpec, ...]:
@@ -443,6 +477,21 @@ class SQLiteExperimentReader:
         )
         events: list[StatusEventRecord] = []
         for row in rows:
+            expected_event_id = canonical_status_event_id(
+                subject_type=row["subject_type"],
+                experiment_id=row["experiment_id"],
+                candidate_id=row["candidate_id"],
+                fold_id=row["fold_id"],
+                attempt_id=row["attempt_id"],
+                revision=row["subject_revision"],
+            )
+            if row["event_id"] != expected_event_id:
+                raise _integrity(
+                    "status event ID disagrees with its canonical lineage",
+                    "status_event_id_mismatch",
+                    event_id=row["event_id"],
+                    expected_event_id=expected_event_id,
+                )
             detail = _json_object(row["detail_json"], "detail_json")
             detail_payload = canonical_payload(detail)
             if str(detail_payload.content_hash) != row["detail_hash"]:

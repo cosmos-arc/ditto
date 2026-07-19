@@ -88,12 +88,14 @@ class ResearchArtifactService:
         except FileNotFoundError:
             pass
         else:
-            return self._validate_immutable_replay(
+            digest = self._validate_immutable_replay(
                 relative_path=relative_path,
                 existing=existing,
                 incoming=payload,
                 incoming_sha256=incoming_sha256,
             )
+            self._fsync_parent_directory(target)
+            return digest
 
         target.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary_name = tempfile.mkstemp(
@@ -112,12 +114,15 @@ class ResearchArtifactService:
                 os.link(temporary, target)
             except FileExistsError:
                 existing = target.read_bytes()
-                return self._validate_immutable_replay(
+                digest = self._validate_immutable_replay(
                     relative_path=relative_path,
                     existing=existing,
                     incoming=payload,
                     incoming_sha256=incoming_sha256,
                 )
+                self._fsync_parent_directory(target)
+                return digest
+            self._fsync_parent_directory(target)
             return incoming_sha256
         finally:
             if descriptor >= 0:
@@ -125,6 +130,14 @@ class ResearchArtifactService:
                     os.close(descriptor)
             with suppress(FileNotFoundError):
                 temporary.unlink()
+
+    @staticmethod
+    def _fsync_parent_directory(target: Path) -> None:
+        directory_descriptor = os.open(target.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_descriptor)
+        finally:
+            os.close(directory_descriptor)
 
     @staticmethod
     def _validate_immutable_replay(

@@ -77,6 +77,7 @@ def _launch(
     *,
     candidates: object | None = None,
     created_at: datetime = NOW,
+    desired_state: ExperimentDesiredState = ExperimentDesiredState.RUN,
 ) -> ExperimentLaunchSpec:
     return ExperimentLaunchSpec(
         experiment_id=ExperimentId("exp-1"),
@@ -97,7 +98,7 @@ def _launch(
         worker_count=2,
         failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
         budget=ExperimentBudget(candidate_limit=128, fold_run_limit=1024),
-        desired_state=ExperimentDesiredState.RUN,
+        desired_state=desired_state,
         created_at=created_at,
     )
 
@@ -110,6 +111,19 @@ def test_launch_spec_is_immutable_and_candidate_count_includes_baseline() -> Non
 
     assert spec.candidate_count == 2
     assert spec.baseline_candidate.candidate_id == CandidateId("candidate-1")
+
+
+@pytest.mark.parametrize(
+    "desired_state",
+    [ExperimentDesiredState.PAUSE, ExperimentDesiredState.CANCEL],
+)
+def test_launch_spec_requires_initial_run_intent_before_any_persistence(
+    desired_state: ExperimentDesiredState,
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(desired_state=desired_state)
+
+    assert exc_info.value.details["reason_code"] == "initial_desired_state_must_be_run"
 
 
 def test_launch_spec_defensively_freezes_nested_candidate_parameters() -> None:

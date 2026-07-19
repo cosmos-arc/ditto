@@ -334,6 +334,11 @@ class ExperimentLaunchSpec:
                     "invalid_launch_spec_field",
                     field=field_name,
                 )
+        if self.desired_state is not ExperimentDesiredState.RUN:
+            raise _spec_error(
+                "experiment launch must begin with run intent",
+                "initial_desired_state_must_be_run",
+            )
         if type(self.seed) is not int or self.seed < 0:
             raise _spec_error(
                 "seed must be a non-negative integer",

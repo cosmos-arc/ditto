@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from datetime import datetime
 
 from ditto_analysis.errors import (
+    AnalysisError,
     ExperimentConflictError,
     ExperimentIntegrityError,
     ExperimentLeaseLostError,
@@ -36,6 +37,7 @@ from ditto_analysis.experiments.persistence import (
 )
 from ditto_analysis.storage.sqlite.experiments._work_rules import (
     validate_attempt_fold_owner,
+    validate_experiment_dispatchable,
     validate_fold_transition,
 )
 from ditto_analysis.storage.sqlite.experiments.database import (
@@ -127,6 +129,7 @@ class SQLiteAtomicDispatchMixin:
             self._validate_lease(
                 connection, lease_fence, now_epoch_us, key.experiment_id
             )
+            validate_experiment_dispatchable(connection, key.experiment_id)
             fold = connection.execute(
                 """
                 SELECT * FROM experiment_fold
@@ -413,6 +416,178 @@ class SQLiteAtomicDispatchMixin:
             occurred_at,
             revision,
         )
+
+    @staticmethod
+    def _validate_pause_requeue_preconditions(
+        connection: sqlite3.Connection,
+        key: FoldKey,
+        expected_fold_revision: int,
+    ) -> sqlite3.Row:
+        parent = connection.execute(
+            """
+            SELECT status, desired_state FROM experiment
+            WHERE experiment_id=?
+            """,
+            (str(key.experiment_id),),
+        ).fetchone()
+        if parent is None:
+            raise _integrity("experiment does not exist", "experiment_not_found")
+        if (
+            parent["status"] != ExperimentStatus.PAUSE_REQUESTED.value
+            or parent["desired_state"] != ExperimentDesiredState.PAUSE.value
+        ):
+            raise ExperimentSpecError(
+                "pause fold requeue requires a pause-requested experiment",
+                details={
+                    "reason_code": "pause_requeue_not_requested",
+                    "status": parent["status"],
+                    "desired_state": parent["desired_state"],
+                },
+            )
+        fold = connection.execute(
+            """
+            SELECT * FROM experiment_fold
+            WHERE experiment_id=? AND candidate_id=? AND fold_id=?
+            """,
+            (str(key.experiment_id), str(key.candidate_id), str(key.fold_id)),
+        ).fetchone()
+        if fold is None:
+            raise _integrity("fold does not exist", "fold_not_found")
+        if fold["revision"] != expected_fold_revision:
+            raise _conflict("fold revision is stale", "stale_projection_revision")
+        if fold["status"] != ExperimentStatus.RUNNING.value:
+            raise ExperimentSpecError(
+                "pause recovery requires a running fold",
+                details={
+                    "reason_code": "pause_requeue_fold_not_running",
+                    "status": fold["status"],
+                },
+            )
+        if fold["claim_owner_token"] is None:
+            raise _integrity(
+                "running fold is missing its persisted claim owner",
+                "running_fold_missing_claim_owner",
+            )
+        live_attempt = connection.execute(
+            """
+            SELECT attempt_id, status FROM experiment_attempt
+            WHERE experiment_id=? AND candidate_id=? AND fold_id=?
+              AND status IN ('queued', 'running')
+            ORDER BY ordinal, attempt_id
+            LIMIT 1
+            """,
+            (str(key.experiment_id), str(key.candidate_id), str(key.fold_id)),
+        ).fetchone()
+        if live_attempt is not None:
+            raise ExperimentSpecError(
+                "pause recovery requires every fold attempt to be terminal",
+                details={
+                    "reason_code": "pause_requeue_live_attempt",
+                    "attempt_id": live_attempt["attempt_id"],
+                    "attempt_status": live_attempt["status"],
+                },
+            )
+        return fold
+
+    def requeue_fold_for_pause(
+        self,
+        key: FoldKey,
+        *,
+        expected_fold_revision: int,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> FoldProjection:
+        """Explicitly unclaim a drained running fold during cooperative pause."""
+        connection = self._database.get_connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            self._validate_lease(
+                connection,
+                lease_fence,
+                now_epoch_us,
+                key.experiment_id,
+            )
+            fold = self._validate_pause_requeue_preconditions(
+                connection,
+                key,
+                expected_fold_revision,
+            )
+            validate_fold_transition(
+                ExperimentStatus.RUNNING,
+                ExperimentStatus.QUEUED,
+                claim_owner_token=None,
+                fence_owner_token=lease_fence.owner_token,
+                failure_code=None,
+                reason_code="pause_recovery_requeue",
+            )
+            new_revision = expected_fold_revision + 1
+            cursor = connection.execute(
+                """
+                UPDATE experiment_fold
+                SET status='queued', claim_owner_token=NULL,
+                    updated_at_epoch_us=?, revision=?
+                WHERE experiment_id=? AND candidate_id=? AND fold_id=?
+                  AND revision=? AND status='running'
+                  AND claim_owner_token=?
+                """,
+                (
+                    _epoch_us(occurred_at),
+                    new_revision,
+                    str(key.experiment_id),
+                    str(key.candidate_id),
+                    str(key.fold_id),
+                    expected_fold_revision,
+                    fold["claim_owner_token"],
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise _conflict("fold CAS lost", "stale_projection_revision")
+            self._insert_event(
+                connection,
+                subject_type="fold",
+                experiment_id=str(key.experiment_id),
+                candidate_id=str(key.candidate_id),
+                fold_id=str(key.fold_id),
+                attempt_id=None,
+                revision=new_revision,
+                previous_status=ExperimentStatus.RUNNING,
+                status=ExperimentStatus.QUEUED,
+                desired_state=None,
+                stage=None,
+                failure_code=None,
+                reason_code="pause_recovery_requeue",
+                detail=detail,
+                occurred_at=occurred_at,
+            )
+            connection.commit()
+            return FoldProjection(
+                key,
+                ExperimentStatus.QUEUED,
+                None,
+                datetime.fromtimestamp(
+                    fold["created_at_epoch_us"] / 1_000_000,
+                    tz=occurred_at.tzinfo,
+                ),
+                occurred_at,
+                new_revision,
+            )
+        except AnalysisError:
+            connection.rollback()
+            raise
+        except sqlite3.IntegrityError as exc:
+            connection.rollback()
+            raise _integrity(
+                "pause recovery lineage or event constraint failed",
+                "invalid_pause_requeue",
+            ) from exc
+        except sqlite3.Error as exc:
+            connection.rollback()
+            raise ExperimentPersistenceError(
+                "pause fold requeue failed and was rolled back",
+                details={"reason_code": "pause_requeue_failed"},
+            ) from exc
 
     def requeue_interrupted_fold(
         self,

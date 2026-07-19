@@ -184,6 +184,17 @@ class ExperimentWriterProtocol(Protocol):
         detail: Mapping[str, object],
     ) -> FoldProjection: ...
 
+    def requeue_fold_for_pause(
+        self,
+        key: FoldKey,
+        *,
+        expected_fold_revision: int,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> FoldProjection: ...
+
     def requeue_interrupted_fold(
         self,
         key: FoldKey,

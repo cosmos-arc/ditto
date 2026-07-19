@@ -27,6 +27,13 @@ from ditto_analysis.experiments.models import (
     validate_status_transition,
 )
 from ditto_analysis.experiments.persistence import ExperimentProjection, LeaseFence
+from ditto_analysis.storage.sqlite.experiments._experiment_rules import (
+    validate_expected_desired_state,
+    validate_scheduled_experiment_transition,
+)
+from ditto_analysis.storage.sqlite.experiments._work_rules import (
+    find_experiment_live_child,
+)
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
 )
@@ -155,6 +162,12 @@ class SQLiteExperimentControlMixin:
                 attempt_started=False,
                 precondition_repairable=False,
             )
+            desired_state = ExperimentDesiredState(row["desired_state"])
+            validate_expected_desired_state(
+                current_status,
+                desired_state,
+                ExperimentDesiredState.RUN,
+            )
             if row["queue_ordinal"] is not None:
                 raise _conflict(
                     "experiment queue ordinal is already allocated",
@@ -182,7 +195,6 @@ class SQLiteExperimentControlMixin:
                 raise _conflict(
                     "experiment enqueue CAS lost", "stale_projection_revision"
                 )
-            desired_state = ExperimentDesiredState(row["desired_state"])
             stage = ExperimentStage(row["stage"])
             self._insert_event(
                 connection,
@@ -265,13 +277,18 @@ class SQLiteExperimentControlMixin:
                 attempt_started=attempt_started,
                 precondition_repairable=precondition_repairable,
             )
+            desired_state = ExperimentDesiredState(row["desired_state"])
+            validate_scheduled_experiment_transition(
+                current_status,
+                target_status,
+                desired_state,
+            )
             validate_experiment_status_stage_transition(
                 current_status,
                 ExperimentStage(row["stage"]),
                 target_status,
                 target_stage,
             )
-            desired_state = ExperimentDesiredState(row["desired_state"])
             record = ExperimentRecord(
                 experiment_id,
                 target_status,
@@ -283,6 +300,19 @@ class SQLiteExperimentControlMixin:
                 ),
                 failure_code,
             )
+            live_child = find_experiment_live_child(
+                connection,
+                experiment_id,
+                target_status,
+            )
+            if live_child is not None:
+                raise ExperimentSpecError(
+                    "experiment has child work that must drain before transition",
+                    details={
+                        "reason_code": "experiment_live_child",
+                        **live_child,
+                    },
+                )
             new_revision = expected_revision + 1
             cursor = connection.execute(
                 """
@@ -365,6 +395,13 @@ class SQLiteExperimentControlMixin:
                 )
             current_status = ExperimentStatus(row["status"])
             current_stage = ExperimentStage(row["stage"])
+            desired_state = ExperimentDesiredState(row["desired_state"])
+            if current_status is ExperimentStatus.RUNNING:
+                validate_expected_desired_state(
+                    current_status,
+                    desired_state,
+                    ExperimentDesiredState.RUN,
+                )
             if (
                 current_status is not ExperimentStatus.RUNNING
                 or _NEXT_RUNNING_STAGE.get(current_stage) is not target_stage
@@ -397,7 +434,6 @@ class SQLiteExperimentControlMixin:
                 raise _conflict(
                     "experiment stage CAS lost", "stale_projection_revision"
                 )
-            desired_state = ExperimentDesiredState(row["desired_state"])
             failure_code = (
                 None
                 if row["failure_code"] is None
