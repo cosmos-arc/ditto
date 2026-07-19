@@ -27,6 +27,58 @@ from ditto_analysis.experiments import (
 
 NOW = datetime(2026, 7, 19, 4, 0, tzinfo=UTC)
 
+EXPERIMENT_FAILURE_POLICY_CASES = [
+    (ExperimentStatus.DRAFT, None, ExperimentFailureCode.CANDIDATE_FAILED, False),
+    (
+        ExperimentStatus.BLOCKED,
+        ExperimentFailureCode.SNAPSHOT_NOT_CERTIFIED,
+        ExperimentFailureCode.CANDIDATE_FAILED,
+        False,
+    ),
+    (ExperimentStatus.QUEUED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (ExperimentStatus.RUNNING, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (
+        ExperimentStatus.PAUSE_REQUESTED,
+        None,
+        ExperimentFailureCode.SYSTEM_ERROR,
+        False,
+    ),
+    (ExperimentStatus.PAUSED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (
+        ExperimentStatus.CANCEL_REQUESTED,
+        None,
+        ExperimentFailureCode.SYSTEM_ERROR,
+        False,
+    ),
+    (ExperimentStatus.CANCELLED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (ExperimentStatus.COMPLETED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (
+        ExperimentStatus.COMPLETED_WITH_FAILURES,
+        ExperimentFailureCode.CANDIDATE_FAILED,
+        ExperimentFailureCode.SYSTEM_ERROR,
+        True,
+    ),
+    (
+        ExperimentStatus.FAILED,
+        ExperimentFailureCode.SYSTEM_ERROR,
+        ExperimentFailureCode.SNAPSHOT_NOT_CERTIFIED,
+        True,
+    ),
+]
+
+ATTEMPT_FAILURE_POLICY_CASES = [
+    (ExperimentStatus.QUEUED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (ExperimentStatus.RUNNING, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (ExperimentStatus.CANCELLED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (ExperimentStatus.COMPLETED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
+    (
+        ExperimentStatus.FAILED,
+        ExperimentFailureCode.CANDIDATE_FAILED,
+        ExperimentFailureCode.SNAPSHOT_NOT_CERTIFIED,
+        True,
+    ),
+]
+
 
 @pytest.mark.parametrize(
     "identity_type",
@@ -127,6 +179,92 @@ def test_failure_code_is_stable_and_only_present_for_failure_outcomes() -> None:
     assert record.failure_code.value == "system_error"
 
 
+def test_preflight_blocker_failure_codes_are_stable() -> None:
+    assert (
+        ExperimentFailureCode("snapshot_not_certified").value
+        == "snapshot_not_certified"
+    )
+    assert ExperimentFailureCode("insufficient_history").value == "insufficient_history"
+
+
+def test_blocked_experiment_rejects_candidate_failure_code() -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        ExperimentRecord(
+            experiment_id=ExperimentId("exp-blocked"),
+            status=ExperimentStatus.BLOCKED,
+            desired_state=ExperimentDesiredState.RUN,
+            stage=ExperimentStage.PREFLIGHT,
+            created_at=NOW,
+            failure_code=ExperimentFailureCode.CANDIDATE_FAILED,
+        )
+
+    assert exc_info.value.details["reason_code"] == (
+        "failure_code_not_allowed_for_status"
+    )
+
+
+@pytest.mark.parametrize(
+    ("status", "allowed_code", "wrong_code", "code_required"),
+    EXPERIMENT_FAILURE_POLICY_CASES,
+)
+def test_experiment_failure_code_policy_is_total_by_status(
+    status: ExperimentStatus,
+    allowed_code: ExperimentFailureCode | None,
+    wrong_code: ExperimentFailureCode,
+    code_required: bool,
+) -> None:
+    assert _experiment(status=status, failure_code=allowed_code).status is status
+
+    with pytest.raises(ExperimentSpecError) as wrong_code_exc:
+        _experiment(status=status, failure_code=wrong_code)
+    expected_reason = (
+        "failure_code_without_failure_outcome"
+        if allowed_code is None
+        else "failure_code_not_allowed_for_status"
+    )
+    assert wrong_code_exc.value.details["reason_code"] == expected_reason
+
+    if code_required:
+        with pytest.raises(ExperimentSpecError) as missing_code_exc:
+            _experiment(status=status)
+        assert missing_code_exc.value.details["reason_code"] == (
+            "failure_code_required"
+        )
+    else:
+        assert _experiment(status=status).failure_code is None
+
+
+@pytest.mark.parametrize(
+    ("status", "allowed_code", "wrong_code", "code_required"),
+    ATTEMPT_FAILURE_POLICY_CASES,
+)
+def test_attempt_failure_code_policy_is_total_for_allowed_statuses(
+    status: ExperimentStatus,
+    allowed_code: ExperimentFailureCode | None,
+    wrong_code: ExperimentFailureCode,
+    code_required: bool,
+) -> None:
+    assert _attempt(status=status, failure_code=allowed_code).status is status
+
+    with pytest.raises(ExperimentSpecError) as wrong_code_exc:
+        _attempt(status=status, failure_code=wrong_code)
+    expected_reason = (
+        "failure_code_without_failure_outcome"
+        if allowed_code is None
+        else "failure_code_not_allowed_for_status"
+    )
+    assert wrong_code_exc.value.details["reason_code"] == expected_reason
+
+    if code_required:
+        with pytest.raises(ExperimentSpecError) as missing_code_exc:
+            _attempt(status=status)
+        assert missing_code_exc.value.details["reason_code"] == (
+            "failure_code_required"
+        )
+    else:
+        assert _attempt(status=status).failure_code is None
+
+
 def test_failed_records_require_a_stable_failure_code() -> None:
     with pytest.raises(ExperimentSpecError) as exc_info:
         ExperimentRecord(
@@ -173,23 +311,29 @@ def test_non_failed_attempt_rejects_failure_code() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "status",
-    [ExperimentStatus.DRAFT, ExperimentStatus.BLOCKED],
-)
-def test_attempt_rejects_pre_attempt_experiment_statuses(
+@pytest.mark.parametrize("status", list(ExperimentStatus))
+def test_attempt_statuses_use_an_explicit_minimal_allowlist(
     status: ExperimentStatus,
 ) -> None:
+    allowed = {
+        ExperimentStatus.QUEUED,
+        ExperimentStatus.RUNNING,
+        ExperimentStatus.COMPLETED,
+        ExperimentStatus.FAILED,
+        ExperimentStatus.CANCELLED,
+    }
+    failure_code = (
+        ExperimentFailureCode.SYSTEM_ERROR
+        if status is ExperimentStatus.FAILED
+        else None
+    )
+
+    if status in allowed:
+        assert _attempt(status=status, failure_code=failure_code).status is status
+        return
+
     with pytest.raises(ExperimentSpecError) as exc_info:
-        AttemptRecord(
-            attempt_id=AttemptId("attempt-1"),
-            experiment_id=ExperimentId("exp-1"),
-            candidate_id=CandidateId("candidate-1"),
-            fold_id=FoldId("fold-1"),
-            ordinal=1,
-            status=status,
-            created_at=NOW,
-        )
+        _attempt(status=status, failure_code=failure_code)
 
     assert exc_info.value.details["reason_code"] == "invalid_attempt_status"
 
@@ -216,3 +360,35 @@ def test_records_require_timezone_aware_utc_datetime(bad_time: datetime) -> None
 
 def _set_attribute(target: object, name: str, value: object) -> None:
     setattr(target, name, value)
+
+
+def _attempt(
+    *,
+    status: ExperimentStatus,
+    failure_code: ExperimentFailureCode | None = None,
+) -> AttemptRecord:
+    return AttemptRecord(
+        attempt_id=AttemptId("attempt-1"),
+        experiment_id=ExperimentId("exp-1"),
+        candidate_id=CandidateId("candidate-1"),
+        fold_id=FoldId("fold-1"),
+        ordinal=1,
+        status=status,
+        created_at=NOW,
+        failure_code=failure_code,
+    )
+
+
+def _experiment(
+    *,
+    status: ExperimentStatus,
+    failure_code: ExperimentFailureCode | None = None,
+) -> ExperimentRecord:
+    return ExperimentRecord(
+        experiment_id=ExperimentId("exp-1"),
+        status=status,
+        desired_state=ExperimentDesiredState.RUN,
+        stage=ExperimentStage.PREFLIGHT,
+        created_at=NOW,
+        failure_code=failure_code,
+    )

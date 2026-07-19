@@ -11,6 +11,7 @@ from types import MappingProxyType
 from typing import cast
 
 from ditto_analysis.errors import ExperimentSpecError
+from ditto_analysis.experiments._validation import require_utc_datetime
 from ditto_analysis.experiments.models import (
     CandidateId,
     ContentHash,
@@ -56,7 +57,74 @@ def _positive_int(value: object, field_name: str) -> int:
     return value
 
 
-def _freeze_value(value: object, path: str) -> FrozenValue:
+def _enter_container(
+    value: object,
+    path: str,
+    active_container_ids: set[int],
+) -> int:
+    container_id = id(value)
+    if container_id in active_container_ids:
+        raise _spec_error(
+            f"{path} contains a cyclic container reference",
+            "cyclic_experiment_value",
+            field=path,
+        )
+    active_container_ids.add(container_id)
+    return container_id
+
+
+def _freeze_mapping_value(
+    value: Mapping[object, object],
+    path: str,
+    active_container_ids: set[int],
+) -> Mapping[str, FrozenValue]:
+    container_id = _enter_container(value, path, active_container_ids)
+    try:
+        frozen: dict[str, FrozenValue] = {}
+        for key, item in value.items():
+            if not isinstance(key, str) or not key.strip():
+                raise _spec_error(
+                    f"{path} mapping keys must be non-empty strings",
+                    "invalid_parameter_key",
+                    field=path,
+                )
+            frozen[key] = _freeze_value(
+                item,
+                f"{path}.{key}",
+                active_container_ids,
+            )
+        return MappingProxyType(frozen)
+    finally:
+        active_container_ids.remove(container_id)
+
+
+def _freeze_sequence_value(
+    value: Sequence[object],
+    path: str,
+    active_container_ids: set[int],
+) -> tuple[FrozenValue, ...]:
+    container_id = _enter_container(value, path, active_container_ids)
+    try:
+        return tuple(
+            _freeze_value(
+                item,
+                f"{path}[{index}]",
+                active_container_ids,
+            )
+            for index, item in enumerate(value)
+        )
+    finally:
+        active_container_ids.remove(container_id)
+
+
+def _freeze_value(
+    value: object,
+    path: str,
+    active_container_ids: set[int] | None = None,
+) -> FrozenValue:
+    active_ids: set[int] = (
+        set() if active_container_ids is None else active_container_ids
+    )
     if value is None or isinstance(value, str):
         return value
     if type(value) is int:
@@ -76,23 +144,11 @@ def _freeze_value(value: object, path: str) -> FrozenValue:
             field=path,
         )
     if isinstance(value, Mapping):
-        frozen: dict[str, FrozenValue] = {}
         mapping = cast("Mapping[object, object]", value)
-        for key, item in mapping.items():
-            if not isinstance(key, str) or not key.strip():
-                raise _spec_error(
-                    f"{path} mapping keys must be non-empty strings",
-                    "invalid_parameter_key",
-                    field=path,
-                )
-            frozen[key] = _freeze_value(item, f"{path}.{key}")
-        return MappingProxyType(frozen)
+        return _freeze_mapping_value(mapping, path, active_ids)
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         sequence = cast("Sequence[object]", value)
-        return tuple(
-            _freeze_value(item, f"{path}[{index}]")
-            for index, item in enumerate(sequence)
-        )
+        return _freeze_sequence_value(sequence, path, active_ids)
     raise _spec_error(
         f"{path} contains an unsupported or unordered value",
         "invalid_experiment_value",
@@ -116,22 +172,6 @@ def _freeze_mapping(value: object, field_name: str) -> Mapping[str, FrozenValue]
             field=field_name,
         )
     return frozen
-
-
-def _require_utc(value: object, field_name: str) -> datetime:
-    utc_offset = value.utcoffset() if isinstance(value, datetime) else None
-    if (
-        not isinstance(value, datetime)
-        or value.tzinfo is None
-        or utc_offset is None
-        or utc_offset.total_seconds() != 0
-    ):
-        raise _spec_error(
-            f"{field_name} must be an aware UTC datetime",
-            "datetime_not_utc",
-            field=field_name,
-        )
-    return value
 
 
 class ExperimentFailurePolicy(StrEnum):
@@ -284,7 +324,7 @@ class ExperimentLaunchSpec:
                 "worker_count must be between 2 and 4",
                 "invalid_worker_count",
             )
-        _require_utc(self.created_at, "created_at")
+        require_utc_datetime(self.created_at, "created_at")
 
         candidates = _freeze_candidates(self.candidates)
         object.__setattr__(self, "candidates", candidates)

@@ -1,5 +1,7 @@
 """Unit tests for immutable experiment launch specifications."""
 
+from collections import UserList
+from collections.abc import Callable
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
 from typing import cast
@@ -15,12 +17,44 @@ from ditto_analysis.experiments import (
     ExperimentFailurePolicy,
     ExperimentId,
     ExperimentLaunchSpec,
+    ExperimentRecord,
+    ExperimentStage,
+    ExperimentStatus,
     FoldProtocolSpec,
     SnapshotId,
     StrategyVersion,
 )
 
 NOW = datetime(2026, 7, 19, 4, 0, tzinfo=UTC)
+
+
+class _CustomSequence(UserList[object]):
+    """Non-built-in Sequence used to prove structural cycle handling."""
+
+
+def _cyclic_dict() -> object:
+    value: dict[str, object] = {}
+    value["self"] = value
+    return value
+
+
+def _cyclic_list() -> object:
+    value: list[object] = []
+    value.append(value)
+    return value
+
+
+def _tuple_via_list_cycle() -> object:
+    bridge: list[object] = []
+    value = (bridge,)
+    bridge.append(value)
+    return value
+
+
+def _cyclic_custom_sequence() -> object:
+    value = _CustomSequence()
+    value.append(value)
+    return value
 
 
 def _candidate(
@@ -37,7 +71,11 @@ def _candidate(
     )
 
 
-def _launch(*, candidates: object | None = None) -> ExperimentLaunchSpec:
+def _launch(
+    *,
+    candidates: object | None = None,
+    created_at: datetime = NOW,
+) -> ExperimentLaunchSpec:
     return ExperimentLaunchSpec(
         experiment_id=ExperimentId("exp-1"),
         strategy_version=StrategyVersion("stock-selection@3"),
@@ -58,7 +96,7 @@ def _launch(*, candidates: object | None = None) -> ExperimentLaunchSpec:
         failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
         budget=ExperimentBudget(candidate_limit=128, fold_run_limit=1024),
         desired_state=ExperimentDesiredState.RUN,
-        created_at=NOW,
+        created_at=created_at,
     )
 
 
@@ -82,6 +120,56 @@ def test_launch_spec_defensively_freezes_nested_candidate_parameters() -> None:
     assert candidate.parameters["nested"]["window"] == 20
     with pytest.raises(TypeError):
         cast("dict[str, object]", candidate.parameters)["new"] = 1
+
+
+@pytest.mark.parametrize(
+    "value_factory",
+    [
+        _cyclic_dict,
+        _cyclic_list,
+        _tuple_via_list_cycle,
+        _cyclic_custom_sequence,
+    ],
+)
+def test_candidate_parameters_reject_cyclic_containers(
+    value_factory: Callable[[], object],
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _candidate(1, baseline=True, parameters={"cycle": value_factory()})
+
+    assert exc_info.value.details["reason_code"] == "cyclic_experiment_value"
+
+
+def test_candidate_parameters_allow_shared_non_cyclic_containers() -> None:
+    shared = [1, 2]
+
+    candidate = _candidate(
+        1,
+        baseline=True,
+        parameters={"left": shared, "right": shared},
+    )
+
+    assert candidate.parameters["left"] == (1, 2)
+    assert candidate.parameters["right"] == (1, 2)
+
+
+def test_launch_and_record_share_utc_validation_reason() -> None:
+    naive = datetime(2026, 7, 19, 4, 0)
+
+    with pytest.raises(ExperimentSpecError) as launch_exc:
+        _launch(created_at=naive)
+    with pytest.raises(ExperimentSpecError) as record_exc:
+        ExperimentRecord(
+            experiment_id=ExperimentId("exp-1"),
+            status=ExperimentStatus.DRAFT,
+            desired_state=ExperimentDesiredState.RUN,
+            stage=ExperimentStage.PREFLIGHT,
+            created_at=naive,
+        )
+
+    expected = {"reason_code": "datetime_not_utc", "field": "created_at"}
+    assert launch_exc.value.details == expected
+    assert record_exc.value.details == expected
 
 
 @pytest.mark.parametrize(

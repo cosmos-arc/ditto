@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import StrEnum
 from typing import cast
 
@@ -12,6 +12,7 @@ from ditto_analysis.errors import (
     ExperimentSpecError,
     ExperimentStateTransitionError,
 )
+from ditto_analysis.experiments._validation import require_utc_datetime
 
 __all__ = [
     "AttemptId",
@@ -171,7 +172,8 @@ class ExperimentStage(StrEnum):
 class ExperimentFailureCode(StrEnum):
     """Stable machine-readable experiment failure classifications."""
 
-    PREFLIGHT_FAILED = "preflight_failed"
+    SNAPSHOT_NOT_CERTIFIED = "snapshot_not_certified"
+    INSUFFICIENT_HISTORY = "insufficient_history"
     CANDIDATE_FAILED = "candidate_failed"
     INPUT_HASH_MISMATCH = "input_hash_mismatch"
     LEASE_LOST = "lease_lost"
@@ -191,22 +193,6 @@ def _require_positive_ordinal(value: object, field_name: str) -> int:
     return value
 
 
-def _require_utc(value: object, field_name: str) -> datetime:
-    if (
-        not isinstance(value, datetime)
-        or value.tzinfo is None
-        or value.utcoffset() != timedelta(0)
-    ):
-        raise ExperimentSpecError(
-            f"{field_name} must be an aware UTC datetime",
-            details={
-                "reason_code": "datetime_not_utc",
-                "field": field_name,
-            },
-        )
-    return value
-
-
 def _require_instance(value: object, expected: type, field_name: str) -> None:
     if not isinstance(value, expected):
         raise ExperimentSpecError(
@@ -218,29 +204,119 @@ def _require_instance(value: object, expected: type, field_name: str) -> None:
         )
 
 
-_FAILURE_OUTCOMES = frozenset(
-    {ExperimentStatus.COMPLETED_WITH_FAILURES, ExperimentStatus.FAILED}
+_ALLOWED_ATTEMPT_STATUSES = frozenset(
+    {
+        ExperimentStatus.QUEUED,
+        ExperimentStatus.RUNNING,
+        ExperimentStatus.CANCELLED,
+        ExperimentStatus.COMPLETED,
+        ExperimentStatus.FAILED,
+    }
 )
+
+
+@dataclass(frozen=True, slots=True)
+class _FailureCodePolicy:
+    """Allowed codes and presence rule for one record status."""
+
+    required: bool
+    allowed_codes: frozenset[ExperimentFailureCode]
+
+
+_NO_FAILURE_CODE = _FailureCodePolicy(required=False, allowed_codes=frozenset())
+_BLOCKER_CODES = frozenset(
+    {
+        ExperimentFailureCode.SNAPSHOT_NOT_CERTIFIED,
+        ExperimentFailureCode.INSUFFICIENT_HISTORY,
+    }
+)
+_LOCAL_FAILURE_CODES = frozenset({ExperimentFailureCode.CANDIDATE_FAILED})
+_HARD_FAILURE_CODES = frozenset(
+    {
+        ExperimentFailureCode.INPUT_HASH_MISMATCH,
+        ExperimentFailureCode.LEASE_LOST,
+        ExperimentFailureCode.SYSTEM_ERROR,
+    }
+)
+_EXPERIMENT_FAILURE_CODE_POLICY = {
+    ExperimentStatus.DRAFT: _NO_FAILURE_CODE,
+    ExperimentStatus.BLOCKED: _FailureCodePolicy(
+        required=False,
+        allowed_codes=_BLOCKER_CODES,
+    ),
+    ExperimentStatus.QUEUED: _NO_FAILURE_CODE,
+    ExperimentStatus.RUNNING: _NO_FAILURE_CODE,
+    ExperimentStatus.PAUSE_REQUESTED: _NO_FAILURE_CODE,
+    ExperimentStatus.PAUSED: _NO_FAILURE_CODE,
+    ExperimentStatus.CANCEL_REQUESTED: _NO_FAILURE_CODE,
+    ExperimentStatus.CANCELLED: _NO_FAILURE_CODE,
+    ExperimentStatus.COMPLETED: _NO_FAILURE_CODE,
+    ExperimentStatus.COMPLETED_WITH_FAILURES: _FailureCodePolicy(
+        required=True,
+        allowed_codes=_LOCAL_FAILURE_CODES,
+    ),
+    ExperimentStatus.FAILED: _FailureCodePolicy(
+        required=True,
+        allowed_codes=_HARD_FAILURE_CODES,
+    ),
+}
+_ATTEMPT_FAILURE_CODE_POLICY = {
+    ExperimentStatus.QUEUED: _NO_FAILURE_CODE,
+    ExperimentStatus.RUNNING: _NO_FAILURE_CODE,
+    ExperimentStatus.CANCELLED: _NO_FAILURE_CODE,
+    ExperimentStatus.COMPLETED: _NO_FAILURE_CODE,
+    ExperimentStatus.FAILED: _FailureCodePolicy(
+        required=True,
+        allowed_codes=_LOCAL_FAILURE_CODES | _HARD_FAILURE_CODES,
+    ),
+}
 
 
 def _validate_failure_code(
     status: ExperimentStatus,
     failure_code: ExperimentFailureCode | None,
     *,
-    allowed_statuses: frozenset[ExperimentStatus],
+    policy_by_status: dict[ExperimentStatus, _FailureCodePolicy],
 ) -> None:
-    if failure_code is not None:
-        _require_instance(failure_code, ExperimentFailureCode, "failure_code")
-        if status not in allowed_statuses:
-            raise ExperimentSpecError(
-                "failure_code is only valid for failed outcomes",
-                details={"reason_code": "failure_code_without_failure_outcome"},
-            )
-    if status in _FAILURE_OUTCOMES and failure_code is None:
+    policy = policy_by_status.get(status)
+    if policy is None:
         raise ExperimentSpecError(
-            "failure outcomes require a stable failure_code",
-            details={"reason_code": "failure_code_required"},
+            f"no failure-code policy exists for status '{status.value}'",
+            details={
+                "reason_code": "invalid_failure_policy_status",
+                "status": status.value,
+            },
         )
+    if failure_code is None:
+        if not policy.required:
+            return
+        raise ExperimentSpecError(
+            f"status '{status.value}' requires a stable failure_code",
+            details={
+                "reason_code": "failure_code_required",
+                "status": status.value,
+            },
+        )
+    _require_instance(failure_code, ExperimentFailureCode, "failure_code")
+    if failure_code in policy.allowed_codes:
+        return
+    if not policy.allowed_codes:
+        raise ExperimentSpecError(
+            f"status '{status.value}' does not accept failure_code",
+            details={
+                "reason_code": "failure_code_without_failure_outcome",
+                "status": status.value,
+                "failure_code": failure_code.value,
+            },
+        )
+    raise ExperimentSpecError(
+        f"failure_code '{failure_code.value}' is not valid for status '{status.value}'",
+        details={
+            "reason_code": "failure_code_not_allowed_for_status",
+            "status": status.value,
+            "failure_code": failure_code.value,
+        },
+    )
 
 
 def _validate_attempt_lineage(
@@ -298,11 +374,11 @@ class ExperimentRecord:
         _require_instance(self.status, ExperimentStatus, "status")
         _require_instance(self.desired_state, ExperimentDesiredState, "desired_state")
         _require_instance(self.stage, ExperimentStage, "stage")
-        _require_utc(self.created_at, "created_at")
+        require_utc_datetime(self.created_at, "created_at")
         _validate_failure_code(
             self.status,
             self.failure_code,
-            allowed_statuses=_FAILURE_OUTCOMES | {ExperimentStatus.BLOCKED},
+            policy_by_status=_EXPERIMENT_FAILURE_CODE_POLICY,
         )
 
 
@@ -368,10 +444,10 @@ class AttemptRecord:
         _require_instance(self.fold_id, FoldId, "fold_id")
         _require_positive_ordinal(self.ordinal, "attempt_ordinal")
         _require_instance(self.status, ExperimentStatus, "status")
-        _require_utc(self.created_at, "created_at")
-        if self.status in {ExperimentStatus.DRAFT, ExperimentStatus.BLOCKED}:
+        require_utc_datetime(self.created_at, "created_at")
+        if self.status not in _ALLOWED_ATTEMPT_STATUSES:
             raise ExperimentSpecError(
-                "attempt records cannot use pre-attempt experiment statuses",
+                "attempt record status is not an execution-attempt state",
                 details={"reason_code": "invalid_attempt_status"},
             )
         _validate_attempt_lineage(
@@ -386,7 +462,7 @@ class AttemptRecord:
         _validate_failure_code(
             self.status,
             self.failure_code,
-            allowed_statuses=_FAILURE_OUTCOMES,
+            policy_by_status=_ATTEMPT_FAILURE_CODE_POLICY,
         )
 
 
