@@ -8,6 +8,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Mapping
 from datetime import datetime
+from typing import cast
 
 from ditto_analysis.errors import (
     AnalysisError,
@@ -25,7 +26,9 @@ from ditto_analysis.experiments.models import (
     ExperimentStatus,
 )
 from ditto_analysis.experiments.persistence import (
+    AttemptProjection,
     CanonicalPayload,
+    FoldProjection,
     ResearchCycleIdentity,
     canonical_payload,
     encode_candidate_parameters,
@@ -71,6 +74,54 @@ def _conflict(
 
 def _optional(value: object | None) -> str | None:
     return None if value is None else str(value)
+
+
+def _event_values(
+    *,
+    subject_type: str,
+    experiment_id: str,
+    candidate_id: str | None,
+    fold_id: str | None,
+    attempt_id: str | None,
+    revision: int,
+    previous_status: ExperimentStatus | None,
+    status: ExperimentStatus,
+    desired_state: ExperimentDesiredState | None,
+    stage: ExperimentStage | None,
+    failure_code: ExperimentFailureCode | None,
+    reason_code: str | None,
+    detail: Mapping[str, object],
+    occurred_at_epoch_us: int,
+) -> tuple[object, ...]:
+    payload = canonical_payload(detail)
+    event_identity = canonical_payload(
+        {
+            "attempt_id": attempt_id,
+            "candidate_id": candidate_id,
+            "experiment_id": experiment_id,
+            "fold_id": fold_id,
+            "revision": revision,
+            "subject_type": subject_type,
+        }
+    )
+    return (
+        f"status:{event_identity.content_hash}",
+        experiment_id,
+        candidate_id,
+        fold_id,
+        attempt_id,
+        subject_type,
+        revision,
+        _optional(previous_status),
+        status.value,
+        _optional(desired_state),
+        _optional(stage),
+        _optional(failure_code),
+        reason_code,
+        payload.json_bytes.decode("utf-8"),
+        str(payload.content_hash),
+        occurred_at_epoch_us,
+    )
 
 
 class SQLiteExperimentCreationMixin:
@@ -201,8 +252,9 @@ class SQLiteExperimentCreationMixin:
                 details={"reason_code": "invalid_initial_experiment_projection"},
             )
 
-    @staticmethod
+    @classmethod
     def _verify_experiment_replay(
+        cls,
         connection: sqlite3.Connection,
         expected_experiment: tuple[object, ...],
         candidates: tuple[tuple[CandidateSpec, CanonicalPayload], ...],
@@ -216,10 +268,14 @@ class SQLiteExperimentCreationMixin:
                 "experiment disappeared while its write lock was held",
                 "experiment_replay_missing",
             )
-        if tuple(existing) != expected_experiment:
+        actual_creation = tuple(existing[index] for index in (*range(9), 14))
+        expected_creation = tuple(
+            expected_experiment[index] for index in (*range(9), 14)
+        )
+        if actual_creation != expected_creation:
             raise _conflict(
                 "experiment identity was replayed with different immutable data",
-                "experiment_replay_drift",
+                "experiment_aggregate_replay_drift",
                 experiment_id=expected_experiment[0],
             )
         expected_candidates = tuple(
@@ -243,18 +299,141 @@ class SQLiteExperimentCreationMixin:
                 (expected_experiment[0],),
             )
         )
-        event_count = connection.execute(
-            """
-            SELECT count(*) FROM experiment_status_event
-            WHERE experiment_id=? AND subject_type='experiment' AND subject_revision=0
-            """,
-            (expected_experiment[0],),
-        ).fetchone()[0]
-        if actual_candidates != expected_candidates or event_count != 1:
+        if actual_candidates != expected_candidates:
             raise _conflict(
                 "experiment aggregate replay found partial or drifted children",
                 "experiment_aggregate_replay_drift",
                 experiment_id=expected_experiment[0],
+            )
+        cls._verify_creation_event(
+            connection,
+            subject_type="experiment",
+            experiment_id=str(expected_experiment[0]),
+            candidate_id=None,
+            fold_id=None,
+            attempt_id=None,
+            status=ExperimentStatus(str(expected_experiment[10])),
+            desired_state=ExperimentDesiredState(str(expected_experiment[11])),
+            stage=ExperimentStage(str(expected_experiment[12])),
+            failure_code=(
+                None
+                if expected_experiment[13] is None
+                else ExperimentFailureCode(str(expected_experiment[13]))
+            ),
+            reason_code="experiment_created",
+            occurred_at_epoch_us=cast("int", expected_experiment[14]),
+            replay_reason_code="experiment_aggregate_replay_drift",
+        )
+
+    @classmethod
+    def _verify_fold_replay(
+        cls,
+        connection: sqlite3.Connection,
+        existing: sqlite3.Row,
+        values: tuple[object, ...],
+        initial: FoldProjection,
+    ) -> None:
+        indexes = (*range(13), 15)
+        if tuple(existing[index] for index in indexes) != tuple(
+            values[index] for index in indexes
+        ):
+            raise _conflict(
+                "fold immutable creation facts drifted",
+                "fold_aggregate_replay_drift",
+            )
+        cls._verify_creation_event(
+            connection,
+            subject_type="fold",
+            experiment_id=cast("str", values[0]),
+            candidate_id=cast("str", values[1]),
+            fold_id=cast("str", values[2]),
+            attempt_id=None,
+            status=initial.status,
+            desired_state=None,
+            stage=None,
+            failure_code=None,
+            reason_code="fold_created",
+            occurred_at_epoch_us=cast("int", values[15]),
+            replay_reason_code="fold_aggregate_replay_drift",
+        )
+
+    @classmethod
+    def _verify_attempt_replay(
+        cls,
+        connection: sqlite3.Connection,
+        existing: sqlite3.Row,
+        values: tuple[object, ...],
+        initial: AttemptProjection,
+    ) -> None:
+        indexes = (0, 1, 2, 3, 4, 5, 8, 10, 12)
+        if tuple(existing[index] for index in indexes) != tuple(
+            values[index] for index in indexes
+        ):
+            raise _conflict(
+                "attempt immutable creation facts drifted",
+                "attempt_aggregate_replay_drift",
+            )
+        cls._verify_creation_event(
+            connection,
+            subject_type="attempt",
+            experiment_id=cast("str", values[1]),
+            candidate_id=cast("str", values[2]),
+            fold_id=cast("str", values[3]),
+            attempt_id=cast("str", values[0]),
+            status=initial.status,
+            desired_state=None,
+            stage=None,
+            failure_code=initial.failure_code,
+            reason_code="attempt_created",
+            occurred_at_epoch_us=cast("int", values[12]),
+            replay_reason_code="attempt_aggregate_replay_drift",
+        )
+
+    @staticmethod
+    def _verify_creation_event(
+        connection: sqlite3.Connection,
+        *,
+        subject_type: str,
+        experiment_id: str,
+        candidate_id: str | None,
+        fold_id: str | None,
+        attempt_id: str | None,
+        status: ExperimentStatus,
+        desired_state: ExperimentDesiredState | None,
+        stage: ExperimentStage | None,
+        failure_code: ExperimentFailureCode | None,
+        reason_code: str,
+        occurred_at_epoch_us: int,
+        replay_reason_code: str,
+    ) -> None:
+        expected = _event_values(
+            subject_type=subject_type,
+            experiment_id=experiment_id,
+            candidate_id=candidate_id,
+            fold_id=fold_id,
+            attempt_id=attempt_id,
+            revision=0,
+            previous_status=None,
+            status=status,
+            desired_state=desired_state,
+            stage=stage,
+            failure_code=failure_code,
+            reason_code=reason_code,
+            detail={},
+            occurred_at_epoch_us=occurred_at_epoch_us,
+        )
+        event = connection.execute(
+            "SELECT * FROM experiment_status_event WHERE event_id=?",
+            (expected[0],),
+        ).fetchone()
+        if event is None or tuple(event) != expected:
+            raise _conflict(
+                "aggregate replay found a missing or drifted creation event",
+                replay_reason_code,
+                experiment_id=experiment_id,
+                candidate_id=candidate_id,
+                fold_id=fold_id,
+                attempt_id=attempt_id,
             )
 
     @staticmethod
@@ -276,14 +455,22 @@ class SQLiteExperimentCreationMixin:
         detail: Mapping[str, object],
         occurred_at: datetime,
     ) -> None:
-        payload = canonical_payload(detail)
-        lineage = ":".join(
-            item
-            for item in (experiment_id, candidate_id, fold_id, attempt_id)
-            if item is not None
+        values = _event_values(
+            subject_type=subject_type,
+            experiment_id=experiment_id,
+            candidate_id=candidate_id,
+            fold_id=fold_id,
+            attempt_id=attempt_id,
+            revision=revision,
+            previous_status=previous_status,
+            status=status,
+            desired_state=desired_state,
+            stage=stage,
+            failure_code=failure_code,
+            reason_code=reason_code,
+            detail=detail,
+            occurred_at_epoch_us=_epoch_us(occurred_at),
         )
-        subject_order = {"experiment": 0, "fold": 1, "attempt": 2}[subject_type]
-        event_id = f"status:{subject_order}:{subject_type}:{lineage}:{revision}"
         connection.execute(
             """
             INSERT INTO experiment_status_event(
@@ -293,22 +480,5 @@ class SQLiteExperimentCreationMixin:
                 detail_hash, occurred_at_epoch_us
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (
-                event_id,
-                experiment_id,
-                candidate_id,
-                fold_id,
-                attempt_id,
-                subject_type,
-                revision,
-                _optional(previous_status),
-                status.value,
-                _optional(desired_state),
-                _optional(stage),
-                _optional(failure_code),
-                reason_code,
-                payload.json_bytes.decode("utf-8"),
-                str(payload.content_hash),
-                _epoch_us(occurred_at),
-            ),
+            values,
         )

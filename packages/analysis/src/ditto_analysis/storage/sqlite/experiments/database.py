@@ -53,30 +53,34 @@ class ResearchExperimentDatabase:
 
     def _ensure_open(self) -> None:
         with self._state_lock:
-            if self._closed:
-                raise ExperimentDatabaseClosedError(
-                    "research experiment database has been permanently closed",
-                    details={"reason_code": "research_database_closed"},
-                )
+            self._raise_if_closed()
+
+    def _raise_if_closed(self) -> None:
+        if self._closed:
+            raise ExperimentDatabaseClosedError(
+                "research experiment database has been permanently closed",
+                details={"reason_code": "research_database_closed"},
+            )
 
     def get_connection(self) -> sqlite3.Connection:
         """Get a thread-local connection with both required pragmas proven on."""
-        self._ensure_open()
-        connection = self._pool.get_connection()
-        connection.execute("PRAGMA foreign_keys=ON")
-        connection.execute("PRAGMA recursive_triggers=ON")
-        foreign_keys = connection.execute("PRAGMA foreign_keys").fetchone()[0]
-        recursive_triggers = connection.execute("PRAGMA recursive_triggers").fetchone()[
-            0
-        ]
-        if foreign_keys != 1 or recursive_triggers != 1:
-            raise _schema_error(
-                "required SQLite integrity pragmas could not be enabled",
-                "research_database_pragma_disabled",
-                foreign_keys=foreign_keys,
-                recursive_triggers=recursive_triggers,
-            )
-        return connection
+        with self._state_lock:
+            self._raise_if_closed()
+            connection = self._pool.get_connection()
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("PRAGMA recursive_triggers=ON")
+            foreign_keys = connection.execute("PRAGMA foreign_keys").fetchone()[0]
+            recursive_triggers = connection.execute(
+                "PRAGMA recursive_triggers"
+            ).fetchone()[0]
+            if foreign_keys != 1 or recursive_triggers != 1:
+                raise _schema_error(
+                    "required SQLite integrity pragmas could not be enabled",
+                    "research_database_pragma_disabled",
+                    foreign_keys=foreign_keys,
+                    recursive_triggers=recursive_triggers,
+                )
+            return connection
 
     @contextmanager
     def connection(self) -> Generator[sqlite3.Connection]:
@@ -213,4 +217,4 @@ class ResearchExperimentDatabase:
             if self._closed:
                 return
             self._closed = True
-        self._pool.close_all()
+            self._pool.close_all()

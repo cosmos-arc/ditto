@@ -424,7 +424,18 @@ class SQLiteExperimentReader:
             .execute(
                 """
             SELECT * FROM experiment_status_event WHERE experiment_id=?
-            ORDER BY occurred_at_epoch_us, event_id
+            ORDER BY
+                occurred_at_epoch_us,
+                CASE subject_type
+                    WHEN 'experiment' THEN 0
+                    WHEN 'fold' THEN 1
+                    WHEN 'attempt' THEN 2
+                END,
+                experiment_id,
+                candidate_id,
+                fold_id,
+                attempt_id,
+                subject_revision
             """,
                 (str(experiment_id),),
             )

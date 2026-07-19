@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import orjson
 import polars as pl
 import pytest
-from ditto_analysis.errors import ExperimentSpecError, ResearchDatasetError
+from ditto_analysis.errors import (
+    ExperimentConflictError,
+    ExperimentSpecError,
+    ResearchDatasetError,
+)
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 
 
@@ -264,6 +272,160 @@ class TestAtomicArtifactWrites:
 
         assert not (tmp_path / "experiments/e-1/result.parquet").exists()
         assert tuple((tmp_path / "experiments/e-1").glob("*.tmp")) == ()
+
+
+class TestImmutableArtifactPublication:
+    """R3 evidence publication is immutable and separate from generic writes."""
+
+    def test_publish_uses_fsynced_closed_sibling_temp_and_no_clobber_link(
+        self,
+        service: ResearchArtifactService,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        payload = b"immutable-evidence"
+        original_mkstemp = tempfile.mkstemp
+        original_fsync = os.fsync
+        original_link = os.link
+        descriptor: int | None = None
+        calls: list[str] = []
+
+        def capture_mkstemp(
+            suffix: str | None = None,
+            prefix: str | None = None,
+            dir: str | os.PathLike[str] | None = None,  # noqa: A002
+            text: bool = False,
+        ) -> tuple[int, str]:
+            nonlocal descriptor
+            descriptor, temporary_name = original_mkstemp(
+                suffix=suffix,
+                prefix=prefix,
+                dir=dir,
+                text=text,
+            )
+            return descriptor, temporary_name
+
+        def observe_fsync(fd: int) -> None:
+            assert fd == descriptor
+            calls.append("fsync")
+            original_fsync(fd)
+
+        def observe_link(
+            source: str | os.PathLike[str],
+            target: str | os.PathLike[str],
+        ) -> None:
+            source_path = Path(source)
+            target_path = Path(target)
+            assert calls == ["fsync"]
+            assert descriptor is not None
+            with pytest.raises(OSError):
+                os.fstat(descriptor)
+            assert source_path.parent == target_path.parent
+            assert source_path.exists()
+            assert not target_path.exists()
+            calls.append("link")
+            original_link(source, target)
+
+        monkeypatch.setattr(tempfile, "mkstemp", capture_mkstemp)
+        monkeypatch.setattr(os, "fsync", observe_fsync)
+        monkeypatch.setattr(os, "link", observe_link)
+
+        digest = service.publish_immutable_artifact(
+            "experiments/e-1/evidence.bin", payload
+        )
+
+        assert digest == hashlib.sha256(payload).hexdigest()
+        assert calls == ["fsync", "link"]
+        assert (tmp_path / "experiments/e-1/evidence.bin").read_bytes() == payload
+        assert tuple((tmp_path / "experiments/e-1").glob("*.tmp")) == ()
+
+    def test_identical_replay_is_a_noop(
+        self,
+        service: ResearchArtifactService,
+        tmp_path: Path,
+    ) -> None:
+        relative_path = "experiments/e-1/evidence.bin"
+        payload = b"same-evidence"
+        expected_digest = hashlib.sha256(payload).hexdigest()
+        assert (
+            service.publish_immutable_artifact(relative_path, payload)
+            == expected_digest
+        )
+        target = tmp_path / relative_path
+        before = target.stat()
+
+        replay_digest = service.publish_immutable_artifact(relative_path, payload)
+
+        after = target.stat()
+        assert replay_digest == expected_digest
+        assert (after.st_ino, after.st_mtime_ns, after.st_size) == (
+            before.st_ino,
+            before.st_mtime_ns,
+            before.st_size,
+        )
+        assert tuple(target.parent.glob("*.tmp")) == ()
+
+    def test_conflicting_replay_preserves_existing_bytes_without_partial(
+        self,
+        service: ResearchArtifactService,
+        tmp_path: Path,
+    ) -> None:
+        relative_path = "experiments/e-1/evidence.bin"
+        original = b"original-evidence"
+        conflicting = b"conflicting-evidence"
+        service.publish_immutable_artifact(relative_path, original)
+
+        with pytest.raises(ExperimentConflictError) as exc_info:
+            service.publish_immutable_artifact(relative_path, conflicting)
+
+        assert exc_info.value.details == {
+            "reason_code": "immutable_artifact_conflict",
+            "relative_path": relative_path,
+            "existing_sha256": hashlib.sha256(original).hexdigest(),
+            "incoming_sha256": hashlib.sha256(conflicting).hexdigest(),
+        }
+        target = tmp_path / relative_path
+        assert target.read_bytes() == original
+        assert tuple(target.parent.glob("*.tmp")) == ()
+
+    def test_concurrent_publishers_choose_one_content_without_clobber(
+        self,
+        service: ResearchArtifactService,
+        tmp_path: Path,
+    ) -> None:
+        relative_path = "experiments/e-1/evidence.bin"
+        payloads = (b"worker-a", b"worker-b")
+        barrier = threading.Barrier(len(payloads))
+
+        def publish(payload: bytes) -> tuple[str, str]:
+            barrier.wait()
+            try:
+                digest = service.publish_immutable_artifact(relative_path, payload)
+            except ExperimentConflictError as exc:
+                return "conflict", str(exc.details["incoming_sha256"])
+            return "published", digest
+
+        with ThreadPoolExecutor(max_workers=len(payloads)) as executor:
+            results = tuple(executor.map(publish, payloads))
+
+        target = tmp_path / relative_path
+        winning_payload = target.read_bytes()
+        winning_digest = hashlib.sha256(winning_payload).hexdigest()
+        assert winning_payload in payloads
+        assert tuple(status for status, _digest in results).count("published") == 1
+        assert tuple(status for status, _digest in results).count("conflict") == 1
+        assert ("published", winning_digest) in results
+        assert tuple(target.parent.glob("*.tmp")) == ()
+
+    def test_generic_json_writer_keeps_overwrite_semantics(
+        self,
+        service: ResearchArtifactService,
+    ) -> None:
+        service.write_json("mutable.json", {"revision": 1})
+
+        service.write_json("mutable.json", {"revision": 2})
+
+        assert service.read_json("mutable.json") == {"revision": 2}
 
 
 class TestResolveArtifactRelativePath:

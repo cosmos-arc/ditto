@@ -325,3 +325,50 @@ def test_close_all_closes_worker_connections_and_prevents_resurrection(
 
     with pytest.raises(api.ExperimentDatabaseClosedError):
         database.get_connection()
+
+
+def test_close_all_serializes_with_inflight_connection_acquisition(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api = _api()
+    database = api.ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    pool: Any = vars(database)["_pool"]
+    original_get_connection = pool.get_connection
+    acquisition_entered = Event()
+    allow_acquisition = Event()
+    close_started = Event()
+    close_finished = Event()
+
+    def delayed_get_connection() -> sqlite3.Connection:
+        acquisition_entered.set()
+        assert allow_acquisition.wait(timeout=5)
+        return original_get_connection()
+
+    def acquire_then_probe_after_close() -> str:
+        connection = database.get_connection()
+        assert close_finished.wait(timeout=5)
+        with pytest.raises(sqlite3.ProgrammingError):
+            connection.execute("SELECT 1")
+        return "closed"
+
+    def close() -> None:
+        close_started.set()
+        database.close_all()
+        close_finished.set()
+
+    monkeypatch.setattr(pool, "get_connection", delayed_get_connection)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        acquire_future = executor.submit(acquire_then_probe_after_close)
+        assert acquisition_entered.wait(timeout=5)
+        close_future = executor.submit(close)
+        assert close_started.wait(timeout=5)
+        close_returned_before_acquisition = close_finished.wait(timeout=0.2)
+        allow_acquisition.set()
+        assert acquire_future.result(timeout=5) == "closed"
+        close_future.result(timeout=5)
+
+    assert not close_returned_before_acquisition
+    with pytest.raises(api.ExperimentDatabaseClosedError):
+        database.get_connection()

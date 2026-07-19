@@ -10,6 +10,11 @@ import pytest
 
 PUBLIC_MODULE_NAMES = ("ditto_analysis.experiments",)
 ANALYSIS_ROOT = Path(__file__).parents[2]
+SUPERSEDED_EXPERIMENT_RECORDS = {
+    "AttemptRecord",
+    "CandidateRecord",
+    "FoldRecord",
+}
 
 
 @pytest.fixture(params=PUBLIC_MODULE_NAMES)
@@ -38,6 +43,27 @@ def test_experiment_namespace_exports_stable_domain_contracts(
         "validate_status_transition",
     }
     assert expected <= set(public_module.__all__)
+
+
+def test_experiment_namespace_does_not_publish_superseded_record_types(
+    public_module: ModuleType,
+) -> None:
+    """The promoted namespace exposes only the final typed persistence surface."""
+    assert not SUPERSEDED_EXPERIMENT_RECORDS & set(public_module.__all__)
+    assert all(
+        not hasattr(public_module, record_name)
+        for record_name in SUPERSEDED_EXPERIMENT_RECORDS
+    )
+
+
+def test_experiment_domain_does_not_define_superseded_record_types() -> None:
+    """The obsolete parallel model hierarchy cannot be imported from its leaf."""
+    domain_module = importlib.import_module("ditto_analysis.experiments.models")
+
+    assert all(
+        not hasattr(domain_module, record_name)
+        for record_name in SUPERSEDED_EXPERIMENT_RECORDS
+    )
 
 
 def test_experiment_namespace_owns_contracts_but_keeps_runtime_in_storage_leaf(

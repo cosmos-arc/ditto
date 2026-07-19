@@ -39,7 +39,7 @@ def validate_fold_transition(
     failure_code: ExperimentFailureCode | None,
     reason_code: str | None,
 ) -> None:
-    """Reject illegal fold edges and ambiguous pause recovery."""
+    """Reject illegal fold edges and ambiguous crash recovery."""
     if (previous, target) not in _FOLD_TRANSITIONS:
         raise ExperimentSpecError(
             f"invalid fold transition: {previous.value} -> {target.value}",
@@ -59,11 +59,11 @@ def validate_fold_transition(
     if (
         previous is ExperimentStatus.RUNNING
         and target is ExperimentStatus.QUEUED
-        and reason_code != "pause_recovery"
+        and reason_code != "crash_recovery"
     ):
         raise ExperimentSpecError(
-            "running fold can requeue only for pause recovery",
-            details={"reason_code": "pause_recovery_reason_required"},
+            "running fold can requeue only for crash recovery",
+            details={"reason_code": "crash_recovery_reason_required"},
         )
     if (target is ExperimentStatus.FAILED) != (failure_code is not None):
         raise ExperimentSpecError(

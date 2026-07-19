@@ -22,8 +22,10 @@ import pytest
 from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments import (
     AttemptId,
+    BacktestRunId,
     CandidateId,
     CandidateSpec,
+    CheckpointRef,
     ContentHash,
     ExperimentBudget,
     ExperimentDesiredState,
@@ -144,15 +146,21 @@ def _create_experiment(writer: Any, api: SimpleNamespace) -> None:
     )
 
 
-def _fold_spec(api: SimpleNamespace, *, role: str = "walk_forward") -> Any:
-    key = api.FoldKey(
+def _fold_spec(
+    api: SimpleNamespace,
+    *,
+    role: str = "walk_forward",
+    key: Any | None = None,
+    ordinal: int = 1,
+) -> Any:
+    key = key or api.FoldKey(
         ExperimentId("experiment-1"),
         CandidateId("candidate-1"),
         FoldId("fold-1"),
     )
     return api.FoldPersistenceSpec.create(
         key=key,
-        ordinal=1,
+        ordinal=ordinal,
         fold_role=api.FoldRole(role),
         train_window=(
             None
@@ -431,6 +439,76 @@ def test_create_experiment_conflicting_replay_and_partial_insert_fail_closed(
     assert reader.get_launch_spec(ExperimentId("experiment-1")) == _launch()
 
 
+def test_experiment_create_replay_after_enqueue_is_noop(tmp_path: Path) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    cycle = api.ResearchCycleIdentity("cycle-2026-h2", ContentHash("c" * 64))
+    spec = _launch()
+    initial = _record()
+    writer.create_experiment(cycle, spec, initial)
+    queued = writer.enqueue_experiment(
+        spec.experiment_id,
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    before_events = reader.list_status_events(spec.experiment_id)
+    before_changes = database.get_connection().total_changes
+
+    writer.create_experiment(cycle, spec, initial)
+
+    assert reader.get_experiment_projection(spec.experiment_id) == queued
+    assert reader.list_status_events(spec.experiment_id) == before_events
+    assert database.get_connection().total_changes == before_changes
+
+
+def test_experiment_replay_requires_exact_revision_zero_event(tmp_path: Path) -> None:
+    database, _reader, writer, api = _store(tmp_path)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        CREATE TRIGGER ignore_experiment_creation_event
+        BEFORE INSERT ON experiment_status_event
+        WHEN NEW.subject_type='experiment' AND NEW.subject_revision=0
+        BEGIN
+            SELECT RAISE(IGNORE);
+        END
+        """
+    )
+    connection.commit()
+    cycle = api.ResearchCycleIdentity("cycle-2026-h2", ContentHash("c" * 64))
+    spec = _launch()
+    initial = _record()
+    writer.create_experiment(cycle, spec, initial)
+    connection.execute("DROP TRIGGER ignore_experiment_creation_event")
+    detail = api.canonical_payload({})
+    connection.execute(
+        """
+        INSERT INTO experiment_status_event(
+            event_id, experiment_id, candidate_id, fold_id, attempt_id,
+            subject_type, subject_revision, previous_status, status,
+            desired_state, stage, failure_code, reason_code, detail_json,
+            detail_hash, occurred_at_epoch_us
+        ) VALUES (?, ?, NULL, NULL, NULL, 'experiment', 0, NULL, 'draft',
+                  'run', 'preflight', NULL, ?, ?, ?, ?)
+        """,
+        (
+            "wrong-experiment-create-event",
+            "experiment-1",
+            "wrong_creation_reason",
+            detail.json_bytes.decode("utf-8"),
+            str(detail.content_hash),
+            int(NOW.timestamp() * 1_000_000),
+        ),
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.create_experiment(cycle, spec, initial)
+
+    assert exc_info.value.details["reason_code"] == "experiment_aggregate_replay_drift"
+
+
 def test_add_fold_and_attempt_round_trip_full_lineage_and_revision_zero_events(
     tmp_path: Path,
 ) -> None:
@@ -451,6 +529,198 @@ def test_add_fold_and_attempt_round_trip_full_lineage_and_revision_zero_events(
         ("fold", 1),
         ("attempt", 0),
     ]
+
+
+def test_fold_create_replay_after_claim_is_noop(tmp_path: Path) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    initial = _fold_projection(api, fold)
+    lease = writer.try_claim_lease(
+        fold.key.experiment_id,
+        "owner-replay",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    claimed = writer.claim_fold(
+        fold.key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        occurred_at=NOW,
+    )
+    before_events = reader.list_status_events(fold.key.experiment_id)
+    before_changes = database.get_connection().total_changes
+
+    writer.add_fold(fold, initial)
+
+    assert reader.get_fold(fold.key).projection == claimed
+    assert reader.list_status_events(fold.key.experiment_id) == before_events
+    assert database.get_connection().total_changes == before_changes
+
+
+def test_fold_replay_requires_revision_zero_event(tmp_path: Path) -> None:
+    database, _reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    connection = database.get_connection()
+    connection.execute(
+        """
+        CREATE TRIGGER ignore_fold_creation_event
+        BEFORE INSERT ON experiment_status_event
+        WHEN NEW.subject_type='fold' AND NEW.subject_revision=0
+        BEGIN
+            SELECT RAISE(IGNORE);
+        END
+        """
+    )
+    connection.commit()
+    fold = _fold_spec(api)
+    initial = _fold_projection(api, fold)
+    writer.add_fold(fold, initial)
+    connection.execute("DROP TRIGGER ignore_fold_creation_event")
+    connection.commit()
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.add_fold(fold, initial)
+
+    assert exc_info.value.details["reason_code"] == "fold_aggregate_replay_drift"
+
+
+def test_attempt_create_replay_after_completion_is_unfenced_noop(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = writer.try_claim_lease(
+        fold.key.experiment_id,
+        "owner-replay",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    writer.claim_fold(
+        fold.key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        occurred_at=NOW,
+    )
+    spec = _attempt_spec(api, fold.key)
+    initial = _attempt_projection(api)
+    writer.add_attempt(
+        spec,
+        initial,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+    )
+    running = writer.transition_attempt(
+        spec.attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=BacktestRunId("backtest-run-replay"),
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+        occurred_at=NOW,
+        reason_code="attempt_started",
+        detail={},
+    )
+    completed = writer.transition_attempt(
+        spec.attempt_id,
+        target_status=ExperimentStatus.COMPLETED,
+        backtest_run_id=running.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=running.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+        occurred_at=NOW,
+        reason_code="attempt_completed",
+        detail={},
+    )
+    writer.transition_fold(
+        fold.key,
+        target_status=ExperimentStatus.COMPLETED,
+        claim_owner_token=None,
+        failure_code=None,
+        expected_revision=1,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 5,
+        occurred_at=NOW,
+        reason_code="fold_completed",
+        detail={},
+    )
+    before_events = reader.list_status_events(fold.key.experiment_id)
+    before_changes = database.get_connection().total_changes
+
+    writer.add_attempt(
+        spec,
+        initial,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 101,
+    )
+
+    assert reader.get_attempt(spec.attempt_id).projection == completed
+    assert reader.list_status_events(fold.key.experiment_id) == before_events
+    assert database.get_connection().total_changes == before_changes
+
+
+def test_attempt_replay_requires_revision_zero_event(tmp_path: Path) -> None:
+    database, _reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = writer.try_claim_lease(
+        fold.key.experiment_id,
+        "owner-replay",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+    writer.claim_fold(
+        fold.key,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        occurred_at=NOW,
+    )
+    connection = database.get_connection()
+    connection.execute(
+        """
+        CREATE TRIGGER ignore_attempt_creation_event
+        BEFORE INSERT ON experiment_status_event
+        WHEN NEW.subject_type='attempt' AND NEW.subject_revision=0
+        BEGIN
+            SELECT RAISE(IGNORE);
+        END
+        """
+    )
+    connection.commit()
+    spec = _attempt_spec(api, fold.key)
+    initial = _attempt_projection(api)
+    writer.add_attempt(
+        spec,
+        initial,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+    )
+    connection.execute("DROP TRIGGER ignore_attempt_creation_event")
+    connection.commit()
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.add_attempt(
+            spec,
+            initial,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+        )
+
+    assert exc_info.value.details["reason_code"] == "attempt_aggregate_replay_drift"
 
 
 def test_fold_payload_must_exactly_match_every_relational_field(tmp_path: Path) -> None:
@@ -511,17 +781,10 @@ def test_projection_cas_and_event_append_commit_or_rollback_together(
     database, reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)
 
-    queued = writer.transition_experiment(
+    queued = writer.enqueue_experiment(
         ExperimentId("experiment-1"),
-        target_status=ExperimentStatus.QUEUED,
-        target_desired_state=ExperimentDesiredState.RUN,
-        target_stage=ExperimentStage.PREFLIGHT,
-        failure_code=None,
-        queue_ordinal=1,
         expected_revision=0,
         occurred_at=NOW,
-        attempt_started=False,
-        precondition_repairable=False,
         reason_code="preflight_passed",
         detail={"certified": True},
     )
@@ -546,11 +809,10 @@ def test_projection_cas_and_event_append_commit_or_rollback_together(
     with pytest.raises(api.ExperimentPersistenceError):
         writer.transition_experiment(
             ExperimentId("experiment-1"),
-            target_status=ExperimentStatus.RUNNING,
-            target_desired_state=ExperimentDesiredState.RUN,
-            target_stage=ExperimentStage.EXPLORATION,
+            target_status=ExperimentStatus.CANCEL_REQUESTED,
+            target_desired_state=ExperimentDesiredState.CANCEL,
+            target_stage=ExperimentStage.PREFLIGHT,
             failure_code=None,
-            queue_ordinal=1,
             expected_revision=1,
             occurred_at=NOW,
             attempt_started=False,
@@ -560,6 +822,162 @@ def test_projection_cas_and_event_append_commit_or_rollback_together(
         )
     assert reader.get_experiment_projection(ExperimentId("experiment-1")).revision == 1
     assert len(reader.list_status_events(ExperimentId("experiment-1"))) == 2
+
+
+def test_generic_transition_rejects_caller_supplied_queue_ordinal_before_write(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    before = reader.get_experiment_projection(ExperimentId("experiment-1"))
+    before_events = reader.list_status_events(ExperimentId("experiment-1"))
+
+    with pytest.raises(TypeError):
+        writer.transition_experiment(
+            ExperimentId("experiment-1"),
+            target_status=ExperimentStatus.QUEUED,
+            target_desired_state=ExperimentDesiredState.RUN,
+            target_stage=ExperimentStage.PREFLIGHT,
+            failure_code=None,
+            queue_ordinal=777,
+            expected_revision=0,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="manual_queue_bypass",
+            detail={},
+        )
+
+    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == before
+    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
+
+
+def test_generic_transition_rejects_scheduler_edge_without_fence_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    queued = writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+    )
+    before_events = reader.list_status_events(ExperimentId("experiment-1"))
+    before_slot = reader.get_scheduler_slot()
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.transition_experiment(
+            ExperimentId("experiment-1"),
+            target_status=ExperimentStatus.RUNNING,
+            target_desired_state=ExperimentDesiredState.RUN,
+            target_stage=ExperimentStage.EXPLORATION,
+            failure_code=None,
+            expected_revision=queued.revision,
+            occurred_at=NOW,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code="unfenced_dispatch",
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"] == "scheduler_transition_requires_fence"
+    )
+    assert reader.get_experiment_projection(ExperimentId("experiment-1")) == queued
+    assert reader.list_status_events(ExperimentId("experiment-1")) == before_events
+    assert reader.get_scheduler_slot() == before_slot
+
+
+def test_typed_lineage_event_identity_does_not_collide_on_colons(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    candidates = (
+        CandidateSpec(
+            candidate_id=CandidateId("candidate:a"),
+            ordinal=1,
+            is_baseline=True,
+            parameters={"lookback": 20},
+        ),
+        CandidateSpec(
+            candidate_id=CandidateId("candidate"),
+            ordinal=2,
+            is_baseline=False,
+            parameters={"lookback": 40},
+        ),
+    )
+    writer.create_experiment(
+        api.ResearchCycleIdentity("cycle-2026-h2", ContentHash("c" * 64)),
+        _launch(candidates=candidates),
+        _record(),
+    )
+    keys = (
+        api.FoldKey(
+            ExperimentId("experiment-1"), CandidateId("candidate:a"), FoldId("b")
+        ),
+        api.FoldKey(
+            ExperimentId("experiment-1"), CandidateId("candidate"), FoldId("a:b")
+        ),
+    )
+
+    for ordinal, key in enumerate(keys, start=1):
+        spec = _fold_spec(api, key=key, ordinal=ordinal)
+        writer.add_fold(spec, _fold_projection(api, spec))
+
+    fold_events = tuple(
+        event
+        for event in reader.list_status_events(ExperimentId("experiment-1"))
+        if event.subject_type.value == "fold"
+    )
+    assert len(fold_events) == 2
+    assert len({event.event_id for event in fold_events}) == 2
+
+
+def test_status_events_order_numeric_revision_for_same_timestamp(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold)
+    backtest_run_id = BacktestRunId("backtest-run-1")
+
+    writer.transition_attempt(
+        AttemptId("attempt-1"),
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+        reason_code="attempt_started",
+        detail={},
+    )
+    for revision in range(1, 11):
+        writer.transition_attempt(
+            AttemptId("attempt-1"),
+            target_status=ExperimentStatus.RUNNING,
+            backtest_run_id=backtest_run_id,
+            checkpoint_ref=CheckpointRef(f"checkpoint-{revision}"),
+            failure_code=None,
+            expected_revision=revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + revision + 2,
+            occurred_at=NOW,
+            reason_code="checkpoint",
+            detail={},
+        )
+
+    revisions = tuple(
+        event.subject_revision
+        for event in reader.list_status_events(ExperimentId("experiment-1"))
+        if event.attempt_id == AttemptId("attempt-1")
+    )
+    assert revisions == tuple(range(12))
 
 
 def test_operator_status_transition_cannot_change_the_current_stage(
@@ -575,7 +993,6 @@ def test_operator_status_transition_cannot_change_the_current_stage(
             target_desired_state=ExperimentDesiredState.RUN,
             target_stage=ExperimentStage.EXPLORATION,
             failure_code=None,
-            queue_ordinal=None,
             expected_revision=0,
             occurred_at=NOW,
             attempt_started=False,
@@ -598,7 +1015,6 @@ def test_stale_cas_and_append_only_event_mutations_are_rejected(tmp_path: Path) 
             target_desired_state=ExperimentDesiredState.RUN,
             target_stage=ExperimentStage.PREFLIGHT,
             failure_code=None,
-            queue_ordinal=1,
             expected_revision=7,
             occurred_at=NOW,
             attempt_started=False,

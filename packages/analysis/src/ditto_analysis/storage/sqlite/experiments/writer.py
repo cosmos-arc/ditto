@@ -73,6 +73,16 @@ _WORK_STATUSES = frozenset(
     }
 )
 
+_OPERATOR_EXPERIMENT_TRANSITIONS = frozenset(
+    {
+        (ExperimentStatus.DRAFT, ExperimentStatus.BLOCKED),
+        (ExperimentStatus.QUEUED, ExperimentStatus.CANCEL_REQUESTED),
+        (ExperimentStatus.RUNNING, ExperimentStatus.PAUSE_REQUESTED),
+        (ExperimentStatus.RUNNING, ExperimentStatus.CANCEL_REQUESTED),
+        (ExperimentStatus.PAUSED, ExperimentStatus.CANCEL_REQUESTED),
+    }
+)
+
 
 def _epoch_us(value: datetime) -> int:
     require_utc_datetime(value, "datetime")
@@ -130,7 +140,6 @@ class SQLiteExperimentWriter(
         target_desired_state: ExperimentDesiredState,
         target_stage: ExperimentStage,
         failure_code: ExperimentFailureCode | None,
-        queue_ordinal: int | None,
         expected_revision: int,
         occurred_at: datetime,
         attempt_started: bool,
@@ -161,6 +170,14 @@ class SQLiteExperimentWriter(
                 attempt_started=attempt_started,
                 precondition_repairable=precondition_repairable,
             )
+            if (
+                current_status,
+                target_status,
+            ) not in _OPERATOR_EXPERIMENT_TRANSITIONS:
+                raise ExperimentSpecError(
+                    "scheduler-owned experiment transition requires a lease fence",
+                    details={"reason_code": "scheduler_transition_requires_fence"},
+                )
             validate_experiment_status_stage_transition(
                 current_status,
                 ExperimentStage(row["stage"]),
@@ -182,7 +199,7 @@ class SQLiteExperimentWriter(
             cursor = connection.execute(
                 """
                 UPDATE experiment
-                SET status=?, desired_state=?, stage=?, failure_code=?, queue_ordinal=?,
+                SET status=?, desired_state=?, stage=?, failure_code=?,
                     updated_at_epoch_us=?, revision=?
                 WHERE experiment_id=? AND revision=?
                 """,
@@ -191,7 +208,6 @@ class SQLiteExperimentWriter(
                     target_desired_state.value,
                     target_stage.value,
                     _optional(failure_code),
-                    queue_ordinal,
                     _epoch_us(occurred_at),
                     new_revision,
                     str(experiment_id),
@@ -219,7 +235,7 @@ class SQLiteExperimentWriter(
             )
             connection.commit()
             return ExperimentProjection(
-                record, queue_ordinal, new_revision, occurred_at
+                record, row["queue_ordinal"], new_revision, occurred_at
             )
         except AnalysisError:
             connection.rollback()
@@ -272,8 +288,7 @@ class SQLiteExperimentWriter(
                 values[:3],
             ).fetchone()
             if existing is not None:
-                if tuple(existing) != values:
-                    raise _conflict("fold replay drift", "fold_replay_drift")
+                self._verify_fold_replay(connection, existing, values, initial)
                 connection.commit()
                 return
             connection.execute(
@@ -392,21 +407,20 @@ class SQLiteExperimentWriter(
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute(
+                "SELECT * FROM experiment_attempt WHERE attempt_id=?",
+                (str(spec.attempt_id),),
+            ).fetchone()
+            if existing is not None:
+                self._verify_attempt_replay(connection, existing, values, initial)
+                connection.commit()
+                return
             self._validate_lease(
                 connection, lease_fence, now_epoch_us, spec.fold_key.experiment_id
             )
             validate_attempt_fold_owner(
                 connection, spec.fold_key, lease_fence.owner_token
             )
-            existing = connection.execute(
-                "SELECT * FROM experiment_attempt WHERE attempt_id=?",
-                (str(spec.attempt_id),),
-            ).fetchone()
-            if existing is not None:
-                if tuple(existing) != values:
-                    raise _conflict("attempt replay drift", "attempt_replay_drift")
-                connection.commit()
-                return
             if spec.parent_attempt_id is not None:
                 parent = connection.execute(
                     "SELECT * FROM experiment_attempt WHERE attempt_id=?",
@@ -562,6 +576,14 @@ class SQLiteExperimentWriter(
             if row["revision"] != expected_revision:
                 raise _conflict("fold revision is stale", "stale_projection_revision")
             previous_status = ExperimentStatus(row["status"])
+            if (
+                previous_status is ExperimentStatus.RUNNING
+                and target_status is ExperimentStatus.QUEUED
+            ):
+                raise ExperimentSpecError(
+                    "running fold recovery requires an atomic recovery operation",
+                    details={"reason_code": "recovery_transition_requires_atomic_api"},
+                )
             validate_fold_transition(
                 previous_status,
                 target_status,

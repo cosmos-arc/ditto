@@ -22,6 +22,7 @@ from ditto_analysis.experiments import (
     ContentHash,
     ExperimentBudget,
     ExperimentDesiredState,
+    ExperimentFailureCode,
     ExperimentFailurePolicy,
     ExperimentId,
     ExperimentLaunchSpec,
@@ -40,6 +41,7 @@ NOW_US = 1_768_000_000_000_000
 
 def _api() -> SimpleNamespace:
     from ditto_analysis.errors import (
+        ExperimentIntegrityError,
         ExperimentLeaseLostError,
         ExperimentPersistenceError,
     )
@@ -132,9 +134,24 @@ def _add_fold(
     return key
 
 
-def _attempt(api: SimpleNamespace, key: Any, attempt_id: str = "attempt-1") -> Any:
+def _attempt(
+    api: SimpleNamespace,
+    key: Any,
+    attempt_id: str = "attempt-1",
+    *,
+    ordinal: int = 1,
+    parent_attempt_id: AttemptId | None = None,
+    resume_from_run_id: BacktestRunId | None = None,
+    fingerprint: ContentHash | None = None,
+) -> Any:
     spec = api.AttemptPersistenceSpec(
-        AttemptId(attempt_id), key, 1, None, None, ContentHash("d" * 64), NOW
+        AttemptId(attempt_id),
+        key,
+        ordinal,
+        parent_attempt_id,
+        resume_from_run_id,
+        fingerprint or ContentHash("d" * 64),
+        NOW,
     )
     projection = api.AttemptProjection(
         AttemptId(attempt_id),
@@ -147,6 +164,48 @@ def _attempt(api: SimpleNamespace, key: Any, attempt_id: str = "attempt-1") -> A
         0,
     )
     return spec, projection
+
+
+def _start_running_attempt(
+    writer: Any,
+    api: SimpleNamespace,
+    key: Any,
+    *,
+    owner: str = "owner-a",
+    lease_until_epoch_us: int = NOW_US + 10,
+) -> tuple[Any, Any, Any]:
+    lease = writer.try_claim_lease(
+        key.experiment_id,
+        owner,
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=lease_until_epoch_us,
+    )
+    assert lease is not None
+    spec, projection = _attempt(api, key)
+    writer.claim_fold_and_add_attempt(
+        key,
+        spec,
+        projection,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        occurred_at=NOW,
+    )
+    running = writer.transition_attempt(
+        spec.attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=BacktestRunId("backtest-run-1"),
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+        reason_code="attempt_started",
+        detail={},
+    )
+    return lease, spec, running
 
 
 def test_fresh_schema_has_exactly_one_free_global_slot(tmp_path: Path) -> None:
@@ -736,7 +795,7 @@ def test_claim_fold_and_add_attempt_is_one_atomic_dispatch_transaction(
     assert reader.get_attempt(AttemptId("attempt-2")) is None
 
 
-def test_atomic_dispatch_rejects_retry_shape_before_mutating_the_fold(
+def test_atomic_successor_dispatch_rejects_missing_parent_without_mutating_fold(
     tmp_path: Path,
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
@@ -769,7 +828,7 @@ def test_atomic_dispatch_rejects_retry_shape_before_mutating_the_fold(
         0,
     )
 
-    with pytest.raises(ExperimentSpecError) as exc_info:
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
         writer.claim_fold_and_add_attempt(
             key,
             retry,
@@ -780,12 +839,261 @@ def test_atomic_dispatch_rejects_retry_shape_before_mutating_the_fold(
             occurred_at=NOW,
         )
 
-    assert (
-        exc_info.value.details["reason_code"]
-        == "atomic_dispatch_requires_first_attempt"
-    )
+    assert exc_info.value.details["reason_code"] == "invalid_retry_parent_lineage"
     assert reader.get_fold(key).projection.status is ExperimentStatus.QUEUED
     assert reader.get_attempt(AttemptId("attempt-retry")) is None
+
+
+def test_reclaimed_owner_recovers_interrupted_work_and_dispatches_successor(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    old_lease, parent_spec, running_attempt = _start_running_attempt(writer, api, key)
+    new_lease = writer.try_claim_lease(
+        key.experiment_id,
+        "owner-b",
+        expected_revision=old_lease.revision,
+        now_epoch_us=NOW_US + 10,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert new_lease is not None
+
+    with pytest.raises(api.ExperimentLeaseLostError):
+        writer.requeue_interrupted_fold(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=1,
+            expected_attempt_revision=running_attempt.revision,
+            lease_fence=old_lease.fence,
+            now_epoch_us=NOW_US + 11,
+            occurred_at=NOW,
+            detail={"reclaimed_by": "owner-b"},
+        )
+    assert reader.get_fold(key).projection.status is ExperimentStatus.RUNNING
+    assert reader.get_attempt(parent_spec.attempt_id).projection == running_attempt
+
+    recovered_fold, interrupted_attempt = writer.requeue_interrupted_fold(
+        key,
+        parent_spec.attempt_id,
+        expected_fold_revision=1,
+        expected_attempt_revision=running_attempt.revision,
+        lease_fence=new_lease.fence,
+        now_epoch_us=NOW_US + 11,
+        occurred_at=NOW,
+        detail={"reclaimed_by": "owner-b"},
+    )
+    assert recovered_fold.status is ExperimentStatus.QUEUED
+    assert recovered_fold.claim_owner_token is None
+    assert interrupted_attempt.status is ExperimentStatus.FAILED
+    assert interrupted_attempt.failure_code is ExperimentFailureCode.LEASE_LOST
+    assert (
+        database.get_connection()
+        .execute(
+            """
+            SELECT count(*) FROM experiment_attempt
+            WHERE experiment_id=? AND candidate_id=? AND fold_id=?
+              AND status IN ('queued', 'running')
+            """,
+            (str(key.experiment_id), str(key.candidate_id), str(key.fold_id)),
+        )
+        .fetchone()[0]
+        == 0
+    )
+
+    successor_spec, successor_initial = _attempt(
+        api,
+        key,
+        "attempt-2",
+        ordinal=2,
+        parent_attempt_id=parent_spec.attempt_id,
+        resume_from_run_id=running_attempt.backtest_run_id,
+    )
+    claimed_fold, successor = writer.claim_fold_and_add_attempt(
+        key,
+        successor_spec,
+        successor_initial,
+        expected_fold_revision=recovered_fold.revision,
+        lease_fence=new_lease.fence,
+        now_epoch_us=NOW_US + 12,
+        occurred_at=NOW,
+    )
+
+    assert claimed_fold.status is ExperimentStatus.RUNNING
+    assert successor == successor_initial
+    assert reader.get_attempt(parent_spec.attempt_id).projection == interrupted_attempt
+    assert reader.get_attempt(successor_spec.attempt_id).spec == successor_spec
+    assert (
+        database.get_connection()
+        .execute(
+            """
+            SELECT count(*) FROM experiment_attempt
+            WHERE experiment_id=? AND candidate_id=? AND fold_id=?
+              AND status IN ('queued', 'running')
+            """,
+            (str(key.experiment_id), str(key.candidate_id), str(key.fold_id)),
+        )
+        .fetchone()[0]
+        == 1
+    )
+    reasons = {
+        event.reason_code for event in reader.list_status_events(key.experiment_id)
+    }
+    assert {"crash_recovery_interrupted", "crash_recovery_requeue"} <= reasons
+
+
+def test_crash_recovery_attempt_and_fold_events_rollback_together(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    old_lease, parent_spec, running_attempt = _start_running_attempt(writer, api, key)
+    new_lease = writer.try_claim_lease(
+        key.experiment_id,
+        "owner-b",
+        expected_revision=old_lease.revision,
+        now_epoch_us=NOW_US + 10,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert new_lease is not None
+    connection = database.get_connection()
+    connection.execute(
+        """
+        CREATE TRIGGER abort_crash_recovery_fold_event
+        BEFORE INSERT ON experiment_status_event
+        WHEN NEW.subject_type='fold' AND NEW.reason_code='crash_recovery_requeue'
+        BEGIN
+            SELECT RAISE(ABORT, 'injected recovery event failure');
+        END
+        """
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentPersistenceError):
+        writer.requeue_interrupted_fold(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=1,
+            expected_attempt_revision=running_attempt.revision,
+            lease_fence=new_lease.fence,
+            now_epoch_us=NOW_US + 11,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert reader.get_fold(key).projection.status is ExperimentStatus.RUNNING
+    assert reader.get_fold(key).projection.revision == 1
+    assert reader.get_attempt(parent_spec.attempt_id).projection == running_attempt
+    assert all(
+        event.reason_code
+        not in {"crash_recovery_interrupted", "crash_recovery_requeue"}
+        for event in reader.list_status_events(key.experiment_id)
+    )
+
+
+def test_current_owner_cannot_misclassify_its_live_attempt_as_crash_orphan(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    running_fold = reader.get_fold(key).projection
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_interrupted_fold(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=running_fold.revision,
+            expected_attempt_revision=running_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "crash_recovery_requires_reclaimed_owner"
+    )
+    assert reader.get_fold(key).projection == running_fold
+    assert reader.get_attempt(parent_spec.attempt_id).projection == running_attempt
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+@pytest.mark.parametrize(
+    ("drift", "reason_code"),
+    [
+        ("parent", "invalid_retry_parent_lineage"),
+        ("fingerprint", "retry_fingerprint_drift"),
+        ("resume", "retry_resume_source_mismatch"),
+    ],
+)
+def test_atomic_successor_dispatch_validates_parent_before_fold_claim(
+    tmp_path: Path,
+    drift: str,
+    reason_code: str,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    old_lease, parent_spec, running_attempt = _start_running_attempt(writer, api, key)
+    new_lease = writer.try_claim_lease(
+        key.experiment_id,
+        "owner-b",
+        expected_revision=old_lease.revision,
+        now_epoch_us=NOW_US + 10,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert new_lease is not None
+    recovered_fold, _interrupted = writer.requeue_interrupted_fold(
+        key,
+        parent_spec.attempt_id,
+        expected_fold_revision=1,
+        expected_attempt_revision=running_attempt.revision,
+        lease_fence=new_lease.fence,
+        now_epoch_us=NOW_US + 11,
+        occurred_at=NOW,
+        detail={},
+    )
+    successor_spec, successor_initial = _attempt(
+        api,
+        key,
+        "attempt-2",
+        ordinal=2,
+        parent_attempt_id=(
+            AttemptId("missing-parent") if drift == "parent" else parent_spec.attempt_id
+        ),
+        resume_from_run_id=(
+            BacktestRunId("wrong-run")
+            if drift == "resume"
+            else running_attempt.backtest_run_id
+        ),
+        fingerprint=(
+            ContentHash("e" * 64)
+            if drift == "fingerprint"
+            else parent_spec.reproduction_fingerprint
+        ),
+    )
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.claim_fold_and_add_attempt(
+            key,
+            successor_spec,
+            successor_initial,
+            expected_fold_revision=recovered_fold.revision,
+            lease_fence=new_lease.fence,
+            now_epoch_us=NOW_US + 12,
+            occurred_at=NOW,
+        )
+
+    assert exc_info.value.details["reason_code"] == reason_code
+    assert reader.get_fold(key).projection == recovered_fold
+    assert reader.get_attempt(successor_spec.attempt_id) is None
 
 
 def test_expired_fence_cannot_claim_or_write_work(tmp_path: Path) -> None:
@@ -813,26 +1121,21 @@ def test_expired_fence_cannot_claim_or_write_work(tmp_path: Path) -> None:
     assert reader.get_fold(key).projection.status is ExperimentStatus.QUEUED
 
 
-def test_running_fold_can_return_to_queue_only_for_explicit_pause_recovery(
+@pytest.mark.parametrize("reason_code", ["pause_recovery", "crash_recovery"])
+def test_generic_fold_transition_cannot_requeue_running_fold_with_live_attempt(
     tmp_path: Path,
+    reason_code: str,
 ) -> None:
     _database, reader, writer, api = _store(tmp_path)
     key = _add_fold(writer, api)
-    lease = writer.try_claim_lease(
-        ExperimentId("experiment-1"),
-        "owner-a",
-        expected_revision=0,
-        now_epoch_us=NOW_US,
+    lease, attempt_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
         lease_until_epoch_us=NOW_US + 100,
     )
-    assert lease is not None
-    running = writer.claim_fold(
-        key,
-        expected_revision=0,
-        lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 1,
-        occurred_at=NOW,
-    )
+    running_fold = reader.get_fold(key).projection
+    before_events = reader.list_status_events(key.experiment_id)
 
     with pytest.raises(ExperimentSpecError) as exc_info:
         writer.transition_fold(
@@ -840,30 +1143,20 @@ def test_running_fold_can_return_to_queue_only_for_explicit_pause_recovery(
             target_status=ExperimentStatus.QUEUED,
             claim_owner_token=None,
             failure_code=None,
-            expected_revision=running.revision,
+            expected_revision=running_fold.revision,
             lease_fence=lease.fence,
-            now_epoch_us=NOW_US + 2,
+            now_epoch_us=NOW_US + 3,
             occurred_at=NOW,
-            reason_code="retry",
+            reason_code=reason_code,
             detail={},
         )
-    assert exc_info.value.details["reason_code"] == "pause_recovery_reason_required"
-    assert reader.get_fold(key).projection == running
-
-    recovered = writer.transition_fold(
-        key,
-        target_status=ExperimentStatus.QUEUED,
-        claim_owner_token=None,
-        failure_code=None,
-        expected_revision=running.revision,
-        lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 2,
-        occurred_at=NOW,
-        reason_code="pause_recovery",
-        detail={},
+    assert (
+        exc_info.value.details["reason_code"]
+        == "recovery_transition_requires_atomic_api"
     )
-    assert recovered.status is ExperimentStatus.QUEUED
-    assert recovered.claim_owner_token is None
+    assert reader.get_fold(key).projection == running_fold
+    assert reader.get_attempt(attempt_spec.attempt_id).projection == running_attempt
+    assert reader.list_status_events(key.experiment_id) == before_events
 
 
 def test_terminal_work_items_cannot_transition_back_to_live_states(

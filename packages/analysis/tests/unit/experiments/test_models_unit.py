@@ -2,17 +2,21 @@
 
 from collections.abc import Callable
 from dataclasses import FrozenInstanceError
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 from ditto_analysis.errors import ExperimentIdentityError, ExperimentSpecError
 from ditto_analysis.experiments import (
     AttemptId,
-    AttemptRecord,
+    AttemptPersistenceSpec,
+    AttemptProjection,
+    AttemptView,
     BacktestRunId,
     CandidateId,
-    CandidateRecord,
+    CandidateSpec,
     CheckpointRef,
+    ContentHash,
+    DateWindow,
     ExperimentDesiredState,
     ExperimentFailureCode,
     ExperimentId,
@@ -20,7 +24,11 @@ from ditto_analysis.experiments import (
     ExperimentStage,
     ExperimentStatus,
     FoldId,
-    FoldRecord,
+    FoldKey,
+    FoldPersistenceSpec,
+    FoldProjection,
+    FoldRole,
+    FoldView,
     SnapshotId,
     StrategyVersion,
 )
@@ -61,19 +69,6 @@ EXPERIMENT_FAILURE_POLICY_CASES = [
     (
         ExperimentStatus.FAILED,
         ExperimentFailureCode.SYSTEM_ERROR,
-        ExperimentFailureCode.SNAPSHOT_NOT_CERTIFIED,
-        True,
-    ),
-]
-
-ATTEMPT_FAILURE_POLICY_CASES = [
-    (ExperimentStatus.QUEUED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
-    (ExperimentStatus.RUNNING, None, ExperimentFailureCode.SYSTEM_ERROR, False),
-    (ExperimentStatus.CANCELLED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
-    (ExperimentStatus.COMPLETED, None, ExperimentFailureCode.SYSTEM_ERROR, False),
-    (
-        ExperimentStatus.FAILED,
-        ExperimentFailureCode.CANDIDATE_FAILED,
         ExperimentFailureCode.SNAPSHOT_NOT_CERTIFIED,
         True,
     ),
@@ -124,46 +119,76 @@ def test_candidate_fold_and_attempt_preserve_parent_identity_and_ordinals() -> N
     fold_id = FoldId("fold-1")
     attempt_id = AttemptId("attempt-2")
 
-    candidate = CandidateRecord(
-        candidate_id,
-        experiment_id,
+    candidate = CandidateSpec(
+        candidate_id=candidate_id,
         ordinal=1,
         is_baseline=True,
+        parameters={"lookback": 20},
     )
-    fold = FoldRecord(fold_id, experiment_id, candidate_id, ordinal=1)
-    attempt = AttemptRecord(
+    fold_key = FoldKey(experiment_id, candidate_id, fold_id)
+    fold_spec = FoldPersistenceSpec.create(
+        key=fold_key,
+        ordinal=1,
+        fold_role=FoldRole.WALK_FORWARD,
+        train_window=DateWindow(date(2024, 1, 2), date(2025, 12, 31)),
+        test_window=DateWindow(date(2026, 1, 5), date(2026, 3, 31)),
+        purge_sessions=2,
+        embargo_sessions=1,
+    )
+    fold = FoldView(
+        spec=fold_spec,
+        projection=FoldProjection(
+            key=fold_key,
+            status=ExperimentStatus.QUEUED,
+            claim_owner_token=None,
+            created_at=NOW,
+            updated_at=NOW,
+            revision=0,
+        ),
+    )
+    attempt_spec = AttemptPersistenceSpec(
         attempt_id=attempt_id,
-        experiment_id=experiment_id,
-        candidate_id=candidate_id,
-        fold_id=fold_id,
+        fold_key=fold_key,
         ordinal=2,
-        status=ExperimentStatus.QUEUED,
-        created_at=NOW,
         parent_attempt_id=AttemptId("attempt-1"),
         resume_from_run_id=BacktestRunId("run-1"),
-        checkpoint_ref=CheckpointRef("checkpoint-1"),
+        reproduction_fingerprint=ContentHash("a" * 64),
+        created_at=NOW,
+    )
+    attempt = AttemptView(
+        spec=attempt_spec,
+        projection=AttemptProjection(
+            attempt_id=attempt_id,
+            status=ExperimentStatus.QUEUED,
+            backtest_run_id=None,
+            checkpoint_ref=CheckpointRef("checkpoint-1"),
+            failure_code=None,
+            created_at=NOW,
+            updated_at=NOW,
+            revision=0,
+        ),
     )
 
-    assert candidate.ordinal == fold.ordinal == 1
-    assert attempt.ordinal == 2
-    assert attempt.parent_attempt_id == AttemptId("attempt-1")
-    assert attempt.resume_from_run_id == BacktestRunId("run-1")
+    assert candidate.ordinal == fold.spec.ordinal == 1
+    assert fold.spec.key == fold.projection.key == fold_key
+    assert attempt.spec.ordinal == 2
+    assert attempt.spec.fold_key == fold_key
+    assert attempt.spec.parent_attempt_id == AttemptId("attempt-1")
+    assert attempt.spec.resume_from_run_id == BacktestRunId("run-1")
+    assert attempt.projection.checkpoint_ref == CheckpointRef("checkpoint-1")
 
 
-def test_retry_cannot_overwrite_parent_identity_or_ordinal() -> None:
-    with pytest.raises(ExperimentSpecError) as exc_info:
-        AttemptRecord(
-            attempt_id=AttemptId("attempt-1"),
-            experiment_id=ExperimentId("exp-1"),
-            candidate_id=CandidateId("candidate-1"),
-            fold_id=FoldId("fold-1"),
-            ordinal=1,
-            status=ExperimentStatus.QUEUED,
-            created_at=NOW,
-            parent_attempt_id=AttemptId("attempt-1"),
-        )
+def test_attempt_view_separates_immutable_lineage_from_execution_projection() -> None:
+    attempt = _attempt(
+        status=ExperimentStatus.RUNNING,
+        ordinal=2,
+        parent_attempt_id=AttemptId("attempt-1"),
+    )
 
-    assert exc_info.value.details["reason_code"] == "invalid_attempt_lineage"
+    assert attempt.spec.parent_attempt_id == AttemptId("attempt-1")
+    assert attempt.spec.ordinal == 2
+    assert attempt.projection.status is ExperimentStatus.RUNNING
+    assert not hasattr(attempt.projection, "parent_attempt_id")
 
 
 def test_failure_code_is_stable_and_only_present_for_failure_outcomes() -> None:
@@ -234,35 +259,14 @@ def test_experiment_failure_code_policy_is_total_by_status(
         assert _experiment(status=status).failure_code is None
 
 
-@pytest.mark.parametrize(
-    ("status", "allowed_code", "wrong_code", "code_required"),
-    ATTEMPT_FAILURE_POLICY_CASES,
-)
-def test_attempt_failure_code_policy_is_total_for_allowed_statuses(
-    status: ExperimentStatus,
-    allowed_code: ExperimentFailureCode | None,
-    wrong_code: ExperimentFailureCode,
-    code_required: bool,
-) -> None:
-    assert _attempt(status=status, failure_code=allowed_code).status is status
-
-    with pytest.raises(ExperimentSpecError) as wrong_code_exc:
-        _attempt(status=status, failure_code=wrong_code)
-    expected_reason = (
-        "failure_code_without_failure_outcome"
-        if allowed_code is None
-        else "failure_code_not_allowed_for_status"
+def test_attempt_projection_preserves_a_stable_failure_outcome() -> None:
+    attempt = _attempt(
+        status=ExperimentStatus.FAILED,
+        failure_code=ExperimentFailureCode.CANDIDATE_FAILED,
     )
-    assert wrong_code_exc.value.details["reason_code"] == expected_reason
 
-    if code_required:
-        with pytest.raises(ExperimentSpecError) as missing_code_exc:
-            _attempt(status=status)
-        assert missing_code_exc.value.details["reason_code"] == (
-            "failure_code_required"
-        )
-    else:
-        assert _attempt(status=status).failure_code is None
+    assert attempt.projection.status is ExperimentStatus.FAILED
+    assert attempt.projection.failure_code is ExperimentFailureCode.CANDIDATE_FAILED
 
 
 def test_failed_records_require_a_stable_failure_code() -> None:
@@ -276,66 +280,6 @@ def test_failed_records_require_a_stable_failure_code() -> None:
         )
 
     assert exc_info.value.details["reason_code"] == "failure_code_required"
-
-
-def test_failed_attempt_requires_a_stable_failure_code() -> None:
-    with pytest.raises(ExperimentSpecError) as exc_info:
-        AttemptRecord(
-            attempt_id=AttemptId("attempt-1"),
-            experiment_id=ExperimentId("exp-failed"),
-            candidate_id=CandidateId("candidate-1"),
-            fold_id=FoldId("fold-1"),
-            ordinal=1,
-            status=ExperimentStatus.FAILED,
-            created_at=NOW,
-        )
-
-    assert exc_info.value.details["reason_code"] == "failure_code_required"
-
-
-def test_non_failed_attempt_rejects_failure_code() -> None:
-    with pytest.raises(ExperimentSpecError) as exc_info:
-        AttemptRecord(
-            attempt_id=AttemptId("attempt-1"),
-            experiment_id=ExperimentId("exp-running"),
-            candidate_id=CandidateId("candidate-1"),
-            fold_id=FoldId("fold-1"),
-            ordinal=1,
-            status=ExperimentStatus.RUNNING,
-            created_at=NOW,
-            failure_code=ExperimentFailureCode.SYSTEM_ERROR,
-        )
-
-    assert exc_info.value.details["reason_code"] == (
-        "failure_code_without_failure_outcome"
-    )
-
-
-@pytest.mark.parametrize("status", list(ExperimentStatus))
-def test_attempt_statuses_use_an_explicit_minimal_allowlist(
-    status: ExperimentStatus,
-) -> None:
-    allowed = {
-        ExperimentStatus.QUEUED,
-        ExperimentStatus.RUNNING,
-        ExperimentStatus.COMPLETED,
-        ExperimentStatus.FAILED,
-        ExperimentStatus.CANCELLED,
-    }
-    failure_code = (
-        ExperimentFailureCode.SYSTEM_ERROR
-        if status is ExperimentStatus.FAILED
-        else None
-    )
-
-    if status in allowed:
-        assert _attempt(status=status, failure_code=failure_code).status is status
-        return
-
-    with pytest.raises(ExperimentSpecError) as exc_info:
-        _attempt(status=status, failure_code=failure_code)
-
-    assert exc_info.value.details["reason_code"] == "invalid_attempt_status"
 
 
 @pytest.mark.parametrize(
@@ -366,16 +310,34 @@ def _attempt(
     *,
     status: ExperimentStatus,
     failure_code: ExperimentFailureCode | None = None,
-) -> AttemptRecord:
-    return AttemptRecord(
-        attempt_id=AttemptId("attempt-1"),
-        experiment_id=ExperimentId("exp-1"),
-        candidate_id=CandidateId("candidate-1"),
-        fold_id=FoldId("fold-1"),
-        ordinal=1,
-        status=status,
-        created_at=NOW,
-        failure_code=failure_code,
+    ordinal: int = 1,
+    parent_attempt_id: AttemptId | None = None,
+) -> AttemptView:
+    attempt_id = AttemptId(f"attempt-{ordinal}")
+    return AttemptView(
+        spec=AttemptPersistenceSpec(
+            attempt_id=attempt_id,
+            fold_key=FoldKey(
+                ExperimentId("exp-1"),
+                CandidateId("candidate-1"),
+                FoldId("fold-1"),
+            ),
+            ordinal=ordinal,
+            parent_attempt_id=parent_attempt_id,
+            resume_from_run_id=None,
+            reproduction_fingerprint=ContentHash("a" * 64),
+            created_at=NOW,
+        ),
+        projection=AttemptProjection(
+            attempt_id=attempt_id,
+            status=status,
+            backtest_run_id=None,
+            checkpoint_ref=None,
+            failure_code=failure_code,
+            created_at=NOW,
+            updated_at=NOW,
+            revision=0,
+        ),
     )
 
 

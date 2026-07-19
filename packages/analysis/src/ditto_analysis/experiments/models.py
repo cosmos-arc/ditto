@@ -16,10 +16,8 @@ from ditto_analysis.experiments._validation import require_utc_datetime
 
 __all__ = [
     "AttemptId",
-    "AttemptRecord",
     "BacktestRunId",
     "CandidateId",
-    "CandidateRecord",
     "CheckpointRef",
     "ContentHash",
     "ExperimentDesiredState",
@@ -29,7 +27,6 @@ __all__ = [
     "ExperimentStage",
     "ExperimentStatus",
     "FoldId",
-    "FoldRecord",
     "SnapshotId",
     "StrategyVersion",
     "validate_status_transition",
@@ -180,19 +177,6 @@ class ExperimentFailureCode(StrEnum):
     SYSTEM_ERROR = "system_error"
 
 
-def _require_positive_ordinal(value: object, field_name: str) -> int:
-    if type(value) is not int or value <= 0:
-        raise ExperimentSpecError(
-            f"{field_name} must be a positive integer",
-            details={
-                "reason_code": "invalid_ordinal",
-                "field": field_name,
-                "value": value,
-            },
-        )
-    return value
-
-
 def _require_instance(value: object, expected: type, field_name: str) -> None:
     if not isinstance(value, expected):
         raise ExperimentSpecError(
@@ -202,17 +186,6 @@ def _require_instance(value: object, expected: type, field_name: str) -> None:
                 "field": field_name,
             },
         )
-
-
-_ALLOWED_ATTEMPT_STATUSES = frozenset(
-    {
-        ExperimentStatus.QUEUED,
-        ExperimentStatus.RUNNING,
-        ExperimentStatus.CANCELLED,
-        ExperimentStatus.COMPLETED,
-        ExperimentStatus.FAILED,
-    }
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -258,16 +231,6 @@ _EXPERIMENT_FAILURE_CODE_POLICY = {
     ExperimentStatus.FAILED: _FailureCodePolicy(
         required=True,
         allowed_codes=_HARD_FAILURE_CODES,
-    ),
-}
-_ATTEMPT_FAILURE_CODE_POLICY = {
-    ExperimentStatus.QUEUED: _NO_FAILURE_CODE,
-    ExperimentStatus.RUNNING: _NO_FAILURE_CODE,
-    ExperimentStatus.CANCELLED: _NO_FAILURE_CODE,
-    ExperimentStatus.COMPLETED: _NO_FAILURE_CODE,
-    ExperimentStatus.FAILED: _FailureCodePolicy(
-        required=True,
-        allowed_codes=_LOCAL_FAILURE_CODES | _HARD_FAILURE_CODES,
     ),
 }
 
@@ -319,44 +282,6 @@ def _validate_failure_code(
     )
 
 
-def _validate_attempt_lineage(
-    attempt_id: AttemptId,
-    ordinal: int,
-    parent_attempt_id: AttemptId | None,
-) -> None:
-    if parent_attempt_id is not None:
-        _require_instance(parent_attempt_id, AttemptId, "parent_attempt_id")
-        if parent_attempt_id == attempt_id:
-            raise ExperimentSpecError(
-                "retry attempt cannot be its own parent",
-                details={"reason_code": "invalid_attempt_lineage"},
-            )
-    if ordinal > 1 and parent_attempt_id is None:
-        raise ExperimentSpecError(
-            "retry attempt must reference its immutable parent attempt",
-            details={"reason_code": "invalid_attempt_lineage"},
-        )
-    if ordinal == 1 and parent_attempt_id is not None:
-        raise ExperimentSpecError(
-            "first attempt cannot reference a parent attempt",
-            details={"reason_code": "invalid_attempt_lineage"},
-        )
-
-
-def _validate_attempt_references(
-    resume_from_run_id: BacktestRunId | None,
-    checkpoint_ref: CheckpointRef | None,
-) -> None:
-    if resume_from_run_id is not None:
-        _require_instance(
-            resume_from_run_id,
-            BacktestRunId,
-            "resume_from_run_id",
-        )
-    if checkpoint_ref is not None:
-        _require_instance(checkpoint_ref, CheckpointRef, "checkpoint_ref")
-
-
 @dataclass(frozen=True, slots=True)
 class ExperimentRecord:
     """Immutable projection of an experiment's observed control state."""
@@ -379,90 +304,6 @@ class ExperimentRecord:
             self.status,
             self.failure_code,
             policy_by_status=_EXPERIMENT_FAILURE_CODE_POLICY,
-        )
-
-
-@dataclass(frozen=True, slots=True)
-class CandidateRecord:
-    """Stable candidate identity within one experiment."""
-
-    candidate_id: CandidateId
-    experiment_id: ExperimentId
-    ordinal: int
-    is_baseline: bool = False
-
-    def __post_init__(self) -> None:
-        """Validate candidate identity and stable ordinal."""
-        _require_instance(self.candidate_id, CandidateId, "candidate_id")
-        _require_instance(self.experiment_id, ExperimentId, "experiment_id")
-        _require_positive_ordinal(self.ordinal, "candidate_ordinal")
-        if type(self.is_baseline) is not bool:
-            raise ExperimentSpecError(
-                "is_baseline must be bool",
-                details={"reason_code": "invalid_baseline_marker"},
-            )
-
-
-@dataclass(frozen=True, slots=True)
-class FoldRecord:
-    """Stable fold identity and its experiment/candidate parents."""
-
-    fold_id: FoldId
-    experiment_id: ExperimentId
-    candidate_id: CandidateId
-    ordinal: int
-
-    def __post_init__(self) -> None:
-        """Validate fold identity, parents, and ordinal."""
-        _require_instance(self.fold_id, FoldId, "fold_id")
-        _require_instance(self.experiment_id, ExperimentId, "experiment_id")
-        _require_instance(self.candidate_id, CandidateId, "candidate_id")
-        _require_positive_ordinal(self.ordinal, "fold_ordinal")
-
-
-@dataclass(frozen=True, slots=True)
-class AttemptRecord:
-    """Immutable execution attempt; retries append instead of overwriting."""
-
-    attempt_id: AttemptId
-    experiment_id: ExperimentId
-    candidate_id: CandidateId
-    fold_id: FoldId
-    ordinal: int
-    status: ExperimentStatus
-    created_at: datetime
-    parent_attempt_id: AttemptId | None = None
-    resume_from_run_id: BacktestRunId | None = None
-    checkpoint_ref: CheckpointRef | None = None
-    failure_code: ExperimentFailureCode | None = None
-
-    def __post_init__(self) -> None:
-        """Validate attempt identity, lineage, and opaque references."""
-        _require_instance(self.attempt_id, AttemptId, "attempt_id")
-        _require_instance(self.experiment_id, ExperimentId, "experiment_id")
-        _require_instance(self.candidate_id, CandidateId, "candidate_id")
-        _require_instance(self.fold_id, FoldId, "fold_id")
-        _require_positive_ordinal(self.ordinal, "attempt_ordinal")
-        _require_instance(self.status, ExperimentStatus, "status")
-        require_utc_datetime(self.created_at, "created_at")
-        if self.status not in _ALLOWED_ATTEMPT_STATUSES:
-            raise ExperimentSpecError(
-                "attempt record status is not an execution-attempt state",
-                details={"reason_code": "invalid_attempt_status"},
-            )
-        _validate_attempt_lineage(
-            self.attempt_id,
-            self.ordinal,
-            self.parent_attempt_id,
-        )
-        _validate_attempt_references(
-            self.resume_from_run_id,
-            self.checkpoint_ref,
-        )
-        _validate_failure_code(
-            self.status,
-            self.failure_code,
-            policy_by_status=_ATTEMPT_FAILURE_CODE_POLICY,
         )
 
 

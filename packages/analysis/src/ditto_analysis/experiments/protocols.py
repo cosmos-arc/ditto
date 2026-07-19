@@ -109,7 +109,6 @@ class ExperimentWriterProtocol(Protocol):
         target_desired_state: ExperimentDesiredState,
         target_stage: ExperimentStage,
         failure_code: ExperimentFailureCode | None,
-        queue_ordinal: int | None,
         expected_revision: int,
         occurred_at: datetime,
         attempt_started: bool,
@@ -184,6 +183,19 @@ class ExperimentWriterProtocol(Protocol):
         reason_code: str | None,
         detail: Mapping[str, object],
     ) -> FoldProjection: ...
+
+    def requeue_interrupted_fold(
+        self,
+        key: FoldKey,
+        attempt_id: AttemptId,
+        *,
+        expected_fold_revision: int,
+        expected_attempt_revision: int,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> tuple[FoldProjection, AttemptProjection]: ...
 
     def add_attempt(
         self,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from collections.abc import Callable, Mapping
@@ -12,7 +13,11 @@ from typing import Literal, cast
 import orjson
 import polars as pl
 
-from ditto_analysis.errors import ExperimentSpecError, ResearchDatasetError
+from ditto_analysis.errors import (
+    ExperimentConflictError,
+    ExperimentSpecError,
+    ResearchDatasetError,
+)
 from ditto_analysis.experiments.persistence import validate_artifact_relative_path
 
 __all__ = ["ResearchArtifactService"]
@@ -63,6 +68,84 @@ class ResearchArtifactService:
         finally:
             with suppress(FileNotFoundError):
                 temporary.unlink()
+
+    def publish_immutable_artifact(
+        self,
+        relative_path: str,
+        payload: bytes,
+    ) -> str:
+        """
+        Publish final evidence bytes once, returning their SHA-256 digest.
+
+        Unlike the generic ``write_*`` methods, this operation never replaces an
+        existing target. Replaying identical bytes is a no-op; any other replay is
+        a typed persistence conflict.
+        """
+        target = self._path(relative_path)
+        incoming_sha256 = hashlib.sha256(payload).hexdigest()
+        try:
+            existing = target.read_bytes()
+        except FileNotFoundError:
+            pass
+        else:
+            return self._validate_immutable_replay(
+                relative_path=relative_path,
+                existing=existing,
+                incoming=payload,
+                incoming_sha256=incoming_sha256,
+            )
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            dir=target.parent,
+        )
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                descriptor = -1
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            try:
+                os.link(temporary, target)
+            except FileExistsError:
+                existing = target.read_bytes()
+                return self._validate_immutable_replay(
+                    relative_path=relative_path,
+                    existing=existing,
+                    incoming=payload,
+                    incoming_sha256=incoming_sha256,
+                )
+            return incoming_sha256
+        finally:
+            if descriptor >= 0:
+                with suppress(OSError):
+                    os.close(descriptor)
+            with suppress(FileNotFoundError):
+                temporary.unlink()
+
+    @staticmethod
+    def _validate_immutable_replay(
+        *,
+        relative_path: str,
+        existing: bytes,
+        incoming: bytes,
+        incoming_sha256: str,
+    ) -> str:
+        existing_sha256 = hashlib.sha256(existing).hexdigest()
+        if existing_sha256 == incoming_sha256 and existing == incoming:
+            return incoming_sha256
+        raise ExperimentConflictError(
+            "immutable artifact already exists with different content",
+            details={
+                "reason_code": "immutable_artifact_conflict",
+                "relative_path": relative_path,
+                "existing_sha256": existing_sha256,
+                "incoming_sha256": incoming_sha256,
+            },
+        )
 
     # -- Parquet --
 
