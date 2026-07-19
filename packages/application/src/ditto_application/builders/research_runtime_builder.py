@@ -47,8 +47,18 @@ def _require_snapshot_id(value: object) -> str:
         raise _builder_error(
             "research snapshot identity must be a non-empty canonical string",
             reason="invalid_research_snapshot_identity",
-            snapshot_id=value,
+            path="snapshot_identity.snapshot_id",
+            actual_type=type(value).__name__,
         )
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise _builder_error(
+            "research snapshot identity must have a canonical UTF-8 identity",
+            reason="invalid_research_snapshot_identity",
+            path="snapshot_identity.snapshot_id",
+            actual_type="str",
+        ) from None
     return value
 
 
@@ -58,7 +68,8 @@ def _require_snapshot_manifest_hash(value: object, *, snapshot_id: str) -> str:
             "research snapshot manifest hash must be canonical SHA-256",
             reason="invalid_research_snapshot_identity",
             snapshot_id=snapshot_id,
-            manifest_hash=value,
+            path="snapshot_identity.manifest_hash",
+            actual_type=type(value).__name__,
         )
     return value
 
@@ -161,7 +172,15 @@ def _require_snapshot_identity(value: object) -> ResearchSnapshotIdentity:
             reason="invalid_research_snapshot_identity",
             actual_type=type(value).__name__,
         )
-    return value
+    snapshot_id = _require_snapshot_id(cast(object, value.snapshot_id))
+    manifest_hash = _require_snapshot_manifest_hash(
+        cast(object, value.manifest_hash),
+        snapshot_id=snapshot_id,
+    )
+    return ResearchSnapshotIdentity(
+        snapshot_id=snapshot_id,
+        manifest_hash=manifest_hash,
+    )
 
 
 @dataclass(frozen=True)

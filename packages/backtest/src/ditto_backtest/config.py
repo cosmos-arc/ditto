@@ -97,6 +97,11 @@ def validate_research_snapshot_identity(
     ):
         msg = "research_snapshot_id must be None or a non-empty canonical string"
         raise ValueError(msg)
+    try:
+        snapshot_id.encode("utf-8")
+    except UnicodeEncodeError:
+        msg = "research_snapshot_id must have a canonical UTF-8 identity"
+        raise ValueError(msg) from None
     validated_hash = validate_canonical_sha256(
         manifest_hash,
         field_name="research_snapshot_manifest_hash",

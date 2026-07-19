@@ -618,7 +618,7 @@ def test_etf_legacy_records_inject_only_registered_template_parameters(
     assert "fast_period" not in effective
 
 
-@pytest.mark.parametrize("snapshot_id", ["", " ", 42])
+@pytest.mark.parametrize("snapshot_id", ["", " ", 42, "\ud800"])
 def test_research_snapshot_identity_is_explicit_and_certified(
     snapshot_id: object,
 ) -> None:
@@ -635,6 +635,50 @@ def test_research_snapshot_identity_is_explicit_and_certified(
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
     assert exc_info.value.details["reason"] == "invalid_research_snapshot_identity"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "invalid_value"),
+    [
+        pytest.param("snapshot_id", "\ud800", id="snapshot-surrogate"),
+        pytest.param("snapshot_id", [], id="snapshot-wrong-type"),
+        pytest.param("manifest_hash", "bad", id="manifest-noncanonical"),
+        pytest.param("manifest_hash", "\ud800", id="manifest-surrogate"),
+    ],
+)
+def test_research_builder_revalidates_bypassed_snapshot_identity(
+    field_name: str,
+    invalid_value: object,
+) -> None:
+    """Builder snapshots the pair again instead of trusting a bypassed DTO."""
+    snapshot = _snapshot()
+    object.__setattr__(snapshot, field_name, invalid_value)
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        _builder().build(
+            record=_record(),
+            candidate_parameters=(),
+            snapshot_identity=snapshot,
+        )
+
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert exc_info.value.details["reason"] == "invalid_research_snapshot_identity"
+    assert exc_info.value.details["path"] == f"snapshot_identity.{field_name}"
+    assert getattr(snapshot, field_name) == invalid_value
+
+
+def test_research_builder_copies_valid_snapshot_identity() -> None:
+    """Later mutation of the caller DTO cannot alter the resolved runtime."""
+    snapshot = _snapshot()
+
+    runtime = _builder().build(
+        record=_record(),
+        candidate_parameters=(),
+        snapshot_identity=snapshot,
+    )
+
+    assert runtime.snapshot_identity == snapshot
+    assert runtime.snapshot_identity is not snapshot
 
 
 @pytest.mark.parametrize("manifest_hash", ["", "c" * 16, "C" * 64, "z" * 64])

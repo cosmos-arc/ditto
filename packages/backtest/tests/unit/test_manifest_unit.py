@@ -264,7 +264,11 @@ class TestRunManifestFrozen:
                 parameter_overrides=("top_k=3",),
             )
 
-    def test_rejects_noncanonical_research_snapshot_identity(self) -> None:
+    @pytest.mark.parametrize("snapshot_id", [" snapshot ", "\ud800"])
+    def test_rejects_noncanonical_research_snapshot_identity(
+        self,
+        snapshot_id: str,
+    ) -> None:
         with pytest.raises(ValueError, match="research_snapshot_id"):
             RunManifest(
                 run_id="r",
@@ -276,7 +280,7 @@ class TestRunManifestFrozen:
                 base_spec_hash=_BASE_SPEC_HASH,
                 parameter_hash=_EMPTY_PARAMETER_HASH,
                 effective_parameters=(),
-                research_snapshot_id=" snapshot ",
+                research_snapshot_id=snapshot_id,
                 research_snapshot_manifest_hash="c" * 64,
             )
 
