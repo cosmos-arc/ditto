@@ -87,6 +87,7 @@ class SelectionStage:
             selected = rank <= selected_count
             self.evidence_sink.emit(
                 SelectionEvidence(
+                    trade_date=self.evidence_sink.current_trade_date,
                     instrument_id=instrument_id,
                     score=score,
                     rank=rank,
@@ -96,6 +97,7 @@ class SelectionStage:
             if not selected:
                 self.evidence_sink.emit(
                     ExclusionEvidence(
+                        trade_date=self.evidence_sink.current_trade_date,
                         instrument_id=instrument_id,
                         stage="selection",
                         reason_code=ExclusionReason.BELOW_TOP_K,

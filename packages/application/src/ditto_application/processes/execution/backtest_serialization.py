@@ -25,6 +25,7 @@ __all__ = ["serialize_report"]
 _INITIAL_UNIVERSE_SCHEMA = pl.Schema(
     {
         "run_id": pl.String,
+        "trade_date": pl.String,
         "instrument_id": pl.String,
         "instrument_id_kind": pl.String,
         "ordinal": pl.Int64,
@@ -33,6 +34,7 @@ _INITIAL_UNIVERSE_SCHEMA = pl.Schema(
 _EXCLUSION_SCHEMA = pl.Schema(
     {
         "run_id": pl.String,
+        "trade_date": pl.String,
         "instrument_id": pl.String,
         "instrument_id_kind": pl.String,
         "stage": pl.String,
@@ -43,6 +45,7 @@ _EXCLUSION_SCHEMA = pl.Schema(
 _SELECTION_SCHEMA = pl.Schema(
     {
         "run_id": pl.String,
+        "trade_date": pl.String,
         "instrument_id": pl.String,
         "instrument_id_kind": pl.String,
         "score": pl.Float64,
@@ -53,6 +56,7 @@ _SELECTION_SCHEMA = pl.Schema(
 _FACTOR_CONTRIBUTION_SCHEMA = pl.Schema(
     {
         "run_id": pl.String,
+        "trade_date": pl.String,
         "instrument_id": pl.String,
         "instrument_id_kind": pl.String,
         "factor_name": pl.String,
@@ -61,7 +65,7 @@ _FACTOR_CONTRIBUTION_SCHEMA = pl.Schema(
         "normalized_value": pl.Float64,
         "weight": pl.Float64,
         "contribution": pl.Float64,
-        "score": pl.Float64,
+        "factor_signal_score": pl.Float64,
         "rank": pl.Int64,
         "selected": pl.Boolean,
     },
@@ -95,7 +99,10 @@ def serialize_report(
         (json_bytes, parquet_tables) 二元组.
         json_bytes: 报告元数据的 JSON 字节.
         parquet_tables: 名称到 DataFrame 的映射.
-            键: nav / portfolio_stats / trade_log / fill_log.
+            既有键: nav / portfolio_stats / trade_log / fill_log.
+            ``selection_evidence`` 非 None 时另含 initial_universe_evidence /
+            exclusion_evidence / selection_evidence /
+            factor_contribution_evidence；四表均以 trade_date 区分调仓日。
 
     """
     json_data = _serialize_json_data(
@@ -220,6 +227,7 @@ def _serialize_selection_evidence(
         initial_rows.append(
             {
                 "run_id": run_id,
+                "trade_date": event.trade_date,
                 "instrument_id": instrument_id,
                 "instrument_id_kind": instrument_id_kind,
                 "ordinal": event.ordinal,
@@ -234,6 +242,7 @@ def _serialize_selection_evidence(
         exclusion_rows.append(
             {
                 "run_id": run_id,
+                "trade_date": event.trade_date,
                 "instrument_id": instrument_id,
                 "instrument_id_kind": instrument_id_kind,
                 "stage": event.stage,
@@ -250,6 +259,7 @@ def _serialize_selection_evidence(
         selection_rows.append(
             {
                 "run_id": run_id,
+                "trade_date": event.trade_date,
                 "instrument_id": instrument_id,
                 "instrument_id_kind": instrument_id_kind,
                 "score": event.score,
@@ -266,6 +276,7 @@ def _serialize_selection_evidence(
         contribution_rows.append(
             {
                 "run_id": run_id,
+                "trade_date": event.trade_date,
                 "instrument_id": instrument_id,
                 "instrument_id_kind": instrument_id_kind,
                 "factor_name": event.factor_name,
@@ -274,7 +285,7 @@ def _serialize_selection_evidence(
                 "normalized_value": event.normalized_value,
                 "weight": event.weight,
                 "contribution": event.contribution,
-                "score": event.score,
+                "factor_signal_score": event.factor_signal_score,
                 "rank": event.rank,
                 "selected": event.selected,
             },

@@ -9,9 +9,13 @@ from typing import cast
 import polars as pl
 import pytest
 from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
+from ditto_application.builders.template_builders import (
+    build_alpha_stages,
+    build_legacy_node_stage_groups,
+)
 from ditto_application.exceptions import AppBuilderError
 from ditto_portfolio.rebalancing import AllocationStage, ConstraintStage
-from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
+from ditto_strategy.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
@@ -24,6 +28,7 @@ from ditto_strategy.alpha.node_registry import (
 from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.alpha.templates import TrailingStopStage
@@ -144,6 +149,51 @@ def test_stock_seed_pipeline_keeps_stable_builtin_stage_order() -> None:
         "SelectionStage",
     )
     assert isinstance(pipeline._stages[5], AllocationStage)
+
+
+def test_stock_runtime_wires_one_evidence_sink_to_pipeline_and_stages() -> None:
+    """The real node adapter must not build an unobservable or second runner."""
+    spec = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    resolved = adapt_legacy_strategy_spec(spec)
+    collector = SelectionEvidenceCollector()
+
+    pipeline = _builder().build(
+        legacy_spec=spec,
+        pipeline=resolved.pipeline,
+        strategy_kind=resolved.strategy_kind,
+        evidence_sink=collector,
+    )
+
+    assert pipeline._evidence_sink is collector
+    evidence_stages = tuple(
+        stage
+        for stage in pipeline._stages
+        if isinstance(stage, TrendFilterStage | RiskLockFilter | SelectionStage)
+    )
+    assert evidence_stages
+    assert all(stage.evidence_sink is collector for stage in evidence_stages)
+
+
+def test_stock_template_builders_preserve_selection_evidence_sink_identity() -> None:
+    """Both public template seams wire their actual filter/selection instances."""
+    spec = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    collector = SelectionEvidenceCollector()
+
+    alpha_stages = tuple(build_alpha_stages(spec, evidence_sink=collector))
+    legacy_groups = build_legacy_node_stage_groups(
+        spec,
+        evidence_sink=collector,
+    )
+    legacy_stages = tuple(stage for group in legacy_groups.values() for stage in group)
+
+    for stages in (alpha_stages, legacy_stages):
+        evidence_stages = tuple(
+            stage
+            for stage in stages
+            if isinstance(stage, TrendFilterStage | RiskLockFilter | SelectionStage)
+        )
+        assert evidence_stages
+        assert all(stage.evidence_sink is collector for stage in evidence_stages)
 
 
 def test_stock_seed_rank_then_combine_preserves_factor_bridge_scores() -> None:

@@ -85,7 +85,11 @@ def build_stock_selection_trend_pipeline(
                 winsorize_sigma=config.winsorize_sigma,
                 zscore=config.zscore,
                 neutralize_by=config.neutralize_by,
-                evidence_sink=evidence_sink,
+                # Child-local rank scores are not additive to the outer
+                # CompositeDecisionStage score. Until composite-scope
+                # contributions are modeled explicitly, emitting none is the
+                # only honest audit contract.
+                evidence_sink=None,
             )
             for factor in config.signal_factors
         )

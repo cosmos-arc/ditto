@@ -426,6 +426,7 @@ class TestSelectionEvidenceTables:
         "initial_universe_evidence": pl.Schema(
             {
                 "run_id": pl.String,
+                "trade_date": pl.String,
                 "instrument_id": pl.String,
                 "instrument_id_kind": pl.String,
                 "ordinal": pl.Int64,
@@ -434,6 +435,7 @@ class TestSelectionEvidenceTables:
         "exclusion_evidence": pl.Schema(
             {
                 "run_id": pl.String,
+                "trade_date": pl.String,
                 "instrument_id": pl.String,
                 "instrument_id_kind": pl.String,
                 "stage": pl.String,
@@ -444,6 +446,7 @@ class TestSelectionEvidenceTables:
         "selection_evidence": pl.Schema(
             {
                 "run_id": pl.String,
+                "trade_date": pl.String,
                 "instrument_id": pl.String,
                 "instrument_id_kind": pl.String,
                 "score": pl.Float64,
@@ -454,6 +457,7 @@ class TestSelectionEvidenceTables:
         "factor_contribution_evidence": pl.Schema(
             {
                 "run_id": pl.String,
+                "trade_date": pl.String,
                 "instrument_id": pl.String,
                 "instrument_id_kind": pl.String,
                 "factor_name": pl.String,
@@ -462,7 +466,7 @@ class TestSelectionEvidenceTables:
                 "normalized_value": pl.Float64,
                 "weight": pl.Float64,
                 "contribution": pl.Float64,
-                "score": pl.Float64,
+                "factor_signal_score": pl.Float64,
                 "rank": pl.Int64,
                 "selected": pl.Boolean,
             },
@@ -494,6 +498,63 @@ class TestSelectionEvidenceTables:
         assert set(tables) == {"nav"}
         assert not (set(tables) & set(self._EXPECTED_SCHEMAS))
 
+    def test_multi_day_evidence_serializes_trade_date_in_every_table(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        trade_dates = ("2026-03-22", "2026-03-23")
+        log = SelectionEvidenceLog(
+            initial_universe=tuple(
+                InitialUniverseEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    ordinal=1,
+                )
+                for trade_date in trade_dates
+            ),
+            exclusions=tuple(
+                ExclusionEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    stage="selection",
+                    reason_code=ExclusionReason.BELOW_TOP_K,
+                )
+                for trade_date in trade_dates
+            ),
+            selections=tuple(
+                SelectionEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    score=0.5,
+                    rank=2,
+                    selected=False,
+                )
+                for trade_date in trade_dates
+            ),
+            factor_contributions=tuple(
+                FactorContributionEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    factor_name="momentum",
+                    raw_value=0.5,
+                    processed_value=0.5,
+                    normalized_value=0.5,
+                    weight=1.0,
+                    contribution=0.5,
+                    factor_signal_score=0.5,
+                    rank=2,
+                    selected=False,
+                )
+                for trade_date in trade_dates
+            ),
+        )
+
+        _, tables = serialize_report(_make_report(), selection_evidence=log)
+
+        for table_name in self._EXPECTED_SCHEMAS:
+            assert tables[table_name]["trade_date"].to_list() == list(trade_dates)
+
     def test_populated_evidence_uses_stable_names_without_overwriting_report_tables(
         self,
     ) -> None:
@@ -503,11 +564,20 @@ class TestSelectionEvidenceTables:
 
         log = SelectionEvidenceLog(
             initial_universe=(
-                InitialUniverseEvidence(instrument_id=1, ordinal=1),
-                InitialUniverseEvidence(instrument_id="000002.SZ", ordinal=2),
+                InitialUniverseEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id=1,
+                    ordinal=1,
+                ),
+                InitialUniverseEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id="000002.SZ",
+                    ordinal=2,
+                ),
             ),
             exclusions=(
                 ExclusionEvidence(
+                    trade_date="2026-03-22",
                     instrument_id="000002.SZ",
                     stage="selection",
                     reason_code=ExclusionReason.BELOW_TOP_K,
@@ -515,12 +585,14 @@ class TestSelectionEvidenceTables:
             ),
             selections=(
                 SelectionEvidence(
+                    trade_date="2026-03-22",
                     instrument_id=1,
                     score=0.9,
                     rank=1,
                     selected=True,
                 ),
                 SelectionEvidence(
+                    trade_date="2026-03-22",
                     instrument_id="000002.SZ",
                     score=0.5,
                     rank=2,
@@ -529,6 +601,7 @@ class TestSelectionEvidenceTables:
             ),
             factor_contributions=(
                 FactorContributionEvidence(
+                    trade_date="2026-03-22",
                     instrument_id=1,
                     factor_name="momentum",
                     raw_value=0.12,
@@ -536,7 +609,7 @@ class TestSelectionEvidenceTables:
                     normalized_value=1.0,
                     weight=0.6,
                     contribution=0.6,
-                    score=0.8,
+                    factor_signal_score=0.8,
                     rank=1,
                     selected=True,
                 ),
@@ -550,12 +623,14 @@ class TestSelectionEvidenceTables:
         assert tables["initial_universe_evidence"].to_dicts() == [
             {
                 "run_id": "test-run-001",
+                "trade_date": "2026-03-22",
                 "instrument_id": "1",
                 "instrument_id_kind": "integer",
                 "ordinal": 1,
             },
             {
                 "run_id": "test-run-001",
+                "trade_date": "2026-03-22",
                 "instrument_id": "000002.SZ",
                 "instrument_id_kind": "string",
                 "ordinal": 2,

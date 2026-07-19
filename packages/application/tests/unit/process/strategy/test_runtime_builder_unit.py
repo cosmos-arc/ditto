@@ -13,6 +13,8 @@ from ditto_application.exceptions import AppBuilderError
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.alpha.specs import (
     CostModelSpec,
     ExecutionSpec,
@@ -118,6 +120,39 @@ class TestStrategyRuntimeBuilder:
         )
         assert len(runtime.spec_hash) == 64
         catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
+
+    def test_published_stock_runtime_preserves_one_evidence_sink_identity(
+        self,
+    ) -> None:
+        """The public builder passes one caller-owned sink through the real runner."""
+        from ditto_strategy.alpha.builtins.filtering import (
+            RiskLockFilter,
+            TrendFilterStage,
+        )
+        from ditto_strategy.alpha.builtins.selection import SelectionStage
+
+        spec = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+        record = _make_spec_record(spec, version=7)
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = record
+        collector = SelectionEvidenceCollector()
+
+        runtime = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        ).build_published_runtime(
+            spec.strategy_id,
+            7,
+            evidence_sink=collector,
+        )
+
+        assert runtime.pipeline._evidence_sink is collector
+        evidence_stages = tuple(
+            stage
+            for stage in runtime.pipeline._stages
+            if isinstance(stage, TrendFilterStage | RiskLockFilter | SelectionStage)
+        )
+        assert evidence_stages
+        assert all(stage.evidence_sink is collector for stage in evidence_stages)
 
     def test_runtime_routes_legacy_catalog_through_node_pipeline_builder(self) -> None:
         """legacy record 必须显式 adapt 后走 registry/compiler builder。"""

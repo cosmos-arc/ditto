@@ -12,6 +12,7 @@ from ditto_strategy.alpha.parameters import (
     EffectiveParameter,
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.specs import StrategySpec, StrategySpecV2
 from ditto_strategy.models import StrategySpecRecord
 
@@ -266,6 +267,7 @@ class ResearchRuntimeBuilder:
         record: StrategySpecRecord,
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
+        evidence_sink: SelectionEvidenceSink | None = None,
     ) -> ResearchStrategyRuntime:
         """Resolve an exact legacy version and candidate into the existing runner."""
         record = _require_research_record(record)
@@ -287,6 +289,7 @@ class ResearchRuntimeBuilder:
             candidate_parameters=candidate_parameters,
             registry=self._node_registry,
             node_pipeline_builder=self._node_pipeline_builder,
+            evidence_sink=evidence_sink,
         )
         _ensure_resolved_strategy_identity(
             record,

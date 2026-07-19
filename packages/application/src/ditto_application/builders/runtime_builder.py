@@ -14,6 +14,7 @@ from ditto_strategy.alpha.parameters import (
     EffectiveParameter,
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.specs import StrategySpec, StrategySpecV2
 from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.models import StrategySpecRecord
@@ -82,6 +83,7 @@ class StrategyRuntimeBuilder:
         version: int | None = None,
         *,
         candidate_parameters: tuple[CandidateParameter, ...] = (),
+        evidence_sink: SelectionEvidenceSink | None = None,
     ) -> PublishedStrategyRuntime:
         """读取 published spec 并构造 ``StrategySpec + StrategyPipeline``。"""
         record = (
@@ -107,6 +109,7 @@ class StrategyRuntimeBuilder:
             candidate_parameters=candidate_parameters,
             registry=self._node_registry,
             node_pipeline_builder=self._node_pipeline_builder,
+            evidence_sink=evidence_sink,
         )
         return PublishedStrategyRuntime(
             record=record,

@@ -349,6 +349,9 @@ class StrategyPipeline:
              - 若无 ``weight`` 列，使用 equal_weight 兜底
 
         """
+        if self._evidence_sink is not None:
+            self._evidence_sink.begin_rebalance(input_bundle.trade_date)
+
         # Step 1: 初始 DecisionFrame
         frame = input_bundle.instruments.clone()
         validate_frame(
@@ -356,7 +359,12 @@ class StrategyPipeline:
             (FrameCol.INSTRUMENT_ID,),
             boundary="input_bundle.instruments",
         )
-        self._emit_initial_universe(frame)
+        self._validate_unique_evidence_instruments(
+            frame,
+            trade_date=input_bundle.trade_date,
+            boundary="input_bundle.instruments",
+        )
+        self._emit_initial_universe(frame, trade_date=input_bundle.trade_date)
 
         # Step 2: 可选 signal_values join
         if input_bundle.signal_values is not None:
@@ -365,12 +373,22 @@ class StrategyPipeline:
                 (FrameCol.INSTRUMENT_ID,),
                 boundary="input_bundle.signal_values",
             )
+            self._validate_unique_evidence_instruments(
+                input_bundle.signal_values,
+                trade_date=input_bundle.trade_date,
+                boundary="input_bundle.signal_values",
+            )
             frame = frame.join(
                 input_bundle.signal_values,
                 on=FrameCol.INSTRUMENT_ID,
                 how="left",
             )
             validate_frame(frame, (FrameCol.INSTRUMENT_ID,), boundary="initial_join")
+            self._validate_unique_evidence_instruments(
+                frame,
+                trade_date=input_bundle.trade_date,
+                boundary="initial_join",
+            )
 
         # Step 3: 顺序执行 stages
         for stage in self._stages:
@@ -381,11 +399,22 @@ class StrategyPipeline:
                 boundary="stage_output",
                 stage_name=stage.__class__.__name__,
             )
+            self._validate_unique_evidence_instruments(
+                frame,
+                trade_date=input_bundle.trade_date,
+                boundary="stage_output",
+                stage_name=stage.__class__.__name__,
+            )
 
         # Step 4: 从最终 frame 提取 TargetPortfolio
         return self._build_target_portfolio(frame, input_bundle)
 
-    def _emit_initial_universe(self, frame: pl.DataFrame) -> None:
+    def _emit_initial_universe(
+        self,
+        frame: pl.DataFrame,
+        *,
+        trade_date: str,
+    ) -> None:
         """Emit the candidate pool before joins or stage transformations."""
         if self._evidence_sink is None:
             return
@@ -393,10 +422,44 @@ class StrategyPipeline:
         for ordinal, instrument_id in enumerate(instrument_ids, start=1):
             self._evidence_sink.emit(
                 InitialUniverseEvidence(
+                    trade_date=trade_date,
                     instrument_id=instrument_id,
                     ordinal=ordinal,
                 ),
             )
+
+    def _validate_unique_evidence_instruments(
+        self,
+        frame: pl.DataFrame,
+        *,
+        trade_date: str,
+        boundary: str,
+        stage_name: str | None = None,
+    ) -> None:
+        """Keep date-keyed evidence unambiguous without changing plain runs."""
+        if self._evidence_sink is None or frame.is_empty():
+            return
+        instrument_ids = frame.get_column(FrameCol.INSTRUMENT_ID)
+        duplicate_ids = (
+            frame.filter(instrument_ids.is_duplicated())
+            .get_column(FrameCol.INSTRUMENT_ID)
+            .unique(maintain_order=True)
+            .to_list()
+        )
+        if not duplicate_ids:
+            return
+        details: dict[str, object] = {
+            "reason": "duplicate_evidence_instrument_id",
+            "boundary": boundary,
+            "trade_date": trade_date,
+            "duplicate_instrument_ids": tuple(duplicate_ids),
+        }
+        if stage_name is not None:
+            details["stage_name"] = stage_name
+        raise StrategySpecError(
+            "evidence-enabled pipeline has duplicate instrument_id rows",
+            details=details,
+        )
 
     def _build_target_portfolio(
         self,

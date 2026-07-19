@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
+from datetime import date
 from enum import StrEnum
 from math import isfinite
 from typing import Protocol, cast
+
+from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
     "ExclusionEvidence",
@@ -20,6 +23,41 @@ __all__ = [
 ]
 
 type EvidenceInstrumentId = int | str
+type EvidenceKey = tuple[str, EvidenceInstrumentId]
+
+
+def _evidence_error(
+    message: str,
+    *,
+    reason: str,
+    **details: object,
+) -> StrategySpecError:
+    payload: dict[str, object] = {"reason": reason}
+    payload.update(details)
+    return StrategySpecError(message, details=payload)
+
+
+def _validate_trade_date(value: object) -> None:
+    if not isinstance(value, str):
+        raise _evidence_error(
+            "selection evidence trade_date must be an ISO date",
+            reason="invalid_evidence_trade_date",
+            trade_date=value,
+        )
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as exc:
+        raise _evidence_error(
+            "selection evidence trade_date must be an ISO date",
+            reason="invalid_evidence_trade_date",
+            trade_date=value,
+        ) from exc
+    if parsed.isoformat() != value:
+        raise _evidence_error(
+            "selection evidence trade_date must use YYYY-MM-DD",
+            reason="invalid_evidence_trade_date",
+            trade_date=value,
+        )
 
 
 def _validate_instrument_id(value: object) -> None:
@@ -106,11 +144,13 @@ class ExclusionReason(StrEnum):
 class InitialUniverseEvidence:
     """One instrument entering the pipeline before joins or stages."""
 
+    trade_date: str
     instrument_id: EvidenceInstrumentId
     ordinal: int
 
     def __post_init__(self) -> None:
         """Validate immutable universe evidence at its public boundary."""
+        _validate_trade_date(self.trade_date)
         _validate_instrument_id(self.instrument_id)
         _validate_positive_int(self.ordinal, field_name="ordinal")
 
@@ -119,6 +159,7 @@ class InitialUniverseEvidence:
 class ExclusionEvidence:
     """The first stage and stable reason that excluded one instrument."""
 
+    trade_date: str
     instrument_id: EvidenceInstrumentId
     stage: str
     reason_code: ExclusionReason
@@ -126,6 +167,7 @@ class ExclusionEvidence:
 
     def __post_init__(self) -> None:
         """Validate immutable exclusion evidence at its public boundary."""
+        _validate_trade_date(self.trade_date)
         _validate_instrument_id(self.instrument_id)
         _validate_text(self.stage, field_name="stage")
         _validate_reason_code(self.reason_code)
@@ -134,8 +176,9 @@ class ExclusionEvidence:
 
 @dataclass(frozen=True, slots=True)
 class FactorContributionEvidence:
-    """One factor's values and contribution to an instrument's score."""
+    """One factor's additive contribution to its factor-stage signal score."""
 
+    trade_date: str
     instrument_id: EvidenceInstrumentId
     factor_name: str
     raw_value: float | None
@@ -143,12 +186,13 @@ class FactorContributionEvidence:
     normalized_value: float | None
     weight: float
     contribution: float | None
-    score: float | None
+    factor_signal_score: float | None
     rank: int | None = None
     selected: bool | None = None
 
     def __post_init__(self) -> None:
         """Validate all numeric contribution fields and optional state."""
+        _validate_trade_date(self.trade_date)
         _validate_instrument_id(self.instrument_id)
         _validate_text(self.factor_name, field_name="factor_name")
         _validate_finite_number(
@@ -172,7 +216,11 @@ class FactorContributionEvidence:
             field_name="contribution",
             optional=True,
         )
-        _validate_finite_number(self.score, field_name="score", optional=True)
+        _validate_finite_number(
+            self.factor_signal_score,
+            field_name="factor_signal_score",
+            optional=True,
+        )
         if self.rank is not None:
             _validate_positive_int(self.rank, field_name="rank")
         _validate_optional_bool(self.selected, field_name="selected")
@@ -182,6 +230,7 @@ class FactorContributionEvidence:
 class SelectionEvidence:
     """Top-k decision for one instrument in selector output order."""
 
+    trade_date: str
     instrument_id: EvidenceInstrumentId
     score: float | None
     rank: int
@@ -189,6 +238,7 @@ class SelectionEvidence:
 
     def __post_init__(self) -> None:
         """Validate immutable top-k selection evidence."""
+        _validate_trade_date(self.trade_date)
         _validate_instrument_id(self.instrument_id)
         _validate_finite_number(self.score, field_name="score", optional=True)
         _validate_positive_int(self.rank, field_name="rank")
@@ -206,6 +256,15 @@ type SelectionEvidenceEvent = (
 class SelectionEvidenceSink(Protocol):
     """Narrow side-channel used by stages to emit immutable evidence."""
 
+    def begin_rebalance(self, trade_date: str) -> None:
+        """Bind subsequent events to one validated rebalance date."""
+        ...
+
+    @property
+    def current_trade_date(self) -> str:
+        """Return the active date or fail closed when no run is bound."""
+        ...
+
     def emit(self, event: SelectionEvidenceEvent) -> None:
         """Accept one evidence event or raise to the caller."""
         ...
@@ -213,7 +272,7 @@ class SelectionEvidenceSink(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class SelectionEvidenceLog:
-    """Immutable snapshot of all evidence emitted by one pipeline run."""
+    """Immutable snapshot of evidence from one or more rebalance dates."""
 
     initial_universe: tuple[InitialUniverseEvidence, ...] = ()
     exclusions: tuple[ExclusionEvidence, ...] = ()
@@ -258,15 +317,39 @@ class SelectionEvidenceLog:
                 field_name="selections",
             ),
         )
+        _validate_event_invariants(
+            (
+                *self.initial_universe,
+                *self.exclusions,
+                *self.factor_contributions,
+                *self.selections,
+            ),
+        )
 
 
 class SelectionEvidenceCollector:
     """In-memory sink that publishes immutable snapshots."""
 
-    __slots__ = ("_events",)
+    __slots__ = ("_current_trade_date", "_events")
 
     def __init__(self) -> None:
         self._events: list[SelectionEvidenceEvent] = []
+        self._current_trade_date: str | None = None
+
+    def begin_rebalance(self, trade_date: str) -> None:
+        """Bind this reusable collector to the next pipeline rebalance date."""
+        _validate_trade_date(trade_date)
+        self._current_trade_date = trade_date
+
+    @property
+    def current_trade_date(self) -> str:
+        """Return the active date, rejecting direct unbound stage emission."""
+        if self._current_trade_date is None:
+            raise _evidence_error(
+                "selection evidence sink is not bound to a rebalance date",
+                reason="evidence_rebalance_unbound",
+            )
+        return self._current_trade_date
 
     def emit(self, event: object) -> None:
         """Accept one event."""
@@ -278,6 +361,15 @@ class SelectionEvidenceCollector:
             | SelectionEvidence,
         ):
             raise TypeError("event must be an immutable selection evidence record")
+        active_trade_date = self.current_trade_date
+        if event.trade_date != active_trade_date:
+            raise _evidence_error(
+                "selection evidence trade_date does not match active rebalance",
+                reason="evidence_trade_date_mismatch",
+                active_trade_date=active_trade_date,
+                event_trade_date=event.trade_date,
+            )
+        _validate_event_invariants((*self._events, event))
         self._events.append(event)
 
     def snapshot(self) -> SelectionEvidenceLog:
@@ -293,7 +385,9 @@ class SelectionEvidenceCollector:
         selections = tuple(
             event for event in self._events if isinstance(event, SelectionEvidence)
         )
-        selection_by_instrument = {event.instrument_id: event for event in selections}
+        selection_by_instrument = {
+            (event.trade_date, event.instrument_id): event for event in selections
+        }
         factor_contributions = tuple(
             _enrich_contribution(event, selection_by_instrument)
             for event in self._events
@@ -309,9 +403,85 @@ class SelectionEvidenceCollector:
 
 def _enrich_contribution(
     event: FactorContributionEvidence,
-    selections: dict[EvidenceInstrumentId, SelectionEvidence],
+    selections: dict[EvidenceKey, SelectionEvidence],
 ) -> FactorContributionEvidence:
-    selection = selections.get(event.instrument_id)
+    selection = selections.get((event.trade_date, event.instrument_id))
     if selection is None:
         return event
     return replace(event, rank=selection.rank, selected=selection.selected)
+
+
+def _validate_event_invariants(events: Sequence[SelectionEvidenceEvent]) -> None:
+    """Reject ambiguous same-day evidence before enrichment or serialization."""
+    initial_keys: set[EvidenceKey] = set()
+    exclusion_keys: set[EvidenceKey] = set()
+    contribution_keys: set[tuple[str, EvidenceInstrumentId, str]] = set()
+    selections: dict[EvidenceKey, SelectionEvidence] = {}
+    for event in events:
+        key = (event.trade_date, event.instrument_id)
+        if isinstance(event, InitialUniverseEvidence):
+            _require_unique_key(
+                key,
+                seen=initial_keys,
+                evidence_kind="initial universe",
+            )
+            initial_keys.add(key)
+            continue
+        if isinstance(event, ExclusionEvidence):
+            _require_unique_key(
+                key,
+                seen=exclusion_keys,
+                evidence_kind="exclusion",
+            )
+            selection = selections.get(key)
+            if selection is not None and selection.selected:
+                raise _contradictory_exclusion_error(key)
+            exclusion_keys.add(key)
+            continue
+        if isinstance(event, FactorContributionEvidence):
+            contribution_key = (*key, event.factor_name)
+            if contribution_key in contribution_keys:
+                raise _evidence_error(
+                    "duplicate factor contribution evidence for instrument/factor/date",
+                    reason="duplicate_factor_contribution_evidence",
+                    trade_date=event.trade_date,
+                    instrument_id=event.instrument_id,
+                    factor_name=event.factor_name,
+                )
+            contribution_keys.add(contribution_key)
+            continue
+        _require_unique_key(
+            key,
+            seen=set(selections),
+            evidence_kind="selection",
+        )
+        if event.selected and key in exclusion_keys:
+            raise _contradictory_exclusion_error(key)
+        selections[key] = event
+
+
+def _require_unique_key(
+    key: EvidenceKey,
+    *,
+    seen: set[EvidenceKey],
+    evidence_kind: str,
+) -> None:
+    if key not in seen:
+        return
+    trade_date, instrument_id = key
+    raise _evidence_error(
+        f"duplicate {evidence_kind} evidence for one instrument and trade_date",
+        reason=f"duplicate_{evidence_kind.replace(' ', '_')}_evidence",
+        trade_date=trade_date,
+        instrument_id=instrument_id,
+    )
+
+
+def _contradictory_exclusion_error(key: EvidenceKey) -> StrategySpecError:
+    trade_date, instrument_id = key
+    return _evidence_error(
+        "selected instrument has contradictory exclusion evidence",
+        reason="contradictory_exclusion_evidence",
+        trade_date=trade_date,
+        instrument_id=instrument_id,
+    )

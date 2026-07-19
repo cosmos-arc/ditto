@@ -287,6 +287,73 @@ class TestStrategyPipeline:
         ] == [(1, 1), (2, 2), (3, 3)]
         assert target.positions == {1: 1 / 3, 2: 1 / 3, 3: 1 / 3}
 
+    def test_reusable_collector_keeps_each_rebalance_date_distinct(
+        self,
+        empty_context: StrategyContext,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(stages=(), evidence_sink=collector)
+        instruments = pl.DataFrame({"instrument_id": [1, 2]})
+
+        for trade_date in ("2026-01-15", "2026-01-16"):
+            pipeline.run(
+                empty_context,
+                _make_input_bundle(
+                    instruments=instruments,
+                    market_data=sample_market_data,
+                    trade_date=trade_date,
+                ),
+            )
+
+        assert [
+            (event.trade_date, event.instrument_id)
+            for event in collector.snapshot().initial_universe
+        ] == [
+            ("2026-01-15", 1),
+            ("2026-01-15", 2),
+            ("2026-01-16", 1),
+            ("2026-01-16", 2),
+        ]
+
+    def test_evidence_pipeline_rejects_duplicate_input_instrument_ids(
+        self,
+        empty_context: StrategyContext,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(stages=(), evidence_sink=collector)
+        bundle = _make_input_bundle(
+            instruments=pl.DataFrame({"instrument_id": [1, 1]}),
+            market_data=sample_market_data,
+        )
+
+        with pytest.raises(StrategySpecError, match="duplicate instrument_id"):
+            pipeline.run(empty_context, bundle)
+
+    def test_evidence_pipeline_rejects_duplicate_stage_output_instrument_ids(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(
+            stages=(
+                _ReplaceFrameStage(
+                    pl.DataFrame({"instrument_id": [1, 1], "score": [0.9, 0.8]}),
+                ),
+            ),
+            evidence_sink=collector,
+        )
+        bundle = _make_input_bundle(
+            instruments=sample_instruments,
+            market_data=sample_market_data,
+        )
+
+        with pytest.raises(StrategySpecError, match="duplicate instrument_id"):
+            pipeline.run(empty_context, bundle)
+
     def test_empty_pipeline_returns_empty_target(
         self,
         empty_context: StrategyContext,

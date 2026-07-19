@@ -322,6 +322,7 @@ class MultiFactorSignalStage:
             for values in evidence_frame.iter_rows():
                 self.evidence_sink.emit(
                     FactorContributionEvidence(
+                        trade_date=self.evidence_sink.current_trade_date,
                         instrument_id=values[0],
                         factor_name=factor_name,
                         raw_value=_optional_float(values[1]),
@@ -329,7 +330,7 @@ class MultiFactorSignalStage:
                         normalized_value=_optional_float(values[3]),
                         weight=weight / weight_sum,
                         contribution=_optional_float(values[4]),
-                        score=_optional_float(values[5]),
+                        factor_signal_score=_optional_float(values[5]),
                     ),
                 )
 
@@ -349,6 +350,7 @@ class MultiFactorSignalStage:
         ).iter_rows():
             self.evidence_sink.emit(
                 FactorContributionEvidence(
+                    trade_date=self.evidence_sink.current_trade_date,
                     instrument_id=instrument_id,
                     factor_name=factor_name,
                     raw_value=None,
@@ -356,7 +358,7 @@ class MultiFactorSignalStage:
                     normalized_value=None,
                     weight=effective_weight,
                     contribution=0.0,
-                    score=_optional_float(score),
+                    factor_signal_score=_optional_float(score),
                 ),
             )
 

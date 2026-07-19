@@ -28,6 +28,7 @@ from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.protocols import DecisionStage
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.specs import ConstraintSpec, StrategySpec
 from ditto_strategy.alpha.templates import (
     ETFRotationConfig,
@@ -135,7 +136,11 @@ def resolve_scoring_method(
 # ---------------------------------------------------------------------------
 
 
-def build_alpha_stages(spec: StrategySpec) -> list[DecisionStage]:
+def build_alpha_stages(
+    spec: StrategySpec,
+    *,
+    evidence_sink: SelectionEvidenceSink | None = None,
+) -> list[DecisionStage]:
     """根据模板类型构建 alpha pipeline stages。"""
     if spec.template == "etf_rotation":
         return build_etf_rotation_pipeline(build_etf_rotation_config(spec))
@@ -146,7 +151,7 @@ def build_alpha_stages(spec: StrategySpec) -> list[DecisionStage]:
     if spec.template == "stock_selection":
         config = build_stock_selection_trend_config(spec)
         validate_stock_selection_config(config)
-        return build_stock_selection_trend_pipeline(config)
+        return build_stock_selection_trend_pipeline(config, evidence_sink=evidence_sink)
     if spec.template == "stock_sector_rotation":
         config = build_stock_sector_rotation_config(spec)
         validate_sector_rotation_config(config)
@@ -202,6 +207,7 @@ def _legacy_stock_selection_stage_groups(
     spec: StrategySpec,
     *,
     scoring_method: ScoringMethod,
+    evidence_sink: SelectionEvidenceSink | None,
 ) -> tuple[
     tuple[DecisionStage, ...],
     tuple[DecisionStage, ...],
@@ -216,7 +222,10 @@ def _legacy_stock_selection_stage_groups(
         else config
     )
     validate_stock_selection_config(alpha_config)
-    alpha_stages = tuple(build_stock_selection_trend_pipeline(alpha_config))
+    alpha_pipeline = build_stock_selection_trend_pipeline(
+        alpha_config, evidence_sink=evidence_sink
+    )
+    alpha_stages = tuple(alpha_pipeline)
     _, _, _, allocator = _legacy_alpha_slices(spec, alpha_stages)
     trend_filter = alpha_stages[1]
     if not isinstance(trend_filter, TrendFilterStage):
@@ -235,7 +244,10 @@ def _legacy_stock_selection_stage_groups(
             replace(trend_filter, signal_column="signal_value"),
         ),
         (ScoringStage(method=scoring_method, ascending=False),),
-        (RiskLockFilter(), SelectionStage(top_k=config.top_k)),
+        (
+            RiskLockFilter(evidence_sink=evidence_sink),
+            SelectionStage(top_k=config.top_k, evidence_sink=evidence_sink),
+        ),
         allocator,
     )
 
@@ -292,6 +304,8 @@ def _legacy_alpha_slices(
 
 def build_legacy_node_stage_groups(
     spec: StrategySpec,
+    *,
+    evidence_sink: SelectionEvidenceSink | None = None,
 ) -> Mapping[str, tuple[DecisionStage, ...]]:
     """把 legacy template factory 结果按稳定 implementation key 分组。"""
     runtime_spec = _legacy_runtime_spec(spec)
@@ -301,6 +315,7 @@ def build_legacy_node_stage_groups(
             _legacy_stock_selection_stage_groups(
                 runtime_spec,
                 scoring_method=scoring_method,
+                evidence_sink=evidence_sink,
             )
         )
     else:

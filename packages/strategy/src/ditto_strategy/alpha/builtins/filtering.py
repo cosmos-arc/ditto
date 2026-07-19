@@ -187,6 +187,7 @@ def _filter_with_evidence(
         is_missing = reason_column is not None and values[1] is None
         evidence_sink.emit(
             ExclusionEvidence(
+                trade_date=evidence_sink.current_trade_date,
                 instrument_id=instrument_id,
                 stage=stage_name,
                 reason_code=(

@@ -293,6 +293,37 @@ def test_stock_selection_materializes_true_tunable_defaults_before_binding() -> 
     assert overridden.legacy_spec.params["custom_not_tunable"] == "preserved"
 
 
+def test_research_stock_runtime_preserves_one_evidence_sink_identity() -> None:
+    """Research assembly shares the caller sink with its stages and runner."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_strategy.alpha.builtins.filtering import (
+        RiskLockFilter,
+        TrendFilterStage,
+    )
+    from ditto_strategy.alpha.builtins.selection import SelectionStage
+    from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
+
+    collector = SelectionEvidenceCollector()
+
+    runtime = ResearchRuntimeBuilder().build(
+        record=_stock_record(),
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+        evidence_sink=collector,
+    )
+
+    assert runtime.pipeline._evidence_sink is collector
+    evidence_stages = tuple(
+        stage
+        for stage in runtime.pipeline._stages
+        if isinstance(stage, TrendFilterStage | RiskLockFilter | SelectionStage)
+    )
+    assert evidence_stages
+    assert all(stage.evidence_sink is collector for stage in evidence_stages)
+
+
 def test_lookback_candidate_changes_resolved_compiled_config_only() -> None:
     """Current legacy lookback is visible in compiled config without fake consumers."""
     from ditto_application.builders.research_runtime_builder import (

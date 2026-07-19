@@ -18,6 +18,7 @@ from ditto_strategy.alpha.pipeline import (
     compile_node_pipeline,
 )
 from ditto_strategy.alpha.protocols import DecisionStage
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.specs import (
     ConstraintSpec,
     CostModelSpec,
@@ -308,6 +309,8 @@ def _build_legacy_runtime_view(
 
 def _build_trend_filter(
     config: Mapping[str, object],
+    *,
+    evidence_sink: SelectionEvidenceSink | None,
 ) -> tuple[DecisionStage, ...]:
     return (
         TrendFilterStage(
@@ -323,6 +326,7 @@ def _build_trend_filter(
                 config["signal_column"],
                 field_name="node.config.signal_column",
             ),
+            evidence_sink=evidence_sink,
         ),
     )
 
@@ -344,6 +348,7 @@ class NodePipelineBuilder:
         legacy_spec: StrategySpec,
         pipeline: PipelineSpec,
         strategy_kind: StrategyKind,
+        evidence_sink: SelectionEvidenceSink | None = None,
     ) -> StrategyPipeline:
         """经 compiler 和 versioned legacy adapter 构造唯一现有 runner。"""
         compiled = compile_node_pipeline(
@@ -355,7 +360,10 @@ class NodePipelineBuilder:
             if node.implementation_key not in _SUPPORTED_IMPLEMENTATION_KEYS:
                 self._raise_unknown_implementation(node)
         runtime_view = _build_legacy_runtime_view(legacy_spec, compiled.nodes)
-        legacy_groups = build_legacy_node_stage_groups(runtime_view.spec)
+        legacy_groups = build_legacy_node_stage_groups(
+            runtime_view.spec,
+            evidence_sink=evidence_sink,
+        )
         stages: list[DecisionStage] = []
         for node in compiled.nodes:
             stages.extend(
@@ -363,9 +371,10 @@ class NodePipelineBuilder:
                     node,
                     legacy_groups=legacy_groups,
                     metadata_configs=runtime_view.metadata_configs,
+                    evidence_sink=evidence_sink,
                 ),
             )
-        return StrategyPipeline(stages)
+        return StrategyPipeline(stages, evidence_sink=evidence_sink)
 
     @staticmethod
     def _resolve_builtin_stages(
@@ -373,6 +382,7 @@ class NodePipelineBuilder:
         *,
         legacy_groups: Mapping[str, Sequence[DecisionStage]],
         metadata_configs: Mapping[str, Mapping[str, object]],
+        evidence_sink: SelectionEvidenceSink | None,
     ) -> Sequence[DecisionStage]:
         implementation_key = node.implementation_key
         legacy_stages = legacy_groups.get(implementation_key)
@@ -381,7 +391,10 @@ class NodePipelineBuilder:
         if implementation_key in metadata_configs:
             return ()
         if implementation_key == "builtin.trend_filter.v1":
-            return _build_trend_filter(node.config)
+            return _build_trend_filter(
+                node.config,
+                evidence_sink=evidence_sink,
+            )
         NodePipelineBuilder._raise_unknown_implementation(node)
 
     @staticmethod

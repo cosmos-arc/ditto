@@ -6,6 +6,8 @@ MultiFactorSignalStage, build_stock_selection_trend_pipeline, and E2E pipeline.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import polars as pl
 import pytest
 from ditto_kernel.identity import InstrumentId
@@ -675,7 +677,7 @@ class TestMultiFactorContributionEvidence:
                 item.normalized_value,
                 item.weight,
                 item.contribution,
-                item.score,
+                item.factor_signal_score,
             )
             for item in contributions
         ] == pytest.approx(
@@ -705,6 +707,7 @@ class TestMultiFactorContributionEvidence:
             zscore=True,
         )
         collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-03-22")
         evidence_stage = MultiFactorSignalStage(
             signal_factors=("factor",),
             signal_weights=(1.0,),
@@ -728,6 +731,7 @@ class TestMultiFactorContributionEvidence:
             {"instrument_id": [1, 2, 3], "factor": [10.0, None, 30.0]},
         )
         collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-03-22")
 
         MultiFactorSignalStage(
             signal_factors=("factor",),
@@ -740,7 +744,48 @@ class TestMultiFactorContributionEvidence:
         assert missing.processed_value is None
         assert missing.normalized_value is None
         assert missing.contribution is None
-        assert missing.score is None
+        assert missing.factor_signal_score is None
+
+    def test_one_collector_records_complete_simple_pipeline_evidence_across_dates(
+        self,
+        empty_context: StrategyContext,
+        multi_factor_bundle: StrategyInputBundle,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        stages = build_stock_selection_trend_pipeline(
+            StockSelectionTrendConfig(
+                signal_factors=("momentum", "volatility"),
+                signal_weights=(0.8, 0.2),
+                top_k=2,
+                trend_threshold=0.0,
+            ),
+            evidence_sink=collector,
+        )
+        pipeline = StrategyPipeline(stages, evidence_sink=collector)
+
+        for trade_date in ("2026-03-22", "2026-03-23"):
+            pipeline.run(
+                empty_context,
+                replace(multi_factor_bundle, trade_date=trade_date),
+            )
+
+        snapshot = collector.snapshot()
+        assert {event.trade_date for event in snapshot.initial_universe} == {
+            "2026-03-22",
+            "2026-03-23",
+        }
+        assert {event.trade_date for event in snapshot.factor_contributions} == {
+            "2026-03-22",
+            "2026-03-23",
+        }
+        assert {event.trade_date for event in snapshot.selections} == {
+            "2026-03-22",
+            "2026-03-23",
+        }
+        assert {event.trade_date for event in snapshot.exclusions} == {
+            "2026-03-22",
+            "2026-03-23",
+        }
 
 
 class TestStockSelectionTrendConfigPreprocess:
@@ -902,3 +947,35 @@ class TestBuildStockSelectionTrendPipelineFusion:
         pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, multi_factor_bundle)
         assert len(target.positions) <= 2
+
+    def test_composite_evidence_does_not_report_local_substage_contributions(
+        self,
+        empty_context: StrategyContext,
+        multi_factor_bundle: StrategyInputBundle,
+    ) -> None:
+        """Child-local rank scores are not additive to the composite final score."""
+        collector = SelectionEvidenceCollector()
+        config = StockSelectionTrendConfig(
+            signal_factors=("momentum", "volatility"),
+            signal_weights=(0.8, 0.2),
+            top_k=2,
+            trend_threshold=0.0,
+            fusion="composite",
+        )
+        stages = build_stock_selection_trend_pipeline(
+            config,
+            evidence_sink=collector,
+        )
+
+        StrategyPipeline(stages, evidence_sink=collector).run(
+            empty_context,
+            multi_factor_bundle,
+        )
+
+        assert collector.snapshot().factor_contributions == ()
+        composite = stages[0]
+        assert isinstance(composite, CompositeDecisionStage)
+        assert all(
+            isinstance(stage, MultiFactorSignalStage) and stage.evidence_sink is None
+            for stage in composite.stages
+        )

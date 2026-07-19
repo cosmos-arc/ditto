@@ -11,6 +11,7 @@ from ditto_strategy.alpha.parameters import (
     ParameterBinder,
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec, StrategySpecV2
 from ditto_strategy.errors import StrategySpecError
@@ -47,6 +48,7 @@ def build_typed_legacy_runtime(
     candidate_parameters: tuple[CandidateParameter, ...],
     registry: NodeRegistry,
     node_pipeline_builder: NodePipelineBuilder,
+    evidence_sink: SelectionEvidenceSink | None = None,
 ) -> TypedLegacyRuntime:
     """Bind one exact legacy record and compile the existing runner once."""
     legacy_spec = deserialize_strategy_spec(record)
@@ -62,6 +64,7 @@ def build_typed_legacy_runtime(
         legacy_spec=legacy_spec,
         pipeline=binding.resolved_spec.pipeline,
         strategy_kind=binding.resolved_spec.strategy_kind,
+        evidence_sink=evidence_sink,
     )
     return TypedLegacyRuntime(
         legacy_spec=legacy_spec,
