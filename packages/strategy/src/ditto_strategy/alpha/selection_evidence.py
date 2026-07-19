@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass, replace
 from datetime import date
 from enum import StrEnum
@@ -260,6 +260,14 @@ class SelectionEvidenceSink(Protocol):
         """Bind subsequent events to one validated rebalance date."""
         ...
 
+    def commit_rebalance(self) -> None:
+        """Publish every event in the active rebalance atomically."""
+        ...
+
+    def abort_rebalance(self) -> None:
+        """Discard every event in the active rebalance."""
+        ...
+
     @property
     def current_trade_date(self) -> str:
         """Return the active date or fail closed when no run is bound."""
@@ -330,16 +338,58 @@ class SelectionEvidenceLog:
 class SelectionEvidenceCollector:
     """In-memory sink that publishes immutable snapshots."""
 
-    __slots__ = ("_current_trade_date", "_events")
+    __slots__ = (
+        "_contribution_keys",
+        "_current_trade_date",
+        "_events",
+        "_exclusion_keys",
+        "_initial_keys",
+        "_pending_events",
+        "_selections",
+    )
 
     def __init__(self) -> None:
         self._events: list[SelectionEvidenceEvent] = []
+        self._pending_events: list[SelectionEvidenceEvent] = []
         self._current_trade_date: str | None = None
+        self._initial_keys: set[EvidenceKey] = set()
+        self._exclusion_keys: set[EvidenceKey] = set()
+        self._contribution_keys: set[tuple[str, EvidenceInstrumentId, str]] = set()
+        self._selections: dict[EvidenceKey, SelectionEvidence] = {}
 
     def begin_rebalance(self, trade_date: str) -> None:
         """Bind this reusable collector to the next pipeline rebalance date."""
         _validate_trade_date(trade_date)
+        if self._current_trade_date is not None:
+            raise _evidence_error(
+                "selection evidence sink already has an active rebalance",
+                reason="evidence_rebalance_already_active",
+                active_trade_date=self._current_trade_date,
+                requested_trade_date=trade_date,
+            )
         self._current_trade_date = trade_date
+
+    def commit_rebalance(self) -> None:
+        """Publish the active batch after its TargetPortfolio is constructed."""
+        self._require_active_rebalance()
+        self._events.extend(self._pending_events)
+        self._pending_events.clear()
+        self._current_trade_date = None
+
+    def abort_rebalance(self) -> None:
+        """Rollback the active batch and every incremental index entry."""
+        self._require_active_rebalance()
+        for event in reversed(self._pending_events):
+            self._remove_from_indexes(event)
+        self._pending_events.clear()
+        self._current_trade_date = None
+
+    def _require_active_rebalance(self) -> None:
+        if self._current_trade_date is None:
+            raise _evidence_error(
+                "selection evidence sink is not bound to a rebalance date",
+                reason="evidence_rebalance_unbound",
+            )
 
     @property
     def current_trade_date(self) -> str:
@@ -369,8 +419,64 @@ class SelectionEvidenceCollector:
                 active_trade_date=active_trade_date,
                 event_trade_date=event.trade_date,
             )
-        _validate_event_invariants((*self._events, event))
-        self._events.append(event)
+        self._validate_incremental_event(event)
+        self._add_to_indexes(event)
+        self._pending_events.append(event)
+
+    def _validate_incremental_event(self, event: SelectionEvidenceEvent) -> None:
+        """Validate one event against date-keyed O(1) indexes."""
+        key = (event.trade_date, event.instrument_id)
+        if isinstance(event, InitialUniverseEvidence):
+            _require_unique_key(
+                key,
+                seen=self._initial_keys,
+                evidence_kind="initial universe",
+            )
+            return
+        if isinstance(event, ExclusionEvidence):
+            _require_unique_key(
+                key,
+                seen=self._exclusion_keys,
+                evidence_kind="exclusion",
+            )
+            selection = self._selections.get(key)
+            if selection is not None and selection.selected:
+                raise _contradictory_exclusion_error(key)
+            return
+        if isinstance(event, FactorContributionEvidence):
+            contribution_key = (*key, event.factor_name)
+            if contribution_key in self._contribution_keys:
+                raise _duplicate_contribution_error(event)
+            return
+        _require_unique_key(
+            key,
+            seen=self._selections,
+            evidence_kind="selection",
+        )
+        if event.selected and key in self._exclusion_keys:
+            raise _contradictory_exclusion_error(key)
+
+    def _add_to_indexes(self, event: SelectionEvidenceEvent) -> None:
+        key = (event.trade_date, event.instrument_id)
+        if isinstance(event, InitialUniverseEvidence):
+            self._initial_keys.add(key)
+        elif isinstance(event, ExclusionEvidence):
+            self._exclusion_keys.add(key)
+        elif isinstance(event, FactorContributionEvidence):
+            self._contribution_keys.add((*key, event.factor_name))
+        else:
+            self._selections[key] = event
+
+    def _remove_from_indexes(self, event: SelectionEvidenceEvent) -> None:
+        key = (event.trade_date, event.instrument_id)
+        if isinstance(event, InitialUniverseEvidence):
+            self._initial_keys.remove(key)
+        elif isinstance(event, ExclusionEvidence):
+            self._exclusion_keys.remove(key)
+        elif isinstance(event, FactorContributionEvidence):
+            self._contribution_keys.remove((*key, event.factor_name))
+        else:
+            del self._selections[key]
 
     def snapshot(self) -> SelectionEvidenceLog:
         """Return an immutable snapshot."""
@@ -441,18 +547,12 @@ def _validate_event_invariants(events: Sequence[SelectionEvidenceEvent]) -> None
         if isinstance(event, FactorContributionEvidence):
             contribution_key = (*key, event.factor_name)
             if contribution_key in contribution_keys:
-                raise _evidence_error(
-                    "duplicate factor contribution evidence for instrument/factor/date",
-                    reason="duplicate_factor_contribution_evidence",
-                    trade_date=event.trade_date,
-                    instrument_id=event.instrument_id,
-                    factor_name=event.factor_name,
-                )
+                raise _duplicate_contribution_error(event)
             contribution_keys.add(contribution_key)
             continue
         _require_unique_key(
             key,
-            seen=set(selections),
+            seen=selections,
             evidence_kind="selection",
         )
         if event.selected and key in exclusion_keys:
@@ -463,7 +563,7 @@ def _validate_event_invariants(events: Sequence[SelectionEvidenceEvent]) -> None
 def _require_unique_key(
     key: EvidenceKey,
     *,
-    seen: set[EvidenceKey],
+    seen: Collection[EvidenceKey],
     evidence_kind: str,
 ) -> None:
     if key not in seen:
@@ -474,6 +574,18 @@ def _require_unique_key(
         reason=f"duplicate_{evidence_kind.replace(' ', '_')}_evidence",
         trade_date=trade_date,
         instrument_id=instrument_id,
+    )
+
+
+def _duplicate_contribution_error(
+    event: FactorContributionEvidence,
+) -> StrategySpecError:
+    return _evidence_error(
+        "duplicate factor contribution evidence for instrument/factor/date",
+        reason="duplicate_factor_contribution_evidence",
+        trade_date=event.trade_date,
+        instrument_id=event.instrument_id,
+        factor_name=event.factor_name,
     )
 
 

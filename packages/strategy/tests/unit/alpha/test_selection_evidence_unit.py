@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import FrozenInstanceError, fields
 from importlib.util import find_spec
 from math import inf, nan
@@ -208,6 +209,7 @@ def test_collector_snapshot_enriches_factor_rows_with_selection_state() -> None:
             selected=True,
         ),
     )
+    collector.commit_rebalance()
 
     snapshot = collector.snapshot()
 
@@ -231,6 +233,36 @@ def test_collector_rejects_duplicate_selection_for_one_instrument_and_date() -> 
 
     with pytest.raises(StrategySpecError, match="duplicate selection evidence"):
         collector.emit(duplicate)
+
+
+def test_collector_emit_uses_constant_invariant_scan_count_at_scale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Per-event validation must not rescan the full committed event history."""
+    scan_sizes: list[int] = []
+    original_validator = evidence._validate_event_invariants
+
+    def record_scan(events: Sequence[evidence.SelectionEvidenceEvent]) -> None:
+        scan_sizes.append(len(events))
+        original_validator(events)
+
+    monkeypatch.setattr(evidence, "_validate_event_invariants", record_scan)
+    collector = SelectionEvidenceCollector()
+    collector.begin_rebalance(_TRADE_DATE)
+
+    for instrument_id in range(2_000):
+        collector.emit(
+            InitialUniverseEvidence(
+                trade_date=_TRADE_DATE,
+                instrument_id=instrument_id,
+                ordinal=instrument_id + 1,
+            ),
+        )
+
+    assert scan_sizes == []
+    collector.commit_rebalance()
+    assert len(collector.snapshot().initial_universe) == 2_000
+    assert scan_sizes == [2_000]
 
 
 @pytest.mark.parametrize(
@@ -300,6 +332,7 @@ def test_same_instrument_is_valid_across_dates_and_enriched_per_date() -> None:
                 selected=selected,
             ),
         )
+        collector.commit_rebalance()
 
     snapshot = collector.snapshot()
 
@@ -325,6 +358,45 @@ def test_collector_rejects_duplicate_initial_universe_for_one_date() -> None:
 
     with pytest.raises(StrategySpecError, match="duplicate initial universe"):
         collector.emit(initial)
+
+
+def test_pending_and_aborted_rebalance_is_never_published() -> None:
+    collector = SelectionEvidenceCollector()
+    collector.begin_rebalance(_TRADE_DATE)
+    collector.emit(
+        InitialUniverseEvidence(
+            trade_date=_TRADE_DATE,
+            instrument_id=1,
+            ordinal=1,
+        ),
+    )
+
+    assert collector.snapshot().initial_universe == ()
+
+    collector.abort_rebalance()
+
+    assert collector.snapshot().initial_universe == ()
+    with pytest.raises(StrategySpecError) as exc_info:
+        _ = collector.current_trade_date
+    assert exc_info.value.details["reason"] == "evidence_rebalance_unbound"
+
+
+def test_collector_lifecycle_misuse_fails_closed_with_typed_reasons() -> None:
+    collector = SelectionEvidenceCollector()
+
+    with pytest.raises(StrategySpecError) as commit_error:
+        collector.commit_rebalance()
+    assert commit_error.value.details["reason"] == "evidence_rebalance_unbound"
+
+    collector.begin_rebalance(_TRADE_DATE)
+    with pytest.raises(StrategySpecError) as begin_error:
+        collector.begin_rebalance("2026-03-23")
+    assert begin_error.value.details["reason"] == "evidence_rebalance_already_active"
+
+    collector.abort_rebalance()
+    with pytest.raises(StrategySpecError) as abort_error:
+        collector.abort_rebalance()
+    assert abort_error.value.details["reason"] == "evidence_rebalance_unbound"
 
 
 def test_collector_rejects_duplicate_exclusion_and_selected_contradiction() -> None:
@@ -405,6 +477,7 @@ def test_filtering_records_each_instruments_first_specific_exclusion() -> None:
     )
 
     result = stage.process(frame, StrategyContext())
+    collector.commit_rebalance()
     exclusions = collector.snapshot().exclusions
 
     assert result["instrument_id"].to_list() == ["PASS"]
@@ -434,6 +507,7 @@ def test_selection_emits_top_k_state_without_changing_tie_order() -> None:
         frame,
         StrategyContext(),
     )
+    collector.commit_rebalance()
 
     assert_frame_equal(actual, expected)
     assert actual["instrument_id"].to_list() == ["FIRST_TIE", "SECOND_TIE"]
@@ -466,6 +540,7 @@ def test_trend_and_risk_filters_emit_missing_threshold_and_lock_reasons() -> Non
         evidence_sink=collector,
     ).process(frame, context)
     result = RiskLockFilter(evidence_sink=collector).process(after_trend, context)
+    collector.commit_rebalance()
 
     assert result["instrument_id"].to_list() == ["PASS"]
     assert [item.reason_code for item in collector.snapshot().exclusions] == [
@@ -477,6 +552,12 @@ def test_trend_and_risk_filters_emit_missing_threshold_and_lock_reasons() -> Non
 
 class _FailingSink:
     def begin_rebalance(self, trade_date: str) -> None:
+        pass
+
+    def commit_rebalance(self) -> None:
+        pass
+
+    def abort_rebalance(self) -> None:
         pass
 
     @property

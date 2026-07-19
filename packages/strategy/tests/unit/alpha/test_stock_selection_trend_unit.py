@@ -634,6 +634,123 @@ class TestMultiFactorSignalStagePreprocess:
 class TestMultiFactorContributionEvidence:
     """Contribution evidence comes from the actual preprocess/rank path."""
 
+    def test_duplicate_factor_occurrences_are_aggregated_in_first_seen_order(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "factor": [1.0, 2.0, 3.0],
+                "other": [3.0, 1.0, 2.0],
+            },
+        )
+        factors = ("factor", "other", "factor")
+        weights = (0.25, 0.25, 0.5)
+        expected = MultiFactorSignalStage(
+            signal_factors=factors,
+            signal_weights=weights,
+        ).process(frame, empty_context)
+        collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-03-22")
+
+        actual = MultiFactorSignalStage(
+            signal_factors=factors,
+            signal_weights=weights,
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+        collector.commit_rebalance()
+
+        assert_frame_equal(actual, expected)
+        first_instrument = [
+            event
+            for event in collector.snapshot().factor_contributions
+            if event.instrument_id == 1
+        ]
+        assert [event.factor_name for event in first_instrument] == ["factor", "other"]
+        assert [event.weight for event in first_instrument] == pytest.approx(
+            [0.75, 0.25],
+        )
+        assert sum(event.contribution or 0.0 for event in first_instrument) == (
+            pytest.approx(actual["signal_value"][0])
+        )
+
+    def test_duplicate_factor_negative_occurrence_aggregates_effective_weight(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "factor": [1.0, 2.0, 3.0],
+                "other": [3.0, 1.0, 2.0],
+            },
+        )
+        factors = ("factor", "other", "factor")
+        weights = (1.0, 1.0, -1.0)
+        expected = MultiFactorSignalStage(
+            signal_factors=factors,
+            signal_weights=weights,
+        ).process(frame, empty_context)
+        collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-03-22")
+
+        actual = MultiFactorSignalStage(
+            signal_factors=factors,
+            signal_weights=weights,
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+        collector.commit_rebalance()
+
+        assert_frame_equal(actual, expected)
+        first_instrument = [
+            event
+            for event in collector.snapshot().factor_contributions
+            if event.instrument_id == 1
+        ]
+        assert [event.weight for event in first_instrument] == pytest.approx([0.0, 1.0])
+        assert first_instrument[0].contribution == pytest.approx(0.0)
+        assert sum(event.contribution or 0.0 for event in first_instrument) == (
+            pytest.approx(actual["signal_value"][0])
+        )
+
+    def test_duplicate_missing_factor_emits_one_zero_contribution_per_instrument(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "present": [1.0, 2.0, 3.0],
+            },
+        )
+        factors = ("missing", "present", "missing")
+        weights = (0.2, 0.3, 0.5)
+        expected = MultiFactorSignalStage(
+            signal_factors=factors,
+            signal_weights=weights,
+        ).process(frame, empty_context)
+        collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-03-22")
+
+        actual = MultiFactorSignalStage(
+            signal_factors=factors,
+            signal_weights=weights,
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+        collector.commit_rebalance()
+
+        assert_frame_equal(actual, expected)
+        missing = [
+            event
+            for event in collector.snapshot().factor_contributions
+            if event.factor_name == "missing"
+        ]
+        assert len(missing) == frame.height
+        assert {event.weight for event in missing} == {0.7}
+        assert all(event.raw_value is None for event in missing)
+        assert all(event.contribution == 0.0 for event in missing)
+
     def test_pipeline_emits_raw_processed_contribution_and_final_selection(
         self,
         empty_context: StrategyContext,
@@ -718,6 +835,7 @@ class TestMultiFactorContributionEvidence:
 
         expected = plain_stage.process(frame, empty_context)
         actual = evidence_stage.process(frame, empty_context)
+        collector.commit_rebalance()
 
         assert_frame_equal(actual, expected)
         assert all(not name.startswith("_prepped_") for name in actual.columns)
@@ -738,6 +856,7 @@ class TestMultiFactorContributionEvidence:
             signal_weights=(1.0,),
             evidence_sink=collector,
         ).process(frame, empty_context)
+        collector.commit_rebalance()
 
         missing = collector.snapshot().factor_contributions[1]
         assert missing.raw_value is None

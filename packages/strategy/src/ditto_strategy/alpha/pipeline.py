@@ -349,9 +349,30 @@ class StrategyPipeline:
              - 若无 ``weight`` 列，使用 equal_weight 兜底
 
         """
-        if self._evidence_sink is not None:
-            self._evidence_sink.begin_rebalance(input_bundle.trade_date)
+        if self._evidence_sink is None:
+            return self._run_pipeline(context, input_bundle)
 
+        self._evidence_sink.begin_rebalance(input_bundle.trade_date)
+        try:
+            target = self._run_pipeline(context, input_bundle)
+            self._evidence_sink.commit_rebalance()
+        except BaseException as error:
+            try:
+                self._evidence_sink.abort_rebalance()
+            except BaseException as abort_error:
+                error.add_note(
+                    "selection evidence abort also failed: "
+                    + f"{type(abort_error).__name__}: {abort_error}",
+                )
+            raise
+        return target
+
+    def _run_pipeline(
+        self,
+        context: StrategyContext,
+        input_bundle: StrategyInputBundle,
+    ) -> TargetPortfolio:
+        """Run one decision attempt inside the caller's evidence transaction."""
         # Step 1: 初始 DecisionFrame
         frame = input_bundle.instruments.clone()
         validate_frame(

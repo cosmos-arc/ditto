@@ -110,8 +110,41 @@ class _ReplaceFrameStage:
         return self._result
 
 
+class _FailOnceStage:
+    """Fail the first attempt, then permit an exact same-date retry."""
+
+    def __init__(self) -> None:
+        self._failed = False
+
+    def process(
+        self,
+        frame: pl.DataFrame,
+        context: StrategyContext,
+    ) -> pl.DataFrame:
+        if not self._failed:
+            self._failed = True
+            raise RuntimeError("stage failed")
+        return frame
+
+
+class _FatalStageError(BaseException):
+    """Non-Exception failure used to prove unconditional transaction cleanup."""
+
+
+class _FatalStage:
+    def __init__(self, error: _FatalStageError) -> None:
+        self._error = error
+
+    def process(
+        self,
+        frame: pl.DataFrame,
+        context: StrategyContext,
+    ) -> pl.DataFrame:
+        raise self._error
+
+
 class _ObserveInitialEvidenceStage:
-    """Capture whether initial-universe evidence exists before any stage runs."""
+    """Capture whether a pending initial universe leaks into public snapshots."""
 
     def __init__(self, collector: SelectionEvidenceCollector) -> None:
         self._collector = collector
@@ -262,7 +295,7 @@ class TestStrategyInputBundle:
 
 
 class TestStrategyPipeline:
-    def test_initial_universe_evidence_is_emitted_before_join_and_stages(
+    def test_initial_universe_evidence_is_pending_until_target_build_succeeds(
         self,
         empty_context: StrategyContext,
         sample_instruments: pl.DataFrame,
@@ -280,7 +313,7 @@ class TestStrategyPipeline:
 
         target = pipeline.run(empty_context, bundle)
 
-        assert observer.observed_instrument_ids == (1, 2, 3)
+        assert observer.observed_instrument_ids == ()
         assert [
             (event.instrument_id, event.ordinal)
             for event in collector.snapshot().initial_universe
@@ -315,6 +348,78 @@ class TestStrategyPipeline:
             ("2026-01-16", 1),
             ("2026-01-16", 2),
         ]
+
+    def test_failed_stage_aborts_pending_evidence_and_same_date_retry_commits(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(
+            stages=(_FailOnceStage(),),
+            evidence_sink=collector,
+        )
+        bundle = _make_input_bundle(
+            instruments=sample_instruments,
+            market_data=sample_market_data,
+        )
+
+        with pytest.raises(RuntimeError, match="stage failed"):
+            pipeline.run(empty_context, bundle)
+
+        assert collector.snapshot().initial_universe == ()
+
+        target = pipeline.run(empty_context, bundle)
+
+        assert target.positions == {1: 1 / 3, 2: 1 / 3, 3: 1 / 3}
+        assert [
+            event.instrument_id for event in collector.snapshot().initial_universe
+        ] == [1, 2, 3]
+
+    def test_target_portfolio_failure_aborts_pending_evidence(
+        self,
+        empty_context: StrategyContext,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(stages=(), evidence_sink=collector)
+        bundle = _make_input_bundle(
+            instruments=pl.DataFrame({"instrument_id": ["UNMAPPED"]}),
+            market_data=sample_market_data,
+            require_canonical_target_ids=True,
+        )
+
+        with pytest.raises(StrategySpecError, match="canonical"):
+            pipeline.run(empty_context, bundle)
+
+        assert collector.snapshot().initial_universe == ()
+
+    def test_non_exception_failure_aborts_and_is_reraised_unchanged(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        failure = _FatalStageError("fatal stage failure")
+        pipeline = StrategyPipeline(
+            stages=(_FatalStage(failure),),
+            evidence_sink=collector,
+        )
+        bundle = _make_input_bundle(
+            instruments=sample_instruments,
+            market_data=sample_market_data,
+        )
+
+        with pytest.raises(_FatalStageError) as exc_info:
+            pipeline.run(empty_context, bundle)
+
+        assert exc_info.value is failure
+        assert collector.snapshot().initial_universe == ()
+        with pytest.raises(StrategySpecError) as lifecycle_error:
+            _ = collector.current_trade_date
+        assert lifecycle_error.value.details["reason"] == "evidence_rebalance_unbound"
 
     def test_evidence_pipeline_rejects_duplicate_input_instrument_ids(
         self,

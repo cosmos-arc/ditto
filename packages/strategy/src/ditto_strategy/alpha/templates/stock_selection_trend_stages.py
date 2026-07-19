@@ -248,6 +248,17 @@ class MultiFactorSignalStage:
                 weighted_sum = weighted_sum + pl.lit(weight) * pl.col(normalized_col)
         return weighted_sum
 
+    def _aggregated_factor_weights(self) -> tuple[tuple[str, float], ...]:
+        """Sum duplicate occurrences while preserving first-seen factor order."""
+        aggregated: dict[str, float] = {}
+        for factor_name, weight in zip(
+            self.signal_factors,
+            self.signal_weights,
+            strict=True,
+        ):
+            aggregated[factor_name] = aggregated.get(factor_name, 0.0) + weight
+        return tuple(aggregated.items())
+
     def _materialize_contributions(
         self,
         result: pl.DataFrame,
@@ -261,7 +272,7 @@ class MultiFactorSignalStage:
         factor_to_contribution: dict[str, str] = {}
         contribution_exprs: list[pl.Expr] = []
         for factor_index, (factor_name, weight) in enumerate(
-            zip(self.signal_factors, self.signal_weights, strict=True),
+            self._aggregated_factor_weights(),
         ):
             normalized_col = factor_to_normalized.get(factor_name)
             if normalized_col is None:
@@ -295,11 +306,7 @@ class MultiFactorSignalStage:
         """Emit values materialized by this exact calculation path."""
         if self.evidence_sink is None:
             return
-        for factor_name, weight in zip(
-            self.signal_factors,
-            self.signal_weights,
-            strict=True,
-        ):
+        for factor_name, weight in self._aggregated_factor_weights():
             raw_col = factor_to_raw.get(factor_name)
             prepped_col = factor_to_prepped.get(factor_name)
             normalized_col = factor_to_normalized.get(factor_name)
