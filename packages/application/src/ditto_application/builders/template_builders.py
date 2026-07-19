@@ -200,9 +200,11 @@ def _resolve_legacy_scoring_method(spec: StrategySpec) -> ScoringMethod:
                 },
             ) from exc
 
-    override = spec.params.get("scoring_method")
-    if override is not None:
-        return _parse(override, field_name="params.scoring_method")
+    if "scoring_method" in spec.params:
+        return _parse(
+            spec.params["scoring_method"],
+            field_name="params.scoring_method",
+        )
     return _parse(spec.scorer.method, field_name="scorer.method")
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import polars as pl
 import pytest
@@ -184,6 +185,75 @@ def test_valid_scoring_override_precedes_legacy_default_scorer() -> None:
         stage for stage in pipeline._stages if isinstance(stage, ScoringStage)
     )
     assert scoring.method is ScoringMethod.RANK
+
+
+def test_missing_scoring_override_falls_back_to_scorer_method() -> None:
+    """缺失 override 时保持 legacy scorer.method 回退语义。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    spec = replace(
+        source,
+        scorer=replace(source.scorer, method="rank"),
+        params={
+            key: value
+            for key, value in source.params.items()
+            if key != "scoring_method"
+        },
+    )
+
+    pipeline = _build(spec)
+
+    scoring = next(
+        stage for stage in pipeline._stages if isinstance(stage, ScoringStage)
+    )
+    assert scoring.method is ScoringMethod.RANK
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    [
+        pytest.param(None, id="null"),
+        pytest.param(7, id="non-string"),
+        pytest.param("", id="empty"),
+        pytest.param("os.system", id="unknown"),
+    ],
+)
+def test_explicit_invalid_scoring_override_fails_closed(
+    invalid_value: object,
+) -> None:
+    """显式 override 不得因值为 null 而被误判为未提供。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    invalid = replace(
+        source,
+        params={**source.params, "scoring_method": invalid_value},
+    )
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        _build(invalid)
+
+    assert (
+        "params.scoring_method" in str(exc_info.value)
+        or exc_info.value.details.get("field_name") == "params.scoring_method"
+    )
+
+
+def test_explicit_null_scorer_method_fails_closed_when_type_is_bypassed() -> None:
+    """即使上游绕过静态类型，scorer.method=null 也必须拒绝。"""
+    source = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    invalid = replace(
+        source,
+        scorer=replace(source.scorer, method=cast(str, None)),
+        params={
+            key: value
+            for key, value in source.params.items()
+            if key != "scoring_method"
+        },
+    )
+
+    with pytest.raises(StrategySpecError) as exc_info:
+        _build(invalid)
+
+    assert exc_info.value.details["reason"] == "invalid_node_config_type"
+    assert exc_info.value.details["config_key"] == "method"
 
 
 def test_stock_seed_unknown_allocation_method_still_fails_closed() -> None:
