@@ -67,7 +67,9 @@ def _candidate(
         candidate_id=CandidateId(f"candidate-{ordinal}"),
         ordinal=ordinal,
         is_baseline=baseline,
-        parameters={} if parameters is None else parameters,
+        # Launch candidates must have unique canonical parameter payloads,
+        # including the explicit baseline.
+        parameters={"candidate": ordinal} if parameters is None else parameters,
     )
 
 

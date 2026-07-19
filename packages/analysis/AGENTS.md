@@ -6,7 +6,7 @@ last_synced: 2026-06-04
 
 ## 定位
 
-纯研究分析平面 — 研究数据集契约、研究 control-plane。`experiments` 已提供纯领域合同；reports/diagnostics/screeners 仍为 reserved namespace。
+纯研究分析平面 — 研究数据集契约、研究 control-plane。`experiments` 已提供领域与持久化合同；SQLite adapter 位于 storage leaf，reports/diagnostics/screeners 仍为 reserved namespace。
 
 ## 核心模块
 
@@ -15,7 +15,8 @@ last_synced: 2026-06-04
 | contracts.py | research catalog reader/writer protocols |
 | errors.py | 分析层错误类型 |
 | research/ | 研究 control-plane（domain/catalog_service/artifact_service） |
-| experiments/ | experiment identity/spec/state/protocol 纯领域合同；不含调度与存储实现 |
+| experiments/ | experiment identity/spec/state/codec/protocol 领域与持久化合同；不含调度编排或 runtime adapter |
+| storage/sqlite/experiments/ | 独立 research SQLite、typed reader/writer 与 scheduler lease fencing |
 | storage/sqlite/research/ | 研究 SQLite 存储（reader/writer） |
 | di/ | analysis DI providers |
 
@@ -31,7 +32,7 @@ last_synced: 2026-06-04
 - analysis → data/features/strategy/portfolio/risk/execution/backtest ❌
 - 生产能力包 → analysis ❌（application 仅 research query 与 experiment 编排路径可消费合同）
 - 使用 reports/diagnostics/screeners 作为行为依赖 ❌
-- 把 experiments 合同误当作调度、I/O 或存储实现 ❌
+- 从 experiments barrel 导入 runtime database/reader/writer ❌（adapter 只在 storage leaf）
 
 ## 关键约束
 

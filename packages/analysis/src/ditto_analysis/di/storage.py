@@ -1,12 +1,22 @@
 """Analysis storage DI Provider — 研究 SQLite 存储装配."""
 
+from collections.abc import Iterator
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLiteClient
 
+from ditto_analysis.experiments.protocols import (
+    ExperimentReaderProtocol,
+    ExperimentWriterProtocol,
+)
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
+from ditto_analysis.storage.sqlite.experiments import (
+    ResearchExperimentDatabase,
+    SQLiteExperimentReader,
+    SQLiteExperimentWriter,
+)
 from ditto_analysis.storage.sqlite.research import (
     SQLiteResearchCatalogReader,
     SQLiteResearchCatalogWriter,
@@ -19,6 +29,51 @@ class AnalysisStorageProvider(Provider):
     """研究存储 Provider — SQLite catalog 读写与域服务."""
 
     scope = Scope.APP
+
+    @provide
+    def research_experiment_database(
+        self,
+        data_root: Path,
+    ) -> Iterator[ResearchExperimentDatabase]:
+        """Own the nominal research DB and close every worker connection on exit."""
+        database = ResearchExperimentDatabase(data_root)
+        database.initialize()
+        try:
+            yield database
+        finally:
+            database.close_all()
+
+    @provide
+    def research_experiment_reader(
+        self,
+        database: ResearchExperimentDatabase,
+    ) -> SQLiteExperimentReader:
+        """Provide the typed experiment reader without exposing its private pool."""
+        return SQLiteExperimentReader(database)
+
+    @provide
+    def research_experiment_writer(
+        self,
+        database: ResearchExperimentDatabase,
+    ) -> SQLiteExperimentWriter:
+        """Provide the typed experiment command and lease writer."""
+        return SQLiteExperimentWriter(database)
+
+    @provide
+    def research_experiment_reader_port(
+        self,
+        reader: SQLiteExperimentReader,
+    ) -> ExperimentReaderProtocol:
+        """Expose the experiment reader through its analysis-owned port."""
+        return reader
+
+    @provide
+    def research_experiment_writer_port(
+        self,
+        writer: SQLiteExperimentWriter,
+    ) -> ExperimentWriterProtocol:
+        """Expose the experiment writer through its analysis-owned port."""
+        return writer
 
     @provide
     def research_catalog_reader(

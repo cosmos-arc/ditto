@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -275,6 +277,27 @@ def _freeze_candidates(value: object) -> tuple[CandidateSpec, ...]:
     return cast("tuple[CandidateSpec, ...]", candidates)
 
 
+def _canonical_parameter_value(value: FrozenValue) -> object:
+    if isinstance(value, Mapping):
+        return {
+            key: _canonical_parameter_value(item) for key, item in sorted(value.items())
+        }
+    if isinstance(value, tuple):
+        return [_canonical_parameter_value(item) for item in value]
+    return value
+
+
+def _parameter_hash(parameters: Mapping[str, FrozenValue]) -> str:
+    payload = json.dumps(
+        _canonical_parameter_value(parameters),
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 @dataclass(frozen=True, slots=True)
 class ExperimentLaunchSpec:
     """Complete minimum deterministic semantics frozen at experiment launch."""
@@ -292,7 +315,7 @@ class ExperimentLaunchSpec:
     desired_state: ExperimentDesiredState
     created_at: datetime
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: C901 - complete aggregate invariant gate
         """Validate and defensively freeze all deterministic launch semantics."""
         typed_fields = (
             (self.experiment_id, ExperimentId, "experiment_id"),
@@ -340,6 +363,14 @@ class ExperimentLaunchSpec:
             raise _spec_error(
                 "candidate identities must be unique within an experiment",
                 "duplicate_candidate_identity",
+            )
+        parameter_hashes = tuple(
+            _parameter_hash(candidate.parameters) for candidate in candidates
+        )
+        if len(set(parameter_hashes)) != len(parameter_hashes):
+            raise _spec_error(
+                "candidate parameter sets must be semantically unique",
+                "duplicate_candidate_parameters",
             )
         baselines = tuple(
             candidate for candidate in candidates if candidate.is_baseline

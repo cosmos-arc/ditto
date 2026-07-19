@@ -1,0 +1,605 @@
+"""Typed, lossless reader for the experiment control-plane schema."""
+
+# The public read verbs are fully typed by the analysis-owned persistence contracts.
+# ruff: noqa: D102
+
+from __future__ import annotations
+
+import hashlib
+import json
+import sqlite3
+from collections.abc import Mapping
+from datetime import UTC, date, datetime
+from typing import cast
+
+from ditto_analysis.errors import (
+    ExperimentIntegrityError,
+    ExperimentPersistenceError,
+    ExperimentSpecError,
+)
+from ditto_analysis.experiments.models import (
+    AttemptId,
+    BacktestRunId,
+    CandidateId,
+    CheckpointRef,
+    ContentHash,
+    ExperimentDesiredState,
+    ExperimentFailureCode,
+    ExperimentId,
+    ExperimentRecord,
+    ExperimentStage,
+    ExperimentStatus,
+    FoldId,
+    SnapshotId,
+)
+from ditto_analysis.experiments.persistence import (
+    ArtifactRecord,
+    AttemptPersistenceSpec,
+    AttemptProjection,
+    AttemptView,
+    DateWindow,
+    ExperimentProjection,
+    FoldKey,
+    FoldPersistenceSpec,
+    FoldProjection,
+    FoldRole,
+    FoldView,
+    GateEvaluationRecord,
+    HoldoutClaimRecord,
+    ResearchCycleIdentity,
+    SchedulerSlot,
+    StatusEventRecord,
+    StatusSubjectType,
+    canonical_payload,
+    decode_launch_spec,
+    encode_candidate_parameters,
+)
+from ditto_analysis.experiments.specs import (
+    CandidateSpec,
+    ExperimentLaunchSpec,
+    FrozenValue,
+)
+from ditto_analysis.storage.sqlite.experiments.database import (
+    ResearchExperimentDatabase,
+)
+
+
+def _dt(value: int) -> datetime:
+    return datetime.fromtimestamp(value / 1_000_000, tz=UTC)
+
+
+def _integrity(
+    message: str, reason_code: str, **details: object
+) -> ExperimentIntegrityError:
+    return ExperimentIntegrityError(
+        message,
+        details={"reason_code": reason_code, **details},
+    )
+
+
+def _failure(value: str | None) -> ExperimentFailureCode | None:
+    return None if value is None else ExperimentFailureCode(value)
+
+
+def _json_object(payload: str, field: str) -> dict[str, object]:
+    try:
+        decoded = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise _integrity(
+            f"persisted {field} is not JSON",
+            "persisted_payload_invalid",
+            field=field,
+        ) from exc
+    if not isinstance(decoded, dict):
+        raise _integrity(
+            f"persisted {field} is not an object",
+            "persisted_payload_invalid",
+            field=field,
+        )
+    return cast("dict[str, object]", decoded)
+
+
+class SQLiteExperimentReader:
+    """Read approved experiment records without exposing SQLite rows."""
+
+    def __init__(self, database: ResearchExperimentDatabase) -> None:
+        self._database = database
+
+    def _one(self, sql: str, parameters: tuple[object, ...]) -> sqlite3.Row | None:
+        try:
+            return self._database.get_connection().execute(sql, parameters).fetchone()
+        except sqlite3.Error as exc:
+            raise ExperimentPersistenceError(
+                "experiment read failed",
+                details={"reason_code": "experiment_read_failed"},
+            ) from exc
+
+    def get_research_cycle_identity(
+        self, experiment_id: ExperimentId
+    ) -> ResearchCycleIdentity | None:
+        row = self._one(
+            """
+            SELECT research_cycle_id, research_cycle_hash
+            FROM experiment WHERE experiment_id=?
+            """,
+            (str(experiment_id),),
+        )
+        if row is None:
+            return None
+        return ResearchCycleIdentity(
+            row["research_cycle_id"], ContentHash(row["research_cycle_hash"])
+        )
+
+    def get_launch_spec(
+        self, experiment_id: ExperimentId
+    ) -> ExperimentLaunchSpec | None:
+        row = self._one(
+            "SELECT * FROM experiment WHERE experiment_id=?", (str(experiment_id),)
+        )
+        if row is None:
+            return None
+        spec = decode_launch_spec(
+            row["launch_spec_json"].encode("utf-8"),
+            ContentHash(row["launch_spec_hash"]),
+        )
+        if (
+            spec.experiment_id != experiment_id
+            or str(spec.strategy_version) != row["strategy_version"]
+            or str(spec.strategy_spec_hash) != row["strategy_spec_hash"]
+            or str(spec.snapshot_id) != row["snapshot_id"]
+            or spec.desired_state.value != row["desired_state"]
+            or int(spec.created_at.timestamp() * 1_000_000)
+            != row["created_at_epoch_us"]
+        ):
+            raise _integrity(
+                "launch payload disagrees with the experiment projection",
+                "launch_projection_drift",
+                experiment_id=str(experiment_id),
+            )
+        persisted_candidates = self.list_candidates(experiment_id)
+        if persisted_candidates != tuple(spec.candidates):
+            raise _integrity(
+                "launch payload disagrees with relational candidates",
+                "launch_candidate_drift",
+                experiment_id=str(experiment_id),
+            )
+        return spec
+
+    def get_experiment_projection(
+        self, experiment_id: ExperimentId
+    ) -> ExperimentProjection | None:
+        row = self._one(
+            "SELECT * FROM experiment WHERE experiment_id=?", (str(experiment_id),)
+        )
+        if row is None:
+            return None
+        return self._experiment_projection(row)
+
+    @staticmethod
+    def _experiment_projection(row: sqlite3.Row) -> ExperimentProjection:
+        record = ExperimentRecord(
+            experiment_id=ExperimentId(row["experiment_id"]),
+            status=ExperimentStatus(row["status"]),
+            desired_state=ExperimentDesiredState(row["desired_state"]),
+            stage=ExperimentStage(row["stage"]),
+            created_at=_dt(row["created_at_epoch_us"]),
+            failure_code=_failure(row["failure_code"]),
+        )
+        return ExperimentProjection(
+            record=record,
+            queue_ordinal=row["queue_ordinal"],
+            revision=row["revision"],
+            updated_at=_dt(row["updated_at_epoch_us"]),
+        )
+
+    def list_dispatchable_experiments(self) -> tuple[ExperimentProjection, ...]:
+        rows = (
+            self._database.get_connection()
+            .execute(
+                """
+                SELECT * FROM experiment
+                WHERE status='queued'
+                ORDER BY queue_ordinal, experiment_id
+                """
+            )
+            .fetchall()
+        )
+        return tuple(self._experiment_projection(row) for row in rows)
+
+    def list_candidates(self, experiment_id: ExperimentId) -> tuple[CandidateSpec, ...]:
+        rows = (
+            self._database.get_connection()
+            .execute(
+                """
+                SELECT * FROM experiment_candidate
+                WHERE experiment_id=? ORDER BY ordinal, candidate_id
+                """,
+                (str(experiment_id),),
+            )
+            .fetchall()
+        )
+        candidates: list[CandidateSpec] = []
+        for row in rows:
+            parameters = _json_object(row["parameters_json"], "parameters_json")
+            try:
+                candidate = CandidateSpec(
+                    candidate_id=CandidateId(row["candidate_id"]),
+                    ordinal=row["ordinal"],
+                    is_baseline=bool(row["is_baseline"]),
+                    parameters=cast("Mapping[str, FrozenValue]", parameters),
+                )
+            except ExperimentSpecError as exc:
+                raise _integrity(
+                    "persisted candidate parameters are invalid",
+                    "persisted_candidate_parameters_invalid",
+                    candidate_id=row["candidate_id"],
+                ) from exc
+            encoded = encode_candidate_parameters(candidate.parameters)
+            if str(encoded.content_hash) != row["parameters_hash"]:
+                raise _integrity(
+                    "candidate parameter hash mismatch",
+                    "candidate_parameter_hash_mismatch",
+                    candidate_id=row["candidate_id"],
+                )
+            candidates.append(candidate)
+        return tuple(candidates)
+
+    def get_fold(self, key: FoldKey) -> FoldView | None:
+        row = self._one(
+            """
+            SELECT * FROM experiment_fold
+            WHERE experiment_id=? AND candidate_id=? AND fold_id=?
+            """,
+            (str(key.experiment_id), str(key.candidate_id), str(key.fold_id)),
+        )
+        return None if row is None else self._fold_view(row)
+
+    def list_folds(self, experiment_id: ExperimentId) -> tuple[FoldView, ...]:
+        rows = (
+            self._database.get_connection()
+            .execute(
+                """
+            SELECT * FROM experiment_fold WHERE experiment_id=?
+            ORDER BY ordinal, candidate_id, fold_id
+            """,
+                (str(experiment_id),),
+            )
+            .fetchall()
+        )
+        return tuple(self._fold_view(row) for row in rows)
+
+    def list_claimable_folds(self, experiment_id: ExperimentId) -> tuple[FoldView, ...]:
+        rows = (
+            self._database.get_connection()
+            .execute(
+                """
+                SELECT fold.*
+                FROM experiment_fold AS fold
+                JOIN experiment_candidate AS candidate
+                  ON candidate.experiment_id = fold.experiment_id
+                 AND candidate.candidate_id = fold.candidate_id
+                WHERE fold.experiment_id=? AND fold.status='queued'
+                ORDER BY candidate.ordinal, fold.ordinal, fold.fold_id
+                """,
+                (str(experiment_id),),
+            )
+            .fetchall()
+        )
+        return tuple(self._fold_view(row) for row in rows)
+
+    @staticmethod
+    def _fold_view(row: sqlite3.Row) -> FoldView:
+        payload = row["fold_spec_json"].encode("utf-8")
+        actual_hash = hashlib.sha256(payload).hexdigest()
+        if actual_hash != row["fold_spec_hash"]:
+            raise _integrity(
+                "fold canonical payload hash mismatch",
+                "fold_payload_hash_mismatch",
+                fold_id=row["fold_id"],
+            )
+        key = FoldKey(
+            ExperimentId(row["experiment_id"]),
+            CandidateId(row["candidate_id"]),
+            FoldId(row["fold_id"]),
+        )
+        train_window = (
+            None
+            if row["train_start"] is None
+            else DateWindow(
+                date.fromisoformat(row["train_start"]),
+                date.fromisoformat(row["train_end"]),
+            )
+        )
+        spec = FoldPersistenceSpec(
+            key=key,
+            ordinal=row["ordinal"],
+            fold_role=FoldRole(row["fold_role"]),
+            train_window=train_window,
+            test_window=DateWindow(
+                date.fromisoformat(row["test_start"]),
+                date.fromisoformat(row["test_end"]),
+            ),
+            purge_sessions=row["purge_sessions"],
+            embargo_sessions=row["embargo_sessions"],
+            canonical_payload=payload,
+            payload_hash=ContentHash(row["fold_spec_hash"]),
+        )
+        expected = FoldPersistenceSpec.create(
+            key=spec.key,
+            ordinal=spec.ordinal,
+            fold_role=spec.fold_role,
+            train_window=spec.train_window,
+            test_window=spec.test_window,
+            purge_sessions=spec.purge_sessions,
+            embargo_sessions=spec.embargo_sessions,
+        )
+        if expected.canonical_payload != spec.canonical_payload:
+            raise _integrity(
+                "fold payload disagrees with its relational fields",
+                "fold_relation_payload_mismatch",
+                fold_id=row["fold_id"],
+            )
+        projection = FoldProjection(
+            key=key,
+            status=ExperimentStatus(row["status"]),
+            claim_owner_token=row["claim_owner_token"],
+            created_at=_dt(row["created_at_epoch_us"]),
+            updated_at=_dt(row["updated_at_epoch_us"]),
+            revision=row["revision"],
+        )
+        return FoldView(spec, projection)
+
+    def get_attempt(self, attempt_id: AttemptId) -> AttemptView | None:
+        row = self._one(
+            "SELECT * FROM experiment_attempt WHERE attempt_id=?",
+            (str(attempt_id),),
+        )
+        return None if row is None else self._attempt_view(row)
+
+    def list_attempts(self, key: FoldKey) -> tuple[AttemptView, ...]:
+        rows = (
+            self._database.get_connection()
+            .execute(
+                """
+            SELECT * FROM experiment_attempt
+            WHERE experiment_id=? AND candidate_id=? AND fold_id=?
+            ORDER BY ordinal, attempt_id
+            """,
+                (str(key.experiment_id), str(key.candidate_id), str(key.fold_id)),
+            )
+            .fetchall()
+        )
+        return tuple(self._attempt_view(row) for row in rows)
+
+    @staticmethod
+    def _attempt_view(row: sqlite3.Row) -> AttemptView:
+        key = FoldKey(
+            ExperimentId(row["experiment_id"]),
+            CandidateId(row["candidate_id"]),
+            FoldId(row["fold_id"]),
+        )
+        attempt_id = AttemptId(row["attempt_id"])
+        spec = AttemptPersistenceSpec(
+            attempt_id=attempt_id,
+            fold_key=key,
+            ordinal=row["ordinal"],
+            parent_attempt_id=(
+                None
+                if row["parent_attempt_id"] is None
+                else AttemptId(row["parent_attempt_id"])
+            ),
+            resume_from_run_id=(
+                None
+                if row["resume_from_run_id"] is None
+                else BacktestRunId(row["resume_from_run_id"])
+            ),
+            reproduction_fingerprint=ContentHash(row["reproduction_fingerprint"]),
+            created_at=_dt(row["created_at_epoch_us"]),
+        )
+        projection = AttemptProjection(
+            attempt_id=attempt_id,
+            status=ExperimentStatus(row["status"]),
+            backtest_run_id=(
+                None
+                if row["backtest_run_id"] is None
+                else BacktestRunId(row["backtest_run_id"])
+            ),
+            checkpoint_ref=(
+                None
+                if row["checkpoint_ref"] is None
+                else CheckpointRef(row["checkpoint_ref"])
+            ),
+            failure_code=_failure(row["failure_code"]),
+            created_at=_dt(row["created_at_epoch_us"]),
+            updated_at=_dt(row["updated_at_epoch_us"]),
+            revision=row["revision"],
+        )
+        return AttemptView(spec, projection)
+
+    def list_status_events(
+        self, experiment_id: ExperimentId
+    ) -> tuple[StatusEventRecord, ...]:
+        rows = (
+            self._database.get_connection()
+            .execute(
+                """
+            SELECT * FROM experiment_status_event WHERE experiment_id=?
+            ORDER BY occurred_at_epoch_us, event_id
+            """,
+                (str(experiment_id),),
+            )
+            .fetchall()
+        )
+        events: list[StatusEventRecord] = []
+        for row in rows:
+            detail = _json_object(row["detail_json"], "detail_json")
+            detail_payload = canonical_payload(detail)
+            if str(detail_payload.content_hash) != row["detail_hash"]:
+                raise _integrity(
+                    "status event detail hash mismatch",
+                    "status_event_detail_hash_mismatch",
+                    event_id=row["event_id"],
+                )
+            events.append(
+                StatusEventRecord(
+                    event_id=row["event_id"],
+                    experiment_id=ExperimentId(row["experiment_id"]),
+                    candidate_id=(
+                        None
+                        if row["candidate_id"] is None
+                        else CandidateId(row["candidate_id"])
+                    ),
+                    fold_id=None if row["fold_id"] is None else FoldId(row["fold_id"]),
+                    attempt_id=(
+                        None
+                        if row["attempt_id"] is None
+                        else AttemptId(row["attempt_id"])
+                    ),
+                    subject_type=StatusSubjectType(row["subject_type"]),
+                    subject_revision=row["subject_revision"],
+                    previous_status=(
+                        None
+                        if row["previous_status"] is None
+                        else ExperimentStatus(row["previous_status"])
+                    ),
+                    status=ExperimentStatus(row["status"]),
+                    desired_state=(
+                        None
+                        if row["desired_state"] is None
+                        else ExperimentDesiredState(row["desired_state"])
+                    ),
+                    stage=None
+                    if row["stage"] is None
+                    else ExperimentStage(row["stage"]),
+                    failure_code=_failure(row["failure_code"]),
+                    reason_code=row["reason_code"],
+                    detail=detail,
+                    detail_hash=ContentHash(row["detail_hash"]),
+                    occurred_at=_dt(row["occurred_at_epoch_us"]),
+                )
+            )
+        return tuple(events)
+
+    def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
+        row = self._one(
+            "SELECT * FROM research_artifact WHERE artifact_id=?", (artifact_id,)
+        )
+        if row is None:
+            return None
+        return ArtifactRecord(
+            artifact_id=row["artifact_id"],
+            experiment_id=ExperimentId(row["experiment_id"]),
+            candidate_id=None
+            if row["candidate_id"] is None
+            else CandidateId(row["candidate_id"]),
+            fold_id=None if row["fold_id"] is None else FoldId(row["fold_id"]),
+            attempt_id=None
+            if row["attempt_id"] is None
+            else AttemptId(row["attempt_id"]),
+            artifact_kind=row["artifact_kind"],
+            relative_path=row["relative_path"],
+            content_hash=ContentHash(row["content_hash"]),
+            schema_hash=ContentHash(row["schema_hash"]),
+            row_count=row["row_count"],
+            byte_size=row["byte_size"],
+            reproduction_fingerprint=ContentHash(row["reproduction_fingerprint"]),
+            manifest=_json_object(row["manifest_json"], "manifest_json"),
+            is_pinned=bool(row["is_pinned"]),
+            pinned_at=None
+            if row["pinned_at_epoch_us"] is None
+            else _dt(row["pinned_at_epoch_us"]),
+            created_at=_dt(row["created_at_epoch_us"]),
+            revision=row["revision"],
+        )
+
+    def get_gate_evaluation(self, evaluation_id: str) -> GateEvaluationRecord | None:
+        row = self._one(
+            "SELECT * FROM gate_evaluation WHERE evaluation_id=?", (evaluation_id,)
+        )
+        if row is None:
+            return None
+        record = GateEvaluationRecord(
+            evaluation_id=row["evaluation_id"],
+            experiment_id=ExperimentId(row["experiment_id"]),
+            candidate_id=None
+            if row["candidate_id"] is None
+            else CandidateId(row["candidate_id"]),
+            fold_id=None if row["fold_id"] is None else FoldId(row["fold_id"]),
+            attempt_id=None
+            if row["attempt_id"] is None
+            else AttemptId(row["attempt_id"]),
+            rule_id=row["rule_id"],
+            policy_version=row["policy_version"],
+            layer=row["layer"],
+            outcome=row["outcome"],
+            observed=json.loads(row["observed_json"]),
+            policy=json.loads(row["policy_json"]),
+            artifact_id=row["artifact_id"],
+            evaluated_at=_dt(row["evaluated_at_epoch_us"]),
+        )
+        if str(record.payload_hash) != row["payload_hash"]:
+            raise _integrity(
+                "gate evaluation payload hash mismatch",
+                "gate_payload_hash_mismatch",
+                evaluation_id=evaluation_id,
+            )
+        return record
+
+    def get_holdout_claim(self, claim_id: str) -> HoldoutClaimRecord | None:
+        row = self._one("SELECT * FROM holdout_claim WHERE claim_id=?", (claim_id,))
+        if row is None:
+            return None
+        record = HoldoutClaimRecord(
+            claim_id=row["claim_id"],
+            cycle=ResearchCycleIdentity(
+                row["research_cycle_id"], ContentHash(row["research_cycle_hash"])
+            ),
+            fold_key=FoldKey(
+                ExperimentId(row["experiment_id"]),
+                CandidateId(row["candidate_id"]),
+                FoldId(row["fold_id"]),
+            ),
+            resolved_spec_hash=ContentHash(row["resolved_spec_hash"]),
+            parameters_hash=ContentHash(row["parameters_hash"]),
+            snapshot_id=SnapshotId(row["snapshot_id"]),
+            window=DateWindow(
+                date.fromisoformat(row["window_start"]),
+                date.fromisoformat(row["window_end"]),
+            ),
+            reproduction_fingerprint=ContentHash(row["reproduction_fingerprint"]),
+            logical_run_id=row["logical_run_id"],
+            operator_confirmation=row["operator_confirmation"],
+            selection_reason=_json_object(
+                row["selection_reason_json"], "selection_reason_json"
+            ),
+            claimed_at=_dt(row["claimed_at_epoch_us"]),
+        )
+        if str(record.claim_payload_hash) != row["claim_payload_hash"]:
+            raise _integrity(
+                "holdout claim payload hash mismatch",
+                "holdout_claim_hash_mismatch",
+                claim_id=claim_id,
+            )
+        return record
+
+    def get_scheduler_slot(self) -> SchedulerSlot:
+        row = self._one(
+            "SELECT * FROM experiment_scheduler_slot WHERE slot_id='global'", ()
+        )
+        if row is None:
+            raise _integrity(
+                "global scheduler slot is absent", "scheduler_slot_missing"
+            )
+        return SchedulerSlot(
+            slot_id=row["slot_id"],
+            experiment_id=(
+                None
+                if row["experiment_id"] is None
+                else ExperimentId(row["experiment_id"])
+            ),
+            owner_token=row["owner_token"],
+            lease_until_epoch_us=row["lease_until_epoch_us"],
+            acquired_at_epoch_us=row["acquired_at_epoch_us"],
+            renewed_at_epoch_us=row["renewed_at_epoch_us"],
+            revision=row["revision"],
+        )

@@ -11,7 +11,7 @@
 | 子域 | 职责 |
 |------|------|
 | research | 研究数据集 control-plane，契约定义 |
-| experiments | reserved — 预留实验管理命名空间 |
+| experiments | experiment 领域与持久化合同、canonical codec、typed DTO/Protocol |
 | storage | 研究 SQLite 存储 |
 | di | DI 注册，研究模块依赖注入 |
 

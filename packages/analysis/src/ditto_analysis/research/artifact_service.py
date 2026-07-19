@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import os
+import tempfile
+from collections.abc import Callable, Mapping
+from contextlib import suppress
 from pathlib import Path
 from typing import Literal, cast
 
 import orjson
 import polars as pl
 
-from ditto_analysis.errors import ResearchDatasetError
+from ditto_analysis.errors import ExperimentSpecError, ResearchDatasetError
+from ditto_analysis.experiments.persistence import validate_artifact_relative_path
 
 __all__ = ["ResearchArtifactService"]
 
@@ -25,13 +29,46 @@ class ResearchArtifactService:
     """Encapsulates analysis-owned research artifact file I/O."""
 
     def __init__(self, *, artifact_root: Path) -> None:
-        self._root = Path(artifact_root)
+        self._root = Path(artifact_root).resolve()
+
+    def _path(self, relative_path: str) -> Path:
+        canonical = validate_artifact_relative_path(relative_path)
+        path = (self._root / Path(*canonical.parts)).resolve()
+        if not path.is_relative_to(self._root):
+            raise ExperimentSpecError(
+                "artifact path escapes its resolved canonical root",
+                details={"reason_code": "invalid_artifact_relative_path"},
+            )
+        return path
+
+    def _atomic_write(
+        self,
+        relative_path: str,
+        write: Callable[[Path], object],
+    ) -> None:
+        target = self._path(relative_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            dir=target.parent,
+        )
+        os.close(descriptor)
+        temporary = Path(temporary_name)
+        try:
+            write(temporary)
+            with temporary.open("rb") as stream:
+                os.fsync(stream.fileno())
+            temporary.replace(target)
+        finally:
+            with suppress(FileNotFoundError):
+                temporary.unlink()
 
     # -- Parquet --
 
     def read_parquet(self, relative_path: str) -> pl.DataFrame:
         """Read a parquet file by its relative path from artifact_root."""
-        path = self._root / relative_path
+        path = self._path(relative_path)
         if not path.exists():
             raise FileNotFoundError(f"research parquet not found: {relative_path}")
         return pl.read_parquet(path)
@@ -42,9 +79,7 @@ class ResearchArtifactService:
         frame: pl.DataFrame,
     ) -> None:
         """Write a parquet file, creating parent directories as needed."""
-        path = self._root / relative_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        frame.write_parquet(path)
+        self._atomic_write(relative_path, frame.write_parquet)
 
     # -- Multi-format export --
 
@@ -70,15 +105,14 @@ class ResearchArtifactService:
                 supported=tuple(_EXPORT_WRITERS),
                 supported_formats=tuple(_EXPORT_WRITERS),
             )
-        path = self._root / relative_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        getattr(frame, writer_name)(path)
+        writer = cast("Callable[[Path], object]", getattr(frame, writer_name))
+        self._atomic_write(relative_path, writer)
 
     # -- JSON --
 
     def read_json(self, relative_path: str) -> dict[str, object]:
         """Read a JSON file by its relative path from artifact_root."""
-        path = self._root / relative_path
+        path = self._path(relative_path)
         if not path.exists():
             raise FileNotFoundError(f"research JSON not found: {relative_path}")
         payload = orjson.loads(path.read_bytes())
@@ -97,14 +131,11 @@ class ResearchArtifactService:
         data: Mapping[str, object],
     ) -> None:
         """Write a JSON file with sorted keys, creating parent directories."""
-        path = self._root / relative_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(
-            orjson.dumps(
-                data,
-                option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
-            )
+        payload = orjson.dumps(
+            data,
+            option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
         )
+        self._atomic_write(relative_path, lambda path: path.write_bytes(payload))
 
     # -- Artifact resolution --
 
@@ -117,7 +148,9 @@ class ResearchArtifactService:
         artifact_root = self._root / "derived" / "artifacts"
         matches = sorted(artifact_root.glob(f"*/{derived_id}/v{version}"))
         if matches:
-            return str(matches[0].relative_to(self._root))
+            resolved = matches[0].resolve()
+            if resolved.is_relative_to(self._root):
+                return str(resolved.relative_to(self._root))
         return None
 
     def read_source_snapshot_ids(
@@ -125,7 +158,7 @@ class ResearchArtifactService:
         artifact_relative_path: str,
     ) -> tuple[str, ...]:
         """Read source snapshot IDs from the latest artifact metadata."""
-        version_root = self._root / artifact_relative_path
+        version_root = self._path(artifact_relative_path)
         runs_root = version_root / "_runs"
         if not runs_root.exists():
             return ()

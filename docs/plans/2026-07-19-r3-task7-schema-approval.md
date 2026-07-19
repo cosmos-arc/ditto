@@ -2,10 +2,20 @@
 
 > 日期：2026-07-19
 >
-> 状态：等待数据库 schema 显式批准
+> 状态：已批准（2026-07-19）
 >
 > 适用任务：Research SQLite、insert-only stores 与 scheduler lease
 > DDL：[2026-07-19-r3-task7-research-schema-v1.sql](2026-07-19-r3-task7-research-schema-v1.sql)
+
+批准原文：
+
+```text
+批准 Task 7 Research Schema v1，仅授权仓库代码、tmp_path 测试和临时可写 data root，不操作当前或生产数据库。
+```
+
+运行限制：实现和验收只能修改仓库代码，并只能在 `tmp_path` 或显式临时可写
+data root 中创建 research/metadata 测试库；不得初始化、迁移、复制或修改当前开发
+data root、任何现有部署数据库或生产数据库。
 
 ## 1. 审批范围
 

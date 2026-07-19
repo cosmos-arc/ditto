@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import orjson
 import polars as pl
 import pytest
-from ditto_analysis.errors import ResearchDatasetError
+from ditto_analysis.errors import ExperimentSpecError, ResearchDatasetError
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 
 
@@ -179,6 +180,90 @@ class TestWriteJson:
         service.write_json("nested/dir/output.json", {"x": 1})
 
         assert (tmp_path / "nested" / "dir" / "output.json").exists()
+
+
+class TestAtomicArtifactWrites:
+    """Task 7 file writes must be canonically contained and atomically published."""
+
+    @pytest.mark.parametrize(
+        "relative_path",
+        ["/absolute/file.parquet", "../escape.parquet", "a/../b.parquet", "C:/x"],
+    )
+    def test_all_writers_reject_noncanonical_paths_before_file_io(
+        self,
+        service: ResearchArtifactService,
+        relative_path: str,
+    ) -> None:
+        with pytest.raises(ExperimentSpecError):
+            service.write_parquet(relative_path, pl.DataFrame({"x": [1]}))
+
+    def test_resolved_symlink_escape_is_rejected(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        root = tmp_path / "root"
+        outside = tmp_path / "outside"
+        root.mkdir()
+        outside.mkdir()
+        (root / "link").symlink_to(outside, target_is_directory=True)
+        service = ResearchArtifactService(artifact_root=root)
+
+        with pytest.raises(ExperimentSpecError):
+            service.write_json("link/escape.json", {"x": 1})
+
+        assert not (outside / "escape.json").exists()
+
+    def test_parquet_write_fsyncs_sibling_temp_before_atomic_replace(
+        self,
+        service: ResearchArtifactService,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        frame = pl.DataFrame({"x": [1, 2], "label": ["a", "b"]})
+        original_fsync = os.fsync
+        original_replace = os.replace
+        calls: list[str] = []
+
+        def observe_fsync(fd: int) -> None:
+            calls.append("fsync")
+            original_fsync(fd)
+
+        def observe_replace(source: os.PathLike[str], target: os.PathLike[str]) -> None:
+            source_path = Path(source)
+            target_path = Path(target)
+            assert source_path.parent == target_path.parent
+            assert source_path.exists()
+            assert not target_path.exists()
+            calls.append("replace")
+            original_replace(source, target)
+
+        monkeypatch.setattr(os, "fsync", observe_fsync)
+        monkeypatch.setattr(os, "replace", observe_replace)
+        service.write_parquet("experiments/e-1/result.parquet", frame)
+
+        assert calls == ["fsync", "replace"]
+        assert pl.read_parquet(tmp_path / "experiments/e-1/result.parquet").equals(
+            frame
+        )
+        assert tuple((tmp_path / "experiments/e-1").glob("*.tmp")) == ()
+
+    def test_rename_failure_leaves_no_final_or_partial_file(
+        self,
+        service: ResearchArtifactService,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fail_replace(_source: os.PathLike[str], _target: os.PathLike[str]) -> None:
+            raise OSError("injected rename failure")
+
+        monkeypatch.setattr(os, "replace", fail_replace)
+        with pytest.raises(OSError, match="injected rename failure"):
+            service.write_parquet(
+                "experiments/e-1/result.parquet", pl.DataFrame({"x": [1]})
+            )
+
+        assert not (tmp_path / "experiments/e-1/result.parquet").exists()
+        assert tuple((tmp_path / "experiments/e-1").glob("*.tmp")) == ()
 
 
 class TestResolveArtifactRelativePath:

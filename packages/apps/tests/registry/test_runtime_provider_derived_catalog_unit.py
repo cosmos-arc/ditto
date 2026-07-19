@@ -2,8 +2,19 @@
 
 from unittest.mock import MagicMock
 
+import pytest
 from dishka import Container, Provider, Scope, make_container, provide
 from ditto_analysis.di import AnalysisStorageProvider
+from ditto_analysis.errors import ExperimentDatabaseClosedError
+from ditto_analysis.experiments.protocols import (
+    ExperimentReaderProtocol,
+    ExperimentWriterProtocol,
+)
+from ditto_analysis.storage.sqlite.experiments import (
+    ResearchExperimentDatabase,
+    SQLiteExperimentReader,
+    SQLiteExperimentWriter,
+)
 from ditto_apps.registry.infra import ConfigProvider
 from ditto_data.di import RuntimeProvider
 from ditto_data.sources.source import DataSources
@@ -56,6 +67,30 @@ def _make_container() -> Container:
 
 class TestCapabilityStorageProviderDerivedWiring:
     """Tests for capability storage provider derived service wiring."""
+
+    def test_analysis_provider_owns_dedicated_experiment_database_lifecycle(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        monkeypatch.setenv("ENVIRONMENT", "testing")
+        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        container = _make_container()
+
+        database = container.get(ResearchExperimentDatabase)
+        reader = container.get(SQLiteExperimentReader)
+        writer = container.get(SQLiteExperimentWriter)
+        reader_port = container.get(ExperimentReaderProtocol)
+        writer_port = container.get(ExperimentWriterProtocol)
+
+        assert database.path == tmp_path / "research" / "research.sqlite"
+        assert isinstance(reader, SQLiteExperimentReader)
+        assert isinstance(writer, SQLiteExperimentWriter)
+        assert reader_port is reader
+        assert writer_port is writer
+        container.close()
+        with pytest.raises(ExperimentDatabaseClosedError):
+            database.get_connection()
 
     def test_features_provider_provides_derived_catalog_service(
         self,

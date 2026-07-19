@@ -1,8 +1,9 @@
 """
-Experiment pure domain contracts.
+Experiment domain and persistence contracts.
 
-This package does not schedule work and does not persist records. Application
-orchestration and adapters consume these immutable analysis-owned contracts.
+This package does not schedule work. Runtime database and storage adapters live under
+``ditto_analysis.storage.sqlite.experiments``; this barrel exports only immutable,
+analysis-owned contracts and codecs.
 """
 
 from ditto_analysis.experiments.models import (
@@ -25,6 +26,32 @@ from ditto_analysis.experiments.models import (
     StrategyVersion,
     validate_status_transition,
 )
+from ditto_analysis.experiments.persistence import (
+    ArtifactRecord,
+    AttemptPersistenceSpec,
+    AttemptProjection,
+    AttemptView,
+    CanonicalPayload,
+    DateWindow,
+    ExperimentProjection,
+    FoldKey,
+    FoldPersistenceSpec,
+    FoldProjection,
+    FoldRole,
+    FoldView,
+    GateEvaluationRecord,
+    HoldoutClaimRecord,
+    LeaseFence,
+    ResearchCycleIdentity,
+    SchedulerLease,
+    SchedulerSlot,
+    StatusEventRecord,
+    StatusSubjectType,
+    canonical_payload,
+    decode_launch_spec,
+    encode_candidate_parameters,
+    encode_launch_spec,
+)
 from ditto_analysis.experiments.protocols import (
     ExperimentReaderProtocol,
     ExperimentWriterProtocol,
@@ -38,29 +65,53 @@ from ditto_analysis.experiments.specs import (
 )
 
 __all__ = [
+    "ArtifactRecord",
     "AttemptId",
+    "AttemptPersistenceSpec",
+    "AttemptProjection",
     "AttemptRecord",
+    "AttemptView",
     "BacktestRunId",
     "CandidateId",
     "CandidateRecord",
     "CandidateSpec",
+    "CanonicalPayload",
     "CheckpointRef",
     "ContentHash",
+    "DateWindow",
     "ExperimentBudget",
     "ExperimentDesiredState",
     "ExperimentFailureCode",
     "ExperimentFailurePolicy",
     "ExperimentId",
     "ExperimentLaunchSpec",
+    "ExperimentProjection",
     "ExperimentReaderProtocol",
     "ExperimentRecord",
     "ExperimentStage",
     "ExperimentStatus",
     "ExperimentWriterProtocol",
     "FoldId",
+    "FoldKey",
+    "FoldPersistenceSpec",
+    "FoldProjection",
     "FoldProtocolSpec",
     "FoldRecord",
+    "FoldRole",
+    "FoldView",
+    "GateEvaluationRecord",
+    "HoldoutClaimRecord",
+    "LeaseFence",
+    "ResearchCycleIdentity",
+    "SchedulerLease",
+    "SchedulerSlot",
     "SnapshotId",
+    "StatusEventRecord",
+    "StatusSubjectType",
     "StrategyVersion",
+    "canonical_payload",
+    "decode_launch_spec",
+    "encode_candidate_parameters",
+    "encode_launch_spec",
     "validate_status_transition",
 ]
