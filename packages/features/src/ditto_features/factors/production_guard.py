@@ -49,7 +49,7 @@ _R2_CERTIFICATION_PROFILE = "r2-modern-a-share-v1"
 _R3_CORE_FACTOR_IDS = R3_CORE_FACTOR_CATALOG.factor_ids
 _R3_PREPROCESSING_STEPS = R3_CORE_FACTOR_CATALOG.preprocessing.steps
 _R3_CORE_PAYLOAD_HASH = (
-    "6cb5c709366b81cf9ef0243068d6e3f6cc128894978f170ca4947f3142128c42"
+    "ec79390c84b1bcc2234ffc24bcb50c36cccf38b28492e6052b9a924e0f5e67f3"
 )
 
 
@@ -165,6 +165,7 @@ def _validate_r3_core_descriptor(descriptor: CoreFactorDescriptor) -> None:
     if spec is None:
         raise ValueError(f"unregistered core factor: {descriptor.factor_id}")
     _validate_bound_factor_spec(descriptor, spec)
+    _validate_effective_lookback_coverage(descriptor)
     _validate_governed_leaf_dependencies(descriptor)
     _validate_descriptor_pit_dataset(descriptor)
     if descriptor.benchmark_required:
@@ -193,6 +194,37 @@ def _validate_bound_factor_spec(
     actual_contract = CoreFactorSpecContract.from_spec(spec, ALL_FACTOR_SPECS)
     if actual_contract != descriptor.factor_spec:
         raise ValueError(f"factor spec contract drifted: {descriptor.factor_id}")
+
+
+def _validate_effective_lookback_coverage(
+    descriptor: CoreFactorDescriptor,
+) -> None:
+    effective = descriptor.factor_spec.effective_lookback
+    if effective == 0:
+        return
+    undersized = tuple(
+        requirement.dataset_id
+        for lane in descriptor.lanes
+        for requirement in descriptor.input_requirements_for(lane)
+        if requirement.lookback.unit is descriptor.lookback.unit
+        and requirement.lookback.value < effective
+    )
+    if undersized:
+        message = "factor dataset history is below effective lookback"
+        message += f": {descriptor.factor_id}: {undersized!r} < {effective}"
+        raise ValueError(message)
+    undersized_intermediates = tuple(
+        intermediate.column_id
+        for intermediate in descriptor.materialized_intermediates
+        if intermediate.lookback.unit is descriptor.lookback.unit
+        and intermediate.lookback.value < effective
+    )
+    if undersized_intermediates:
+        message = "materialized history is below effective lookback"
+        message += (
+            f": {descriptor.factor_id}: {undersized_intermediates!r} < {effective}"
+        )
+        raise ValueError(message)
 
 
 def _validate_governed_leaf_dependencies(

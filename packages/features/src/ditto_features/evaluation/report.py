@@ -31,11 +31,18 @@ class R3FactorDiagnosticsProjection:
     values: Mapping[str, object]
 
     def __post_init__(self) -> None:
-        """Defensively copy and recursively freeze the projected evidence."""
-        copied = {key: _deep_freeze(value) for key, value in self.values.items()}
-        if self.computed_metrics != tuple(copied):
+        """Normalize, validate, and recursively freeze projected evidence."""
+        metric_ids = _copy_sequence(self.computed_metrics, "computed metric IDs")
+        if metric_ids != tuple(self.values):
             raise ValueError("computed metric IDs must match diagnostic values")
-        object.__setattr__(self, "values", MappingProxyType(copied))
+        normalized = {
+            metric_id: _deep_freeze(
+                _normalize_diagnostic(metric_id, self.values[metric_id])
+            )
+            for metric_id in metric_ids
+        }
+        object.__setattr__(self, "computed_metrics", metric_ids)
+        object.__setattr__(self, "values", MappingProxyType(normalized))
 
 
 _R3_DIAGNOSTIC_SOURCES = (
@@ -79,7 +86,7 @@ def project_r3_factor_diagnostics(
     for metric_id, source_key in _R3_DIAGNOSTIC_SOURCES:
         value = raw.get(source_key)
         if _diagnostic_was_computed(value):
-            values[metric_id] = _normalize_diagnostic(metric_id, value)
+            values[metric_id] = value
     return R3FactorDiagnosticsProjection(
         computed_metrics=tuple(values),
         values=values,
@@ -107,6 +114,16 @@ _STRING_NUMERIC_MAPPING_DIAGNOSTICS = frozenset(
     }
 )
 _DIAGNOSTIC_PAIR_LENGTH = 2
+
+
+def _require_ordered_sequence(value: object, field_name: str) -> None:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError(f"{field_name} must be a non-text sequence")
+
+
+def _copy_sequence[T](value: Sequence[T], field_name: str) -> tuple[T, ...]:
+    _require_ordered_sequence(value, field_name)
+    return tuple(value)
 
 
 def _normalize_diagnostic(metric_id: str, value: object) -> object:
@@ -219,7 +236,12 @@ def _normalize_nested_numeric_mapping(
                 cast(Mapping[object, object], item), metric_id
             )
         else:
-            normalized[key] = _require_finite_number(item, metric_id)
+            try:
+                normalized[key] = _require_finite_number(item, metric_id)
+            except ValueError as exc:
+                raise ValueError(
+                    f"{metric_id} diagnostic must be a numeric mapping"
+                ) from exc
     return MappingProxyType(normalized)
 
 

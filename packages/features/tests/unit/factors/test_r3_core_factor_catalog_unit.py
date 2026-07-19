@@ -214,7 +214,7 @@ def _context(
             dataset_id="index_daily",
             certified_fields=frozenset({"benchmark.close"}),
             certified_history=coverage,
-            pit_aligned=True,
+            certified_pit=PitRequirement.KNOWN_AT,
         )
     return AvailabilityContext(
         lane=lane,
@@ -226,7 +226,14 @@ def _context(
         },
         benchmark_id=benchmark_id,
         certified_benchmarks=benchmarks,
-        pit_aligned_datasets=frozenset(expanded_datasets),
+        certified_pit={
+            dataset: (
+                PitRequirement.ANNOUNCEMENT_KNOWN_AT
+                if dataset in {"income_statement", "balance_sheet"}
+                else PitRequirement.KNOWN_AT
+            )
+            for dataset in expanded_datasets
+        },
     )
 
 
@@ -349,7 +356,7 @@ def test_fundamental_availability_has_no_current_value_fallback() -> None:
     context = _context("stock_daily", "income_statement", "balance_sheet")
     unavailable = assess_core_factor_input_availability(
         descriptor,
-        replace(context, pit_aligned_datasets=frozenset()),
+        replace(context, certified_pit={}),
     )
     assert unavailable.certified_inputs_available is False
     assert unavailable.reason is AvailabilityReason.PIT_ALIGNMENT_MISSING
@@ -359,7 +366,7 @@ def test_fundamental_availability_has_no_current_value_fallback() -> None:
 def test_market_availability_requires_known_at_alignment() -> None:
     context = replace(
         _context("stock_daily", history=20),
-        pit_aligned_datasets=frozenset(),
+        certified_pit={},
     )
     unavailable = assess_core_factor_input_availability(
         _descriptor("momentum_1m"),
@@ -407,7 +414,7 @@ def test_availability_context_copies_history_evidence() -> None:
         lane=AssetLane.STOCK,
         certified_datasets=frozenset(history),
         certified_history=history,
-        pit_aligned_datasets=frozenset(history),
+        certified_pit={"stock_daily": PitRequirement.KNOWN_AT},
     )
     history["stock_daily"] = CertifiedHistoryCoverage(0, 0)
     assert context.certified_history["stock_daily"].trading_days == 20
@@ -454,7 +461,7 @@ def test_catalog_is_valid_for_production_without_relaxing_expression_guard() -> 
             column_id="ts_mean_daily_amount_20d",
             expression="ts_mean(market.amount, 20)",
             dependencies=("market.amount",),
-            lookback=Lookback(20, LookbackUnit.TRADING_DAYS),
+            lookback=Lookback(21, LookbackUnit.TRADING_DAYS),
         ),
     )
 
@@ -643,7 +650,7 @@ def test_liquidity_materialization_uses_certified_amount_capability() -> None:
             column_id="ts_mean_daily_amount_20d",
             expression="ts_mean(market.amount, 20)",
             dependencies=("market.amount",),
-            lookback=Lookback(20, LookbackUnit.TRADING_DAYS),
+            lookback=Lookback(21, LookbackUnit.TRADING_DAYS),
         ),
     )
     assert ALL_FACTOR_SPECS["liquidity"].dependencies == ("market.amount",)
@@ -708,16 +715,14 @@ def test_missing_uncertified_factor_fields_fail_closed() -> None:
             "valuation_metrics": frozenset({"market_cap"}),
             "industry_mapping": frozenset({"industry_id"}),
         },
-        pit_aligned_datasets=frozenset(
-            {
-                "stock_daily",
-                "adj_factor",
-                "income_statement",
-                "balance_sheet",
-                "valuation_metrics",
-                "industry_mapping",
-            }
-        ),
+        certified_pit={
+            "stock_daily": PitRequirement.KNOWN_AT,
+            "adj_factor": PitRequirement.KNOWN_AT,
+            "income_statement": PitRequirement.ANNOUNCEMENT_KNOWN_AT,
+            "balance_sheet": PitRequirement.ANNOUNCEMENT_KNOWN_AT,
+            "valuation_metrics": PitRequirement.KNOWN_AT,
+            "industry_mapping": PitRequirement.KNOWN_AT,
+        },
     )
 
     ep = assess_core_factor_input_availability(_descriptor("ep_ttm"), context)
@@ -756,7 +761,10 @@ def test_preprocessing_inputs_are_explicit_and_fail_closed() -> None:
             "stock_daily": frozenset({"market.close"}),
             "adj_factor": frozenset({"market.adj_factor"}),
         },
-        pit_aligned_datasets=frozenset({"stock_daily", "adj_factor"}),
+        certified_pit={
+            "stock_daily": PitRequirement.KNOWN_AT,
+            "adj_factor": PitRequirement.KNOWN_AT,
+        },
     )
     unavailable = assess_core_factor_input_availability(
         _descriptor("momentum_1m"), context
@@ -784,9 +792,11 @@ def test_size_factor_skips_only_size_neutralization_requirement() -> None:
             "valuation_metrics": frozenset({"fundamentals.free_float_shares"}),
             "industry_mapping": frozenset({"industry_id"}),
         },
-        pit_aligned_datasets=frozenset(
-            {"stock_daily", "valuation_metrics", "industry_mapping"}
-        ),
+        certified_pit={
+            "stock_daily": PitRequirement.KNOWN_AT,
+            "valuation_metrics": PitRequirement.KNOWN_AT,
+            "industry_mapping": PitRequirement.KNOWN_AT,
+        },
     )
     result = assess_core_factor_input_availability(
         _descriptor("log_free_float_cap"), context
@@ -802,7 +812,7 @@ def test_relative_strength_requires_concrete_certified_benchmark_evidence() -> N
         dataset_id="index_daily",
         certified_fields=frozenset({"benchmark.close"}),
         certified_history=CertifiedHistoryCoverage(60, 0),
-        pit_aligned=True,
+        certified_pit=PitRequirement.KNOWN_AT,
     )
     context = AvailabilityContext(
         lane=AssetLane.STOCK,
@@ -831,14 +841,12 @@ def test_relative_strength_requires_concrete_certified_benchmark_evidence() -> N
         },
         benchmark_id="000300.SH",
         certified_benchmarks={"000300.SH": benchmark},
-        pit_aligned_datasets=frozenset(
-            {
-                "stock_daily",
-                "adj_factor",
-                "industry_mapping",
-                "valuation_metrics",
-            }
-        ),
+        certified_pit={
+            "stock_daily": PitRequirement.KNOWN_AT,
+            "adj_factor": PitRequirement.KNOWN_AT,
+            "industry_mapping": PitRequirement.KNOWN_AT,
+            "valuation_metrics": PitRequirement.KNOWN_AT,
+        },
     )
     assert assess_core_factor_input_availability(
         _descriptor("relative_strength_60d"), context
@@ -914,7 +922,7 @@ def test_catalog_guard_binds_transitive_factor_dependency_graph(monkeypatch) -> 
 
 def test_catalog_hash_is_a_frozen_external_literal() -> None:
     assert R3_CORE_FACTOR_CATALOG.payload_hash == (
-        "6cb5c709366b81cf9ef0243068d6e3f6cc128894978f170ca4947f3142128c42"
+        "ec79390c84b1bcc2234ffc24bcb50c36cccf38b28492e6052b9a924e0f5e67f3"
     )
 
 
@@ -936,7 +944,7 @@ def test_invalid_enum_values_raise_safe_value_errors() -> None:
 
 def test_availability_context_copies_sets_and_rejects_invalid_text() -> None:
     datasets = {"stock_daily"}
-    pit = {"stock_daily"}
+    pit = {"stock_daily": PitRequirement.KNOWN_AT}
     fields = {"stock_daily": {"market.close"}}
     context = AvailabilityContext(
         lane=AssetLane.STOCK,
@@ -945,13 +953,13 @@ def test_availability_context_copies_sets_and_rejects_invalid_text() -> None:
             "stock_daily": CertifiedHistoryCoverage(20, 0),
         },
         certified_fields=cast(dict[str, frozenset[str]], fields),
-        pit_aligned_datasets=cast(frozenset[str], pit),
+        certified_pit=pit,
     )
     datasets.add("adj_factor")
     pit.clear()
     fields["stock_daily"].add("market.amount")
     assert context.certified_datasets == frozenset({"stock_daily"})
-    assert context.pit_aligned_datasets == frozenset({"stock_daily"})
+    assert context.certified_pit == {"stock_daily": PitRequirement.KNOWN_AT}
     assert context.certified_fields["stock_daily"] == frozenset({"market.close"})
 
     with pytest.raises(ValueError, match="UTF-8"):

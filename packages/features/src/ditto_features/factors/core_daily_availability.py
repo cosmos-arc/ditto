@@ -19,6 +19,7 @@ from ditto_features.factors.core_daily_contracts import (
     require_instance,
     require_text,
 )
+from ditto_features.factors.core_daily_validation import copy_sequence
 
 __all__ = [
     "AvailabilityContext",
@@ -36,7 +37,7 @@ class CertifiedBenchmarkEvidence:
     dataset_id: str
     certified_fields: frozenset[str]
     certified_history: CertifiedHistoryCoverage
-    pit_aligned: bool
+    certified_pit: PitRequirement
 
     def __post_init__(self) -> None:
         """Copy and validate externally supplied benchmark evidence."""
@@ -52,10 +53,10 @@ class CertifiedBenchmarkEvidence:
             CertifiedHistoryCoverage,
             "invalid certified benchmark history",
         )
-        require_instance(
-            self.pit_aligned,
-            bool,
-            "benchmark PIT evidence must be bool",
+        require_enum_member(
+            self.certified_pit,
+            PitRequirement,
+            "invalid certified benchmark PIT evidence",
         )
         object.__setattr__(self, "certified_fields", fields)
 
@@ -65,6 +66,10 @@ def _empty_certified_fields() -> dict[str, frozenset[str]]:
 
 
 def _empty_certified_benchmarks() -> dict[str, CertifiedBenchmarkEvidence]:
+    return {}
+
+
+def _empty_certified_pit() -> dict[str, PitRequirement]:
     return {}
 
 
@@ -82,28 +87,30 @@ class AvailabilityContext:
     certified_benchmarks: Mapping[str, CertifiedBenchmarkEvidence] = field(
         default_factory=_empty_certified_benchmarks
     )
-    pit_aligned_datasets: frozenset[str] = frozenset()
+    certified_pit: Mapping[str, PitRequirement] = field(
+        default_factory=_empty_certified_pit
+    )
 
     def __post_init__(self) -> None:
         """Defensively copy and validate all certified input evidence."""
         require_enum_member(self.lane, AssetLane, "invalid availability asset lane")
         datasets = frozenset(self.certified_datasets)
-        pit_aligned = frozenset(self.pit_aligned_datasets)
-        for dataset_id in (*datasets, *pit_aligned):
+        for dataset_id in datasets:
             require_text(dataset_id, "certified dataset ID")
         history = _copy_certified_history(self.certified_history)
         fields = _copy_certified_fields(self.certified_fields)
+        pit = _copy_certified_pit(self.certified_pit)
         if not set(history) <= datasets or not set(fields) <= datasets:
             raise ValueError("history and fields must belong to certified datasets")
-        if not pit_aligned <= datasets:
-            raise ValueError("PIT aligned datasets must be certified")
+        if not set(pit) <= datasets:
+            raise ValueError("PIT evidence must belong to certified datasets")
         if self.benchmark_id is not None:
             require_text(self.benchmark_id, "benchmark ID")
         benchmarks = _copy_certified_benchmarks(self.certified_benchmarks)
         object.__setattr__(self, "certified_datasets", datasets)
-        object.__setattr__(self, "pit_aligned_datasets", pit_aligned)
         object.__setattr__(self, "certified_history", MappingProxyType(history))
         object.__setattr__(self, "certified_fields", MappingProxyType(fields))
+        object.__setattr__(self, "certified_pit", MappingProxyType(pit))
         object.__setattr__(
             self,
             "certified_benchmarks",
@@ -138,6 +145,20 @@ def _copy_certified_fields(
     return fields
 
 
+def _copy_certified_pit(
+    source: Mapping[str, PitRequirement],
+) -> dict[str, PitRequirement]:
+    pit = dict(source)
+    for dataset_id, evidence in pit.items():
+        require_text(dataset_id, "certified PIT dataset ID")
+        require_enum_member(
+            evidence,
+            PitRequirement,
+            "invalid certified dataset PIT evidence",
+        )
+    return pit
+
+
 def _copy_certified_benchmarks(
     source: Mapping[str, CertifiedBenchmarkEvidence],
 ) -> dict[str, CertifiedBenchmarkEvidence]:
@@ -162,6 +183,19 @@ class CoreFactorInputAvailability:
     reason: AvailabilityReason | None = None
     dataset_ids: tuple[str, ...] = ()
     missing_fields: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Defensively copy sequence evidence at the public DTO boundary."""
+        object.__setattr__(
+            self,
+            "dataset_ids",
+            copy_sequence(self.dataset_ids, "availability dataset IDs"),
+        )
+        object.__setattr__(
+            self,
+            "missing_fields",
+            copy_sequence(self.missing_fields, "availability missing fields"),
+        )
 
 
 def assess_core_factor_input_availability(
@@ -212,6 +246,20 @@ def _history_satisfies(
     lookback: Lookback,
 ) -> bool:
     return coverage is not None and coverage.amount_for(lookback.unit) >= lookback.value
+
+
+_PIT_STRENGTH = {
+    PitRequirement.NONE: 0,
+    PitRequirement.KNOWN_AT: 1,
+    PitRequirement.ANNOUNCEMENT_KNOWN_AT: 2,
+}
+
+
+def _pit_satisfies(
+    evidence: PitRequirement,
+    requirement: PitRequirement,
+) -> bool:
+    return _PIT_STRENGTH[evidence] >= _PIT_STRENGTH[requirement]
 
 
 def _assess_dataset_requirements(
@@ -267,8 +315,10 @@ def _assess_dataset_requirements(
     missing_pit = tuple(
         item.dataset_id
         for item in requirements
-        if item.pit_requirement is not PitRequirement.NONE
-        and item.dataset_id not in context.pit_aligned_datasets
+        if not _pit_satisfies(
+            context.certified_pit.get(item.dataset_id, PitRequirement.NONE),
+            item.pit_requirement,
+        )
     )
     if missing_pit:
         return CoreFactorInputAvailability(
@@ -314,10 +364,7 @@ def _assess_benchmark_requirement(
             missing_fields,
         )
     failure = None
-    if (
-        requirement.pit_requirement is not PitRequirement.NONE
-        and not evidence.pit_aligned
-    ):
+    if not _pit_satisfies(evidence.certified_pit, requirement.pit_requirement):
         failure = CoreFactorInputAvailability(
             False,
             AvailabilityReason.PIT_ALIGNMENT_MISSING,

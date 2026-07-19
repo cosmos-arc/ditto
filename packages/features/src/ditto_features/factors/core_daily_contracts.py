@@ -13,6 +13,7 @@ import orjson
 from ditto_features.expression.analyzer import analyze_expression
 from ditto_features.expression.lexer import tokenize
 from ditto_features.expression.parser import ExpressionParser
+from ditto_features.factors.core_daily_validation import copy_sequence
 from ditto_features.factors.spec import FactorSpec
 
 __all__ = [
@@ -199,6 +200,8 @@ class DatasetInputRequirement:
 
     def __post_init__(self) -> None:
         """Reject incomplete or ambiguous dataset capability contracts."""
+        fields = copy_sequence(self.required_fields, "required input fields")
+        object.__setattr__(self, "required_fields", fields)
         require_text(self.dataset_id, "dataset ID")
         if not self.required_fields or len(set(self.required_fields)) != len(
             self.required_fields
@@ -236,6 +239,8 @@ class LaneDatasetRequirement:
 
     def __post_init__(self) -> None:
         """Reject untyped lanes and duplicate dataset requirements."""
+        requirements = copy_sequence(self.requirements, "lane dataset requirements")
+        object.__setattr__(self, "requirements", requirements)
         require_enum_member(self.lane, AssetLane, "invalid asset lane")
         dataset_ids = tuple(item.dataset_id for item in self.requirements)
         if not dataset_ids or len(set(dataset_ids)) != len(dataset_ids):
@@ -289,6 +294,8 @@ class MaterializedIntermediate:
 
     def __post_init__(self) -> None:
         """Reject incomplete intermediate computation contracts."""
+        dependencies = copy_sequence(self.dependencies, "materialized dependencies")
+        object.__setattr__(self, "dependencies", dependencies)
         require_text(self.column_id, "materialized intermediate column")
         require_text(self.expression, "materialized intermediate expression")
         if not self.dependencies or len(set(self.dependencies)) != len(
@@ -333,6 +340,27 @@ class PreprocessingContract:
 
     def __post_init__(self) -> None:
         """Copy lane sets and reject inconsistent preprocessing inputs."""
+        object.__setattr__(
+            self,
+            "steps",
+            copy_sequence(self.steps, "preprocessing steps"),
+        )
+        object.__setattr__(
+            self,
+            "industry_input_requirements",
+            copy_sequence(
+                self.industry_input_requirements,
+                "industry preprocessing requirements",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "size_input_requirements",
+            copy_sequence(
+                self.size_input_requirements,
+                "size preprocessing requirements",
+            ),
+        )
         object.__setattr__(self, "applicable_lanes", frozenset(self.applicable_lanes))
         object.__setattr__(
             self,
@@ -438,15 +466,27 @@ class CoreFactorSpecContract:
     dependencies: tuple[str, ...]
     computation_type: Literal["expression", "python"]
     compiled_lookback: int | None
+    effective_lookback: int
     leaf_dependencies: tuple[str, ...]
     dependency_graph_hash: str
 
     def __post_init__(self) -> None:
         """Reject incomplete or ambiguous factor computation identities."""
+        object.__setattr__(
+            self,
+            "dependencies",
+            copy_sequence(self.dependencies, "factor spec dependencies"),
+        )
+        object.__setattr__(
+            self,
+            "leaf_dependencies",
+            copy_sequence(self.leaf_dependencies, "factor leaf dependencies"),
+        )
         _validate_factor_expression(self.expression, self.computation_type)
         _validate_factor_dependencies(self.dependencies)
         if self.compiled_lookback is not None:
             _require_non_negative_int(self.compiled_lookback)
+        _require_non_negative_int(self.effective_lookback)
         _validate_factor_leaf_dependencies(self.leaf_dependencies)
         if not _is_sha256_hex(self.dependency_graph_hash):
             raise ValueError("invalid factor dependency graph hash")
@@ -459,9 +499,11 @@ class CoreFactorSpecContract:
     ) -> CoreFactorSpecContract:
         """Bind a FactorSpec and its recursive registry dependency closure."""
         compiled_lookback = _compiled_lookback(spec)
-        graph_payload, leaf_dependencies = _resolve_factor_dependency_graph(
-            spec,
-            registry,
+        graph_payload, leaf_dependencies, effective_lookback = (
+            _resolve_factor_dependency_graph(
+                spec,
+                registry,
+            )
         )
         graph_hash = hashlib.sha256(
             orjson.dumps(graph_payload, option=orjson.OPT_SORT_KEYS)
@@ -471,6 +513,7 @@ class CoreFactorSpecContract:
             dependencies=tuple(spec.dependencies),
             computation_type=spec.computation_type,
             compiled_lookback=compiled_lookback,
+            effective_lookback=effective_lookback,
             leaf_dependencies=leaf_dependencies,
             dependency_graph_hash=graph_hash,
         )
@@ -483,6 +526,7 @@ class CoreFactorSpecContract:
             "dependencies": sorted(self.dependencies),
             "computation_type": self.computation_type,
             "compiled_lookback": self.compiled_lookback,
+            "effective_lookback": self.effective_lookback,
             "leaf_dependencies": sorted(self.leaf_dependencies),
             "dependency_graph_hash": self.dependency_graph_hash,
         }
@@ -530,23 +574,28 @@ def _compiled_lookback(spec: FactorSpec) -> int | None:
 def _resolve_factor_dependency_graph(
     root: FactorSpec,
     registry: Mapping[str, FactorSpec],
-) -> tuple[list[dict[str, object]], tuple[str, ...]]:
+) -> tuple[list[dict[str, object]], tuple[str, ...], int]:
     graph: dict[str, dict[str, object]] = {}
     leaves: set[str] = set()
     visiting: set[str] = set()
+    effective_lookback = 0
 
     def visit(spec: FactorSpec) -> None:
+        nonlocal effective_lookback
         if spec.id in visiting:
             raise ValueError(f"factor dependency cycle: {spec.id}")
         if spec.id in graph:
             return
         visiting.add(spec.id)
+        compiled_lookback = _compiled_lookback(spec)
+        effective_lookback = max(effective_lookback, compiled_lookback or 0)
         graph[spec.id] = {
             "factor_id": spec.id,
             "expression": spec.expression,
             "dependencies": sorted(spec.dependencies),
             "computation_type": spec.computation_type,
-            "compiled_lookback": _compiled_lookback(spec),
+            "compiled_lookback": compiled_lookback,
+            "calendar_context": _calendar_context_payload(spec),
         }
         for dependency in spec.dependencies:
             upstream = registry.get(dependency)
@@ -557,7 +606,22 @@ def _resolve_factor_dependency_graph(
         visiting.remove(spec.id)
 
     visit(root)
-    return [graph[factor_id] for factor_id in sorted(graph)], tuple(sorted(leaves))
+    return (
+        [graph[factor_id] for factor_id in sorted(graph)],
+        tuple(sorted(leaves)),
+        effective_lookback,
+    )
+
+
+def _calendar_context_payload(spec: FactorSpec) -> dict[str, object] | None:
+    context = spec.calendar_context
+    if context is None:
+        return None
+    return {
+        "is_special": context.is_special,
+        "is_half_day": context.is_half_day,
+        "exchange": context.exchange,
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -578,6 +642,19 @@ class CoreFactorDescriptor:
 
     def __post_init__(self) -> None:
         """Copy lane sets and reject ambiguous governed metadata."""
+        object.__setattr__(
+            self,
+            "dataset_requirements",
+            copy_sequence(self.dataset_requirements, "factor dataset requirements"),
+        )
+        object.__setattr__(
+            self,
+            "materialized_intermediates",
+            copy_sequence(
+                self.materialized_intermediates,
+                "factor materialized intermediates",
+            ),
+        )
         require_text(self.factor_id, "core factor ID")
         object.__setattr__(self, "lanes", frozenset(self.lanes))
         if not self.lanes:
@@ -670,6 +747,8 @@ class CoreFactorCatalog:
 
     def __post_init__(self) -> None:
         """Reject empty, duplicate, and unversioned catalogs."""
+        descriptors = copy_sequence(self.descriptors, "core factor descriptors")
+        object.__setattr__(self, "descriptors", descriptors)
         factor_ids = tuple(item.factor_id for item in self.descriptors)
         if not factor_ids or len(factor_ids) != len(set(factor_ids)):
             raise ValueError("core factor IDs must be non-empty and unique")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from types import MappingProxyType
 
 from ditto_features.factors.core_daily_contracts import (
@@ -121,6 +122,7 @@ def _market_descriptor(
         spec,
         _FACTOR_DEPENDENCY_REGISTRY,
     )
+    effective_history = max(lookback, spec_contract.effective_lookback)
     fields = market_fields or tuple(
         dependency
         for dependency in spec_contract.leaf_dependencies
@@ -136,7 +138,7 @@ def _market_descriptor(
             _input_requirement(
                 market_dataset,
                 fields,
-                lookback,
+                effective_history,
                 LookbackUnit.TRADING_DAYS,
                 PitRequirement.KNOWN_AT,
             )
@@ -146,7 +148,7 @@ def _market_descriptor(
                 _input_requirement(
                     adjustment_dataset,
                     ("market.adj_factor",),
-                    lookback,
+                    effective_history,
                     LookbackUnit.TRADING_DAYS,
                     PitRequirement.KNOWN_AT,
                 )
@@ -157,7 +159,7 @@ def _market_descriptor(
         _input_requirement(
             "index_daily",
             ("benchmark.close",),
-            lookback,
+            effective_history,
             LookbackUnit.TRADING_DAYS,
             PitRequirement.KNOWN_AT,
         )
@@ -176,7 +178,16 @@ def _market_descriptor(
         factor_spec=spec_contract,
         benchmark_required=benchmark_required,
         benchmark_requirement=benchmark_requirement,
-        materialized_intermediates=materialized_intermediates,
+        materialized_intermediates=tuple(
+            replace(
+                intermediate,
+                lookback=Lookback(
+                    max(intermediate.lookback.value, effective_history),
+                    intermediate.lookback.unit,
+                ),
+            )
+            for intermediate in materialized_intermediates
+        ),
         production_expression=production_expression,
     )
 
