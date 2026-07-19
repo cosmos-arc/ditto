@@ -7,6 +7,13 @@ from ditto_features.factors.spec import FactorSpec
 __all__ = ["MOMENTUMS"]
 
 MOMENTUMS: dict[str, FactorSpec] = {
+    "relative_strength_60d": FactorSpec(
+        id="relative_strength_60d",
+        expression="",
+        dependencies=("market.close",),
+        description=("60-day return relative to a pre-registered certified benchmark"),
+        computation_type="python",
+    ),
     "reversal_1m": FactorSpec(
         id="reversal_1m",
         expression="-ts_pct_change(market.close, 20)",

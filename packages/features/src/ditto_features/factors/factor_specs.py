@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ditto_features.factors.alpha import ALPHAS
 from ditto_features.factors.alternative import ALTERNATIVES
+from ditto_features.factors.core_daily import R3_CORE_FACTOR_CATALOG
 from ditto_features.factors.fundamental import FUNDAMENTALS
 from ditto_features.factors.growth import GROWTHS
 from ditto_features.factors.liquidity import LIQUIDITIES
@@ -16,7 +17,7 @@ from ditto_features.factors.technical import TECHNICALS
 from ditto_features.factors.value import VALUES
 from ditto_features.factors.volatility import VOLATILITIES
 
-__all__ = ["ALL_FACTOR_SPECS"]
+__all__ = ["ALL_FACTOR_SPECS", "R3_CORE_FACTOR_CATALOG"]
 
 ALL_FACTOR_SPECS: dict[str, FactorSpec] = {
     **PRIMITIVES,

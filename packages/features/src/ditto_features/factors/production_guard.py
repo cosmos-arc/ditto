@@ -10,6 +10,13 @@ from ditto_features.errors import FactorValidationError
 from ditto_features.expression.analyzer import analyze_expression
 from ditto_features.expression.lexer import tokenize
 from ditto_features.expression.parser import ExpressionParser
+from ditto_features.factors.core_daily import (
+    R3_CORE_FACTOR_CATALOG,
+    CoreFactorCatalog,
+    CoreFactorDescriptor,
+    PitRequirement,
+    PreprocessingStep,
+)
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 
 __all__ = [
@@ -18,6 +25,7 @@ __all__ = [
     "UnsafeProductionFactorExpressionError",
     "validate_certified_seed_factor_contract",
     "validate_production_factor_expression",
+    "validate_r3_core_factor_catalog",
 ]
 
 _CROSS_SECTION_OPERATORS = frozenset({"cs_rank", "cs_zscore", "cs_demean"})
@@ -36,6 +44,9 @@ _R2_STOCK_SEED_INPUT_DATASET_IDS = (
 )
 _R2_STOCK_SEED_MAX_LOOKBACK = 20
 _R2_CERTIFICATION_PROFILE = "r2-modern-a-share-v1"
+_R3_CORE_FACTOR_IDS = R3_CORE_FACTOR_CATALOG.factor_ids
+_R3_PREPROCESSING_STEPS = R3_CORE_FACTOR_CATALOG.preprocessing.steps
+_R3_CORE_PAYLOAD_HASH = R3_CORE_FACTOR_CATALOG.payload_hash
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +139,56 @@ def validate_production_factor_expression(
             _raise_unsafe_expression(expression, operator, compact_arg)
         if _is_unmaterialized_time_series_identifier(compact_arg, materialized):
             _raise_unsafe_expression(expression, operator, compact_arg)
+
+
+def validate_r3_core_factor_catalog(catalog: CoreFactorCatalog) -> None:
+    """Fail closed when the governed R3 catalog or production seam drifts."""
+    for descriptor in catalog.descriptors:
+        _validate_r3_core_descriptor(descriptor)
+
+    if catalog.factor_ids != _R3_CORE_FACTOR_IDS:
+        raise ValueError(f"R3 core factor IDs changed: {catalog.factor_ids!r}")
+    if catalog.preprocessing.steps != _R3_PREPROCESSING_STEPS:
+        raise ValueError("R3 preprocessing order changed")
+    if catalog.preprocessing.steps != tuple(PreprocessingStep):
+        raise ValueError("R3 preprocessing registry is incomplete")
+    if catalog.payload_hash != _R3_CORE_PAYLOAD_HASH:
+        raise ValueError("R3 core factor catalog payload changed")
+
+
+def _validate_r3_core_descriptor(descriptor: CoreFactorDescriptor) -> None:
+    spec = ALL_FACTOR_SPECS.get(descriptor.factor_id)
+    if spec is None:
+        raise ValueError(f"unregistered core factor: {descriptor.factor_id}")
+    if spec.id != descriptor.factor_id:
+        raise ValueError(f"core factor spec ID drifted: {descriptor.factor_id}")
+    if descriptor.pit_requirement is PitRequirement.ANNOUNCEMENT_KNOWN_AT and not any(
+        dataset_id in descriptor.required_datasets_for(lane)
+        for lane in descriptor.lanes
+        for dataset_id in (
+            "balance_sheet",
+            "income_statement",
+            "valuation_metrics",
+        )
+    ):
+        raise ValueError(
+            f"PIT core factor has no governed PIT dataset: {descriptor.factor_id}"
+        )
+    if descriptor.benchmark_required:
+        if spec.computation_type != "python" or spec.expression:
+            raise ValueError(
+                "benchmark-relative core factor must use explicit Python computation: "
+                + descriptor.factor_id
+            )
+        return
+    for intermediate in descriptor.materialized_intermediates:
+        validate_production_factor_expression(intermediate.expression)
+    validate_production_factor_expression(
+        descriptor.production_expression or spec.expression,
+        materialized_columns=(
+            item.column_id for item in descriptor.materialized_intermediates
+        ),
+    )
 
 
 def _iter_cross_section_first_args(expression: str) -> Iterator[tuple[str, str]]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sized
 from dataclasses import dataclass
 
 __all__ = [
@@ -12,9 +13,75 @@ __all__ = [
     "ICSummary",
     "LongShortResult",
     "PerformanceAttributionResult",
+    "R3FactorDiagnosticsProjection",
     "RegimeICResult",
     "TailRiskMetrics",
+    "project_r3_factor_diagnostics",
 ]
+
+
+@dataclass(frozen=True)
+class R3FactorDiagnosticsProjection:
+    """Honest projection of diagnostics that were actually computed."""
+
+    computed_metrics: tuple[str, ...]
+    values: dict[str, object]
+
+
+_R3_DIAGNOSTIC_SOURCES = (
+    ("coverage", "coverage"),
+    ("missingness", "missingness"),
+    ("rank_ic", "rank_ic"),
+    ("icir", "icir"),
+    ("decay", "ic_decay"),
+    ("quantile_return", "quantile_annual_returns"),
+    ("turnover", "avg_turnover"),
+    ("cost_drag", "cost_drag"),
+    ("fold_stability", "fold_stability"),
+    ("factor_contribution", "factor_contribution"),
+    ("exposure", "factor_exposure"),
+    ("parameter_neighborhood_stability", "parameter_neighborhood_stability"),
+)
+
+
+def project_r3_factor_diagnostics(
+    source: Mapping[str, object] | FactorEvaluationReport,
+) -> R3FactorDiagnosticsProjection:
+    """Project evaluator output without inventing absent diagnostic results."""
+    if isinstance(source, Mapping):
+        raw = source
+    elif source.n_observations == 0:
+        raw = {}
+    else:
+        raw = {
+            "rank_ic": source.rank_ic_summary.mean,
+            "icir": source.rank_ic_summary.icir,
+            "ic_decay": source.ic_decay,
+            "quantile_annual_returns": source.quantile_annual_returns,
+            "avg_turnover": source.avg_turnover,
+            "cost_drag": (
+                source.long_short.annual_return - source.net_return_after_cost
+            ),
+            "factor_exposure": source.factor_exposure,
+        }
+
+    values: dict[str, object] = {}
+    for metric_id, source_key in _R3_DIAGNOSTIC_SOURCES:
+        value = raw.get(source_key)
+        if _diagnostic_was_computed(value):
+            values[metric_id] = value
+    return R3FactorDiagnosticsProjection(
+        computed_metrics=tuple(values),
+        values=values,
+    )
+
+
+def _diagnostic_was_computed(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, Sized):
+        return len(value) > 0
+    return True
 
 
 @dataclass(frozen=True)
