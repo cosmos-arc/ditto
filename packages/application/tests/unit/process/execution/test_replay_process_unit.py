@@ -7,6 +7,7 @@ _build_config、_extract_nav、_load_report、_find_artifact_dir。
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
@@ -16,7 +17,7 @@ import orjson
 import polars as pl
 import pytest
 from ditto_application.exceptions import AppProcessError
-from ditto_backtest.manifest import RunManifest
+from ditto_backtest.manifest import RunManifest, serialize_manifest
 from ditto_backtest.replay import ManifestDiff, ReplayValidationResult
 from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_backtest.statistics import BacktestReport
@@ -302,6 +303,32 @@ class TestLoadManifest:
 
         assert exc_info.value.details["field_name"] == "spec_hash"
         assert exc_info.value.details["reason"] == "invalid_canonical_identity"
+
+    def test_signed_zero_manifest_replay_round_trip_has_one_identity(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Persisted -0.0 loads and reserializes as canonical +0.0 with one hash."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        path = "/pipeline/nodes/legacy_factor_set/config/params/threshold"
+        positive = (EffectiveParameter(path=path, value=0.0),)
+        raw = _make_manifest_raw(
+            parameter_hash=canonical_parameter_hash(positive),
+            effective_parameters=[{"path": path, "value": -0.0}],
+        )
+        manifest_path = tmp_path / "manifest.json"
+        manifest_path.write_bytes(orjson.dumps(raw))
+
+        first = ReplayProcess._load_manifest(tmp_path)
+        canonical_raw = orjson.loads(serialize_manifest(first))
+        manifest_path.write_bytes(orjson.dumps(canonical_raw))
+        second = ReplayProcess._load_manifest(tmp_path)
+
+        assert math.copysign(1.0, first.effective_parameters[0].value) == 1.0
+        assert canonical_raw["effective_parameters"][0]["value"] == 0.0
+        assert first.effective_parameters == second.effective_parameters
+        assert first.parameter_hash == second.parameter_hash
 
 
 # ---------------------------------------------------------------------------

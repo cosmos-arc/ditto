@@ -29,6 +29,7 @@ from ditto_strategy.alpha.specs import (
 from ditto_strategy.alpha.templates import (
     ETFRotationConfig,
     ETFTrendSwingConfig,
+    StockSelectionTrendConfig,
     get_etf_rotation_param_constraints,
     get_etf_trend_swing_param_constraints,
     get_sector_rotation_param_constraints,
@@ -72,6 +73,7 @@ __all__ = [
     "deserialize_strategy_spec",
     "deserialize_strategy_spec_v2",
     "inject_template_constraints",
+    "resolve_rebalance_frequency",
 ]
 
 # ---------------------------------------------------------------------------
@@ -82,6 +84,15 @@ _DEFAULT_SLIPPAGE_BPS = DEFAULT_SLIPPAGE_BPS
 _DEFAULT_TRAILING_STOP_PCT = 0.08
 _DEFAULT_MAX_WEIGHT = 0.15
 _DEFAULT_TOP_K = 10
+
+
+def resolve_rebalance_frequency(frequency: str) -> str:
+    """Map persisted execution frequency to the template's effective value."""
+    return {
+        "D": "daily",
+        "W": "weekly",
+        "M": "monthly",
+    }.get(frequency, "daily")
 
 
 # ---------------------------------------------------------------------------
@@ -568,8 +579,21 @@ def inject_template_constraints(spec: StrategySpec) -> StrategySpec:
             param_constraints=get_etf_trend_swing_param_constraints(),
         )
     if spec.template == "stock_selection":
+        defaults = StockSelectionTrendConfig()
+        selector_k = spec.selector.params.get("k")
         return replace(
             spec,
+            params={
+                "allocation_method": defaults.allocation_method,
+                "cash_target": defaults.cash_target,
+                "max_weight": defaults.max_weight,
+                "rebalance_freq": resolve_rebalance_frequency(
+                    spec.execution.frequency,
+                ),
+                "top_k": defaults.top_k if selector_k is None else selector_k,
+                "trend_threshold": defaults.trend_threshold,
+                **spec.params,
+            },
             param_constraints=get_stock_selection_param_constraints(),
         )
     if spec.template == "stock_sector_rotation":

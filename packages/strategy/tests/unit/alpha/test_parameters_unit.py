@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 
 import pytest
@@ -462,3 +463,253 @@ def test_parameter_schema_rejects_self_inconsistent_constraints(
         )
 
     _assert_spec_invalid(exc_info, reason=reason)
+
+
+def test_parameter_identity_collapses_signed_zero_without_mutating_hash_input() -> None:
+    """All public parameter identities reuse the canonical float-zero rule."""
+    from ditto_strategy.alpha.parameters import (
+        EffectiveParameter,
+        canonical_parameter_hash,
+    )
+
+    negative = EffectiveParameter(path=_path("threshold"), value=-0.0)
+    positive = EffectiveParameter(path=_path("threshold"), value=0.0)
+
+    assert math.copysign(1.0, negative.value) == 1.0
+    assert canonical_parameter_hash((negative,)) == canonical_parameter_hash(
+        (positive,),
+    )
+
+    bypassed = EffectiveParameter(path=_path("threshold"), value=0.0)
+    object.__setattr__(bypassed, "value", -0.0)
+    assert math.copysign(1.0, bypassed.value) == -1.0
+
+    assert canonical_parameter_hash((bypassed,)) == canonical_parameter_hash(
+        (positive,),
+    )
+    assert math.copysign(1.0, bypassed.value) == -1.0
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    [
+        pytest.param(float("nan"), id="nan"),
+        pytest.param(float("inf"), id="positive-infinity"),
+        pytest.param(float("-inf"), id="negative-infinity"),
+        pytest.param(10**100, id="huge-integer"),
+    ],
+)
+def test_direct_parameter_values_fail_closed_without_raw_codec_errors(
+    invalid_value: float | int,
+) -> None:
+    """Non-canonical typed values always raise stable StrategySpecError details."""
+    from ditto_strategy.alpha.parameters import CandidateParameter, EffectiveParameter
+
+    for parameter_type in (CandidateParameter, EffectiveParameter):
+        with pytest.raises(StrategySpecError) as exc_info:
+            parameter_type(path=_path("threshold"), value=invalid_value)
+
+        _assert_spec_invalid(exc_info, reason="invalid_parameter_value")
+        assert exc_info.value.details["path"] == _path("threshold")
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    [
+        pytest.param(float("nan"), id="bypassed-nan"),
+        pytest.param(float("inf"), id="bypassed-infinity"),
+        pytest.param(10**100, id="bypassed-huge-integer"),
+    ],
+)
+def test_parameter_hash_revalidates_bypassed_values_without_codec_leaks(
+    invalid_value: float | int,
+) -> None:
+    """Hashing is an independent fail-closed identity boundary."""
+    from ditto_strategy.alpha.parameters import (
+        EffectiveParameter,
+        canonical_parameter_hash,
+    )
+
+    bypassed = EffectiveParameter(path=_path("threshold"), value=0.0)
+    object.__setattr__(bypassed, "value", invalid_value)
+
+    with pytest.raises(StrategySpecError) as exc_info:
+        canonical_parameter_hash((bypassed,))
+
+    _assert_spec_invalid(exc_info, reason="invalid_parameter_value")
+    assert exc_info.value.details["path"] == _path("threshold")
+
+
+def test_binder_canonicalizes_signed_zero_without_mutating_candidate() -> None:
+    """Binding snapshots canonical zero while leaving the caller's DTO untouched."""
+    from ditto_strategy.alpha.parameters import CandidateParameter, ParameterBinder
+
+    candidate = CandidateParameter(path=_path("threshold"), value=0.0)
+    object.__setattr__(candidate, "value", -0.0)
+
+    negative = ParameterBinder(registry=default_node_registry()).bind(
+        _v2_parameter_spec(),
+        candidate_parameters=(candidate,),
+    )
+    positive = ParameterBinder(registry=default_node_registry()).bind(
+        _v2_parameter_spec(),
+        candidate_parameters=(CandidateParameter(path=_path("threshold"), value=0.0),),
+    )
+
+    effective_value = next(
+        item.value
+        for item in negative.effective_parameters
+        if item.path == _path("threshold")
+    )
+    assert math.copysign(1.0, effective_value) == 1.0
+    assert negative.parameter_hash == positive.parameter_hash
+    assert negative.resolved_spec_hash == positive.resolved_spec_hash
+    assert math.copysign(1.0, candidate.value) == -1.0
+
+
+@pytest.mark.parametrize(
+    ("invalid_candidates", "expected_path", "actual_type"),
+    [
+        pytest.param(object(), "candidate_parameters", "object", id="wrong-object"),
+        pytest.param([], "candidate_parameters", "list", id="wrong-container"),
+        pytest.param(
+            (object(),),
+            "candidate_parameters[0]",
+            "object",
+            id="wrong-tuple-element",
+        ),
+    ],
+)
+def test_binder_rejects_wrong_candidate_shapes_with_stable_details(
+    invalid_candidates: object,
+    expected_path: str,
+    actual_type: str,
+) -> None:
+    """Runtime shape errors never leak Python or codec TypeError."""
+    from ditto_strategy.alpha.parameters import ParameterBinder
+
+    with pytest.raises(StrategySpecError) as exc_info:
+        ParameterBinder(registry=default_node_registry()).bind(
+            _v2_parameter_spec(),
+            candidate_parameters=invalid_candidates,  # type: ignore[arg-type]
+        )
+
+    _assert_spec_invalid(exc_info, reason="invalid_candidate_parameters")
+    assert exc_info.value.details["path"] == expected_path
+    assert exc_info.value.details["actual_type"] == actual_type
+
+
+def test_binder_wrong_spec_uses_typed_boundary_errors() -> None:
+    """Wrong runtime spec objects fail through the public typed contract."""
+    from ditto_strategy.alpha.parameters import ParameterBinder
+
+    binder = ParameterBinder(registry=default_node_registry())
+    with pytest.raises(StrategySpecError) as wrong_spec:
+        binder.bind(
+            object(),  # type: ignore[arg-type]
+            candidate_parameters=(),
+        )
+    _assert_spec_invalid(wrong_spec, reason="invalid_parameter_spec")
+    assert wrong_spec.value.details["path"] == "spec"
+
+
+def _wide_step_spec() -> StrategySpecV2:
+    return adapt_legacy_strategy_spec(
+        StrategySpec(
+            strategy_id="wide-step-spec",
+            name="Wide step spec",
+            template="etf_rotation",
+            universe="csi_etf_broad",
+            asset_class="etf",
+            params={"float_value": 0.0, "int_value": 0},
+            param_constraints=(
+                ParamConstraint(
+                    name="float_value",
+                    dtype="float",
+                    min_value=0.0,
+                    max_value=100_000_000.0,
+                    step=0.01,
+                ),
+                ParamConstraint(
+                    name="int_value",
+                    dtype="int",
+                    min_value=0,
+                    max_value=9_007_199_254_740_994,
+                    step=2,
+                ),
+            ),
+        ),
+    )
+
+
+def test_float_step_alignment_does_not_scale_tolerance_with_large_values() -> None:
+    """A half-step remains invalid when the quotient is in the billions."""
+    from ditto_strategy.alpha.parameters import CandidateParameter, ParameterBinder
+
+    with pytest.raises(StrategySpecError) as exc_info:
+        ParameterBinder(registry=default_node_registry()).bind(
+            _wide_step_spec(),
+            candidate_parameters=(
+                CandidateParameter(
+                    path=_path("float_value"),
+                    value=50_000_000.005,
+                ),
+            ),
+        )
+
+    _assert_spec_invalid(exc_info, reason="parameter_step_mismatch")
+    assert exc_info.value.details["path"] == _path("float_value")
+
+
+def test_integer_step_alignment_remains_exact_above_float_precision() -> None:
+    """An odd integer cannot become aligned through lossy float conversion."""
+    from ditto_strategy.alpha.parameters import CandidateParameter, ParameterBinder
+
+    with pytest.raises(StrategySpecError) as exc_info:
+        ParameterBinder(registry=default_node_registry()).bind(
+            _wide_step_spec(),
+            candidate_parameters=(
+                CandidateParameter(
+                    path=_path("int_value"),
+                    value=9_007_199_254_740_993,
+                ),
+            ),
+        )
+
+    _assert_spec_invalid(exc_info, reason="parameter_step_mismatch")
+    assert exc_info.value.details["path"] == _path("int_value")
+
+
+@pytest.mark.parametrize(
+    ("path", "value"),
+    [
+        pytest.param(_path("float_value"), 0.0, id="float-minimum"),
+        pytest.param(_path("float_value"), 0.3, id="float-rounding"),
+        pytest.param(
+            _path("float_value"),
+            100_000_000.0,
+            id="float-large-maximum",
+        ),
+        pytest.param(_path("int_value"), 0, id="integer-minimum"),
+        pytest.param(
+            _path("int_value"),
+            9_007_199_254_740_994,
+            id="integer-large-maximum",
+        ),
+    ],
+)
+def test_step_alignment_preserves_valid_float_and_integer_boundaries(
+    path: str,
+    value: float | int,
+) -> None:
+    """Strict tolerance still accepts aligned float and exact integer boundaries."""
+    from ditto_strategy.alpha.parameters import CandidateParameter, ParameterBinder
+
+    result = ParameterBinder(registry=default_node_registry()).bind(
+        _wide_step_spec(),
+        candidate_parameters=(CandidateParameter(path=path, value=value),),
+    )
+
+    assert {item.path: item.value for item in result.effective_parameters}[
+        path
+    ] == value

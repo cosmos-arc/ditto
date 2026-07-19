@@ -62,6 +62,9 @@ from ditto_application.builders.deserialization import (
     _DEFAULT_TRAILING_STOP_PCT,
 )
 from ditto_application.exceptions import AppBuilderError
+from ditto_application.strategy_spec_deserialization import (
+    resolve_rebalance_frequency,
+)
 
 __all__ = [
     "build_alpha_stages",
@@ -125,16 +128,6 @@ def resolve_scoring_method(
     except ValueError as exc:
         msg = f"不支持的 scoring_method: {method}"
         raise AppBuilderError(msg) from exc
-
-
-def resolve_rebalance_frequency(frequency: str) -> str:
-    """将执行层频率映射为模板 rebalance_freq。"""
-    mapping = {
-        "D": "daily",
-        "W": "weekly",
-        "M": "monthly",
-    }
-    return mapping.get(frequency, "daily")
 
 
 # ---------------------------------------------------------------------------

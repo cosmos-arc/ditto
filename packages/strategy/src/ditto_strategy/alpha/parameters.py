@@ -11,6 +11,7 @@ from typing import NoReturn, cast
 
 import orjson
 
+from ditto_strategy.alpha._canonical_values import canonicalize_float_identity
 from ditto_strategy.alpha._parameter_paths import (
     escape_parameter_path_segment,
     legacy_parameter_path,
@@ -38,6 +39,7 @@ __all__ = [
 type ParameterValue = bool | int | float | str
 
 _MIN_PARAMETER_PATH_SEGMENTS = 5
+_STEP_QUOTIENT_ABS_TOL = 1e-9
 
 
 class ParameterValueType(StrEnum):
@@ -72,13 +74,15 @@ def _canonical_scalar(value: object, *, path: str) -> ParameterValue:
             path=path,
             actual_type=type(value).__name__,
         )
-    if isinstance(value, float) and not math.isfinite(value):
-        _spec_invalid(
-            "candidate parameter float must be finite",
-            reason="invalid_parameter_value",
-            path=path,
-            actual_value=value,
-        )
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            _spec_invalid(
+                "candidate parameter float must be finite",
+                reason="invalid_parameter_value",
+                path=path,
+                actual_value=value,
+            )
+        return canonicalize_float_identity(value)
     if isinstance(value, int) and not isinstance(value, bool):
         try:
             orjson.dumps(value)
@@ -405,8 +409,21 @@ class ParameterDefinition:
             ParameterValueType.FLOAT,
         }:
             return canonical
-        numeric = float(canonical)
-        if self.min_value is not None and numeric < self.min_value:
+        is_integer = self.value_type is ParameterValueType.INTEGER
+        numeric: int | float = (
+            cast(int, canonical) if is_integer else cast(float, canonical)
+        )
+        minimum: int | float | None = (
+            int(self.min_value)
+            if is_integer and self.min_value is not None
+            else self.min_value
+        )
+        maximum: int | float | None = (
+            int(self.max_value)
+            if is_integer and self.max_value is not None
+            else self.max_value
+        )
+        if minimum is not None and numeric < minimum:
             _spec_invalid(
                 "candidate parameter is below its minimum",
                 reason="parameter_below_min",
@@ -414,7 +431,7 @@ class ParameterDefinition:
                 min_value=self.min_value,
                 actual_value=canonical,
             )
-        if self.max_value is not None and numeric > self.max_value:
+        if maximum is not None and numeric > maximum:
             _spec_invalid(
                 "candidate parameter is above its maximum",
                 reason="parameter_above_max",
@@ -423,9 +440,18 @@ class ParameterDefinition:
                 actual_value=canonical,
             )
         if self.step is not None:
-            origin = self.min_value or 0.0
-            quotient = (numeric - origin) / self.step
-            if not math.isclose(quotient, round(quotient), abs_tol=1e-9):
+            origin: int | float = minimum if minimum is not None else 0
+            if is_integer:
+                aligned = (cast(int, numeric) - cast(int, origin)) % int(self.step) == 0
+            else:
+                quotient = (numeric - origin) / self.step
+                aligned = math.isclose(
+                    quotient,
+                    round(quotient),
+                    rel_tol=0.0,
+                    abs_tol=_STEP_QUOTIENT_ABS_TOL,
+                )
+            if not aligned:
                 _spec_invalid(
                     "candidate parameter does not align to its step",
                     reason="parameter_step_mismatch",
@@ -540,6 +566,7 @@ def _require_strategy_spec_v2(value: object) -> StrategySpecV2:
         _spec_invalid(
             "parameter schema requires StrategySpecV2",
             reason="invalid_parameter_spec",
+            path="spec",
             actual_type=type(value).__name__,
         )
     return value
@@ -552,13 +579,17 @@ def _require_candidate_parameters(
         _spec_invalid(
             "candidate parameters must be tuple[CandidateParameter, ...]",
             reason="invalid_candidate_parameters",
+            path="candidate_parameters",
+            actual_type=type(value).__name__,
         )
     candidates: list[CandidateParameter] = []
-    for item in cast(tuple[object, ...], value):
+    for index, item in enumerate(cast(tuple[object, ...], value)):
         if not isinstance(item, CandidateParameter):
             _spec_invalid(
                 "candidate parameters must be tuple[CandidateParameter, ...]",
                 reason="invalid_candidate_parameters",
+                path=f"candidate_parameters[{index}]",
+                actual_type=type(item).__name__,
             )
         candidates.append(item)
     return tuple(candidates)
@@ -566,21 +597,43 @@ def _require_candidate_parameters(
 
 def canonical_parameter_hash(values: Sequence[EffectiveParameter]) -> str:
     """Return the canonical SHA-256 identity of complete effective values."""
-    runtime_values = cast(Sequence[object], values)
-    if not all(isinstance(item, EffectiveParameter) for item in runtime_values):
+    runtime_values = cast(object, values)
+    if not isinstance(runtime_values, Sequence) or isinstance(
+        runtime_values,
+        (str, bytes, bytearray),
+    ):
         _spec_invalid(
-            "effective parameters must contain only EffectiveParameter values",
+            "effective parameters must be a canonical sequence",
             reason="invalid_effective_parameters",
+            path="effective_parameters",
+            actual_type=type(runtime_values).__name__,
         )
-    paths = [item.path for item in values]
+    canonical_values: list[tuple[str, ParameterValue]] = []
+    for index, item in enumerate(cast(Sequence[object], runtime_values)):
+        if not isinstance(item, EffectiveParameter):
+            _spec_invalid(
+                "effective parameters must contain only EffectiveParameter values",
+                reason="invalid_effective_parameters",
+                path=f"effective_parameters[{index}]",
+                actual_type=type(item).__name__,
+            )
+        path = _require_nonempty_path(
+            item.path,
+            message="effective parameter path must be non-empty",
+        )
+        canonical_values.append(
+            (path, _canonical_scalar(item.value, path=path)),
+        )
+    paths = [path for path, _ in canonical_values]
     if len(paths) != len(set(paths)):
         _spec_invalid(
             "effective parameter paths must be unique",
             reason="duplicate_effective_parameter",
+            path="effective_parameters",
         )
     payload = [
-        {"path": item.path, "value": item.value}
-        for item in sorted(values, key=lambda item: item.path)
+        {"path": path, "value": value}
+        for path, value in sorted(canonical_values, key=lambda item: item[0])
     ]
     return hashlib.sha256(
         orjson.dumps(payload, option=orjson.OPT_SORT_KEYS),

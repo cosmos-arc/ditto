@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, cast
 
 from ditto_strategy.alpha.node_registry import NodeRegistry, default_node_registry
 from ditto_strategy.alpha.parameters import (
@@ -68,9 +68,90 @@ def _require_research_record(value: object) -> StrategySpecRecord:
         raise _builder_error(
             "research runtime requires an explicit StrategySpecRecord",
             reason="invalid_research_version_record",
+            path="record",
             actual_type=type(value).__name__,
         )
+    if type(value.version) is not int or value.version <= 0:
+        raise _builder_error(
+            "research runtime requires a positive exact integer version",
+            reason="invalid_research_version_record",
+            path="record.version",
+            actual_value=value.version,
+        )
+    raw_strategy_id = cast(object, value.strategy_id)
+    if (
+        not isinstance(raw_strategy_id, str)
+        or not raw_strategy_id
+        or raw_strategy_id != raw_strategy_id.strip()
+    ):
+        raise _builder_error(
+            "research record strategy identity must be non-empty and canonical",
+            reason="invalid_research_strategy_identity",
+            path="record.strategy_id",
+            actual_value=raw_strategy_id,
+        )
+    raw_spec_json = cast(object, value.spec_json)
+    if not isinstance(raw_spec_json, dict):
+        raise _builder_error(
+            "research record spec_json must be an object",
+            reason="invalid_research_version_record",
+            path="record.spec_json",
+            actual_type=type(raw_spec_json).__name__,
+        )
     return value
+
+
+def _ensure_payload_strategy_identity(
+    record: StrategySpecRecord,
+) -> bool:
+    """Validate record/payload family agreement and return native-V2 status."""
+    is_native_v2 = record.spec_json.get("schema_version") is not None
+    identity_field = "strategy_family_id" if is_native_v2 else "strategy_id"
+    payload_identity = record.spec_json.get(identity_field)
+    path = f"spec_json.{identity_field}"
+    if (
+        not isinstance(payload_identity, str)
+        or not payload_identity
+        or payload_identity != payload_identity.strip()
+    ):
+        raise _builder_error(
+            "research payload strategy identity must be non-empty and canonical",
+            reason="invalid_research_strategy_identity",
+            path=path,
+            actual_value=payload_identity,
+        )
+    if payload_identity != record.strategy_id:
+        raise _builder_error(
+            "research record and payload strategy identities do not match",
+            reason="research_strategy_identity_mismatch",
+            path=path,
+            record_strategy_id=record.strategy_id,
+            payload_strategy_family_id=payload_identity,
+        )
+    return is_native_v2
+
+
+def _ensure_resolved_strategy_identity(
+    record: StrategySpecRecord,
+    *,
+    legacy_strategy_id: str,
+    base_family_id: str,
+    resolved_family_id: str,
+) -> None:
+    identities = (
+        ("legacy_spec.strategy_id", legacy_strategy_id),
+        ("base_spec.strategy_family_id", base_family_id),
+        ("resolved_spec.strategy_family_id", resolved_family_id),
+    )
+    for path, identity in identities:
+        if identity != record.strategy_id:
+            raise _builder_error(
+                "resolved research strategy identity does not match its record",
+                reason="research_strategy_identity_mismatch",
+                path=path,
+                record_strategy_id=record.strategy_id,
+                payload_strategy_family_id=identity,
+            )
 
 
 def _require_snapshot_identity(value: object) -> ResearchSnapshotIdentity:
@@ -114,6 +195,7 @@ class _DraftReviewResearchVersionGuard:
             raise _builder_error(
                 "strategy version is not buildable by the research runtime",
                 reason="research_version_not_buildable",
+                path="record.status",
                 strategy_id=record.strategy_id,
                 strategy_version=record.version,
                 version_status=record.status,
@@ -156,7 +238,8 @@ class ResearchRuntimeBuilder:
         self._node_pipeline_builder = node_pipeline_builder or NodePipelineBuilder(
             registry=registry,
         )
-        self._version_guard = version_guard or _DraftReviewResearchVersionGuard()
+        self._status_guard = _DraftReviewResearchVersionGuard()
+        self._version_guard = version_guard
 
     def build(
         self,
@@ -168,8 +251,11 @@ class ResearchRuntimeBuilder:
         """Resolve an exact legacy version and candidate into the existing runner."""
         record = _require_research_record(record)
         snapshot_identity = _require_snapshot_identity(snapshot_identity)
-        self._version_guard.ensure_buildable(record)
-        if record.spec_json.get("schema_version") is not None:
+        self._status_guard.ensure_buildable(record)
+        if self._version_guard is not None:
+            self._version_guard.ensure_buildable(record)
+        is_native_v2 = _ensure_payload_strategy_identity(record)
+        if is_native_v2:
             raise _builder_error(
                 "native StrategySpec v2 execution is not available in Task3",
                 reason="native_v2_executor_unavailable",
@@ -182,6 +268,12 @@ class ResearchRuntimeBuilder:
             candidate_parameters=candidate_parameters,
             registry=self._node_registry,
             node_pipeline_builder=self._node_pipeline_builder,
+        )
+        _ensure_resolved_strategy_identity(
+            record,
+            legacy_strategy_id=resolved.legacy_spec.strategy_id,
+            base_family_id=resolved.base_spec.strategy_family_id,
+            resolved_family_id=resolved.resolved_spec.strategy_family_id,
         )
         return ResearchStrategyRuntime(
             strategy_id=record.strategy_id,
