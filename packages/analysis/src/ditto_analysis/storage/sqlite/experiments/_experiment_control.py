@@ -17,6 +17,7 @@ from ditto_analysis.errors import (
     ExperimentSpecError,
 )
 from ditto_analysis.experiments._validation import require_utc_datetime
+from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.models import (
     ExperimentDesiredState,
     ExperimentFailureCode,
@@ -26,7 +27,13 @@ from ditto_analysis.experiments.models import (
     ExperimentStatus,
     validate_status_transition,
 )
-from ditto_analysis.experiments.persistence import ExperimentProjection, LeaseFence
+from ditto_analysis.experiments.persistence import (
+    ExperimentProjection,
+    LeaseFence,
+)
+from ditto_analysis.storage.sqlite.experiments._enqueue_fence import (
+    validate_experiment_enqueue_fence,
+)
 from ditto_analysis.storage.sqlite.experiments._experiment_rules import (
     validate_expected_desired_state,
     validate_scheduled_experiment_transition,
@@ -140,8 +147,9 @@ class SQLiteExperimentControlMixin:
         occurred_at: datetime,
         reason_code: str | None,
         detail: Mapping[str, object],
+        launch_fence: ExperimentEnqueueFence,
     ) -> ExperimentProjection:
-        """Allocate the next queue ordinal and append the CAS event atomically."""
+        """Fence exact child sets, allocate queue order, and append one CAS event."""
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
@@ -173,6 +181,11 @@ class SQLiteExperimentControlMixin:
                     "experiment queue ordinal is already allocated",
                     "queue_ordinal_already_allocated",
                 )
+            validate_experiment_enqueue_fence(
+                connection,
+                experiment_id,
+                launch_fence,
+            )
             queue_ordinal = connection.execute(
                 "SELECT coalesce(max(queue_ordinal), 0) + 1 FROM experiment"
             ).fetchone()[0]

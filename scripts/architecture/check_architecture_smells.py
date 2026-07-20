@@ -21,6 +21,8 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 16. Application providers must not read environment variables directly
 17. Generic helpers/utils source paths must have owned architecture allowances
 18. Every src __init__.py must declare an explicit __all__
+19. Experiment sources must not use TYPE_CHECKING to hide import cycles
+20. The process provider must declare wiring classes only
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -422,12 +424,137 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
         ),
     ),
     ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/providers_process.py",
+        owner="application research process DI provider",
+        reason=(
+            "The process composition root wires approved experiment persistence "
+            "ports into the application research planning boundary."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning.py"
+        ),
+        owner="application experiment planning process",
+        reason=(
+            "The pure work planner reuses the analysis-owned failure-policy value "
+            "that is frozen into the approved launch contract; it performs no I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning_process.py"
+        ),
+        owner="application experiment planning process",
+        reason=(
+            "The approved R3 planning boundary assembles analysis-owned launch "
+            "identities and delegates persistence through narrow protocols."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning_contracts.py"
+        ),
+        owner="application experiment planning contracts",
+        reason=(
+            "The neutral request contract freezes the analysis-owned failure "
+            "policy selected by the operator; it contains no orchestration or I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_executor_probe.py"
+        ),
+        owner="application experiment executor probe boundary",
+        reason=(
+            "The private probe boundary seals an analysis-owned canonical payload "
+            "before and after calling an untrusted executor adapter."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_material.py"
+        ),
+        owner="application experiment launch material compiler",
+        reason=(
+            "The private compiler materializes every immutable analysis launch row "
+            "before computing the operator-confirmed content hash."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_saga.py"
+        ),
+        owner="application experiment launch saga",
+        reason=(
+            "The private launch saga owns exact replay and readback over the "
+            "analysis experiment reader and writer protocols."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_reconstruction.py"
+        ),
+        owner="application experiment launch reconstruction boundary",
+        reason=(
+            "The private fail-closed codec reconstructs analysis-owned launch, "
+            "gate, and fold value rows before the saga's first writer call."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_preflight_codec.py"
+        ),
+        owner="application experiment preflight codec",
+        reason=(
+            "The private persisted-report codec verifies analysis-owned fold, "
+            "window, failure-policy, and canonical payload identities."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/research_validation_windows.py"
+        ),
+        owner="application validation protocol compiler",
+        reason=(
+            "The research validation compiler reuses analysis-owned date-window "
+            "and fold-role value contracts without storage or runtime I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/queries/experiments.py",
+        owner="application experiment query facade",
+        reason=(
+            "The experiment query facade is the approved application boundary "
+            "for durable analysis control-plane reads."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/queries/research.py",
         owner="application research query facade",
         reason=(
             "The research query facade is the production-facing boundary for "
             "analysis reads; other application query paths must use that facade "
             "instead of importing analysis directly."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/queries/"
+            "research_certification.py"
+        ),
+        owner="application research certification query adapter",
+        reason=(
+            "The read-only certification adapter resolves one exact immutable "
+            "research snapshot through the approved analysis catalog boundary."
         ),
     ),
     ProductionAnalysisWiringAllowance(
@@ -630,6 +757,44 @@ STALE_SOURCE_ARCHITECTURE_TERMS = (
 
 ANALYSIS_PLACEHOLDER_INIT_PATHS = (
     "packages/analysis/src/ditto_analysis/experiments/__init__.py",
+)
+
+EXPERIMENT_APPLICATION_SOURCE_PREFIX = (
+    "packages/application/src/ditto_application/processes/experiments/"
+)
+EXPERIMENT_APPLICATION_SOURCE_PATHS = frozenset(
+    {
+        "packages/application/src/ditto_application/commands/experiments.py",
+        "packages/application/src/ditto_application/queries/experiments.py",
+    }
+)
+TASK8_VALIDATION_AUTHORITY_SOURCE_PATHS = frozenset(
+    {
+        (
+            "packages/application/src/ditto_application/builders/"
+            "research_executor_probe.py"
+        ),
+        (
+            "packages/application/src/ditto_application/builders/"
+            "research_validation_authority.py"
+        ),
+        (
+            "packages/application/src/ditto_application/"
+            "research_certification_contracts.py"
+        ),
+        ("packages/application/src/ditto_application/research_validation_contracts.py"),
+        ("packages/application/src/ditto_application/research_validation_calendar.py"),
+        (
+            "packages/application/src/ditto_application/"
+            "research_validation_eligibility.py"
+        ),
+        ("packages/application/src/ditto_application/research_validation_protocol.py"),
+        ("packages/application/src/ditto_application/research_validation_windows.py"),
+    }
+)
+TYPE_CHECKING_MODULES = frozenset({"typing", "typing_extensions"})
+PROCESS_PROVIDER_SOURCE_PATH = (
+    "packages/application/src/ditto_application/providers_process.py"
 )
 
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
@@ -1149,6 +1314,93 @@ def check_application_provider_no_environment_reads(
     return errors
 
 
+def check_experiment_source_no_type_checking(
+    source: str,
+    rel_path: str,
+) -> list[str]:
+    """Reject TYPE_CHECKING imports across the Task 8 planning boundary."""
+    if not (
+        rel_path.startswith(EXPERIMENT_APPLICATION_SOURCE_PREFIX)
+        or rel_path in EXPERIMENT_APPLICATION_SOURCE_PATHS
+        or rel_path in TASK8_VALIDATION_AUTHORITY_SOURCE_PATHS
+    ):
+        return []
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    imports_type_checking_directly = any(
+        isinstance(node, ast.ImportFrom)
+        and node.module in TYPE_CHECKING_MODULES
+        and any(alias.name == "TYPE_CHECKING" for alias in node.names)
+        for node in ast.walk(tree)
+    )
+    type_checking_module_aliases = {
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+        if alias.name in TYPE_CHECKING_MODULES
+    }
+    simple_name_aliases = {
+        (target.id, node.value.id)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign | ast.AnnAssign)
+        and isinstance(node.value, ast.Name)
+        for target in (node.targets if isinstance(node, ast.Assign) else (node.target,))
+        if isinstance(target, ast.Name)
+    }
+    aliases_changed = True
+    while aliases_changed:
+        aliases_changed = False
+        for alias_name, source_name in simple_name_aliases:
+            if (
+                source_name in type_checking_module_aliases
+                and alias_name not in type_checking_module_aliases
+            ):
+                type_checking_module_aliases.add(alias_name)
+                aliases_changed = True
+    accesses_type_checking_attribute = any(
+        isinstance(node, ast.Attribute)
+        and node.attr == "TYPE_CHECKING"
+        and isinstance(node.value, ast.Name)
+        and node.value.id in type_checking_module_aliases
+        for node in ast.walk(tree)
+    )
+    if not (imports_type_checking_directly or accesses_type_checking_attribute):
+        return []
+    return [
+        f"{rel_path}: experiment source imports TYPE_CHECKING; extract a neutral "
+        "contract instead of hiding an import cycle"
+    ]
+
+
+def check_process_provider_wiring_only(
+    source: str,
+    rel_path: str,
+) -> list[str]:
+    """Reject public behavior classes declared in the process DI provider."""
+    if rel_path != PROCESS_PROVIDER_SOURCE_PATH:
+        return []
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    behavior_classes = (
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and not node.name.startswith("_")
+        and node.name != "AppProcessProvider"
+    )
+    return [
+        f"{rel_path}: application process provider declares behavior class "
+        f"{class_name!r}; move behavior to its owning query, builder, or process "
+        "adapter module"
+        for class_name in behavior_classes
+    ]
+
+
 def is_generic_helper_namespace_path(rel_path: str) -> bool:
     """Return whether a production source path uses generic helpers/utils names."""
     parts = Path(rel_path).parts
@@ -1281,6 +1533,8 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_execution_sqlite_legacy_not_extension_point(rel_path))
         errors.extend(check_apps_non_registry_capability_imports(source, rel_path))
         errors.extend(check_application_provider_no_environment_reads(source, rel_path))
+        errors.extend(check_experiment_source_no_type_checking(source, rel_path))
+        errors.extend(check_process_provider_wiring_only(source, rel_path))
         errors.extend(check_generic_helper_namespace_allowance(rel_path))
         errors.extend(check_source_architecture_terms(source, rel_path))
         if _is_semantic_scan_target(rel_path):

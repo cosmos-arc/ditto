@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_analysis.experiments import ExperimentReaderProtocol
 from ditto_data.catalog import DataCatalogReader
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.remediation import CatalogRemediationApprovalReader
@@ -23,6 +24,7 @@ from ditto_application.queries.backtest import BacktestQueryFacade
 from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.comparison import ComparisonQueryFacade
+from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
@@ -75,6 +77,14 @@ class AppStrategyQueryProvider(Provider):
     ) -> StrategyQueryFacade:
         """策略只读查询 facade — 封装 StrategyCatalogReader."""
         return StrategyQueryFacade(catalog_service=catalog_service)
+
+    @provide
+    def experiment_query_facade(
+        self,
+        reader: ExperimentReaderProtocol,
+    ) -> ExperimentQueryFacade:
+        """Expose durable research experiments through application read models."""
+        return ExperimentQueryFacade(reader=reader)
 
     @provide
     def backtest_query_facade(

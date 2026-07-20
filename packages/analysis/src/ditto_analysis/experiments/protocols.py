@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Protocol
 
+from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
@@ -86,6 +87,10 @@ class ExperimentReaderProtocol(Protocol):
         self, evaluation_id: str
     ) -> GateEvaluationRecord | None: ...
 
+    def list_gate_evaluations(
+        self, experiment_id: ExperimentId
+    ) -> tuple[GateEvaluationRecord, ...]: ...
+
     def get_holdout_claim(self, claim_id: str) -> HoldoutClaimRecord | None: ...
 
     def get_scheduler_slot(self) -> SchedulerSlot: ...
@@ -125,6 +130,7 @@ class ExperimentWriterProtocol(Protocol):
         occurred_at: datetime,
         reason_code: str | None,
         detail: Mapping[str, object],
+        launch_fence: ExperimentEnqueueFence,
     ) -> ExperimentProjection: ...
 
     def transition_scheduled_experiment(

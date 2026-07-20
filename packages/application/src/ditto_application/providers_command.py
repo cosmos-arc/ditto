@@ -72,6 +72,7 @@ from ditto_application.commands.catalog_remediation import (
 from ditto_application.commands.data_product_certification import (
     DataProductCertificationCommands,
 )
+from ditto_application.commands.experiments import LaunchExperimentHandler
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
 from ditto_application.commands.source_fallback_policy import (
@@ -102,6 +103,9 @@ from ditto_application.opening_baseline import OpeningBaselinePort
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
+)
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.opening_baseline import OpeningBaselineResolver
 
@@ -110,6 +114,14 @@ class AppCommandProvider(Provider):
     """App Command 层 DI Provider — Command Handler 注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def launch_experiment_handler(
+        self,
+        process: ExperimentPlanningProcess,
+    ) -> LaunchExperimentHandler:
+        """Expose confirmed experiment launch through the command boundary."""
+        return LaunchExperimentHandler(process)
 
     @provide
     def data_product_certification_commands(

@@ -15,6 +15,12 @@ from ditto_application.builders import (
     StrategySliceBuilder,
 )
 from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
+from ditto_application.builders.research_executor_probe import (
+    BuilderBackedResearchExecutorProbe,
+)
+from ditto_application.builders.research_validation_authority import (
+    ProductionResearchValidationAuthorityProbe,
+)
 from ditto_application.commands.account import ImportAccountBaselineHandler
 from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
@@ -24,6 +30,7 @@ from ditto_application.commands.catalog_remediation import (
     CatalogRemediationIngestDatePort,
     ExecuteCatalogRemediationApprovalHandler,
 )
+from ditto_application.commands.experiments import LaunchExperimentHandler
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.trade import ProjectedFillCorrectionAdapter
 from ditto_application.processes.execution.manual_sizing import (
@@ -32,6 +39,9 @@ from ditto_application.processes.execution.manual_sizing import (
 )
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
+)
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -58,9 +68,13 @@ from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
+from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_application.queries.remediation import CatalogRemediationQueryFacade
+from ditto_application.queries.research_certification import (
+    DataReadinessCertificationProbe,
+)
 from ditto_application.queries.source import SourceDataPort
 from ditto_application.settings import TradingSettings
 from ditto_data.catalog import InMemoryDataCatalog
@@ -302,11 +316,22 @@ class TestAppProviderStructure:
             "backtest_query_facade",
             "run_read_model",
             "strategy_query_facade",
+            "experiment_query_facade",
             "lineage_query_facade",
             "catalog_remediation_query_facade",
             "comparison_query_facade",
         }
         assert expected.issubset(method_names)
+
+    def test_experiment_query_facade_receives_analysis_reader_port(self) -> None:
+        """Experiment queries must retain the injected typed read boundary."""
+        provider = AppStrategyQueryProvider()
+        reader = MagicMock()
+
+        facade = provider.experiment_query_facade(reader=reader)
+
+        assert isinstance(facade, ExperimentQueryFacade)
+        assert facade._reader is reader
 
     def test_app_portfolio_query_provider_methods(self) -> None:
         """AppPortfolioQueryProvider 应包含组合/交易查询的 provide 方法."""
@@ -327,8 +352,19 @@ class TestAppProviderStructure:
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
             "check_data_quality_handler",
+            "launch_experiment_handler",
         }
         assert expected.issubset(method_names)
+
+    def test_launch_experiment_handler_receives_planning_process(self) -> None:
+        """Experiment command wiring must retain the exact planning process."""
+        provider = AppCommandProvider()
+        process = MagicMock()
+
+        handler = provider.launch_experiment_handler(process=process)
+
+        assert isinstance(handler, LaunchExperimentHandler)
+        assert handler._process is process
 
     def test_account_baseline_handler_receives_both_aggregate_ports(self) -> None:
         """Provider wiring must preserve complete replacement audit evidence."""
@@ -382,10 +418,47 @@ class TestAppProviderStructure:
             "quality_batch_coordinator",
             "quality_completeness_service",
             "quality_patrol_service",
+            "research_certification_probe",
+            "research_executor_probe",
+            "research_validation_authority_probe",
+            "experiment_planning_process",
             "manual_sizing_context_builder",
             "a_share_trade_date_resolver",
         }
         assert expected.issubset(method_names)
+
+    def test_experiment_planning_provider_wires_exact_ports(self) -> None:
+        """Planning provider must preserve reader, writer, and read-only probes."""
+        provider = AppProcessProvider()
+        reader = MagicMock()
+        writer = MagicMock()
+        certification_probe = MagicMock()
+        executor_probe = MagicMock()
+        authority_probe = MagicMock()
+
+        process = provider.experiment_planning_process(
+            reader=reader,
+            writer=writer,
+            certification_probe=certification_probe,
+            executor_probe=executor_probe,
+            authority_probe=authority_probe,
+        )
+
+        assert isinstance(process, ExperimentPlanningProcess)
+        assert process._reader is reader
+        assert process._writer is writer
+        assert process._certification_probe is certification_probe
+        assert process._executor_probe is executor_probe
+        assert process._authority_probe is authority_probe
+
+    def test_research_validation_authority_provider_is_production_fail_closed(
+        self,
+    ) -> None:
+        provider = AppProcessProvider()
+
+        authority = provider.research_validation_authority_probe()
+
+        assert isinstance(authority, ProductionResearchValidationAuthorityProbe)
 
     def test_quality_batch_coordinator_provider_wires_application_dependencies(
         self,
@@ -709,6 +782,7 @@ class TestAppProviderIntegration:
 
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("SQLITE_PATH", (tmp_path / "metadata.sqlite").as_posix())
 
         container = make_container(
             _TestConfigProvider(tmp_path),
@@ -742,9 +816,25 @@ class TestAppProviderIntegration:
             app_container.get(CatalogRemediationQueryFacade),
             CatalogRemediationQueryFacade,
         )
+        assert isinstance(
+            app_container.get(ExperimentQueryFacade),
+            ExperimentQueryFacade,
+        )
 
     def test_process_services_resolved(self, app_container) -> None:
         """AppProcessProvider 的服务应可从容器解析."""
+        assert isinstance(
+            app_container.get(DataReadinessCertificationProbe),
+            DataReadinessCertificationProbe,
+        )
+        assert isinstance(
+            app_container.get(BuilderBackedResearchExecutorProbe),
+            BuilderBackedResearchExecutorProbe,
+        )
+        assert isinstance(
+            app_container.get(ExperimentPlanningProcess),
+            ExperimentPlanningProcess,
+        )
         assert isinstance(
             app_container.get(DerivedMaterializationOrchestrator),
             DerivedMaterializationOrchestrator,
@@ -809,6 +899,10 @@ class TestAppProviderIntegration:
 
     def test_command_services_resolved(self, app_container) -> None:
         """AppCommandProvider 的服务应可从容器解析."""
+        assert isinstance(
+            app_container.get(LaunchExperimentHandler),
+            LaunchExperimentHandler,
+        )
         assert isinstance(
             app_container.get(CheckDataQualityHandler),
             CheckDataQualityHandler,

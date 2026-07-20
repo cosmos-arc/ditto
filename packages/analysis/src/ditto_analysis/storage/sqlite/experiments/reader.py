@@ -578,6 +578,36 @@ class SQLiteExperimentReader:
         )
         if row is None:
             return None
+        return self._gate_evaluation(row)
+
+    def list_gate_evaluations(
+        self, experiment_id: ExperimentId
+    ) -> tuple[GateEvaluationRecord, ...]:
+        connection = self._database.get_connection()
+        try:
+            connection.execute("BEGIN")
+            rows = connection.execute(
+                """
+                SELECT * FROM gate_evaluation
+                WHERE experiment_id=? ORDER BY evaluation_id
+                """,
+                (str(experiment_id),),
+            ).fetchall()
+            records = tuple(self._gate_evaluation(row) for row in rows)
+            connection.commit()
+            return records
+        except sqlite3.Error as exc:
+            connection.rollback()
+            raise ExperimentPersistenceError(
+                "experiment read failed",
+                details={"reason_code": "experiment_read_failed"},
+            ) from exc
+        except BaseException:
+            connection.rollback()
+            raise
+
+    @staticmethod
+    def _gate_evaluation(row: sqlite3.Row) -> GateEvaluationRecord:
         record = GateEvaluationRecord(
             evaluation_id=row["evaluation_id"],
             experiment_id=ExperimentId(row["experiment_id"]),
@@ -601,7 +631,7 @@ class SQLiteExperimentReader:
             raise _integrity(
                 "gate evaluation payload hash mismatch",
                 "gate_payload_hash_mismatch",
-                evaluation_id=evaluation_id,
+                evaluation_id=row["evaluation_id"],
             )
         return record
 

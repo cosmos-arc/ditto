@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
+from ditto_analysis.experiments import (
+    ExperimentReaderProtocol,
+    ExperimentWriterProtocol,
+)
+from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.certification import (
     CertificationReader as DataProductCertificationReader,
@@ -49,6 +54,15 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
+from ditto_application.builders.research_executor_probe import (
+    BuilderBackedResearchExecutorProbe as _BuilderBackedResearchExecutorProbe,
+)
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+)
+from ditto_application.builders.research_validation_authority import (
+    ProductionResearchValidationAuthorityProbe as _ValidationAuthorityProbe,
+)
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_sizing import (
@@ -62,6 +76,9 @@ from ditto_application.processes.execution.replay_process import ReplayProcess
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
+)
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitPorts,
@@ -92,9 +109,14 @@ from ditto_application.processes.quality import (
 )
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.account import AccountBaselineQuery
-from ditto_application.queries.data_readiness import DataReadinessQueryFacade
+from ditto_application.queries.data_readiness import (
+    DataReadinessQueryFacade,
+)
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.research_certification import (
+    DataReadinessCertificationProbe as _DataReadinessCertificationProbe,
+)
 from ditto_application.queries.run import RunReadModel
 from ditto_application.settings import TradingSettings
 
@@ -196,6 +218,48 @@ class AppProcessProvider(Provider):
         return DataReadinessQueryFacade(
             certification_reader=certification_reader,
             maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+    @provide
+    def research_certification_probe(
+        self,
+        facade: DataReadinessQueryFacade,
+        research_catalog: ResearchCatalogService,
+    ) -> _DataReadinessCertificationProbe:
+        """Bind R3 preflight to the fixed R2 certification read model."""
+        return _DataReadinessCertificationProbe(facade, research_catalog)
+
+    @provide
+    def research_executor_probe(
+        self,
+        builder: ResearchRuntimeBuilder,
+    ) -> _BuilderBackedResearchExecutorProbe:
+        """Validate every candidate against the explicit-version runtime builder."""
+        return _BuilderBackedResearchExecutorProbe(builder)
+
+    @provide
+    def research_validation_authority_probe(
+        self,
+    ) -> _ValidationAuthorityProbe:
+        """Bind planning to the production fail-closed validation authority."""
+        return _ValidationAuthorityProbe()
+
+    @provide
+    def experiment_planning_process(
+        self,
+        reader: ExperimentReaderProtocol,
+        writer: ExperimentWriterProtocol,
+        certification_probe: _DataReadinessCertificationProbe,
+        executor_probe: _BuilderBackedResearchExecutorProbe,
+        authority_probe: _ValidationAuthorityProbe,
+    ) -> ExperimentPlanningProcess:
+        """Assemble deterministic preflight and exact launch persistence ports."""
+        return ExperimentPlanningProcess(
+            reader=reader,
+            writer=writer,
+            certification_probe=certification_probe,
+            executor_probe=executor_probe,
+            authority_probe=authority_probe,
         )
 
     @provide

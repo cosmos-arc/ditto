@@ -29,6 +29,162 @@ check_production_no_analysis = _MOD.check_production_no_analysis  # type: ignore
 _is_semantic_scan_target = _MOD._is_semantic_scan_target  # type: ignore[attr-defined]
 
 
+def test_task8_experiment_sources_forbid_type_checking_cycle_hides():
+    assert hasattr(_MOD, "check_experiment_source_no_type_checking")
+    checker = _MOD.check_experiment_source_no_type_checking  # type: ignore[attr-defined]
+
+    errors = checker(
+        "from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from x import Y\n",
+        ("packages/application/src/ditto_application/processes/experiments/example.py"),
+    )
+
+    assert errors == [
+        "packages/application/src/ditto_application/processes/experiments/"
+        "example.py: experiment source imports TYPE_CHECKING; extract a neutral "
+        "contract instead of hiding an import cycle"
+    ]
+
+    authority_errors = checker(
+        "from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from x import Y\n",
+        "packages/application/src/ditto_application/research_validation_contracts.py",
+    )
+
+    assert authority_errors == [
+        "packages/application/src/ditto_application/"
+        "research_validation_contracts.py: experiment source imports "
+        "TYPE_CHECKING; extract a neutral contract instead of hiding an "
+        "import cycle"
+    ]
+
+    certification_errors = checker(
+        "from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from x import Y\n",
+        "packages/application/src/ditto_application/"
+        "research_certification_contracts.py",
+    )
+
+    assert certification_errors == [
+        "packages/application/src/ditto_application/"
+        "research_certification_contracts.py: experiment source imports "
+        "TYPE_CHECKING; extract a neutral contract instead of hiding an "
+        "import cycle"
+    ]
+
+
+def test_task8_type_checking_gate_rejects_module_and_extension_alias_bypasses():
+    checker = _MOD.check_experiment_source_no_type_checking  # type: ignore[attr-defined]
+    rel_path = (
+        "packages/application/src/ditto_application/research_certification_contracts.py"
+    )
+    expected = [
+        f"{rel_path}: experiment source imports TYPE_CHECKING; extract a neutral "
+        "contract instead of hiding an import cycle"
+    ]
+
+    for source in (
+        "import typing\n\nif typing.TYPE_CHECKING:\n    from x import Y\n",
+        (
+            "import typing as type_api\n\n"
+            "if type_api.TYPE_CHECKING:\n    from x import Y\n"
+        ),
+        (
+            "from typing_extensions import TYPE_CHECKING as TC\n\n"
+            "if TC:\n    from x import Y\n"
+        ),
+        (
+            "import typing_extensions as type_ext\n\n"
+            "if type_ext.TYPE_CHECKING:\n    from x import Y\n"
+        ),
+    ):
+        assert checker(source, rel_path) == expected
+
+
+def test_task8_type_checking_gate_covers_the_whole_experiment_application_surface():
+    checker = _MOD.check_experiment_source_no_type_checking  # type: ignore[attr-defined]
+
+    for rel_path in (
+        "packages/application/src/ditto_application/commands/experiments.py",
+        "packages/application/src/ditto_application/queries/experiments.py",
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "nested/example.py"
+        ),
+    ):
+        assert checker(
+            "from typing import TYPE_CHECKING\n",
+            rel_path,
+        ) == [
+            f"{rel_path}: experiment source imports TYPE_CHECKING; extract a neutral "
+            "contract instead of hiding an import cycle"
+        ]
+
+
+def test_task8_type_checking_gate_rejects_arbitrarily_deep_module_aliases():
+    checker = _MOD.check_experiment_source_no_type_checking  # type: ignore[attr-defined]
+    rel_path = "packages/application/src/ditto_application/commands/experiments.py"
+
+    for module_name in ("typing", "typing_extensions"):
+        errors = checker(
+            f"import {module_name} as type_api\n"
+            "type_guard = type_api\n"
+            "next_guard = type_guard\n"
+            "final_guard = next_guard\n\n"
+            "if final_guard.TYPE_CHECKING:\n"
+            "    from x import Y\n",
+            rel_path,
+        )
+
+        assert errors == [
+            f"{rel_path}: experiment source imports TYPE_CHECKING; extract a neutral "
+            "contract instead of hiding an import cycle"
+        ]
+
+
+def test_task8_type_checking_gate_allows_ordinary_typing_module_use():
+    checker = _MOD.check_experiment_source_no_type_checking  # type: ignore[attr-defined]
+
+    errors = checker(
+        "import typing as type_api\n\nvalue = type_api.cast(str, 'ok')\n",
+        "packages/application/src/ditto_application/"
+        "research_certification_contracts.py",
+    )
+
+    assert errors == []
+
+
+def test_task8_type_checking_gate_allows_propagated_typing_cast_and_plain_text():
+    checker = _MOD.check_experiment_source_no_type_checking  # type: ignore[attr-defined]
+    rel_path = "packages/application/src/ditto_application/queries/experiments.py"
+
+    errors = checker(
+        "import typing as type_api\n"
+        "type_guard = type_api\n"
+        "next_guard = type_guard\n"
+        "value = next_guard.cast(str, 'ok')\n"
+        "message = 'typing.TYPE_CHECKING'\n"
+        "# if next_guard.TYPE_CHECKING: ignored\n",
+        rel_path,
+    )
+
+    assert errors == []
+
+
+def test_task8_process_provider_forbids_behavior_adapters():
+    assert hasattr(_MOD, "check_process_provider_wiring_only")
+    checker = _MOD.check_process_provider_wiring_only  # type: ignore[attr-defined]
+
+    errors = checker(
+        "class DataReadinessCertificationProbe:\n    def assess(self): ...\n",
+        "packages/application/src/ditto_application/providers_process.py",
+    )
+
+    assert errors == [
+        "packages/application/src/ditto_application/providers_process.py: "
+        "application process provider declares behavior class "
+        "'DataReadinessCertificationProbe'; move behavior to its owning "
+        "query, builder, or process adapter module"
+    ]
+
+
 def test_apps_capability_roots_include_all_domain_packages():
     assert {"ditto_portfolio", "ditto_risk"} <= APPS_CAPABILITY_IMPORT_ROOTS
 
@@ -111,8 +267,47 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         "packages/application/src/ditto_application/providers.py",
         "packages/application/src/ditto_application/providers_market.py",
         "packages/application/src/ditto_application/providers_portfolio.py",
+        "packages/application/src/ditto_application/providers_process.py",
         "packages/application/src/ditto_application/providers_strategy.py",
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_executor_probe.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_material.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_saga.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_reconstruction.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_preflight_codec.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning_process.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning_contracts.py"
+        ),
+        ("packages/application/src/ditto_application/research_validation_windows.py"),
+        "packages/application/src/ditto_application/queries/experiments.py",
         "packages/application/src/ditto_application/queries/research.py",
+        (
+            "packages/application/src/ditto_application/queries/"
+            "research_certification.py"
+        ),
         "packages/application/src/ditto_application/queries/research_helpers.py",
     } == {allowance.path for allowance in allowances}
     assert not any(hasattr(allowance, "match") for allowance in allowances)
@@ -125,6 +320,29 @@ def test_application_research_query_is_allowed_to_wire_analysis():
     )
 
     assert errors == []
+
+
+def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
+    rel_path = (
+        "packages/application/src/ditto_application/processes/experiments/"
+        "_launch_reconstruction.py"
+    )
+    near_miss = rel_path.replace(
+        "_launch_reconstruction.py",
+        "_launch_reconstruction_extra.py",
+    )
+
+    assert (
+        check_production_no_analysis(
+            "from ditto_analysis.experiments import FoldPersistenceSpec",
+            rel_path,
+        )
+        == []
+    )
+    assert check_production_no_analysis(
+        "from ditto_analysis.experiments import FoldPersistenceSpec",
+        near_miss,
+    ) == [f"{near_miss}: production imports ditto_analysis (check import-linter)"]
 
 
 def test_application_provider_modules_are_allowed_to_wire_analysis():
