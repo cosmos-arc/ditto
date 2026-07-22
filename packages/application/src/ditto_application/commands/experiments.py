@@ -10,6 +10,10 @@ from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
+from ditto_application.processes.experiments.holdout import (
+    ClaimHoldoutCandidateRequest,
+    HoldoutClaimReceipt,
+)
 from ditto_application.processes.experiments.planning_process import (
     ExperimentLaunchReceipt,
     ExperimentPlanningProcess,
@@ -19,6 +23,8 @@ from ditto_application.processes.experiments.planning_process import (
 __all__ = [
     "CancelExperimentCommand",
     "CancelExperimentHandler",
+    "ClaimHoldoutCandidateCommand",
+    "ClaimHoldoutCandidateHandler",
     "ExperimentControlNotifier",
     "ExperimentControlProcess",
     "ExperimentControlReceipt",
@@ -63,6 +69,96 @@ class LaunchExperimentHandler:
                 },
             )
             raise AppCommandError(str(exc), details=details) from exc
+
+
+@dataclass(frozen=True, slots=True)
+class ClaimHoldoutCandidateCommand:
+    """Claim one preselected candidate's holdout authority exactly once."""
+
+    request: ClaimHoldoutCandidateRequest
+
+    def __post_init__(self) -> None:
+        """Keep the command boundary nominal and free of derived identities."""
+        if type(self.request) is not ClaimHoldoutCandidateRequest:
+            raise AppCommandError(
+                "holdout claim command is invalid",
+                details={
+                    "code": "SPEC_INVALID",
+                    "reason": "holdout_claim_request_invalid",
+                    "command": "claim_holdout_candidate",
+                },
+            )
+
+
+class HoldoutClaimCommandProcess(Protocol):
+    """Commit-or-replay one holdout claim before scheduler notification."""
+
+    def claim_holdout_candidate(
+        self,
+        request: ClaimHoldoutCandidateRequest,
+    ) -> HoldoutClaimReceipt:
+        """Return committed server truth for the exact request."""
+        ...
+
+
+class ClaimHoldoutCandidateHandler:
+    """Persist a holdout claim before waking the scheduler."""
+
+    def __init__(
+        self,
+        *,
+        process: HoldoutClaimCommandProcess,
+        notifier: ExperimentControlNotifier,
+    ) -> None:
+        self._process = process
+        self._notifier = notifier
+
+    def handle(self, command: ClaimHoldoutCandidateCommand) -> HoldoutClaimReceipt:
+        """Commit or exactly replay the claim, then issue a non-durable wake-up."""
+        if type(command) is not ClaimHoldoutCandidateCommand:
+            raise AppCommandError(
+                "holdout claim command is invalid",
+                details={
+                    "code": "SPEC_INVALID",
+                    "reason": "holdout_claim_command_invalid",
+                    "command": "claim_holdout_candidate",
+                },
+            )
+        try:
+            receipt = self._process.claim_holdout_candidate(command.request)
+        except AppProcessError as exc:
+            details = dict(exc.details)
+            details.update(
+                {
+                    "command": "claim_holdout_candidate",
+                    "experiment_id": command.request.experiment_id,
+                }
+            )
+            raise AppCommandError(str(exc), details=details) from exc
+        try:
+            self._notifier.notify_scheduler(
+                experiment_id=receipt.experiment_id,
+                action="holdout_claimed",
+                occurred_at=receipt.occurred_at,
+            )
+        except Exception as exc:
+            details = dict(exc.details) if isinstance(exc, AppProcessError) else {}
+            details.update(
+                {
+                    "command": "claim_holdout_candidate",
+                    "notification": "scheduler_action",
+                    "notification_target": "holdout_claimed",
+                    "error_type": type(exc).__name__,
+                    "experiment_id": receipt.experiment_id,
+                    "claim_id": receipt.claim_id,
+                    "revision": receipt.experiment_revision,
+                }
+            )
+            raise AppCommandError(
+                "holdout claim was persisted but scheduler notification failed",
+                details=details,
+            ) from exc
+        return receipt
 
 
 @dataclass(frozen=True, slots=True)

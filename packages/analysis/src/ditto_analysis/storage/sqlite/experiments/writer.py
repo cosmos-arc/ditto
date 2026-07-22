@@ -56,6 +56,14 @@ from ditto_analysis.storage.sqlite.experiments._experiment_rules import (
 from ditto_analysis.storage.sqlite.experiments._facts import (
     SQLiteExperimentFactsMixin,
 )
+from ditto_analysis.storage.sqlite.experiments._holdout import (
+    SQLiteHoldoutClaimMixin,
+)
+from ditto_analysis.storage.sqlite.experiments._holdout_authority import (
+    reject_unbound_holdout_dispatch,
+    validate_holdout_attempt_row,
+    validate_holdout_work_authority,
+)
 from ditto_analysis.storage.sqlite.experiments._terminal_retry import (
     SQLiteTerminalFoldRetryMixin,
 )
@@ -122,6 +130,7 @@ def _optional(value: object | None) -> str | None:
 class SQLiteExperimentWriter(
     SQLiteExperimentCreationMixin,
     SQLiteExperimentFactsMixin,
+    SQLiteHoldoutClaimMixin,
     SQLiteAtomicDispatchMixin,
     SQLiteTerminalFoldRetryMixin,
     SQLiteExperimentControlMixin,
@@ -419,6 +428,11 @@ class SQLiteExperimentWriter(
                 connection, lease_fence, now_epoch_us, spec.fold_key.experiment_id
             )
             validate_experiment_dispatchable(connection, spec.fold_key.experiment_id)
+            validate_holdout_work_authority(
+                connection,
+                spec.fold_key,
+                spec.reproduction_fingerprint,
+            )
             validate_attempt_fold_owner(
                 connection, spec.fold_key, lease_fence.owner_token
             )
@@ -584,6 +598,7 @@ class SQLiteExperimentWriter(
             if row["revision"] != expected_revision:
                 raise _conflict("fold revision is stale", "stale_projection_revision")
             previous_status = ExperimentStatus(row["status"])
+            reject_unbound_holdout_dispatch(row, target_status)
             if (
                 previous_status is ExperimentStatus.RUNNING
                 and target_status is ExperimentStatus.QUEUED
@@ -690,6 +705,7 @@ class SQLiteExperimentWriter(
                 raise _integrity("attempt does not exist", "attempt_not_found")
             experiment_id = ExperimentId(row["experiment_id"])
             self._validate_lease(connection, lease_fence, now_epoch_us, experiment_id)
+            validate_holdout_attempt_row(connection, row)
             if row["revision"] != expected_revision:
                 raise _conflict(
                     "attempt revision is stale", "stale_projection_revision"

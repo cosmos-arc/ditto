@@ -470,15 +470,60 @@ def _holdout_claim(api: SimpleNamespace, fold_key: Any) -> Any:
     )
 
 
+def _insert_holdout_claim_fixture(
+    database: Any, api: SimpleNamespace, claim: Any
+) -> None:
+    """Seed the frozen Task 7 table only for disposable schema-adversarial tests."""
+    reason = api.canonical_payload(claim.selection_reason)
+    database.get_connection().execute(
+        """
+        INSERT INTO holdout_claim(
+            claim_id, research_cycle_id, research_cycle_hash, experiment_id,
+            candidate_id, fold_id, fold_role, resolved_spec_hash, parameters_hash,
+            snapshot_id, window_start, window_end, reproduction_fingerprint,
+            logical_run_id, operator_confirmation, selection_reason_json,
+            claim_payload_hash, claimed_at_epoch_us
+        ) VALUES (?, ?, ?, ?, ?, ?, 'holdout', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            claim.claim_id,
+            claim.cycle.cycle_id,
+            str(claim.cycle.cycle_hash),
+            str(claim.fold_key.experiment_id),
+            str(claim.fold_key.candidate_id),
+            str(claim.fold_key.fold_id),
+            str(claim.resolved_spec_hash),
+            str(claim.parameters_hash),
+            str(claim.snapshot_id),
+            claim.window.start.isoformat(),
+            claim.window.end.isoformat(),
+            str(claim.reproduction_fingerprint),
+            claim.logical_run_id,
+            claim.operator_confirmation,
+            reason.json_bytes.decode("utf-8"),
+            str(claim.claim_payload_hash),
+            int(claim.claimed_at.timestamp() * 1_000_000),
+        ),
+    )
+    database.get_connection().commit()
+
+
 def _seed_all_tables(database: Any, writer: Any, api: SimpleNamespace) -> None:
     _create_experiment(writer, api)
-    fold = _add_fold(writer, api, role="holdout")
+    fold = _add_fold(writer, api, role="walk_forward")
+    holdout_key = replace(fold.key, fold_id=FoldId("fold-holdout"))
+    holdout = _fold_spec(api, key=holdout_key, role="holdout", ordinal=2)
+    writer.add_fold(holdout, _fold_projection(api, holdout))
     lease = _dispatch_first_attempt(writer, api, fold, owner="owner-adversarial")
     writer.add_artifact(
         _artifact(api), lease_fence=lease.fence, now_epoch_us=NOW_US + 1
     )
     writer.add_gate_evaluation(_gate(api))
-    writer.claim_holdout(_holdout_claim(api, fold.key))
+    _insert_holdout_claim_fixture(
+        database,
+        api,
+        _holdout_claim(api, holdout.key),
+    )
     assert (
         database.get_connection()
         .execute("SELECT count(*) FROM experiment_scheduler_slot")
@@ -1827,10 +1872,10 @@ def test_audit_fact_tables_reject_update_and_delete(tmp_path: Path, table: str) 
     assert after == before
 
 
-def test_artifact_gate_and_holdout_are_typed_append_only_facts(tmp_path: Path) -> None:
+def test_artifact_and_gate_are_typed_append_only_facts(tmp_path: Path) -> None:
     _database, reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)
-    fold = _add_fold(writer, api, role="holdout")
+    _add_fold(writer, api, role="holdout")
     lease = _claim_queued_experiment(writer, owner="owner-artifact")
     artifact = api.ArtifactRecord(
         artifact_id="artifact-1",
@@ -1879,26 +1924,6 @@ def test_artifact_gate_and_holdout_are_typed_append_only_facts(tmp_path: Path) -
     )
     writer.add_gate_evaluation(gate)
     assert reader.get_gate_evaluation("gate-1") == gate
-
-    claim = api.HoldoutClaimRecord(
-        claim_id="claim-1",
-        cycle=api.ResearchCycleIdentity("cycle-2026-h2", ContentHash("c" * 64)),
-        fold_key=fold.key,
-        resolved_spec_hash=ContentHash("3" * 64),
-        parameters_hash=api.canonical_payload(
-            {"alpha": 0.05, "lookback": 20}
-        ).content_hash,
-        snapshot_id=SnapshotId("snapshot-certified-1"),
-        window=api.DateWindow(date(2026, 1, 5), date(2026, 3, 31)),
-        reproduction_fingerprint=ContentHash("d" * 64),
-        logical_run_id="logical-run-1",
-        operator_confirmation="approved by operator-1",
-        selection_reason={"rank": 1},
-        claimed_at=NOW,
-    )
-    first = writer.claim_holdout(claim)
-    replay = writer.claim_holdout(claim)
-    assert replay == first == reader.get_holdout_claim("claim-1")
 
 
 def test_list_gate_evaluations_returns_empty_for_experiment_without_gates(
@@ -2065,59 +2090,10 @@ def test_artifact_create_drift_after_pin_fails_closed_before_lease_validation(
     assert database.get_connection().total_changes == before_changes
 
 
-def test_holdout_claim_rejects_cycle_and_fold_role_lineage_drift(
-    tmp_path: Path,
-) -> None:
-    _database, reader, writer, api = _store(tmp_path)
-    _create_experiment(writer, api)
-    walk_forward = _add_fold(writer, api, role="walk_forward")
+def test_holdout_claim_has_no_standalone_writer_bypass(tmp_path: Path) -> None:
+    _database, _reader, writer, _api_values = _store(tmp_path)
 
-    with pytest.raises(api.ExperimentIntegrityError) as fold_exc:
-        writer.claim_holdout(_holdout_claim(api, walk_forward.key))
-    assert fold_exc.value.details["reason_code"] == "invalid_holdout_lineage"
-
-    holdout = replace(
-        _fold_spec(api, role="holdout"),
-        key=replace(walk_forward.key, fold_id=FoldId("fold-2")),
-        ordinal=2,
-    )
-    holdout = api.FoldPersistenceSpec.create(
-        holdout.key,
-        holdout.ordinal,
-        holdout.fold_role,
-        holdout.train_window,
-        holdout.test_window,
-        holdout.purge_sessions,
-        holdout.embargo_sessions,
-    )
-    writer.add_fold(holdout, _fold_projection(api, holdout))
-    wrong_cycle = replace(
-        _holdout_claim(api, holdout.key),
-        cycle=api.ResearchCycleIdentity("cycle-2026-h2", ContentHash("e" * 64)),
-    )
-    with pytest.raises(api.ExperimentIntegrityError) as cycle_exc:
-        writer.claim_holdout(wrong_cycle)
-    assert cycle_exc.value.details["reason_code"] == "invalid_holdout_lineage"
-    assert reader.get_holdout_claim("claim-1") is None
-
-
-def test_holdout_exact_replay_is_noop_but_payload_drift_fails_closed(
-    tmp_path: Path,
-) -> None:
-    _database, reader, writer, api = _store(tmp_path)
-    _create_experiment(writer, api)
-    fold = _add_fold(writer, api, role="holdout")
-    claim = _holdout_claim(api, fold.key)
-    assert writer.claim_holdout(claim) == claim
-    assert writer.claim_holdout(claim) == claim
-
-    with pytest.raises(api.ExperimentConflictError) as exc_info:
-        writer.claim_holdout(
-            replace(claim, operator_confirmation="approved by operator-2")
-        )
-
-    assert exc_info.value.details["reason_code"] == "holdout_claim_replay_drift"
-    assert reader.get_holdout_claim("claim-1") == claim
+    assert not hasattr(writer, "claim_holdout")
 
 
 @pytest.mark.parametrize(

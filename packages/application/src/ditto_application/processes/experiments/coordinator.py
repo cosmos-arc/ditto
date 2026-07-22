@@ -1,5 +1,7 @@
 """Durable, lease-fenced first-attempt scheduling for R3 experiments."""
 
+# ruff: noqa: PLR0913
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -31,11 +33,24 @@ from ditto_application.processes.experiments._coordinator_contract import (
     SchedulerTickResult,
     SchedulerTickState,
 )
+from ditto_application.processes.experiments._coordinator_holdout import (
+    HoldoutCoordinatorAuthority,
+    selected_holdout_fold_ids,
+    validate_holdout_snapshot,
+)
+from ditto_application.processes.experiments._coordinator_progress import (
+    CoordinatorResultBuilder,
+)
 from ditto_application.processes.experiments._coordinator_recovery import (
     ExperimentRecoveryOrchestrator,
 )
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     deterministic_backtest_run_id,
+)
+from ditto_application.processes.experiments.holdout import (
+    ClaimHoldoutCandidateRequest,
+    HoldoutClaimReceipt,
+    HoldoutSelectionEvidenceProvider,
 )
 from ditto_application.processes.experiments.lease_authority import (
     LeaseAuthority,
@@ -83,10 +98,12 @@ _REPLAYABLE_TERMINAL_ATTEMPT = frozenset(
 _STAGE_ROLE = {
     ExperimentStage.EXPLORATION: FoldRole.EXPLORATION,
     ExperimentStage.WALK_FORWARD: FoldRole.WALK_FORWARD,
+    ExperimentStage.HOLDOUT: FoldRole.HOLDOUT,
 }
 _NEXT_STAGE = {
     ExperimentStage.EXPLORATION: ExperimentStage.WALK_FORWARD,
     ExperimentStage.WALK_FORWARD: ExperimentStage.CANDIDATE_SELECTION,
+    ExperimentStage.HOLDOUT: ExperimentStage.EVIDENCE,
 }
 _SNAPSHOT_VOCABULARY = _snapshot_rules.SnapshotVocabulary(
     live_statuses=_LIVE,
@@ -140,6 +157,10 @@ _SNAPSHOT_VOCABULARY = _snapshot_rules.SnapshotVocabulary(
 )
 _scheduler_error = _snapshot_rules.scheduler_error
 _require_utc_event_time = require_utc_event_time
+_RESULT_BUILDER = CoordinatorResultBuilder(_SNAPSHOT_VOCABULARY)
+_progress = _RESULT_BUILDER.progress
+_result = _RESULT_BUILDER.result
+_empty_result = _RESULT_BUILDER.empty
 
 
 class ExperimentExecutionCoordinator:
@@ -152,6 +173,7 @@ class ExperimentExecutionCoordinator:
         first_attempt_factory: FirstAttemptFactory,
         owner_token: str,
         lease_duration: timedelta,
+        selection_evidence_provider: HoldoutSelectionEvidenceProvider | None = None,
         clock: Callable[[], datetime] | None = None,
         checkpoint_available: Callable[[str], bool] | None = None,
         checkpoint_resumable: Callable[[str], bool] | None = None,
@@ -162,6 +184,12 @@ class ExperimentExecutionCoordinator:
             owner_token=owner_token,
             lease_duration=lease_duration,
             clock=clock,
+        )
+        self._holdout = HoldoutCoordinatorAuthority(
+            store=store,
+            first_attempt_factory=first_attempt_factory,
+            selection_evidence_provider=selection_evidence_provider,
+            authority=self._authority,
         )
         self._recovery = ExperimentRecoveryOrchestrator(
             store=store,
@@ -270,6 +298,13 @@ class ExperimentExecutionCoordinator:
                 now_epoch_us=now_epoch_us(),
             )
         )
+
+    def claim_holdout_candidate(
+        self,
+        request: ClaimHoldoutCandidateRequest,
+    ) -> HoldoutClaimReceipt:
+        """Commit or exactly replay the sole candidate allowed into holdout."""
+        return self._holdout.claim_candidate(request)
 
     def poll_execution_directive(
         self,
@@ -606,7 +641,7 @@ class ExperimentExecutionCoordinator:
             stage = snapshot.projection.record.stage
             if stage is ExperimentStage.CANDIDATE_SELECTION:
                 return snapshot, SchedulerTickState.CANDIDATE_SELECTION
-            if stage is ExperimentStage.HOLDOUT:
+            if stage is ExperimentStage.HOLDOUT and snapshot.holdout_claim is None:
                 return snapshot, SchedulerTickState.HOLDOUT_GATED
             if stage is ExperimentStage.EVIDENCE:
                 return snapshot, SchedulerTickState.WAITING
@@ -645,6 +680,7 @@ class ExperimentExecutionCoordinator:
     ) -> tuple[ExperimentDispatch, ...]:
         progress = _progress(snapshot)
         role = _STAGE_ROLE[snapshot.projection.record.stage]
+        selected_holdout_ids = selected_holdout_fold_ids(snapshot)
         candidate_ordinals = {
             candidate.candidate_id: candidate.ordinal
             for candidate in snapshot.launch_spec.candidates
@@ -655,6 +691,10 @@ class ExperimentExecutionCoordinator:
                 for fold in snapshot.folds
                 if fold.spec.fold_role is role
                 and fold.projection.status is ExperimentStatus.QUEUED
+                and (
+                    selected_holdout_ids is None
+                    or str(fold.spec.key.fold_id) in selected_holdout_ids
+                )
             ),
             key=lambda fold: (
                 candidate_ordinals[fold.spec.key.candidate_id],
@@ -743,57 +783,5 @@ class ExperimentExecutionCoordinator:
             snapshot,
             _SNAPSHOT_VOCABULARY,
         )
+        validate_holdout_snapshot(snapshot)
         return snapshot
-
-
-def _progress(snapshot: ExperimentSchedulerSnapshot) -> ExperimentProgress:
-    _snapshot_rules.validate_durable_worker_capacity(
-        snapshot,
-        _SNAPSHOT_VOCABULARY,
-    )
-    worker_limit = snapshot.launch_spec.worker_count
-    live_attempts = tuple(
-        attempt for attempt in snapshot.attempts if attempt.projection.status in _LIVE
-    )
-    return ExperimentProgress(
-        experiment_id=snapshot.projection.record.experiment_id,
-        stage=snapshot.projection.record.stage,
-        worker_limit=worker_limit,
-        available_capacity=max(0, worker_limit - len(live_attempts)),
-        total_fold_count=len(snapshot.folds),
-        terminal_fold_count=sum(
-            1 for fold in snapshot.folds if fold.projection.status in _TERMINAL_WORK
-        ),
-        live_attempt_count=len(live_attempts),
-        completed_attempt_count=sum(
-            1
-            for attempt in snapshot.attempts
-            if attempt.projection.status is ExperimentStatus.COMPLETED
-        ),
-        failed_candidate_attempt_count=sum(
-            1
-            for attempt in snapshot.attempts
-            if attempt.projection.failure_code is ExperimentFailureCode.CANDIDATE_FAILED
-        ),
-        hard_failure_count=_snapshot_rules.hard_failure_count(
-            snapshot,
-            _SNAPSHOT_VOCABULARY,
-        ),
-    )
-
-
-def _result(
-    state: SchedulerTickState,
-    snapshot: ExperimentSchedulerSnapshot,
-    dispatches: tuple[ExperimentDispatch, ...],
-) -> SchedulerTickResult:
-    return SchedulerTickResult(
-        state=state,
-        experiment_id=snapshot.projection.record.experiment_id,
-        dispatches=dispatches,
-        progress=_progress(snapshot),
-    )
-
-
-def _empty_result(state: SchedulerTickState) -> SchedulerTickResult:
-    return SchedulerTickResult(state, None, (), None)

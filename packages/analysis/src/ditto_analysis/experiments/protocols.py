@@ -10,6 +10,10 @@ from datetime import datetime
 from typing import Protocol
 
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
+from ditto_analysis.experiments.holdout import (
+    AtomicHoldoutClaimReceipt,
+    HoldoutClaimAuthorityCommand,
+)
 from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
@@ -96,6 +100,10 @@ class ExperimentReaderProtocol(Protocol):
     ) -> tuple[GateEvaluationRecord, ...]: ...
 
     def get_holdout_claim(self, claim_id: str) -> HoldoutClaimRecord | None: ...
+
+    def get_holdout_claim_for_experiment(
+        self, experiment_id: ExperimentId
+    ) -> HoldoutClaimRecord | None: ...
 
     def get_scheduler_slot(self) -> SchedulerSlot: ...
 
@@ -286,7 +294,13 @@ class ExperimentWriterProtocol(Protocol):
 
     def add_gate_evaluation(self, record: GateEvaluationRecord) -> None: ...
 
-    def claim_holdout(self, record: HoldoutClaimRecord) -> HoldoutClaimRecord: ...
+    def claim_holdout_candidate(
+        self,
+        command: HoldoutClaimAuthorityCommand,
+        *,
+        lease_fence: LeaseFence | None,
+        now_epoch_us: int | None,
+    ) -> AtomicHoldoutClaimReceipt: ...
 
     def try_claim_lease(
         self,

@@ -80,6 +80,26 @@ def run_unfenced_scheduler_operation[ResultT](
         return operation()
     except AppProcessError:
         raise
+    except ExperimentLeaseLostError as exc:
+        reason = str(exc.details.get("reason_code", "scheduler_lease_lost"))
+        raise _scheduler_error("LEASE_LOST", reason) from exc
+    except ExperimentConflictError as exc:
+        code = str(exc.details.get("code", "CONFLICT"))
+        reason = str(exc.details.get("reason_code", "operator_request_rejected"))
+        details = {
+            key: value
+            for key, value in exc.details.items()
+            if key not in {"code", "reason_code"}
+        }
+        raise _scheduler_error(code, reason, **details) from exc
+    except ExperimentSpecError as exc:
+        reason = str(exc.details.get("reason_code", "scheduler_spec_invalid"))
+        raise _scheduler_error("SPEC_INVALID", reason) from exc
+    except ExperimentIntegrityError as exc:
+        reason = str(
+            exc.details.get("reason_code", "scheduler_persistence_integrity_failed")
+        )
+        raise _scheduler_error("EXPERIMENT_INTEGRITY_FAILED", reason) from exc
     except AnalysisError as exc:
         code = str(exc.details.get("code", "SYSTEM_ERROR"))
         reason = str(exc.details.get("reason_code", "scheduler_control_write_failed"))
@@ -243,14 +263,19 @@ class LeaseAuthority:
                 raise self._normalized_error(exc) from exc
             except (ExperimentConflictError, ExperimentSpecError) as exc:
                 code = (
-                    "CONFLICT"
+                    str(exc.details.get("code", "CONFLICT"))
                     if isinstance(exc, ExperimentConflictError)
                     else "SPEC_INVALID"
                 )
                 reason = str(
                     exc.details.get("reason_code", "operator_request_rejected")
                 )
-                raise _scheduler_error(code, reason) from exc
+                details = {
+                    key: value
+                    for key, value in exc.details.items()
+                    if key not in {"code", "reason_code"}
+                }
+                raise _scheduler_error(code, reason, **details) from exc
             except Exception as exc:
                 self._invalidate(type(exc).__name__)
                 raise self._normalized_error(exc) from exc
@@ -336,6 +361,11 @@ class LeaseAuthority:
             return _scheduler_error(
                 "EXPERIMENT_INTEGRITY_FAILED",
                 "scheduler_persistence_integrity_failed",
+            )
+        if isinstance(error, ExperimentSpecError):
+            return _scheduler_error(
+                "SPEC_INVALID",
+                str(error.details.get("reason_code", "scheduler_spec_invalid")),
             )
         if isinstance(error, AnalysisError):
             return _scheduler_error(

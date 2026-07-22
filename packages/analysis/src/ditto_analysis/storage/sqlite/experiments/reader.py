@@ -9,7 +9,7 @@ import hashlib
 import json
 import sqlite3
 from collections.abc import Mapping
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import cast
 
 from ditto_analysis.errors import (
@@ -17,6 +17,8 @@ from ditto_analysis.errors import (
     ExperimentPersistenceError,
     ExperimentSpecError,
 )
+from ditto_analysis.experiments._time import datetime_from_epoch_us as _dt
+from ditto_analysis.experiments._time import epoch_us
 from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
@@ -30,7 +32,6 @@ from ditto_analysis.experiments.models import (
     ExperimentStage,
     ExperimentStatus,
     FoldId,
-    SnapshotId,
 )
 from ditto_analysis.experiments.persistence import (
     ArtifactRecord,
@@ -64,16 +65,15 @@ from ditto_analysis.storage.sqlite.experiments._events import (
     canonical_status_event_id,
     event_values,
 )
+from ditto_analysis.storage.sqlite.experiments._holdout import (
+    holdout_claim_from_row,
+)
 from ditto_analysis.storage.sqlite.experiments._scheduler_queue import (
     scheduler_queue_candidates,
 )
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
 )
-
-
-def _dt(value: int) -> datetime:
-    return datetime.fromtimestamp(value / 1_000_000, tz=UTC)
 
 
 def _integrity(
@@ -162,8 +162,7 @@ class SQLiteExperimentReader:
             or str(spec.strategy_version) != row["strategy_version"]
             or str(spec.strategy_spec_hash) != row["strategy_spec_hash"]
             or str(spec.snapshot_id) != row["snapshot_id"]
-            or int(spec.created_at.timestamp() * 1_000_000)
-            != row["created_at_epoch_us"]
+            or epoch_us(spec.created_at) != row["created_at_epoch_us"]
         ):
             raise _integrity(
                 "launch payload disagrees with immutable relational fields",
@@ -184,7 +183,7 @@ class SQLiteExperimentReader:
             failure_code=None,
             reason_code="experiment_created",
             detail={},
-            occurred_at_epoch_us=int(spec.created_at.timestamp() * 1_000_000),
+            occurred_at_epoch_us=epoch_us(spec.created_at),
         )
         creation = self._one(
             """
@@ -664,40 +663,17 @@ class SQLiteExperimentReader:
 
     def get_holdout_claim(self, claim_id: str) -> HoldoutClaimRecord | None:
         row = self._one("SELECT * FROM holdout_claim WHERE claim_id=?", (claim_id,))
-        if row is None:
-            return None
-        record = HoldoutClaimRecord(
-            claim_id=row["claim_id"],
-            cycle=ResearchCycleIdentity(
-                row["research_cycle_id"], ContentHash(row["research_cycle_hash"])
-            ),
-            fold_key=FoldKey(
-                ExperimentId(row["experiment_id"]),
-                CandidateId(row["candidate_id"]),
-                FoldId(row["fold_id"]),
-            ),
-            resolved_spec_hash=ContentHash(row["resolved_spec_hash"]),
-            parameters_hash=ContentHash(row["parameters_hash"]),
-            snapshot_id=SnapshotId(row["snapshot_id"]),
-            window=DateWindow(
-                date.fromisoformat(row["window_start"]),
-                date.fromisoformat(row["window_end"]),
-            ),
-            reproduction_fingerprint=ContentHash(row["reproduction_fingerprint"]),
-            logical_run_id=row["logical_run_id"],
-            operator_confirmation=row["operator_confirmation"],
-            selection_reason=_json_object(
-                row["selection_reason_json"], "selection_reason_json"
-            ),
-            claimed_at=_dt(row["claimed_at_epoch_us"]),
+        return None if row is None else holdout_claim_from_row(row)
+
+    def get_holdout_claim_for_experiment(
+        self,
+        experiment_id: ExperimentId,
+    ) -> HoldoutClaimRecord | None:
+        row = self._one(
+            "SELECT * FROM holdout_claim WHERE experiment_id=?",
+            (str(experiment_id),),
         )
-        if str(record.claim_payload_hash) != row["claim_payload_hash"]:
-            raise _integrity(
-                "holdout claim payload hash mismatch",
-                "holdout_claim_hash_mismatch",
-                claim_id=claim_id,
-            )
-        return record
+        return None if row is None else holdout_claim_from_row(row)
 
     def get_scheduler_slot(self) -> SchedulerSlot:
         row = self._one(

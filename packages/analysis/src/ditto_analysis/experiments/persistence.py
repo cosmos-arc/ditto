@@ -11,13 +11,13 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from enum import StrEnum
 from pathlib import PurePosixPath
 from typing import Any, cast
 
 from ditto_analysis.errors import ExperimentSpecError
-from ditto_analysis.experiments._validation import require_utc_datetime
+from ditto_analysis.experiments._time import datetime_from_epoch_us, epoch_us
 from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
@@ -169,8 +169,7 @@ def encode_candidate_parameters(
 
 
 def _epoch_us(value: datetime) -> int:
-    require_utc_datetime(value, "datetime")
-    return int(value.timestamp() * 1_000_000)
+    return epoch_us(value)
 
 
 def _datetime_from_epoch_us(value: object, field: str) -> datetime:
@@ -178,7 +177,7 @@ def _datetime_from_epoch_us(value: object, field: str) -> datetime:
         raise _error(
             f"{field} is not a valid epoch-us value", "invalid_canonical_payload"
         )
-    return datetime.fromtimestamp(value / 1_000_000, tz=UTC)
+    return datetime_from_epoch_us(value)
 
 
 def encode_launch_spec(spec: ExperimentLaunchSpec) -> CanonicalPayload:

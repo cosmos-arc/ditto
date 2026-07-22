@@ -6,6 +6,12 @@ This package does not schedule work. Runtime database and storage adapters live 
 analysis-owned contracts and codecs.
 """
 
+from ditto_analysis.experiments.holdout import (
+    AtomicHoldoutClaimReceipt,
+    HoldoutClaimAuthorityCommand,
+    HoldoutSelectionReason,
+    holdout_request_payload,
+)
 from ditto_analysis.experiments.metric_schema import (
     R3_COMPARISON_METRIC_IDS,
     R3_DIAGNOSTIC_METRIC_IDS,
@@ -102,6 +108,7 @@ __all__ = [
     "R3_DIAGNOSTIC_METRIC_IDS",
     "R3_RESEARCH_METRIC_SCHEMA",
     "ArtifactRecord",
+    "AtomicHoldoutClaimReceipt",
     "AttemptId",
     "AttemptPersistenceSpec",
     "AttemptProjection",
@@ -135,7 +142,9 @@ __all__ = [
     "FoldRole",
     "FoldView",
     "GateEvaluationRecord",
+    "HoldoutClaimAuthorityCommand",
     "HoldoutClaimRecord",
+    "HoldoutSelectionReason",
     "LeaseFence",
     "LogicalTrialIdentity",
     "MetricConstraint",
@@ -170,6 +179,7 @@ __all__ = [
     "decode_launch_spec",
     "encode_candidate_parameters",
     "encode_launch_spec",
+    "holdout_request_payload",
     "partition_observation_date_grid_hash",
     "validate_status_transition",
 ]

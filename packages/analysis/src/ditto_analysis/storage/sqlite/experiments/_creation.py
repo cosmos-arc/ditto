@@ -17,7 +17,7 @@ from ditto_analysis.errors import (
     ExperimentPersistenceError,
     ExperimentSpecError,
 )
-from ditto_analysis.experiments._validation import require_utc_datetime
+from ditto_analysis.experiments._time import epoch_us as _epoch_us
 from ditto_analysis.experiments.models import (
     ExperimentDesiredState,
     ExperimentFailureCode,
@@ -38,11 +38,6 @@ from ditto_analysis.storage.sqlite.experiments._events import event_values
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
 )
-
-
-def _epoch_us(value: datetime) -> int:
-    require_utc_datetime(value, "datetime")
-    return int(value.timestamp() * 1_000_000)
 
 
 def _persistence_error(

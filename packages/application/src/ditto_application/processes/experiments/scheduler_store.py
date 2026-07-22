@@ -1,13 +1,10 @@
 """Typed durable scheduler facade over the approved Task 7 persistence ports."""
-
-# These methods preserve explicit revisions, fences, and event timestamps.
-# ruff: noqa: D102
+# ruff: noqa: D101, D102, D105
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
 from typing import Protocol, cast
 
 from ditto_analysis.errors import AnalysisError
@@ -32,13 +29,29 @@ from ditto_analysis.experiments import (
     FoldId,
     FoldKey,
     FoldView,
+    HoldoutClaimAuthorityCommand,
+    HoldoutSelectionReason,
     SchedulerLease,
     SchedulerSlot,
 )
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._holdout_contract import (
+    HoldoutClaimPersistenceRequest,
+    PersistedHoldoutClaim,
+    persisted_holdout_claim,
+    persisted_holdout_history,
+)
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
+)
+from ditto_application.processes.experiments._scheduler_control import (
+    ExperimentExecutionControlChanged,
+    ResearchExecutionDirective,
+)
+from ditto_application.processes.experiments._scheduler_reasons import (
+    attempt_reason,
+    fold_reason,
 )
 
 __all__ = [
@@ -69,10 +82,6 @@ __all__ = [
 ]
 
 
-class ExperimentExecutionControlChanged(AppProcessError):
-    """A durable PAUSE/CANCEL request won the race before attempt start."""
-
-
 @dataclass(frozen=True, slots=True)
 class QueuedAttempt:
     """Execution-owned immutable attempt identity prepared before a fold claim."""
@@ -81,7 +90,6 @@ class QueuedAttempt:
     projection: AttemptProjection
 
     def __post_init__(self) -> None:
-        """Require one exact initially queued attempt and coherent lineage shape."""
         if (
             type(cast("object", self.spec)) is not AttemptPersistenceSpec
             or type(cast("object", self.projection)) is not AttemptProjection
@@ -106,7 +114,6 @@ class FirstAttempt(QueuedAttempt):
     """Execution-owned first-attempt identity prepared before durable claim."""
 
     def __post_init__(self) -> None:
-        """Keep the Task 9 first-attempt boundary exact and backwards compatible."""
         try:
             QueuedAttempt.__post_init__(self)
         except AppProcessError as exc:
@@ -117,14 +124,6 @@ class FirstAttempt(QueuedAttempt):
             or self.spec.resume_from_run_id is not None
         ):
             raise experiment_process_error("first_attempt_contract_invalid")
-
-
-class ResearchExecutionDirective(StrEnum):
-    """Normal durable control observed by an executing research child."""
-
-    RUN = "run"
-    PAUSE = "pause"
-    CANCEL = "cancel"
 
 
 class FirstAttemptFactory(Protocol):
@@ -150,9 +149,9 @@ class ExperimentSchedulerSnapshot:
     launch_spec: ExperimentLaunchSpec
     folds: tuple[FoldView, ...]
     attempts: tuple[AttemptView, ...]
+    holdout_claim: PersistedHoldoutClaim | None = None
 
     def __post_init__(self) -> None:
-        """Require one lineage-complete experiment snapshot."""
         experiment_id = self.projection.record.experiment_id
         if self.launch_spec.experiment_id != experiment_id:
             raise experiment_process_error("scheduler_snapshot_launch_mismatch")
@@ -174,11 +173,12 @@ class ExperimentSchedulerSnapshot:
             for attempt in self.attempts
         ):
             raise experiment_process_error("scheduler_snapshot_attempt_lineage_invalid")
+        claim = self.holdout_claim
+        if claim is not None and claim.experiment_id != str(experiment_id):
+            raise experiment_process_error("scheduler_snapshot_holdout_lineage_invalid")
 
 
 class ExperimentSchedulerStoreProtocol(Protocol):
-    """Narrow Task 9 scheduling operations over the Task 7 store contracts."""
-
     def list_dispatchable_experiments(self) -> tuple[ExperimentProjection, ...]: ...
 
     def get_scheduler_slot(self) -> SchedulerSlot: ...
@@ -211,6 +211,14 @@ class ExperimentSchedulerStoreProtocol(Protocol):
     def load_snapshot(
         self, experiment_id: ExperimentId
     ) -> ExperimentSchedulerSnapshot: ...
+
+    def claim_holdout_candidate(
+        self,
+        request: HoldoutClaimPersistenceRequest,
+        *,
+        lease: SchedulerLease | None,
+        now_epoch_us: int | None,
+    ) -> PersistedHoldoutClaim: ...
 
     def transition_to_running(
         self,
@@ -414,11 +422,53 @@ class ExperimentSchedulerStore:
             raise experiment_process_error("scheduler_experiment_not_found")
         folds = self._reader.list_folds(experiment_id)
         attempts = self._reader.list_experiment_attempts(experiment_id)
+        claim = self._reader.get_holdout_claim_for_experiment(experiment_id)
+        holdout_claim = persisted_holdout_history(
+            claim,
+            () if claim is None else self._reader.list_status_events(experiment_id),
+        )
         return ExperimentSchedulerSnapshot(
             projection=projection,
             launch_spec=launch_spec,
             folds=folds,
             attempts=attempts,
+            holdout_claim=holdout_claim,
+        )
+
+    def claim_holdout_candidate(
+        self,
+        request: HoldoutClaimPersistenceRequest,
+        *,
+        lease: SchedulerLease | None,
+        now_epoch_us: int | None,
+    ) -> PersistedHoldoutClaim:
+        receipt = self._writer.claim_holdout_candidate(
+            HoldoutClaimAuthorityCommand(
+                experiment_id=ExperimentId(request.experiment_id),
+                candidate_id=CandidateId(request.candidate_id),
+                expected_revision=request.expected_revision,
+                expected_selection_evidence_hash=ContentHash(
+                    request.expected_selection_evidence_hash
+                ),
+                operator_confirmation=request.operator_confirmation,
+                selection_reason=HoldoutSelectionReason(
+                    request.selection_reason_code,
+                    request.selection_reason_summary,
+                ),
+                resolved_reproduction_fingerprint=(
+                    None
+                    if request.resolved_reproduction_fingerprint is None
+                    else ContentHash(request.resolved_reproduction_fingerprint)
+                ),
+                occurred_at=request.occurred_at,
+            ),
+            lease_fence=None if lease is None else lease.fence,
+            now_epoch_us=now_epoch_us,
+        )
+        return persisted_holdout_claim(
+            receipt.claim,
+            experiment_revision=receipt.experiment_revision,
+            event_id=receipt.event_id,
         )
 
     def transition_to_running(
@@ -585,7 +635,7 @@ class ExperimentSchedulerStore:
                 lease_fence=lease.fence,
                 now_epoch_us=now_epoch_us,
                 occurred_at=occurred_at,
-                reason_code=_attempt_reason(target_status, failure_code),
+                reason_code=attempt_reason(target_status, failure_code),
                 detail={},
             )
         except AnalysisError:
@@ -681,7 +731,7 @@ class ExperimentSchedulerStore:
             lease_fence=lease.fence,
             now_epoch_us=now_epoch_us,
             occurred_at=occurred_at,
-            reason_code=reason_code or _fold_reason(target_status, failure_code),
+            reason_code=reason_code or fold_reason(target_status, failure_code),
             detail={},
         )
         return FoldView(fold.spec, projection)
@@ -748,29 +798,3 @@ class ExperimentSchedulerStore:
             detail={"requested_by": lease.owner_token},
         )
         return FoldView(fold.spec, projection)
-
-
-def _attempt_reason(
-    status: ExperimentStatus,
-    failure_code: ExperimentFailureCode | None,
-) -> str:
-    if status is ExperimentStatus.RUNNING:
-        return "first_attempt_started"
-    if status is ExperimentStatus.COMPLETED:
-        return "first_attempt_completed"
-    if failure_code is ExperimentFailureCode.CANDIDATE_FAILED:
-        return "candidate_attempt_failed"
-    return "system_attempt_failed"
-
-
-def _fold_reason(
-    status: ExperimentStatus,
-    failure_code: ExperimentFailureCode | None,
-) -> str:
-    if status is ExperimentStatus.COMPLETED:
-        return "fold_completed"
-    if status is ExperimentStatus.CANCELLED:
-        return "candidate_isolated_after_failure"
-    if failure_code is ExperimentFailureCode.CANDIDATE_FAILED:
-        return "candidate_fold_failed"
-    return "system_fold_failed"

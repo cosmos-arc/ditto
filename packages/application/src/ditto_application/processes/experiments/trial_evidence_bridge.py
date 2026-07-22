@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping
+from dataclasses import InitVar, dataclass
 from datetime import date
 from statistics import fmean
 from typing import NoReturn, cast
@@ -12,6 +13,7 @@ from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments import (
     R3_RESEARCH_METRIC_SCHEMA,
     CandidateExecutionBinding,
+    CandidateId,
     ContentHash,
     ExperimentId,
     ExperimentLaunchSpec,
@@ -26,7 +28,10 @@ from ditto_analysis.experiments.trial_family import (
     LogicalTrialIdentity,
     TrialKind,
 )
-from ditto_analysis.experiments.trial_ledger import trial_outcome_content_hash
+from ditto_analysis.experiments.trial_ledger import (
+    TrialLedger,
+    trial_outcome_content_hash,
+)
 from ditto_analysis.experiments.trial_outcomes import (
     MetricEvidenceLineage,
     TrialOutcome,
@@ -53,16 +58,105 @@ from ditto_application.processes.experiments.walk_forward import (
     WalkForwardCandidate,
 )
 
-__all__ = ["project_walk_forward_trial_outcomes"]
+__all__ = [
+    "VerifiedPreHoldoutSelectionEvidence",
+    "project_walk_forward_trial_outcomes",
+    "verify_pre_holdout_selection_evidence",
+]
 
 _TRADING_DAYS_PER_YEAR = 252
 _MIN_SHARPE_OBSERVATIONS = 2
+_VERIFIED_SELECTION_FACTORY_TOKEN = object()
 
 
 def _bridge_error(reason: str, **details: object) -> NoReturn:
     raise AppProcessError(
         "walk-forward trial evidence bridge is invalid",
         details={"code": "SPEC_INVALID", "reason": reason, **details},
+    )
+
+
+def _selection_evidence_error(reason: str, **details: object) -> NoReturn:
+    raise AppProcessError(
+        "pre-holdout selection evidence is invalid",
+        details={"code": "SPEC_INVALID", "reason": reason, **details},
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedPreHoldoutSelectionEvidence:
+    """Factory-sealed proof that selection used untouched pre-holdout evidence."""
+
+    experiment_id: ExperimentId
+    candidate_id: CandidateId
+    content_hash: ContentHash
+    _factory_token: InitVar[object | None] = None
+
+    def __post_init__(self, _factory_token: object | None) -> None:
+        """Prevent callers from minting verified selection evidence."""
+        if (
+            _factory_token is not _VERIFIED_SELECTION_FACTORY_TOKEN
+            or type(self.experiment_id) is not ExperimentId
+            or type(self.candidate_id) is not CandidateId
+            or type(self.content_hash) is not ContentHash
+        ):
+            _selection_evidence_error("selection_evidence_factory_required")
+
+
+def verify_pre_holdout_selection_evidence(
+    ledger: object,
+    *,
+    experiment_id: ExperimentId,
+    candidate_id: CandidateId,
+    expected_content_hash: ContentHash,
+) -> VerifiedPreHoldoutSelectionEvidence:
+    """Verify one ranked current candidate before any holdout evidence exists."""
+    if (
+        type(ledger) is not TrialLedger
+        or type(experiment_id) is not ExperimentId
+        or type(candidate_id) is not CandidateId
+        or type(expected_content_hash) is not ContentHash
+    ):
+        _selection_evidence_error("invalid_selection_evidence_contract")
+    typed_ledger = ledger
+    try:
+        observed_content_hash = typed_ledger.content_hash
+    except AnalysisError:
+        _selection_evidence_error("invalid_selection_evidence_ledger")
+    if observed_content_hash != expected_content_hash:
+        _selection_evidence_error(
+            "selection_evidence_hash_mismatch",
+            expected_content_hash=str(expected_content_hash),
+            observed_content_hash=str(observed_content_hash),
+        )
+
+    current_trials = tuple(
+        trial for trial in typed_ledger.trials if trial.trial.kind is TrialKind.CURRENT
+    )
+    if not current_trials or any(
+        trial.trial.origin_experiment_id != experiment_id for trial in current_trials
+    ):
+        _selection_evidence_error("selection_evidence_experiment_mismatch")
+    if any(
+        trial.holdout_metrics or trial.holdout_metric_evidence
+        for trial in current_trials
+    ):
+        _selection_evidence_error("selection_evidence_holdout_already_consumed")
+
+    selected = tuple(
+        trial for trial in current_trials if trial.candidate_id == candidate_id
+    )
+    if (
+        len(selected) != 1
+        or selected[0].status is not TrialStatus.COMPLETED
+        or selected[0].trial not in typed_ledger.ranked_trial_ids
+    ):
+        _selection_evidence_error("selection_evidence_candidate_not_ranked")
+    return VerifiedPreHoldoutSelectionEvidence(
+        experiment_id,
+        candidate_id,
+        observed_content_hash,
+        _factory_token=_VERIFIED_SELECTION_FACTORY_TOKEN,
     )
 
 

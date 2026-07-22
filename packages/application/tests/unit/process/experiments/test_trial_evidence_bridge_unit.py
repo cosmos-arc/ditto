@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from typing import cast
 
@@ -53,6 +54,7 @@ from ditto_analysis.experiments.trial_ledger import (
     SamplingReturnUnit,
     TrialOutcome,
     TrialStatus,
+    build_trial_ledger,
     partition_observation_date_grid_hash,
     trial_outcome_content_hash,
 )
@@ -76,6 +78,7 @@ from ditto_application.processes.experiments.execution_contracts import (
 )
 from ditto_application.processes.experiments.trial_evidence_bridge import (
     project_walk_forward_trial_outcomes,
+    verify_pre_holdout_selection_evidence,
 )
 from ditto_application.processes.experiments.walk_forward import (
     WalkForwardAggregation,
@@ -630,3 +633,77 @@ def test_bridge_emits_no_current_pbo_sampling_without_a_preregistered_plan() -> 
     outcomes = project_walk_forward_trial_outcomes(_launch(), aggregation)
 
     assert all(outcome.pbo_sampling is None for outcome in outcomes)
+
+
+def test_pre_holdout_selection_verifier_accepts_ranked_completed_current_trial() -> (
+    None
+):
+    launch = _launch()
+    outcomes = project_walk_forward_trial_outcomes(
+        launch,
+        _aggregation_with_typed_metrics(),
+    )
+    ledger = build_trial_ledger(launch.promotion_objective, outcomes)
+    selected = ledger.ranked_candidate_ids[0]
+
+    verified = verify_pre_holdout_selection_evidence(
+        ledger,
+        experiment_id=EXPERIMENT_ID,
+        candidate_id=selected,
+        expected_content_hash=ledger.content_hash,
+    )
+
+    assert verified.experiment_id == EXPERIMENT_ID
+    assert verified.candidate_id == selected
+    assert verified.content_hash == ledger.content_hash
+
+
+def test_pre_holdout_selection_verifier_rejects_drift() -> None:
+    launch = _launch()
+    outcomes = project_walk_forward_trial_outcomes(
+        launch,
+        _aggregation_with_typed_metrics(),
+    )
+    ledger = build_trial_ledger(launch.promotion_objective, outcomes)
+    selected = ledger.ranked_candidate_ids[0]
+
+    with pytest.raises(AppProcessError, match="selection evidence"):
+        verify_pre_holdout_selection_evidence(
+            ledger,
+            experiment_id=EXPERIMENT_ID,
+            candidate_id=selected,
+            expected_content_hash=ContentHash("0" * 64),
+        )
+    with pytest.raises(AppProcessError, match="selection evidence"):
+        verify_pre_holdout_selection_evidence(
+            ledger,
+            experiment_id=ExperimentId("experiment-substituted"),
+            candidate_id=selected,
+            expected_content_hash=ledger.content_hash,
+        )
+    with pytest.raises(AppProcessError, match="selection evidence"):
+        verify_pre_holdout_selection_evidence(
+            ledger,
+            experiment_id=EXPERIMENT_ID,
+            candidate_id=CandidateId("candidate-unranked"),
+            expected_content_hash=ledger.content_hash,
+        )
+
+    alpha = outcomes[1]
+    metric_id = ResearchMetricId.NET_RETURN
+    contaminated = replace(
+        alpha,
+        holdout_metrics={metric_id: alpha.metrics[metric_id]},
+        holdout_metric_evidence={metric_id: alpha.metric_evidence[metric_id]},
+    )
+    contaminated_ledger = build_trial_ledger(
+        launch.promotion_objective,
+        (outcomes[0], contaminated),
+    )
+    with pytest.raises(AppProcessError, match="selection evidence"):
+        verify_pre_holdout_selection_evidence(
+            contaminated_ledger,
+            experiment_id=EXPERIMENT_ID,
+            candidate_id=selected,
+            expected_content_hash=contaminated_ledger.content_hash,
+        )

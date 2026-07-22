@@ -132,6 +132,11 @@ class ExperimentRecoveryOrchestrator:
         fold = _find_fold(snapshot, key)
         if fold.projection.revision != expected_revision:
             raise scheduler_error("SPEC_INVALID", "stale_fold_revision")
+        if fold.projection.status is not ExperimentStatus.FAILED:
+            raise scheduler_error(
+                "SPEC_INVALID",
+                "terminal_fold_retry_requires_failed_fold",
+            )
         parent = _latest_attempt(snapshot, key)
         self._store.retry_terminal_fold(
             fold,

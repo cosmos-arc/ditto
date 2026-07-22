@@ -48,7 +48,6 @@ from ditto_analysis.storage.sqlite.experiments.database import (
 _NEXT_RUNNING_STAGE = {
     ExperimentStage.EXPLORATION: ExperimentStage.WALK_FORWARD,
     ExperimentStage.WALK_FORWARD: ExperimentStage.CANDIDATE_SELECTION,
-    ExperimentStage.CANDIDATE_SELECTION: ExperimentStage.HOLDOUT,
     ExperimentStage.HOLDOUT: ExperimentStage.EVIDENCE,
 }
 

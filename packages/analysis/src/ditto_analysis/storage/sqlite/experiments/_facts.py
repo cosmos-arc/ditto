@@ -20,7 +20,6 @@ from ditto_analysis.experiments._validation import require_utc_datetime
 from ditto_analysis.experiments.persistence import (
     ArtifactRecord,
     GateEvaluationRecord,
-    HoldoutClaimRecord,
     LeaseFence,
     canonical_payload,
     validate_artifact_relative_path,
@@ -64,7 +63,7 @@ def _conflict(message: str, reason_code: str) -> ExperimentConflictError:
 
 
 class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
-    """Persist immutable artifacts, gates, and one-shot holdout claims."""
+    """Persist immutable artifacts and gate evaluations."""
 
     _reader: SQLiteExperimentReader
 
@@ -264,84 +263,4 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
             raise _persistence_error(
                 "gate evaluation insert failed",
                 "gate_evaluation_insert_failed",
-            ) from exc
-
-    def claim_holdout(self, record: HoldoutClaimRecord) -> HoldoutClaimRecord:
-        reason_payload = canonical_payload(record.selection_reason)
-        values = (
-            record.claim_id,
-            record.cycle.cycle_id,
-            str(record.cycle.cycle_hash),
-            str(record.fold_key.experiment_id),
-            str(record.fold_key.candidate_id),
-            str(record.fold_key.fold_id),
-            "holdout",
-            str(record.resolved_spec_hash),
-            str(record.parameters_hash),
-            str(record.snapshot_id),
-            record.window.start.isoformat(),
-            record.window.end.isoformat(),
-            str(record.reproduction_fingerprint),
-            record.logical_run_id,
-            record.operator_confirmation,
-            reason_payload.json_bytes.decode("utf-8"),
-            str(record.claim_payload_hash),
-            _epoch_us(record.claimed_at),
-        )
-        connection = self._database.get_connection()
-        try:
-            connection.execute("BEGIN IMMEDIATE")
-            existing = connection.execute(
-                """
-                SELECT * FROM holdout_claim
-                WHERE claim_id=? OR research_cycle_id=? OR research_cycle_hash=?
-                   OR experiment_id=? OR logical_run_id=?
-                   OR (experiment_id=? AND candidate_id=? AND fold_id=?)
-                LIMIT 1
-                """,
-                (
-                    record.claim_id,
-                    record.cycle.cycle_id,
-                    str(record.cycle.cycle_hash),
-                    str(record.fold_key.experiment_id),
-                    record.logical_run_id,
-                    str(record.fold_key.experiment_id),
-                    str(record.fold_key.candidate_id),
-                    str(record.fold_key.fold_id),
-                ),
-            ).fetchone()
-            if existing is not None:
-                if tuple(existing) != values:
-                    raise _conflict(
-                        "holdout claim uniqueness drift", "holdout_claim_replay_drift"
-                    )
-                connection.commit()
-                return record
-            connection.execute(
-                """
-                INSERT INTO holdout_claim(
-                    claim_id, research_cycle_id, research_cycle_hash, experiment_id,
-                    candidate_id, fold_id, fold_role, resolved_spec_hash,
-                    parameters_hash,
-                    snapshot_id, window_start, window_end, reproduction_fingerprint,
-                    logical_run_id, operator_confirmation, selection_reason_json,
-                    claim_payload_hash, claimed_at_epoch_us
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                values,
-            )
-            connection.commit()
-            return record
-        except ExperimentConflictError:
-            connection.rollback()
-            raise
-        except sqlite3.IntegrityError as exc:
-            connection.rollback()
-            raise _integrity(
-                "holdout claim lineage is invalid", "invalid_holdout_lineage"
-            ) from exc
-        except sqlite3.Error as exc:
-            connection.rollback()
-            raise _persistence_error(
-                "holdout claim failed", "holdout_claim_failed"
             ) from exc

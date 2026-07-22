@@ -22,6 +22,7 @@ from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
     CheckpointRef,
+    ContentHash,
     ExperimentDesiredState,
     ExperimentFailureCode,
     ExperimentId,
@@ -34,6 +35,9 @@ from ditto_analysis.experiments.persistence import (
     FoldKey,
     FoldProjection,
     LeaseFence,
+)
+from ditto_analysis.storage.sqlite.experiments._holdout_authority import (
+    validate_holdout_work_authority,
 )
 from ditto_analysis.storage.sqlite.experiments._work_rules import (
     validate_attempt_fold_owner,
@@ -141,6 +145,11 @@ class SQLiteAtomicDispatchMixin:
                 raise _integrity("fold does not exist", "fold_not_found")
             if fold["revision"] != expected_fold_revision:
                 raise _conflict("fold revision is stale", "stale_projection_revision")
+            validate_holdout_work_authority(
+                connection,
+                key,
+                spec.reproduction_fingerprint,
+            )
             self._validate_dispatch_attempt_lineage(connection, key, spec)
             previous_status = ExperimentStatus(fold["status"])
             validate_fold_transition(
@@ -639,6 +648,11 @@ class SQLiteAtomicDispatchMixin:
                 expected_fold_revision=expected_fold_revision,
                 expected_attempt_revision=expected_attempt_revision,
                 current_owner_token=lease_fence.owner_token,
+            )
+            validate_holdout_work_authority(
+                connection,
+                key,
+                ContentHash(attempt["reproduction_fingerprint"]),
             )
             previous_attempt_status = ExperimentStatus(attempt["status"])
             previous_fold_status = ExperimentStatus(fold["status"])

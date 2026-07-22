@@ -20,6 +20,7 @@ from ditto_analysis.errors import (
 from ditto_analysis.experiments._validation import require_utc_datetime
 from ditto_analysis.experiments.models import (
     AttemptId,
+    ContentHash,
     ExperimentDesiredState,
     ExperimentFailureCode,
     ExperimentId,
@@ -27,6 +28,9 @@ from ditto_analysis.experiments.models import (
     ExperimentStatus,
 )
 from ditto_analysis.experiments.persistence import FoldKey, FoldProjection, LeaseFence
+from ditto_analysis.storage.sqlite.experiments._holdout_authority import (
+    validate_holdout_work_authority,
+)
 from ditto_analysis.storage.sqlite.experiments._work_rules import (
     validate_terminal_fold_retry_experiment,
     validate_terminal_fold_retry_parent,
@@ -261,12 +265,17 @@ class SQLiteTerminalFoldRetryMixin:
                 key,
                 expected_fold_revision,
             )
-            self._load_terminal_retry_parent(
+            parent = self._load_terminal_retry_parent(
                 connection,
                 key,
                 parent_attempt_id,
                 expected_parent_attempt_revision=expected_parent_attempt_revision,
                 fold_failure_code=fold_failure_code,
+            )
+            validate_holdout_work_authority(
+                connection,
+                key,
+                ContentHash(parent["reproduction_fingerprint"]),
             )
             occurred_at_epoch_us = _epoch_us(occurred_at)
             new_revision = expected_fold_revision + 1
