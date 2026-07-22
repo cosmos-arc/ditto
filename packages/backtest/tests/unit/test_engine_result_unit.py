@@ -3,18 +3,30 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from types import MappingProxyType
 
+import orjson
 import pytest
 from ditto_backtest import result as result_module
+from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 from ditto_backtest.manifest_types import RunManifest, RunMode
 from ditto_backtest.result import EngineResult, EngineResultBuilder
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.trade_builder import (
+    FifoOpenEntrySnapshot,
+    FlatToFlatAccumulatorSnapshot,
+    TradeBuilderStateSnapshot,
+    TradeMatchingMethod,
+)
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting import AccountView, CashBook, FillEvent
+from ditto_strategy.alpha.context import StrategyContextSnapshot
+from ditto_strategy.alpha.models import TargetPortfolio
 
 IID_1 = InstrumentId(1)
 
@@ -24,10 +36,10 @@ def _checkpoint_cls() -> type:
     return result_module.BacktestCheckpoint
 
 
-def _sample_order() -> Order:
+def _sample_order(client_order_id: str = "ord-1") -> Order:
     """创建最小 Order 用于测试。"""
     return Order(
-        client_id=ClientOrderId(value="ord-1"),
+        client_id=ClientOrderId(value=client_order_id),
         instrument_id=IID_1,
         order_type=OrderType.MARKET,
         direction=OrderSide.BUY,
@@ -61,6 +73,115 @@ def _sample_account_view() -> AccountView:
         nav=1_000_000.0,
         exposure=0.0,
     )
+
+
+def _complete_audit_state_payload() -> dict[str, object]:
+    """Build one canonical audit tree containing every typed record level."""
+    return {
+        "closed_trades": [
+            {
+                "direction": "buy",
+                "entry_date": "2026-03-01",
+                "entry_order_ids": ["order-1"],
+                "entry_price": 10.0,
+                "exit_date": "2026-03-02",
+                "exit_order_ids": ["order-2"],
+                "exit_price": 11.0,
+                "fees": 2.0,
+                "gross_pnl": 100.0,
+                "holding_days": 1,
+                "instrument_id": 1,
+                "net_pnl": 98.0,
+                "quantity": 100,
+                "return_pct": 0.098,
+                "trade_id": "trade-1",
+            }
+        ],
+        "daily_snapshots": [
+            {
+                "account": {
+                    "cash_available": 1_000.0,
+                    "cash_frozen": 0.0,
+                    "cash_settled": 1_000.0,
+                    "exposure": 0.5,
+                    "nav": 2_000.0,
+                    "positions": [
+                        {
+                            "available_quantity": 100,
+                            "average_cost": 10.0,
+                            "instrument_id": 1,
+                            "market_value": 1_000.0,
+                            "quantity": 100,
+                            "realized_pnl": 0.0,
+                            "total_fees": 1.0,
+                            "unrealized_pnl": 0.0,
+                        }
+                    ],
+                    "total_value": 2_000.0,
+                },
+                "trade_date": "2026-03-01",
+            }
+        ],
+        "fills": [
+            {
+                "correlation_id": None,
+                "cumulative_quantity": 100,
+                "direction": "buy",
+                "event_time": "2026-03-01T00:00:00+00:00",
+                "fee": 1.0,
+                "fill_id": "fill-1",
+                "fill_price": 10.0,
+                "filled_quantity": 100,
+                "instrument_id": 1,
+                "leaves_quantity": 0,
+                "order_id": "order-1",
+                "slippage": 0.0,
+            }
+        ],
+        "pre_trade_log": [
+            {
+                "check_sequence": ["lot_size"],
+                "decision": "accepted",
+                "direction": "buy",
+                "final_quantity": 100,
+                "instrument_id": 1,
+                "order_id": "order-1",
+                "original_quantity": 100,
+                "reason": None,
+                "trade_date": "2026-03-01",
+            }
+        ],
+        "risk_log": [
+            {
+                "action_taken": "alert",
+                "current_value": 0.5,
+                "detail": "exposure warning",
+                "instrument_id": 1,
+                "rule_id": "exposure",
+                "scope": "instrument",
+                "severity": "warning",
+                "threshold": 0.4,
+                "trade_date": "2026-03-01",
+            }
+        ],
+    }
+
+
+def _nested_mapping(
+    payload: object,
+    path: tuple[str | int, ...],
+) -> dict[str, object]:
+    """Resolve a typed test path and return its mapping target."""
+    current = payload
+    for component in path:
+        if isinstance(component, str):
+            assert isinstance(current, dict)
+            current = current[component]
+        else:
+            assert isinstance(current, list)
+            current = current[component]
+    assert isinstance(current, dict)
+    return current
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +307,405 @@ class TestBacktestCheckpoint:
         )
 
         assert restored.state_hash == snapshot.state_hash
+
+    def test_runtime_state_round_trip_preserves_deterministic_resume_state(
+        self,
+    ) -> None:
+        """Runtime JSON must carry every cross-day state owner needed by resume."""
+        trade_builder_state = TradeBuilderStateSnapshot(
+            method=TradeMatchingMethod.FIFO,
+            counter=7,
+            fifo_open_entries=(
+                FifoOpenEntrySnapshot(
+                    trade_id="trade-7",
+                    instrument_id=IID_1,
+                    direction=OrderSide.BUY,
+                    entry_date=date(2026, 3, 1),
+                    entry_price=10.0,
+                    entry_fee=5.0,
+                    original_quantity=200,
+                    remaining_quantity=100,
+                    entry_order_id="plan-order-8",
+                ),
+            ),
+        )
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                strategy_context=StrategyContextSnapshot(
+                    risk_locked_instruments={
+                        IID_1: ("single-loss", "2026-03-10"),
+                    },
+                    positions={IID_1: 10.25},
+                ),
+                planner_id_counter=9,
+                brokerage_fill_counter=4,
+                trade_builder_state=trade_builder_state,
+            )
+        )
+
+        restored = result_module.BacktestRuntimeStateSnapshot.from_json(
+            snapshot.to_json(),
+        )
+
+        assert restored == snapshot
+        assert restored.to_strategy_context_snapshot() == StrategyContextSnapshot(
+            risk_locked_instruments={IID_1: ("single-loss", "2026-03-10")},
+            positions={IID_1: 10.25},
+        )
+        assert restored.state_hash == snapshot.state_hash
+
+    def test_runtime_state_legacy_json_uses_safe_defaults(self) -> None:
+        """V1 payloads without deterministic-resume fields remain readable."""
+        legacy_json = '{"delayed_signals":[],"pending_orders":[]}'
+
+        restored = result_module.BacktestRuntimeStateSnapshot.from_json(legacy_json)
+
+        assert restored.runtime_state_version is None
+        assert restored.is_exact_resume_state is False
+        assert restored.planner_id_counter == 0
+        assert restored.brokerage_fill_counter == 0
+        assert restored.trade_builder_state is None
+        assert restored.to_strategy_context_snapshot() == StrategyContextSnapshot(
+            risk_locked_instruments={},
+            positions={},
+        )
+        assert restored.to_json() == legacy_json
+
+    def test_runtime_state_from_live_state_attests_complete_v2_payload(self) -> None:
+        """Only a live capture may attest all result-determining V2 fields."""
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                trade_builder_state=TradeBuilderStateSnapshot(
+                    method=TradeMatchingMethod.FIFO,
+                    counter=0,
+                ),
+                rebalance_calendar_start="2026-03-01",
+                audit_state_json=(
+                    '{"closed_trades":[],"daily_snapshots":[],"fills":[],'
+                    '"pre_trade_log":[],"risk_log":[]}'
+                ),
+            )
+        )
+
+        assert snapshot.runtime_state_version == 2
+        assert snapshot.is_exact_resume_state is True
+        assert '"runtime_state_version":2' in snapshot.to_json()
+        assert (
+            result_module.BacktestRuntimeStateSnapshot.from_json(snapshot.to_json())
+            == snapshot
+        )
+
+    def test_v2_runtime_requires_nullable_pending_order_fields(self) -> None:
+        """V2 cannot silently default an omitted result-affecting nullable field."""
+        ticket = OrderTicket(
+            order=_sample_order("plan-order-1"),
+            status=OrderStatus.SUBMITTED,
+        )
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                pending_tickets=(ticket,),
+                planner_id_counter=1,
+                trade_builder_state=TradeBuilderStateSnapshot(
+                    method=TradeMatchingMethod.FIFO,
+                    counter=0,
+                ),
+                rebalance_calendar_start="2026-03-01",
+                audit_state_json=ExecutionAuditStateSnapshot().to_json(),
+            )
+        )
+        payload = snapshot.to_payload()
+        pending_orders = payload["pending_orders"]
+        assert isinstance(pending_orders, list)
+        pending = pending_orders[0]
+        assert isinstance(pending, dict)
+        del pending["price"]
+
+        with pytest.raises(ValueError, match="missing required fields"):
+            result_module.BacktestRuntimeStateSnapshot.from_payload(payload)
+
+    def test_v2_runtime_rejects_non_contiguous_delayed_queue(self) -> None:
+        """Delayed queue identity must match its order-sensitive tuple position."""
+        payload = {
+            "audit_state_json": ExecutionAuditStateSnapshot().to_json(),
+            "brokerage_fill_counter": 0,
+            "delayed_signals": [
+                {
+                    "cash_target": 0.0,
+                    "positions": [],
+                    "queue_index": 1,
+                    "run_id": "run-1",
+                    "strategy_id": "strategy-1",
+                    "trade_date": "2026-03-01",
+                }
+            ],
+            "pending_orders": [],
+            "planner_id_counter": 0,
+            "rebalance_calendar_start": "2026-03-01",
+            "runtime_state_version": 2,
+            "strategy_context": {"position_costs": [], "risk_locks": []},
+            "trade_builder_state": {
+                "counter": 0,
+                "fifo_open_entries": [],
+                "method": "fifo",
+            },
+        }
+
+        with pytest.raises(ValueError, match="queue indices must be contiguous"):
+            result_module.BacktestRuntimeStateSnapshot.from_payload(payload)
+
+    @pytest.mark.parametrize(
+        "location",
+        [
+            "root",
+            "pending_order",
+            "delayed_signal",
+            "target_weight",
+            "strategy_context",
+            "risk_lock",
+            "position_cost",
+            "trade_builder",
+            "fifo_entry",
+        ],
+    )
+    def test_v2_runtime_rejects_unknown_fields_at_every_typed_level(
+        self,
+        location: str,
+    ) -> None:
+        """Signed V2 JSON cannot carry ignored data that disappears on decode."""
+        ticket = OrderTicket(
+            order=_sample_order("plan-order-1"),
+            status=OrderStatus.SUBMITTED,
+        )
+        trade_state = TradeBuilderStateSnapshot(
+            method=TradeMatchingMethod.FIFO,
+            counter=1,
+            fifo_open_entries=(
+                FifoOpenEntrySnapshot(
+                    trade_id="trade-1",
+                    instrument_id=IID_1,
+                    direction=OrderSide.BUY,
+                    entry_date=date(2026, 3, 1),
+                    entry_price=10.0,
+                    entry_fee=0.0,
+                    original_quantity=100,
+                    remaining_quantity=100,
+                    entry_order_id="plan-order-1",
+                ),
+            ),
+        )
+        signal = TargetPortfolio(
+            trade_date="2026-03-01",
+            strategy_id="strategy-1",
+            run_id="run-1",
+            positions={IID_1: 0.5},
+            cash_target=0.5,
+        )
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                pending_tickets=(ticket,),
+                delayed_signals=(signal,),
+                strategy_context=StrategyContextSnapshot(
+                    risk_locked_instruments={IID_1: ("cooldown", "2026-03-10")},
+                    positions={IID_1: 10.0},
+                ),
+                planner_id_counter=1,
+                brokerage_fill_counter=1,
+                trade_builder_state=trade_state,
+                rebalance_calendar_start="2026-03-01",
+                audit_state_json=ExecutionAuditStateSnapshot().to_json(),
+            )
+        )
+        payload = snapshot.to_payload()
+        nested: object = payload
+        if location == "pending_order":
+            nested = payload["pending_orders"]
+        elif location in {"delayed_signal", "target_weight"}:
+            nested = payload["delayed_signals"]
+        elif location in {"strategy_context", "risk_lock", "position_cost"}:
+            nested = payload["strategy_context"]
+        elif location in {"trade_builder", "fifo_entry"}:
+            nested = payload["trade_builder_state"]
+        if isinstance(nested, list):
+            nested = nested[0]
+        if location == "target_weight":
+            assert isinstance(nested, dict)
+            nested = nested["positions"]
+            assert isinstance(nested, list)
+            nested = nested[0]
+        elif location == "risk_lock":
+            assert isinstance(nested, dict)
+            nested = nested["risk_locks"]
+            assert isinstance(nested, list)
+            nested = nested[0]
+        elif location == "position_cost":
+            assert isinstance(nested, dict)
+            nested = nested["position_costs"]
+            assert isinstance(nested, list)
+            nested = nested[0]
+        elif location == "fifo_entry":
+            assert isinstance(nested, dict)
+            nested = nested["fifo_open_entries"]
+            assert isinstance(nested, list)
+            nested = nested[0]
+        assert isinstance(nested, dict)
+        nested["unexpected"] = "tampered"
+
+        with pytest.raises(ValueError, match="unexpected fields"):
+            result_module.BacktestRuntimeStateSnapshot.from_payload(payload)
+
+    @pytest.mark.parametrize(
+        ("location", "path"),
+        [
+            ("audit_root", ()),
+            ("fill", ("fills", 0)),
+            ("daily_snapshot", ("daily_snapshots", 0)),
+            ("account", ("daily_snapshots", 0, "account")),
+            ("position", ("daily_snapshots", 0, "account", "positions", 0)),
+            ("closed_trade", ("closed_trades", 0)),
+            ("risk_record", ("risk_log", 0)),
+            ("pre_trade_record", ("pre_trade_log", 0)),
+        ],
+    )
+    def test_v2_runtime_rejects_unknown_audit_fields_at_every_typed_level(
+        self,
+        location: str,
+        path: tuple[str | int, ...],
+    ) -> None:
+        """V2 decode must fail closed before an audit subtree can be hashed."""
+        audit_payload = _complete_audit_state_payload()
+        _nested_mapping(audit_payload, path)["unexpected"] = location
+        audit_state_json = orjson.dumps(
+            audit_payload,
+            option=orjson.OPT_SORT_KEYS,
+        ).decode()
+        direct_snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                trade_builder_state=TradeBuilderStateSnapshot(
+                    method=TradeMatchingMethod.FIFO,
+                    counter=0,
+                ),
+                rebalance_calendar_start="2026-03-01",
+                audit_state_json=audit_state_json,
+            )
+        )
+        payload = {
+            "audit_state_json": audit_state_json,
+            "brokerage_fill_counter": 1,
+            "delayed_signals": [],
+            "pending_orders": [],
+            "planner_id_counter": 0,
+            "rebalance_calendar_start": "2026-03-01",
+            "runtime_state_version": 2,
+            "strategy_context": {"position_costs": [], "risk_locks": []},
+            "trade_builder_state": {
+                "counter": 0,
+                "fifo_open_entries": [],
+                "method": "fifo",
+            },
+        }
+
+        assert direct_snapshot.is_exact_resume_state is False
+        with pytest.raises(ValueError, match="canonical"):
+            result_module.BacktestRuntimeStateSnapshot.from_payload(payload)
+
+    def test_flat_to_flat_runtime_state_round_trip(self) -> None:
+        """Flat-to-flat accumulators retain nullable dates and numeric state."""
+        trade_state = TradeBuilderStateSnapshot(
+            method=TradeMatchingMethod.FLAT_TO_FLAT,
+            counter=3,
+            flat_to_flat_accumulators=(
+                FlatToFlatAccumulatorSnapshot(
+                    instrument_id=IID_1,
+                    entry_order_ids=("plan-order-1",),
+                    exit_order_ids=(),
+                    net_quantity=100,
+                    buy_quantity=100,
+                    buy_total_cost=1_000.0,
+                    buy_fees=5.0,
+                    sell_quantity=0,
+                    sell_total_proceeds=0.0,
+                    sell_fees=0.0,
+                    first_entry_date=date(2026, 3, 1),
+                    last_entry_date=date(2026, 3, 1),
+                    first_exit_date=None,
+                    last_exit_date=None,
+                ),
+            ),
+        )
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                planner_id_counter=1,
+                trade_builder_state=trade_state,
+                rebalance_calendar_start="2026-03-01",
+                audit_state_json=ExecutionAuditStateSnapshot().to_json(),
+            )
+        )
+
+        restored = result_module.BacktestRuntimeStateSnapshot.from_json(
+            snapshot.to_json()
+        )
+
+        assert restored.trade_builder_state == trade_state
+
+    def test_versioned_runtime_rejects_noncanonical_audit_json(self) -> None:
+        """Hash evidence uses the canonical typed audit representation only."""
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                trade_builder_state=TradeBuilderStateSnapshot(
+                    method=TradeMatchingMethod.FIFO,
+                    counter=0,
+                ),
+                rebalance_calendar_start="2026-03-01",
+                audit_state_json='{ "fills": [] }',
+            )
+        )
+
+        assert snapshot.is_exact_resume_state is False
+        with pytest.raises(ValueError, match="runtime state is incomplete"):
+            snapshot.to_json()
+
+    def test_runtime_state_preserves_pending_execution_order(self) -> None:
+        """Checkpoint arrays must preserve OrderBook insertion/execution order."""
+        tickets = tuple(
+            OrderTicket(
+                order=_sample_order(client_order_id),
+                status=OrderStatus.SUBMITTED,
+            )
+            for client_order_id in ("plan-order-9", "plan-order-10")
+        )
+
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(pending_tickets=tickets)
+        )
+
+        assert [item.client_order_id for item in snapshot.pending_orders] == [
+            "plan-order-9",
+            "plan-order-10",
+        ]
+
+    def test_runtime_state_preserves_strategy_context_iteration_order(self) -> None:
+        """Strategy context mappings can feed order-sensitive pipeline code."""
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                strategy_context=StrategyContextSnapshot(
+                    risk_locked_instruments={
+                        InstrumentId(2): ("second", "2026-03-10"),
+                        InstrumentId(1): ("first", "2026-03-10"),
+                    },
+                    positions={InstrumentId(2): 20.0, InstrumentId(1): 10.0},
+                ),
+            )
+        )
+
+        assert [
+            item.instrument_id for item in snapshot.strategy_context.risk_locks
+        ] == [
+            InstrumentId(2),
+            InstrumentId(1),
+        ]
+        assert [
+            item.instrument_id for item in snapshot.strategy_context.position_costs
+        ] == [InstrumentId(2), InstrumentId(1)]
 
 
 # ---------------------------------------------------------------------------

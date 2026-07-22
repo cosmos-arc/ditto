@@ -190,6 +190,24 @@ class TestConnectGetAccount:
 
         assert brokerage.get_settlement_state_snapshot() == snapshot
 
+    def test_fill_counter_snapshot_restore_keeps_fill_ids_unique(self) -> None:
+        """A resumed brokerage must not reuse a parent attempt's fill ID."""
+        brokerage = BacktestBrokerage(account=_account(), order_book=_order_book())
+        brokerage.restore_fill_counter(4)
+        brokerage.place_order(_order())
+
+        fills = brokerage.process_pending(_process_input())
+
+        assert fills[0].fill_id == "fill-5"
+        assert brokerage.snapshot_fill_counter() == 5
+
+    @pytest.mark.parametrize("counter", [-1, True, 1.5])
+    def test_restore_fill_counter_rejects_invalid_values(self, counter: object) -> None:
+        brokerage = BacktestBrokerage(account=_account(), order_book=_order_book())
+
+        with pytest.raises(ValueError, match="counter"):
+            brokerage.restore_fill_counter(counter)  # type: ignore[arg-type]
+
 
 # ---------------------------------------------------------------------------
 # mark-to-market

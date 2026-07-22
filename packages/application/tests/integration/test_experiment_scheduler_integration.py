@@ -10,6 +10,7 @@ from ditto_analysis.experiments import (
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
+    CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
     ContentHash,
@@ -30,11 +31,20 @@ from ditto_analysis.experiments import (
     FoldProtocolSpec,
     FoldRole,
     FoldView,
+    LogicalTrialIdentity,
     ResearchCycleIdentity,
+    ResearchMetricDirection,
+    ResearchMetricId,
     SnapshotId,
     StrategyVersion,
+    TrialFamilyDeclaration,
+    TrialKind,
 )
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
+from ditto_analysis.experiments.trial_ledger import (
+    ObjectiveMetric,
+    PromotionObjective,
+)
 from ditto_analysis.storage.sqlite.experiments import (
     ResearchExperimentDatabase,
     SQLiteExperimentReader,
@@ -86,19 +96,52 @@ def _launch(
     *,
     candidate_count: int = 3,
 ) -> ExperimentLaunchSpec:
+    candidates = tuple(
+        CandidateSpec(
+            CandidateId(f"candidate-{ordinal}"),
+            ordinal,
+            ordinal == 1,
+            {"value": ordinal},
+        )
+        for ordinal in range(1, candidate_count + 1)
+    )
     return ExperimentLaunchSpec(
         experiment_id=ExperimentId(experiment_id),
         strategy_version=StrategyVersion("strategy@integration"),
         strategy_spec_hash=ContentHash("a" * 64),
         snapshot_id=SnapshotId("snapshot-integration"),
-        candidates=tuple(
-            CandidateSpec(
-                CandidateId(f"candidate-{ordinal}"),
-                ordinal,
-                ordinal == 1,
-                {"value": ordinal},
+        candidates=candidates,
+        execution_bindings=tuple(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(f"{candidate.ordinal + 16:064x}"),
             )
-            for ordinal in range(1, candidate_count + 1)
+            for candidate in candidates
+        ),
+        promotion_objective=PromotionObjective(
+            ObjectiveMetric(
+                ResearchMetricId.NET_RETURN,
+                ResearchMetricDirection.MAXIMIZE,
+            ),
+            (),
+            (),
+            CandidateId("candidate-1"),
+            "Test durable scheduler behavior.",
+            TrialFamilyDeclaration(
+                "scheduler-test-family",
+                tuple(
+                    LogicalTrialIdentity(
+                        ExperimentId(experiment_id),
+                        candidate.candidate_id,
+                        candidate.ordinal,
+                        candidate.parameter_hash,
+                        TrialKind.CURRENT,
+                    )
+                    for candidate in candidates
+                ),
+            ),
         ),
         fold_protocol=FoldProtocolSpec("r3", 1, ContentHash("b" * 64)),
         seed=42,

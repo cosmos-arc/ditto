@@ -218,6 +218,19 @@ class ExperimentWriterProtocol(Protocol):
         detail: Mapping[str, object],
     ) -> tuple[FoldProjection, AttemptProjection]: ...
 
+    def requeue_failed_fold_for_retry(
+        self,
+        key: FoldKey,
+        parent_attempt_id: AttemptId,
+        *,
+        expected_fold_revision: int,
+        expected_parent_attempt_revision: int,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> FoldProjection: ...
+
     def add_attempt(
         self,
         spec: AttemptPersistenceSpec,

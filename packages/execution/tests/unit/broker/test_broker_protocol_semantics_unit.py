@@ -13,6 +13,8 @@ def test_broker_protocols_have_non_overlapping_documented_responsibilities() -> 
     assert not hasattr(BrokerGateway, "process_pending")
     assert hasattr(Brokerage, "place_order")
     assert hasattr(Brokerage, "process_pending")
+    assert not hasattr(Brokerage, "snapshot_fill_counter")
+    assert not hasattr(Brokerage, "restore_fill_counter")
 
     gateway_docs = "\n".join(
         (

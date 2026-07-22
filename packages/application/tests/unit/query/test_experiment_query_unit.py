@@ -9,6 +9,7 @@ from typing import cast
 import pytest
 from ditto_analysis.errors import ExperimentPersistenceError
 from ditto_analysis.experiments import (
+    CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
     ContentHash,
@@ -32,9 +33,18 @@ from ditto_analysis.experiments import (
     FoldRole,
     FoldView,
     GateEvaluationRecord,
+    LogicalTrialIdentity,
     ResearchCycleIdentity,
+    ResearchMetricDirection,
+    ResearchMetricId,
     SnapshotId,
     StrategyVersion,
+    TrialFamilyDeclaration,
+    TrialKind,
+)
+from ditto_analysis.experiments.trial_ledger import (
+    ObjectiveMetric,
+    PromotionObjective,
 )
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.experiments import ExperimentQueryFacade
@@ -69,6 +79,38 @@ def _aggregate() -> tuple[
         strategy_spec_hash=ContentHash("a" * 64),
         snapshot_id=SnapshotId("snapshot-certified-1"),
         candidates=candidates,
+        execution_bindings=tuple(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(f"{candidate.ordinal + 16:064x}"),
+            )
+            for candidate in candidates
+        ),
+        promotion_objective=PromotionObjective(
+            ObjectiveMetric(
+                ResearchMetricId.NET_RETURN,
+                ResearchMetricDirection.MAXIMIZE,
+            ),
+            (),
+            (),
+            CandidateId("candidate-baseline"),
+            "Test experiment query behavior.",
+            TrialFamilyDeclaration(
+                "query-test-family",
+                tuple(
+                    LogicalTrialIdentity(
+                        experiment_id,
+                        candidate.candidate_id,
+                        candidate.ordinal,
+                        candidate.parameter_hash,
+                        TrialKind.CURRENT,
+                    )
+                    for candidate in candidates
+                ),
+            ),
+        ),
         fold_protocol=FoldProtocolSpec(
             protocol_id="r3-complete-month-walk-forward",
             protocol_version=1,

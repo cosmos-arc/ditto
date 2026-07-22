@@ -22,13 +22,20 @@ from ditto_analysis.experiments.models import (
     SnapshotId,
     StrategyVersion,
 )
+from ditto_analysis.experiments.promotion_models import PromotionObjective
+from ditto_analysis.experiments.promotion_objective import (
+    validate_promotion_objective_graph,
+)
+from ditto_analysis.experiments.trial_family import LogicalTrialIdentity, TrialKind
 
 __all__ = [
+    "CandidateExecutionBinding",
     "CandidateSpec",
     "ExperimentBudget",
     "ExperimentFailurePolicy",
     "ExperimentLaunchSpec",
     "FoldProtocolSpec",
+    "candidate_parameter_hash",
 ]
 
 type FrozenScalar = str | bool | int | float | None
@@ -207,6 +214,38 @@ class CandidateSpec:
             _freeze_mapping(self.parameters, "parameters"),
         )
 
+    @property
+    def parameter_hash(self) -> ContentHash:
+        """Return the canonical content identity of the frozen parameters."""
+        return candidate_parameter_hash(self.parameters)
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateExecutionBinding:
+    """Preflight-frozen runtime identity for one exact launch candidate."""
+
+    candidate_id: CandidateId
+    ordinal: int
+    parameter_hash: ContentHash
+    resolved_spec_hash: ContentHash
+
+    def __post_init__(self) -> None:
+        """Reject nominal or partial runtime identities."""
+        if type(self.candidate_id) is not CandidateId:
+            raise _spec_error(
+                "execution binding candidate_id must be CandidateId",
+                "invalid_candidate_execution_binding",
+            )
+        _positive_int(self.ordinal, "candidate_execution_ordinal")
+        if (
+            type(self.parameter_hash) is not ContentHash
+            or type(self.resolved_spec_hash) is not ContentHash
+        ):
+            raise _spec_error(
+                "execution binding requires exact parameter and resolved spec hashes",
+                "invalid_candidate_execution_binding",
+            )
+
 
 @dataclass(frozen=True, slots=True)
 class FoldProtocolSpec:
@@ -273,6 +312,25 @@ def _freeze_candidates(value: object) -> tuple[CandidateSpec, ...]:
     return cast("tuple[CandidateSpec, ...]", candidates)
 
 
+def _freeze_execution_bindings(
+    value: object,
+) -> tuple[CandidateExecutionBinding, ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        raise _spec_error(
+            "execution_bindings must be an ordered finite Sequence",
+            "invalid_candidate_execution_bindings",
+        )
+    bindings = tuple(cast("Sequence[object]", value))
+    if not bindings or any(
+        type(item) is not CandidateExecutionBinding for item in bindings
+    ):
+        raise _spec_error(
+            "execution_bindings must contain exact typed bindings",
+            "invalid_candidate_execution_bindings",
+        )
+    return cast("tuple[CandidateExecutionBinding, ...]", bindings)
+
+
 def _canonical_parameter_value(value: FrozenValue) -> object:
     if isinstance(value, Mapping):
         return {
@@ -283,7 +341,10 @@ def _canonical_parameter_value(value: FrozenValue) -> object:
     return value
 
 
-def _parameter_hash(parameters: Mapping[str, FrozenValue]) -> str:
+def candidate_parameter_hash(
+    parameters: Mapping[str, FrozenValue],
+) -> ContentHash:
+    """Hash one frozen candidate parameter mapping canonically."""
     payload = json.dumps(
         _canonical_parameter_value(parameters),
         ensure_ascii=False,
@@ -291,7 +352,40 @@ def _parameter_hash(parameters: Mapping[str, FrozenValue]) -> str:
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+    return ContentHash(hashlib.sha256(payload).hexdigest())
+
+
+def _promotion_objective_for_family(
+    value: object,
+    *,
+    experiment_id: ExperimentId,
+    baseline_candidate_id: CandidateId,
+    candidates: tuple[CandidateSpec, ...],
+) -> PromotionObjective:
+    objective = validate_promotion_objective_graph(value)
+    if objective.baseline_candidate_id != baseline_candidate_id:
+        raise _spec_error(
+            "promotion objective must bind the explicit baseline candidate",
+            "promotion_baseline_candidate_mismatch",
+        )
+    expected_current = tuple(
+        LogicalTrialIdentity(
+            origin_experiment_id=experiment_id,
+            candidate_id=candidate.candidate_id,
+            ordinal=candidate.ordinal,
+            parameter_hash=candidate.parameter_hash,
+            kind=TrialKind.CURRENT,
+        )
+        for candidate in candidates
+    )
+    if objective.trial_family.current_members != expected_current:
+        raise _spec_error(
+            "promotion objective current family must equal executable candidates",
+            "promotion_current_trial_family_mismatch",
+            declared_current_trial_count=len(objective.trial_family.current_members),
+            candidate_count=len(candidates),
+        )
+    return objective
 
 
 @dataclass(frozen=True, slots=True)
@@ -303,6 +397,8 @@ class ExperimentLaunchSpec:
     strategy_spec_hash: ContentHash
     snapshot_id: SnapshotId
     candidates: Sequence[CandidateSpec]
+    execution_bindings: Sequence[CandidateExecutionBinding]
+    promotion_objective: PromotionObjective
     fold_protocol: FoldProtocolSpec
     seed: int
     worker_count: int
@@ -311,7 +407,7 @@ class ExperimentLaunchSpec:
     desired_state: ExperimentDesiredState
     created_at: datetime
 
-    def __post_init__(self) -> None:  # noqa: C901 - complete aggregate invariant gate
+    def __post_init__(self) -> None:  # noqa: C901, PLR0912 - aggregate invariant gate
         """Validate and defensively freeze all deterministic launch semantics."""
         typed_fields = (
             (self.experiment_id, ExperimentId, "experiment_id"),
@@ -352,6 +448,8 @@ class ExperimentLaunchSpec:
 
         candidates = _freeze_candidates(self.candidates)
         object.__setattr__(self, "candidates", candidates)
+        execution_bindings = _freeze_execution_bindings(self.execution_bindings)
+        object.__setattr__(self, "execution_bindings", execution_bindings)
         ordinals = tuple(candidate.ordinal for candidate in candidates)
         if ordinals != tuple(range(1, len(candidates) + 1)):
             raise _spec_error(
@@ -365,9 +463,26 @@ class ExperimentLaunchSpec:
                 "candidate identities must be unique within an experiment",
                 "duplicate_candidate_identity",
             )
-        parameter_hashes = tuple(
-            _parameter_hash(candidate.parameters) for candidate in candidates
+        expected_binding_keys = tuple(
+            (candidate.candidate_id, candidate.ordinal) for candidate in candidates
         )
+        observed_binding_keys = tuple(
+            (binding.candidate_id, binding.ordinal) for binding in execution_bindings
+        )
+        if observed_binding_keys != expected_binding_keys:
+            raise _spec_error(
+                "execution bindings must exactly match launch candidate order",
+                "candidate_execution_binding_mismatch",
+            )
+        if any(
+            binding.parameter_hash != candidate.parameter_hash
+            for candidate, binding in zip(candidates, execution_bindings, strict=True)
+        ):
+            raise _spec_error(
+                "execution binding parameter hash must equal candidate parameters",
+                "candidate_execution_parameter_hash_mismatch",
+            )
+        parameter_hashes = tuple(candidate.parameter_hash for candidate in candidates)
         if len(set(parameter_hashes)) != len(parameter_hashes):
             raise _spec_error(
                 "candidate parameter sets must be semantically unique",
@@ -386,6 +501,7 @@ class ExperimentLaunchSpec:
                 "only one baseline candidate is allowed",
                 "multiple_baseline_candidates",
             )
+        baseline = next(candidate for candidate in candidates if candidate.is_baseline)
         if (
             len(candidates) > _MAX_CANDIDATES
             or len(candidates) > self.budget.candidate_limit
@@ -396,6 +512,16 @@ class ExperimentLaunchSpec:
                 candidate_count=len(candidates),
                 candidate_limit=self.budget.candidate_limit,
             )
+        object.__setattr__(
+            self,
+            "promotion_objective",
+            _promotion_objective_for_family(
+                self.promotion_objective,
+                experiment_id=self.experiment_id,
+                baseline_candidate_id=baseline.candidate_id,
+                candidates=candidates,
+            ),
+        )
 
     @property
     def candidate_count(self) -> int:

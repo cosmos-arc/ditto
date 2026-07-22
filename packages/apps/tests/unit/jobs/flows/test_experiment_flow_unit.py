@@ -221,7 +221,7 @@ def _worker_result(
         reproduction_fingerprint=dispatch.attempt.spec.reproduction_fingerprint,
         state=state,
         failure_code=failure_code,
-        error_type=None if state is ResearchWorkerState.COMPLETED else "RuntimeError",
+        error_type=None if failure_code is None else "RuntimeError",
     )
 
 
@@ -574,6 +574,8 @@ def test_flow_rejects_worker_result_identity_or_failure_pair_drift(
     ("state", "failure_code"),
     [
         (ResearchWorkerState.COMPLETED, None),
+        (ResearchWorkerState.PAUSED, None),
+        (ResearchWorkerState.CANCELLED, None),
         (
             ResearchWorkerState.CANDIDATE_FAILED,
             ExperimentFailureCode.CANDIDATE_FAILED,
@@ -619,9 +621,7 @@ def test_flow_accepts_exact_worker_state_failure_code_pairs(
             "reproduction_fingerprint": "a" * 64,
             "state": state.value,
             "failure_code": None if failure_code is None else failure_code.value,
-            "error_type": (
-                None if state is ResearchWorkerState.COMPLETED else "RuntimeError"
-            ),
+            "error_type": None if failure_code is None else "RuntimeError",
         }
     ]
 

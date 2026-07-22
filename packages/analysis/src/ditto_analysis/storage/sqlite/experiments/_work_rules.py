@@ -36,6 +36,12 @@ _ATTEMPT_TRANSITIONS = frozenset(
         (ExperimentStatus.RUNNING, ExperimentStatus.FAILED),
     }
 )
+_RETRYABLE_TERMINAL_FAILURE_CODES = frozenset(
+    {
+        ExperimentFailureCode.LEASE_LOST,
+        ExperimentFailureCode.SYSTEM_ERROR,
+    }
+)
 
 
 def find_experiment_live_child(
@@ -161,6 +167,85 @@ def validate_attempt_start_dispatchable(
     """Fence only a queued attempt's first transition into active work."""
     if previous is ExperimentStatus.QUEUED and target is ExperimentStatus.RUNNING:
         validate_experiment_dispatchable(connection, experiment_id)
+
+
+def validate_terminal_fold_retry_experiment(
+    *,
+    experiment_status: ExperimentStatus,
+    desired_state: ExperimentDesiredState,
+) -> None:
+    """Require active RUN intent before retrying terminal fold work."""
+    if (
+        experiment_status is not ExperimentStatus.RUNNING
+        or desired_state is not ExperimentDesiredState.RUN
+    ):
+        raise ExperimentSpecError(
+            "terminal fold retry requires a running experiment with run intent",
+            details={
+                "reason_code": "terminal_fold_retry_experiment_not_running",
+                "status": experiment_status.value,
+                "desired_state": desired_state.value,
+            },
+        )
+
+
+def validate_terminal_fold_retry_target(
+    *,
+    fold_status: ExperimentStatus,
+    fold_failure_code: ExperimentFailureCode | None,
+) -> None:
+    """Require a retryable failed fold outcome."""
+    if fold_status is not ExperimentStatus.FAILED:
+        raise ExperimentSpecError(
+            "terminal fold retry requires a failed fold",
+            details={
+                "reason_code": "terminal_fold_retry_requires_failed_fold",
+                "status": fold_status.value,
+            },
+        )
+    if fold_failure_code not in _RETRYABLE_TERMINAL_FAILURE_CODES:
+        raise ExperimentSpecError(
+            "terminal fold failure is not retryable",
+            details={
+                "reason_code": "terminal_fold_retry_failure_not_retryable",
+                "failure_code": (
+                    None if fold_failure_code is None else fold_failure_code.value
+                ),
+            },
+        )
+
+
+def validate_terminal_fold_retry_parent(
+    *,
+    parent_status: ExperimentStatus,
+    parent_failure_code: ExperimentFailureCode | None,
+    fold_failure_code: ExperimentFailureCode,
+) -> None:
+    """Require a matching system/lease terminal outcome on the latest attempt."""
+    if (
+        parent_status is not ExperimentStatus.FAILED
+        or parent_failure_code is None
+        or parent_failure_code not in _RETRYABLE_TERMINAL_FAILURE_CODES
+    ):
+        raise ExperimentSpecError(
+            "terminal fold retry parent attempt is not retryable",
+            details={
+                "reason_code": "terminal_fold_retry_parent_not_retryable",
+                "status": parent_status.value,
+                "failure_code": (
+                    None if parent_failure_code is None else parent_failure_code.value
+                ),
+            },
+        )
+    if parent_failure_code is not fold_failure_code:
+        raise ExperimentIntegrityError(
+            "terminal fold and parent attempt failure lineage differs",
+            details={
+                "reason_code": "terminal_fold_retry_failure_lineage_mismatch",
+                "fold_failure_code": fold_failure_code.value,
+                "parent_failure_code": parent_failure_code.value,
+            },
+        )
 
 
 def validate_fold_transition(

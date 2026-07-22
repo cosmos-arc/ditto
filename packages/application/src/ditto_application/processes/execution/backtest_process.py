@@ -1,12 +1,4 @@
-"""
-回测编排服务 — Process 模块.
-
-包含 BacktestService 及其配置类，负责编排完整回测流程：
-引擎运行 → 报告生成 → 审计日志持久化 → 策略产物持久化。
-
-审计持久化逻辑委托给 backtest_audit 模块，
-因子 bundle 构建委托给 factor_bridge 模块。
-"""
+"""回测编排服务：引擎、报告、审计及策略产物持久化。"""
 
 from __future__ import annotations
 
@@ -593,12 +585,20 @@ class BacktestService:
 
             on_progress = _report_progress
 
-        # checkpoint 持久化 — 引擎保持 storage-free，由 App 层写入运行控制面。
         checkpoint_writer = self._options.checkpoint_writer
         on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
         if checkpoint_writer is not None:
 
             def _save_checkpoint(checkpoint: BacktestCheckpoint) -> None:
+                completed_days = checkpoint.completed_days
+                total_days = checkpoint.total_days
+                order_count = checkpoint.order_count
+                fill_count = checkpoint.fill_count
+                if self._config.resume_from_run_id:
+                    completed_days += self._config.resume_checkpoint_completed_days
+                    total_days = self._config.resume_checkpoint_total_days
+                    order_count += self._config.resume_checkpoint_order_count
+                    fill_count += self._config.resume_checkpoint_fill_count
                 checkpoint_writer.save_checkpoint(
                     StrategyRunCheckpointRecord(
                         run_id=run_id,
@@ -607,11 +607,11 @@ class BacktestService:
                         mode=EngineMode.BACKTEST.value,
                         completed_trade_date=checkpoint.completed_trade_date,
                         resume_from=checkpoint.resume_from,
-                        completed_days=checkpoint.completed_days,
-                        total_days=checkpoint.total_days,
+                        completed_days=completed_days,
+                        total_days=total_days,
                         nav=checkpoint.nav,
-                        order_count=checkpoint.order_count,
-                        fill_count=checkpoint.fill_count,
+                        order_count=order_count,
+                        fill_count=fill_count,
                         account_state_json=checkpoint.account_state_json,
                         account_state_hash=checkpoint.account_state_hash,
                         settlement_state_json=checkpoint.settlement_state_json,

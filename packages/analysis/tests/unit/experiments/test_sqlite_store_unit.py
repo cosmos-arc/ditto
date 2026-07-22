@@ -20,11 +20,13 @@ from threading import Barrier
 from types import SimpleNamespace
 from typing import Any
 
+import orjson
 import pytest
 from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments import (
     AttemptId,
     BacktestRunId,
+    CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
     CheckpointRef,
@@ -39,10 +41,24 @@ from ditto_analysis.experiments import (
     ExperimentStatus,
     FoldId,
     FoldProtocolSpec,
+    ResearchMetricDirection,
+    ResearchMetricId,
+    ResearchMetricValue,
     SnapshotId,
     StrategyVersion,
 )
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
+from ditto_analysis.experiments.trial_family import (
+    LogicalTrialIdentity,
+    TrialFamilyDeclaration,
+    TrialKind,
+)
+from ditto_analysis.experiments.trial_ledger import (
+    ConstraintOperator,
+    MetricConstraint,
+    ObjectiveMetric,
+    PromotionObjective,
+)
 
 NOW = datetime(2026, 7, 19, 4, 0, tzinfo=UTC)
 NOW_US = 1_768_000_000_000_000
@@ -95,17 +111,83 @@ def _candidate(
     )
 
 
+def _objective(
+    *,
+    baseline_candidate_id: str = "candidate-1",
+    experiment_id: str = "experiment-1",
+    candidates: tuple[CandidateSpec, ...] | None = None,
+) -> PromotionObjective:
+    launch_candidates = candidates or (
+        _candidate(1, baseline=True),
+        _candidate(2),
+    )
+    return PromotionObjective(
+        primary=ObjectiveMetric(
+            ResearchMetricId.NET_RETURN,
+            ResearchMetricDirection.MAXIMIZE,
+        ),
+        hard_constraints=(
+            MetricConstraint(
+                ResearchMetricValue(ResearchMetricId.MAX_DRAWDOWN, -20.0),
+                ConstraintOperator.GREATER_THAN_OR_EQUAL,
+            ),
+        ),
+        tie_break_order=(
+            ObjectiveMetric(
+                ResearchMetricId.TURNOVER,
+                ResearchMetricDirection.MINIMIZE,
+            ),
+        ),
+        baseline_candidate_id=CandidateId(baseline_candidate_id),
+        economic_rationale="Capture durable returns after costs.",
+        trial_family=TrialFamilyDeclaration(
+            "stock-selection-r3-v1",
+            tuple(
+                LogicalTrialIdentity(
+                    ExperimentId(experiment_id),
+                    candidate.candidate_id,
+                    candidate.ordinal,
+                    candidate.parameter_hash,
+                    TrialKind.CURRENT,
+                )
+                for candidate in launch_candidates
+            ),
+        ),
+    )
+
+
 def _launch(
     *,
     experiment_id: str = "experiment-1",
     candidates: tuple[CandidateSpec, ...] | None = None,
 ) -> ExperimentLaunchSpec:
+    launch_candidates = candidates or (
+        _candidate(1, baseline=True),
+        _candidate(2),
+    )
+    baseline = next(
+        candidate for candidate in launch_candidates if candidate.is_baseline
+    )
     return ExperimentLaunchSpec(
         experiment_id=ExperimentId(experiment_id),
         strategy_version=StrategyVersion("stock-selection@3"),
         strategy_spec_hash=ContentHash("a" * 64),
         snapshot_id=SnapshotId("snapshot-certified-1"),
-        candidates=candidates or (_candidate(1, baseline=True), _candidate(2)),
+        candidates=launch_candidates,
+        execution_bindings=tuple(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(f"{candidate.ordinal + 16:064x}"),
+            )
+            for candidate in launch_candidates
+        ),
+        promotion_objective=_objective(
+            baseline_candidate_id=str(baseline.candidate_id),
+            experiment_id=experiment_id,
+            candidates=launch_candidates,
+        ),
         fold_protocol=FoldProtocolSpec(
             protocol_id="r3-walk-forward",
             protocol_version=1,
@@ -417,6 +499,20 @@ def test_launch_codec_round_trips_complete_typed_spec_and_hashes_on_read() -> No
     assert encoded.content_hash == ContentHash(
         hashlib.sha256(encoded.json_bytes).hexdigest()
     )
+    assert decoded.promotion_objective == _objective()
+
+
+def test_launch_codec_rejects_schema_v1_payload_without_promotion_objective() -> None:
+    api = _api()
+    encoded = api.encode_launch_spec(_launch())
+    decoded = orjson.loads(encoded.json_bytes)
+    del decoded["promotion_objective"]
+    legacy = api.canonical_payload(decoded)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        api.decode_launch_spec(legacy.json_bytes, legacy.content_hash)
+
+    assert exc_info.value.details["reason_code"] == "invalid_canonical_payload"
 
 
 def test_canonical_payload_is_stable_across_mapping_insertion_order() -> None:

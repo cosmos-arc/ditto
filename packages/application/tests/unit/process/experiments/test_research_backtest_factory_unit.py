@@ -81,7 +81,16 @@ from ditto_application.processes.experiments.worker import (
     ResearchFoldRunState,
     VerifiedResearchBacktestBuild,
 )
+from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 from ditto_backtest.brokerage import BacktestBrokerage
+from ditto_backtest.result import (
+    BacktestAccountStateSnapshot,
+    BacktestFrozenQuantitySnapshot,
+    BacktestPendingOrderSnapshot,
+    BacktestPositionSnapshot,
+    BacktestRuntimeStateSnapshot,
+    BacktestSettlementStateSnapshot,
+)
 from ditto_backtest.simulation import (
     AShareFillModel,
     AShareSettlementModel,
@@ -89,15 +98,19 @@ from ditto_backtest.simulation import (
 )
 from ditto_execution.orders.book import OrderBook
 from ditto_execution.planner import SimpleExecutionPlanner
+from ditto_execution.trade_builder import (
+    TradeBuilderStateSnapshot,
+    TradeMatchingMethod,
+)
 from ditto_features.expression.contracts import (
     Analysis,
     CompiledDerivedExpression,
     CompileIdentity,
 )
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderType
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import InstrumentRules, RulesGetter
-from ditto_portfolio.accounting import Account, CashBook
+from ditto_portfolio.accounting import Account, CashBook, FillEvent
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -117,6 +130,7 @@ from ditto_strategy.alpha.specs import (
 )
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 
 _NOW = datetime(2026, 7, 20, 9, tzinfo=UTC)
 _DATES = ("2026-01-02", "2026-01-05")
@@ -593,9 +607,41 @@ class _Loader:
         return self.rules
 
 
+class _CheckpointStore:
+    def __init__(
+        self,
+        checkpoints: tuple[StrategyRunCheckpointRecord, ...] = (),
+    ) -> None:
+        self._checkpoints = {item.run_id: item for item in checkpoints}
+        self.read_calls: list[str] = []
+        self.saved: list[StrategyRunCheckpointRecord] = []
+
+    def get_latest_checkpoint(
+        self,
+        run_id: str,
+    ) -> StrategyRunCheckpointRecord | None:
+        self.read_calls.append(run_id)
+        return self._checkpoints.get(run_id)
+
+    def list_checkpoints_by_strategy(
+        self,
+        strategy_id: str,
+    ) -> list[StrategyRunCheckpointRecord]:
+        return [
+            item
+            for item in self._checkpoints.values()
+            if item.strategy_id == strategy_id
+        ]
+
+    def save_checkpoint(self, record: StrategyRunCheckpointRecord) -> None:
+        self.saved.append(record)
+        self._checkpoints[record.run_id] = record
+
+
 def _fixture(
     *,
     rules: VerifiedInstrumentRulesArtifact | None = None,
+    checkpoint_store: _CheckpointStore | None = None,
 ) -> tuple[
     FrozenAuditResearchBacktestFactory,
     ResearchExecutionAudit,
@@ -620,6 +666,7 @@ def _fixture(
     reader = _Reader(record)
     builder = _Builder(runtime)
     loader = _Loader(frames, rules)
+    checkpoints = checkpoint_store or _CheckpointStore()
     audit = _audit(binding, snapshot, _backtest(snapshot, rules))
     return (
         FrozenAuditResearchBacktestFactory(
@@ -627,11 +674,124 @@ def _fixture(
             runtime_builder=builder,
             artifact_loader=loader,
             environment=audit.semantics.environment,
+            checkpoint_reader=checkpoints,
+            checkpoint_writer=checkpoints,
         ),
         audit,
         reader,
         builder,
         loader,
+    )
+
+
+def _resumable_checkpoint(audit: ResearchExecutionAudit) -> StrategyRunCheckpointRecord:
+    account = BacktestAccountStateSnapshot(
+        cash_available=900_000.0,
+        cash_settled=900_000.0,
+        cash_frozen=0.0,
+        total_value=1_000_000.0,
+        nav=1_000_000.0,
+        exposure=100_000.0,
+        positions=(
+            BacktestPositionSnapshot(
+                instrument_id=InstrumentId(_MEMBER_ID),
+                quantity=10_000,
+                available_quantity=9_900,
+                average_cost=10.0,
+                market_value=100_000.0,
+                unrealized_pnl=0.0,
+                realized_pnl=0.0,
+                total_fees=0.0,
+            ),
+        ),
+    )
+    settlement = BacktestSettlementStateSnapshot(
+        frozen_quantities=(
+            BacktestFrozenQuantitySnapshot(
+                instrument_id=InstrumentId(_MEMBER_ID),
+                settle_date=_DATES[1],
+                quantity=100,
+            ),
+        ),
+    )
+    runtime = BacktestRuntimeStateSnapshot(
+        pending_orders=(
+            BacktestPendingOrderSnapshot(
+                client_order_id="plan-order-9",
+                instrument_id=InstrumentId(_MEMBER_ID),
+                order_type="market",
+                direction="buy",
+                quantity=100,
+                price=None,
+                stop_price=None,
+                trade_date=_DATES[0],
+                status="submitted",
+                filled_quantity=0,
+                leaves_quantity=100,
+                filled_price=None,
+                average_fill_price=None,
+            ),
+        ),
+        planner_id_counter=9,
+        brokerage_fill_counter=1,
+        trade_builder_state=TradeBuilderStateSnapshot(
+            method=TradeMatchingMethod.FIFO,
+            counter=0,
+        ),
+        rebalance_calendar_start=_DATES[0],
+        audit_state_json=ExecutionAuditStateSnapshot(
+            fills=(
+                FillEvent(
+                    fill_id="fill-1",
+                    order_id="plan-order-9",
+                    instrument_id=InstrumentId(_MEMBER_ID),
+                    direction=OrderSide.BUY,
+                    filled_quantity=100,
+                    fill_price=10.0,
+                    fee=0.0,
+                    slippage=0.0,
+                    event_time=_NOW,
+                    cumulative_quantity=100,
+                    leaves_quantity=0,
+                ),
+            ),
+            daily_snapshots=((_DATES[0], account),),
+        ).to_json(),
+        runtime_state_version=2,
+    )
+    strategy = audit.semantics.strategy
+    assert type(strategy) is StrategyExecutionBinding
+    return StrategyRunCheckpointRecord(
+        run_id=audit.backtest_run_id,
+        strategy_id=strategy.exact_strategy.strategy_id,
+        strategy_version=str(strategy.exact_strategy.version),
+        mode="backtest",
+        completed_trade_date=_DATES[0],
+        resume_from=_DATES[1],
+        completed_days=1,
+        total_days=len(_DATES),
+        nav=account.nav,
+        order_count=1,
+        fill_count=1,
+        account_state_json=account.to_json(),
+        account_state_hash=account.state_hash,
+        settlement_state_json=settlement.to_json(),
+        settlement_state_hash=settlement.state_hash,
+        runtime_state_json=runtime.to_json(),
+        runtime_state_hash=runtime.state_hash,
+        updated_at=_NOW.isoformat(),
+    )
+
+
+def _resume_audit(audit: ResearchExecutionAudit) -> ResearchExecutionAudit:
+    return ResearchExecutionAudit.create(
+        semantics=audit.semantics,
+        attempt_id="attempt-2",
+        attempt_ordinal=2,
+        backtest_run_id="backtest-run-2",
+        parent_attempt_id=audit.attempt_id,
+        resume_from_run_id=audit.backtest_run_id,
+        created_at=_NOW,
     )
 
 
@@ -708,6 +868,251 @@ def test_factory_builds_real_service_and_attests_constructed_objects() -> None:
             if item.artifact_kind == "instrument_rules"
         )
     ]
+
+
+def test_factory_publishes_only_resumable_strategy_checkpoints() -> None:
+    checkpoints = _CheckpointStore()
+    factory, audit, *_ = _fixture(checkpoint_store=checkpoints)
+
+    factory.build(audit, external_should_stop=_never_stop).service.run()
+
+    assert [item.completed_trade_date for item in checkpoints.saved] == list(
+        _DATES[:-1]
+    )
+    assert [item.run_id for item in checkpoints.saved] == [
+        audit.backtest_run_id,
+    ]
+    assert checkpoints.saved[-1].resume_from == _DATES[-1]
+
+
+def test_factory_resumes_exact_parent_checkpoint_with_full_runtime_state() -> None:
+    _, parent_audit, *_ = _fixture()
+    checkpoint = _resumable_checkpoint(parent_audit)
+    checkpoints = _CheckpointStore((checkpoint,))
+    factory, parent_audit, *_ = _fixture(checkpoint_store=checkpoints)
+    audit = _resume_audit(parent_audit)
+
+    result = factory.build(audit, external_should_stop=_never_stop)
+
+    config = result.service._config
+    assert checkpoints.read_calls == [parent_audit.backtest_run_id]
+    assert config.start_date == checkpoint.resume_from
+    assert config.end_date == parent_audit.semantics.test_end.isoformat()
+    assert config.parent_run_id == parent_audit.backtest_run_id
+    assert config.resume_from_run_id == parent_audit.backtest_run_id
+    assert config.resume_checkpoint_trade_date == checkpoint.completed_trade_date
+    assert config.resume_checkpoint_completed_days == checkpoint.completed_days
+    assert config.resume_checkpoint_total_days == checkpoint.total_days
+    assert config.resume_account_state_json == checkpoint.account_state_json
+    assert config.resume_settlement_state_json == checkpoint.settlement_state_json
+    assert config.resume_runtime_state_json == checkpoint.runtime_state_json
+    assert result.service._options.checkpoint_writer is checkpoints
+    expected_runtime = BacktestRuntimeStateSnapshot.from_json(
+        checkpoint.runtime_state_json
+    )
+    assert result.service._options.restore_runtime_state == expected_runtime
+    # Exact V2 runtime evidence carries the actual monotonic counters; aggregate
+    # order counts cannot reconstruct IDs consumed by both plans and orders.
+    assert expected_runtime.resolved_planner_id_counter == 9
+    assert expected_runtime.brokerage_fill_counter == 1
+    assert result.graph.components.account.get_view().nav == checkpoint.nav
+    assert (
+        result.graph.components.brokerage.get_settlement_state_snapshot()
+        == BacktestSettlementStateSnapshot.from_json(checkpoint.settlement_state_json)
+    )
+    assert tuple(
+        item.order.client_id.value
+        for item in result.graph.components.order_book.get_pending()
+    ) == ("plan-order-9",)
+    assert result.attestation == ResearchBacktestBuildAttestation.from_audit(audit)
+    assert result.attestation.reproduction_fingerprint == (
+        parent_audit.reproduction_fingerprint
+    )
+
+
+def test_factory_rejects_v1_runtime_without_exact_monotonic_state() -> None:
+    """Aggregate order counts cannot reconstruct planner IDs consumed by plans."""
+    _, parent_audit, *_ = _fixture()
+    legacy_runtime = BacktestRuntimeStateSnapshot.from_json(
+        '{"delayed_signals":[],"pending_orders":[]}',
+    )
+    checkpoint = replace(
+        _resumable_checkpoint(parent_audit),
+        order_count=2,
+        runtime_state_json=legacy_runtime.to_json(),
+        runtime_state_hash=legacy_runtime.state_hash,
+    )
+    checkpoints = _CheckpointStore((checkpoint,))
+    factory, parent_audit, *_ = _fixture(checkpoint_store=checkpoints)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        factory.build(
+            _resume_audit(parent_audit),
+            external_should_stop=_never_stop,
+        )
+
+    assert (
+        exc_info.value.details["reason"]
+        == "research_resume_checkpoint_state_incomplete"
+    )
+
+
+@pytest.mark.parametrize(
+    "drift",
+    [
+        "account",
+        "audit-order-id",
+        "calendar-anchor",
+        "daily-date",
+        "fill-id",
+        "planner-counter",
+    ],
+)
+def test_factory_rejects_cross_field_runtime_audit_drift(drift: str) -> None:
+    """Individually valid hashes cannot hide a broken checkpoint boundary."""
+    _, parent_audit, *_ = _fixture()
+    checkpoint = _resumable_checkpoint(parent_audit)
+    runtime = BacktestRuntimeStateSnapshot.from_json(checkpoint.runtime_state_json)
+    audit_state = ExecutionAuditStateSnapshot.from_json(runtime.audit_state_json or "")
+    if drift == "account":
+        trade_date, account = audit_state.daily_snapshots[-1]
+        audit_state = replace(
+            audit_state,
+            daily_snapshots=(
+                (
+                    trade_date,
+                    replace(account, cash_available=account.cash_available - 1.0),
+                ),
+            ),
+        )
+    elif drift == "audit-order-id":
+        audit_state = replace(
+            audit_state,
+            fills=(replace(audit_state.fills[0], order_id="plan-order-10"),),
+        )
+    elif drift == "daily-date":
+        _, account = audit_state.daily_snapshots[-1]
+        audit_state = replace(
+            audit_state,
+            daily_snapshots=((_DATES[1], account),),
+        )
+    elif drift == "fill-id":
+        audit_state = replace(
+            audit_state,
+            fills=(replace(audit_state.fills[0], fill_id="fill-2"),),
+        )
+    elif drift == "planner-counter":
+        audit_state = replace(audit_state, fills=())
+    runtime = replace(
+        runtime,
+        audit_state_json=audit_state.to_json(),
+        pending_orders=() if drift == "planner-counter" else runtime.pending_orders,
+        planner_id_counter=0
+        if drift == "planner-counter"
+        else runtime.planner_id_counter,
+        brokerage_fill_counter=(
+            0 if drift == "planner-counter" else runtime.brokerage_fill_counter
+        ),
+        rebalance_calendar_start=(
+            _DATES[1]
+            if drift == "calendar-anchor"
+            else runtime.rebalance_calendar_start
+        ),
+    )
+    checkpoint = replace(
+        checkpoint,
+        fill_count=0 if drift == "planner-counter" else checkpoint.fill_count,
+        runtime_state_json=runtime.to_json(),
+        runtime_state_hash=runtime.state_hash,
+    )
+    checkpoints = _CheckpointStore((checkpoint,))
+    factory, parent_audit, *_ = _fixture(checkpoint_store=checkpoints)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        factory.build(
+            _resume_audit(parent_audit),
+            external_should_stop=_never_stop,
+        )
+
+    assert exc_info.value.details["reason"] == "research_resume_checkpoint_state_drift"
+
+
+def test_factory_rejects_cross_field_settlement_account_drift() -> None:
+    """Individually hashed settlement state must match unavailable positions."""
+    _, parent_audit, *_ = _fixture()
+    checkpoint = _resumable_checkpoint(parent_audit)
+    settlement = BacktestSettlementStateSnapshot(
+        frozen_quantities=(
+            BacktestFrozenQuantitySnapshot(
+                instrument_id=InstrumentId(_MEMBER_ID),
+                settle_date=_DATES[1],
+                quantity=99,
+            ),
+        ),
+    )
+    checkpoint = replace(
+        checkpoint,
+        settlement_state_json=settlement.to_json(),
+        settlement_state_hash=settlement.state_hash,
+    )
+    checkpoints = _CheckpointStore((checkpoint,))
+    factory, parent_audit, *_ = _fixture(checkpoint_store=checkpoints)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        factory.build(
+            _resume_audit(parent_audit),
+            external_should_stop=_never_stop,
+        )
+
+    assert exc_info.value.details["reason"] == "research_resume_checkpoint_state_drift"
+
+
+@pytest.mark.parametrize(
+    ("checkpoint", "expected_reason"),
+    [
+        pytest.param(None, "research_resume_checkpoint_missing", id="missing"),
+        pytest.param(
+            "wrong-parent",
+            "research_resume_checkpoint_identity_drift",
+            id="wrong-parent",
+        ),
+        pytest.param(
+            "incomplete-state",
+            "research_resume_checkpoint_state_incomplete",
+            id="incomplete-state",
+        ),
+    ],
+)
+def test_factory_rejects_non_exact_parent_checkpoint(
+    checkpoint: str | None,
+    expected_reason: str,
+) -> None:
+    _, parent_audit, *_ = _fixture()
+    resolved: StrategyRunCheckpointRecord | None
+    if checkpoint is None:
+        resolved = None
+    elif checkpoint == "wrong-parent":
+        resolved = replace(_resumable_checkpoint(parent_audit), run_id="other-run")
+    else:
+        resolved = replace(
+            _resumable_checkpoint(parent_audit),
+            runtime_state_json="",
+            runtime_state_hash="",
+        )
+    checkpoints = _CheckpointStore(
+        () if resolved is None else (resolved,),
+    )
+    if resolved is not None and resolved.run_id != parent_audit.backtest_run_id:
+        checkpoints._checkpoints[parent_audit.backtest_run_id] = resolved
+    factory, parent_audit, *_ = _fixture(checkpoint_store=checkpoints)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        factory.build(
+            _resume_audit(parent_audit),
+            external_should_stop=_never_stop,
+        )
+
+    assert exc_info.value.details["reason"] == expected_reason
 
 
 def test_existing_runner_executes_the_concrete_factory_and_service() -> None:

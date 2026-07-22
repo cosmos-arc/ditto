@@ -17,15 +17,19 @@ from ditto_application.processes.experiments._planning_values import (
     BaselineInputValue,
 )
 from ditto_application.processes.experiments.planning import (
+    BaselineCandidatePlan,
     BaselineDescriptor,
     CandidateMatrixSpec,
     ExperimentBudgetSpec,
     ExperimentFailurePolicy,
     ParameterAxis,
     ResourceCostModel,
+    inspect_candidate_matrix_size,
 )
 from ditto_application.processes.experiments.planning_contracts import (
     ExperimentPlanningRequest,
+    declare_trial_family,
+    seal_promotion_objective,
 )
 from ditto_application.processes.experiments.planning_probes import (
     ExperimentSnapshotIdentity,
@@ -158,7 +162,12 @@ def _validated_matrix_payload(matrix: CandidateMatrixSpec) -> Mapping[str, objec
 
 def _validated_request_graph(
     request: object,
-) -> tuple[ExperimentPlanningRequest, Mapping[str, object], Mapping[str, object]]:
+) -> tuple[
+    ExperimentPlanningRequest,
+    Mapping[str, object],
+    Mapping[str, object],
+    Mapping[str, object],
+]:
     """Seal all caller-owned nodes before any read-side probe may run."""
     if type(request) is not ExperimentPlanningRequest:
         _invalid("invalid_planning_request_type")
@@ -167,6 +176,7 @@ def _validated_request_graph(
     snapshot = exact_request.snapshot_identity
     validation = exact_request.validation_request
     matrix = exact_request.matrix_spec
+    objective = exact_request.promotion_objective
     requirements = exact_request.dataset_requirements
     cost = exact_request.cost_model
     budget = exact_request.budget
@@ -244,8 +254,33 @@ def _validated_request_graph(
     matrix_payload = _validated_matrix_payload(matrix)
     if matrix.candidate_limit != budget.candidate_limit:
         _invalid("planning_request_candidate_limit_mismatch")
+    sealed_objective, objective_payload = seal_promotion_objective(objective)
+    matrix_size = inspect_candidate_matrix_size(matrix)
+    baseline = BaselineCandidatePlan(matrix.baseline)
+    expected_baseline_id = ":".join(
+        (
+            exact_request.experiment_id,
+            "candidate",
+            str(baseline.ordinal),
+            baseline.candidate_hash,
+        )
+    )
+    if str(sealed_objective.baseline_candidate_id) != expected_baseline_id:
+        _invalid("promotion_baseline_candidate_mismatch")
+    if not matrix_size.exceeds_limit:
+        expected_family = declare_trial_family(
+            experiment_id=exact_request.experiment_id,
+            matrix_spec=matrix,
+            family_id=sealed_objective.trial_family.family_id,
+            prior_members=sealed_objective.trial_family.prior_members,
+        )
+        if (
+            sealed_objective.trial_family.current_members
+            != expected_family.current_members
+        ):
+            _invalid("promotion_current_trial_family_mismatch")
     protocol_payload = canonical_validation_protocol_payload(validation)
-    return exact_request, matrix_payload, protocol_payload
+    return exact_request, matrix_payload, protocol_payload, objective_payload
 
 
 def validate_planning_request_graph(request: object) -> None:
@@ -254,7 +289,9 @@ def validate_planning_request_graph(request: object) -> None:
 
 
 def _request_payload(request: ExperimentPlanningRequest) -> Mapping[str, object]:
-    request, matrix_payload, protocol_payload = _validated_request_graph(request)
+    request, matrix_payload, protocol_payload, objective_payload = (
+        _validated_request_graph(request)
+    )
     strategy = request.strategy_record
     requirements = request.dataset_requirements
     return {
@@ -277,6 +314,7 @@ def _request_payload(request: ExperimentPlanningRequest) -> Mapping[str, object]
         },
         "validation_protocol": protocol_payload,
         "matrix_spec": matrix_payload,
+        "promotion_objective": objective_payload,
         "dataset_requirements": [
             item.as_payload()
             for item in sorted(

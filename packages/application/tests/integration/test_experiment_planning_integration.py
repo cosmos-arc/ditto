@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -13,14 +14,25 @@ import orjson
 import polars as pl
 import pytest
 from ditto_analysis.experiments import (
+    ContentHash,
     ExperimentId,
     ExperimentStatus,
     FoldRole,
     FoldView,
+    ResearchMetricDirection,
+    ResearchMetricId,
+    ResearchMetricValue,
     StatusSubjectType,
+    TrialFamilyDeclaration,
     canonical_payload,
 )
 from ditto_analysis.experiments.specs import ExperimentFailurePolicy
+from ditto_analysis.experiments.trial_ledger import (
+    ConstraintOperator,
+    MetricConstraint,
+    ObjectiveMetric,
+    PromotionObjective,
+)
 from ditto_analysis.storage.sqlite.experiments import (
     ResearchExperimentDatabase,
     SQLiteExperimentReader,
@@ -70,6 +82,9 @@ from ditto_application.processes.experiments.planning import (
     ExperimentBudgetSpec,
     ResourceCostModel,
 )
+from ditto_application.processes.experiments.planning_contracts import (
+    declare_trial_family,
+)
 from ditto_application.processes.experiments.planning_probes import (
     BaselineRuntimeExecutorEvidence,
 )
@@ -79,9 +94,11 @@ from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
     ExperimentPlanningRequest,
     ExperimentSnapshotIdentity,
+    ResearchCertificationProbe,
     ResearchCertificationRequest,
     ResearchCertificationResult,
     ResearchDatasetRequirement,
+    ResearchExecutorProbe,
     ResearchExecutorProbeRequest,
     ResearchExecutorProbeResult,
     ResearchSnapshotEvidence,
@@ -94,6 +111,7 @@ from ditto_application.processes.experiments.research_snapshot_manifest import (
 )
 from ditto_application.research_validation_contracts import (
     ResearchValidationAuthorityEvidence,
+    ResearchValidationAuthorityProbe,
     ResearchValidationAuthorityResult,
     RuntimeValidationEvidence,
 )
@@ -209,7 +227,49 @@ def _validation_request() -> ValidationProtocolRequest:
     )
 
 
+def _objective(
+    experiment_id: str,
+    matrix: CandidateMatrixSpec,
+) -> PromotionObjective:
+    family = declare_trial_family(
+        experiment_id=experiment_id,
+        matrix_spec=matrix,
+        family_id="stock-selection-r3-v1",
+    )
+    return PromotionObjective(
+        primary=ObjectiveMetric(
+            ResearchMetricId.NET_RETURN,
+            ResearchMetricDirection.MAXIMIZE,
+        ),
+        hard_constraints=(
+            MetricConstraint(
+                ResearchMetricValue(ResearchMetricId.MAX_DRAWDOWN, -20.0),
+                ConstraintOperator.GREATER_THAN_OR_EQUAL,
+            ),
+        ),
+        tie_break_order=(
+            ObjectiveMetric(
+                ResearchMetricId.TURNOVER,
+                ResearchMetricDirection.MINIMIZE,
+            ),
+        ),
+        baseline_candidate_id=family.current_members[0].candidate_id,
+        economic_rationale="Capture durable returns after costs.",
+        trial_family=family,
+    )
+
+
 def _planning_request() -> ExperimentPlanningRequest:
+    matrix = CandidateMatrixSpec(
+        baseline=BaselineDescriptor(
+            descriptor_type="etf-current-active",
+            payload={
+                "strategy_id": "seed_etf_rotation",
+                "version": 2,
+                "spec_hash": "f" * 64,
+            },
+        ),
+    )
     return ExperimentPlanningRequest(
         experiment_id=_EXPERIMENT_ID,
         research_cycle_id="cycle-task8-integration-1",
@@ -226,16 +286,8 @@ def _planning_request() -> ExperimentPlanningRequest:
             manifest_hash=_exact_snapshot().manifest_hash,
         ),
         validation_request=_validation_request(),
-        matrix_spec=CandidateMatrixSpec(
-            baseline=BaselineDescriptor(
-                descriptor_type="etf-current-active",
-                payload={
-                    "strategy_id": "seed_etf_rotation",
-                    "version": 2,
-                    "spec_hash": "f" * 64,
-                },
-            ),
-        ),
+        matrix_spec=matrix,
+        promotion_objective=_objective(_EXPERIMENT_ID, matrix),
         dataset_requirements=(
             ResearchDatasetRequirement(
                 dataset_id="etf_daily",
@@ -372,6 +424,7 @@ def _gates(reader: SQLiteExperimentReader):
 def _persisted_snapshot(reader: SQLiteExperimentReader, receipt):
     experiment_id = ExperimentId(_EXPERIMENT_ID)
     projection = reader.get_experiment_projection(experiment_id)
+    launch_spec = reader.get_launch_spec(experiment_id)
     candidates = reader.list_candidates(experiment_id)
     folds = reader.list_folds(experiment_id)
     gates = _gates(reader)
@@ -380,6 +433,8 @@ def _persisted_snapshot(reader: SQLiteExperimentReader, receipt):
     assert receipt.status == ExperimentStatus.QUEUED.value
     assert projection is not None
     assert projection.record.status is ExperimentStatus.QUEUED
+    assert launch_spec is not None
+    assert launch_spec.promotion_objective == _planning_request().promotion_objective
     assert projection.queue_ordinal == receipt.queue_ordinal
     assert len(candidates) == receipt.candidate_count == 2
     assert len(folds) == receipt.fold_count == 4 * len(candidates)
@@ -416,7 +471,7 @@ def _persisted_snapshot(reader: SQLiteExperimentReader, receipt):
         == canonical_payload(detail["preflight"]).content_hash.value
     )
     assert enqueue_events[0].detail_hash == canonical_payload(detail).content_hash
-    return projection, candidates, folds, gates, events
+    return launch_spec, projection, candidates, folds, gates, events
 
 
 def test_launch_is_durable_and_exact_hash_replay_is_zero_write(
@@ -458,6 +513,57 @@ def test_launch_is_durable_and_exact_hash_replay_is_zero_write(
         assert _persisted_snapshot(durable_reader, receipt) == snapshot
     finally:
         reopened.close_all()
+
+
+def test_invalid_promotion_objective_is_rejected_before_probe_or_sql_write(
+    tmp_path: Path,
+) -> None:
+    class _BombProbe:
+        def assess(self, _request):
+            raise AssertionError("certification probe must not run")
+
+        def probe(self, _request):
+            raise AssertionError("research probe must not run")
+
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    request = _planning_request()
+    current = request.promotion_objective.trial_family.current_members
+    substituted = replace(current[1], parameter_hash=ContentHash("f" * 64))
+    request = replace(
+        request,
+        promotion_objective=replace(
+            request.promotion_objective,
+            trial_family=TrialFamilyDeclaration(
+                request.promotion_objective.trial_family.family_id,
+                (current[0], substituted),
+            ),
+        ),
+    )
+    bomb = _BombProbe()
+    process = ExperimentPlanningProcess(
+        reader=SQLiteExperimentReader(database),
+        writer=SQLiteExperimentWriter(database),
+        certification_probe=cast("ResearchCertificationProbe", bomb),
+        executor_probe=cast("ResearchExecutorProbe", bomb),
+        authority_probe=cast("ResearchValidationAuthorityProbe", bomb),
+    )
+    before = database.get_connection().total_changes
+
+    try:
+        report = process.preflight(request)
+        with pytest.raises(AppProcessError) as exc_info:
+            process.launch(request, confirmed_plan_hash="0" * 64)
+
+        assert report.status.value == "blocked"
+        assert report.checks[0].reason == "promotion_current_trial_family_mismatch"
+        assert exc_info.value.details == {
+            "code": "SPEC_INVALID",
+            "reason": "promotion_current_trial_family_mismatch",
+        }
+        assert database.get_connection().total_changes == before
+    finally:
+        database.close_all()
 
 
 class _ExactStrategyReader:

@@ -1,9 +1,4 @@
-"""
-ReplayProcess — 回测重放编排.
-
-从原始运行的 manifest.json 恢复配置，重新执行回测，
-使用 ReplayValidator 对比结果，并记录血统关系.
-"""
+"""ReplayProcess — deterministic backtest replay orchestration."""
 
 from __future__ import annotations
 
@@ -41,7 +36,14 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.exceptions import AppProcessError
-from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution._replay_artifact_reservation import (
+    ReplayArtifactReservation,
+)
+from ditto_application.processes.execution.backtest_audit import resolve_run_id
+from ditto_application.processes.execution.backtest_process import (
+    BacktestServiceConfig,
+    BacktestServiceOptions,
+)
 from ditto_application.processes.execution.replay_manifest_codec import (
     deserialize_effective_parameters,
 )
@@ -61,16 +63,7 @@ class ReplayRunConfigReader(Protocol):
 
 @dataclass(frozen=True)
 class ReplayResult:
-    """
-    重放结果.
-
-    Attributes:
-        new_run_id: 新运行的 run_id
-        validation: 复现性验证结果
-        original_manifest: 原始 manifest
-        replay_manifest: 重放 manifest
-
-    """
+    """Replay result and immutable original/replayed manifests."""
 
     new_run_id: str
     validation: ReplayValidationResult
@@ -79,16 +72,7 @@ class ReplayResult:
 
 
 class ReplayProcess:
-    """
-    回测重放编排 — 从原始运行恢复配置并重新执行.
-
-    职责：
-    1. 加载原始 manifest.json
-    2. 从 backtest_report.json 恢复运行配置
-    3. 使用 StrategyFacade 重新执行回测
-    4. 使用 ReplayValidator 对比两次运行结果
-    5. 返回 ReplayResult
-    """
+    """Replay a persisted backtest and validate deterministic equivalence."""
 
     def __init__(
         self,
@@ -101,83 +85,104 @@ class ReplayProcess:
         self._run_model = run_model
 
     def replay(self, original_run_id: str) -> ReplayResult:
-        """
-        基于原始运行重放回测.
-
-        Args:
-            original_run_id: 原始运行的 run_id
-
-        Returns:
-            ReplayResult 包含验证结果
-
-        Raises:
-            FileNotFoundError: manifest.json 不存在
-            ValueError: 无法从报告中恢复配置
-
-        """
-        # 1. 加载原始 manifest.json
+        """Replay ``original_run_id`` without mutating its artifacts."""
         artifact_dir = self._find_artifact_dir(original_run_id)
         original_manifest = self._load_manifest(artifact_dir)
 
-        # 2. 从 backtest_report.json 恢复配置
         report = self._load_report(artifact_dir)
         original_run_config = self._load_run_config(original_run_id)
+        requested_run_id = resolve_run_id("")
+        if requested_run_id == original_run_id:
+            raise AppProcessError(
+                "Replay run ID must differ from the original run ID",
+                reason="replay_run_id_collision",
+                original_run_id=original_run_id,
+                replay_run_id=requested_run_id,
+            )
+        indexed_target = find_artifact(
+            self._artifact_service,
+            requested_run_id,
+            ArtifactKind.BACKTEST_REPORT,
+        )
+        if indexed_target is not None:
+            indexed_dir = Path(indexed_target.file_path)
+            same_dir = indexed_dir.resolve() == artifact_dir.resolve()
+            raise AppProcessError(
+                "Replay artifact target is already indexed",
+                reason=(
+                    "replay_artifact_directory_collision"
+                    if same_dir
+                    else "replay_artifact_target_exists"
+                ),
+                original_artifact_dir=str(artifact_dir),
+                replay_artifact_dir=str(indexed_dir),
+            )
+        target_dir = artifact_dir.parent / requested_run_id
         config = self._build_config(
             original_manifest,
             report,
+            run_id=requested_run_id,
             parent_run_id=original_run_id,
             run_config=original_run_config,
         )
-
-        # 3. 执行重放
-        replay_report = self._facade.run_backtest_from_catalog(
-            config=config,
-            version=int(original_manifest.strategy_version)
-            if original_manifest.strategy_version.isdigit()
-            else None,
+        reservation = ReplayArtifactReservation.acquire(
+            target_dir,
+            original=artifact_dir,
         )
-
-        # 4. 加载重放 manifest（从新运行的 artifact 目录）
-        new_run_id = replay_report.run_id
-        replay_artifact_dir = self._find_artifact_dir(new_run_id)
-        replay_manifest = self._load_manifest(replay_artifact_dir)
-
-        # 5. 提取 NAV 序列进行对比
-        original_nav = self._extract_nav(report)
-        replay_nav = self._extract_nav_from_report(replay_report)
-        state_proof = _build_state_proof(
-            original_fills=_load_fill_log(artifact_dir),
-            original_account=_load_final_account_state(report),
-            replay_report=replay_report,
-        )
-
-        # 6. 验证复现性
-        validation = ReplayValidator.validate(
-            original_manifest,
-            replay_manifest,
-            original_nav,
-            replay_nav,
-            state_proof=state_proof,
-        )
-        self._persist_replay_proof(
-            original_run_id=original_run_id,
-            replay_run_id=new_run_id,
-            original_manifest=original_manifest,
-            validation=validation,
-            original_resume_provenance=_load_resume_provenance(report),
-            replay_artifact_dir=replay_artifact_dir,
-        )
-
-        return ReplayResult(
-            new_run_id=new_run_id,
-            validation=validation,
-            original_manifest=original_manifest,
-            replay_manifest=replay_manifest,
-        )
-
-    # ------------------------------------------------------------------
-    # 内部辅助
-    # ------------------------------------------------------------------
+        try:
+            replay_report = self._facade.run_backtest_from_catalog(
+                config=config,
+                options=BacktestServiceOptions(artifact_dir=str(artifact_dir.parent)),
+                version=int(original_manifest.strategy_version)
+                if original_manifest.strategy_version.isdigit()
+                else None,
+            )
+            new_run_id = replay_report.run_id
+            if new_run_id != requested_run_id:
+                raise AppProcessError(
+                    "Replay facade returned a run ID that differs from the request",
+                    reason="replay_run_id_mismatch",
+                    original_run_id=original_run_id,
+                    requested_run_id=requested_run_id,
+                    actual_run_id=new_run_id,
+                )
+            replay_artifact_dir = self._find_artifact_dir(new_run_id)
+            if not reservation.matches(replay_artifact_dir):
+                raise AppProcessError(
+                    "Replay artifact directory differs from its reserved target",
+                    reason="replay_artifact_target_mismatch",
+                    requested_artifact_dir=str(target_dir),
+                    replay_artifact_dir=str(replay_artifact_dir),
+                )
+            replay_manifest = self._load_manifest(replay_artifact_dir)
+            state_proof = _build_state_proof(
+                original_fills=_load_fill_log(artifact_dir),
+                original_account=_load_final_account_state(report),
+                replay_report=replay_report,
+            )
+            validation = ReplayValidator.validate(
+                original_manifest,
+                replay_manifest,
+                self._extract_nav(report),
+                self._extract_nav_from_report(replay_report),
+                state_proof=state_proof,
+            )
+            self._persist_replay_proof(
+                original_run_id=original_run_id,
+                replay_run_id=new_run_id,
+                original_manifest=original_manifest,
+                validation=validation,
+                original_resume_provenance=_load_resume_provenance(report),
+                replay_artifact_dir=replay_artifact_dir,
+            )
+            return ReplayResult(
+                new_run_id=new_run_id,
+                validation=validation,
+                original_manifest=original_manifest,
+                replay_manifest=replay_manifest,
+            )
+        finally:
+            reservation.cleanup_empty()
 
     def _find_artifact_dir(self, run_id: str) -> Path:
         """查找运行对应的 artifact 目录."""
@@ -215,6 +220,7 @@ class ReplayProcess:
         manifest: RunManifest,
         report: dict[str, Any],
         *,
+        run_id: str = "",
         parent_run_id: str = "",
         run_config: dict[str, object] | None = None,
     ) -> BacktestServiceConfig:
@@ -223,6 +229,7 @@ class ReplayProcess:
         return BacktestServiceConfig(
             strategy_id=manifest.strategy_id,
             strategy_version=manifest.strategy_version,
+            run_id=run_id,
             spec_hash=manifest.spec_hash,
             base_spec_hash=manifest.base_spec_hash,
             parameter_hash=manifest.parameter_hash,
@@ -230,8 +237,12 @@ class ReplayProcess:
             research_snapshot_id=manifest.research_snapshot_id,
             research_snapshot_manifest_hash=(manifest.research_snapshot_manifest_hash),
             parent_run_id=parent_run_id,
-            start_date=period.get("start", ""),
-            end_date=period.get("end", ""),
+            start_date=(
+                _str_config_field(run_config, "start_date") or period.get("start", "")
+            ),
+            end_date=(
+                _str_config_field(run_config, "end_date") or period.get("end", "")
+            ),
             initial_cash=_initial_cash_from_config_or_report(run_config, report),
             parameter_overrides=(),
             candidate_parameters=tuple(
@@ -240,7 +251,13 @@ class ReplayProcess:
             ),
             rebalance_freq=_extract_rebalance_freq(report),
             engine_version=manifest.engine_version,
+            random_seed=_int_config_field(run_config, "random_seed", default=42),
             execution_delay=_int_config_field(run_config, "execution_delay"),
+            knowledge_lag_days=_int_config_field(
+                run_config,
+                "knowledge_lag_days",
+                default=1,
+            ),
             resume_from_run_id=_str_config_field(run_config, "resume_from_run_id"),
             resume_checkpoint_trade_date=_str_config_field(
                 run_config,
@@ -298,7 +315,6 @@ class ReplayProcess:
         nav_data = report.get("nav_series")
         if nav_data is not None:
             return [float(v) for v in nav_data]
-        # 退而求其次 — 用单个 final_nav
         final_nav = report.get("final_nav")
         if final_nav is not None:
             return [float(final_nav)]
@@ -484,14 +500,19 @@ def _str_config_field(config: dict[str, object] | None, key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
-def _int_config_field(config: dict[str, object] | None, key: str) -> int:
+def _int_config_field(
+    config: dict[str, object] | None,
+    key: str,
+    *,
+    default: int = 0,
+) -> int:
     """Read an optional run-config int field without treating bool as int."""
     if config is None:
-        return 0
+        return default
     value = config.get(key)
     if isinstance(value, bool):
-        return 0
-    return value if isinstance(value, int) else 0
+        return default
+    return value if isinstance(value, int) else default
 
 
 def _float_config_field(config: dict[str, object] | None, key: str) -> float:

@@ -17,6 +17,7 @@ from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments import (
     AttemptId,
     BacktestRunId,
+    CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
     CheckpointRef,
@@ -32,10 +33,21 @@ from ditto_analysis.experiments import (
     ExperimentStatus,
     FoldId,
     FoldProtocolSpec,
+    ResearchMetricDirection,
+    ResearchMetricId,
     SnapshotId,
     StrategyVersion,
 )
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
+from ditto_analysis.experiments.trial_family import (
+    LogicalTrialIdentity,
+    TrialFamilyDeclaration,
+    TrialKind,
+)
+from ditto_analysis.experiments.trial_ledger import (
+    ObjectiveMetric,
+    PromotionObjective,
+)
 
 NOW = datetime(2026, 7, 19, 4, 0, tzinfo=UTC)
 NOW_US = 1_768_000_000_000_000
@@ -43,6 +55,7 @@ NOW_US = 1_768_000_000_000_000
 
 def _api() -> SimpleNamespace:
     from ditto_analysis.errors import (
+        ExperimentConflictError,
         ExperimentIntegrityError,
         ExperimentLeaseLostError,
         ExperimentPersistenceError,
@@ -68,14 +81,47 @@ def _api() -> SimpleNamespace:
 
 
 def _launch(experiment_id: str = "experiment-1") -> ExperimentLaunchSpec:
+    candidates = (
+        CandidateSpec(CandidateId("candidate-1"), 1, True, {"x": 1}),
+        CandidateSpec(CandidateId("candidate-2"), 2, False, {"x": 2}),
+    )
     return ExperimentLaunchSpec(
         experiment_id=ExperimentId(experiment_id),
         strategy_version=StrategyVersion("stock-selection@3"),
         strategy_spec_hash=ContentHash("a" * 64),
         snapshot_id=SnapshotId("snapshot-certified-1"),
-        candidates=(
-            CandidateSpec(CandidateId("candidate-1"), 1, True, {"x": 1}),
-            CandidateSpec(CandidateId("candidate-2"), 2, False, {"x": 2}),
+        candidates=candidates,
+        execution_bindings=tuple(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(f"{candidate.ordinal + 16:064x}"),
+            )
+            for candidate in candidates
+        ),
+        promotion_objective=PromotionObjective(
+            ObjectiveMetric(
+                ResearchMetricId.NET_RETURN,
+                ResearchMetricDirection.MAXIMIZE,
+            ),
+            (),
+            (),
+            CandidateId("candidate-1"),
+            "Test durable scheduler behavior.",
+            TrialFamilyDeclaration(
+                "scheduler-test-family",
+                tuple(
+                    LogicalTrialIdentity(
+                        ExperimentId(experiment_id),
+                        candidate.candidate_id,
+                        candidate.ordinal,
+                        candidate.parameter_hash,
+                        TrialKind.CURRENT,
+                    )
+                    for candidate in candidates
+                ),
+            ),
         ),
         fold_protocol=FoldProtocolSpec("r3-walk-forward", 1, ContentHash("b" * 64)),
         seed=42,
@@ -3553,3 +3599,688 @@ def test_terminal_work_items_cannot_transition_back_to_live_states(
         )
     assert fold_exc.value.details["reason_code"] == "invalid_fold_transition"
     assert reader.get_fold(key).projection == terminal_fold
+
+
+def _failed_fold_for_terminal_retry(
+    writer: Any,
+    reader: Any,
+    api: SimpleNamespace,
+    key: Any,
+    *,
+    failure_code: ExperimentFailureCode = ExperimentFailureCode.SYSTEM_ERROR,
+) -> tuple[Any, Any, Any, Any]:
+    lease, parent_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    failed_attempt = writer.transition_attempt(
+        parent_spec.attempt_id,
+        target_status=ExperimentStatus.FAILED,
+        backtest_run_id=running_attempt.backtest_run_id,
+        checkpoint_ref=running_attempt.checkpoint_ref,
+        failure_code=failure_code,
+        expected_revision=running_attempt.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+        occurred_at=NOW,
+        reason_code="attempt_failed",
+        detail={},
+    )
+    running_fold_view = reader.get_fold(key)
+    assert running_fold_view is not None
+    failed_fold = writer.transition_fold(
+        key,
+        target_status=ExperimentStatus.FAILED,
+        claim_owner_token=None,
+        failure_code=failure_code,
+        expected_revision=running_fold_view.projection.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 5,
+        occurred_at=NOW,
+        reason_code="fold_failed",
+        detail={},
+    )
+    return lease, parent_spec, failed_attempt, failed_fold
+
+
+@pytest.mark.parametrize(
+    "failure_code",
+    [ExperimentFailureCode.SYSTEM_ERROR, ExperimentFailureCode.LEASE_LOST],
+)
+def test_retryable_terminal_fold_requeues_atomically_and_appends_event(
+    tmp_path: Path,
+    failure_code: ExperimentFailureCode,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, failed_attempt, failed_fold = _failed_fold_for_terminal_retry(
+        writer,
+        reader,
+        api,
+        key,
+        failure_code=failure_code,
+    )
+
+    requeued = writer.requeue_failed_fold_for_retry(
+        key,
+        parent_spec.attempt_id,
+        expected_fold_revision=failed_fold.revision,
+        expected_parent_attempt_revision=failed_attempt.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 6,
+        occurred_at=NOW,
+        detail={"failure_code": failure_code.value},
+    )
+
+    assert requeued.status is ExperimentStatus.QUEUED
+    assert requeued.claim_owner_token is None
+    assert requeued.revision == failed_fold.revision + 1
+    fold_view = reader.get_fold(key)
+    assert fold_view is not None
+    assert fold_view.projection == requeued
+    parent_view = reader.get_attempt(parent_spec.attempt_id)
+    assert parent_view is not None
+    assert parent_view.projection == failed_attempt
+    assert len(reader.list_attempts(key)) == 1
+    retry_events = [
+        event
+        for event in reader.list_status_events(key.experiment_id)
+        if event.reason_code == "terminal_fold_retry"
+    ]
+    assert len(retry_events) == 1
+    retry_event = retry_events[0]
+    assert retry_event.previous_status is ExperimentStatus.FAILED
+    assert retry_event.status is ExperimentStatus.QUEUED
+    assert retry_event.failure_code is None
+    assert retry_event.subject_revision == requeued.revision
+    assert retry_event.detail == {"failure_code": failure_code.value}
+
+
+def test_terminal_fold_retry_rejects_candidate_failure_without_writes(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, failed_attempt, failed_fold = _failed_fold_for_terminal_retry(
+        writer,
+        reader,
+        api,
+        key,
+        failure_code=ExperimentFailureCode.CANDIDATE_FAILED,
+    )
+    before_fold = reader.get_fold(key)
+    before_attempts = reader.list_attempts(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=failed_fold.revision,
+            expected_parent_attempt_revision=failed_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 6,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "terminal_fold_retry_failure_not_retryable"
+    )
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_attempts(key) == before_attempts
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+def test_terminal_fold_retry_rejects_cancelled_fold_without_writes(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    cancelled_attempt = writer.transition_attempt(
+        parent_spec.attempt_id,
+        target_status=ExperimentStatus.CANCELLED,
+        backtest_run_id=running_attempt.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=running_attempt.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+        occurred_at=NOW,
+        reason_code="attempt_cancelled",
+        detail={},
+    )
+    running_fold_view = reader.get_fold(key)
+    assert running_fold_view is not None
+    cancelled_fold = writer.transition_fold(
+        key,
+        target_status=ExperimentStatus.CANCELLED,
+        claim_owner_token=None,
+        failure_code=None,
+        expected_revision=running_fold_view.projection.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 5,
+        occurred_at=NOW,
+        reason_code="fold_cancelled",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=cancelled_fold.revision,
+            expected_parent_attempt_revision=cancelled_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 6,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "terminal_fold_retry_requires_failed_fold"
+    )
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+@pytest.mark.parametrize(
+    ("target_status", "target_desired_state"),
+    [
+        (ExperimentStatus.PAUSED, ExperimentDesiredState.PAUSE),
+        (ExperimentStatus.CANCELLED, ExperimentDesiredState.CANCEL),
+    ],
+)
+def test_terminal_fold_retry_rejects_inactive_parent_experiment_without_writes(
+    tmp_path: Path,
+    target_status: ExperimentStatus,
+    target_desired_state: ExperimentDesiredState,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, failed_attempt, failed_fold = _failed_fold_for_terminal_retry(
+        writer, reader, api, key
+    )
+    running_experiment = reader.get_experiment_projection(key.experiment_id)
+    assert running_experiment is not None
+    requested_status = (
+        ExperimentStatus.PAUSE_REQUESTED
+        if target_status is ExperimentStatus.PAUSED
+        else ExperimentStatus.CANCEL_REQUESTED
+    )
+    requested = writer.transition_experiment(
+        key.experiment_id,
+        target_status=requested_status,
+        target_desired_state=target_desired_state,
+        target_stage=running_experiment.record.stage,
+        failure_code=None,
+        expected_revision=running_experiment.revision,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="operator_control",
+        detail={},
+    )
+    writer.transition_scheduled_experiment(
+        key.experiment_id,
+        target_status=target_status,
+        target_stage=requested.record.stage,
+        failure_code=None,
+        expected_revision=requested.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 6,
+        occurred_at=NOW,
+        attempt_started=True,
+        precondition_repairable=False,
+        reason_code="control_drained",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_attempts = reader.list_attempts(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=failed_fold.revision,
+            expected_parent_attempt_revision=failed_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 7,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "terminal_fold_retry_experiment_not_running"
+    )
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_attempts(key) == before_attempts
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+def test_terminal_fold_retry_rejects_cancelled_parent_attempt_without_writes(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, running_attempt = _start_running_attempt(
+        writer,
+        api,
+        key,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    cancelled_attempt = writer.transition_attempt(
+        parent_spec.attempt_id,
+        target_status=ExperimentStatus.CANCELLED,
+        backtest_run_id=running_attempt.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=running_attempt.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+        occurred_at=NOW,
+        reason_code="attempt_cancelled",
+        detail={},
+    )
+    running_fold_view = reader.get_fold(key)
+    assert running_fold_view is not None
+    failed_fold = writer.transition_fold(
+        key,
+        target_status=ExperimentStatus.FAILED,
+        claim_owner_token=None,
+        failure_code=ExperimentFailureCode.SYSTEM_ERROR,
+        expected_revision=running_fold_view.projection.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 5,
+        occurred_at=NOW,
+        reason_code="fold_failed",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=failed_fold.revision,
+            expected_parent_attempt_revision=cancelled_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 6,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "terminal_fold_retry_parent_not_retryable"
+    )
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+def test_terminal_fold_retry_rejects_wrong_parent_lineage_without_writes(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    other_key = _add_fold(
+        writer,
+        api,
+        candidate_id="candidate-2",
+        fold_id="fold-2",
+        ordinal=1,
+    )
+    lease, parent_spec, failed_attempt, failed_fold = _failed_fold_for_terminal_retry(
+        writer, reader, api, key
+    )
+    wrong_spec, wrong_initial = _attempt(api, other_key, "attempt-other")
+    writer.claim_fold_and_add_attempt(
+        other_key,
+        wrong_spec,
+        wrong_initial,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 6,
+        occurred_at=NOW,
+    )
+    wrong_running = writer.transition_attempt(
+        wrong_spec.attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=BacktestRunId("backtest-run-other"),
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 7,
+        occurred_at=NOW,
+        reason_code="attempt_started",
+        detail={},
+    )
+    wrong_failed = writer.transition_attempt(
+        wrong_spec.attempt_id,
+        target_status=ExperimentStatus.FAILED,
+        backtest_run_id=wrong_running.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=ExperimentFailureCode.SYSTEM_ERROR,
+        expected_revision=wrong_running.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 8,
+        occurred_at=NOW,
+        reason_code="attempt_failed",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_attempts = reader.list_attempts(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            wrong_spec.attempt_id,
+            expected_fold_revision=failed_fold.revision,
+            expected_parent_attempt_revision=wrong_failed.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 9,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "terminal_fold_retry_parent_lineage_invalid"
+    )
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_attempts(key) == before_attempts
+    assert reader.list_status_events(key.experiment_id) == before_events
+    assert reader.get_attempt(parent_spec.attempt_id).projection == failed_attempt
+
+
+@pytest.mark.parametrize("stale_target", ["fold", "parent"])
+def test_terminal_fold_retry_rejects_stale_revision_without_writes(
+    tmp_path: Path,
+    stale_target: str,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, failed_attempt, failed_fold = _failed_fold_for_terminal_retry(
+        writer, reader, api, key
+    )
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=(
+                failed_fold.revision - 1
+                if stale_target == "fold"
+                else failed_fold.revision
+            ),
+            expected_parent_attempt_revision=(
+                failed_attempt.revision - 1
+                if stale_target == "parent"
+                else failed_attempt.revision
+            ),
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 6,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "stale_projection_revision"
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+@pytest.mark.parametrize(
+    ("fence_case", "expected_reason"),
+    [
+        ("wrong_owner", "scheduler_lease_lost"),
+        ("expired", "scheduler_lease_expired"),
+    ],
+)
+def test_terminal_fold_retry_rejects_invalid_fence_without_writes(
+    tmp_path: Path,
+    fence_case: str,
+    expected_reason: str,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, failed_attempt, failed_fold = _failed_fold_for_terminal_retry(
+        writer, reader, api, key
+    )
+    fence = lease.fence
+    now_epoch_us = NOW_US + 6
+    if fence_case == "wrong_owner":
+        fence = type(lease.fence)(
+            experiment_id=lease.fence.experiment_id,
+            owner_token="owner-b",
+            revision=lease.fence.revision,
+            lease_until_epoch_us=lease.fence.lease_until_epoch_us,
+        )
+    else:
+        now_epoch_us = lease.fence.lease_until_epoch_us
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(api.ExperimentLeaseLostError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=failed_fold.revision,
+            expected_parent_attempt_revision=failed_attempt.revision,
+            lease_fence=fence,
+            now_epoch_us=now_epoch_us,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == expected_reason
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+def test_terminal_fold_retry_rejects_live_attempt_without_writes(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, _running_experiment = _start_running_experiment(
+        writer,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    parent_spec, initial = _attempt(api, key)
+    running_fold, queued_attempt = writer.claim_fold_and_add_attempt(
+        key,
+        parent_spec,
+        initial,
+        expected_fold_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 2,
+        occurred_at=NOW,
+    )
+    failed_fold = writer.transition_fold(
+        key,
+        target_status=ExperimentStatus.FAILED,
+        claim_owner_token=None,
+        failure_code=ExperimentFailureCode.SYSTEM_ERROR,
+        expected_revision=running_fold.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+        occurred_at=NOW,
+        reason_code="fold_failed",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_attempts = reader.list_attempts(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=failed_fold.revision,
+            expected_parent_attempt_revision=queued_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 4,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert exc_info.value.details["reason_code"] == "terminal_fold_retry_live_attempt"
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_attempts(key) == before_attempts
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+def test_terminal_fold_retry_rejects_non_latest_parent_without_writes(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, first_spec, first_failed, first_fold = _failed_fold_for_terminal_retry(
+        writer,
+        reader,
+        api,
+        key,
+    )
+    requeued = writer.requeue_failed_fold_for_retry(
+        key,
+        first_spec.attempt_id,
+        expected_fold_revision=first_fold.revision,
+        expected_parent_attempt_revision=first_failed.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 6,
+        occurred_at=NOW,
+        detail={},
+    )
+    second_spec, second_initial = _attempt(
+        api,
+        key,
+        "attempt-2",
+        ordinal=2,
+        parent_attempt_id=first_spec.attempt_id,
+        resume_from_run_id=first_failed.backtest_run_id,
+        fingerprint=first_spec.reproduction_fingerprint,
+    )
+    second_running_fold, _second_queued = writer.claim_fold_and_add_attempt(
+        key,
+        second_spec,
+        second_initial,
+        expected_fold_revision=requeued.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 7,
+        occurred_at=NOW,
+    )
+    second_running = writer.transition_attempt(
+        second_spec.attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=BacktestRunId("backtest-run-2"),
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=0,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 8,
+        occurred_at=NOW,
+        reason_code="attempt_started",
+        detail={},
+    )
+    writer.transition_attempt(
+        second_spec.attempt_id,
+        target_status=ExperimentStatus.FAILED,
+        backtest_run_id=second_running.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=ExperimentFailureCode.SYSTEM_ERROR,
+        expected_revision=second_running.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 9,
+        occurred_at=NOW,
+        reason_code="attempt_failed",
+        detail={},
+    )
+    second_failed_fold = writer.transition_fold(
+        key,
+        target_status=ExperimentStatus.FAILED,
+        claim_owner_token=None,
+        failure_code=ExperimentFailureCode.SYSTEM_ERROR,
+        expected_revision=second_running_fold.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 10,
+        occurred_at=NOW,
+        reason_code="fold_failed",
+        detail={},
+    )
+    before_fold = reader.get_fold(key)
+    before_attempts = reader.list_attempts(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            first_spec.attempt_id,
+            expected_fold_revision=second_failed_fold.revision,
+            expected_parent_attempt_revision=first_failed.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 11,
+            occurred_at=NOW,
+            detail={},
+        )
+
+    assert (
+        exc_info.value.details["reason_code"] == "terminal_fold_retry_parent_not_latest"
+    )
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_attempts(key) == before_attempts
+    assert reader.list_status_events(key.experiment_id) == before_events
+
+
+def test_terminal_fold_retry_event_failure_rolls_back_fold_update(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sqlite3
+
+    _database, reader, writer, api = _store(tmp_path)
+    key = _add_fold(writer, api)
+    lease, parent_spec, failed_attempt, failed_fold = _failed_fold_for_terminal_retry(
+        writer, reader, api, key
+    )
+    before_fold = reader.get_fold(key)
+    before_events = reader.list_status_events(key.experiment_id)
+
+    def fail_event_insert(*_args: object, **_kwargs: object) -> None:
+        raise sqlite3.IntegrityError("injected terminal retry event failure")
+
+    monkeypatch.setattr(writer, "_insert_event", fail_event_insert)
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        writer.requeue_failed_fold_for_retry(
+            key,
+            parent_spec.attempt_id,
+            expected_fold_revision=failed_fold.revision,
+            expected_parent_attempt_revision=failed_attempt.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 6,
+            occurred_at=NOW,
+            detail={"must_rollback": True},
+        )
+
+    assert exc_info.value.details["reason_code"] == "invalid_terminal_fold_retry"
+    assert reader.get_fold(key) == before_fold
+    assert reader.list_status_events(key.experiment_id) == before_events

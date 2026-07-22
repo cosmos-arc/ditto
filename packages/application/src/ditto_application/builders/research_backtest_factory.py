@@ -16,6 +16,10 @@ from ditto_strategy.alpha.parameters import (
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointReaderProtocol,
+    StrategyRunCheckpointWriterProtocol,
+)
 
 from ditto_application.builders.research_backtest_components import (
     FrozenBacktestStrategyBuild,
@@ -52,6 +56,10 @@ from ditto_application.processes.experiments.execution_bundle import (
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ResearchAssetLane,
+)
+from ditto_application.processes.experiments.research_backtest_checkpoint import (
+    ResearchBacktestCheckpointControl,
+    resolve_research_backtest_resume,
 )
 from ditto_application.processes.experiments.research_data_feed import (
     FrozenResearchDataFrames,
@@ -196,6 +204,8 @@ class FrozenAuditResearchBacktestFactory:
         published_baseline_builder: ExactPublishedBaselineRuntimeBuilder | None = None,
         artifact_loader: ExactResearchArtifactLoader,
         environment: CodeEnvironmentLock,
+        checkpoint_reader: StrategyRunCheckpointReaderProtocol,
+        checkpoint_writer: StrategyRunCheckpointWriterProtocol,
     ) -> None:
         if type(environment) is not CodeEnvironmentLock:
             raise _error("invalid_actual_code_environment_lock")
@@ -204,6 +214,8 @@ class FrozenAuditResearchBacktestFactory:
         self._published_baseline_builder = published_baseline_builder
         self._artifacts = artifact_loader
         self._environment = environment
+        self._checkpoint_reader = checkpoint_reader
+        self._checkpoint_writer = checkpoint_writer
 
     def build(
         self,
@@ -234,6 +246,15 @@ class FrozenAuditResearchBacktestFactory:
             benchmark=benchmark,
             expected_manifest_hash=semantics.backtest.data_feed_manifest_hash,
         )
+        checkpoint_control = ResearchBacktestCheckpointControl(
+            writer=self._checkpoint_writer,
+            resume=resolve_research_backtest_resume(
+                audit=audit,
+                strategy=built_strategy.binding,
+                trading_days=tuple(feed.trading_days()),
+                checkpoint_reader=self._checkpoint_reader,
+            ),
+        )
         component_build = build_research_backtest_service(
             audit=audit,
             strategy=built_strategy,
@@ -241,6 +262,7 @@ class FrozenAuditResearchBacktestFactory:
             feed=feed,
             benchmark=benchmark,
             external_should_stop=external_should_stop,
+            checkpoint_control=checkpoint_control,
         )
         service = component_build.service
         actual_backtest = component_build.execution_config
@@ -290,8 +312,8 @@ class FrozenAuditResearchBacktestFactory:
         if type(audit) is not ResearchExecutionAudit:
             raise _error("invalid_research_execution_audit")
         typed = audit
-        if typed.resume_from_run_id is not None:
-            raise _error("research_resume_evidence_unavailable")
+        if typed.resume_from_run_id is not None and typed.parent_attempt_id is None:
+            raise _error("research_resume_lineage_incomplete")
         rebuilt = ResearchExecutionAudit.create(
             semantics=typed.semantics,
             attempt_id=typed.attempt_id,

@@ -52,12 +52,15 @@ class _NeverBuilder:
 def test_factory_uses_candidate_builder_only_for_non_baseline_runtime() -> None:
     _, audit, reader, candidate_builder, loader = factory_fixtures._fixture()
     published_builder = _NeverBuilder()
+    checkpoints = factory_fixtures._CheckpointStore()
     factory = FrozenAuditResearchBacktestFactory(
         strategy_reader=reader,
         runtime_builder=candidate_builder,
         published_baseline_builder=published_builder,
         artifact_loader=loader,
         environment=audit.semantics.environment,
+        checkpoint_reader=checkpoints,
+        checkpoint_writer=checkpoints,
     )
 
     factory.build(audit, external_should_stop=factory_fixtures._never_stop)
@@ -128,12 +131,15 @@ def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
     )
     candidate_builder = _NeverBuilder()
     published_builder = factory_fixtures._Builder(runtime)
+    checkpoints = factory_fixtures._CheckpointStore()
     factory = FrozenAuditResearchBacktestFactory(
         strategy_reader=factory_fixtures._Reader(record),
         runtime_builder=candidate_builder,
         published_baseline_builder=published_builder,
         artifact_loader=loader,
         environment=semantics.environment,
+        checkpoint_reader=checkpoints,
+        checkpoint_writer=checkpoints,
     )
 
     built = factory._build_strategy(semantics, loader.rules)
@@ -199,12 +205,15 @@ def test_factory_rejects_invalid_published_baseline_lane_or_status(
         created_at=candidate_audit.created_at,
     )
     published_builder = factory_fixtures._Builder(runtime)
+    checkpoints = factory_fixtures._CheckpointStore()
     factory = FrozenAuditResearchBacktestFactory(
         strategy_reader=reader,
         runtime_builder=_NeverBuilder(),
         published_baseline_builder=published_builder,
         artifact_loader=loader,
         environment=audit.semantics.environment,
+        checkpoint_reader=checkpoints,
+        checkpoint_writer=checkpoints,
     )
 
     with pytest.raises(AppProcessError) as exc_info:

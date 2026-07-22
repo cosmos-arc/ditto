@@ -3,38 +3,50 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import StrEnum
 
 from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments import (
     AttemptId,
     AttemptView,
-    BacktestRunId,
-    ContentHash,
+    CheckpointRef,
     ExperimentFailureCode,
     ExperimentFailurePolicy,
     ExperimentId,
     ExperimentStage,
     ExperimentStatus,
-    FoldKey,
     FoldRole,
-    FoldView,
     SchedulerLease,
-    canonical_payload,
 )
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import (
     _coordinator_snapshot as _snapshot_rules,
 )
-from ditto_application.processes.experiments.lease_authority import LeaseAuthority
+from ditto_application.processes.experiments._coordinator_contract import (
+    ExperimentControlReceipt,
+    ExperimentDispatch,
+    ExperimentProgress,
+    PersistedAttemptStart,
+    SchedulerTickResult,
+    SchedulerTickState,
+)
+from ditto_application.processes.experiments._coordinator_recovery import (
+    ExperimentRecoveryOrchestrator,
+)
+from ditto_application.processes.experiments._execution_resolution_evidence import (
+    deterministic_backtest_run_id,
+)
+from ditto_application.processes.experiments.lease_authority import (
+    LeaseAuthority,
+    require_utc_event_time,
+    run_unfenced_scheduler_operation,
+)
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
     ExperimentSchedulerStoreProtocol,
-    FirstAttempt,
     FirstAttemptFactory,
+    ResearchExecutionDirective,
 )
 
 __all__ = [
@@ -55,18 +67,16 @@ _TERMINAL_WORK = frozenset(
         ExperimentStatus.FAILED,
     }
 )
-_TERMINAL_EXPERIMENT = frozenset(
-    {*_TERMINAL_WORK, ExperimentStatus.COMPLETED_WITH_FAILURES}
-)
+_TERMINAL_EXPERIMENT = _TERMINAL_WORK | {
+    ExperimentStatus.COMPLETED_WITH_FAILURES,
+}
 _HARD_FAILURES = frozenset(
     {
         ExperimentFailureCode.INPUT_HASH_MISMATCH,
         ExperimentFailureCode.SYSTEM_ERROR,
     }
 )
-_FIRST_RUN_FAILURES = frozenset(
-    {ExperimentFailureCode.CANDIDATE_FAILED, *_HARD_FAILURES}
-)
+_FIRST_RUN_FAILURES = _HARD_FAILURES | {ExperimentFailureCode.CANDIDATE_FAILED}
 _REPLAYABLE_TERMINAL_ATTEMPT = frozenset(
     {ExperimentStatus.COMPLETED, ExperimentStatus.FAILED}
 )
@@ -129,104 +139,7 @@ _SNAPSHOT_VOCABULARY = _snapshot_rules.SnapshotVocabulary(
     ),
 )
 _scheduler_error = _snapshot_rules.scheduler_error
-
-
-class SchedulerTickState(StrEnum):
-    """Observable result of one bounded coordinator tick."""
-
-    IDLE = "idle"
-    LEASE_BUSY = "lease_busy"
-    DISPATCHED = "dispatched"
-    WAITING = "waiting"
-    CANDIDATE_SELECTION = "candidate_selection"
-    HOLDOUT_GATED = "holdout_gated"
-    RECOVERY_REQUIRED = "recovery_required"
-    FAIL_FAST = "fail_fast"
-
-
-@dataclass(frozen=True, slots=True)
-class ExperimentProgress:
-    """Progress calculated only from persisted fold and attempt projections."""
-
-    experiment_id: ExperimentId
-    stage: ExperimentStage
-    worker_limit: int
-    available_capacity: int
-    total_fold_count: int
-    terminal_fold_count: int
-    live_attempt_count: int
-    completed_attempt_count: int
-    failed_candidate_attempt_count: int
-    hard_failure_count: int
-
-
-@dataclass(frozen=True, slots=True)
-class ExperimentDispatch:
-    """One durably claimed first attempt ready for execution-owned audit work."""
-
-    stage: ExperimentStage
-    fold: FoldView
-    attempt: AttemptView
-
-
-@dataclass(frozen=True, slots=True)
-class PersistedAttemptStart:
-    """Exact durable attempt/fold pair observed by a start-attempt request."""
-
-    attempt: AttemptView
-    fold: FoldView
-    started_now: bool
-
-    def __post_init__(self) -> None:
-        """Reject incomplete or internally inconsistent persisted start facts."""
-        base_invalid = (
-            type(self.attempt) is not AttemptView
-            or type(self.fold) is not FoldView
-            or type(self.started_now) is not bool
-            or self.attempt.spec.attempt_id != self.attempt.projection.attempt_id
-            or self.fold.spec.key != self.fold.projection.key
-            or self.attempt.spec.fold_key != self.fold.spec.key
-            or self.attempt.projection.backtest_run_id is None
-            or self.attempt.projection.checkpoint_ref is not None
-        )
-        running = (
-            self.attempt.projection.status is ExperimentStatus.RUNNING
-            and self.attempt.projection.failure_code is None
-            and self.fold.projection.status is ExperimentStatus.RUNNING
-            and self.fold.projection.claim_owner_token is not None
-        )
-        terminal_status = self.attempt.projection.status
-        terminal = (
-            not self.started_now
-            and terminal_status in _REPLAYABLE_TERMINAL_ATTEMPT
-            and self.fold.projection.status is terminal_status
-            and self.fold.projection.claim_owner_token is None
-            and (
-                (
-                    terminal_status is ExperimentStatus.COMPLETED
-                    and self.attempt.projection.failure_code is None
-                )
-                or (
-                    terminal_status is ExperimentStatus.FAILED
-                    and self.attempt.projection.failure_code in _FIRST_RUN_FAILURES
-                )
-            )
-        )
-        if base_invalid or not (running or terminal):
-            raise _scheduler_error(
-                "EXPERIMENT_INTEGRITY_FAILED",
-                "persisted_attempt_start_invalid",
-            )
-
-
-@dataclass(frozen=True, slots=True)
-class SchedulerTickResult:
-    """Bounded result of one tick; absence of progress means no owned experiment."""
-
-    state: SchedulerTickState
-    experiment_id: ExperimentId | None
-    dispatches: tuple[ExperimentDispatch, ...]
-    progress: ExperimentProgress | None
+_require_utc_event_time = require_utc_event_time
 
 
 class ExperimentExecutionCoordinator:
@@ -240,37 +153,179 @@ class ExperimentExecutionCoordinator:
         owner_token: str,
         lease_duration: timedelta,
         clock: Callable[[], datetime] | None = None,
+        checkpoint_available: Callable[[str], bool] | None = None,
+        checkpoint_resumable: Callable[[str], bool] | None = None,
     ) -> None:
         self._store = store
-        self._first_attempt_factory = first_attempt_factory
         self._authority = LeaseAuthority(
             store,
             owner_token=owner_token,
             lease_duration=lease_duration,
             clock=clock,
         )
+        self._recovery = ExperimentRecoveryOrchestrator(
+            store=store,
+            attempt_factory=first_attempt_factory,
+            checkpoint_available=checkpoint_available or (lambda _run_id: False),
+            checkpoint_resumable=checkpoint_resumable or (lambda _run_id: False),
+            run_id_factory=deterministic_backtest_run_id,
+        )
 
     def tick(self, *, occurred_at: datetime) -> SchedulerTickResult:
         """Acquire the queue head and dispatch at most DB-derived capacity."""
         _require_utc_event_time(occurred_at)
         self._authority.ensure_usable()
-        if not self._authority.has_lease:
-            unowned = self._acquire_queue_head()
-            if unowned is not None:
-                return unowned
-        return self._authority.execute(
-            lambda lease, now_epoch_us: self._tick_owned(
-                lease,
-                now_epoch_us,
-                occurred_at,
+        while True:
+            if not self._authority.has_lease:
+                unowned = self._acquire_queue_head()
+                if unowned is not None:
+                    return unowned
+            result = self._authority.execute(
+                lambda lease, now_epoch_us: self._tick_owned(
+                    lease,
+                    now_epoch_us,
+                    occurred_at,
+                )
             )
-        )
+            if result is not None:
+                return result
+            self._authority.release()
 
     def renew_lease(self, *, occurred_at: datetime | None = None) -> SchedulerLease:
         """Renew from the authority clock; retain worker-call compatibility."""
         if occurred_at is not None:
             _require_utc_event_time(occurred_at)
         return self._authority.renew()
+
+    def pause(
+        self,
+        *,
+        experiment_id: str,
+        expected_revision: int,
+        occurred_at: datetime,
+    ) -> ExperimentControlReceipt:
+        """Persist pause intent before any child notification occurs."""
+        _require_utc_event_time(occurred_at)
+        return run_unfenced_scheduler_operation(
+            lambda: self._recovery.pause(
+                experiment_id=experiment_id,
+                expected_revision=expected_revision,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def cancel(
+        self,
+        *,
+        experiment_id: str,
+        expected_revision: int,
+        occurred_at: datetime,
+    ) -> ExperimentControlReceipt:
+        """Persist cancellation intent before any child notification occurs."""
+        _require_utc_event_time(occurred_at)
+        return run_unfenced_scheduler_operation(
+            lambda: self._recovery.cancel(
+                experiment_id=experiment_id,
+                expected_revision=expected_revision,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def resume(
+        self,
+        *,
+        experiment_id: str,
+        expected_revision: int,
+        occurred_at: datetime,
+    ) -> ExperimentControlReceipt:
+        """Persist RUN intent without constructing a successor attempt early."""
+        _require_utc_event_time(occurred_at)
+        return run_unfenced_scheduler_operation(
+            lambda: self._recovery.resume(
+                experiment_id=experiment_id,
+                expected_revision=expected_revision,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def retry_fold(
+        self,
+        *,
+        experiment_id: str,
+        candidate_id: str,
+        fold_id: str,
+        expected_revision: int,
+        occurred_at: datetime,
+    ) -> ExperimentControlReceipt:
+        """Requeue one eligible terminal fold under the current scheduler fence."""
+        _require_utc_event_time(occurred_at)
+        return self._authority.execute_operator(
+            lambda lease, now_epoch_us: self._recovery.retry_fold(
+                experiment_id=experiment_id,
+                candidate_id=candidate_id,
+                fold_id=fold_id,
+                expected_revision=expected_revision,
+                occurred_at=occurred_at,
+                lease=lease,
+                now_epoch_us=now_epoch_us(),
+            )
+        )
+
+    def poll_execution_directive(
+        self,
+        attempt_id: AttemptId,
+        *,
+        occurred_at: datetime,
+    ) -> ResearchExecutionDirective:
+        """Read the exact durable RUN, PAUSE, or CANCEL intent under the fence."""
+        _require_utc_event_time(occurred_at)
+        return self._authority.execute(
+            lambda lease, _now: self._recovery.poll_directive(
+                self._load_snapshot(lease.experiment_id),
+                attempt_id,
+                lease,
+            )
+        )
+
+    def record_checkpoint(
+        self,
+        attempt_id: AttemptId,
+        checkpoint_ref: CheckpointRef,
+        *,
+        occurred_at: datetime,
+    ) -> AttemptView:
+        """Index an already-written strategy checkpoint under the current fence."""
+        _require_utc_event_time(occurred_at)
+        return self._authority.execute(
+            lambda lease, now_epoch_us: self._recovery.record_checkpoint(
+                self._load_snapshot(lease.experiment_id),
+                attempt_id,
+                checkpoint_ref,
+                lease,
+                now_epoch_us=now_epoch_us(),
+                occurred_at=occurred_at,
+            )
+        )
+
+    def cooperative_stop_attempt(
+        self,
+        attempt_id: AttemptId,
+        directive: ResearchExecutionDirective,
+        *,
+        occurred_at: datetime,
+    ) -> ExperimentSchedulerSnapshot:
+        """Fence one normal child stop and drain its durable control request."""
+        _require_utc_event_time(occurred_at)
+        return self._authority.execute(
+            lambda lease, now_epoch_us: self._recovery.cooperative_stop(
+                self._load_snapshot(lease.experiment_id),
+                attempt_id,
+                directive,
+                lease,
+                now_epoch_us=now_epoch_us,
+                occurred_at=occurred_at,
+            )
+        )
 
     def start_attempt(
         self,
@@ -302,8 +357,8 @@ class ExperimentExecutionCoordinator:
                     "dispatch_attempt_identity_drift",
                 )
             attempt = matches[0]
-            _require_task9_first_attempt(attempt)
-            fold = _find_fold(snapshot, attempt.spec.fold_key)
+            self._recovery.validate_attempt_lineage(snapshot)
+            fold = self._recovery.find_fold(snapshot, attempt.spec.fold_key)
             backtest_run_id = deterministic_backtest_run_id(
                 attempt.spec.attempt_id,
                 attempt.spec.reproduction_fingerprint,
@@ -317,7 +372,7 @@ class ExperimentExecutionCoordinator:
                     _SNAPSHOT_VOCABULARY,
                 )
                 return PersistedAttemptStart(attempt, fold, False)
-            fold = _require_fold_owned_by_lease(snapshot, attempt, lease)
+            fold = self._recovery.require_owned_fold(snapshot, attempt, lease)
             _snapshot_rules.require_exact_persisted_dispatch(
                 snapshot,
                 dispatch,
@@ -425,11 +480,10 @@ class ExperimentExecutionCoordinator:
         lease: SchedulerLease,
         now_epoch_us: Callable[[], int],
         occurred_at: datetime,
-    ) -> SchedulerTickResult:
+    ) -> SchedulerTickResult | None:
         snapshot = self._load_snapshot(lease.experiment_id)
         _snapshot_rules.validate_worker_limit(snapshot)
-        for attempt in snapshot.attempts:
-            _require_task9_first_attempt(attempt)
+        self._recovery.validate_attempt_lineage(snapshot)
         if snapshot.projection.record.status is ExperimentStatus.QUEUED:
             self._store.transition_to_running(
                 snapshot.projection,
@@ -438,8 +492,33 @@ class ExperimentExecutionCoordinator:
                 occurred_at=occurred_at,
             )
             snapshot = self._load_snapshot(lease.experiment_id)
-        if snapshot.projection.record.status is not ExperimentStatus.RUNNING:
+        status = snapshot.projection.record.status
+        if status in _TERMINAL_EXPERIMENT:
+            return None
+        if status in {
+            ExperimentStatus.PAUSE_REQUESTED,
+            ExperimentStatus.CANCEL_REQUESTED,
+        }:
+            drain = (
+                self._recovery.drain_pause
+                if status is ExperimentStatus.PAUSE_REQUESTED
+                else self._recovery.drain_cancel
+            )
+            snapshot = drain(
+                snapshot,
+                lease,
+                now_epoch_us=now_epoch_us,
+                occurred_at=occurred_at,
+            )
             return _result(SchedulerTickState.WAITING, snapshot, ())
+        if status is not ExperimentStatus.RUNNING:
+            return _result(SchedulerTickState.WAITING, snapshot, ())
+        snapshot = self._recovery.recover_running(
+            snapshot,
+            lease,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+        )
         _snapshot_rules.validate_live_work_stage(snapshot, _SNAPSHOT_VOCABULARY)
         _snapshot_rules.validate_no_future_stage_outcomes(
             snapshot,
@@ -451,7 +530,10 @@ class ExperimentExecutionCoordinator:
             lease.owner_token,
             _SNAPSHOT_VOCABULARY,
         ):
-            return _result(SchedulerTickState.RECOVERY_REQUIRED, snapshot, ())
+            raise _scheduler_error(
+                "EXPERIMENT_INTEGRITY_FAILED",
+                "durable_recovery_incomplete",
+            )
         if _snapshot_rules.must_stop_after_failure(
             snapshot,
             _SNAPSHOT_VOCABULARY,
@@ -582,12 +664,9 @@ class ExperimentExecutionCoordinator:
         )
         dispatches: list[ExperimentDispatch] = []
         for fold in claimable[: progress.available_capacity]:
-            first_attempt = self._first_attempt_factory.create(fold, occurred_at)
-            if type(first_attempt) is not FirstAttempt:
-                raise _scheduler_error("SPEC_INVALID", "first_attempt_factory_invalid")
-            claimed_fold, attempt = self._store.claim_first_attempt(
+            claimed_fold, attempt = self._recovery.claim_attempt(
+                snapshot,
                 fold,
-                first_attempt,
                 lease,
                 now_epoch_us=now_epoch_us(),
                 occurred_at=occurred_at,
@@ -611,9 +690,9 @@ class ExperimentExecutionCoordinator:
         failure_code: ExperimentFailureCode | None,
     ) -> ExperimentProgress:
         snapshot = self._load_snapshot(lease.experiment_id)
-        attempt = _find_attempt(snapshot, attempt_id)
-        _require_task9_first_attempt(attempt)
-        fold = _find_fold(snapshot, attempt.spec.fold_key)
+        attempt = self._recovery.find_attempt(snapshot, attempt_id)
+        self._recovery.validate_attempt_lineage(snapshot)
+        fold = self._recovery.find_fold(snapshot, attempt.spec.fold_key)
         if attempt.projection.status is target_status:
             if attempt.projection.failure_code is not failure_code:
                 raise _scheduler_error(
@@ -622,10 +701,10 @@ class ExperimentExecutionCoordinator:
                 )
             if fold.projection.status is target_status:
                 return _progress(snapshot)
-            _require_fold_owned_by_lease(snapshot, attempt, lease)
+            self._recovery.require_owned_fold(snapshot, attempt, lease)
             updated_attempt = attempt
         else:
-            _require_fold_owned_by_lease(snapshot, attempt, lease)
+            self._recovery.require_owned_fold(snapshot, attempt, lease)
             if attempt.projection.status is not ExperimentStatus.RUNNING:
                 raise _scheduler_error("SPEC_INVALID", "attempt_is_not_finishable")
             if attempt.projection.backtest_run_id is None:
@@ -640,7 +719,7 @@ class ExperimentExecutionCoordinator:
                 occurred_at=occurred_at,
             )
         snapshot = self._load_snapshot(lease.experiment_id)
-        fold = _find_fold(snapshot, updated_attempt.spec.fold_key)
+        fold = self._recovery.find_fold(snapshot, updated_attempt.spec.fold_key)
         if fold.projection.status is target_status:
             return _progress(snapshot)
         if fold.projection.status is not ExperimentStatus.RUNNING:
@@ -665,73 +744,6 @@ class ExperimentExecutionCoordinator:
             _SNAPSHOT_VOCABULARY,
         )
         return snapshot
-
-
-def _find_attempt(
-    snapshot: ExperimentSchedulerSnapshot,
-    attempt_id: AttemptId,
-) -> AttemptView:
-    matches = tuple(
-        attempt
-        for attempt in snapshot.attempts
-        if attempt.spec.attempt_id == attempt_id
-    )
-    if len(matches) != 1:
-        raise _scheduler_error("SPEC_INVALID", "attempt_not_found_or_ambiguous")
-    return matches[0]
-
-
-def deterministic_backtest_run_id(
-    attempt_id: AttemptId,
-    reproduction_fingerprint: ContentHash,
-) -> BacktestRunId:
-    """Derive the stable run identity from the exact attempt fingerprint."""
-    identity = canonical_payload(
-        {
-            "kind": "r3_research_backtest_run",
-            "attempt_id": str(attempt_id),
-            "reproduction_fingerprint": str(reproduction_fingerprint),
-        }
-    ).content_hash
-    return BacktestRunId(f"research-run-{identity}")
-
-
-def _require_fold_owned_by_lease(
-    snapshot: ExperimentSchedulerSnapshot,
-    attempt: AttemptView,
-    lease: SchedulerLease,
-) -> FoldView:
-    fold = _find_fold(snapshot, attempt.spec.fold_key)
-    if (
-        fold.projection.status is not ExperimentStatus.RUNNING
-        or fold.projection.claim_owner_token != lease.owner_token
-    ):
-        raise _scheduler_error(
-            "LEASE_LOST",
-            "attempt_fold_not_owned_by_lease",
-        )
-    return fold
-
-
-def _find_fold(snapshot: ExperimentSchedulerSnapshot, key: FoldKey) -> FoldView:
-    matches = tuple(fold for fold in snapshot.folds if fold.spec.key == key)
-    if len(matches) != 1:
-        raise _scheduler_error("SPEC_INVALID", "fold_not_found_or_ambiguous")
-    return matches[0]
-
-
-def _require_task9_first_attempt(attempt: AttemptView) -> None:
-    if (
-        attempt.spec.attempt_id != attempt.projection.attempt_id
-        or attempt.spec.ordinal != 1
-        or attempt.spec.parent_attempt_id is not None
-        or attempt.spec.resume_from_run_id is not None
-        or attempt.projection.checkpoint_ref is not None
-    ):
-        raise _scheduler_error(
-            "SPEC_INVALID",
-            "task9_first_attempt_contract_invalid",
-        )
 
 
 def _progress(snapshot: ExperimentSchedulerSnapshot) -> ExperimentProgress:
@@ -785,12 +797,3 @@ def _result(
 
 def _empty_result(state: SchedulerTickState) -> SchedulerTickResult:
     return SchedulerTickResult(state, None, (), None)
-
-
-def _require_utc_event_time(value: datetime) -> None:
-    if (
-        type(value) is not datetime
-        or value.tzinfo is None
-        or value.utcoffset() != timedelta(0)
-    ):
-        raise _scheduler_error("SPEC_INVALID", "occurred_at_must_be_utc")

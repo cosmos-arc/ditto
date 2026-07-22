@@ -7,6 +7,7 @@ and assemble_report correct assembly of FactorEvaluationReport.
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from datetime import date, timedelta
 from types import MappingProxyType
 
@@ -28,12 +29,168 @@ from ditto_features.evaluation.evaluator._report_builder import (
     compute_optional_analysis,
 )
 from ditto_features.evaluation.report import (
+    R3_FACTOR_DIAGNOSTIC_METRIC_IDS,
+    R3_FACTOR_DIAGNOSTICS_SCHEMA_VERSION,
     FactorEvaluationReport,
     ICSummary,
     LongShortResult,
+    R3FactorDiagnosticsProjection,
+    R3FactorDiagnosticsProvenance,
     TailRiskMetrics,
     project_r3_factor_diagnostics,
+    r3_factor_diagnostics_content_hash,
+    r3_factor_diagnostics_projection_hash,
 )
+
+
+def _diagnostic_provenance(
+    *,
+    period: tuple[str, str] = ("2024-01-01", "2024-12-31"),
+) -> R3FactorDiagnosticsProvenance:
+    return R3FactorDiagnosticsProvenance(
+        factor_id="momentum_1m",
+        factor_version=1,
+        evaluation_period=period,
+        dataset_id="factor_evaluation",
+        catalog_snapshot_id="snapshot-r3",
+        universe="a-share-r3",
+        cost_bps=20.0,
+    )
+
+
+def test_r3_projection_carries_immutable_provenance_and_fixed_schema() -> None:
+    source = {
+        "coverage": 0.95,
+        "market_regime_performance": {"bull": 0.12},
+        "liquidity": {"high": 0.04},
+        "industry_exposure": {"bank": 0.10},
+        "size_exposure": {"large": -0.05},
+        "style_exposure": {"value": 0.08},
+    }
+    provenance = _diagnostic_provenance()
+    projection = project_r3_factor_diagnostics(
+        source,
+        provenance=provenance,
+    )
+
+    assert projection.provenance == provenance
+    assert projection.computed_metrics == (
+        "coverage",
+        "market_regime_performance",
+        "liquidity",
+        "industry_exposure",
+        "size_exposure",
+        "style_exposure",
+    )
+    assert R3_FACTOR_DIAGNOSTIC_METRIC_IDS[-5:] == (
+        "market_regime_performance",
+        "liquidity",
+        "industry_exposure",
+        "size_exposure",
+        "style_exposure",
+    )
+    assert projection.content_hash == (
+        r3_factor_diagnostics_projection_hash(
+            source,
+            provenance=provenance,
+        )
+    )
+
+
+def test_r3_projection_hash_has_a_public_versioned_contract() -> None:
+    source = {"coverage": 0.95}
+    provenance = _diagnostic_provenance()
+
+    assert R3_FACTOR_DIAGNOSTICS_SCHEMA_VERSION == 1
+    assert r3_factor_diagnostics_projection_hash(source, provenance=provenance) == (
+        r3_factor_diagnostics_content_hash(source, provenance=provenance)
+    )
+
+
+def test_r3_projection_hash_binds_factor_provenance() -> None:
+    source = {"coverage": 0.95}
+    first = _diagnostic_provenance()
+    relabeled = replace(first, dataset_id="factor_evaluation_v2")
+
+    assert r3_factor_diagnostics_projection_hash(
+        source,
+        provenance=first,
+    ) != r3_factor_diagnostics_projection_hash(
+        source,
+        provenance=relabeled,
+    )
+
+
+def test_r3_projection_rejects_content_hash_drift() -> None:
+    with pytest.raises(ValueError, match="content hash"):
+        R3FactorDiagnosticsProjection(
+            provenance=_diagnostic_provenance(),
+            content_hash="a" * 64,
+            computed_metrics=("coverage",),
+            values={"coverage": 0.95},
+        )
+
+
+def test_diagnostic_hash_and_nested_mapping_order_are_canonical() -> None:
+    first = {
+        "factor_exposure": {
+            "style": {"value": 0.2, "growth": -0.1},
+            "industry": {"bank": 0.3},
+        }
+    }
+    second = {
+        "factor_exposure": {
+            "industry": {"bank": 0.3},
+            "style": {"growth": -0.1, "value": 0.2},
+        }
+    }
+
+    first_projection = project_r3_factor_diagnostics(
+        first,
+        provenance=_diagnostic_provenance(),
+    )
+    second_projection = project_r3_factor_diagnostics(
+        second,
+        provenance=_diagnostic_provenance(),
+    )
+
+    provenance = _diagnostic_provenance()
+    assert r3_factor_diagnostics_projection_hash(first, provenance=provenance) == (
+        r3_factor_diagnostics_projection_hash(second, provenance=provenance)
+    )
+    assert tuple(first_projection.values["exposure"]) == ("industry", "style")
+    assert first_projection.values == second_projection.values
+
+
+@pytest.mark.parametrize("bad_key", ["", " bank", "bank "])
+def test_diagnostic_mapping_keys_must_be_canonical(bad_key: str) -> None:
+    source = {"industry_exposure": {bad_key: 0.1}}
+
+    with pytest.raises(ValueError, match="canonical string"):
+        r3_factor_diagnostics_projection_hash(
+            source,
+            provenance=_diagnostic_provenance(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        ({"coverage": 1.01}, "coverage.*between zero and one"),
+        ({"missingness": -0.01}, "missingness.*between zero and one"),
+        ({"avg_turnover": -0.01}, "turnover.*non-negative"),
+        ({"cost_drag": -0.01}, "cost_drag.*non-negative"),
+    ],
+)
+def test_r3_projection_validates_metric_domains(
+    source: dict[str, object],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        project_r3_factor_diagnostics(
+            source,
+            provenance=_diagnostic_provenance(),
+        )
 
 
 @pytest.mark.parametrize(
@@ -42,16 +199,28 @@ from ditto_features.evaluation.report import (
 )
 def test_diagnostics_reject_invalid_scalar_shapes(bad_value: object) -> None:
     with pytest.raises(ValueError, match=r"coverage.*finite number"):
-        project_r3_factor_diagnostics({"coverage": bad_value})
+        project_r3_factor_diagnostics(
+            {"coverage": bad_value},
+            provenance=_diagnostic_provenance(),
+        )
 
 
 def test_diagnostics_reject_wrong_metric_collection_shapes() -> None:
     with pytest.raises(ValueError, match=r"decay.*pairs"):
-        project_r3_factor_diagnostics({"ic_decay": {"day": 0.1}})
+        project_r3_factor_diagnostics(
+            {"ic_decay": {"day": 0.1}},
+            provenance=_diagnostic_provenance(),
+        )
     with pytest.raises(ValueError, match=r"quantile_return.*numeric mapping"):
-        project_r3_factor_diagnostics({"quantile_annual_returns": [0.1, 0.2]})
+        project_r3_factor_diagnostics(
+            {"quantile_annual_returns": [0.1, 0.2]},
+            provenance=_diagnostic_provenance(),
+        )
     with pytest.raises(ValueError, match=r"factor_contribution.*numeric mapping"):
-        project_r3_factor_diagnostics({"factor_contribution": {"value": True}})
+        project_r3_factor_diagnostics(
+            {"factor_contribution": {"value": True}},
+            provenance=_diagnostic_provenance(),
+        )
 
 
 def test_diagnostics_projection_is_deeply_immutable_and_defensively_copied() -> None:
@@ -61,7 +230,10 @@ def test_diagnostics_projection_is_deeply_immutable_and_defensively_copied() -> 
         "factor_contribution": contribution,
         "factor_exposure": exposure,
     }
-    projection = project_r3_factor_diagnostics(source)
+    projection = project_r3_factor_diagnostics(
+        source,
+        provenance=_diagnostic_provenance(),
+    )
     contribution["momentum"] = 9.9
     exposure["industry"]["bank"] = 9.9
 

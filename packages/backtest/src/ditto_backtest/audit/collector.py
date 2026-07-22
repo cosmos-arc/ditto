@@ -14,6 +14,7 @@ from ditto_backtest.audit.records import (
     PreTradeDecisionRecord,
     RiskScanRecord,
 )
+from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 
 __all__ = [
     "ExecutionAuditCollector",
@@ -65,6 +66,36 @@ class ExecutionAuditCollector:
     ) -> None:
         """记录 PreTrade 订单校验决策。"""
         self._pre_trade_log.extend(decisions)
+
+    # -- checkpoint state API -----------------------------------------------
+
+    def snapshot_state(self) -> ExecutionAuditStateSnapshot:
+        """Capture append-only report inputs without mutating the collector."""
+        return ExecutionAuditStateSnapshot.capture(
+            fills=tuple(self._fills),
+            daily_snapshots=tuple(self._snapshots),
+            closed_trades=tuple(self._closed_trades),
+            risk_log=tuple(self._risk_log),
+            pre_trade_log=tuple(self._pre_trade_log),
+        )
+
+    def restore_state(self, snapshot: ExecutionAuditStateSnapshot) -> None:
+        """Restore history into a pristine collector before execution starts."""
+        if any(
+            (
+                self._fills,
+                self._snapshots,
+                self._closed_trades,
+                self._risk_log,
+                self._pre_trade_log,
+            )
+        ):
+            raise ValueError("execution audit collector must be pristine on restore")
+        self._fills.extend(snapshot.fills)
+        self._snapshots.extend(snapshot.to_daily_snapshots())
+        self._closed_trades.extend(snapshot.closed_trades)
+        self._risk_log.extend(snapshot.risk_log)
+        self._pre_trade_log.extend(snapshot.pre_trade_log)
 
     # -- getter API ----------------------------------------------------------
 

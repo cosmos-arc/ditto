@@ -11,6 +11,7 @@ import pytest
 from ditto_features.evaluation.evaluator._helpers import empty_report
 from ditto_features.evaluation.report import (
     FactorExposureResult,
+    R3FactorDiagnosticsProvenance,
     project_r3_factor_diagnostics,
 )
 from ditto_features.factors import core_daily
@@ -47,6 +48,27 @@ CORE_IDS = (
     "revenue_growth",
     "log_free_float_cap",
 )
+
+
+def _diagnostic_provenance(
+    *,
+    factor_id: str = "momentum_1m",
+    period: tuple[str, str] = ("2025-01-01", "2025-12-31"),
+    dataset_id: str = "factor_evaluation",
+    snapshot_id: str = "snapshot-r3",
+    universe: str = "a-share-r3",
+    cost_bps: float = 20.0,
+) -> R3FactorDiagnosticsProvenance:
+    return R3FactorDiagnosticsProvenance(
+        factor_id=factor_id,
+        factor_version=1,
+        evaluation_period=period,
+        dataset_id=dataset_id,
+        catalog_snapshot_id=snapshot_id,
+        universe=universe,
+        cost_bps=cost_bps,
+    )
+
 
 MARKET_LANES = frozenset({AssetLane.STOCK, AssetLane.ETF})
 STOCK_LANE = frozenset({AssetLane.STOCK})
@@ -501,14 +523,16 @@ def test_production_validation_rechecks_bypassed_descriptor_and_catalog_state() 
 
 
 def test_diagnostics_projection_only_marks_metrics_that_are_present() -> None:
+    source = {
+        "coverage": 0.91,
+        "missingness": 0.09,
+        "rank_ic": 0.04,
+        "icir": 0.8,
+        "avg_turnover": 0.12,
+    }
     projection = project_r3_factor_diagnostics(
-        {
-            "coverage": 0.91,
-            "missingness": 0.09,
-            "rank_ic": 0.04,
-            "icir": 0.8,
-            "avg_turnover": 0.12,
-        }
+        source,
+        provenance=_diagnostic_provenance(),
     )
     assert projection.computed_metrics == (
         "coverage",
@@ -531,19 +555,25 @@ def test_diagnostics_projection_only_marks_metrics_that_are_present() -> None:
 
 
 def test_coverage_and_missingness_do_not_imply_other_diagnostics() -> None:
-    projection = project_r3_factor_diagnostics({"coverage": 1.0, "missingness": 0.0})
+    source = {"coverage": 1.0, "missingness": 0.0}
+    projection = project_r3_factor_diagnostics(
+        source,
+        provenance=_diagnostic_provenance(),
+    )
     assert projection.computed_metrics == ("coverage", "missingness")
     assert projection.values == {"coverage": 1.0, "missingness": 0.0}
 
 
 def test_empty_collections_and_empty_report_are_not_claimed_as_computed() -> None:
+    source = {
+        "coverage": 0.5,
+        "ic_decay": [],
+        "quantile_annual_returns": {},
+        "factor_exposure": None,
+    }
     projection = project_r3_factor_diagnostics(
-        {
-            "coverage": 0.5,
-            "ic_decay": [],
-            "quantile_annual_returns": {},
-            "factor_exposure": None,
-        }
+        source,
+        provenance=_diagnostic_provenance(),
     )
     assert projection.computed_metrics == ("coverage",)
 
@@ -554,7 +584,17 @@ def test_empty_collections_and_empty_report_are_not_claimed_as_computed() -> Non
         holding_period=5,
         n_quantiles=5,
     )
-    empty_projection = project_r3_factor_diagnostics(report)
+    report = replace(
+        report,
+        dataset_id="factor_evaluation",
+        catalog_snapshot_id="snapshot-r3",
+        universe="a-share-r3",
+        cost_bps=20.0,
+    )
+    empty_projection = project_r3_factor_diagnostics(
+        report,
+        provenance=_diagnostic_provenance(period=("2025-01-01", "2025-01-31")),
+    )
     assert empty_projection.computed_metrics == ()
     assert empty_projection.values == {}
 
@@ -585,9 +625,16 @@ def test_actual_report_projects_only_existing_evaluator_diagnostics() -> None:
         avg_turnover=0.2,
         net_return_after_cost=0.10,
         factor_exposure=exposure,
+        dataset_id="factor_evaluation",
+        catalog_snapshot_id="snapshot-r3",
+        universe="a-share-r3",
+        cost_bps=20.0,
     )
 
-    projection = project_r3_factor_diagnostics(report)
+    projection = project_r3_factor_diagnostics(
+        report,
+        provenance=_diagnostic_provenance(period=("2025-01-01", "2025-06-30")),
+    )
     assert projection.computed_metrics == (
         "rank_ic",
         "icir",

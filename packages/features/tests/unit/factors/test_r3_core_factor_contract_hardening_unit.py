@@ -10,7 +10,9 @@ from types import MappingProxyType
 import pytest
 from ditto_features.evaluation.report import (
     R3FactorDiagnosticsProjection,
+    R3FactorDiagnosticsProvenance,
     project_r3_factor_diagnostics,
+    r3_factor_diagnostics_projection_hash,
 )
 from ditto_features.factors.core_daily import (
     R3_CORE_FACTOR_CATALOG,
@@ -46,6 +48,18 @@ def _runtime_replace[T](value: T, /, **changes: object) -> T:
 
 def _descriptor(factor_id: str):
     return R3_CORE_FACTOR_CATALOG.by_id(factor_id)
+
+
+def _diagnostic_provenance() -> R3FactorDiagnosticsProvenance:
+    return R3FactorDiagnosticsProvenance(
+        factor_id="momentum_1m",
+        factor_version=1,
+        evaluation_period=("2025-01-01", "2025-12-31"),
+        dataset_id="factor_evaluation",
+        catalog_snapshot_id="snapshot-r3",
+        universe="a-share-r3",
+        cost_bps=20.0,
+    )
 
 
 def test_catalog_and_nested_sequence_inputs_are_defensively_copied() -> None:
@@ -150,6 +164,10 @@ def test_availability_and_projection_sequences_are_defensively_copied() -> None:
     metric_source = ["coverage"]
     projection = _runtime_construct(
         R3FactorDiagnosticsProjection,
+        provenance=_diagnostic_provenance(),
+        content_hash=r3_factor_diagnostics_projection_hash(
+            {"coverage": 1}, provenance=_diagnostic_provenance()
+        ),
         computed_metrics=metric_source,
         values={"coverage": 1},
     )
@@ -172,6 +190,8 @@ def test_sequence_contracts_reject_text_like_inputs(bad_sequence: object) -> Non
     with pytest.raises(ValueError, match="sequence"):
         _runtime_construct(
             R3FactorDiagnosticsProjection,
+            provenance=_diagnostic_provenance(),
+            content_hash="a" * 64,
             computed_metrics=bad_sequence,
             values={},
         )
@@ -203,6 +223,8 @@ def test_sequence_contracts_reject_non_sequence_iterables(
     with pytest.raises(ValueError, match="sequence"):
         _runtime_construct(
             R3FactorDiagnosticsProjection,
+            provenance=_diagnostic_provenance(),
+            content_hash="a" * 64,
             computed_metrics=bad_sequence_factory(),
             values={"market.close": 1},
         )
@@ -211,16 +233,22 @@ def test_sequence_contracts_reject_non_sequence_iterables(
 def test_projection_constructor_enforces_registered_metric_shapes() -> None:
     with pytest.raises(ValueError, match="finite number"):
         R3FactorDiagnosticsProjection(
+            provenance=_diagnostic_provenance(),
+            content_hash="a" * 64,
             computed_metrics=("coverage",),
             values={"coverage": math.nan},
         )
     with pytest.raises(ValueError, match="unsupported R3 diagnostic metric"):
         R3FactorDiagnosticsProjection(
+            provenance=_diagnostic_provenance(),
+            content_hash="a" * 64,
             computed_metrics=("made_up",),
             values={"made_up": True},
         )
     with pytest.raises(ValueError, match="numeric mapping"):
         R3FactorDiagnosticsProjection(
+            provenance=_diagnostic_provenance(),
+            content_hash="a" * 64,
             computed_metrics=("exposure",),
             values={"exposure": {"industry": {"bank": True}}},
         )
@@ -229,7 +257,16 @@ def test_projection_constructor_enforces_registered_metric_shapes() -> None:
 def test_projection_constructor_and_projector_share_normalization() -> None:
     decay_source = [[1, 0.3]]
     exposure_source = {"industry": {"bank": 0.2}}
+    raw_source = {
+        "coverage": 1,
+        "ic_decay": [[1, 0.3]],
+        "factor_exposure": {"industry": {"bank": 0.2}},
+    }
     direct = R3FactorDiagnosticsProjection(
+        provenance=_diagnostic_provenance(),
+        content_hash=r3_factor_diagnostics_projection_hash(
+            raw_source, provenance=_diagnostic_provenance()
+        ),
         computed_metrics=("coverage", "decay", "exposure"),
         values={
             "coverage": 1,
@@ -238,11 +275,8 @@ def test_projection_constructor_and_projector_share_normalization() -> None:
         },
     )
     projected = project_r3_factor_diagnostics(
-        {
-            "coverage": 1,
-            "ic_decay": [[1, 0.3]],
-            "factor_exposure": {"industry": {"bank": 0.2}},
-        }
+        raw_source,
+        provenance=_diagnostic_provenance(),
     )
     decay_source[0][1] = 9.9
     exposure_source["industry"]["bank"] = 9.9
@@ -253,6 +287,16 @@ def test_projection_constructor_and_projector_share_normalization() -> None:
     assert isinstance(exposure, Mapping)
     assert isinstance(exposure, MappingProxyType)
     assert exposure["industry"]["bank"] == 0.2
+
+
+def test_projection_constructor_rejects_content_hash_drift() -> None:
+    with pytest.raises(ValueError, match="content hash"):
+        R3FactorDiagnosticsProjection(
+            provenance=_diagnostic_provenance(),
+            content_hash="a" * 64,
+            computed_metrics=("coverage",),
+            values={"coverage": 0.95},
+        )
 
 
 def _stock_context(

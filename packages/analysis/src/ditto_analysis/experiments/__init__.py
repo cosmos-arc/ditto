@@ -6,6 +6,20 @@ This package does not schedule work. Runtime database and storage adapters live 
 analysis-owned contracts and codecs.
 """
 
+from ditto_analysis.experiments.metric_schema import (
+    R3_COMPARISON_METRIC_IDS,
+    R3_DIAGNOSTIC_METRIC_IDS,
+    R3_RESEARCH_METRIC_SCHEMA,
+    ResearchMetricAggregation,
+    ResearchMetricDefinition,
+    ResearchMetricDirection,
+    ResearchMetricDomain,
+    ResearchMetricId,
+    ResearchMetricScale,
+    ResearchMetricSchema,
+    ResearchMetricUnit,
+    ResearchMetricValue,
+)
 from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
@@ -22,6 +36,14 @@ from ditto_analysis.experiments.models import (
     SnapshotId,
     StrategyVersion,
     validate_status_transition,
+)
+from ditto_analysis.experiments.pbo_plan import (
+    PboEstimator,
+    PboPartitionIdentity,
+    PboPartitionPlan,
+    ReturnFrequency,
+    SamplingReturnUnit,
+    partition_observation_date_grid_hash,
 )
 from ditto_analysis.experiments.persistence import (
     ArtifactRecord,
@@ -49,29 +71,48 @@ from ditto_analysis.experiments.persistence import (
     encode_candidate_parameters,
     encode_launch_spec,
 )
+from ditto_analysis.experiments.promotion_models import (
+    ConstraintOperator,
+    MetricConstraint,
+    ObjectiveMetric,
+    PriorTrialEvidenceDeclaration,
+    PromotionObjective,
+)
 from ditto_analysis.experiments.protocols import (
     ExperimentReaderProtocol,
     ExperimentWriterProtocol,
 )
 from ditto_analysis.experiments.specs import (
+    CandidateExecutionBinding,
     CandidateSpec,
     ExperimentBudget,
     ExperimentFailurePolicy,
     ExperimentLaunchSpec,
     FoldProtocolSpec,
+    candidate_parameter_hash,
+)
+from ditto_analysis.experiments.trial_family import (
+    LogicalTrialIdentity,
+    TrialFamilyDeclaration,
+    TrialKind,
 )
 
 __all__ = [
+    "R3_COMPARISON_METRIC_IDS",
+    "R3_DIAGNOSTIC_METRIC_IDS",
+    "R3_RESEARCH_METRIC_SCHEMA",
     "ArtifactRecord",
     "AttemptId",
     "AttemptPersistenceSpec",
     "AttemptProjection",
     "AttemptView",
     "BacktestRunId",
+    "CandidateExecutionBinding",
     "CandidateId",
     "CandidateSpec",
     "CanonicalPayload",
     "CheckpointRef",
+    "ConstraintOperator",
     "ContentHash",
     "DateWindow",
     "ExperimentBudget",
@@ -96,16 +137,39 @@ __all__ = [
     "GateEvaluationRecord",
     "HoldoutClaimRecord",
     "LeaseFence",
+    "LogicalTrialIdentity",
+    "MetricConstraint",
+    "ObjectiveMetric",
+    "PboEstimator",
+    "PboPartitionIdentity",
+    "PboPartitionPlan",
+    "PriorTrialEvidenceDeclaration",
+    "PromotionObjective",
     "ResearchCycleIdentity",
+    "ResearchMetricAggregation",
+    "ResearchMetricDefinition",
+    "ResearchMetricDirection",
+    "ResearchMetricDomain",
+    "ResearchMetricId",
+    "ResearchMetricScale",
+    "ResearchMetricSchema",
+    "ResearchMetricUnit",
+    "ResearchMetricValue",
+    "ReturnFrequency",
+    "SamplingReturnUnit",
     "SchedulerLease",
     "SchedulerSlot",
     "SnapshotId",
     "StatusEventRecord",
     "StatusSubjectType",
     "StrategyVersion",
+    "TrialFamilyDeclaration",
+    "TrialKind",
+    "candidate_parameter_hash",
     "canonical_payload",
     "decode_launch_spec",
     "encode_candidate_parameters",
     "encode_launch_spec",
+    "partition_observation_date_grid_hash",
     "validate_status_transition",
 ]

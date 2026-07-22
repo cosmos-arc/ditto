@@ -458,6 +458,105 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "_comparison_evidence.py"
+        ),
+        owner="application R3 comparison evidence values",
+        reason=(
+            "The approved R3 evidence boundary validates analysis-owned metric, "
+            "identity, and persistence value types without storage writes."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_factor_diagnostics_evidence.py"
+        ),
+        owner="application R3 factor diagnostics evidence boundary",
+        reason=(
+            "The read-only lineage envelope binds exact analysis-owned experiment, "
+            "fold, snapshot, and content identities to a diagnostics projection."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_oos_fold_registration.py"
+        ),
+        owner="application R3 OOS fold registration boundary",
+        reason=(
+            "The immutable registration reuses analysis-owned fold and date-window "
+            "value contracts for the approved walk-forward protocol."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_persisted_execution_evidence.py"
+        ),
+        owner="application R3 persisted execution evidence boundary",
+        reason=(
+            "The approved read-only authority seam validates exact analysis-owned "
+            "fold and terminal-attempt projections loaded through the reader port."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_report_evidence.py"
+        ),
+        owner="application R3 backtest report evidence boundary",
+        reason=(
+            "The pure report hasher emits an analysis-owned content identity over "
+            "the complete result fields consumed by R3 metrics."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_evidence.py"
+        ),
+        owner="application R3 walk-forward evidence values",
+        reason=(
+            "The immutable evidence values carry analysis-owned fold and content "
+            "identities without persistence or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "comparison.py"
+        ),
+        owner="application R3 candidate comparison process",
+        reason=(
+            "The approved comparison process binds persisted experiment identities "
+            "to versioned analysis-owned metric projections."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "trial_evidence_bridge.py"
+        ),
+        owner="application R3 trial evidence bridge",
+        reason=(
+            "The approved bridge converts validated walk-forward evidence into "
+            "analysis-owned logical trial outcomes without persistence I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "walk_forward.py"
+        ),
+        owner="application R3 walk-forward aggregation",
+        reason=(
+            "The approved aggregation process recomputes analysis-owned metrics "
+            "from validated out-of-sample result evidence."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "_execution_resolution_evidence.py"
         ),
         owner="application durable research execution evidence boundary",
@@ -1731,7 +1830,37 @@ _DEP_NAME_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)")
 
 # Exact cross-package export exceptions only. Every entry must include a
 # design-boundary reason in the value before it is added here.
-ALLOWED_CROSS_PACKAGE_EXPORTS: dict[tuple[str, str, str], str] = {}
+_RESEARCH_SCHEDULER_FACADE = (
+    "packages/application/src/ditto_application/processes/experiments/"
+    "scheduler_store.py"
+)
+_RESEARCH_SCHEDULER_EXPORTS = frozenset(
+    {
+        "AttemptId",
+        "AttemptView",
+        "BacktestRunId",
+        "CandidateId",
+        "CheckpointRef",
+        "ContentHash",
+        "ExperimentDesiredState",
+        "ExperimentFailureCode",
+        "ExperimentId",
+        "ExperimentProjection",
+        "ExperimentStage",
+        "ExperimentStatus",
+        "FoldId",
+        "FoldKey",
+        "FoldView",
+        "SchedulerLease",
+    }
+)
+ALLOWED_CROSS_PACKAGE_EXPORTS: dict[tuple[str, str, str], str] = {
+    (_RESEARCH_SCHEDULER_FACADE, name, "ditto_analysis.experiments"): (
+        "The approved R3 scheduler facade is the sole application boundary for "
+        "analysis-owned persistence identities and projections."
+    )
+    for name in _RESEARCH_SCHEDULER_EXPORTS
+}
 _MIN_PACKAGE_SOURCE_PARTS = 4
 
 # Leaf public surfaces that have been hardened to expose only local symbols.

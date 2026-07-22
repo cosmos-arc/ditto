@@ -7,13 +7,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 from typing import Protocol, cast
 
+from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments import (
+    AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
     AttemptView,
     BacktestRunId,
+    CandidateId,
+    CheckpointRef,
+    ContentHash,
+    ExperimentDesiredState,
     ExperimentFailureCode,
     ExperimentId,
     ExperimentLaunchSpec,
@@ -22,40 +29,67 @@ from ditto_analysis.experiments import (
     ExperimentStage,
     ExperimentStatus,
     ExperimentWriterProtocol,
+    FoldId,
+    FoldKey,
     FoldView,
     SchedulerLease,
     SchedulerSlot,
 )
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
 )
 
 __all__ = [
+    "AttemptId",
+    "AttemptView",
+    "BacktestRunId",
+    "CandidateId",
+    "CheckpointRef",
+    "ContentHash",
+    "ExperimentDesiredState",
+    "ExperimentExecutionControlChanged",
+    "ExperimentFailureCode",
+    "ExperimentId",
+    "ExperimentProjection",
     "ExperimentSchedulerSnapshot",
     "ExperimentSchedulerStore",
     "ExperimentSchedulerStoreProtocol",
+    "ExperimentStage",
+    "ExperimentStatus",
     "FirstAttempt",
     "FirstAttemptFactory",
+    "FoldId",
+    "FoldKey",
+    "FoldView",
+    "QueuedAttempt",
+    "ResearchExecutionDirective",
+    "SchedulerLease",
 ]
 
 
+class ExperimentExecutionControlChanged(AppProcessError):
+    """A durable PAUSE/CANCEL request won the race before attempt start."""
+
+
 @dataclass(frozen=True, slots=True)
-class FirstAttempt:
-    """Execution-owned first-attempt identity prepared before durable claim."""
+class QueuedAttempt:
+    """Execution-owned immutable attempt identity prepared before a fold claim."""
 
     spec: AttemptPersistenceSpec
     projection: AttemptProjection
 
     def __post_init__(self) -> None:
-        """Require one exact, initially queued, non-resume attempt pair."""
+        """Require one exact initially queued attempt and coherent lineage shape."""
         if (
             type(cast("object", self.spec)) is not AttemptPersistenceSpec
             or type(cast("object", self.projection)) is not AttemptProjection
             or self.spec.attempt_id != self.projection.attempt_id
-            or self.spec.ordinal != 1
-            or self.spec.parent_attempt_id is not None
-            or self.spec.resume_from_run_id is not None
+            or type(self.spec.ordinal) is not int
+            or self.spec.ordinal <= 0
+            or (self.spec.ordinal == 1) != (self.spec.parent_attempt_id is None)
+            or (self.spec.ordinal == 1 and self.spec.resume_from_run_id is not None)
             or self.projection.status is not ExperimentStatus.QUEUED
             or self.projection.backtest_run_id is not None
             or self.projection.checkpoint_ref is not None
@@ -64,13 +98,48 @@ class FirstAttempt:
             or self.spec.created_at != self.projection.created_at
             or self.projection.updated_at != self.projection.created_at
         ):
+            raise experiment_process_error("queued_attempt_contract_invalid")
+
+
+@dataclass(frozen=True, slots=True)
+class FirstAttempt(QueuedAttempt):
+    """Execution-owned first-attempt identity prepared before durable claim."""
+
+    def __post_init__(self) -> None:
+        """Keep the Task 9 first-attempt boundary exact and backwards compatible."""
+        try:
+            QueuedAttempt.__post_init__(self)
+        except AppProcessError as exc:
+            raise experiment_process_error("first_attempt_contract_invalid") from exc
+        if (
+            self.spec.ordinal != 1
+            or self.spec.parent_attempt_id is not None
+            or self.spec.resume_from_run_id is not None
+        ):
             raise experiment_process_error("first_attempt_contract_invalid")
+
+
+class ResearchExecutionDirective(StrEnum):
+    """Normal durable control observed by an executing research child."""
+
+    RUN = "run"
+    PAUSE = "pause"
+    CANCEL = "cancel"
 
 
 class FirstAttemptFactory(Protocol):
     """Build the execution-owned fingerprint and immutable first attempt."""
 
     def create(self, fold: FoldView, occurred_at: datetime) -> FirstAttempt: ...
+
+    def create_successor(
+        self,
+        fold: FoldView,
+        parent: AttemptView,
+        *,
+        resume_from_run_id: BacktestRunId | None,
+        occurred_at: datetime,
+    ) -> QueuedAttempt: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +201,13 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         new_lease_until_epoch_us: int,
     ) -> SchedulerLease: ...
 
+    def release_lease(
+        self,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+    ) -> SchedulerSlot: ...
+
     def load_snapshot(
         self, experiment_id: ExperimentId
     ) -> ExperimentSchedulerSnapshot: ...
@@ -165,6 +241,39 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         occurred_at: datetime,
     ) -> tuple[FoldView, AttemptView]: ...
 
+    def claim_attempt(
+        self,
+        fold: FoldView,
+        attempt: QueuedAttempt,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> tuple[FoldView, AttemptView]: ...
+
+    def transition_operator_experiment(
+        self,
+        projection: ExperimentProjection,
+        *,
+        target_status: ExperimentStatus,
+        target_desired_state: ExperimentDesiredState,
+        expected_revision: int,
+        occurred_at: datetime,
+        reason_code: str,
+    ) -> ExperimentProjection: ...
+
+    def transition_controlled_experiment(
+        self,
+        projection: ExperimentProjection,
+        *,
+        target_status: ExperimentStatus,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        attempt_started: bool,
+        reason_code: str,
+    ) -> ExperimentProjection: ...
+
     def transition_attempt(
         self,
         attempt: AttemptView,
@@ -177,13 +286,64 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         occurred_at: datetime,
     ) -> AttemptView: ...
 
+    def checkpoint_attempt(
+        self,
+        attempt: AttemptView,
+        checkpoint_ref: CheckpointRef,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> AttemptView: ...
+
+    def cancel_attempt(
+        self,
+        attempt: AttemptView,
+        *,
+        backtest_run_id: BacktestRunId,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        reason_code: str,
+    ) -> AttemptView: ...
+
     def transition_fold(
         self,
         fold: FoldView,
         *,
         target_status: ExperimentStatus,
         failure_code: ExperimentFailureCode | None,
+        reason_code: str | None = None,
         lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> FoldView: ...
+
+    def requeue_fold_for_pause(
+        self,
+        fold: FoldView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> FoldView: ...
+
+    def recover_interrupted_fold(
+        self,
+        fold: FoldView,
+        attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> tuple[FoldView, AttemptView]: ...
+
+    def retry_terminal_fold(
+        self,
+        fold: FoldView,
+        parent_attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> FoldView: ...
@@ -236,6 +396,17 @@ class ExperimentSchedulerStore:
             new_lease_until_epoch_us=new_lease_until_epoch_us,
         )
 
+    def release_lease(
+        self,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+    ) -> SchedulerSlot:
+        return self._writer.release_lease(
+            lease.fence,
+            now_epoch_us=now_epoch_us,
+        )
+
     def load_snapshot(self, experiment_id: ExperimentId) -> ExperimentSchedulerSnapshot:
         projection = self._reader.get_experiment_projection(experiment_id)
         launch_spec = self._reader.get_launch_spec(experiment_id)
@@ -258,10 +429,15 @@ class ExperimentSchedulerStore:
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> ExperimentProjection:
+        target_stage = (
+            ExperimentStage.EXPLORATION
+            if projection.record.stage is ExperimentStage.PREFLIGHT
+            else projection.record.stage
+        )
         return self._writer.transition_scheduled_experiment(
             projection.record.experiment_id,
             target_status=ExperimentStatus.RUNNING,
-            target_stage=ExperimentStage.EXPLORATION,
+            target_stage=target_stage,
             failure_code=None,
             expected_revision=projection.revision,
             lease_fence=lease.fence,
@@ -302,12 +478,29 @@ class ExperimentSchedulerStore:
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> tuple[FoldView, AttemptView]:
-        if first_attempt.spec.fold_key != fold.spec.key:
-            raise experiment_process_error("first_attempt_fold_lineage_mismatch")
+        return self.claim_attempt(
+            fold,
+            first_attempt,
+            lease,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+        )
+
+    def claim_attempt(
+        self,
+        fold: FoldView,
+        attempt: QueuedAttempt,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> tuple[FoldView, AttemptView]:
+        if attempt.spec.fold_key != fold.spec.key:
+            raise experiment_process_error("attempt_fold_lineage_mismatch")
         fold_projection, attempt_projection = self._writer.claim_fold_and_add_attempt(
             fold.spec.key,
-            first_attempt.spec,
-            first_attempt.projection,
+            attempt.spec,
+            attempt.projection,
             expected_fold_revision=fold.projection.revision,
             lease_fence=lease.fence,
             now_epoch_us=now_epoch_us,
@@ -315,7 +508,57 @@ class ExperimentSchedulerStore:
         )
         return (
             FoldView(fold.spec, fold_projection),
-            AttemptView(first_attempt.spec, attempt_projection),
+            AttemptView(attempt.spec, attempt_projection),
+        )
+
+    def transition_operator_experiment(
+        self,
+        projection: ExperimentProjection,
+        *,
+        target_status: ExperimentStatus,
+        target_desired_state: ExperimentDesiredState,
+        expected_revision: int,
+        occurred_at: datetime,
+        reason_code: str,
+    ) -> ExperimentProjection:
+        return self._writer.transition_experiment(
+            projection.record.experiment_id,
+            target_status=target_status,
+            target_desired_state=target_desired_state,
+            target_stage=projection.record.stage,
+            failure_code=None,
+            expected_revision=expected_revision,
+            occurred_at=occurred_at,
+            attempt_started=False,
+            precondition_repairable=False,
+            reason_code=reason_code,
+            detail={},
+        )
+
+    def transition_controlled_experiment(
+        self,
+        projection: ExperimentProjection,
+        *,
+        target_status: ExperimentStatus,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        attempt_started: bool,
+        reason_code: str,
+    ) -> ExperimentProjection:
+        return self._writer.transition_scheduled_experiment(
+            projection.record.experiment_id,
+            target_status=target_status,
+            target_stage=projection.record.stage,
+            failure_code=None,
+            expected_revision=projection.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+            attempt_started=attempt_started,
+            precondition_repairable=False,
+            reason_code=reason_code,
+            detail={},
         )
 
     def transition_attempt(
@@ -329,17 +572,91 @@ class ExperimentSchedulerStore:
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> AttemptView:
+        if target_status is ExperimentStatus.RUNNING:
+            self._raise_if_execution_control_changed(attempt)
+        try:
+            projection = self._writer.transition_attempt(
+                attempt.spec.attempt_id,
+                target_status=target_status,
+                backtest_run_id=backtest_run_id,
+                checkpoint_ref=attempt.projection.checkpoint_ref,
+                failure_code=failure_code,
+                expected_revision=attempt.projection.revision,
+                lease_fence=lease.fence,
+                now_epoch_us=now_epoch_us,
+                occurred_at=occurred_at,
+                reason_code=_attempt_reason(target_status, failure_code),
+                detail={},
+            )
+        except AnalysisError:
+            if target_status is ExperimentStatus.RUNNING:
+                self._raise_if_execution_control_changed(attempt)
+            raise
+        return AttemptView(attempt.spec, projection)
+
+    def _raise_if_execution_control_changed(self, attempt: AttemptView) -> None:
+        projection = self._reader.get_experiment_projection(
+            attempt.spec.fold_key.experiment_id
+        )
+        if (
+            projection is None
+            or projection.record.desired_state is ExperimentDesiredState.RUN
+        ):
+            return
+        raise ExperimentExecutionControlChanged(
+            "experiment execution control changed before attempt start",
+            details={
+                "code": "CONTROL_CHANGED",
+                "reason": "execution_control_changed_before_start",
+                "desired_state": projection.record.desired_state.value,
+            },
+        )
+
+    def checkpoint_attempt(
+        self,
+        attempt: AttemptView,
+        checkpoint_ref: CheckpointRef,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> AttemptView:
         projection = self._writer.transition_attempt(
             attempt.spec.attempt_id,
-            target_status=target_status,
-            backtest_run_id=backtest_run_id,
-            checkpoint_ref=attempt.projection.checkpoint_ref,
-            failure_code=failure_code,
+            target_status=ExperimentStatus.RUNNING,
+            backtest_run_id=attempt.projection.backtest_run_id,
+            checkpoint_ref=checkpoint_ref,
+            failure_code=None,
             expected_revision=attempt.projection.revision,
             lease_fence=lease.fence,
             now_epoch_us=now_epoch_us,
             occurred_at=occurred_at,
-            reason_code=_attempt_reason(target_status, failure_code),
+            reason_code="strategy_run_checkpoint_indexed",
+            detail={"checkpoint_ref": str(checkpoint_ref)},
+        )
+        return AttemptView(attempt.spec, projection)
+
+    def cancel_attempt(
+        self,
+        attempt: AttemptView,
+        *,
+        backtest_run_id: BacktestRunId,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        reason_code: str,
+    ) -> AttemptView:
+        projection = self._writer.transition_attempt(
+            attempt.spec.attempt_id,
+            target_status=ExperimentStatus.CANCELLED,
+            backtest_run_id=backtest_run_id,
+            checkpoint_ref=attempt.projection.checkpoint_ref,
+            failure_code=None,
+            expected_revision=attempt.projection.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+            reason_code=reason_code,
             detail={},
         )
         return AttemptView(attempt.spec, projection)
@@ -350,6 +667,7 @@ class ExperimentSchedulerStore:
         *,
         target_status: ExperimentStatus,
         failure_code: ExperimentFailureCode | None,
+        reason_code: str | None = None,
         lease: SchedulerLease,
         now_epoch_us: int,
         occurred_at: datetime,
@@ -363,8 +681,71 @@ class ExperimentSchedulerStore:
             lease_fence=lease.fence,
             now_epoch_us=now_epoch_us,
             occurred_at=occurred_at,
-            reason_code=_fold_reason(target_status, failure_code),
+            reason_code=reason_code or _fold_reason(target_status, failure_code),
             detail={},
+        )
+        return FoldView(fold.spec, projection)
+
+    def requeue_fold_for_pause(
+        self,
+        fold: FoldView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> FoldView:
+        projection = self._writer.requeue_fold_for_pause(
+            fold.spec.key,
+            expected_fold_revision=fold.projection.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+            detail={},
+        )
+        return FoldView(fold.spec, projection)
+
+    def recover_interrupted_fold(
+        self,
+        fold: FoldView,
+        attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> tuple[FoldView, AttemptView]:
+        fold_projection, attempt_projection = self._writer.requeue_interrupted_fold(
+            fold.spec.key,
+            attempt.spec.attempt_id,
+            expected_fold_revision=fold.projection.revision,
+            expected_attempt_revision=attempt.projection.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+            detail={"reclaimed_by": lease.owner_token},
+        )
+        return (
+            FoldView(fold.spec, fold_projection),
+            AttemptView(attempt.spec, attempt_projection),
+        )
+
+    def retry_terminal_fold(
+        self,
+        fold: FoldView,
+        parent_attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> FoldView:
+        projection = self._writer.requeue_failed_fold_for_retry(
+            fold.spec.key,
+            parent_attempt.spec.attempt_id,
+            expected_fold_revision=fold.projection.revision,
+            expected_parent_attempt_revision=parent_attempt.projection.revision,
+            lease_fence=lease.fence,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+            detail={"requested_by": lease.owner_token},
         )
         return FoldView(fold.spec, projection)
 

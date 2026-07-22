@@ -5,22 +5,36 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from threading import RLock
-from typing import TypeVar, cast
+from typing import Protocol, TypeVar, cast
 from uuid import uuid4
 
 from ditto_analysis.errors import (
     AnalysisError,
+    ExperimentConflictError,
     ExperimentIntegrityError,
     ExperimentLeaseLostError,
+    ExperimentSpecError,
 )
-from ditto_analysis.experiments import ExperimentId, SchedulerLease
+from ditto_analysis.experiments import (
+    AttemptId,
+    ExperimentId,
+    SchedulerLease,
+    SchedulerSlot,
+)
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentExecutionControlChanged,
     ExperimentSchedulerStoreProtocol,
+    ResearchExecutionDirective,
 )
 
-__all__ = ["LeaseAuthority"]
+__all__ = [
+    "LeaseAuthority",
+    "ResearchExecutionControl",
+    "require_utc_event_time",
+    "run_unfenced_scheduler_operation",
+]
 
 _ResultT = TypeVar("_ResultT")
 _MICROSECONDS_PER_SECOND = 1_000_000
@@ -51,6 +65,25 @@ def _epoch_us(value: datetime) -> int:
     return (
         delta.days * _SECONDS_PER_DAY + delta.seconds
     ) * _MICROSECONDS_PER_SECOND + delta.microseconds
+
+
+def require_utc_event_time(value: datetime) -> None:
+    """Validate an audit timestamp without using it as the lease clock."""
+    _epoch_us(value)
+
+
+def run_unfenced_scheduler_operation[ResultT](
+    operation: Callable[[], ResultT],
+) -> ResultT:
+    """Normalize an operator CAS that intentionally does not need lease ownership."""
+    try:
+        return operation()
+    except AppProcessError:
+        raise
+    except AnalysisError as exc:
+        code = str(exc.details.get("code", "SYSTEM_ERROR"))
+        reason = str(exc.details.get("reason_code", "scheduler_control_write_failed"))
+        raise _scheduler_error(code, reason) from exc
 
 
 def _duration_us(value: timedelta) -> int:
@@ -177,10 +210,47 @@ class LeaseAuthority:
             try:
                 lease = self._require_live_lease(_epoch_us(self._clock()))
                 return operation(lease, self._fenced_now_epoch_us)
+            except ExperimentExecutionControlChanged:
+                raise
             except AppProcessError:
                 if self._lost_reason is None:
                     self._invalidate("application_contract_failure")
                 raise
+            except Exception as exc:
+                self._invalidate(type(exc).__name__)
+                raise self._normalized_error(exc) from exc
+
+    def execute_operator(
+        self,
+        operation: Callable[[SchedulerLease, Callable[[], int]], _ResultT],
+    ) -> _ResultT:
+        """Run a fenced operator CAS without poisoning authority on 4xx rejection."""
+        with self._lock:
+            try:
+                lease = self._require_live_lease(_epoch_us(self._clock()))
+                return operation(lease, self._fenced_now_epoch_us)
+            except ExperimentExecutionControlChanged:
+                raise
+            except AppProcessError as exc:
+                if exc.details.get("code") in {
+                    "LEASE_LOST",
+                    "EXPERIMENT_INTEGRITY_FAILED",
+                }:
+                    self._invalidate("operator_authority_failure")
+                raise
+            except (ExperimentLeaseLostError, ExperimentIntegrityError) as exc:
+                self._invalidate(type(exc).__name__)
+                raise self._normalized_error(exc) from exc
+            except (ExperimentConflictError, ExperimentSpecError) as exc:
+                code = (
+                    "CONFLICT"
+                    if isinstance(exc, ExperimentConflictError)
+                    else "SPEC_INVALID"
+                )
+                reason = str(
+                    exc.details.get("reason_code", "operator_request_rejected")
+                )
+                raise _scheduler_error(code, reason) from exc
             except Exception as exc:
                 self._invalidate(type(exc).__name__)
                 raise self._normalized_error(exc) from exc
@@ -205,6 +275,31 @@ class LeaseAuthority:
                 raise self._normalized_error(exc) from exc
             self._lease = renewed
             return renewed
+
+    def release(self) -> SchedulerSlot:
+        """Release one terminal occupant and keep this authority reusable."""
+        with self._lock:
+            try:
+                now_epoch_us = _epoch_us(self._clock())
+                lease = self._require_live_lease(now_epoch_us)
+                released = self._store.release_lease(
+                    lease,
+                    now_epoch_us=now_epoch_us,
+                )
+                if released.experiment_id is not None:
+                    raise _scheduler_error(
+                        "EXPERIMENT_INTEGRITY_FAILED",
+                        "scheduler_release_returned_occupied_slot",
+                    )
+            except AppProcessError:
+                if self._lost_reason is None:
+                    self._invalidate("application_contract_failure")
+                raise
+            except Exception as exc:
+                self._invalidate(type(exc).__name__)
+                raise self._normalized_error(exc) from exc
+            self._lease = None
+            return released
 
     def _fenced_now_epoch_us(self) -> int:
         now_epoch_us = _epoch_us(self._clock())
@@ -253,3 +348,67 @@ class LeaseAuthority:
             "scheduler_operation_failed",
             error_type=type(error).__name__,
         )
+
+
+class _ExecutionControlCoordinator(Protocol):
+    def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease: ...
+
+    def poll_execution_directive(
+        self,
+        attempt_id: AttemptId,
+        *,
+        occurred_at: datetime,
+    ) -> ResearchExecutionDirective: ...
+
+
+class ResearchExecutionControl:
+    """Lease-aware durable stop callback polled by BacktestService."""
+
+    def __init__(
+        self,
+        *,
+        coordinator: _ExecutionControlCoordinator,
+        attempt_id: AttemptId,
+        clock: Callable[[], datetime],
+    ) -> None:
+        self._coordinator = coordinator
+        self._attempt_id = attempt_id
+        self._clock = clock
+        self._failure: AppProcessError | None = None
+        self._directive = ResearchExecutionDirective.RUN
+
+    @property
+    def failure(self) -> AppProcessError | None:
+        """Return the first durable authority failure, if one occurred."""
+        return self._failure
+
+    @property
+    def directive(self) -> ResearchExecutionDirective:
+        """Return the latest durable execution directive observed."""
+        return self._directive
+
+    def should_stop(self) -> bool:
+        """Renew, read server truth, and fail closed on authority errors."""
+        if self._failure is not None:
+            return True
+        try:
+            occurred_at = self._clock()
+            self._coordinator.renew_lease(occurred_at=occurred_at)
+            self._directive = self._coordinator.poll_execution_directive(
+                self._attempt_id,
+                occurred_at=occurred_at,
+            )
+        except AppProcessError as error:
+            self._failure = error
+            return True
+        except Exception as error:  # pragma: no cover - defensive port boundary
+            self._failure = AppProcessError(
+                "research execution lease renewal failed",
+                details={
+                    "code": "SYSTEM_ERROR",
+                    "reason": "lease_renewal_failed",
+                    "error_type": type(error).__name__,
+                },
+            )
+            return True
+        return self._directive is not ResearchExecutionDirective.RUN

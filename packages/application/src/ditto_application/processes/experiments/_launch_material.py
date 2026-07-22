@@ -9,6 +9,7 @@ from typing import cast
 
 import orjson
 from ditto_analysis.experiments import (
+    CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
     CanonicalPayload,
@@ -578,6 +579,36 @@ def compile_launch_material(
         )
         for candidate in work.candidate_matrix.candidates
     )
+    if len(executor.candidates) != len(candidate_specs) - 1:
+        return None, None
+    baseline_resolved_spec_hash = (
+        executor.baseline_runtime.resolved_spec_hash
+        if executor.baseline_runtime is not None
+        else executor.baseline_descriptor_hash
+    )
+    if baseline_resolved_spec_hash is None:
+        return None, None
+    execution_bindings = (
+        CandidateExecutionBinding(
+            candidate_specs[0].candidate_id,
+            candidate_specs[0].ordinal,
+            candidate_specs[0].parameter_hash,
+            ContentHash(baseline_resolved_spec_hash),
+        ),
+        *tuple(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(runtime.resolved_spec_hash),
+            )
+            for candidate, runtime in zip(
+                candidate_specs[1:],
+                executor.candidates,
+                strict=True,
+            )
+        ),
+    )
     validation_payload = _validation_plan_payload(validation)
     spec = ExperimentLaunchSpec(
         experiment_id=experiment_id,
@@ -587,6 +618,8 @@ def compile_launch_material(
         strategy_spec_hash=ContentHash(executor.strategy_spec_hash),
         snapshot_id=SnapshotId(snapshot.snapshot_id),
         candidates=candidate_specs,
+        execution_bindings=execution_bindings,
+        promotion_objective=request.promotion_objective,
         fold_protocol=FoldProtocolSpec(
             material.fold_protocol_id,
             material.fold_protocol_version,

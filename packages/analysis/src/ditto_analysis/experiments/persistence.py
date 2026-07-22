@@ -34,7 +34,12 @@ from ditto_analysis.experiments.models import (
     SnapshotId,
     StrategyVersion,
 )
+from ditto_analysis.experiments.promotion_objective import (
+    decode_promotion_objective,
+    promotion_objective_payload,
+)
 from ditto_analysis.experiments.specs import (
+    CandidateExecutionBinding,
     CandidateSpec,
     ExperimentBudget,
     ExperimentFailurePolicy,
@@ -191,9 +196,19 @@ def encode_launch_spec(spec: ExperimentLaunchSpec) -> CanonicalPayload:
                     "ordinal": candidate.ordinal,
                     "is_baseline": candidate.is_baseline,
                     "parameters": _json_value(candidate.parameters),
+                    "selection_parameter_hash": str(candidate.parameter_hash),
+                    "execution_parameter_hash": str(binding.parameter_hash),
+                    "resolved_spec_hash": str(binding.resolved_spec_hash),
                 }
-                for candidate in spec.candidates
+                for candidate, binding in zip(
+                    spec.candidates,
+                    spec.execution_bindings,
+                    strict=True,
+                )
             ],
+            "promotion_objective": promotion_objective_payload(
+                spec.promotion_objective
+            ),
             "fold_protocol": {
                 "protocol_id": spec.fold_protocol.protocol_id,
                 "protocol_version": spec.fold_protocol.protocol_version,
@@ -253,6 +268,25 @@ def decode_launch_spec(
             for item_value in candidate_items
             for item in (_mapping(item_value, "candidate"),)
         )
+        execution_bindings = tuple(
+            CandidateExecutionBinding(
+                candidate_id=candidate.candidate_id,
+                ordinal=candidate.ordinal,
+                parameter_hash=ContentHash(str(item["execution_parameter_hash"])),
+                resolved_spec_hash=ContentHash(str(item["resolved_spec_hash"])),
+            )
+            for candidate, item_value in zip(candidates, candidate_items, strict=True)
+            for item in (_mapping(item_value, "candidate"),)
+        )
+        if any(
+            str(candidate.parameter_hash) != str(item["selection_parameter_hash"])
+            for candidate, item_value in zip(candidates, candidate_items, strict=True)
+            for item in (_mapping(item_value, "candidate"),)
+        ):
+            raise _error(
+                "candidate selection parameter hash mismatch",
+                "candidate_parameter_hash_mismatch",
+            )
         protocol = _mapping(root["fold_protocol"], "fold_protocol")
         budget = _mapping(root["budget"], "budget")
         spec = ExperimentLaunchSpec(
@@ -261,6 +295,8 @@ def decode_launch_spec(
             strategy_spec_hash=ContentHash(str(root["strategy_spec_hash"])),
             snapshot_id=SnapshotId(str(root["snapshot_id"])),
             candidates=candidates,
+            execution_bindings=execution_bindings,
+            promotion_objective=decode_promotion_objective(root["promotion_objective"]),
             fold_protocol=FoldProtocolSpec(
                 protocol_id=str(protocol["protocol_id"]),
                 protocol_version=int(protocol["protocol_version"]),

@@ -41,13 +41,18 @@ from ditto_kernel.synchronizer import Synchronizer, TimeSlice
 from ditto_kernel.time_context import TimeContext
 from ditto_portfolio.accounting import AccountView, FillEvent
 from ditto_risk.pre_trade import CompositePreTradeCheck
-from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from loguru import logger
 
 from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed, Slice
+from ditto_backtest.engine_runtime import (
+    EngineRuntimeCapture,
+    capture_runtime_state,
+    restore_runtime_collaborators,
+    strategy_context_from_runtime,
+)
 from ditto_backtest.engine_steps import (
     EngineOptions,
     EngineResultAssemblyContext,
@@ -169,7 +174,14 @@ class EngineLoop:
         self._init_options(loop_deps.options)
         self._init_state(config)
         self._trade_builder = self._create_trade_builder(config)
-        self._recorded_trade_ids: set[str] = set()
+        restore_runtime_collaborators(
+            self._restore_runtime_state,
+            planner=self._planner,
+            brokerage=self._brokerage,
+            trade_builder=self._trade_builder,
+            audit_collector=self._audit_collector,
+        )
+        self._recorded_trade_ids = self._restored_trade_ids()
         self._steps = self._build_steps()
 
     # -- R1: __init__ helpers --------------------------------------------------
@@ -180,6 +192,17 @@ class EngineLoop:
         if config.trade_matching == TradeMatchingMethod.FLAT_TO_FLAT:
             return FlatToFlatTradeBuilder()
         return FifoTradeBuilder()
+
+    def _restored_trade_ids(self) -> set[str]:
+        """Seed audit de-duplication from restored closed-trade history."""
+        if (
+            self._audit_collector is None
+            or self._restore_runtime_state is None
+            or self._restore_runtime_state.audit_state_json is None
+        ):
+            return set()
+        trades = self._audit_collector.get_closed_trades()
+        return {trade.trade_id for trade in trades}
 
     def _init_options(self, options: EngineOptions) -> None:
         """从 EngineOptions 初始化可选组件引用。"""
@@ -200,7 +223,9 @@ class EngineLoop:
         """初始化跨日可变状态。"""
         self._fills: list[FillEvent] = []
         self._orders: list[Order] = []
-        self._strategy_context = StrategyContext()
+        self._strategy_context = strategy_context_from_runtime(
+            self._restore_runtime_state,
+        )
         self._execution_delay = config.execution_delay
         self._knowledge_lag_days = config.knowledge_lag_days
         self._signal_queue: deque[TargetPortfolioLike] = deque()
@@ -278,11 +303,13 @@ class EngineLoop:
         end = trading_days[-1] if trading_days else self._config.end_date
 
         skipped, cancelled = self._run_main_loop(run_id, trading_days)
-        self._flush_delayed_signals()
+        if not cancelled:
+            self._flush_delayed_signals()
 
         account_view = self._brokerage.get_account()
+        if not cancelled:
+            self._flush_open_trades()
         self._refresh_final_checkpoint(account_view)
-        self._flush_open_trades()
 
         manifest = build_run_manifest(
             run_id=run_id,
@@ -316,10 +343,17 @@ class EngineLoop:
     def _build_trading_days(self) -> list[str]:
         """构建 trading_days 索引 — 用于 is_rebalance_day() 计算。"""
         days = self._data_feed.trading_days()
-        trading_days = [d for d in days if d >= self._config.start_date]
-        self._trading_days = tuple(trading_days)
+        calendar_start = self._config.start_date
+        if (
+            self._restore_runtime_state is not None
+            and self._restore_runtime_state.rebalance_calendar_start is not None
+        ):
+            calendar_start = self._restore_runtime_state.rebalance_calendar_start
+        # Resumed runs retain their original frequency/fold phase. Fresh runs
+        # still treat the configured start as the first rebalance boundary.
+        self._trading_days = tuple(d for d in days if d >= calendar_start)
         self._trading_day_index = {d: i for i, d in enumerate(self._trading_days)}
-        return trading_days
+        return [d for d in self._trading_days if d >= self._config.start_date]
 
     def _run_main_loop(
         self,
@@ -392,19 +426,22 @@ class EngineLoop:
             runtime_state=self._runtime_state_snapshot(),
         )
         self._last_checkpoint = checkpoint
-        if self._on_checkpoint is not None:
+        # The last execution day is not durable until delayed-signal and open-
+        # trade terminal flushes finish. On a crash, the previously published
+        # checkpoint remains a resumable boundary and the last day is replayed.
+        if self._on_checkpoint is not None and checkpoint.can_resume:
             self._on_checkpoint(checkpoint)
 
     def _refresh_final_checkpoint(self, account_view: AccountView) -> None:
         """
-        尾部 flush 后刷新最终 checkpoint 的账户与执行统计。
+        尾部 flush 后刷新仅供结果返回的 terminal checkpoint。
 
-        无论 checkpoint 是否携带 resume_from 边界，都需要在
-        execution_delay 尾部 flush 后刷新 NAV/fill/order/account-state，
-        否则 resume 后的 checkpoint 将反映 flush 前的陈旧状态。
+        terminal checkpoint 不通过 durable callback 发布：它出现在 report、
+        artifact 和 attempt commit 之前，无法作为独立恢复提交。若此阶段崩溃，
+        存储层继续保留上一个可恢复边界并确定性重放最后一个交易日。
         """
         checkpoint = self._last_checkpoint
-        if checkpoint is None:
+        if checkpoint is None or checkpoint.can_resume:
             return
 
         refreshed = replace(
@@ -420,8 +457,6 @@ class EngineLoop:
             return
 
         self._last_checkpoint = refreshed
-        if self._on_checkpoint is not None:
-            self._on_checkpoint(refreshed)
 
     def _flush_delayed_signals(self) -> None:
         """Flush 延迟信号 — 回测结束时执行队列中剩余的延迟信号。"""
@@ -449,10 +484,20 @@ class EngineLoop:
         return None
 
     def _runtime_state_snapshot(self) -> BacktestRuntimeStateSnapshot:
-        """Capture pending OMS tickets and delayed engine signals."""
-        return BacktestRuntimeStateSnapshot.from_state(
-            pending_tickets=self._pending_order_tickets(),
-            delayed_signals=tuple(self._signal_queue),
+        """Capture all result-determining state needed for exact resume."""
+        return capture_runtime_state(
+            EngineRuntimeCapture(
+                pending_tickets=self._pending_order_tickets(),
+                delayed_signals=tuple(self._signal_queue),
+                strategy_context=self._strategy_context,
+                planner=self._planner,
+                brokerage=self._brokerage,
+                trade_builder=self._trade_builder,
+                rebalance_calendar_start=(
+                    self._trading_days[0] if self._trading_days else None
+                ),
+                audit_collector=self._audit_collector,
+            )
         )
 
     def _pending_order_tickets(self) -> tuple[OrderTicket, ...]:

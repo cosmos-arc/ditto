@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, fields
 from datetime import date, timedelta
-from decimal import Decimal
 from typing import cast
 
 from ditto_backtest.brokerage import BacktestBrokerage
@@ -61,6 +60,13 @@ from ditto_application.processes.experiments.execution_bundle import (
     ResearchFillMode,
     StrategyExecutionBinding,
 )
+from ditto_application.processes.experiments.research_backtest_checkpoint import (
+    ResearchBacktestCheckpointControl,
+    ResearchBacktestResumeState,
+    build_research_backtest_config,
+    build_research_backtest_strategy_config,
+    require_research_resume_runtime_state,
+)
 from ditto_application.processes.experiments.research_data_feed import ResearchDataFeed
 from ditto_application.processes.experiments.research_policy_artifact import (
     VerifiedInstrumentRulesArtifact,
@@ -77,7 +83,6 @@ __all__ = [
 
 _PRE_TRADE_CHECK_TYPES = (LotSizeCheck, BuyingPowerCheck)
 _CLOSING_AUCTION_PARTICIPATION_RATE = 0.05
-_MINOR_UNITS_PER_CNY = 100
 
 
 def _error(reason: str, **details: object) -> AppProcessError:
@@ -205,6 +210,7 @@ class ClosedBacktestServiceGraph:
     pipeline_attestation: object | None
     external_should_stop: Callable[[], bool]
     components: ConstructedBacktestComponents
+    checkpoint_control: ResearchBacktestCheckpointControl | None = None
 
 
 def require_closed_backtest_service(
@@ -250,7 +256,11 @@ def require_closed_backtest_service(
         raise _error("external_stop_callback_drift")
 
     options = graph.options
-    if type(options) is not BacktestServiceOptions:
+    checkpoint_control = graph.checkpoint_control
+    if (
+        type(options) is not BacktestServiceOptions
+        or type(checkpoint_control) is not ResearchBacktestCheckpointControl
+    ):
         raise _error("constructed_backtest_service_options_drift")
     _require_exact_state_keys(
         options,
@@ -263,6 +273,12 @@ def require_closed_backtest_service(
         "rule_provider": graph.rule_provider,
         "compiled_expressions": graph.compiled_expressions,
         "external_should_stop": expected_should_stop,
+        "checkpoint_writer": checkpoint_control.writer,
+        "restore_runtime_state": (
+            None
+            if checkpoint_control.resume is None
+            else checkpoint_control.resume.runtime
+        ),
     }
     if any(
         getattr(options, name) is not value for name, value in expected_options.items()
@@ -275,9 +291,7 @@ def require_closed_backtest_service(
         options.artifact_dir,
         options.display_map,
         options.run_service,
-        options.checkpoint_writer,
         options.lineage_recorder,
-        options.restore_runtime_state,
     )
     if any(value is not None for value in none_only) or (
         options.allow_experimental_data is not False
@@ -298,9 +312,10 @@ def require_closed_backtest_service(
         or graph.slippage_model is not components.slippage_model
         or graph.rule_provider is not components.rule_provider
         or graph.compiled_expressions is not options.compiled_expressions
+        or options.checkpoint_writer is not checkpoint_control.writer
     ):
         raise _error("constructed_backtest_service_graph_drift")
-    _require_audit_bound_config(graph)
+    _require_audit_bound_config(graph, checkpoint_control)
     _require_pipeline_state(graph)
     ResearchDataFeed.require_verified_state(
         graph.feed,
@@ -320,6 +335,7 @@ def require_closed_backtest_service(
             expected_audit.semantics.backtest.slippage_basis_points
         ),
         components=components,
+        resume_state=checkpoint_control.resume,
     )
     _require_rules_state(graph)
 
@@ -343,6 +359,7 @@ def _require_exact_state_keys(
 
 def _expected_service_config(
     graph: ClosedBacktestServiceGraph,
+    checkpoint_control: ResearchBacktestCheckpointControl,
 ) -> BacktestServiceConfig:
     audit = graph.audit
     semantics = audit.semantics
@@ -354,74 +371,39 @@ def _expected_service_config(
             != strategy.parameter_hash
         ):
             raise _error("constructed_strategy_parameter_state_drift")
-        strategy_id = strategy.exact_strategy.strategy_id
-        strategy_version = str(strategy.exact_strategy.version)
-        base_spec_hash = strategy.exact_strategy.spec_hash
-        spec_hash = strategy.resolved_spec_hash
-        parameter_hash = strategy.parameter_hash
-        candidate_parameters = strategy.candidate_parameters
-        effective_parameters = config.effective_parameters
-        factor_refs = tuple(item.binding_hash for item in strategy.factor_bindings)
         if (
             compiled_expressions_execution_hash(graph.compiled_expressions)
             != strategy.compiled_factor_set_hash
         ):
             raise _error("compiled_factor_set_execution_drift")
+        resolved = build_research_backtest_strategy_config(
+            strategy,
+            effective_parameters=config.effective_parameters,
+            rebalance_frequency=semantics.backtest.rebalance_frequency,
+        )
     elif type(strategy) is BaselineExecutorBinding:
         if graph.compiled_expressions is not None or config.effective_parameters:
             raise _error("synthetic_baseline_execution_drift")
-        strategy_id = strategy.baseline_ref
-        strategy_version = str(strategy.executor_contract_version)
-        base_spec_hash = strategy.descriptor_hash
-        spec_hash = strategy.descriptor_hash
-        parameter_hash = canonical_parameter_hash(())
-        candidate_parameters = ()
-        effective_parameters = ()
-        factor_refs = ()
+        resolved = build_research_backtest_strategy_config(
+            strategy,
+            effective_parameters=(),
+            rebalance_frequency=semantics.backtest.rebalance_frequency,
+        )
     else:
         raise _error("invalid_strategy_execution_binding")
-    benchmark = semantics.backtest.benchmark
-    return BacktestServiceConfig(
-        strategy_id=strategy_id,
-        strategy_version=strategy_version,
-        run_id=audit.backtest_run_id,
-        start_date=semantics.test_start.isoformat(),
-        end_date=semantics.test_end.isoformat(),
-        initial_cash=float(
-            Decimal(semantics.backtest.initial_cash_minor_units)
-            / Decimal(_MINOR_UNITS_PER_CNY)
-        ),
-        benchmark_id=(
-            None if benchmark is None else InstrumentId(benchmark.instrument_id)
-        ),
-        candidate_parameters=candidate_parameters,
-        research_snapshot_id=semantics.snapshot.exact_snapshot.snapshot_id,
-        research_snapshot_manifest_hash=(
-            semantics.snapshot.exact_snapshot.manifest_hash
-        ),
-        rebalance_freq=semantics.backtest.rebalance_frequency,
-        engine_version=semantics.backtest.engine_version,
-        random_seed=semantics.seed,
-        execution_delay=semantics.execution_delay_sessions,
-        knowledge_lag_days=semantics.knowledge_lag_days,
-        code_version=semantics.environment.code_version,
-        data_catalog_identities=tuple(
-            f"{item.input_id}:{item.content_hash}:{item.schema_hash}"
-            for item in semantics.snapshot.inputs
-        ),
-        factor_report_refs=factor_refs,
-        recommendation_status="research",
-        participation_rate=(semantics.backtest.participation_rate_ppm / 1_000_000),
-        fill_mode=semantics.backtest.fill_mode.value,
-        resume_from_run_id="",
-        spec_hash=spec_hash,
-        base_spec_hash=base_spec_hash,
-        parameter_hash=parameter_hash,
-        effective_parameters=effective_parameters,
+    return build_research_backtest_config(
+        audit=audit,
+        strategy=resolved,
+        initial_cash=semantics.backtest.initial_cash_minor_units / 100,
+        benchmark=semantics.backtest.benchmark,
+        resume=checkpoint_control.resume,
     )
 
 
-def _require_audit_bound_config(graph: ClosedBacktestServiceGraph) -> None:
+def _require_audit_bound_config(
+    graph: ClosedBacktestServiceGraph,
+    checkpoint_control: ResearchBacktestCheckpointControl,
+) -> None:
     config = graph.config
     if type(config) is not BacktestServiceConfig:
         raise _error("constructed_backtest_service_config_drift")
@@ -430,7 +412,10 @@ def _require_audit_bound_config(graph: ClosedBacktestServiceGraph) -> None:
         {item.name for item in fields(BacktestServiceConfig)},
         "constructed_backtest_service_config_drift",
     )
-    if not has_exact_runtime_value(config, _expected_service_config(graph)):
+    if not has_exact_runtime_value(
+        config,
+        _expected_service_config(graph, checkpoint_control),
+    ):
         raise _error("constructed_backtest_service_config_drift")
 
 
@@ -674,7 +659,7 @@ def _require_planner_state(
             planner_state.get("_default_lot_size"),
             DEFAULT_LOT_SIZE,
         )
-        or not has_exact_runtime_value(planner_state.get("_counter"), 0)
+        or not has_exact_runtime_value(components.planner.snapshot_id_counter(), 0)
     ):
         raise _error("constructed_execution_planner_parameter_drift")
     raw_checks: object = vars(components.pre_trade).get("_checks")
@@ -698,6 +683,7 @@ def _require_planner_state(
 def _require_brokerage_state(
     config: BacktestServiceConfig,
     components: ConstructedBacktestComponents,
+    resume_state: ResearchBacktestResumeState | None,
 ) -> None:
     model = components.brokerage_model
     if not all_references_identical(
@@ -710,9 +696,6 @@ def _require_brokerage_state(
     ):
         raise _error("constructed_brokerage_model_drift")
     brokerage_state = vars(components.brokerage)
-    frozen_quantities = brokerage_state.get("_frozen_quantities")
-    if not has_exact_runtime_value(frozen_quantities, {}):
-        raise _error("constructed_brokerage_state_drift")
     if (
         not all_references_identical(
             (
@@ -722,11 +705,49 @@ def _require_brokerage_state(
                 (brokerage_state.get("_rules_getter"), components.rules_getter),
             )
         )
-        or not has_exact_runtime_value(brokerage_state.get("_fill_counter"), 0)
+        or not has_exact_runtime_value(
+            components.brokerage.snapshot_fill_counter(),
+            0,
+        )
         or not has_exact_runtime_value(
             brokerage_state.get("_current_trade_date"),
             "",
         )
+    ):
+        raise _error("constructed_brokerage_state_drift")
+    if resume_state is None:
+        _require_pristine_account_and_orders(config, components)
+    else:
+        require_research_resume_runtime_state(
+            resume_state,
+            account=components.account,
+            cash=components.cash,
+            brokerage=components.brokerage,
+            order_book=components.order_book,
+            order_journal=components.order_journal,
+        )
+
+    if type(
+        components.rule_provider.inner
+    ) is not InMemoryRuleProvider or not has_exact_runtime_value(
+        components.rule_provider.knowledge_lag_days,
+        config.knowledge_lag_days,
+    ):
+        raise _error("constructed_rule_provider_drift")
+    if not has_exact_runtime_value(
+        components.settlement_model.trading_calendar,
+        tuple(components.feed.trading_days()),
+    ):
+        raise _error("constructed_settlement_calendar_drift")
+
+
+def _require_pristine_account_and_orders(
+    config: BacktestServiceConfig,
+    components: ConstructedBacktestComponents,
+) -> None:
+    if not has_exact_runtime_value(
+        vars(components.brokerage).get("_frozen_quantities"),
+        {},
     ):
         raise _error("constructed_brokerage_state_drift")
 
@@ -752,18 +773,6 @@ def _require_brokerage_state(
     )
     if order_state_drift is not None:
         raise _error(order_state_drift)
-    if type(
-        components.rule_provider.inner
-    ) is not InMemoryRuleProvider or not has_exact_runtime_value(
-        components.rule_provider.knowledge_lag_days,
-        config.knowledge_lag_days,
-    ):
-        raise _error("constructed_rule_provider_drift")
-    if not has_exact_runtime_value(
-        components.settlement_model.trading_calendar,
-        tuple(components.feed.trading_days()),
-    ):
-        raise _error("constructed_settlement_calendar_drift")
 
 
 def require_actual_component_state(
@@ -772,6 +781,7 @@ def require_actual_component_state(
     expected_order_type: OrderType,
     expected_slippage_basis_points: int,
     components: ConstructedBacktestComponents,
+    resume_state: ResearchBacktestResumeState | None,
 ) -> tuple[OrderType, tuple[LotSizeCheck, BuyingPowerCheck]]:
     """Verify state and identity of every numerical component."""
     _require_component_types(components)
@@ -782,6 +792,8 @@ def require_actual_component_state(
         float(expected_slippage_basis_points),
     ):
         raise _error("constructed_slippage_model_parameter_drift")
+    if (resume_state is None) is not (config.resume_from_run_id == ""):
+        raise _error("constructed_checkpoint_control_drift")
     planner_evidence = _require_planner_state(expected_order_type, components)
-    _require_brokerage_state(config, components)
+    _require_brokerage_state(config, components, resume_state)
     return planner_evidence

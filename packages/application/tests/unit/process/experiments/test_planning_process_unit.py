@@ -11,6 +11,7 @@ import orjson
 import pytest
 from ditto_analysis.errors import ExperimentConflictError, ResearchDatasetError
 from ditto_analysis.experiments import (
+    ContentHash,
     ExperimentDesiredState,
     ExperimentProjection,
     ExperimentReaderProtocol,
@@ -19,11 +20,21 @@ from ditto_analysis.experiments import (
     ExperimentWriterProtocol,
     FoldRole,
     FoldView,
+    ResearchMetricDirection,
+    ResearchMetricId,
+    ResearchMetricValue,
     StatusEventRecord,
     StatusSubjectType,
+    TrialFamilyDeclaration,
     canonical_payload,
 )
 from ditto_analysis.experiments.specs import ExperimentFailurePolicy
+from ditto_analysis.experiments.trial_ledger import (
+    ConstraintOperator,
+    MetricConstraint,
+    ObjectiveMetric,
+    PromotionObjective,
+)
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import (
     _launch_material as launch_material_module,
@@ -58,6 +69,9 @@ from ditto_application.processes.experiments.planning import (
     ResourceCostModel,
     ValidationWorkload,
     plan_experiment_work,
+)
+from ditto_application.processes.experiments.planning_contracts import (
+    declare_trial_family,
 )
 from ditto_application.processes.experiments.planning_probes import (
     BaselineRuntimeExecutorEvidence,
@@ -193,9 +207,52 @@ def _validation(
     )
 
 
+def _objective(
+    experiment_id: str,
+    matrix: CandidateMatrixSpec,
+) -> PromotionObjective:
+    family = declare_trial_family(
+        experiment_id=experiment_id,
+        matrix_spec=matrix,
+        family_id="stock-selection-r3-v1",
+    )
+    return PromotionObjective(
+        primary=ObjectiveMetric(
+            ResearchMetricId.NET_RETURN,
+            ResearchMetricDirection.MAXIMIZE,
+        ),
+        hard_constraints=(
+            MetricConstraint(
+                ResearchMetricValue(ResearchMetricId.MAX_DRAWDOWN, -20.0),
+                ConstraintOperator.GREATER_THAN_OR_EQUAL,
+            ),
+        ),
+        tie_break_order=(
+            ObjectiveMetric(
+                ResearchMetricId.TURNOVER,
+                ResearchMetricDirection.MINIMIZE,
+            ),
+        ),
+        baseline_candidate_id=family.current_members[0].candidate_id,
+        economic_rationale="Capture durable returns after costs.",
+        trial_family=family,
+    )
+
+
 def _request(month_count: int = 96) -> ExperimentPlanningRequest:
+    experiment_id = "exp-plan-1"
+    matrix = CandidateMatrixSpec(
+        baseline=BaselineDescriptor(
+            descriptor_type="etf-current-active",
+            payload={
+                "strategy_id": "seed_etf_rotation",
+                "version": 2,
+                "spec_hash": "f" * 64,
+            },
+        ),
+    )
     return ExperimentPlanningRequest(
-        experiment_id="exp-plan-1",
+        experiment_id=experiment_id,
         research_cycle_id="cycle-plan-1",
         research_cycle_hash="c" * 64,
         strategy_record=StrategySpecRecord(
@@ -210,16 +267,8 @@ def _request(month_count: int = 96) -> ExperimentPlanningRequest:
             manifest_hash="d" * 64,
         ),
         validation_request=_validation(month_count),
-        matrix_spec=CandidateMatrixSpec(
-            baseline=BaselineDescriptor(
-                descriptor_type="etf-current-active",
-                payload={
-                    "strategy_id": "seed_etf_rotation",
-                    "version": 2,
-                    "spec_hash": "f" * 64,
-                },
-            ),
-        ),
+        matrix_spec=matrix,
+        promotion_objective=_objective(experiment_id, matrix),
         dataset_requirements=(
             ResearchDatasetRequirement(
                 dataset_id="etf_daily",
@@ -243,6 +292,148 @@ def _request(month_count: int = 96) -> ExperimentPlanningRequest:
         failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
         created_at=NOW,
     )
+
+
+def test_planning_request_hash_covers_every_promotion_objective_declaration() -> None:
+    request = _request()
+    objective = request.promotion_objective
+    constraint = objective.hard_constraints[0]
+    tie_break = objective.tie_break_order[0]
+    variants = (
+        replace(
+            objective,
+            primary=ObjectiveMetric(
+                ResearchMetricId.RELATIVE_NET_RETURN,
+                ResearchMetricDirection.MAXIMIZE,
+            ),
+        ),
+        replace(
+            objective,
+            hard_constraints=(
+                MetricConstraint(
+                    ResearchMetricValue(ResearchMetricId.CAPACITY, 1_000_000.0),
+                    ConstraintOperator.GREATER_THAN_OR_EQUAL,
+                ),
+            ),
+        ),
+        replace(
+            objective,
+            hard_constraints=(
+                replace(
+                    constraint,
+                    operator=ConstraintOperator.LESS_THAN_OR_EQUAL,
+                ),
+            ),
+        ),
+        replace(
+            objective,
+            hard_constraints=(
+                replace(
+                    constraint,
+                    threshold=ResearchMetricValue(
+                        ResearchMetricId.MAX_DRAWDOWN,
+                        -25.0,
+                    ),
+                ),
+            ),
+        ),
+        replace(
+            objective,
+            tie_break_order=(
+                ObjectiveMetric(
+                    ResearchMetricId.COST_DRAG,
+                    ResearchMetricDirection.MINIMIZE,
+                ),
+            ),
+        ),
+        replace(
+            objective,
+            tie_break_order=(
+                ObjectiveMetric(
+                    ResearchMetricId.CAPACITY,
+                    ResearchMetricDirection.MAXIMIZE,
+                ),
+                tie_break,
+            ),
+        ),
+        replace(objective, economic_rationale="Prefer robust net capacity."),
+        replace(
+            objective,
+            trial_family=TrialFamilyDeclaration(
+                "stock-selection-r3-v2",
+                objective.trial_family.members,
+            ),
+        ),
+    )
+
+    hashes = {
+        planning_request_hash(request),
+        *(
+            planning_request_hash(replace(request, promotion_objective=item))
+            for item in variants
+        ),
+    }
+
+    assert len(hashes) == len(variants) + 1
+
+
+def _objective_with_other_declared_baseline() -> PromotionObjective:
+    objective = _request().promotion_objective
+    return replace(
+        objective,
+        baseline_candidate_id=objective.trial_family.current_members[1].candidate_id,
+    )
+
+
+def _objective_with_substituted_current_trial() -> PromotionObjective:
+    objective = _request().promotion_objective
+    current = objective.trial_family.current_members
+    substituted = replace(current[1], parameter_hash=ContentHash("f" * 64))
+    return replace(
+        objective,
+        trial_family=TrialFamilyDeclaration(
+            objective.trial_family.family_id,
+            (current[0], substituted),
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("objective", "reason"),
+    [
+        (
+            _objective_with_other_declared_baseline(),
+            "promotion_baseline_candidate_mismatch",
+        ),
+        (
+            _objective_with_substituted_current_trial(),
+            "promotion_current_trial_family_mismatch",
+        ),
+    ],
+)
+def test_promotion_objective_must_name_the_complete_planned_candidate_family(
+    objective: PromotionObjective,
+    reason: str,
+) -> None:
+    request = replace(_request(), promotion_objective=objective)
+    store = _Store()
+    certification = _CertificationProbe()
+    executor = _ExecutorProbe()
+    authority = _AuthorityProbe()
+
+    report = _process(
+        store,
+        certification=certification,
+        executor=executor,
+        authority=authority,
+    ).preflight(request)
+
+    assert report.status is ExperimentPreflightStatus.BLOCKED
+    assert report.checks[0].reason == reason
+    assert certification.calls == []
+    assert executor.calls == 0
+    assert authority.calls == 0
+    assert store.calls == []
 
 
 class _CertificationProbe:
@@ -1050,6 +1241,7 @@ def test_non_exact_planning_request_blocks_before_probes_or_writes(
         snapshot_identity=base.snapshot_identity,
         validation_request=base.validation_request,
         matrix_spec=base.matrix_spec,
+        promotion_objective=base.promotion_objective,
         dataset_requirements=base.dataset_requirements,
         cost_model=base.cost_model,
         budget=base.budget,
@@ -1112,6 +1304,14 @@ def _mutate_matrix_baseline_identity(request: ExperimentPlanningRequest) -> None
     object.__setattr__(request.matrix_spec.baseline, "canonical_json", "{}")
 
 
+def _mutate_promotion_objective_graph(request: ExperimentPlanningRequest) -> None:
+    object.__setattr__(
+        request.promotion_objective.primary,
+        "direction",
+        request.promotion_objective.primary.direction.value,
+    )
+
+
 def _mutate_seed_bool(request: ExperimentPlanningRequest) -> None:
     object.__setattr__(request, "seed", True)
 
@@ -1158,6 +1358,7 @@ def _mutate_dataset_requirement(request: ExperimentPlanningRequest) -> None:
         _mutate_cost_scalar,
         _mutate_budget_node,
         _mutate_matrix_baseline_identity,
+        _mutate_promotion_objective_graph,
         _mutate_seed_bool,
         _mutate_seed_negative,
         _mutate_worker_count,
@@ -1169,6 +1370,7 @@ def _mutate_dataset_requirement(request: ExperimentPlanningRequest) -> None:
         "cost-scalar",
         "budget-node-subclass",
         "matrix-baseline-identity",
+        "promotion-objective-graph",
         "seed-bool",
         "seed-negative",
         "worker-count",

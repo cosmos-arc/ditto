@@ -2,18 +2,36 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
-from ditto_analysis.experiments import ExperimentFailurePolicy
+from ditto_analysis.errors import AnalysisError
+from ditto_analysis.experiments import (
+    CandidateId,
+    CandidateSpec,
+    ExperimentFailurePolicy,
+    ExperimentId,
+)
+from ditto_analysis.experiments.promotion_objective import (
+    promotion_objective_payload,
+    validate_promotion_objective_graph,
+)
+from ditto_analysis.experiments.trial_family import (
+    LogicalTrialIdentity,
+    TrialFamilyDeclaration,
+    TrialKind,
+)
+from ditto_analysis.experiments.trial_ledger import PromotionObjective
 from ditto_strategy.models import StrategySpecRecord
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments.planning import (
     CandidateMatrixSpec,
     ExperimentBudgetSpec,
     ResourceCostModel,
+    expand_candidate_matrix,
 )
 from ditto_application.processes.experiments.planning_probes import (
     ExperimentSnapshotIdentity,
@@ -25,7 +43,45 @@ __all__ = [
     "ExperimentPlanningRequest",
     "ExperimentPreflightCheck",
     "PreflightOutcome",
+    "declare_trial_family",
+    "seal_promotion_objective",
 ]
+
+
+def declare_trial_family(
+    *,
+    experiment_id: str,
+    matrix_spec: CandidateMatrixSpec,
+    family_id: str,
+    prior_members: Sequence[LogicalTrialIdentity] = (),
+) -> TrialFamilyDeclaration:
+    """Derive exact current logical trials from a canonical executable matrix."""
+    plan = expand_candidate_matrix(matrix_spec)
+    origin = ExperimentId(experiment_id)
+    current_members: list[LogicalTrialIdentity] = []
+    for candidate in plan.candidates:
+        candidate_id = CandidateId(
+            f"{experiment_id}:candidate:{candidate.ordinal}:{candidate.candidate_hash}"
+        )
+        spec = CandidateSpec(
+            candidate_id=candidate_id,
+            ordinal=candidate.ordinal,
+            is_baseline=candidate.role.value == "baseline",
+            parameters=candidate.persistence_parameters,
+        )
+        current_members.append(
+            LogicalTrialIdentity(
+                origin,
+                candidate_id,
+                candidate.ordinal,
+                spec.parameter_hash,
+                TrialKind.CURRENT,
+            )
+        )
+    return TrialFamilyDeclaration(
+        family_id,
+        (*tuple(prior_members), *current_members),
+    )
 
 
 class PreflightOutcome(StrEnum):
@@ -60,6 +116,7 @@ class ExperimentPlanningRequest:
     snapshot_identity: ExperimentSnapshotIdentity
     validation_request: ValidationProtocolRequest
     matrix_spec: CandidateMatrixSpec
+    promotion_objective: PromotionObjective
     dataset_requirements: tuple[ResearchDatasetRequirement, ...]
     cost_model: ResourceCostModel
     budget: ExperimentBudgetSpec
@@ -67,3 +124,21 @@ class ExperimentPlanningRequest:
     worker_count: int
     failure_policy: ExperimentFailurePolicy
     created_at: datetime
+
+
+def seal_promotion_objective(
+    value: object,
+) -> tuple[PromotionObjective, Mapping[str, object]]:
+    """Detach and canonically project an untrusted objective request graph."""
+    try:
+        objective = validate_promotion_objective_graph(value)
+        payload = promotion_objective_payload(objective)
+    except AnalysisError as exc:
+        raise AppProcessError(
+            "planning request has no stable canonical objective",
+            details={
+                "code": "SPEC_INVALID",
+                "reason": "invalid_promotion_objective_graph",
+            },
+        ) from exc
+    return objective, payload

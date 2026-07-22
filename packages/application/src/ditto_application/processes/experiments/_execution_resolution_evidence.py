@@ -3,22 +3,30 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import datetime
 from typing import Protocol, cast
 
 import orjson
+from ditto_analysis.experiments import (
+    AttemptId,
+    AttemptPersistenceSpec,
+    AttemptProjection,
+    AttemptView,
+    BacktestRunId,
+    ContentHash,
+    ExperimentStatus,
+    FoldView,
+    StatusEventRecord,
+    StatusSubjectType,
+    canonical_payload,
+    encode_launch_spec,
+)
 from ditto_analysis.experiments import (
     ExperimentLaunchSpec as _ExperimentLaunchSpec,
 )
 from ditto_analysis.experiments import (
     ExperimentReaderProtocol as _ExperimentReaderProtocol,
-)
-from ditto_analysis.experiments import (
-    ExperimentStatus,
-    StatusEventRecord,
-    StatusSubjectType,
-    canonical_payload,
-    encode_launch_spec,
 )
 from ditto_analysis.experiments import (
     FoldView as _FoldView,
@@ -35,7 +43,11 @@ from ditto_application.processes.experiments._preflight_codec import (
     decode_preflight_report,
 )
 from ditto_application.processes.experiments.execution_bundle import (
+    BacktestExecutionConfigBinding,
     ContentAddressedResearchInput,
+    ExactBenchmarkBinding,
+    ResearchExecutionAudit,
+    ResearchExecutionSemantics,
     ResearchSnapshotBinding,
 )
 from ditto_application.processes.experiments.execution_contracts import (
@@ -52,6 +64,7 @@ from ditto_application.processes.experiments.research_policy_artifact import (
 from ditto_application.processes.experiments.research_snapshot_manifest import (
     VerifiedResearchSnapshotManifest,
 )
+from ditto_application.processes.experiments.scheduler_store import QueuedAttempt
 
 _PREFLIGHT_POLICY_VERSION = "r3-experiment-preflight-v1"
 _SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -60,8 +73,158 @@ type ResearchExperimentReader = _ExperimentReaderProtocol
 type ResearchFoldView = _FoldView
 
 
+def deterministic_backtest_run_id(
+    attempt_id: AttemptId,
+    reproduction_fingerprint: ContentHash,
+) -> BacktestRunId:
+    """Derive one stable run identity from the immutable attempt fingerprint."""
+    identity = canonical_payload(
+        {
+            "kind": "r3_research_backtest_run",
+            "attempt_id": str(attempt_id),
+            "reproduction_fingerprint": str(reproduction_fingerprint),
+        }
+    ).content_hash
+    return BacktestRunId(f"research-run-{identity}")
+
+
 class ResearchExecutionInputError(AppProcessError):
     """Frozen durable evidence cannot reconstruct the claimed numerical input."""
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchExecutionAuditAnchor:
+    """Immutable pre-factory identity rebuilt from authoritative audit fields."""
+
+    audit_payload: bytes
+    audit_bundle_hash: str
+    semantics_payload: bytes
+    reproduction_fingerprint: str
+
+
+def rebuild_execution_audit_anchor(
+    audit: object,
+) -> ResearchExecutionAuditAnchor:
+    """Validate derived audit identities and return detached immutable evidence."""
+    if type(audit) is not ResearchExecutionAudit:
+        raise research_execution_error("research_execution_audit_drift")
+    semantics = audit.semantics
+    if type(semantics) is not ResearchExecutionSemantics:
+        raise research_execution_error("research_execution_audit_drift")
+    backtest = semantics.backtest
+    if type(backtest) is not BacktestExecutionConfigBinding:
+        raise research_execution_error("research_execution_audit_drift")
+    benchmark = backtest.benchmark
+    if benchmark is None:
+        rebuilt_benchmark = None
+    else:
+        if type(benchmark) is not ExactBenchmarkBinding:
+            raise research_execution_error("research_execution_audit_drift")
+        rebuilt_benchmark = replace(benchmark)
+        if (
+            type(benchmark.canonical_hash) is not ContentHash
+            or benchmark.canonical_hash != rebuilt_benchmark.canonical_hash
+        ):
+            raise research_execution_error("research_execution_audit_drift")
+    rebuilt_backtest = replace(backtest, benchmark=rebuilt_benchmark)
+    if (
+        type(backtest.canonical_hash) is not ContentHash
+        or type(backtest.policy_model_evidence_hash) is not ContentHash
+        or backtest.canonical_hash != rebuilt_backtest.canonical_hash
+        or backtest.policy_model_evidence_hash
+        != rebuilt_backtest.policy_model_evidence_hash
+    ):
+        raise research_execution_error("research_execution_audit_drift")
+    rebuilt_semantics = replace(semantics, backtest=rebuilt_backtest)
+    rebuilt_audit = ResearchExecutionAudit.create(
+        semantics=rebuilt_semantics,
+        attempt_id=audit.attempt_id,
+        attempt_ordinal=audit.attempt_ordinal,
+        backtest_run_id=audit.backtest_run_id,
+        parent_attempt_id=audit.parent_attempt_id,
+        resume_from_run_id=audit.resume_from_run_id,
+        created_at=audit.created_at,
+    )
+    if (
+        type(semantics.canonical_payload) is not bytes
+        or type(semantics.reproduction_fingerprint) is not ContentHash
+        or type(audit.canonical_payload) is not bytes
+        or type(audit.bundle_hash) is not ContentHash
+        or semantics.canonical_payload != rebuilt_semantics.canonical_payload
+        or semantics.reproduction_fingerprint
+        != rebuilt_semantics.reproduction_fingerprint
+        or audit.canonical_payload != rebuilt_audit.canonical_payload
+        or audit.bundle_hash != rebuilt_audit.bundle_hash
+    ):
+        raise research_execution_error("research_execution_audit_drift")
+    return ResearchExecutionAuditAnchor(
+        audit_payload=bytes(rebuilt_audit.canonical_payload),
+        audit_bundle_hash=str(rebuilt_audit.bundle_hash),
+        semantics_payload=bytes(rebuilt_semantics.canonical_payload),
+        reproduction_fingerprint=str(rebuilt_semantics.reproduction_fingerprint),
+    )
+
+
+def build_successor_queued_attempt(
+    fold: FoldView,
+    parent: AttemptView,
+    *,
+    resume_from_run_id: BacktestRunId | None,
+    occurred_at: datetime,
+) -> QueuedAttempt:
+    """Build the next exact attempt solely from immutable persisted lineage."""
+    if (
+        type(cast("object", fold)) is not FoldView
+        or type(cast("object", parent)) is not AttemptView
+        or fold.projection.status is not ExperimentStatus.QUEUED
+        or fold.projection.claim_owner_token is not None
+        or parent.spec.fold_key != fold.spec.key
+        or parent.projection.status
+        not in {
+            ExperimentStatus.CANCELLED,
+            ExperimentStatus.COMPLETED,
+            ExperimentStatus.FAILED,
+        }
+        or (
+            resume_from_run_id is not None
+            and type(cast("object", resume_from_run_id)) is not BacktestRunId
+        )
+    ):
+        raise research_execution_error("successor_attempt_parent_invalid")
+    ordinal = parent.spec.ordinal + 1
+    identity = canonical_payload(
+        {
+            "kind": "r3_research_successor_attempt",
+            "fold_payload_hash": str(fold.spec.payload_hash),
+            "parent_attempt_id": str(parent.spec.attempt_id),
+            "ordinal": ordinal,
+            "resume_from_run_id": (
+                None if resume_from_run_id is None else str(resume_from_run_id)
+            ),
+            "reproduction_fingerprint": str(parent.spec.reproduction_fingerprint),
+        }
+    ).content_hash
+    attempt_id = AttemptId(f"attempt-{identity}")
+    spec = AttemptPersistenceSpec(
+        attempt_id=attempt_id,
+        fold_key=fold.spec.key,
+        ordinal=ordinal,
+        parent_attempt_id=parent.spec.attempt_id,
+        resume_from_run_id=resume_from_run_id,
+        reproduction_fingerprint=parent.spec.reproduction_fingerprint,
+        created_at=occurred_at,
+    )
+    projection = AttemptProjection(
+        attempt_id=attempt_id,
+        status=ExperimentStatus.QUEUED,
+        backtest_run_id=None,
+        checkpoint_ref=None,
+        failure_code=None,
+        created_at=occurred_at,
+        updated_at=occurred_at,
+        revision=0,
+    )
+    return QueuedAttempt(spec, projection)
 
 
 def research_execution_error(

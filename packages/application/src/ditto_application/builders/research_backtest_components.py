@@ -16,12 +16,15 @@ from ditto_backtest.simulation import (
     FixedBpsSlippage,
 )
 from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.journal import InMemoryOrderEventJournal
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
-from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderType
-from ditto_portfolio.accounting import Account, CashBook
+from ditto_kernel.order import OrderSide, OrderType
+from ditto_portfolio.accounting import Account, CashBook, Position
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -29,7 +32,6 @@ from ditto_risk.pre_trade import (
 )
 from ditto_strategy.alpha.parameters import (
     EffectiveParameter,
-    canonical_parameter_hash,
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 
@@ -61,6 +63,12 @@ from ditto_application.processes.experiments.execution_bundle import (
     ResearchFillMode,
     StrategyExecutionBinding,
     VersionedExecutionComponent,
+)
+from ditto_application.processes.experiments.research_backtest_checkpoint import (
+    ResearchBacktestCheckpointControl,
+    ResearchBacktestResumeState,
+    build_research_backtest_config,
+    build_research_backtest_strategy_config,
 )
 from ditto_application.processes.experiments.research_data_feed import (
     ResearchDataFeed,
@@ -122,6 +130,7 @@ def build_research_backtest_service(
     feed: ResearchDataFeed,
     benchmark: ExactBenchmarkBinding | None,
     external_should_stop: Callable[[], bool],
+    checkpoint_control: ResearchBacktestCheckpointControl,
 ) -> ResearchBacktestComponentBuild:
     """Build all numerical components and attest their concrete identities."""
     declared = audit.semantics.backtest
@@ -159,14 +168,9 @@ def build_research_backtest_service(
         feed,
         rule_provider,
     )
-    cash = CashBook(
-        available=initial_cash,
-        settled=initial_cash,
-        frozen=0.0,
-    )
-    account = Account(cash=cash)
+    cash, account = _build_account(initial_cash, checkpoint_control)
     order_journal = InMemoryOrderEventJournal()
-    order_book = OrderBook(journal=order_journal)
+    order_book = _build_order_book(order_journal, checkpoint_control)
     rules_getter = KnowledgeLagRulesGetter(rule_provider)
     brokerage = BacktestBrokerage(
         account=account,
@@ -174,6 +178,8 @@ def build_research_backtest_service(
         model=brokerage_model,
         rules_getter=rules_getter,
     )
+    if checkpoint_control.resume is not None:
+        brokerage.restore_settlement_state(checkpoint_control.resume.settlement)
     planner = SimpleExecutionPlanner(
         default_order_type=strategy.planner_order_type,
     )
@@ -185,6 +191,7 @@ def build_research_backtest_service(
         strategy,
         initial_cash,
         benchmark,
+        checkpoint_control,
     )
     options = BacktestServiceOptions(
         fee_model=fee_model,
@@ -192,6 +199,12 @@ def build_research_backtest_service(
         rule_provider=rule_provider,
         compiled_expressions=strategy.compiled_expressions,
         external_should_stop=external_should_stop,
+        checkpoint_writer=checkpoint_control.writer,
+        restore_runtime_state=(
+            None
+            if checkpoint_control.resume is None
+            else checkpoint_control.resume.runtime
+        ),
     )
     service = BacktestService(
         config=config,
@@ -239,6 +252,7 @@ def build_research_backtest_service(
         compiled_expressions=strategy.compiled_expressions,
         pipeline_attestation=strategy.pipeline_attestation,
         external_should_stop=external_should_stop,
+        checkpoint_control=checkpoint_control,
         components=components,
     )
     require_closed_backtest_service(
@@ -251,6 +265,7 @@ def build_research_backtest_service(
         config,
         strategy,
         components,
+        checkpoint_control.resume,
     )
     if actual != declared:
         raise _error("constructed_backtest_component_drift")
@@ -263,6 +278,69 @@ def _initial_cash(binding: BacktestExecutionConfigBinding) -> float:
     return float(
         Decimal(binding.initial_cash_minor_units) / Decimal(_MINOR_UNITS_PER_CNY)
     )
+
+
+def _build_account(
+    initial_cash: float,
+    control: ResearchBacktestCheckpointControl,
+) -> tuple[CashBook, Account]:
+    resume = control.resume
+    if resume is None:
+        cash = CashBook(
+            available=initial_cash,
+            settled=initial_cash,
+            frozen=0.0,
+        )
+        return cash, Account(cash=cash)
+    snapshot = resume.account
+    cash = CashBook(
+        available=snapshot.cash_available,
+        settled=snapshot.cash_settled,
+        frozen=snapshot.cash_frozen,
+    )
+    positions = {
+        item.instrument_id: Position(
+            instrument_id=item.instrument_id,
+            quantity=item.quantity,
+            available_quantity=item.available_quantity,
+            average_cost=item.average_cost,
+            market_value=item.market_value,
+            unrealized_pnl=item.unrealized_pnl,
+            realized_pnl=item.realized_pnl,
+            total_fees=item.total_fees,
+        )
+        for item in snapshot.positions
+    }
+    return cash, Account(positions=positions, cash=cash)
+
+
+def _build_order_book(
+    journal: InMemoryOrderEventJournal,
+    control: ResearchBacktestCheckpointControl,
+) -> OrderBook:
+    order_book = OrderBook(journal=journal)
+    if control.resume is None:
+        return order_book
+    for snapshot in control.resume.runtime.pending_orders:
+        order_book.restore_ticket(
+            OrderTicket(
+                order=Order(
+                    client_id=ClientOrderId(snapshot.client_order_id),
+                    instrument_id=snapshot.instrument_id,
+                    order_type=OrderType(snapshot.order_type),
+                    direction=OrderSide(snapshot.direction),
+                    quantity=snapshot.quantity,
+                    price=snapshot.price,
+                    stop_price=snapshot.stop_price,
+                    trade_date=snapshot.trade_date,
+                ),
+                status=OrderStatus(snapshot.status),
+                filled_quantity=snapshot.filled_quantity,
+                filled_price=snapshot.filled_price,
+                average_fill_price=snapshot.average_fill_price,
+            )
+        )
+    return order_book
 
 
 def _validate_rule_coverage(
@@ -337,64 +415,18 @@ def _service_config(
     strategy: FrozenBacktestStrategyBuild,
     initial_cash: float,
     benchmark: ExactBenchmarkBinding | None,
+    checkpoint_control: ResearchBacktestCheckpointControl,
 ) -> BacktestServiceConfig:
-    semantics = audit.semantics
-    snapshot = semantics.snapshot
-    binding = strategy.binding
-    if type(binding) is StrategyExecutionBinding:
-        strategy_id = binding.exact_strategy.strategy_id
-        strategy_version = str(binding.exact_strategy.version)
-        base_spec_hash = binding.exact_strategy.spec_hash
-        spec_hash = binding.resolved_spec_hash
-        parameter_hash = binding.parameter_hash
-        candidate_parameters = binding.candidate_parameters
-        effective_parameters = strategy.effective_parameters
-        factor_refs = tuple(item.binding_hash for item in binding.factor_bindings)
-    elif type(binding) is BaselineExecutorBinding:
-        strategy_id = binding.baseline_ref
-        strategy_version = str(binding.executor_contract_version)
-        base_spec_hash = binding.descriptor_hash
-        spec_hash = binding.descriptor_hash
-        parameter_hash = canonical_parameter_hash(())
-        candidate_parameters = ()
-        effective_parameters = ()
-        factor_refs = ()
-    else:
-        raise _error("invalid_strategy_execution_binding")
-    return BacktestServiceConfig(
-        strategy_id=strategy_id,
-        strategy_version=strategy_version,
-        run_id=audit.backtest_run_id,
-        start_date=semantics.test_start.isoformat(),
-        end_date=semantics.test_end.isoformat(),
+    return build_research_backtest_config(
+        audit=audit,
+        strategy=build_research_backtest_strategy_config(
+            strategy.binding,
+            effective_parameters=strategy.effective_parameters,
+            rebalance_frequency=strategy.rebalance_frequency,
+        ),
         initial_cash=initial_cash,
-        benchmark_id=(
-            None if benchmark is None else InstrumentId(benchmark.instrument_id)
-        ),
-        candidate_parameters=candidate_parameters,
-        research_snapshot_id=snapshot.exact_snapshot.snapshot_id,
-        research_snapshot_manifest_hash=snapshot.exact_snapshot.manifest_hash,
-        rebalance_freq=strategy.rebalance_frequency,
-        engine_version=semantics.backtest.engine_version,
-        random_seed=semantics.seed,
-        execution_delay=semantics.execution_delay_sessions,
-        knowledge_lag_days=semantics.knowledge_lag_days,
-        code_version=semantics.environment.code_version,
-        data_catalog_identities=tuple(
-            f"{item.input_id}:{item.content_hash}:{item.schema_hash}"
-            for item in snapshot.inputs
-        ),
-        factor_report_refs=factor_refs,
-        recommendation_status="research",
-        participation_rate=(
-            semantics.backtest.participation_rate_ppm / _PARTS_PER_MILLION
-        ),
-        fill_mode=semantics.backtest.fill_mode.value,
-        resume_from_run_id="",
-        spec_hash=spec_hash,
-        base_spec_hash=base_spec_hash,
-        parameter_hash=parameter_hash,
-        effective_parameters=effective_parameters,
+        benchmark=benchmark,
+        resume=checkpoint_control.resume,
     )
 
 
@@ -464,16 +496,16 @@ def _actual_backtest_binding(
     config: BacktestServiceConfig,
     strategy: FrozenBacktestStrategyBuild,
     components: ConstructedBacktestComponents,
+    resume_state: ResearchBacktestResumeState | None,
 ) -> BacktestExecutionConfigBinding:
     planner_order_type, checks = require_actual_component_state(
         config=config,
         expected_order_type=strategy.planner_order_type,
         expected_slippage_basis_points=semantics.backtest.slippage_basis_points,
         components=components,
+        resume_state=resume_state,
     )
-    minor_units = int(
-        Decimal(str(components.cash.available)) * Decimal(_MINOR_UNITS_PER_CNY)
-    )
+    minor_units = int(Decimal(str(config.initial_cash)) * Decimal(_MINOR_UNITS_PER_CNY))
     planner_key = f"ditto_execution.simple_execution_planner.{planner_order_type.value}"
     rebalance_key = (
         "research.baseline.fold_schedule"

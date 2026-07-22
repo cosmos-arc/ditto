@@ -2198,6 +2198,54 @@ class TestBacktestCheckpointPersistence:
             )
         )
 
+    def test_resumed_child_checkpoint_accumulates_parent_progress(self) -> None:
+        """Restored child checkpoints keep run-global progress and total days."""
+        checkpoint_writer = MagicMock()
+        config = _make_service_config(
+            strategy_id="momentum-etf",
+            strategy_version="4",
+            run_id="run-resumed-child",
+            resume_from_run_id="run-parent",
+            resume_checkpoint_completed_days=21,
+            resume_checkpoint_total_days=60,
+            resume_checkpoint_order_count=11,
+            resume_checkpoint_fill_count=9,
+        )
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(checkpoint_writer=checkpoint_writer),
+        )
+        options = service._build_engine_options(
+            "run-resumed-child",
+            ExecutionAuditCollector(),
+        )
+        assert options.on_checkpoint is not None
+
+        options.on_checkpoint(
+            BacktestCheckpoint(
+                run_id="run-resumed-child",
+                strategy_id="momentum-etf",
+                completed_trade_date="2026-02-05",
+                resume_from="2026-02-06",
+                completed_days=4,
+                total_days=39,
+                nav=1_030_000.0,
+                order_count=2,
+                fill_count=2,
+            )
+        )
+
+        persisted = checkpoint_writer.save_checkpoint.call_args.args[0]
+        assert persisted.completed_days == 25
+        assert persisted.total_days == 60
+        assert persisted.order_count == 13
+        assert persisted.fill_count == 11
+
     def test_checkpoint_callback_absent_without_writer(self) -> None:
         """未提供 checkpoint writer 时不注册持久化回调。"""
         service = _make_minimal_service()

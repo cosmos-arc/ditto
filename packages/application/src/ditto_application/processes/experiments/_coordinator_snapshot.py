@@ -24,6 +24,9 @@ class _AttemptSpec(Protocol):
     @property
     def fold_key(self) -> object: ...
 
+    @property
+    def ordinal(self) -> int: ...
+
 
 class _AttemptProjection(Protocol):
     @property
@@ -256,10 +259,21 @@ def hard_failure_count(
     snapshot: ExperimentSchedulerSnapshot,
     vocabulary: SnapshotVocabulary,
 ) -> int:
-    """Count persisted hard failures without inferring in-memory progress."""
+    """Count unresolved latest hard failures, excluding explicitly requeued work."""
+    failed_fold_keys = {
+        fold.spec.key
+        for fold in snapshot.folds
+        if fold.projection.status is vocabulary.failed_status
+    }
+    latest_by_fold: dict[object, _AttemptFact] = {}
+    for attempt in snapshot.attempts:
+        previous = latest_by_fold.get(attempt.spec.fold_key)
+        if previous is None or attempt.spec.ordinal > previous.spec.ordinal:
+            latest_by_fold[attempt.spec.fold_key] = cast("_AttemptFact", attempt)
     return sum(
         1
-        for attempt in snapshot.attempts
+        for key, attempt in latest_by_fold.items()
+        if key in failed_fold_keys
         if attempt.projection.status is vocabulary.failed_status
         and attempt.projection.failure_code in vocabulary.hard_failure_codes
     )

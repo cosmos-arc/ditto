@@ -310,13 +310,37 @@ class SQLiteAtomicDispatchMixin:
                 "retry parent is still live",
                 "retry_parent_not_terminal",
             )
-        if spec.resume_from_run_id is not None and parent["backtest_run_id"] != str(
-            spec.resume_from_run_id
-        ):
-            raise _integrity(
-                "retry resume source differs from the parent run",
-                "retry_resume_source_mismatch",
-            )
+        SQLiteAtomicDispatchMixin._validate_resume_source_lineage(
+            connection,
+            parent,
+            spec.resume_from_run_id,
+        )
+
+    @staticmethod
+    def _validate_resume_source_lineage(
+        connection: sqlite3.Connection,
+        parent: sqlite3.Row,
+        resume_from_run_id: BacktestRunId | None,
+    ) -> None:
+        """Require a resume source to belong to the direct parent's ancestry."""
+        if resume_from_run_id is None:
+            return
+        source = str(resume_from_run_id)
+        ancestor: sqlite3.Row | None = parent
+        while ancestor is not None:
+            if ancestor["backtest_run_id"] == source:
+                return
+            parent_id = ancestor["parent_attempt_id"]
+            if parent_id is None:
+                break
+            ancestor = connection.execute(
+                "SELECT * FROM experiment_attempt WHERE attempt_id=?",
+                (parent_id,),
+            ).fetchone()
+        raise _integrity(
+            "retry resume source is outside the parent ancestry",
+            "retry_resume_source_mismatch",
+        )
 
     @staticmethod
     def _load_interrupted_work(

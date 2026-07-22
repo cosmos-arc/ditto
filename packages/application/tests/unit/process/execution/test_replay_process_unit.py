@@ -11,12 +11,17 @@ import math
 from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import orjson
 import polars as pl
 import pytest
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.backtest_process import (
+    BacktestServiceConfig,
+    BacktestServiceOptions,
+)
+from ditto_application.processes.execution.replay_process import ReplayProcess
 from ditto_backtest.manifest import RunManifest, serialize_manifest
 from ditto_backtest.replay import ManifestDiff, ReplayValidationResult
 from ditto_backtest.result import BacktestAccountStateSnapshot
@@ -32,6 +37,16 @@ from ditto_strategy.alpha.parameters import (
 )
 from ditto_strategy.models import ArtifactKind
 from ditto_strategy.runs.models import StrategyRunRecord
+
+
+@pytest.fixture(autouse=True)
+def _stable_replay_run_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep replay identity deterministic while production uses a fresh UUID."""
+    monkeypatch.setattr(
+        "ditto_application.processes.execution.replay_process.resolve_run_id",
+        lambda configured_run_id: configured_run_id or "run-replay",
+    )
+
 
 # ---------------------------------------------------------------------------
 # 辅助函数
@@ -133,6 +148,40 @@ def _make_backtest_report(
     report.fill_log = fill_log
     report.final_account_state = final_account_state
     return report
+
+
+def _configure_replay_execution(
+    *,
+    artifact_service: MagicMock,
+    facade: MagicMock,
+    original_record: MagicMock,
+    replay_record: MagicMock,
+    replay_dir: Path,
+    replay_manifest_raw: dict[str, object],
+    replay_report: BacktestReport,
+) -> None:
+    """Materialize the reserved replay target when the mocked facade executes."""
+    artifact_service.list_artifacts.return_value = [original_record]
+
+    def _execute(
+        *,
+        config: BacktestServiceConfig,
+        version: int | None,
+        options: BacktestServiceOptions,
+    ) -> BacktestReport:
+        assert version is None or isinstance(version, int)
+        root = Path(str(options.artifact_dir))
+        target = root / config.run_id
+        assert target == replay_dir
+        assert target.is_dir()
+        (target / "manifest.json").write_bytes(orjson.dumps(replay_manifest_raw))
+        artifact_service.list_artifacts.return_value = [
+            replay_record,
+            original_record,
+        ]
+        return replay_report
+
+    facade.run_backtest_from_catalog.side_effect = _execute
 
 
 def _make_account_view() -> AccountView:
@@ -325,7 +374,9 @@ class TestLoadManifest:
         manifest_path.write_bytes(orjson.dumps(canonical_raw))
         second = ReplayProcess._load_manifest(tmp_path)
 
-        assert math.copysign(1.0, first.effective_parameters[0].value) == 1.0
+        first_value = first.effective_parameters[0].value
+        assert isinstance(first_value, float)
+        assert math.copysign(1.0, first_value) == 1.0
         assert canonical_raw["effective_parameters"][0]["value"] == 0.0
         assert first.effective_parameters == second.effective_parameters
         assert first.parameter_hash == second.parameter_hash
@@ -621,14 +672,11 @@ class TestReplaySuccess:
         (orig_dir / "manifest.json").write_bytes(orjson.dumps(manifest_raw))
         (orig_dir / "backtest_report.json").write_bytes(orjson.dumps(report_raw))
 
-        # --- 准备 replay artifact 目录 ---
         replay_dir = tmp_path / "artifacts" / "run-replay"
-        replay_dir.mkdir(parents=True)
         replay_manifest_raw = _make_manifest_raw(
             run_id="run-replay",
             config_hash="hash-abc",  # 与 original 相同
         )
-        (replay_dir / "manifest.json").write_bytes(orjson.dumps(replay_manifest_raw))
 
         # --- Mock ---
         mock_artifact_service = MagicMock()
@@ -640,11 +688,6 @@ class TestReplaySuccess:
         replay_record.run_id = "run-replay"
         replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
         replay_record.file_path = str(replay_dir)
-        mock_artifact_service.list_artifacts.return_value = [
-            replay_record,
-            orig_record,
-        ]
-
         replay_report = _make_backtest_report(
             run_id="run-replay",
             nav_series=(
@@ -655,7 +698,15 @@ class TestReplaySuccess:
         )
 
         mock_facade = MagicMock()
-        mock_facade.run_backtest_from_catalog.return_value = replay_report
+        _configure_replay_execution(
+            artifact_service=mock_artifact_service,
+            facade=mock_facade,
+            original_record=orig_record,
+            replay_record=replay_record,
+            replay_dir=replay_dir,
+            replay_manifest_raw=replay_manifest_raw,
+            replay_report=replay_report,
+        )
 
         process = ReplayProcess(
             strategy_facade=mock_facade,
@@ -677,6 +728,7 @@ class TestReplaySuccess:
         config = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
         assert config is not None
         assert config.strategy_id == "strat-1"
+        assert config.run_id == "run-replay"
         assert config.parent_run_id == "run-original"
 
         # version 参数正确
@@ -701,11 +753,9 @@ class TestReplaySuccess:
         )
 
         replay_dir = tmp_path / "artifacts" / "run-replay"
-        replay_dir.mkdir(parents=True)
-        (replay_dir / "manifest.json").write_bytes(
-            orjson.dumps(
-                _make_manifest_raw(run_id="run-replay", config_hash="hash-abc"),
-            ),
+        replay_manifest_raw = _make_manifest_raw(
+            run_id="run-replay",
+            config_hash="hash-abc",
         )
 
         orig_record = MagicMock()
@@ -717,19 +767,24 @@ class TestReplaySuccess:
         replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
         replay_record.file_path = str(replay_dir)
         mock_artifact_service = MagicMock()
-        mock_artifact_service.list_artifacts.return_value = [
-            replay_record,
-            orig_record,
-        ]
 
         mock_facade = MagicMock()
-        mock_facade.run_backtest_from_catalog.return_value = _make_backtest_report(
+        replay_report = _make_backtest_report(
             run_id="run-replay",
             nav_series=(
                 ("2026-01-01", 1.0),
                 ("2026-01-02", 1.01),
                 ("2026-01-03", 1.02),
             ),
+        )
+        _configure_replay_execution(
+            artifact_service=mock_artifact_service,
+            facade=mock_facade,
+            original_record=orig_record,
+            replay_record=replay_record,
+            replay_dir=replay_dir,
+            replay_manifest_raw=replay_manifest_raw,
+            replay_report=replay_report,
         )
 
         process = ReplayProcess(
@@ -790,11 +845,9 @@ class TestReplaySuccess:
         (orig_dir / "backtest_report.json").write_bytes(orjson.dumps(report_raw))
 
         replay_dir = tmp_path / "artifacts" / "run-replay"
-        replay_dir.mkdir(parents=True)
-        (replay_dir / "manifest.json").write_bytes(
-            orjson.dumps(
-                _make_manifest_raw(run_id="run-replay", config_hash="hash-abc"),
-            ),
+        replay_manifest_raw = _make_manifest_raw(
+            run_id="run-replay",
+            config_hash="hash-abc",
         )
 
         orig_record = MagicMock()
@@ -806,19 +859,24 @@ class TestReplaySuccess:
         replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
         replay_record.file_path = str(replay_dir)
         mock_artifact_service = MagicMock()
-        mock_artifact_service.list_artifacts.return_value = [
-            replay_record,
-            orig_record,
-        ]
 
         mock_facade = MagicMock()
-        mock_facade.run_backtest_from_catalog.return_value = _make_backtest_report(
+        replay_report = _make_backtest_report(
             run_id="run-replay",
             nav_series=(
                 ("2026-01-01", 1.0),
                 ("2026-01-02", 1.01),
                 ("2026-01-03", 1.02),
             ),
+        )
+        _configure_replay_execution(
+            artifact_service=mock_artifact_service,
+            facade=mock_facade,
+            original_record=orig_record,
+            replay_record=replay_record,
+            replay_dir=replay_dir,
+            replay_manifest_raw=replay_manifest_raw,
+            replay_report=replay_report,
         )
 
         process = ReplayProcess(
@@ -855,7 +913,9 @@ class TestReplaySuccess:
             orjson.dumps(_make_manifest_raw(run_id="run-restored")),
         )
         report_raw = _make_report_dict(
-            period_start="2026-02-02",
+            # Restored audit history expands report.period before the child's
+            # actual execution boundary; replay must use the persisted config.
+            period_start="2026-01-01",
             period_end="2026-03-31",
             initial_cash=1_011_111.0,
             nav_series=[1.0, 1.01, 1.02],
@@ -863,11 +923,9 @@ class TestReplaySuccess:
         (orig_dir / "backtest_report.json").write_bytes(orjson.dumps(report_raw))
 
         replay_dir = tmp_path / "artifacts" / "run-replay"
-        replay_dir.mkdir(parents=True)
-        (replay_dir / "manifest.json").write_bytes(
-            orjson.dumps(
-                _make_manifest_raw(run_id="run-replay", config_hash="hash-abc"),
-            ),
+        replay_manifest_raw = _make_manifest_raw(
+            run_id="run-replay",
+            config_hash="hash-abc",
         )
 
         orig_record = MagicMock()
@@ -879,16 +937,14 @@ class TestReplaySuccess:
         replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
         replay_record.file_path = str(replay_dir)
         mock_artifact_service = MagicMock()
-        mock_artifact_service.list_artifacts.return_value = [
-            replay_record,
-            orig_record,
-        ]
 
         run_config = {
             "start_date": "2026-02-02",
             "end_date": "2026-03-31",
             "initial_cash": 1_000_000.0,
+            "random_seed": 8675309,
             "execution_delay": 1,
+            "knowledge_lag_days": 3,
             "resume_from_run_id": "run-root",
             "resume_checkpoint_trade_date": "2026-01-31",
             "resume_checkpoint_completed_days": 21,
@@ -912,13 +968,22 @@ class TestReplaySuccess:
         )
 
         mock_facade = MagicMock()
-        mock_facade.run_backtest_from_catalog.return_value = _make_backtest_report(
+        replay_report = _make_backtest_report(
             run_id="run-replay",
             nav_series=(
                 ("2026-02-02", 1.0),
                 ("2026-02-03", 1.01),
                 ("2026-02-04", 1.02),
             ),
+        )
+        _configure_replay_execution(
+            artifact_service=mock_artifact_service,
+            facade=mock_facade,
+            original_record=orig_record,
+            replay_record=replay_record,
+            replay_dir=replay_dir,
+            replay_manifest_raw=replay_manifest_raw,
+            replay_report=replay_report,
         )
 
         process = ReplayProcess(
@@ -931,8 +996,12 @@ class TestReplaySuccess:
 
         config = mock_facade.run_backtest_from_catalog.call_args.kwargs["config"]
         assert config.parent_run_id == "run-restored"
+        assert config.start_date == "2026-02-02"
+        assert config.end_date == "2026-03-31"
         assert config.initial_cash == pytest.approx(1_000_000.0)
+        assert config.random_seed == 8675309
         assert config.execution_delay == 1
+        assert config.knowledge_lag_days == 3
         assert config.resume_from_run_id == "run-root"
         assert config.resume_checkpoint_trade_date == "2026-01-31"
         assert config.resume_checkpoint_completed_days == 21
@@ -970,11 +1039,9 @@ class TestReplaySuccess:
         _write_fill_log(orig_dir / "fill_log.parquet", (fill,))
 
         replay_dir = tmp_path / "artifacts" / "run-replay"
-        replay_dir.mkdir(parents=True)
-        (replay_dir / "manifest.json").write_bytes(
-            orjson.dumps(
-                _make_manifest_raw(run_id="run-replay", config_hash="hash-abc"),
-            ),
+        replay_manifest_raw = _make_manifest_raw(
+            run_id="run-replay",
+            config_hash="hash-abc",
         )
 
         orig_record = MagicMock()
@@ -986,13 +1053,9 @@ class TestReplaySuccess:
         replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
         replay_record.file_path = str(replay_dir)
         mock_artifact_service = MagicMock()
-        mock_artifact_service.list_artifacts.return_value = [
-            replay_record,
-            orig_record,
-        ]
 
         mock_facade = MagicMock()
-        mock_facade.run_backtest_from_catalog.return_value = _make_backtest_report(
+        replay_report = _make_backtest_report(
             run_id="run-replay",
             nav_series=(
                 ("2026-01-01", 1.0),
@@ -1000,6 +1063,15 @@ class TestReplaySuccess:
                 ("2026-01-03", 1.02),
             ),
             fill_log=(fill,),
+        )
+        _configure_replay_execution(
+            artifact_service=mock_artifact_service,
+            facade=mock_facade,
+            original_record=orig_record,
+            replay_record=replay_record,
+            replay_dir=replay_dir,
+            replay_manifest_raw=replay_manifest_raw,
+            replay_report=replay_report,
         )
 
         process = ReplayProcess(
@@ -1043,11 +1115,9 @@ class TestReplaySuccess:
         (orig_dir / "backtest_report.json").write_bytes(orjson.dumps(report_raw))
 
         replay_dir = tmp_path / "artifacts" / "run-replay"
-        replay_dir.mkdir(parents=True)
-        (replay_dir / "manifest.json").write_bytes(
-            orjson.dumps(
-                _make_manifest_raw(run_id="run-replay", config_hash="hash-abc"),
-            ),
+        replay_manifest_raw = _make_manifest_raw(
+            run_id="run-replay",
+            config_hash="hash-abc",
         )
 
         orig_record = MagicMock()
@@ -1059,13 +1129,9 @@ class TestReplaySuccess:
         replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
         replay_record.file_path = str(replay_dir)
         mock_artifact_service = MagicMock()
-        mock_artifact_service.list_artifacts.return_value = [
-            replay_record,
-            orig_record,
-        ]
 
         mock_facade = MagicMock()
-        mock_facade.run_backtest_from_catalog.return_value = _make_backtest_report(
+        replay_report = _make_backtest_report(
             run_id="run-replay",
             nav_series=(
                 ("2026-01-01", 1.0),
@@ -1073,6 +1139,15 @@ class TestReplaySuccess:
                 ("2026-01-03", 1.02),
             ),
             final_account_state=account_view,
+        )
+        _configure_replay_execution(
+            artifact_service=mock_artifact_service,
+            facade=mock_facade,
+            original_record=orig_record,
+            replay_record=replay_record,
+            replay_dir=replay_dir,
+            replay_manifest_raw=replay_manifest_raw,
+            replay_report=replay_report,
         )
 
         process = ReplayProcess(
@@ -1107,10 +1182,7 @@ class TestReplaySuccess:
         (orig_dir / "backtest_report.json").write_bytes(orjson.dumps(report_raw))
 
         replay_dir = tmp_path / "artifacts" / "run-replay"
-        replay_dir.mkdir(parents=True)
-        (replay_dir / "manifest.json").write_bytes(
-            orjson.dumps(_make_manifest_raw(run_id="run-replay")),
-        )
+        replay_manifest_raw = _make_manifest_raw(run_id="run-replay")
 
         mock_artifact_service = MagicMock()
         orig_record = MagicMock()
@@ -1121,14 +1193,18 @@ class TestReplaySuccess:
         replay_record.run_id = "run-replay"
         replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
         replay_record.file_path = str(replay_dir)
-        mock_artifact_service.list_artifacts.return_value = [
-            replay_record,
-            orig_record,
-        ]
 
         replay_report = _make_backtest_report(run_id="run-replay")
         mock_facade = MagicMock()
-        mock_facade.run_backtest_from_catalog.return_value = replay_report
+        _configure_replay_execution(
+            artifact_service=mock_artifact_service,
+            facade=mock_facade,
+            original_record=orig_record,
+            replay_record=replay_record,
+            replay_dir=replay_dir,
+            replay_manifest_raw=replay_manifest_raw,
+            replay_report=replay_report,
+        )
 
         process = ReplayProcess(
             strategy_facade=mock_facade,
@@ -1164,6 +1240,452 @@ class TestReplayErrors:
 
         with pytest.raises(FileNotFoundError, match="Artifact directory not found"):
             process.replay("run-nonexistent")
+
+    def test_replay_rejects_generated_original_run_id_before_facade_execution(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A generated collision must fail before any execution can overwrite data."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        artifact_dir = tmp_path / "artifacts" / "run-original"
+        artifact_dir.mkdir(parents=True)
+        (artifact_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original")),
+        )
+        (artifact_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0, 1.01])),
+        )
+        proof_path = artifact_dir / "replay_proof.json"
+        original_proof = b'{"owner":"original"}'
+        proof_path.write_bytes(original_proof)
+
+        original_record = MagicMock()
+        original_record.run_id = "run-original"
+        original_record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        original_record.file_path = str(artifact_dir)
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+        process = ReplayProcess(facade, artifact_service)
+
+        with (
+            patch(
+                "ditto_application.processes.execution.replay_process.resolve_run_id",
+                return_value="run-original",
+            ),
+            patch(
+                "ditto_application.processes.execution.replay_process.atomic_bytes_write"
+            ) as atomic_write,
+            pytest.raises(AppProcessError) as exc_info,
+        ):
+            process.replay("run-original")
+
+        assert exc_info.value.details["reason"] == "replay_run_id_collision"
+        facade.run_backtest_from_catalog.assert_not_called()
+        atomic_write.assert_not_called()
+        artifact_service.save_artifact.assert_not_called()
+        assert proof_path.read_bytes() == original_proof
+
+    def test_replay_rejects_facade_run_id_that_differs_from_requested_id(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Facade output identity must match the collision-safe requested identity."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        artifact_dir = tmp_path / "artifacts" / "run-original"
+        artifact_dir.mkdir(parents=True)
+        (artifact_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original")),
+        )
+        (artifact_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0, 1.01])),
+        )
+        proof_path = artifact_dir / "replay_proof.json"
+        original_proof = b'{"owner":"original"}'
+        proof_path.write_bytes(original_proof)
+
+        original_record = MagicMock()
+        original_record.run_id = "run-original"
+        original_record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        original_record.file_path = str(artifact_dir)
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+        facade.run_backtest_from_catalog.return_value = _make_backtest_report(
+            run_id="run-unrequested",
+            nav_series=(("2026-01-01", 1.0), ("2026-01-02", 1.01)),
+        )
+        process = ReplayProcess(facade, artifact_service)
+
+        with (
+            patch(
+                "ditto_application.processes.execution.replay_process.atomic_bytes_write"
+            ) as atomic_write,
+            pytest.raises(AppProcessError) as exc_info,
+        ):
+            process.replay("run-original")
+
+        assert exc_info.value.details["reason"] == "replay_run_id_mismatch"
+        assert exc_info.value.details["requested_run_id"] == "run-replay"
+        assert exc_info.value.details["actual_run_id"] == "run-unrequested"
+        requested_config = facade.run_backtest_from_catalog.call_args.kwargs["config"]
+        assert requested_config.run_id == "run-replay"
+        atomic_write.assert_not_called()
+        artifact_service.save_artifact.assert_not_called()
+        assert proof_path.read_bytes() == original_proof
+
+    def test_replay_rejects_original_artifact_dir_without_writing_proof(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """An indexed path alias must fail before the facade can mutate originals."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        artifact_dir = tmp_path / "artifacts" / "run-original"
+        artifact_dir.mkdir(parents=True)
+        (artifact_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original")),
+        )
+        (artifact_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0, 1.01])),
+        )
+        proof_path = artifact_dir / "replay_proof.json"
+        original_proof = b'{"owner":"original"}'
+        proof_path.write_bytes(original_proof)
+        (artifact_dir / "fill_log.parquet").write_bytes(b"original-fill-log")
+        original_files = {
+            path.relative_to(artifact_dir): path.read_bytes()
+            for path in artifact_dir.rglob("*")
+            if path.is_file()
+        }
+
+        original_record = MagicMock()
+        original_record.run_id = "run-original"
+        original_record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        original_record.file_path = str(artifact_dir)
+        replay_record = MagicMock()
+        replay_record.run_id = "run-replay"
+        replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        replay_record.file_path = str(artifact_dir)
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [
+            replay_record,
+            original_record,
+        ]
+        facade = MagicMock()
+
+        def _mutate_original_if_called(**_kwargs: object) -> BacktestReport:
+            for path in artifact_dir.rglob("*"):
+                if path.is_file():
+                    path.write_bytes(b"overwritten")
+            return _make_backtest_report(
+                run_id="run-replay",
+                nav_series=(("2026-01-01", 1.0), ("2026-01-02", 1.01)),
+            )
+
+        facade.run_backtest_from_catalog.side_effect = _mutate_original_if_called
+        process = ReplayProcess(facade, artifact_service)
+
+        with (
+            patch(
+                "ditto_application.processes.execution.replay_process.atomic_bytes_write"
+            ) as atomic_write,
+            pytest.raises(AppProcessError) as exc_info,
+        ):
+            process.replay("run-original")
+
+        assert exc_info.value.details["reason"] == "replay_artifact_directory_collision"
+        facade.run_backtest_from_catalog.assert_not_called()
+        atomic_write.assert_not_called()
+        artifact_service.save_artifact.assert_not_called()
+        assert {
+            path.relative_to(artifact_dir): path.read_bytes()
+            for path in artifact_dir.rglob("*")
+            if path.is_file()
+        } == original_files
+
+    def test_replay_rejects_existing_indexed_target_before_facade(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A generated ID cannot reuse another run's indexed artifact target."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        root = tmp_path / "artifacts"
+        original_dir = root / "run-original"
+        target_dir = root / "run-replay"
+        original_dir.mkdir(parents=True)
+        target_dir.mkdir()
+        (original_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original")),
+        )
+        (original_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0, 1.01])),
+        )
+        (original_dir / "immutable.bin").write_bytes(b"original")
+        (target_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-replay")),
+        )
+        (target_dir / "immutable.bin").write_bytes(b"existing-target")
+        before = {
+            path.relative_to(root): path.read_bytes()
+            for path in root.rglob("*")
+            if path.is_file()
+        }
+
+        original_record = MagicMock(
+            run_id="run-original",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(original_dir),
+        )
+        target_record = MagicMock(
+            run_id="run-replay",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(target_dir),
+        )
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [target_record, original_record]
+        facade = MagicMock()
+
+        def _mutate_target_if_called(**_kwargs: object) -> BacktestReport:
+            (target_dir / "immutable.bin").write_bytes(b"overwritten")
+            return _make_backtest_report(
+                run_id="run-replay",
+                nav_series=(("2026-01-01", 1.0), ("2026-01-02", 1.01)),
+            )
+
+        facade.run_backtest_from_catalog.side_effect = _mutate_target_if_called
+        process = ReplayProcess(facade, artifact_service)
+
+        with pytest.raises(AppProcessError) as exc_info:
+            process.replay("run-original")
+
+        assert exc_info.value.details["reason"] == "replay_artifact_target_exists"
+        facade.run_backtest_from_catalog.assert_not_called()
+        artifact_service.save_artifact.assert_not_called()
+        assert {
+            path.relative_to(root): path.read_bytes()
+            for path in root.rglob("*")
+            if path.is_file()
+        } == before
+
+    def test_replay_rejects_existing_unindexed_target_before_facade(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """An orphan target directory is never treated as safe replay storage."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        root = tmp_path / "artifacts"
+        original_dir = root / "run-original"
+        target_dir = root / "run-replay"
+        original_dir.mkdir(parents=True)
+        target_dir.mkdir()
+        (original_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original")),
+        )
+        (original_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0, 1.01])),
+        )
+        (original_dir / "immutable.bin").write_bytes(b"original")
+        (target_dir / "orphan.bin").write_bytes(b"existing-target")
+        before = {
+            path.relative_to(root): path.read_bytes()
+            for path in root.rglob("*")
+            if path.is_file()
+        }
+        original_record = MagicMock(
+            run_id="run-original",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(original_dir),
+        )
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+
+        def _mutate_if_called(**_kwargs: object) -> BacktestReport:
+            (original_dir / "immutable.bin").write_bytes(b"overwritten")
+            (target_dir / "orphan.bin").write_bytes(b"overwritten")
+            return _make_backtest_report(run_id="run-replay")
+
+        facade.run_backtest_from_catalog.side_effect = _mutate_if_called
+        process = ReplayProcess(facade, artifact_service)
+
+        with pytest.raises(AppProcessError) as exc_info:
+            process.replay("run-original")
+
+        assert exc_info.value.details["reason"] == "replay_artifact_target_exists"
+        facade.run_backtest_from_catalog.assert_not_called()
+        artifact_service.save_artifact.assert_not_called()
+        assert {
+            path.relative_to(root): path.read_bytes()
+            for path in root.rglob("*")
+            if path.is_file()
+        } == before
+
+    def test_replay_reservation_race_fails_before_facade(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Losing exclusive target reservation cannot fall through to execution."""
+        from ditto_application.processes.execution.replay_process import ReplayProcess
+
+        original_dir = tmp_path / "artifacts" / "run-original"
+        original_dir.mkdir(parents=True)
+        (original_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original")),
+        )
+        (original_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0, 1.01])),
+        )
+        before = {
+            path.relative_to(original_dir): path.read_bytes()
+            for path in original_dir.rglob("*")
+            if path.is_file()
+        }
+        original_record = MagicMock(
+            run_id="run-original",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(original_dir),
+        )
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+        process = ReplayProcess(facade, artifact_service)
+
+        with (
+            patch.object(Path, "mkdir", side_effect=FileExistsError),
+            pytest.raises(AppProcessError) as exc_info,
+        ):
+            process.replay("run-original")
+
+        assert exc_info.value.details["reason"] == "replay_artifact_target_exists"
+        facade.run_backtest_from_catalog.assert_not_called()
+        assert {
+            path.relative_to(original_dir): path.read_bytes()
+            for path in original_dir.rglob("*")
+            if path.is_file()
+        } == before
+
+    def test_replay_cleans_empty_reservation_when_facade_fails(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A failed facade call must not strand its exclusively-created placeholder."""
+        original_dir = tmp_path / "artifacts" / "run-original"
+        original_dir.mkdir(parents=True)
+        (original_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original"))
+        )
+        (original_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0]))
+        )
+        original_record = MagicMock(
+            run_id="run-original",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(original_dir),
+        )
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+        facade.run_backtest_from_catalog.side_effect = RuntimeError("facade failed")
+
+        with pytest.raises(RuntimeError, match="facade failed"):
+            ReplayProcess(facade, artifact_service).replay("run-original")
+
+        assert not (original_dir.parent / "run-replay").exists()
+
+    def test_replay_requires_indexed_dir_to_equal_exclusive_reservation(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A successful facade cannot redirect validation/proof to another directory."""
+        root = tmp_path / "artifacts"
+        original_dir = root / "run-original"
+        other_dir = root / "other-existing-run"
+        original_dir.mkdir(parents=True)
+        other_dir.mkdir()
+        (original_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original"))
+        )
+        (original_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0]))
+        )
+        (other_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-replay"))
+        )
+        existing_bytes = b"must-survive"
+        (other_dir / "existing.bin").write_bytes(existing_bytes)
+        original_record = MagicMock(
+            run_id="run-original",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(original_dir),
+        )
+        redirected_record = MagicMock(
+            run_id="run-replay",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(other_dir),
+        )
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+
+        def _execute(**kwargs: object) -> BacktestReport:
+            options = kwargs["options"]
+            config = kwargs["config"]
+            assert isinstance(options, BacktestServiceOptions)
+            assert isinstance(config, BacktestServiceConfig)
+            reserved = Path(str(options.artifact_dir)) / config.run_id
+            (reserved / "successful.bin").write_bytes(b"successful-artifact")
+            artifact_service.list_artifacts.return_value = [
+                redirected_record,
+                original_record,
+            ]
+            return _make_backtest_report(run_id="run-replay", nav_series=(("d", 1.0),))
+
+        facade.run_backtest_from_catalog.side_effect = _execute
+
+        with pytest.raises(AppProcessError) as exc_info:
+            ReplayProcess(facade, artifact_service).replay("run-original")
+
+        assert exc_info.value.details["reason"] == "replay_artifact_target_mismatch"
+        assert (root / "run-replay" / "successful.bin").read_bytes() == (
+            b"successful-artifact"
+        )
+        assert (other_dir / "existing.bin").read_bytes() == existing_bytes
+        artifact_service.save_artifact.assert_not_called()
+
+    def test_replay_cleans_empty_reservation_on_run_id_mismatch(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A rejected facade identity leaves no empty directory owned by replay."""
+        original_dir = tmp_path / "artifacts" / "run-original"
+        original_dir.mkdir(parents=True)
+        (original_dir / "manifest.json").write_bytes(
+            orjson.dumps(_make_manifest_raw(run_id="run-original"))
+        )
+        (original_dir / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict(nav_series=[1.0]))
+        )
+        original_record = MagicMock(
+            run_id="run-original",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+            file_path=str(original_dir),
+        )
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+        facade.run_backtest_from_catalog.return_value = _make_backtest_report(
+            run_id="wrong-run"
+        )
+
+        with pytest.raises(AppProcessError, match="differs from the request"):
+            ReplayProcess(facade, artifact_service).replay("run-original")
+
+        assert not (original_dir.parent / "run-replay").exists()
 
 
 # ---------------------------------------------------------------------------

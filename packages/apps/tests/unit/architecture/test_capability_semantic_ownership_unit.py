@@ -293,6 +293,34 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "_comparison_evidence.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_factor_diagnostics_evidence.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_oos_fold_registration.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_persisted_execution_evidence.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_report_evidence.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_evidence.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "comparison.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "coordinator.py"
         ),
         (
@@ -322,6 +350,14 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         (
             "packages/application/src/ditto_application/processes/experiments/"
             "scheduler_store.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "trial_evidence_bridge.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "walk_forward.py"
         ),
         ("packages/application/src/ditto_application/processes/experiments/worker.py"),
         ("packages/application/src/ditto_application/research_validation_windows.py"),

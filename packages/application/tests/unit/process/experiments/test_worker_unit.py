@@ -65,6 +65,10 @@ from ditto_application.processes.experiments.execution_contracts import (
 from ditto_application.processes.experiments.research_data_feed import (
     research_data_feed_manifest_hash,
 )
+from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentExecutionControlChanged,
+    ResearchExecutionDirective,
+)
 from ditto_application.processes.experiments.worker import (
     ExecutionBundleFirstAttemptFactory,
     ExistingBacktestResearchFoldRunner,
@@ -913,6 +917,18 @@ class _Coordinator:
         self.calls.append(("fail", (attempt_id, failure_code, occurred_at)))
         return cast("object", object())
 
+    def poll_execution_directive(self, attempt_id, *, occurred_at):
+        _ = (attempt_id, occurred_at)
+        return ResearchExecutionDirective.RUN
+
+    def record_checkpoint(self, attempt_id, checkpoint_ref, *, occurred_at):
+        self.calls.append(("checkpoint", (attempt_id, checkpoint_ref, occurred_at)))
+        return cast("object", object())
+
+    def cooperative_stop_attempt(self, attempt_id, directive, *, occurred_at):
+        self.calls.append(("stop", (attempt_id, directive, occurred_at)))
+        return cast("object", object())
+
 
 class _Runner:
     def __init__(
@@ -1019,6 +1035,93 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence() ->
         _dispatch().attempt.spec.reproduction_fingerprint
     )
     assert runner.audits[0].backtest_run_id == "research-run-persisted"
+
+
+@pytest.mark.parametrize(
+    ("directive", "expected_state"),
+    [
+        (ResearchExecutionDirective.PAUSE, ResearchWorkerState.PAUSED),
+        (ResearchExecutionDirective.CANCEL, ResearchWorkerState.CANCELLED),
+    ],
+)
+def test_worker_treats_control_winning_start_race_as_normal_stop(
+    directive: ResearchExecutionDirective,
+    expected_state: ResearchWorkerState,
+) -> None:
+    class _ControlRaceCoordinator(_Coordinator):
+        def __init__(self) -> None:
+            super().__init__()
+            self._directives = iter((ResearchExecutionDirective.RUN, directive))
+
+        def poll_execution_directive(self, attempt_id, *, occurred_at):
+            self.calls.append(("directive", (attempt_id, occurred_at)))
+            return next(self._directives)
+
+        def start_attempt(self, dispatch, *, occurred_at):
+            self.calls.append(("start", (dispatch, occurred_at)))
+            raise ExperimentExecutionControlChanged(
+                "control won attempt start race",
+                details={
+                    "code": "CONTROL_CHANGED",
+                    "reason": "execution_control_changed_before_start",
+                },
+            )
+
+    coordinator = _ControlRaceCoordinator()
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is expected_state
+    assert result.failure_code is None
+    assert result.error_type is None
+    assert runner.audits == []
+    assert [name for name, _ in coordinator.calls] == [
+        "renew",
+        "directive",
+        "start",
+        "directive",
+        "renew",
+        "stop",
+    ]
+
+
+def test_worker_rejects_control_change_with_run_intent() -> None:
+    class _FalseControlRaceCoordinator(_Coordinator):
+        def start_attempt(self, dispatch, *, occurred_at):
+            self.calls.append(("start", (dispatch, occurred_at)))
+            raise ExperimentExecutionControlChanged(
+                "control won attempt start race",
+                details={
+                    "code": "CONTROL_CHANGED",
+                    "reason": "execution_control_changed_before_start",
+                },
+            )
+
+    coordinator = _FalseControlRaceCoordinator()
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert captured.value.details == {
+        "code": "EXPERIMENT_INTEGRITY_FAILED",
+        "reason": "execution_control_change_without_stop_intent",
+    }
+    assert runner.audits == []
+    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
 
 
 @pytest.mark.parametrize(

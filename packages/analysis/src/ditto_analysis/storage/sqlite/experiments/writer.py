@@ -56,6 +56,9 @@ from ditto_analysis.storage.sqlite.experiments._experiment_rules import (
 from ditto_analysis.storage.sqlite.experiments._facts import (
     SQLiteExperimentFactsMixin,
 )
+from ditto_analysis.storage.sqlite.experiments._terminal_retry import (
+    SQLiteTerminalFoldRetryMixin,
+)
 from ditto_analysis.storage.sqlite.experiments._work_rules import (
     validate_attempt_fold_owner,
     validate_attempt_start_dispatchable,
@@ -120,6 +123,7 @@ class SQLiteExperimentWriter(
     SQLiteExperimentCreationMixin,
     SQLiteExperimentFactsMixin,
     SQLiteAtomicDispatchMixin,
+    SQLiteTerminalFoldRetryMixin,
     SQLiteExperimentControlMixin,
 ):
     """Implement the approved aggregate, evidence, CAS, and lease commands."""
@@ -446,6 +450,11 @@ class SQLiteExperimentWriter(
                     raise _integrity(
                         "retry fingerprint drift", "retry_fingerprint_drift"
                     )
+                self._validate_resume_source_lineage(
+                    connection,
+                    parent,
+                    spec.resume_from_run_id,
+                )
             connection.execute(
                 """
                 INSERT INTO experiment_attempt(

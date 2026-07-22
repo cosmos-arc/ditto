@@ -5,9 +5,11 @@ from ditto_backtest.audit.records import (
     PreTradeDecisionRecord,
     RiskScanRecord,
 )
+from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 
 __all__ = [
     "ExecutionAuditCollector",
+    "ExecutionAuditStateSnapshot",
     "PreTradeDecisionRecord",
     "RiskScanRecord",
 ]

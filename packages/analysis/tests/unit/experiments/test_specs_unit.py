@@ -9,6 +9,7 @@ from typing import cast
 import pytest
 from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments import (
+    CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
     ContentHash,
@@ -21,8 +22,22 @@ from ditto_analysis.experiments import (
     ExperimentStage,
     ExperimentStatus,
     FoldProtocolSpec,
+    ResearchMetricDirection,
+    ResearchMetricId,
+    ResearchMetricValue,
     SnapshotId,
     StrategyVersion,
+)
+from ditto_analysis.experiments.trial_family import (
+    LogicalTrialIdentity,
+    TrialFamilyDeclaration,
+    TrialKind,
+)
+from ditto_analysis.experiments.trial_ledger import (
+    ConstraintOperator,
+    MetricConstraint,
+    ObjectiveMetric,
+    PromotionObjective,
 )
 
 NOW = datetime(2026, 7, 19, 4, 0, tzinfo=UTC)
@@ -73,21 +88,102 @@ def _candidate(
     )
 
 
+def _objective(
+    *,
+    baseline_candidate_id: str = "candidate-1",
+    candidates: tuple[CandidateSpec, ...] | None = None,
+    parameter_hash_override: str | None = None,
+    prior_members: tuple[LogicalTrialIdentity, ...] = (),
+) -> PromotionObjective:
+    current_candidates = candidates or (
+        _candidate(1, baseline=True),
+        _candidate(2),
+    )
+    current_members = tuple(
+        LogicalTrialIdentity(
+            ExperimentId("exp-1"),
+            candidate.candidate_id,
+            candidate.ordinal,
+            ContentHash(
+                parameter_hash_override
+                if parameter_hash_override is not None and candidate.ordinal == 2
+                else str(candidate.parameter_hash)
+            ),
+            TrialKind.CURRENT,
+        )
+        for candidate in current_candidates
+    )
+    return PromotionObjective(
+        primary=ObjectiveMetric(
+            ResearchMetricId.NET_RETURN,
+            ResearchMetricDirection.MAXIMIZE,
+        ),
+        hard_constraints=(
+            MetricConstraint(
+                ResearchMetricValue(ResearchMetricId.MAX_DRAWDOWN, -20.0),
+                ConstraintOperator.GREATER_THAN_OR_EQUAL,
+            ),
+        ),
+        tie_break_order=(
+            ObjectiveMetric(
+                ResearchMetricId.TURNOVER,
+                ResearchMetricDirection.MINIMIZE,
+            ),
+        ),
+        baseline_candidate_id=CandidateId(baseline_candidate_id),
+        economic_rationale="Capture durable returns after costs.",
+        trial_family=TrialFamilyDeclaration(
+            "stock-selection-r3-v1",
+            (*prior_members, *current_members),
+        ),
+    )
+
+
+def _execution_bindings(
+    candidates: tuple[CandidateSpec, ...],
+) -> tuple[CandidateExecutionBinding, ...]:
+    return tuple(
+        CandidateExecutionBinding(
+            candidate.candidate_id,
+            candidate.ordinal,
+            candidate.parameter_hash,
+            ContentHash(f"{candidate.ordinal + 256:064x}"),
+        )
+        for candidate in candidates
+    )
+
+
 def _launch(
     *,
     candidates: object | None = None,
     created_at: datetime = NOW,
     desired_state: ExperimentDesiredState = ExperimentDesiredState.RUN,
+    promotion_objective: PromotionObjective | None = None,
+    execution_bindings: object | None = None,
 ) -> ExperimentLaunchSpec:
+    resolved_candidates = (
+        (_candidate(1, baseline=True), _candidate(2))
+        if candidates is None
+        else candidates
+    )
+    resolved_bindings = (
+        _execution_bindings(
+            cast("tuple[CandidateSpec, ...]", resolved_candidates)
+            if type(resolved_candidates) is tuple
+            else (_candidate(1, baseline=True), _candidate(2))
+        )
+        if execution_bindings is None
+        else execution_bindings
+    )
     return ExperimentLaunchSpec(
         experiment_id=ExperimentId("exp-1"),
         strategy_version=StrategyVersion("stock-selection@3"),
         strategy_spec_hash=ContentHash("a" * 64),
         snapshot_id=SnapshotId("snapshot-certified-1"),
-        candidates=(
-            (_candidate(1, baseline=True), _candidate(2))
-            if candidates is None
-            else candidates
+        candidates=resolved_candidates,
+        execution_bindings=resolved_bindings,
+        promotion_objective=(
+            _objective() if promotion_objective is None else promotion_objective
         ),
         fold_protocol=FoldProtocolSpec(
             protocol_id="r3-walk-forward",
@@ -111,6 +207,97 @@ def test_launch_spec_is_immutable_and_candidate_count_includes_baseline() -> Non
 
     assert spec.candidate_count == 2
     assert spec.baseline_candidate.candidate_id == CandidateId("candidate-1")
+    assert spec.promotion_objective == _objective()
+
+
+@pytest.mark.parametrize(
+    ("objective", "reason_code"),
+    [
+        (
+            _objective(baseline_candidate_id="candidate-2"),
+            "promotion_baseline_candidate_mismatch",
+        ),
+        (
+            _objective(parameter_hash_override="f" * 64),
+            "promotion_current_trial_family_mismatch",
+        ),
+    ],
+)
+def test_launch_spec_binds_promotion_objective_to_the_complete_candidate_family(
+    objective: PromotionObjective,
+    reason_code: str,
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(promotion_objective=objective)
+
+    assert exc_info.value.details["reason_code"] == reason_code
+
+
+def test_launch_spec_rejects_substituted_execution_binding() -> None:
+    candidates = (_candidate(1, baseline=True), _candidate(2))
+    bindings = _execution_bindings(candidates)
+    substituted = (
+        bindings[0],
+        CandidateExecutionBinding(
+            CandidateId("candidate-substituted"),
+            2,
+            bindings[1].parameter_hash,
+            bindings[1].resolved_spec_hash,
+        ),
+    )
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(candidates=candidates, execution_bindings=substituted)
+
+    assert exc_info.value.details["reason_code"] == (
+        "candidate_execution_binding_mismatch"
+    )
+
+
+def test_launch_spec_rejects_execution_parameter_hash_substitution() -> None:
+    candidates = (_candidate(1, baseline=True), _candidate(2))
+    bindings = _execution_bindings(candidates)
+    substituted = (
+        bindings[0],
+        CandidateExecutionBinding(
+            bindings[1].candidate_id,
+            bindings[1].ordinal,
+            ContentHash("f" * 64),
+            bindings[1].resolved_spec_hash,
+        ),
+    )
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(candidates=candidates, execution_bindings=substituted)
+
+    assert exc_info.value.details["reason_code"] == (
+        "candidate_execution_parameter_hash_mismatch"
+    )
+
+
+def test_launch_spec_allows_prior_trials_while_binding_current_candidates() -> None:
+    prior = LogicalTrialIdentity(
+        ExperimentId("exp-prior"),
+        CandidateId("prior-candidate"),
+        1,
+        ContentHash("e" * 64),
+        TrialKind.PRIOR,
+    )
+
+    spec = _launch(promotion_objective=_objective(prior_members=(prior,)))
+
+    assert spec.promotion_objective.trial_family.prior_members == (prior,)
+    assert len(spec.promotion_objective.trial_family.current_members) == 2
+
+
+def test_launch_spec_revalidates_mutated_objective_before_persistence() -> None:
+    objective = _objective()
+    object.__setattr__(objective.primary, "direction", "maximize")
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(promotion_objective=objective)
+
+    assert exc_info.value.details["reason_code"] == "invalid_promotion_objective_graph"
 
 
 @pytest.mark.parametrize(

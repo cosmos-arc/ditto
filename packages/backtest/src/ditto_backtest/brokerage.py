@@ -193,6 +193,17 @@ class BacktestBrokerage:
             )
         self._frozen_quantities = restored
 
+    def snapshot_fill_counter(self) -> int:
+        """Capture the monotonic fill ID counter for checkpointing."""
+        return self._fill_counter
+
+    def restore_fill_counter(self, counter: int) -> None:
+        """Restore the monotonic fill ID counter from a verified checkpoint."""
+        if type(counter) is not int or counter < 0:
+            msg = "brokerage fill counter must be a non-negative integer"
+            raise ValueError(msg)
+        self._fill_counter = counter
+
     def place_order(self, order: Order) -> OrderTicket:
         """提交订单，返回 OrderTicket (SUBMITTED)。"""
         return self._order_book.submit(order)

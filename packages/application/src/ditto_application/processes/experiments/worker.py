@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol, cast
@@ -12,7 +12,9 @@ from ditto_analysis.experiments import (
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
+    AttemptView,
     BacktestRunId,
+    CheckpointRef,
     ContentHash,
     ExperimentFailureCode,
     ExperimentStage,
@@ -28,6 +30,12 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import BacktestService
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     ResearchExecutionInputError,
+    build_successor_queued_attempt,
+    rebuild_execution_audit_anchor,
+)
+from ditto_application.processes.experiments._worker_contract import (
+    ResearchWorkerResult,
+    ResearchWorkerState,
 )
 from ditto_application.processes.experiments.backtest_service_wiring import (
     ClosedBacktestServiceGraph,
@@ -36,18 +44,26 @@ from ditto_application.processes.experiments.backtest_service_wiring import (
 from ditto_application.processes.experiments.coordinator import (
     ExperimentDispatch,
     PersistedAttemptStart,
+    deterministic_backtest_run_id,
 )
 from ditto_application.processes.experiments.execution_bundle import (
     BacktestExecutionConfigBinding,
     BaselineExecutorBinding,
     CodeEnvironmentLock,
-    ExactBenchmarkBinding,
     ResearchExecutionAudit,
     ResearchExecutionSemantics,
     ResearchSnapshotBinding,
     StrategyExecutionBinding,
 )
-from ditto_application.processes.experiments.scheduler_store import FirstAttempt
+from ditto_application.processes.experiments.lease_authority import (
+    ResearchExecutionControl,
+)
+from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentExecutionControlChanged,
+    FirstAttempt,
+    QueuedAttempt,
+    ResearchExecutionDirective,
+)
 
 __all__ = [
     "ExecutionBundleFirstAttemptFactory",
@@ -217,80 +233,6 @@ def _require_verified_research_backtest_build_seal(
         raise _worker_error("unsealed_research_backtest_build")
 
 
-@dataclass(frozen=True, slots=True)
-class _ResearchExecutionAuditAnchor:
-    """Immutable pre-factory identity rebuilt from authoritative audit fields."""
-
-    audit_payload: bytes
-    audit_bundle_hash: str
-    semantics_payload: bytes
-    reproduction_fingerprint: str
-
-
-def _rebuild_execution_audit_anchor(
-    audit: object,
-) -> _ResearchExecutionAuditAnchor:
-    """Validate derived audit identities and return detached immutable evidence."""
-    if type(audit) is not ResearchExecutionAudit:
-        raise _worker_error("research_execution_audit_drift")
-    typed_audit = audit
-    semantics = typed_audit.semantics
-    if type(semantics) is not ResearchExecutionSemantics:
-        raise _worker_error("research_execution_audit_drift")
-    backtest = semantics.backtest
-    if type(backtest) is not BacktestExecutionConfigBinding:
-        raise _worker_error("research_execution_audit_drift")
-    benchmark = backtest.benchmark
-    if benchmark is None:
-        rebuilt_benchmark = None
-    else:
-        if type(benchmark) is not ExactBenchmarkBinding:
-            raise _worker_error("research_execution_audit_drift")
-        rebuilt_benchmark = replace(benchmark)
-        if (
-            type(benchmark.canonical_hash) is not ContentHash
-            or benchmark.canonical_hash != rebuilt_benchmark.canonical_hash
-        ):
-            raise _worker_error("research_execution_audit_drift")
-    rebuilt_backtest = replace(backtest, benchmark=rebuilt_benchmark)
-    if (
-        type(backtest.canonical_hash) is not ContentHash
-        or type(backtest.policy_model_evidence_hash) is not ContentHash
-        or backtest.canonical_hash != rebuilt_backtest.canonical_hash
-        or backtest.policy_model_evidence_hash
-        != rebuilt_backtest.policy_model_evidence_hash
-    ):
-        raise _worker_error("research_execution_audit_drift")
-    rebuilt_semantics = replace(semantics, backtest=rebuilt_backtest)
-    rebuilt_audit = ResearchExecutionAudit.create(
-        semantics=rebuilt_semantics,
-        attempt_id=typed_audit.attempt_id,
-        attempt_ordinal=typed_audit.attempt_ordinal,
-        backtest_run_id=typed_audit.backtest_run_id,
-        parent_attempt_id=typed_audit.parent_attempt_id,
-        resume_from_run_id=typed_audit.resume_from_run_id,
-        created_at=typed_audit.created_at,
-    )
-    if (
-        type(semantics.canonical_payload) is not bytes
-        or type(semantics.reproduction_fingerprint) is not ContentHash
-        or type(typed_audit.canonical_payload) is not bytes
-        or type(typed_audit.bundle_hash) is not ContentHash
-        or semantics.canonical_payload != rebuilt_semantics.canonical_payload
-        or semantics.reproduction_fingerprint
-        != rebuilt_semantics.reproduction_fingerprint
-        or typed_audit.canonical_payload != rebuilt_audit.canonical_payload
-        or typed_audit.bundle_hash != rebuilt_audit.bundle_hash
-    ):
-        raise _worker_error("research_execution_audit_drift")
-    return _ResearchExecutionAuditAnchor(
-        audit_payload=bytes(rebuilt_audit.canonical_payload),
-        audit_bundle_hash=str(rebuilt_audit.bundle_hash),
-        semantics_payload=bytes(rebuilt_semantics.canonical_payload),
-        reproduction_fingerprint=str(rebuilt_semantics.reproduction_fingerprint),
-    )
-
-
 class ResearchFoldRunState(StrEnum):
     """Typed numerical runner outcome consumed by the durable worker."""
 
@@ -339,7 +281,7 @@ class ExistingBacktestResearchFoldRunner:
         """Build and run the existing single-backtest application service."""
         if external_should_stop():
             return ResearchFoldRunState.STOPPED
-        audit_anchor = _rebuild_execution_audit_anchor(audit)
+        audit_anchor = rebuild_execution_audit_anchor(audit)
         build = self._factory.build(
             audit,
             external_should_stop=external_should_stop,
@@ -353,7 +295,7 @@ class ExistingBacktestResearchFoldRunner:
             or attestation != expected
         ):
             raise _worker_error("research_backtest_attestation_drift")
-        if _rebuild_execution_audit_anchor(audit) != audit_anchor:
+        if rebuild_execution_audit_anchor(audit) != audit_anchor:
             raise _worker_error("research_execution_audit_drift")
         if external_should_stop():
             return ResearchFoldRunState.STOPPED
@@ -410,50 +352,33 @@ class ResearchWorkerCoordinator(Protocol):
         occurred_at: datetime,
     ) -> object: ...
 
+    def poll_execution_directive(
+        self,
+        attempt_id: AttemptId,
+        *,
+        occurred_at: datetime,
+    ) -> ResearchExecutionDirective: ...
+
+    def record_checkpoint(
+        self,
+        attempt_id: AttemptId,
+        checkpoint_ref: CheckpointRef,
+        *,
+        occurred_at: datetime,
+    ) -> object: ...
+
+    def cooperative_stop_attempt(
+        self,
+        attempt_id: AttemptId,
+        directive: ResearchExecutionDirective,
+        *,
+        occurred_at: datetime,
+    ) -> object: ...
+
 
 _TERMINAL_AUTHORITY_LOSS_CODES = frozenset(
     {"LEASE_LOST", "EXPERIMENT_INTEGRITY_FAILED"}
 )
-
-
-class ResearchExecutionControl:
-    """Lease-aware cooperative stop callback polled by BacktestService."""
-
-    def __init__(
-        self,
-        *,
-        coordinator: ResearchWorkerCoordinator,
-        clock: Callable[[], datetime],
-    ) -> None:
-        self._coordinator = coordinator
-        self._clock = clock
-        self._failure: AppProcessError | None = None
-
-    @property
-    def failure(self) -> AppProcessError | None:
-        """Return the first renewal failure observed by the engine fence."""
-        return self._failure
-
-    def should_stop(self) -> bool:
-        """Renew once per engine poll and fail closed on any renewal error."""
-        if self._failure is not None:
-            return True
-        try:
-            self._coordinator.renew_lease(occurred_at=self._clock())
-        except AppProcessError as error:
-            self._failure = error
-            return True
-        except Exception as error:  # pragma: no cover - defensive port boundary
-            self._failure = AppProcessError(
-                "research execution lease renewal failed",
-                details={
-                    "code": "SYSTEM_ERROR",
-                    "reason": "lease_renewal_failed",
-                    "error_type": type(error).__name__,
-                },
-            )
-            return True
-        return False
 
 
 class ResearchCandidateExecutionError(RuntimeError):
@@ -514,7 +439,7 @@ def _require_fold_semantics(
 
 
 class ExecutionBundleFirstAttemptFactory:
-    """Freeze a fingerprint and stable first-attempt identity before claim."""
+    """Freeze stable first and successor attempt identities before claim."""
 
     def __init__(self, resolver: ResearchExecutionSemanticsResolver) -> None:
         self._resolver = resolver
@@ -559,26 +484,21 @@ class ExecutionBundleFirstAttemptFactory:
         )
         return FirstAttempt(spec, projection)
 
-
-class ResearchWorkerState(StrEnum):
-    """Stable one-attempt worker outcome."""
-
-    COMPLETED = "completed"
-    CANDIDATE_FAILED = "candidate_failed"
-    INPUT_FAILED = "input_failed"
-    SYSTEM_FAILED = "system_failed"
-
-
-@dataclass(frozen=True, slots=True)
-class ResearchWorkerResult:
-    """Serializable worker result derived from a durable attempt transition."""
-
-    attempt_id: AttemptId
-    backtest_run_id: BacktestRunId
-    reproduction_fingerprint: ContentHash
-    state: ResearchWorkerState
-    failure_code: ExperimentFailureCode | None
-    error_type: str | None
+    def create_successor(
+        self,
+        fold: FoldView,
+        parent: AttemptView,
+        *,
+        resume_from_run_id: BacktestRunId | None,
+        occurred_at: datetime,
+    ) -> QueuedAttempt:
+        """Create the next immutable attempt without resolving moving semantics."""
+        return build_successor_queued_attempt(
+            fold,
+            parent,
+            resume_from_run_id=resume_from_run_id,
+            occurred_at=occurred_at,
+        )
 
 
 def _failure(error: Exception) -> tuple[ResearchWorkerState, ExperimentFailureCode]:
@@ -671,6 +591,16 @@ def _require_dispatch(dispatch: ExperimentDispatch) -> None:
         raise _worker_error("invalid_experiment_dispatch")
 
 
+def _controlled_worker_state(
+    directive: ResearchExecutionDirective,
+) -> ResearchWorkerState:
+    if directive is ResearchExecutionDirective.PAUSE:
+        return ResearchWorkerState.PAUSED
+    if directive is ResearchExecutionDirective.CANCEL:
+        return ResearchWorkerState.CANCELLED
+    raise _worker_error("cooperative_stop_without_durable_control")
+
+
 class ResearchExperimentWorker:
     """Execute a claimed fold and persist one typed terminal outcome."""
 
@@ -680,11 +610,15 @@ class ResearchExperimentWorker:
         coordinator: ResearchWorkerCoordinator,
         semantics_resolver: ResearchExecutionSemanticsResolver,
         runner: ResearchFoldRunner,
+        checkpoint_available: Callable[[str], bool] | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._coordinator = coordinator
         self._resolver = semantics_resolver
         self._runner = runner
+        self._checkpoint_available: Callable[[str], bool] = checkpoint_available or (
+            lambda _run_id: False
+        )
         self._clock = clock or (lambda: datetime.now(tz=UTC))
 
     def execute(
@@ -696,10 +630,43 @@ class ResearchExperimentWorker:
         """Run one dispatch; all failures after start become durable outcomes."""
         _require_dispatch(dispatch)
         self._coordinator.renew_lease(occurred_at=occurred_at)
-        persisted = self._coordinator.start_attempt(
-            dispatch,
+        initial_directive = self._coordinator.poll_execution_directive(
+            dispatch.attempt.spec.attempt_id,
             occurred_at=occurred_at,
         )
+        if initial_directive is not ResearchExecutionDirective.RUN:
+            run_id = deterministic_backtest_run_id(
+                dispatch.attempt.spec.attempt_id,
+                dispatch.attempt.spec.reproduction_fingerprint,
+            )
+            return self._finish_controlled_attempt(
+                dispatch.attempt.spec,
+                run_id,
+                initial_directive,
+            )
+        try:
+            persisted = self._coordinator.start_attempt(
+                dispatch,
+                occurred_at=occurred_at,
+            )
+        except ExperimentExecutionControlChanged:
+            directive = self._coordinator.poll_execution_directive(
+                dispatch.attempt.spec.attempt_id,
+                occurred_at=self._clock(),
+            )
+            if directive is ResearchExecutionDirective.RUN:
+                raise _worker_integrity_error(
+                    "execution_control_change_without_stop_intent"
+                ) from None
+            run_id = deterministic_backtest_run_id(
+                dispatch.attempt.spec.attempt_id,
+                dispatch.attempt.spec.reproduction_fingerprint,
+            )
+            return self._finish_controlled_attempt(
+                dispatch.attempt.spec,
+                run_id,
+                directive,
+            )
         _require_persisted_start(dispatch, persisted)
         terminal_replay = _terminal_replay_result(persisted)
         if terminal_replay is not None:
@@ -710,50 +677,23 @@ class ResearchExperimentWorker:
             raise _worker_integrity_error("persisted_run_identity_missing")
         execution_control = ResearchExecutionControl(
             coordinator=self._coordinator,
+            attempt_id=attempt.attempt_id,
             clock=self._clock,
         )
         try:
-            _require_execution_authority(execution_control)
-            semantics = self._resolver.resolve(persisted.fold)
-            _require_execution_authority(execution_control)
-            _require_fold_semantics(persisted.fold, semantics)
-            if semantics.reproduction_fingerprint != attempt.reproduction_fingerprint:
-                raise _worker_error("post_claim_reproduction_fingerprint_drift")
-            audit = ResearchExecutionAudit.create(
-                semantics=semantics,
-                attempt_id=str(attempt.attempt_id),
-                attempt_ordinal=attempt.ordinal,
-                backtest_run_id=str(run_id),
-                parent_attempt_id=(
-                    None
-                    if attempt.parent_attempt_id is None
-                    else str(attempt.parent_attempt_id)
-                ),
-                resume_from_run_id=(
-                    None
-                    if attempt.resume_from_run_id is None
-                    else str(attempt.resume_from_run_id)
-                ),
-                created_at=attempt.created_at,
-            )
-            run_state = self._runner.run(
-                audit,
-                external_should_stop=execution_control.should_stop,
-            )
-            if execution_control.failure is not None:
-                raise execution_control.failure
-            if run_state is ResearchFoldRunState.STOPPED:
-                raise _ResearchCooperativeStopError(
-                    "research backtest stopped cooperatively"
-                )
-            if run_state is not ResearchFoldRunState.COMPLETED:
-                raise _worker_error("invalid_research_fold_run_state")
+            self._run_fold(persisted, attempt, run_id, execution_control)
         except Exception as error:
             effective_error = execution_control.failure or error
             if _lost_terminal_authority(effective_error):
                 if effective_error is error:
                     raise
                 raise effective_error from error
+            if isinstance(effective_error, _ResearchCooperativeStopError):
+                return self._finish_controlled_attempt(
+                    attempt,
+                    run_id,
+                    execution_control.directive,
+                )
             state, failure_code = _failure(effective_error)
             finished_at = self._clock()
             self._coordinator.renew_lease(occurred_at=finished_at)
@@ -781,6 +721,80 @@ class ResearchExperimentWorker:
             backtest_run_id=run_id,
             reproduction_fingerprint=attempt.reproduction_fingerprint,
             state=ResearchWorkerState.COMPLETED,
+            failure_code=None,
+            error_type=None,
+        )
+
+    def _run_fold(
+        self,
+        persisted: PersistedAttemptStart,
+        attempt: AttemptPersistenceSpec,
+        run_id: BacktestRunId,
+        execution_control: ResearchExecutionControl,
+    ) -> None:
+        _require_execution_authority(execution_control)
+        semantics = self._resolver.resolve(persisted.fold)
+        _require_execution_authority(execution_control)
+        _require_fold_semantics(persisted.fold, semantics)
+        if semantics.reproduction_fingerprint != attempt.reproduction_fingerprint:
+            raise _worker_error("post_claim_reproduction_fingerprint_drift")
+        audit = ResearchExecutionAudit.create(
+            semantics=semantics,
+            attempt_id=str(attempt.attempt_id),
+            attempt_ordinal=attempt.ordinal,
+            backtest_run_id=str(run_id),
+            parent_attempt_id=(
+                None
+                if attempt.parent_attempt_id is None
+                else str(attempt.parent_attempt_id)
+            ),
+            resume_from_run_id=(
+                None
+                if attempt.resume_from_run_id is None
+                else str(attempt.resume_from_run_id)
+            ),
+            created_at=attempt.created_at,
+        )
+        run_state = self._runner.run(
+            audit,
+            external_should_stop=execution_control.should_stop,
+        )
+        if execution_control.failure is not None:
+            raise execution_control.failure
+        if run_state is ResearchFoldRunState.STOPPED:
+            if execution_control.directive is ResearchExecutionDirective.RUN:
+                raise _worker_error("stop_without_durable_control")
+            raise _ResearchCooperativeStopError(
+                "research backtest stopped cooperatively"
+            )
+        if run_state is not ResearchFoldRunState.COMPLETED:
+            raise _worker_error("invalid_research_fold_run_state")
+
+    def _finish_controlled_attempt(
+        self,
+        attempt: AttemptPersistenceSpec,
+        run_id: BacktestRunId,
+        directive: ResearchExecutionDirective,
+    ) -> ResearchWorkerResult:
+        state = _controlled_worker_state(directive)
+        finished_at = self._clock()
+        self._coordinator.renew_lease(occurred_at=finished_at)
+        if self._checkpoint_available(str(run_id)):
+            self._coordinator.record_checkpoint(
+                attempt.attempt_id,
+                CheckpointRef(str(run_id)),
+                occurred_at=finished_at,
+            )
+        self._coordinator.cooperative_stop_attempt(
+            attempt.attempt_id,
+            directive,
+            occurred_at=finished_at,
+        )
+        return ResearchWorkerResult(
+            attempt_id=attempt.attempt_id,
+            backtest_run_id=run_id,
+            reproduction_fingerprint=attempt.reproduction_fingerprint,
+            state=state,
             failure_code=None,
             error_type=None,
         )

@@ -31,6 +31,8 @@ _EXECUTABLE_STAGE_ROLES = {
 _WORKER_STATE_FAILURE_PAIRS = frozenset(
     {
         (ResearchWorkerState.COMPLETED, None),
+        (ResearchWorkerState.PAUSED, None),
+        (ResearchWorkerState.CANCELLED, None),
         (ResearchWorkerState.CANDIDATE_FAILED, "candidate_failed"),
         (ResearchWorkerState.INPUT_FAILED, "input_hash_mismatch"),
         (ResearchWorkerState.SYSTEM_FAILED, "system_error"),

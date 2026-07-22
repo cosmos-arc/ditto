@@ -18,9 +18,12 @@ from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import AccountView, FillEvent
 
 __all__ = [
+    "FifoOpenEntrySnapshot",
     "FifoTradeBuilder",
+    "FlatToFlatAccumulatorSnapshot",
     "FlatToFlatTradeBuilder",
     "TradeBuilder",
+    "TradeBuilderStateSnapshot",
     "TradeMatchingMethod",
     "TradeRecord",
 ]
@@ -64,6 +67,65 @@ class TradeRecord:
     exit_order_ids: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class FifoOpenEntrySnapshot:
+    """Immutable FIFO open-entry state required for exact resume."""
+
+    trade_id: str
+    instrument_id: InstrumentId
+    direction: OrderSide
+    entry_date: date
+    entry_price: float
+    entry_fee: float
+    original_quantity: int
+    remaining_quantity: int
+    entry_order_id: str
+
+
+@dataclass(frozen=True)
+class FlatToFlatAccumulatorSnapshot:
+    """Immutable flat-to-flat accumulator state required for exact resume."""
+
+    instrument_id: InstrumentId
+    entry_order_ids: tuple[str, ...]
+    exit_order_ids: tuple[str, ...]
+    net_quantity: int
+    buy_quantity: int
+    buy_total_cost: float
+    buy_fees: float
+    sell_quantity: int
+    sell_total_proceeds: float
+    sell_fees: float
+    first_entry_date: date | None
+    last_entry_date: date | None
+    first_exit_date: date | None
+    last_exit_date: date | None
+
+
+@dataclass(frozen=True)
+class TradeBuilderStateSnapshot:
+    """Discriminated immutable state for a supported trade-matching builder."""
+
+    method: TradeMatchingMethod
+    counter: int
+    fifo_open_entries: tuple[FifoOpenEntrySnapshot, ...] = ()
+    flat_to_flat_accumulators: tuple[FlatToFlatAccumulatorSnapshot, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Reject counters and variant data that cannot be restored safely."""
+        if type(self.counter) is not int or self.counter < 0:
+            msg = "trade builder counter must be a non-negative integer"
+            raise ValueError(msg)
+        invalid_variant = (
+            bool(self.flat_to_flat_accumulators)
+            if self.method is TradeMatchingMethod.FIFO
+            else bool(self.fifo_open_entries)
+        )
+        if invalid_variant:
+            msg = "trade builder state does not match its matching method"
+            raise ValueError(msg)
+
+
 # ---------------------------------------------------------------------------
 # Protocol
 # ---------------------------------------------------------------------------
@@ -86,6 +148,14 @@ class TradeBuilder(Protocol):
 
     def flush(self) -> tuple[TradeRecord, ...]:
         """刷新所有未平仓交易为已平仓。"""
+        ...
+
+    def snapshot_state(self) -> TradeBuilderStateSnapshot:
+        """Capture result-determining open matching state and ID counter."""
+        ...
+
+    def restore_state(self, snapshot: TradeBuilderStateSnapshot) -> None:
+        """Restore result-determining open matching state and ID counter."""
         ...
 
 
@@ -183,6 +253,64 @@ class FifoTradeBuilder:
         open_records = self.get_open_trades()
         self._open.clear()
         return open_records
+
+    def snapshot_state(self) -> TradeBuilderStateSnapshot:
+        """Capture open FIFO entries without mutating the builder."""
+        entries = tuple(
+            FifoOpenEntrySnapshot(
+                trade_id=entry.trade_id,
+                instrument_id=entry.instrument_id,
+                direction=entry.direction,
+                entry_date=entry.entry_date,
+                entry_price=entry.entry_price,
+                entry_fee=entry.entry_fee,
+                original_quantity=entry.original_quantity,
+                remaining_quantity=entry.remaining_quantity,
+                entry_order_id=entry.entry_order_id,
+            )
+            for queue in self._open.values()
+            for entry in queue
+        )
+        return TradeBuilderStateSnapshot(
+            method=TradeMatchingMethod.FIFO,
+            counter=self._counter,
+            fifo_open_entries=entries,
+        )
+
+    def restore_state(self, snapshot: TradeBuilderStateSnapshot) -> None:
+        """Restore FIFO queues and their monotonic trade ID counter."""
+        if snapshot.method is not TradeMatchingMethod.FIFO:
+            msg = "cannot restore non-FIFO state into FifoTradeBuilder"
+            raise ValueError(msg)
+        _require_counter_covers_trade_ids(
+            snapshot.counter,
+            tuple(entry.trade_id for entry in snapshot.fifo_open_entries),
+        )
+        restored: dict[InstrumentId, deque[_OpenEntry]] = {}
+        for entry in snapshot.fifo_open_entries:
+            if (
+                entry.original_quantity <= 0
+                or entry.remaining_quantity <= 0
+                or entry.remaining_quantity > entry.original_quantity
+            ):
+                msg = "FIFO open-entry quantities must be positive and consistent"
+                raise ValueError(msg)
+            restored.setdefault(entry.instrument_id, deque()).append(
+                _OpenEntry(
+                    trade_id=entry.trade_id,
+                    instrument_id=entry.instrument_id,
+                    direction=entry.direction,
+                    entry_date=entry.entry_date,
+                    entry_price=entry.entry_price,
+                    entry_fee=entry.entry_fee,
+                    original_quantity=entry.original_quantity,
+                    remaining_quantity=entry.remaining_quantity,
+                    entry_order_id=entry.entry_order_id,
+                )
+            )
+        self._open = restored
+        self._closed = []
+        self._counter = snapshot.counter
 
     # -- internals ----------------------------------------------------------
 
@@ -364,6 +492,68 @@ class FlatToFlatTradeBuilder:
         self._accumulators.clear()
         return open_records
 
+    def snapshot_state(self) -> TradeBuilderStateSnapshot:
+        """Capture accumulators without generating preview trade IDs."""
+        accumulators = tuple(
+            FlatToFlatAccumulatorSnapshot(
+                instrument_id=acc.instrument_id,
+                entry_order_ids=tuple(acc.entry_order_ids),
+                exit_order_ids=tuple(acc.exit_order_ids),
+                net_quantity=acc.net_quantity,
+                buy_quantity=acc.buy_quantity,
+                buy_total_cost=acc.buy_total_cost,
+                buy_fees=acc.buy_fees,
+                sell_quantity=acc.sell_quantity,
+                sell_total_proceeds=acc.sell_total_proceeds,
+                sell_fees=acc.sell_fees,
+                first_entry_date=acc.first_entry_date,
+                last_entry_date=acc.last_entry_date,
+                first_exit_date=acc.first_exit_date,
+                last_exit_date=acc.last_exit_date,
+            )
+            for acc in self._accumulators.values()
+        )
+        return TradeBuilderStateSnapshot(
+            method=TradeMatchingMethod.FLAT_TO_FLAT,
+            counter=self._counter,
+            flat_to_flat_accumulators=accumulators,
+        )
+
+    def restore_state(self, snapshot: TradeBuilderStateSnapshot) -> None:
+        """Restore flat-to-flat accumulators and monotonic trade counter."""
+        if snapshot.method is not TradeMatchingMethod.FLAT_TO_FLAT:
+            msg = "cannot restore non-flat-to-flat state into FlatToFlatTradeBuilder"
+            raise ValueError(msg)
+        restored: dict[InstrumentId, _InstrumentAccumulator] = {}
+        for acc in snapshot.flat_to_flat_accumulators:
+            if (
+                acc.instrument_id in restored
+                or acc.net_quantity <= 0
+                or acc.buy_quantity <= 0
+                or acc.sell_quantity < 0
+            ):
+                msg = "flat-to-flat accumulator state is invalid"
+                raise ValueError(msg)
+            restored[acc.instrument_id] = _InstrumentAccumulator(
+                instrument_id=acc.instrument_id,
+                entry_order_ids=list(acc.entry_order_ids),
+                exit_order_ids=list(acc.exit_order_ids),
+                net_quantity=acc.net_quantity,
+                buy_quantity=acc.buy_quantity,
+                buy_total_cost=acc.buy_total_cost,
+                buy_fees=acc.buy_fees,
+                sell_quantity=acc.sell_quantity,
+                sell_total_proceeds=acc.sell_total_proceeds,
+                sell_fees=acc.sell_fees,
+                first_entry_date=acc.first_entry_date,
+                last_entry_date=acc.last_entry_date,
+                first_exit_date=acc.first_exit_date,
+                last_exit_date=acc.last_exit_date,
+            )
+        self._accumulators = restored
+        self._closed = []
+        self._counter = snapshot.counter
+
     # -- internals ----------------------------------------------------------
 
     def _next_id(self) -> str:
@@ -423,3 +613,15 @@ class FlatToFlatTradeBuilder:
                 exit_order_ids=tuple(acc.exit_order_ids),
             ),
         )
+
+
+def _require_counter_covers_trade_ids(counter: int, trade_ids: tuple[str, ...]) -> None:
+    """Reject snapshots whose next ID could collide with an open trade."""
+    highest = 0
+    for trade_id in trade_ids:
+        prefix, separator, suffix = trade_id.rpartition("-")
+        if prefix == "trade" and separator and suffix.isdigit():
+            highest = max(highest, int(suffix))
+    if counter < highest:
+        msg = "trade builder counter is behind an open trade ID"
+        raise ValueError(msg)

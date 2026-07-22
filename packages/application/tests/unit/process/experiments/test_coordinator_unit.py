@@ -15,6 +15,7 @@ from ditto_analysis.experiments import (
     AttemptProjection,
     AttemptView,
     BacktestRunId,
+    CandidateExecutionBinding,
     CandidateId,
     CandidateSpec,
     CheckpointRef,
@@ -37,10 +38,19 @@ from ditto_analysis.experiments import (
     FoldProtocolSpec,
     FoldRole,
     FoldView,
+    LogicalTrialIdentity,
+    ResearchMetricDirection,
+    ResearchMetricId,
     SchedulerLease,
     SchedulerSlot,
     SnapshotId,
     StrategyVersion,
+    TrialFamilyDeclaration,
+    TrialKind,
+)
+from ditto_analysis.experiments.trial_ledger import (
+    ObjectiveMetric,
+    PromotionObjective,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments.coordinator import (
@@ -51,6 +61,7 @@ from ditto_application.processes.experiments.coordinator import (
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
     FirstAttempt,
+    QueuedAttempt,
 )
 
 NOW = datetime(2026, 7, 20, 1, 0, tzinfo=UTC)
@@ -65,19 +76,52 @@ def _launch(
         ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES
     ),
 ) -> ExperimentLaunchSpec:
+    candidates = tuple(
+        CandidateSpec(
+            CandidateId(f"candidate-{ordinal}"),
+            ordinal,
+            ordinal == 1,
+            {"value": ordinal},
+        )
+        for ordinal in range(1, candidate_count + 1)
+    )
     return ExperimentLaunchSpec(
         experiment_id=ExperimentId("experiment-1"),
         strategy_version=StrategyVersion("strategy@1"),
         strategy_spec_hash=ContentHash("a" * 64),
         snapshot_id=SnapshotId("snapshot-1"),
-        candidates=tuple(
-            CandidateSpec(
-                CandidateId(f"candidate-{ordinal}"),
-                ordinal,
-                ordinal == 1,
-                {"value": ordinal},
+        candidates=candidates,
+        execution_bindings=tuple(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(f"{candidate.ordinal + 16:064x}"),
             )
-            for ordinal in range(1, candidate_count + 1)
+            for candidate in candidates
+        ),
+        promotion_objective=PromotionObjective(
+            ObjectiveMetric(
+                ResearchMetricId.NET_RETURN,
+                ResearchMetricDirection.MAXIMIZE,
+            ),
+            (),
+            (),
+            CandidateId("candidate-1"),
+            "Test coordinator behavior.",
+            TrialFamilyDeclaration(
+                "coordinator-test-family",
+                tuple(
+                    LogicalTrialIdentity(
+                        ExperimentId("experiment-1"),
+                        candidate.candidate_id,
+                        candidate.ordinal,
+                        candidate.parameter_hash,
+                        TrialKind.CURRENT,
+                    )
+                    for candidate in candidates
+                ),
+            ),
         ),
         fold_protocol=FoldProtocolSpec("r3", 1, ContentHash("b" * 64)),
         seed=42,
@@ -143,6 +187,40 @@ class _FirstAttemptFactory:
         return FirstAttempt(
             spec=spec,
             projection=AttemptProjection(
+                attempt_id,
+                ExperimentStatus.QUEUED,
+                None,
+                None,
+                None,
+                occurred_at,
+                occurred_at,
+                0,
+            ),
+        )
+
+    def create_successor(
+        self,
+        fold: FoldView,
+        parent: AttemptView,
+        *,
+        resume_from_run_id: BacktestRunId | None,
+        occurred_at: datetime,
+    ) -> QueuedAttempt:
+        self.calls.append(fold.spec.key)
+        ordinal = parent.spec.ordinal + 1
+        attempt_id = AttemptId(f"{parent.spec.attempt_id}-retry-{ordinal}")
+        spec = AttemptPersistenceSpec(
+            attempt_id=attempt_id,
+            fold_key=fold.spec.key,
+            ordinal=ordinal,
+            parent_attempt_id=parent.spec.attempt_id,
+            resume_from_run_id=resume_from_run_id,
+            reproduction_fingerprint=parent.spec.reproduction_fingerprint,
+            created_at=occurred_at,
+        )
+        return QueuedAttempt(
+            spec,
+            AttemptProjection(
                 attempt_id,
                 ExperimentStatus.QUEUED,
                 None,
@@ -351,6 +429,23 @@ class _SchedulerStore:
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> tuple[FoldView, AttemptView]:
+        return self.claim_attempt(
+            fold,
+            first_attempt,
+            lease,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+        )
+
+    def claim_attempt(
+        self,
+        fold: FoldView,
+        queued_attempt: QueuedAttempt,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> tuple[FoldView, AttemptView]:
         if self.raise_integrity_failure_on_claim:
             raise ExperimentIntegrityError(
                 "corrupt",
@@ -374,10 +469,45 @@ class _SchedulerStore:
             ),
         )
         self.folds[index] = claimed
-        attempt = AttemptView(first_attempt.spec, first_attempt.projection)
-        self.attempts[first_attempt.spec.attempt_id] = attempt
+        attempt = AttemptView(queued_attempt.spec, queued_attempt.projection)
+        self.attempts[queued_attempt.spec.attempt_id] = attempt
         self.claimed_keys.append(fold.spec.key)
         return claimed, attempt
+
+    def recover_interrupted_fold(
+        self,
+        fold: FoldView,
+        attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+    ) -> tuple[FoldView, AttemptView]:
+        self.write_fences.append(lease.revision)
+        recovered_attempt = replace(
+            attempt,
+            projection=replace(
+                attempt.projection,
+                status=ExperimentStatus.FAILED,
+                failure_code=ExperimentFailureCode.LEASE_LOST,
+                updated_at=occurred_at,
+                revision=attempt.projection.revision + 1,
+            ),
+        )
+        self.attempts[attempt.spec.attempt_id] = recovered_attempt
+        fold_index = self.folds.index(fold)
+        recovered_fold = replace(
+            fold,
+            projection=replace(
+                fold.projection,
+                status=ExperimentStatus.QUEUED,
+                claim_owner_token=None,
+                updated_at=occurred_at,
+                revision=fold.projection.revision + 1,
+            ),
+        )
+        self.folds[fold_index] = recovered_fold
+        return recovered_fold, recovered_attempt
 
     def transition_attempt(
         self,
@@ -953,7 +1083,7 @@ def test_live_holdout_work_during_exploration_fails_integrity_closed() -> None:
         coordinator.tick(occurred_at=NOW)
 
     assert exc_info.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
-    assert exc_info.value.details["reason"] == "live_work_outside_current_stage"
+    assert exc_info.value.details["reason"] == "future_stage_attempt_detected"
     assert store.claimed_keys == []
 
 
@@ -1009,11 +1139,17 @@ def test_terminal_holdout_work_during_exploration_fails_integrity_closed() -> No
 
 
 @pytest.mark.parametrize(
-    "invalid_part",
-    ["ordinal", "parent", "resume", "checkpoint"],
+    ("invalid_part", "reason"),
+    [
+        ("ordinal", "attempt_ordinal_gap"),
+        ("parent", "first_attempt_invalid"),
+        ("resume", "first_attempt_invalid"),
+        ("checkpoint", "queued_attempt_projection_invalid"),
+    ],
 )
-def test_existing_attempt_must_stay_inside_task9_first_run_boundary(
+def test_existing_attempt_lineage_must_remain_valid(
     invalid_part: str,
+    reason: str,
 ) -> None:
     store = _SchedulerStore()
     coordinator, _factory = _coordinator(store)
@@ -1053,7 +1189,7 @@ def test_existing_attempt_must_stay_inside_task9_first_run_boundary(
             occurred_at=NOW + timedelta(seconds=1),
         )
 
-    assert exc_info.value.details["reason"] == "task9_first_attempt_contract_invalid"
+    assert exc_info.value.details["reason"] == reason
     assert len(store.write_fences) == write_count
 
 
@@ -1336,20 +1472,22 @@ def test_reclaimed_owner_cannot_start_the_previous_owners_attempt() -> None:
     )
     recovery = replacement.tick(occurred_at=NOW + timedelta(minutes=6))
 
-    assert recovery.state is SchedulerTickState.RECOVERY_REQUIRED
+    assert recovery.state is SchedulerTickState.DISPATCHED
+    assert all(item.attempt.spec.ordinal == 2 for item in recovery.dispatches)
     with pytest.raises(AppProcessError) as exc_info:
         replacement.start_attempt(
             dispatched.dispatches[0],
             occurred_at=NOW + timedelta(minutes=6, seconds=1),
         )
 
-    assert exc_info.value.details["reason"] == "attempt_fold_not_owned_by_lease"
+    assert exc_info.value.details["reason"] == "attempt_terminal_replay_invalid"
 
 
 def test_reclaimed_coordinator_with_same_owner_prefix_cannot_adopt_orphan() -> None:
     store = _SchedulerStore()
     original, _factory = _coordinator(store, owner_token="shared-owner")
-    original.tick(occurred_at=NOW)
+    original_result = original.tick(occurred_at=NOW)
+    old_owner = original_result.dispatches[0].fold.projection.claim_owner_token
     replacement, _replacement_factory = _coordinator(
         store,
         owner_token="shared-owner",
@@ -1358,8 +1496,50 @@ def test_reclaimed_coordinator_with_same_owner_prefix_cannot_adopt_orphan() -> N
 
     result = replacement.tick(occurred_at=NOW + timedelta(minutes=6))
 
-    assert result.state is SchedulerTickState.RECOVERY_REQUIRED
-    assert result.dispatches == ()
+    assert result.state is SchedulerTickState.DISPATCHED
+    assert result.dispatches
+    assert all(
+        item.fold.projection.claim_owner_token != old_owner
+        and item.attempt.spec.ordinal == 2
+        for item in result.dispatches
+    )
+
+
+def test_available_checkpoint_is_not_resumed_without_explicit_resolver() -> None:
+    store = _SchedulerStore(worker_count=2, candidate_count=1)
+    _set_running_stage(store, ExperimentStage.EXPLORATION)
+    parent_fold = next(
+        item for item in store.folds if item.spec.fold_role is FoldRole.EXPLORATION
+    )
+    queued = _FirstAttemptFactory().create(parent_fold, NOW)
+    parent_run_id = BacktestRunId("research-run-nonresumable")
+    parent = AttemptView(
+        queued.spec,
+        replace(
+            queued.projection,
+            status=ExperimentStatus.CANCELLED,
+            backtest_run_id=parent_run_id,
+            checkpoint_ref=CheckpointRef(str(parent_run_id)),
+        ),
+    )
+    store.attempts[parent.spec.attempt_id] = parent
+    coordinator = ExperimentExecutionCoordinator(
+        store=store,
+        first_attempt_factory=_FirstAttemptFactory(),
+        owner_token="replacement-owner",
+        lease_duration=timedelta(minutes=5),
+        clock=lambda: NOW,
+        checkpoint_available=lambda run_id: run_id == str(parent_run_id),
+    )
+
+    result = coordinator.tick(occurred_at=NOW)
+
+    successor = next(
+        item.attempt
+        for item in result.dispatches
+        if item.attempt.spec.parent_attempt_id == parent.spec.attempt_id
+    )
+    assert successor.spec.resume_from_run_id is None
 
 
 def test_reclaimed_owner_cannot_finish_the_previous_owners_running_attempt() -> None:
@@ -1378,14 +1558,17 @@ def test_reclaimed_owner_cannot_finish_the_previous_owners_running_attempt() -> 
     )
     recovery = replacement.tick(occurred_at=NOW + timedelta(minutes=6))
 
-    assert recovery.state is SchedulerTickState.RECOVERY_REQUIRED
+    assert recovery.state is SchedulerTickState.DISPATCHED
+    assert store.attempts[attempt_id].projection.failure_code is (
+        ExperimentFailureCode.LEASE_LOST
+    )
     with pytest.raises(AppProcessError) as exc_info:
         replacement.complete_attempt(
             attempt_id,
             occurred_at=NOW + timedelta(minutes=6, seconds=1),
         )
 
-    assert exc_info.value.details["reason"] == "attempt_fold_not_owned_by_lease"
+    assert exc_info.value.details["reason"] == "attempt_is_not_finishable"
 
 
 def test_split_terminal_write_stops_for_task10_recovery_after_lease_loss() -> None:
@@ -1415,9 +1598,18 @@ def test_split_terminal_write_stops_for_task10_recovery_after_lease_loss() -> No
     result = replacement.tick(occurred_at=NOW + timedelta(minutes=6))
 
     assert exc_info.value.details["code"] == "LEASE_LOST"
-    assert result.state is SchedulerTickState.RECOVERY_REQUIRED
-    assert result.dispatches == ()
-    assert len(store.claimed_keys) == claim_count
+    assert result.state is SchedulerTickState.DISPATCHED
+    assert store.attempts[attempt_id].projection.status is ExperimentStatus.COMPLETED
+    completed_fold = next(
+        item
+        for item in store.folds
+        if item.spec.key == dispatched.dispatches[0].fold.spec.key
+    )
+    assert completed_fold.projection.status is ExperimentStatus.COMPLETED
+    assert all(
+        item.fold.spec.key != completed_fold.spec.key for item in result.dispatches
+    )
+    assert len(store.claimed_keys) > claim_count
 
 
 def test_lost_lease_invalidates_coordinator_and_stops_all_later_writes() -> None:
