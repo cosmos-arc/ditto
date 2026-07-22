@@ -58,6 +58,12 @@ from ditto_analysis.storage.sqlite.experiments._events import (
     canonical_status_event_id,
     event_values,
 )
+from ditto_analysis.storage.sqlite.experiments._holdout_consumption import (
+    find_holdout_consumption_conflict,
+)
+from ditto_analysis.storage.sqlite.experiments._holdout_isolation import (
+    validate_candidate_isolated_holdout,
+)
 from ditto_analysis.storage.sqlite.experiments._holdout_preflight import (
     validate_holdout_preflight,
 )
@@ -192,6 +198,43 @@ def _event_detail(record: HoldoutClaimRecord) -> Mapping[str, object]:
     }
 
 
+def _resolved_holdout_rows(
+    connection: sqlite3.Connection,
+    holdout: tuple[sqlite3.Row, ...],
+    candidate_id: CandidateId,
+) -> tuple[sqlite3.Row, tuple[sqlite3.Row, ...]]:
+    selected = tuple(row for row in holdout if row["candidate_id"] == str(candidate_id))
+    if len(selected) != 1:
+        raise _integrity(
+            "selected candidate must have one holdout fold",
+            "holdout_fold_ambiguous",
+        )
+    selected_row = selected[0]
+    if (
+        selected_row["status"] != ExperimentStatus.QUEUED.value
+        or selected_row["claim_owner_token"] is not None
+    ):
+        raise _spec(
+            "selected holdout fold must be pristine and queued",
+            "holdout_fold_not_pristine",
+        )
+    unselected = tuple(row for row in holdout if row is not selected_row)
+    for row in unselected:
+        if (
+            row["status"] == ExperimentStatus.QUEUED.value
+            and row["claim_owner_token"] is None
+        ):
+            continue
+        if row["status"] == ExperimentStatus.CANCELLED.value:
+            validate_candidate_isolated_holdout(connection, row)
+            continue
+        raise _spec(
+            "unselected holdout fold is neither pristine nor isolated",
+            "holdout_fold_not_pristine",
+        )
+    return selected_row, unselected
+
+
 class SQLiteHoldoutClaimMixin:
     """Claim the sealed holdout and advance its aggregate in one transaction."""
 
@@ -249,6 +292,23 @@ class SQLiteHoldoutClaimMixin:
                 return receipt
             if experiment is None:
                 raise _integrity("experiment does not exist", "experiment_not_found")
+            authority = validate_holdout_preflight(connection, command.experiment_id)
+            conflict = find_holdout_consumption_conflict(
+                connection,
+                authority,
+                holdout_claim_from_row,
+            )
+            if conflict is not None:
+                raise _conflict(
+                    "holdout consumption authority was already used",
+                    "holdout_consumption_already_claimed",
+                    code="HOLDOUT_ALREADY_CLAIMED",
+                    claim_id=conflict.claim_id,
+                    experiment_id=str(conflict.fold_key.experiment_id),
+                    candidate_id=str(conflict.fold_key.candidate_id),
+                    fold_id=str(conflict.fold_key.fold_id),
+                    logical_run_id=conflict.logical_run_id,
+                )
             self._validate_new_authority(
                 connection,
                 command,
@@ -513,7 +573,6 @@ class SQLiteHoldoutClaimMixin:
                 "experiment is not ready for holdout selection",
                 "holdout_claim_stage_invalid",
             )
-        validate_holdout_preflight(connection, command.experiment_id)
         live_fold = connection.execute(
             """
             SELECT fold_id FROM experiment_fold
@@ -609,23 +668,11 @@ class SQLiteHoldoutClaimMixin:
                 "holdout fold cardinality differs from frozen candidates",
                 "holdout_fold_cardinality_drift",
             )
-        selected = tuple(
-            row for row in holdout if row["candidate_id"] == str(command.candidate_id)
+        selected_row, unselected = _resolved_holdout_rows(
+            connection,
+            holdout,
+            command.candidate_id,
         )
-        if len(selected) != 1:
-            raise _integrity(
-                "selected candidate must have one holdout fold",
-                "holdout_fold_ambiguous",
-            )
-        if any(
-            row["status"] != ExperimentStatus.QUEUED.value
-            or row["claim_owner_token"] is not None
-            for row in holdout
-        ):
-            raise _spec(
-                "holdout folds must be pristine and queued",
-                "holdout_fold_not_pristine",
-            )
         attempt_count = connection.execute(
             """
             SELECT count(*) FROM experiment_attempt AS attempt
@@ -642,8 +689,7 @@ class SQLiteHoldoutClaimMixin:
                 "holdout attempts exist before the first claim",
                 "holdout_attempt_before_claim",
             )
-        unselected = tuple(row for row in holdout if row is not selected[0])
-        return candidate, binding, selected[0], unselected
+        return candidate, binding, selected_row, unselected
 
     @staticmethod
     def _insert_claim(
@@ -689,6 +735,9 @@ class SQLiteHoldoutClaimMixin:
         folds: tuple[sqlite3.Row, ...],
     ) -> None:
         for fold in folds:
+            if fold["status"] == ExperimentStatus.CANCELLED.value:
+                validate_candidate_isolated_holdout(connection, fold)
+                continue
             revision = fold["revision"] + 1
             cursor = connection.execute(
                 """

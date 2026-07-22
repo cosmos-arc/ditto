@@ -26,6 +26,9 @@ from ditto_analysis.experiments import (
     TrialFamilyDeclaration,
     canonical_payload,
 )
+from ditto_analysis.experiments.preflight_authority import (
+    canonical_research_cycle_hash,
+)
 from ditto_analysis.experiments.specs import ExperimentFailurePolicy
 from ditto_analysis.experiments.trial_ledger import (
     ConstraintOperator,
@@ -128,6 +131,7 @@ from ditto_application.research_validation_protocol import (
     UniverseCoveragePolicy,
     UniverseMembershipSource,
     ValidationProtocolRequest,
+    compile_validation_protocol,
 )
 from ditto_features.expression.contracts import CompileIdentity
 from ditto_strategy.models import StrategySpecRecord
@@ -260,6 +264,10 @@ def _objective(
 
 
 def _planning_request() -> ExperimentPlanningRequest:
+    validation_request = _validation_request()
+    validation_plan = compile_validation_protocol(validation_request)
+    assert validation_plan.reserved_holdout is not None
+    holdout_window = validation_plan.reserved_holdout.test_window
     matrix = CandidateMatrixSpec(
         baseline=BaselineDescriptor(
             descriptor_type="etf-current-active",
@@ -273,7 +281,13 @@ def _planning_request() -> ExperimentPlanningRequest:
     return ExperimentPlanningRequest(
         experiment_id=_EXPERIMENT_ID,
         research_cycle_id="cycle-task8-integration-1",
-        research_cycle_hash="c" * 64,
+        research_cycle_hash=str(
+            canonical_research_cycle_hash(
+                strategy_family_id="seed_etf_rotation",
+                certified_data_cutoff=holdout_window.end,
+                oos_window=holdout_window,
+            )
+        ),
         strategy_record=StrategySpecRecord(
             strategy_id="seed_etf_rotation",
             name="ETF rotation",
@@ -285,7 +299,7 @@ def _planning_request() -> ExperimentPlanningRequest:
             snapshot_id="certified-snapshot-task8",
             manifest_hash=_exact_snapshot().manifest_hash,
         ),
-        validation_request=_validation_request(),
+        validation_request=validation_request,
         matrix_spec=matrix,
         promotion_objective=_objective(_EXPERIMENT_ID, matrix),
         dataset_requirements=(

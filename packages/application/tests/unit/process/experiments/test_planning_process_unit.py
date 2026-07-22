@@ -28,6 +28,9 @@ from ditto_analysis.experiments import (
     TrialFamilyDeclaration,
     canonical_payload,
 )
+from ditto_analysis.experiments.preflight_authority import (
+    canonical_research_cycle_hash,
+)
 from ditto_analysis.experiments.specs import ExperimentFailurePolicy
 from ditto_analysis.experiments.trial_ledger import (
     ConstraintOperator,
@@ -241,6 +244,10 @@ def _objective(
 
 def _request(month_count: int = 96) -> ExperimentPlanningRequest:
     experiment_id = "exp-plan-1"
+    validation_request = _validation(month_count)
+    validation_plan = compile_validation_protocol(validation_request)
+    assert validation_plan.reserved_holdout is not None
+    holdout_window = validation_plan.reserved_holdout.test_window
     matrix = CandidateMatrixSpec(
         baseline=BaselineDescriptor(
             descriptor_type="etf-current-active",
@@ -254,7 +261,13 @@ def _request(month_count: int = 96) -> ExperimentPlanningRequest:
     return ExperimentPlanningRequest(
         experiment_id=experiment_id,
         research_cycle_id="cycle-plan-1",
-        research_cycle_hash="c" * 64,
+        research_cycle_hash=str(
+            canonical_research_cycle_hash(
+                strategy_family_id="seed_etf_rotation",
+                certified_data_cutoff=holdout_window.end,
+                oos_window=holdout_window,
+            )
+        ),
         strategy_record=StrategySpecRecord(
             strategy_id="seed_etf_rotation",
             name="ETF rotation",
@@ -266,7 +279,7 @@ def _request(month_count: int = 96) -> ExperimentPlanningRequest:
             snapshot_id="certified-snapshot-1",
             manifest_hash="d" * 64,
         ),
-        validation_request=_validation(month_count),
+        validation_request=validation_request,
         matrix_spec=matrix,
         promotion_objective=_objective(experiment_id, matrix),
         dataset_requirements=(
@@ -1222,6 +1235,22 @@ def test_invalid_identity_blocks_before_probes_or_writes() -> None:
     assert report.checks[0].code == "SPEC_INVALID"
     assert certification.calls == []
     assert executor.calls == 0
+    assert store.calls == []
+
+
+def test_cycle_hash_must_match_durable_certification_authority() -> None:
+    store = _Store()
+    report = _process(store).preflight(
+        replace(_request(), research_cycle_hash="0" * 64)
+    )
+
+    assert report.status is ExperimentPreflightStatus.BLOCKED
+    assert report.plan_hash is None
+    certification = next(
+        check for check in report.checks if check.rule_id == "certification"
+    )
+    assert certification.code == "INPUT_HASH_MISMATCH"
+    assert certification.reason == "research_cycle_hash_authority_mismatch"
     assert store.calls == []
 
 

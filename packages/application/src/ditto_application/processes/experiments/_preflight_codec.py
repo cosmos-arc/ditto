@@ -13,6 +13,9 @@ from ditto_analysis.experiments import (
     FoldRole,
     canonical_payload,
 )
+from ditto_analysis.experiments.preflight_authority import (
+    decode_preflight_authority,
+)
 from ditto_strategy.alpha.parameters import ParameterValue
 
 from ditto_application.exceptions import AppProcessError
@@ -51,9 +54,6 @@ from ditto_application.processes.experiments._preflight_decode_values import (
 )
 from ditto_application.processes.experiments._preflight_decode_values import (
     decode_window_dates,
-)
-from ditto_application.processes.experiments._preflight_plan_identity import (
-    validate_plan_preimage,
 )
 from ditto_application.processes.experiments._preflight_semantics import (
     validate_launch_preflight_semantics,
@@ -675,31 +675,15 @@ def _decode(
 ) -> DecodedPreflightReport:
     encoded = canonical_payload(detail)
     decoded = _mapping(cast("object", orjson.loads(encoded.json_bytes)), "detail")
-    if set(decoded) != {
-        "plan_hash",
-        "plan_preimage",
-        "preflight",
-        "preflight_hash",
-    }:
-        raise experiment_process_error("enqueue detail has an invalid shape")
-    plan_hash = _string(decoded.get("plan_hash"), "detail.plan_hash")
-    preflight_hash = _string(decoded.get("preflight_hash"), "detail.preflight_hash")
+    authority_identity = decode_preflight_authority(decoded)
+    plan_hash = str(authority_identity.plan_hash)
     preflight = validate_preflight_shape(decoded.get("preflight"))
     if (
-        not is_canonical_content_hash(plan_hash)
-        or not is_canonical_content_hash(preflight_hash)
-        or canonical_payload(preflight).content_hash.value != preflight_hash
-        or _integer(preflight.get("schema_version"), "preflight.schema_version") != 1
+        _integer(preflight.get("schema_version"), "preflight.schema_version") != 1
         or _string(preflight.get("policy_version"), "preflight.policy_version")
         != expected_policy_version
     ):
         raise experiment_process_error("preflight content identity is invalid")
-    validate_plan_preimage(
-        decoded.get("plan_preimage"),
-        plan_hash=plan_hash,
-        preflight_hash=preflight_hash,
-        preflight=preflight,
-    )
     validation = _mapping(preflight.get("validation"), "validation")
     protocol = decode_validation_protocol(validation.get("protocol"))
     stored_plan = _validation_plan(validation.get("plan"))

@@ -13,6 +13,9 @@ from ditto_analysis.storage.sqlite.experiments._events import (
     canonical_status_event_id,
     event_values,
 )
+from ditto_analysis.storage.sqlite.experiments._holdout_isolation import (
+    validate_candidate_isolated_holdout,
+)
 
 
 def _integrity(message: str, reason_code: str) -> ExperimentIntegrityError:
@@ -61,6 +64,23 @@ def validate_holdout_replay_history(
                 "unselected holdout fold is not durably cancelled",
                 "holdout_unselected_fold_drift",
             )
+        event_id = canonical_status_event_id(
+            subject_type="fold",
+            experiment_id=fold["experiment_id"],
+            candidate_id=fold["candidate_id"],
+            fold_id=fold["fold_id"],
+            attempt_id=None,
+            revision=fold["revision"],
+        )
+        event = connection.execute(
+            "SELECT * FROM experiment_status_event WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+        if event is not None and event["reason_code"] == (
+            "candidate_isolated_after_failure"
+        ):
+            validate_candidate_isolated_holdout(connection, fold)
+            continue
         expected_event = event_values(
             subject_type="fold",
             experiment_id=fold["experiment_id"],
@@ -80,18 +100,6 @@ def validate_holdout_replay_history(
             },
             occurred_at_epoch_us=epoch_us(record.claimed_at),
         )
-        event_id = canonical_status_event_id(
-            subject_type="fold",
-            experiment_id=fold["experiment_id"],
-            candidate_id=fold["candidate_id"],
-            fold_id=fold["fold_id"],
-            attempt_id=None,
-            revision=fold["revision"],
-        )
-        event = connection.execute(
-            "SELECT * FROM experiment_status_event WHERE event_id=?",
-            (event_id,),
-        ).fetchone()
         if event is None or tuple(event) != expected_event:
             raise _integrity(
                 "unselected holdout cancellation event is missing or drifted",

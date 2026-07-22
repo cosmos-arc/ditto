@@ -12,6 +12,7 @@ from ditto_analysis.experiments import (
     ExperimentReaderProtocol,
     ExperimentWriterProtocol,
 )
+from ditto_analysis.experiments.preflight_authority import canonical_research_cycle_hash
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._executor_probe import probe_executor
@@ -31,6 +32,7 @@ from ditto_application.processes.experiments._planning_request_identity import (
 )
 from ditto_application.processes.experiments._preflight_checks import (
     certification_check,
+    cycle_authority_check,
     executor_check,
 )
 from ditto_application.processes.experiments._preflight_codec import (
@@ -206,6 +208,29 @@ def reconstruct_preflight_report(
         isolation_width_sessions=decoded.isolation_width_sessions,
         validation_plan=decoded.validation_plan,
         work_plan=decoded.work_plan,
+    )
+
+
+def _cycle_authority_hash(
+    result: ResearchCertificationResult,
+    check: ExperimentPreflightCheck,
+    request: ExperimentPlanningRequest,
+    validation: ValidationProtocolPlan,
+) -> str | None:
+    snapshot = result.snapshot_evidence
+    holdout = validation.reserved_holdout
+    if (
+        check.outcome is not PreflightOutcome.PASS
+        or type(snapshot) is not ResearchSnapshotEvidence
+        or holdout is None
+    ):
+        return None
+    return str(
+        canonical_research_cycle_hash(
+            strategy_family_id=request.strategy_record.strategy_id,
+            certified_data_cutoff=snapshot.snapshot_end,
+            oos_window=holdout.test_window,
+        )
     )
 
 
@@ -487,9 +512,16 @@ class ExperimentPlanningProcess:
                 None,
             )
         )
-        certification_check = self._certification_check(
-            certification,
-            certification_request,
+        base_certification_check = self._certification_check(
+            certification, certification_request
+        )
+        expected_cycle_hash = _cycle_authority_hash(
+            certification, base_certification_check, request, validation
+        )
+        certification_check = cycle_authority_check(
+            base_certification_check,
+            request,
+            expected_cycle_hash,
         )
         budget_check = _check(
             "budget",

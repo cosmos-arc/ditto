@@ -40,7 +40,7 @@ from ditto_application.processes.experiments.planning_probes import (
 )
 from ditto_application.research_validation_contracts import RuntimeValidationEvidence
 
-__all__ = ["certification_check", "executor_check"]
+__all__ = ["certification_check", "cycle_authority_check", "executor_check"]
 
 
 def executor_check(
@@ -266,4 +266,29 @@ def certification_check(
                 "manifest_hash": request.snapshot_identity.manifest_hash,
             },
         },
+    )
+
+
+def cycle_authority_check(
+    base_check: ExperimentPreflightCheck,
+    request: ExperimentPlanningRequest,
+    expected_cycle_hash: str | None,
+) -> ExperimentPreflightCheck:
+    """Bind a valid certification gate to the canonical consumption identity."""
+    if (
+        expected_cycle_hash is None
+        or request.research_cycle_hash == expected_cycle_hash
+    ):
+        return base_check
+    return ExperimentPreflightCheck(
+        rule_id="certification",
+        outcome=PreflightOutcome.FAIL,
+        code="INPUT_HASH_MISMATCH",
+        reason="research_cycle_hash_authority_mismatch",
+        remediation="derive the research cycle hash from certified authority",
+        observed={
+            "research_cycle_hash": request.research_cycle_hash,
+            "expected_research_cycle_hash": expected_cycle_hash,
+        },
+        policy={"authority": "r3_holdout_consumption"},
     )

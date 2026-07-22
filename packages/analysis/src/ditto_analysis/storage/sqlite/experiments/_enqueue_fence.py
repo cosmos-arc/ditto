@@ -33,7 +33,11 @@ from ditto_analysis.experiments.persistence import (
     canonical_payload,
 )
 
-__all__ = ["validate_experiment_enqueue_fence"]
+__all__ = [
+    "fold_fence_from_row",
+    "gate_fence_from_row",
+    "validate_experiment_enqueue_fence",
+]
 
 
 def _integrity(
@@ -78,7 +82,7 @@ def _json_object(value: object, field_name: str) -> dict[str, object]:
     return cast("dict[str, object]", decoded)
 
 
-def _gate_fence(row: sqlite3.Row) -> GateEvaluationFence:
+def gate_fence_from_row(row: sqlite3.Row) -> GateEvaluationFence:
     try:
         payload_hash = canonical_payload(
             {
@@ -115,7 +119,7 @@ def _gate_fence(row: sqlite3.Row) -> GateEvaluationFence:
     return fence
 
 
-def _fold_fence(row: sqlite3.Row) -> FoldPersistenceFence:
+def fold_fence_from_row(row: sqlite3.Row) -> FoldPersistenceFence:
     raw_payload = row["fold_spec_json"]
     if type(raw_payload) is not str:
         raise _integrity(
@@ -203,7 +207,7 @@ def validate_experiment_enqueue_fence(
         """,
         (str(experiment_id),),
     ).fetchall()
-    actual_gates = tuple(_gate_fence(row) for row in gate_rows)
+    actual_gates = tuple(gate_fence_from_row(row) for row in gate_rows)
     if actual_gates != fence.gates:
         raise _conflict(
             "experiment gate set changed before enqueue",
@@ -219,7 +223,7 @@ def validate_experiment_enqueue_fence(
         """,
         (str(experiment_id),),
     ).fetchall()
-    actual_folds = tuple(_fold_fence(row) for row in fold_rows)
+    actual_folds = tuple(fold_fence_from_row(row) for row in fold_rows)
     if actual_folds != fence.folds:
         raise _conflict(
             "experiment fold set changed before enqueue",
