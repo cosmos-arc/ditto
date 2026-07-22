@@ -242,36 +242,43 @@ def _folds(
     holdout_window: DateWindow | None = None,
 ) -> tuple[FoldPersistenceSpec, ...]:
     actual_holdout = holdout_window or DateWindow(date(2026, 3, 1), date(2026, 3, 28))
-    folds: list[FoldPersistenceSpec] = []
-    for candidate in launch.candidates:
+
+    def fold_spec(
+        candidate: CandidateSpec,
+        ordinal: int,
+        role: FoldRole,
+    ) -> FoldPersistenceSpec:
+        key = FoldKey(
+            launch.experiment_id,
+            candidate.candidate_id,
+            FoldId(f"fold-{candidate.ordinal}-{ordinal}"),
+        )
+        return FoldPersistenceSpec.create(
+            key,
+            ordinal,
+            role,
+            None
+            if role is FoldRole.EXPLORATION
+            else DateWindow(date(2020, 1, 1), date(2025, 12, 31)),
+            (
+                actual_holdout
+                if role is FoldRole.HOLDOUT
+                else DateWindow(date(2026, ordinal, 1), date(2026, ordinal, 28))
+            ),
+            2,
+            1,
+        )
+
+    return tuple(
+        fold_spec(candidate, ordinal, role)
+        for candidate in launch.candidates
         for ordinal, role in (
             (1, FoldRole.EXPLORATION),
             (2, FoldRole.WALK_FORWARD),
-            (3, FoldRole.HOLDOUT),
-        ):
-            key = FoldKey(
-                launch.experiment_id,
-                candidate.candidate_id,
-                FoldId(f"fold-{candidate.ordinal}-{ordinal}"),
-            )
-            folds.append(
-                FoldPersistenceSpec.create(
-                    key,
-                    ordinal,
-                    role,
-                    None
-                    if role is FoldRole.EXPLORATION
-                    else DateWindow(date(2020, 1, 1), date(2025, 12, 31)),
-                    (
-                        actual_holdout
-                        if role is FoldRole.HOLDOUT
-                        else DateWindow(date(2026, ordinal, 1), date(2026, ordinal, 28))
-                    ),
-                    2,
-                    1,
-                )
-            )
-    return tuple(folds)
+        )
+    ) + tuple(
+        fold_spec(candidate, 3, FoldRole.HOLDOUT) for candidate in launch.candidates
+    )
 
 
 _PREFLIGHT_POLICY_VERSION = "r3-experiment-preflight-v1"
@@ -2235,6 +2242,113 @@ def _owned_coordinator(
         is SchedulerTickState.CANDIDATE_SELECTION
     )
     return coordinator, store, provider
+
+
+def _coordinator_with_selection_ledger(
+    reader: SQLiteExperimentReader,
+    writer: SQLiteExperimentWriter,
+    launch: ExperimentLaunchSpec,
+    ledger: TrialLedger,
+) -> ExperimentExecutionCoordinator:
+    provider = _SelectionProvider(launch)
+    provider.ledger = ledger
+    coordinator = ExperimentExecutionCoordinator(
+        store=ExperimentSchedulerStore(reader, writer),
+        first_attempt_factory=_Factory(),
+        selection_evidence_provider=provider,
+        owner_token="holdout-ledger-binding-coordinator",
+        lease_duration=timedelta(minutes=5),
+        clock=lambda: NOW + timedelta(minutes=2),
+    )
+    assert (
+        coordinator.tick(occurred_at=NOW).state
+        is SchedulerTickState.CANDIDATE_SELECTION
+    )
+    return coordinator
+
+
+def test_holdout_claim_rejects_same_experiment_alternate_trial_family(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, launch, _lease = _store(tmp_path)
+    alternate_objective = replace(
+        launch.promotion_objective,
+        trial_family=TrialFamilyDeclaration(
+            "alternate-holdout-family",
+            launch.promotion_objective.trial_family.members,
+        ),
+    )
+    alternate_ledger = _selection_ledger(
+        replace(launch, promotion_objective=alternate_objective)
+    )
+    coordinator = _coordinator_with_selection_ledger(
+        reader,
+        writer,
+        launch,
+        alternate_ledger,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.claim_holdout_candidate(_application_request(alternate_ledger))
+
+    assert exc_info.value.details["reason"] == "selection_evidence_launch_mismatch"
+    assert reader.get_holdout_claim_for_experiment(launch.experiment_id) is None
+    database.close_all()
+
+
+def test_holdout_claim_rejects_ledger_that_omits_frozen_candidates(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, launch, _lease = _store(tmp_path)
+    selected_trial = launch.promotion_objective.trial_family.current_members[0]
+    selected_objective = replace(
+        launch.promotion_objective,
+        trial_family=TrialFamilyDeclaration(
+            launch.promotion_objective.trial_family.family_id,
+            (selected_trial,),
+        ),
+    )
+    selected_ledger = build_trial_ledger(
+        selected_objective,
+        (
+            TrialOutcome(
+                trial=selected_trial,
+                status=TrialStatus.COMPLETED,
+                metrics={
+                    ResearchMetricId.NET_RETURN: ResearchMetricValue(
+                        ResearchMetricId.NET_RETURN,
+                        1.0,
+                    )
+                },
+                holdout_metrics={},
+                source_projection_hash=ContentHash("7" * 64),
+                metric_evidence={
+                    ResearchMetricId.NET_RETURN: MetricEvidenceLineage(
+                        ("comparison://holdout-integration",),
+                        (ContentHash("6" * 64),),
+                    )
+                },
+            ),
+        ),
+    )
+    coordinator = _coordinator_with_selection_ledger(
+        reader,
+        writer,
+        launch,
+        selected_ledger,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.claim_holdout_candidate(
+            replace(
+                _application_request(selected_ledger),
+                candidate_id=str(selected_trial.candidate_id),
+            )
+        )
+
+    assert exc_info.value.details["reason"] == "selection_evidence_launch_mismatch"
+    assert reader.get_holdout_claim_for_experiment(launch.experiment_id) is None
+    database.close_all()
 
 
 def test_failed_candidate_isolation_preserves_remaining_holdout_claim_lifecycle(

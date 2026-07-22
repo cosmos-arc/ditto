@@ -14,14 +14,22 @@ import orjson
 import polars as pl
 import pytest
 from ditto_analysis.experiments import (
+    AttemptId,
+    AttemptPersistenceSpec,
+    AttemptProjection,
+    BacktestRunId,
     ContentHash,
     ExperimentId,
+    ExperimentStage,
     ExperimentStatus,
     FoldRole,
     FoldView,
+    HoldoutClaimAuthorityCommand,
+    HoldoutSelectionReason,
     ResearchMetricDirection,
     ResearchMetricId,
     ResearchMetricValue,
+    SchedulerLease,
     StatusSubjectType,
     TrialFamilyDeclaration,
     canonical_payload,
@@ -137,6 +145,7 @@ from ditto_features.expression.contracts import CompileIdentity
 from ditto_strategy.models import StrategySpecRecord
 
 _NOW = datetime(2026, 7, 19, 8, 30, tzinfo=UTC)
+_NOW_US = int(_NOW.timestamp() * 1_000_000)
 _EXPERIMENT_ID = "exp-task8-integration-1"
 _GATE_RULES = (
     "matrix",
@@ -488,6 +497,141 @@ def _persisted_snapshot(reader: SQLiteExperimentReader, receipt):
     return launch_spec, projection, candidates, folds, gates, events
 
 
+def _complete_planning_fold(
+    writer: SQLiteExperimentWriter,
+    fold: FoldView,
+    lease: SchedulerLease,
+) -> None:
+    attempt_id = AttemptId(
+        f"attempt-complete-{fold.spec.key.candidate_id}-{fold.spec.key.fold_id}"
+    )
+    attempt_spec = AttemptPersistenceSpec(
+        attempt_id,
+        fold.spec.key,
+        1,
+        None,
+        None,
+        ContentHash("8" * 64),
+        _NOW,
+    )
+    initial = AttemptProjection(
+        attempt_id,
+        ExperimentStatus.QUEUED,
+        None,
+        None,
+        None,
+        _NOW,
+        _NOW,
+        0,
+    )
+    fold_projection, attempt_projection = writer.claim_fold_and_add_attempt(
+        fold.spec.key,
+        attempt_spec,
+        initial,
+        expected_fold_revision=fold.projection.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=_NOW_US + 4,
+        occurred_at=_NOW,
+    )
+    running = writer.transition_attempt(
+        attempt_id,
+        target_status=ExperimentStatus.RUNNING,
+        backtest_run_id=BacktestRunId(f"run-{attempt_id}"),
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=attempt_projection.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=_NOW_US + 5,
+        occurred_at=_NOW,
+        reason_code="first_attempt_started",
+        detail={},
+    )
+    writer.transition_attempt(
+        attempt_id,
+        target_status=ExperimentStatus.COMPLETED,
+        backtest_run_id=running.backtest_run_id,
+        checkpoint_ref=None,
+        failure_code=None,
+        expected_revision=running.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=_NOW_US + 6,
+        occurred_at=_NOW,
+        reason_code="first_attempt_completed",
+        detail={},
+    )
+    writer.transition_fold(
+        fold.spec.key,
+        target_status=ExperimentStatus.COMPLETED,
+        claim_owner_token=None,
+        failure_code=None,
+        expected_revision=fold_projection.revision,
+        lease_fence=lease.fence,
+        now_epoch_us=_NOW_US + 7,
+        occurred_at=_NOW,
+        reason_code="fold_completed",
+        detail={},
+    )
+
+
+def _advance_planning_launch_to_candidate_selection(
+    reader: SQLiteExperimentReader,
+    writer: SQLiteExperimentWriter,
+) -> SchedulerLease:
+    experiment_id = ExperimentId(_EXPERIMENT_ID)
+    lease = writer.try_claim_lease(
+        experiment_id,
+        "planning-holdout-owner",
+        expected_revision=reader.get_scheduler_slot().revision,
+        now_epoch_us=_NOW_US,
+        lease_until_epoch_us=_NOW_US + 60_000_000,
+    )
+    assert lease is not None
+    writer.transition_scheduled_experiment(
+        experiment_id,
+        target_status=ExperimentStatus.RUNNING,
+        target_stage=ExperimentStage.EXPLORATION,
+        failure_code=None,
+        expected_revision=1,
+        lease_fence=lease.fence,
+        now_epoch_us=_NOW_US + 1,
+        occurred_at=_NOW,
+        attempt_started=False,
+        precondition_repairable=False,
+        reason_code="scheduler_dispatch",
+        detail={},
+    )
+    folds = reader.list_folds(experiment_id)
+    for fold in folds:
+        if fold.spec.fold_role is FoldRole.EXPLORATION:
+            _complete_planning_fold(writer, fold, lease)
+    projection = writer.advance_experiment_stage(
+        experiment_id,
+        target_stage=ExperimentStage.WALK_FORWARD,
+        expected_revision=2,
+        lease_fence=lease.fence,
+        now_epoch_us=_NOW_US + 2,
+        occurred_at=_NOW,
+        reason_code="scheduler_stage_complete",
+        detail={"completed_stage": "exploration"},
+    )
+    assert projection.revision == 3
+    for fold in folds:
+        if fold.spec.fold_role is FoldRole.WALK_FORWARD:
+            _complete_planning_fold(writer, fold, lease)
+    projection = writer.advance_experiment_stage(
+        experiment_id,
+        target_stage=ExperimentStage.CANDIDATE_SELECTION,
+        expected_revision=3,
+        lease_fence=lease.fence,
+        now_epoch_us=_NOW_US + 3,
+        occurred_at=_NOW,
+        reason_code="scheduler_stage_complete",
+        detail={"completed_stage": "walk_forward"},
+    )
+    assert projection.revision == 4
+    return lease
+
+
 def test_launch_is_durable_and_exact_hash_replay_is_zero_write(
     tmp_path: Path,
 ) -> None:
@@ -527,6 +671,60 @@ def test_launch_is_durable_and_exact_hash_replay_is_zero_write(
         assert _persisted_snapshot(durable_reader, receipt) == snapshot
     finally:
         reopened.close_all()
+
+
+def test_real_planning_launch_passes_storage_holdout_claim_preflight(
+    tmp_path: Path,
+) -> None:
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    reader = SQLiteExperimentReader(database)
+    writer = SQLiteExperimentWriter(database)
+    process = ExperimentPlanningProcess(
+        reader=reader,
+        writer=writer,
+        certification_probe=_CertificationProbe(),
+        executor_probe=_ExecutorProbe(),
+        authority_probe=_AuthorityProbe(),
+    )
+    request = _planning_request()
+
+    try:
+        report = process.preflight(request)
+        assert report.plan_hash is not None
+        process.launch(request, confirmed_plan_hash=report.plan_hash)
+        launch = reader.get_launch_spec(ExperimentId(_EXPERIMENT_ID))
+        assert launch is not None
+        lease = _advance_planning_launch_to_candidate_selection(reader, writer)
+        selected = next(
+            candidate.candidate_id
+            for candidate in launch.candidates
+            if not candidate.is_baseline
+        )
+
+        receipt = writer.claim_holdout_candidate(
+            HoldoutClaimAuthorityCommand(
+                experiment_id=launch.experiment_id,
+                candidate_id=selected,
+                expected_revision=4,
+                expected_selection_evidence_hash=ContentHash("5" * 64),
+                operator_confirmation="operator reviewed immutable evidence",
+                selection_reason=HoldoutSelectionReason(
+                    "objective_review",
+                    "Candidate won the registered objective review.",
+                ),
+                resolved_reproduction_fingerprint=ContentHash("4" * 64),
+                occurred_at=_NOW,
+            ),
+            lease_fence=lease.fence,
+            now_epoch_us=_NOW_US + 8,
+        )
+
+        assert receipt.experiment_revision == 5
+        assert receipt.claim.fold_key.candidate_id == selected
+        assert reader.get_holdout_claim_for_experiment(launch.experiment_id) is not None
+    finally:
+        database.close_all()
 
 
 def test_invalid_promotion_objective_is_rejected_before_probe_or_sql_write(

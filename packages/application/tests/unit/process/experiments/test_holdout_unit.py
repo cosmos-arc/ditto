@@ -12,15 +12,22 @@ from ditto_analysis.experiments import (
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
+    CandidateExecutionBinding,
     CandidateId,
+    CandidateSpec,
     ContentHash,
     DateWindow,
+    ExperimentBudget,
+    ExperimentDesiredState,
+    ExperimentFailurePolicy,
     ExperimentId,
+    ExperimentLaunchSpec,
     ExperimentStatus,
     FoldId,
     FoldKey,
     FoldPersistenceSpec,
     FoldProjection,
+    FoldProtocolSpec,
     FoldRole,
     FoldView,
     LogicalTrialIdentity,
@@ -28,6 +35,8 @@ from ditto_analysis.experiments import (
     ResearchMetricId,
     ResearchMetricValue,
     SchedulerLease,
+    SnapshotId,
+    StrategyVersion,
     TrialFamilyDeclaration,
     TrialKind,
 )
@@ -168,15 +177,19 @@ class _Factory:
 
 
 def _selection_ledger() -> TrialLedger:
+    candidates = (
+        CandidateSpec(CandidateId("candidate-1"), 1, True, {"lookback": 0}),
+        CandidateSpec(CandidateId("candidate-2"), 2, False, {"lookback": 20}),
+    )
     trials = tuple(
         LogicalTrialIdentity(
             ExperimentId("experiment-1"),
-            CandidateId(f"candidate-{ordinal}"),
-            ordinal,
-            ContentHash(f"{ordinal:064x}"),
+            candidate.candidate_id,
+            candidate.ordinal,
+            candidate.parameter_hash,
             TrialKind.CURRENT,
         )
-        for ordinal in (1, 2)
+        for candidate in candidates
     )
     family = TrialFamilyDeclaration("holdout-unit-family", trials)
     objective = PromotionObjective(
@@ -210,6 +223,38 @@ def _selection_ledger() -> TrialLedger:
     return build_trial_ledger(objective, outcomes)
 
 
+def _launch_spec() -> ExperimentLaunchSpec:
+    ledger = _selection_ledger()
+    candidates = (
+        CandidateSpec(CandidateId("candidate-1"), 1, True, {"lookback": 0}),
+        CandidateSpec(CandidateId("candidate-2"), 2, False, {"lookback": 20}),
+    )
+    return ExperimentLaunchSpec(
+        experiment_id=ExperimentId("experiment-1"),
+        strategy_version=StrategyVersion("strategy@1"),
+        strategy_spec_hash=ContentHash("1" * 64),
+        snapshot_id=SnapshotId("snapshot-holdout-unit"),
+        candidates=candidates,
+        execution_bindings=tuple(
+            CandidateExecutionBinding(
+                candidate.candidate_id,
+                candidate.ordinal,
+                candidate.parameter_hash,
+                ContentHash(f"{candidate.ordinal + 32:064x}"),
+            )
+            for candidate in candidates
+        ),
+        promotion_objective=ledger.objective,
+        fold_protocol=FoldProtocolSpec("holdout-unit", 1, ContentHash("2" * 64)),
+        seed=17,
+        worker_count=2,
+        failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
+        budget=ExperimentBudget(128, 512),
+        desired_state=ExperimentDesiredState.RUN,
+        created_at=NOW,
+    )
+
+
 class _SelectionProvider:
     def __init__(self) -> None:
         self.ledger = _selection_ledger()
@@ -225,6 +270,7 @@ class _Store:
         self.persisted = _persisted()
         self.snapshot = SimpleNamespace(
             holdout_claim=self.persisted if existing else None,
+            launch_spec=_launch_spec(),
             folds=(_fold(),),
         )
         self.calls: list[dict[str, Any]] = []

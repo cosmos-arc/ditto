@@ -15,6 +15,7 @@ from ditto_application.processes.experiments.scheduler_store import (
     CandidateId,
     ContentHash,
     ExperimentId,
+    ExperimentLaunchSpec,
     FirstAttempt,
     FirstAttemptFactory,
     FoldView,
@@ -161,6 +162,9 @@ class HoldoutSelectionEvidenceProvider(Protocol):
 
 class _HoldoutSchedulerSnapshot(Protocol):
     @property
+    def launch_spec(self) -> ExperimentLaunchSpec: ...
+
+    @property
     def folds(self) -> tuple[FoldView, ...]: ...
 
     @property
@@ -229,6 +233,7 @@ class HoldoutClaimProcess:
         ledger = provider.load_selection_evidence(experiment_id)
         verified = verify_pre_holdout_selection_evidence(
             ledger,
+            launch_spec=snapshot.launch_spec,
             experiment_id=experiment_id,
             candidate_id=candidate_id,
             expected_content_hash=evidence_hash,

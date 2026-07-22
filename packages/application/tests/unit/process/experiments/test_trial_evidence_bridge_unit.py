@@ -648,6 +648,7 @@ def test_pre_holdout_selection_verifier_accepts_ranked_completed_current_trial()
 
     verified = verify_pre_holdout_selection_evidence(
         ledger,
+        launch_spec=launch,
         experiment_id=EXPERIMENT_ID,
         candidate_id=selected,
         expected_content_hash=ledger.content_hash,
@@ -670,6 +671,7 @@ def test_pre_holdout_selection_verifier_rejects_drift() -> None:
     with pytest.raises(AppProcessError, match="selection evidence"):
         verify_pre_holdout_selection_evidence(
             ledger,
+            launch_spec=launch,
             experiment_id=EXPERIMENT_ID,
             candidate_id=selected,
             expected_content_hash=ContentHash("0" * 64),
@@ -677,6 +679,7 @@ def test_pre_holdout_selection_verifier_rejects_drift() -> None:
     with pytest.raises(AppProcessError, match="selection evidence"):
         verify_pre_holdout_selection_evidence(
             ledger,
+            launch_spec=launch,
             experiment_id=ExperimentId("experiment-substituted"),
             candidate_id=selected,
             expected_content_hash=ledger.content_hash,
@@ -684,6 +687,7 @@ def test_pre_holdout_selection_verifier_rejects_drift() -> None:
     with pytest.raises(AppProcessError, match="selection evidence"):
         verify_pre_holdout_selection_evidence(
             ledger,
+            launch_spec=launch,
             experiment_id=EXPERIMENT_ID,
             candidate_id=CandidateId("candidate-unranked"),
             expected_content_hash=ledger.content_hash,
@@ -703,6 +707,7 @@ def test_pre_holdout_selection_verifier_rejects_drift() -> None:
     with pytest.raises(AppProcessError, match="selection evidence"):
         verify_pre_holdout_selection_evidence(
             contaminated_ledger,
+            launch_spec=launch,
             experiment_id=EXPERIMENT_ID,
             candidate_id=selected,
             expected_content_hash=contaminated_ledger.content_hash,

@@ -221,8 +221,11 @@ def _ordered_fold_rows(
     )
     if len(ordered_rows) != len(fold_rows):
         raise _integrity("preflight fold set contains an unknown candidate")
+    canonical_hash_rows = tuple(
+        row for row in ordered_rows if row["fold_role"] != "holdout"
+    ) + tuple(row for row in ordered_rows if row["fold_role"] == "holdout")
     actual_fold_hashes = tuple(
-        fold_fence_from_row(row).payload_hash for row in ordered_rows
+        fold_fence_from_row(row).payload_hash for row in canonical_hash_rows
     )
     if actual_fold_hashes != authority.fold_payload_hashes:
         raise _integrity("preflight fold payload hashes drifted")

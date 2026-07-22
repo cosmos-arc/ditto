@@ -106,6 +106,7 @@ class VerifiedPreHoldoutSelectionEvidence:
 def verify_pre_holdout_selection_evidence(
     ledger: object,
     *,
+    launch_spec: ExperimentLaunchSpec,
     experiment_id: ExperimentId,
     candidate_id: CandidateId,
     expected_content_hash: ContentHash,
@@ -113,6 +114,7 @@ def verify_pre_holdout_selection_evidence(
     """Verify one ranked current candidate before any holdout evidence exists."""
     if (
         type(ledger) is not TrialLedger
+        or type(launch_spec) is not ExperimentLaunchSpec
         or type(experiment_id) is not ExperimentId
         or type(candidate_id) is not CandidateId
         or type(expected_content_hash) is not ContentHash
@@ -130,9 +132,29 @@ def verify_pre_holdout_selection_evidence(
             observed_content_hash=str(observed_content_hash),
         )
 
+    launch_objective = launch_spec.promotion_objective
+    expected_current_trials = tuple(
+        LogicalTrialIdentity(
+            launch_spec.experiment_id,
+            candidate.candidate_id,
+            candidate.ordinal,
+            candidate.parameter_hash,
+            TrialKind.CURRENT,
+        )
+        for candidate in launch_spec.candidates
+    )
     current_trials = tuple(
         trial for trial in typed_ledger.trials if trial.trial.kind is TrialKind.CURRENT
     )
+    if (
+        launch_spec.experiment_id != experiment_id
+        or typed_ledger.objective != launch_objective
+        or launch_objective.trial_family.current_members != expected_current_trials
+        or tuple(trial.trial for trial in typed_ledger.trials)
+        != launch_objective.trial_family.members
+        or tuple(trial.trial for trial in current_trials) != expected_current_trials
+    ):
+        _selection_evidence_error("selection_evidence_launch_mismatch")
     if not current_trials or any(
         trial.trial.origin_experiment_id != experiment_id for trial in current_trials
     ):
