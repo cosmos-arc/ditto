@@ -405,6 +405,33 @@ class SQLiteExperimentReader:
         )
         return tuple(self._attempt_view(row) for row in rows)
 
+    def list_experiment_attempts(
+        self, experiment_id: ExperimentId
+    ) -> tuple[AttemptView, ...]:
+        rows = (
+            self._database.get_connection()
+            .execute(
+                """
+                SELECT attempt.*
+                FROM experiment_attempt AS attempt
+                LEFT JOIN experiment_fold AS fold
+                  ON fold.experiment_id = attempt.experiment_id
+                 AND fold.candidate_id = attempt.candidate_id
+                 AND fold.fold_id = attempt.fold_id
+                WHERE attempt.experiment_id=?
+                ORDER BY
+                    fold.ordinal,
+                    fold.candidate_id,
+                    fold.fold_id,
+                    attempt.ordinal,
+                    attempt.attempt_id
+                """,
+                (str(experiment_id),),
+            )
+            .fetchall()
+        )
+        return tuple(self._attempt_view(row) for row in rows)
+
     @staticmethod
     def _attempt_view(row: sqlite3.Row) -> AttemptView:
         key = FoldKey(

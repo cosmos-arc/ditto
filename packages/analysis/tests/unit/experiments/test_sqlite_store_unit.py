@@ -838,6 +838,63 @@ def test_add_fold_and_attempt_round_trip_full_lineage_and_revision_zero_events(
     ]
 
 
+def test_list_experiment_attempts_reads_all_folds_in_snapshot_order(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    first = _fold_spec(
+        api,
+        role="exploration",
+        key=api.FoldKey(
+            ExperimentId("experiment-1"),
+            CandidateId("candidate-2"),
+            FoldId("fold-first"),
+        ),
+        ordinal=1,
+    )
+    second = _fold_spec(
+        api,
+        role="exploration",
+        key=api.FoldKey(
+            ExperimentId("experiment-1"),
+            CandidateId("candidate-1"),
+            FoldId("fold-second"),
+        ),
+        ordinal=2,
+    )
+    for fold in (second, first):
+        writer.add_fold(fold, _fold_projection(api, fold))
+    lease = _start_running_experiment(writer, owner="owner-bulk-read")
+    for ordinal, fold in enumerate((second, first), start=1):
+        attempt_id = AttemptId(f"attempt-bulk-{ordinal}")
+        spec = replace(
+            _attempt_spec(api, fold.key),
+            attempt_id=attempt_id,
+        )
+        projection = replace(_attempt_projection(api), attempt_id=attempt_id)
+        writer.claim_fold_and_add_attempt(
+            fold.key,
+            spec,
+            projection,
+            expected_fold_revision=0,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + ordinal + 1,
+            occurred_at=NOW,
+        )
+
+    attempts = reader.list_experiment_attempts(ExperimentId("experiment-1"))
+
+    assert tuple(attempt.spec.fold_key for attempt in attempts) == (
+        first.key,
+        second.key,
+    )
+    assert tuple(attempt.spec.attempt_id for attempt in attempts) == (
+        AttemptId("attempt-bulk-2"),
+        AttemptId("attempt-bulk-1"),
+    )
+
+
 def test_fold_create_replay_after_claim_is_noop(tmp_path: Path) -> None:
     database, reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)

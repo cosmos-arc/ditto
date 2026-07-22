@@ -10,10 +10,14 @@ FactorBridge 将声明式因子表达式字符串桥接到回测引擎的信号�
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import date
+from math import isfinite
+from typing import Any, cast
 
+import orjson
 import polars as pl
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.steps import StepContext
@@ -23,7 +27,12 @@ from ditto_features.derived_types import (
     MaterializationProfile,
 )
 from ditto_features.expression.compiler import ExpressionCompiler
-from ditto_features.expression.contracts import CompiledDerivedExpression
+from ditto_features.expression.contracts import (
+    Analysis,
+    AnalysisWarning,
+    CompiledDerivedExpression,
+    CompileIdentity,
+)
 from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
@@ -40,10 +49,18 @@ __all__ = [
     "build_factor_aware_bundle_builder",
     "build_factor_bundle",
     "build_signal_spec",
+    "compiled_expressions_actual_max_lookback",
+    "compiled_expressions_execution_hash",
 ]
 
 
-def build_signal_spec(expr_str: str, index: int) -> DerivedSpec:
+def build_signal_spec(
+    expr_str: str,
+    index: int,
+    *,
+    derived_id: str | None = None,
+    version: int = 1,
+) -> DerivedSpec:
     """
     从表达式字符串构建信号 DerivedSpec.
 
@@ -53,14 +70,16 @@ def build_signal_spec(expr_str: str, index: int) -> DerivedSpec:
     Args:
         expr_str: 因子表达式字符串（如 ``"ts_mean(close, 20)"``）。
         index: 因子序号，用于生成 ``signal_{index}`` 形式的 id。
+        derived_id: 可选的精确注册因子 ID；普通 legacy 路径保持 ``signal_{index}``。
+        version: ``derived_id`` 对应的精确注册版本。
 
     Returns:
         配置好默认值的 ``DerivedSpec``。
 
     """
     return DerivedSpec(
-        id=f"signal_{index}",
-        version=1,
+        id=derived_id if derived_id is not None else f"signal_{index}",
+        version=version,
         role=DerivedRole.SIGNAL,
         materialization_profile=MaterializationProfile.SERIES,
         expression=expr_str,
@@ -79,6 +98,223 @@ class CompiledExpressions:
     weights: tuple[float, ...]
 
 
+def _require_exact_dataclass_state(value: object, *, reason: str) -> None:
+    try:
+        actual = set(vars(value))
+    except TypeError:
+        raise AppProcessError(
+            "compiled factor execution state is invalid",
+            details={"code": "REPRODUCIBILITY_FAILED", "reason": reason},
+        ) from None
+    expected = {item.name for item in fields(cast("Any", value))}
+    if actual != expected:
+        raise AppProcessError(
+            "compiled factor execution state is invalid",
+            details={"code": "REPRODUCIBILITY_FAILED", "reason": reason},
+        )
+
+
+def _require_exact_polars_expression_state(expression: object) -> pl.Expr:
+    if type(expression) is not pl.Expr:
+        raise AppProcessError(
+            "compiled factor execution state is invalid",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "compiled_factor_expression_state_drift",
+            },
+        )
+    actual: set[str]
+    try:
+        actual = set(vars(expression))
+    except TypeError:
+        actual = set()
+    if actual != {"_pyexpr"}:
+        raise AppProcessError(
+            "compiled factor execution state is invalid",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "compiled_factor_expression_state_drift",
+            },
+        )
+    return expression
+
+
+def _analysis_execution_payload(analysis: Analysis) -> dict[str, object]:
+    _require_exact_dataclass_state(
+        analysis,
+        reason="compiled_factor_analysis_state_drift",
+    )
+    if type(analysis.warnings) is not tuple or any(
+        type(item) is not AnalysisWarning for item in analysis.warnings
+    ):
+        raise AppProcessError(
+            "compiled factor execution state is invalid",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "compiled_factor_analysis_state_drift",
+            },
+        )
+    warnings: list[dict[str, str]] = []
+    for warning in analysis.warnings:
+        _require_exact_dataclass_state(
+            warning,
+            reason="compiled_factor_analysis_state_drift",
+        )
+        warnings.append({"error_code": warning.error_code, "message": warning.message})
+    return {
+        "dependencies": list(analysis.dependencies),
+        "lookback": analysis.lookback,
+        "operator_names": list(analysis.operator_names),
+        "output_schema": list(analysis.output_schema),
+        "requires_full_day": analysis.requires_full_day,
+        "scope": analysis.scope,
+        "warnings": warnings,
+    }
+
+
+def _compile_identity_execution_payload(
+    identity: CompileIdentity,
+) -> dict[str, object]:
+    _require_exact_dataclass_state(
+        identity,
+        reason="compiled_factor_identity_state_drift",
+    )
+    return {
+        "analysis_version": identity.analysis_version,
+        "cache_key": identity.cache_key,
+        "compile_input_hash": identity.compile_input_hash,
+        "compiler_fingerprint": identity.compiler_fingerprint,
+        "engine_codegen_version": identity.engine_codegen_version,
+        "expr_serialization_format": identity.expr_serialization_format,
+        "global_compile_flags": list(identity.global_compile_flags),
+        "operator_fingerprint": identity.operator_fingerprint,
+        "operator_versions": [list(item) for item in identity.operator_versions],
+        "polars_version": identity.polars_version,
+    }
+
+
+def compiled_expressions_execution_hash(
+    compiled: CompiledExpressions | None,
+) -> str:
+    """Hash the exact expressions and weights consumed by numerical execution."""
+    payload: dict[str, object] = {
+        "schema": "ditto.compiled-factor-execution.v1",
+        "compiled": None,
+    }
+    if compiled is not None:
+        if type(compiled) is not CompiledExpressions:
+            raise AppProcessError(
+                "compiled factor execution state is invalid",
+                details={
+                    "code": "REPRODUCIBILITY_FAILED",
+                    "reason": "compiled_factor_set_state_drift",
+                },
+            )
+        _require_exact_dataclass_state(
+            compiled,
+            reason="compiled_factor_set_state_drift",
+        )
+        if (
+            type(compiled.expressions) is not tuple
+            or type(compiled.weights) is not tuple
+            or len(compiled.expressions) != len(compiled.weights)
+            or any(
+                type(weight) is not float or not isfinite(weight)
+                for weight in compiled.weights
+            )
+        ):
+            raise AppProcessError(
+                "compiled factor execution state is invalid",
+                details={
+                    "code": "REPRODUCIBILITY_FAILED",
+                    "reason": "compiled_factor_set_state_drift",
+                },
+            )
+        expressions: list[dict[str, object]] = []
+        for expression in compiled.expressions:
+            if type(expression) is not CompiledDerivedExpression:
+                raise AppProcessError(
+                    "compiled factor execution state is invalid",
+                    details={
+                        "code": "REPRODUCIBILITY_FAILED",
+                        "reason": "compiled_factor_expression_state_drift",
+                    },
+                )
+            _require_exact_dataclass_state(
+                expression,
+                reason="compiled_factor_expression_state_drift",
+            )
+            if (
+                type(expression.analysis) is not Analysis
+                or type(expression.compile_identity) is not CompileIdentity
+            ):
+                raise AppProcessError(
+                    "compiled factor execution state is invalid",
+                    details={
+                        "code": "REPRODUCIBILITY_FAILED",
+                        "reason": "compiled_factor_expression_state_drift",
+                    },
+                )
+            polars_expression = _require_exact_polars_expression_state(expression.expr)
+            try:
+                serialized = polars_expression.meta.serialize()
+            except (AttributeError, TypeError, ValueError, pl.exceptions.PolarsError):
+                raise AppProcessError(
+                    "compiled factor expression cannot be serialized",
+                    details={
+                        "code": "REPRODUCIBILITY_FAILED",
+                        "reason": "compiled_factor_serialization_unavailable",
+                    },
+                ) from None
+            if type(serialized) is not bytes:
+                raise AppProcessError(
+                    "compiled factor expression cannot be serialized",
+                    details={
+                        "code": "REPRODUCIBILITY_FAILED",
+                        "reason": "compiled_factor_serialization_unavailable",
+                    },
+                )
+            expressions.append(
+                {
+                    "analysis": _analysis_execution_payload(expression.analysis),
+                    "compile_identity": _compile_identity_execution_payload(
+                        expression.compile_identity
+                    ),
+                    "derived_id": expression.derived_id,
+                    "expression_sha256": hashlib.sha256(serialized).hexdigest(),
+                    "version": expression.version,
+                }
+            )
+        payload["compiled"] = {
+            "expressions": expressions,
+            "weights_hex": [weight.hex() for weight in compiled.weights],
+        }
+    return hashlib.sha256(
+        orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+    ).hexdigest()
+
+
+def compiled_expressions_actual_max_lookback(
+    compiled: CompiledExpressions | None,
+) -> int:
+    """Return the maximum lookback from one strictly validated compiled set."""
+    compiled_expressions_execution_hash(compiled)
+    if compiled is None:
+        return 0
+    lookbacks = tuple(
+        expression.analysis.lookback for expression in compiled.expressions
+    )
+    if any(type(lookback) is not int or lookback < 0 for lookback in lookbacks):
+        raise AppProcessError(
+            "compiled factor lookback state is invalid",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "compiled_factor_lookback_state_drift",
+            },
+        )
+    return max(lookbacks, default=0)
+
+
 class FactorBridge:
     """因子桥接 — 字符串表达式 → 编译 → 信号计算."""
 
@@ -87,19 +323,68 @@ class FactorBridge:
         compiler: ExpressionCompiler | None = None,
         *,
         factor_registry: Mapping[str, FactorSpec] | None = None,
+        factor_versions: Mapping[str, int] | None = None,
+        require_registered_factor_ids: bool = False,
     ) -> None:
-        self._compiler = compiler or ExpressionCompiler()
+        self._compiler = compiler if compiler is not None else ExpressionCompiler()
         # 因子 ID → 真实表达式的解析 registry。默认用 ALL_FACTOR_SPECS，
         # 使 seed 的 signal_expressions（如 quality_roe）解析为底层表达式（如 roe）。
         # 未命中项原样返回，兼容直接传表达式字符串（如 "close"）。
         self._registry: Mapping[str, FactorSpec] = (
             factor_registry if factor_registry is not None else ALL_FACTOR_SPECS
         )
+        self._factor_versions: Mapping[str, int] = (
+            factor_versions
+            if factor_versions is not None
+            else dict.fromkeys(self._registry, 1)
+        )
+        self._require_registered_factor_ids = require_registered_factor_ids
 
     def _resolve_expression(self, expr_or_id: str) -> str:
-        """因子 ID → 真实表达式；未命中原样返回（兼容直接表达式字符串）."""
+        """Resolve a factor ID while preserving legacy raw-expression behavior."""
         spec = self._registry.get(expr_or_id)
-        return spec.expression if spec is not None else expr_or_id
+        if spec is None:
+            if self._require_registered_factor_ids:
+                raise AppProcessError(
+                    f"unknown registered factor: {expr_or_id}",
+                    details={
+                        "code": "SPEC_INVALID",
+                        "reason": "unknown_registered_factor",
+                        "factor_id": expr_or_id,
+                    },
+                )
+            return expr_or_id
+        if not self._require_registered_factor_ids:
+            return spec.expression
+        if spec.computation_type != "expression":
+            raise AppProcessError(
+                f"research factor executor is unavailable: {expr_or_id}",
+                details={
+                    "code": "EXECUTOR_UNAVAILABLE",
+                    "reason": "research_factor_executor_unavailable",
+                    "factor_id": expr_or_id,
+                    "computation_type": spec.computation_type,
+                },
+            )
+        return spec.expression
+
+    def _resolve_compilation_identity(
+        self,
+        expr_or_id: str,
+    ) -> tuple[str | None, int]:
+        if not self._require_registered_factor_ids:
+            return None, 1
+        version = self._factor_versions.get(expr_or_id)
+        if type(version) is not int or version <= 0:
+            raise AppProcessError(
+                f"registered factor version is invalid: {expr_or_id}",
+                details={
+                    "code": "SPEC_INVALID",
+                    "reason": "invalid_registered_factor_version",
+                    "factor_id": expr_or_id,
+                },
+            )
+        return expr_or_id, version
 
     def compile_and_validate(
         self,
@@ -128,6 +413,18 @@ class FactorBridge:
             msg = f"权重数量 ({len(weights)}) 与表达式数量 ({len(expressions)}) 不匹配"
             raise AppProcessError(msg)
 
+        if self._require_registered_factor_ids and len(expressions) != len(
+            set(expressions)
+        ):
+            raise AppProcessError(
+                "registered factor IDs cannot be duplicated",
+                details={
+                    "code": "SPEC_INVALID",
+                    "reason": "duplicate_registered_factor",
+                    "factor_ids": expressions,
+                },
+            )
+
         for i, w in enumerate(weights):
             if w < 0:
                 msg = f"权重不能为负: weights[{i}] = {w}"
@@ -136,7 +433,13 @@ class FactorBridge:
         compiled: list[CompiledDerivedExpression] = []
         for i, expr_str in enumerate(expressions):
             resolved = self._resolve_expression(expr_str)
-            spec = build_signal_spec(resolved, index=i)
+            derived_id, version = self._resolve_compilation_identity(expr_str)
+            spec = build_signal_spec(
+                resolved,
+                index=i,
+                derived_id=derived_id,
+                version=version,
+            )
             try:
                 result = self._compiler.compile(spec)
             except ExpressionCompileError as exc:
@@ -170,6 +473,7 @@ class FactorBridge:
             包含 ``instrument_id`` + ``signal_value`` 列的 DataFrame。
 
         """
+        compiled_expressions_execution_hash(compiled)
         if df.height == 0:
             return pl.DataFrame(
                 schema={
@@ -184,7 +488,7 @@ class FactorBridge:
         for i, compiled_expr in enumerate(compiled.expressions):
             col_name = f"factor_{i}"
             factor_columns.append(col_name)
-            factor_exprs.append(compiled_expr.expr.alias(col_name))
+            factor_exprs.append(pl.Expr.alias(compiled_expr.expr, col_name))
 
         enriched = df.with_columns(factor_exprs)
 

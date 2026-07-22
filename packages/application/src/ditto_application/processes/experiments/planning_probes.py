@@ -27,6 +27,7 @@ from ditto_application.research_validation_contracts import RuntimeValidationEvi
 
 __all__ = [
     "R3_RESEARCH_CERTIFICATION_PROFILE",
+    "BaselineRuntimeExecutorEvidence",
     "CandidateExecutorEvidence",
     "ExperimentSnapshotIdentity",
     "PlanningIdentityInput",
@@ -107,6 +108,23 @@ class CandidateExecutorEvidence:
     candidate_hash: str
     resolved_spec_hash: str
     parameter_hash: str
+    pipeline_execution_hash: str
+    compiled_factor_set_hash: str
+
+
+@dataclass(frozen=True, slots=True)
+class BaselineRuntimeExecutorEvidence:
+    """Build-time identity for one exact-strategy baseline runtime."""
+
+    base_spec_hash: str
+    resolved_spec_hash: str
+    parameter_hash: str
+    pipeline_execution_hash: str
+    compiled_factor_set_hash: str
+    max_lookback_sessions: int
+    node_registry_manifest_hash: str
+    factor_registry_manifest_hash: str
+    factor_binding_hashes: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +150,13 @@ class ResearchExecutorProbeResult:
     required_datasets: tuple[str, ...]
     candidates: tuple[CandidateExecutorEvidence, ...]
     runtime_validation_evidence: RuntimeValidationEvidence | None = None
+    baseline_ref: str | None = None
+    baseline_descriptor_hash: str | None = None
+    baseline_registry_manifest_hash: str | None = None
+    baseline_exact_strategy_hash: str | None = None
+    factor_registry_manifest_hash: str | None = None
+    factor_binding_hashes: tuple[str, ...] = ()
+    baseline_runtime: BaselineRuntimeExecutorEvidence | None = None
 
 
 class ResearchExecutorProbe(Protocol):

@@ -1108,6 +1108,15 @@ class TestIsRebalanceDay:
         assert loop._is_rebalance_day("2026-03-01") is True
         assert loop._is_rebalance_day("2026-03-15") is True
 
+    def test_fold_schedule_rebalances_only_at_fold_start(self) -> None:
+        config = replace(_make_config(), rebalance_freq="fold_schedule")
+        loop = _make_engine_loop(config=config)
+        loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
+
+        assert loop._is_rebalance_day(DAYS[0]) is True
+        assert loop._is_rebalance_day(DAYS[1]) is False
+
     def test_weekly_monday_true(self) -> None:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)

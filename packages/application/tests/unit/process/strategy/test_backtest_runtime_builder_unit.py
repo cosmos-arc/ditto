@@ -148,6 +148,8 @@ class TestBacktestRuntimeBuilder:
                     value=20,
                 ),
             ),
+            random_seed=1729,
+            knowledge_lag_days=3,
             data_catalog_identities=("dataset:snapshot",),
             recommendation_status="candidate",
             participation_rate=0.02,

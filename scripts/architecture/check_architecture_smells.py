@@ -434,6 +434,74 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "coordinator.py"
+        ),
+        owner="application experiment execution coordinator",
+        reason=(
+            "The first-run coordinator consumes the analysis-owned Task 7 lease, "
+            "fold, and attempt contracts through a narrow application scheduler "
+            "store; it owns no persistence implementation."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "execution_bundle.py"
+        ),
+        owner="application experiment execution evidence compiler",
+        reason=(
+            "The pure execution compiler freezes analysis-owned content hashes "
+            "and canonical payload identities into the per-attempt evidence bundle; "
+            "it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_execution_resolution_evidence.py"
+        ),
+        owner="application durable research execution evidence boundary",
+        reason=(
+            "The private evidence boundary reconstructs exact analysis launch and "
+            "status DTOs for the builder-owned resolver without storage or "
+            "moving-state fallback."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "lease_authority.py"
+        ),
+        owner="application experiment scheduler lease authority",
+        reason=(
+            "The serialized authority owns the latest analysis scheduler fence "
+            "and normalizes lease and integrity failures before application writes."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "scheduler_store.py"
+        ),
+        owner="application experiment scheduler persistence adapter",
+        reason=(
+            "The narrow adapter preserves the analysis-owned Task 7 reader, "
+            "writer, revision, and lease-fence contracts for first-run scheduling."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/worker.py"
+        ),
+        owner="application experiment first-attempt worker",
+        reason=(
+            "The execution boundary consumes frozen analysis attempt, fold, hash, "
+            "and failure contracts while delegating numerical work to BacktestService."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "planning.py"
         ),
         owner="application experiment planning process",

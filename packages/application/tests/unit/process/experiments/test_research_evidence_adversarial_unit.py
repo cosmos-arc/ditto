@@ -280,12 +280,32 @@ def test_candidate_evidence_subclass_and_evil_hash_fail_closed() -> None:
         pass
 
     assert (
-        candidate_evidence_tuple((_EvidenceSubclass("a" * 64, "b" * 64, "c" * 64),))
+        candidate_evidence_tuple(
+            (
+                _EvidenceSubclass(
+                    "a" * 64,
+                    "b" * 64,
+                    "c" * 64,
+                    "d" * 64,
+                    "e" * 64,
+                ),
+            )
+        )
         is None
     )
     assert (
         candidate_evidence_tuple(
-            _EvilTuple((CandidateExecutorEvidence("a" * 64, "b" * 64, "c" * 64),))
+            _EvilTuple(
+                (
+                    CandidateExecutorEvidence(
+                        "a" * 64,
+                        "b" * 64,
+                        "c" * 64,
+                        "d" * 64,
+                        "e" * 64,
+                    ),
+                )
+            )
         )
         is None
     )
@@ -296,6 +316,8 @@ def test_candidate_evidence_subclass_and_evil_hash_fail_closed() -> None:
                     cast("str", _EvilStr("a" * 64)),
                     "b" * 64,
                     "c" * 64,
+                    "d" * 64,
+                    "e" * 64,
                 ),
             )
         )

@@ -47,6 +47,8 @@ def candidate_evidence_tuple(
         and is_canonical_content_hash(item.candidate_hash)
         and is_canonical_content_hash(item.resolved_spec_hash)
         and is_canonical_content_hash(item.parameter_hash)
+        and is_canonical_content_hash(item.pipeline_execution_hash)
+        and is_canonical_content_hash(item.compiled_factor_set_hash)
         for item in items
     ):
         return None

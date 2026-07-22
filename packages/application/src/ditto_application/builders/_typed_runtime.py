@@ -17,7 +17,10 @@ from ditto_strategy.alpha.specs import StrategySpec, StrategySpecV2
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.models import StrategySpecRecord
 
-from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
+from ditto_application.builders.node_pipeline_builder import (
+    AttestedNodePipeline,
+    NodePipelineBuilder,
+)
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
@@ -39,6 +42,8 @@ class TypedLegacyRuntime:
     parameter_hash: str
     effective_parameters: tuple[EffectiveParameter, ...]
     node_registry_manifest_hash: str
+    pipeline_execution_hash: str | None
+    attested_pipeline: AttestedNodePipeline | None
     compiled_expressions: CompiledExpressions | None
 
 
@@ -49,6 +54,8 @@ def build_typed_legacy_runtime(
     registry: NodeRegistry,
     node_pipeline_builder: NodePipelineBuilder,
     evidence_sink: SelectionEvidenceSink | None = None,
+    factor_bridge: FactorBridge | None = None,
+    require_pipeline_attestation: bool = False,
 ) -> TypedLegacyRuntime:
     """Bind one exact legacy record and compile the existing runner once."""
     legacy_spec = deserialize_strategy_spec(record)
@@ -60,12 +67,26 @@ def build_typed_legacy_runtime(
         )
     except StrategySpecError as exc:
         raise AppBuilderError(str(exc), details=exc.details) from exc
-    pipeline = node_pipeline_builder.build(
-        legacy_spec=legacy_spec,
-        pipeline=binding.resolved_spec.pipeline,
-        strategy_kind=binding.resolved_spec.strategy_kind,
-        evidence_sink=evidence_sink,
-    )
+    pipeline_execution_hash: str | None = None
+    attested_pipeline: AttestedNodePipeline | None = None
+    if require_pipeline_attestation:
+        attested = NodePipelineBuilder.build_attested(
+            node_pipeline_builder,
+            legacy_spec=legacy_spec,
+            pipeline=binding.resolved_spec.pipeline,
+            strategy_kind=binding.resolved_spec.strategy_kind,
+            evidence_sink=evidence_sink,
+        )
+        pipeline = attested.pipeline
+        pipeline_execution_hash = attested.execution_hash
+        attested_pipeline = attested
+    else:
+        pipeline = node_pipeline_builder.build(
+            legacy_spec=legacy_spec,
+            pipeline=binding.resolved_spec.pipeline,
+            strategy_kind=binding.resolved_spec.strategy_kind,
+            evidence_sink=evidence_sink,
+        )
     return TypedLegacyRuntime(
         legacy_spec=legacy_spec,
         base_spec=binding.base_spec,
@@ -76,16 +97,24 @@ def build_typed_legacy_runtime(
         parameter_hash=binding.parameter_hash,
         effective_parameters=binding.effective_parameters,
         node_registry_manifest_hash=registry.manifest_hash,
-        compiled_expressions=_compile_signal_expressions(legacy_spec),
+        pipeline_execution_hash=pipeline_execution_hash,
+        attested_pipeline=attested_pipeline,
+        compiled_expressions=_compile_signal_expressions(
+            legacy_spec,
+            factor_bridge=factor_bridge,
+        ),
     )
 
 
 def _compile_signal_expressions(
     spec: StrategySpec,
+    *,
+    factor_bridge: FactorBridge | None,
 ) -> CompiledExpressions | None:
     if not spec.signal_expressions:
         return None
-    return FactorBridge().compile_and_validate(
+    bridge = factor_bridge if factor_bridge is not None else FactorBridge()
+    return bridge.compile_and_validate(
         expressions=spec.signal_expressions,
         weights=spec.signal_weights or (1.0,) * len(spec.signal_expressions),
     )

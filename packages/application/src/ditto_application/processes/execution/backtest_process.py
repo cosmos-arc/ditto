@@ -156,7 +156,9 @@ class BacktestCatalogRequestConfig:
     research_snapshot_manifest_hash: str | None = None
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
+    random_seed: int = 42
     execution_delay: int = 0
+    knowledge_lag_days: int = 1
     code_version: str = ""
     data_catalog_identities: tuple[str, ...] = ()
     factor_report_refs: tuple[str, ...] = ()
@@ -179,6 +181,17 @@ class BacktestCatalogRequestConfig:
 
     def __post_init__(self) -> None:
         """Validate catalog launch request fields unrelated to strategy identity."""
+        for field_name, value in (
+            ("random_seed", self.random_seed),
+            ("knowledge_lag_days", self.knowledge_lag_days),
+            ("execution_delay", self.execution_delay),
+        ):
+            if type(value) is not int or value < 0:
+                raise AppProcessError(
+                    f"{field_name} must be a nonnegative exact integer",
+                    field_name=field_name,
+                    reason="invalid_deterministic_control",
+                )
         if self.recommendation_status not in _ALLOWED_RECOMMENDATION_STATUSES:
             msg = (
                 "recommendation_status must be one of "
@@ -257,6 +270,7 @@ class BacktestServiceOptions:
     artifact_dir: str | None = None
     display_map: dict[InstrumentId, str] | None = None
     run_service: RunLifecycleService | None = None
+    external_should_stop: Callable[[], bool] | None = None
     checkpoint_writer: StrategyRunCheckpointWriterProtocol | None = None
     compiled_expressions: CompiledExpressions | None = None
     lineage_recorder: DataLineageRecorder | None = None
@@ -351,6 +365,12 @@ class BacktestService:
         self._pre_trade_check = pre_trade_check
         self._data_feed = data_feed
         self._options = options
+        self._last_run_cancelled: bool | None = None
+
+    @property
+    def last_run_cancelled(self) -> bool:
+        """Report whether the most recent engine run stopped cooperatively."""
+        return self._last_run_cancelled is True
 
     def run(self) -> BacktestReport:
         """
@@ -362,7 +382,7 @@ class BacktestService:
         """
         run_id = self._resolve_run_id()
         run_svc = self._options.run_service
-
+        self._last_run_cancelled = None
         # 1. (可选) 创建运行记录（get_or_create 语义，保留 API 预写入的 config_json）
         if run_svc is not None:
             existing = run_svc.get_run(run_id)
@@ -390,7 +410,9 @@ class BacktestService:
                             self._config.research_snapshot_manifest_hash
                         ),
                         "rebalance_freq": self._config.rebalance_freq,
+                        "random_seed": self._config.random_seed,
                         "execution_delay": self._config.execution_delay,
+                        "knowledge_lag_days": self._config.knowledge_lag_days,
                         "resume_from_run_id": self._config.resume_from_run_id,
                         "resume_checkpoint_trade_date": (
                             self._config.resume_checkpoint_trade_date
@@ -462,6 +484,7 @@ class BacktestService:
             data_feed=self._data_feed,
             clock=clock,
             start_date=self._config.start_date,
+            knowledge_lag_days=self._config.knowledge_lag_days,
         )
         engine_loop = EngineLoop(
             config=engine_config,
@@ -477,6 +500,7 @@ class BacktestService:
         )
         t0 = time.monotonic()
         engine_result = engine_loop.run()
+        self._last_run_cancelled = engine_result.cancelled
         elapsed = time.monotonic() - t0
 
         # 回测指标记录（application 桥接 backtest → platform Metrics）
@@ -528,6 +552,7 @@ class BacktestService:
             rebalance_freq=self._config.rebalance_freq,
             engine_version=self._config.engine_version,
             execution_delay=self._config.execution_delay,
+            knowledge_lag_days=self._config.knowledge_lag_days,
         )
 
     def _build_engine_options(
@@ -536,26 +561,23 @@ class BacktestService:
         collector: ExecutionAuditCollector,
     ) -> EngineOptions:
         """构建 EngineOptions — 含 event_bus/cancel/progress 回调。"""
-        # 构建自定义 input_bundle_builder (含因子信号注入)
         compiled = self._options.compiled_expressions
         input_bundle_builder = (
             self._build_factor_aware_bundle_builder(compiled, run_id=run_id)
             if compiled is not None
             else None
         )
-
         run_svc = self._options.run_service
-
-        # 协作式取消 — 轮询 run_service.is_cancelled()
         should_stop: Callable[[], bool] | None = None
-        if run_svc is not None:
+        external_should_stop = self._options.external_should_stop
+        if external_should_stop is not None or run_svc is not None:
 
             def _check_cancelled() -> bool:
-                return run_svc.is_cancelled(run_id)
+                if external_should_stop is not None and external_should_stop():
+                    return True
+                return run_svc is not None and run_svc.is_cancelled(run_id)
 
             should_stop = _check_cancelled
-
-        # 进度上报 — 每日更新 run_service
         on_progress: Callable[[int, int], None] | None = None
         if run_svc is not None:
 
@@ -608,6 +630,7 @@ class BacktestService:
             post_trade_guard=self._options.post_trade_guard,
             audit_collector=collector,
             input_bundle_builder=input_bundle_builder,
+            random_seed=self._config.random_seed,
             should_stop=should_stop,
             on_progress=on_progress,
             on_checkpoint=on_checkpoint,

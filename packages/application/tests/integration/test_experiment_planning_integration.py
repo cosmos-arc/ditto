@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, date, datetime, timedelta
+from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
+import orjson
+import polars as pl
+import pytest
 from ditto_analysis.experiments import (
     ExperimentId,
     ExperimentStatus,
     FoldRole,
+    FoldView,
     StatusSubjectType,
     canonical_payload,
 )
@@ -18,11 +26,52 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentReader,
     SQLiteExperimentWriter,
 )
+from ditto_application.builders.published_baseline_runtime_builder import (
+    PublishedBaselineRuntimeBuilder,
+)
+from ditto_application.builders.research_execution_resolver import (
+    DurableResearchExecutionResolver,
+    FrozenResearchExecutionInputs,
+    FrozenResearchInputRequest,
+    ResearchExecutionRuntimeBuilders,
+)
+from ditto_application.builders.research_factor_registry import ResearchFactorBinding
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+    ResearchStrategyRuntime,
+)
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.factor_bridge import (
+    CompiledExpressions,
+    compiled_expressions_execution_hash,
+)
+from ditto_application.processes.experiments._execution_resolution_evidence import (
+    read_durable_launch,
+)
+from ditto_application.processes.experiments.baseline_planning import (
+    resolve_planning_baseline,
+)
+from ditto_application.processes.experiments.baseline_registry import (
+    default_baseline_registry,
+)
+from ditto_application.processes.experiments.execution_bundle import (
+    CodeEnvironmentLock,
+    ContentAddressedResearchInput,
+    ResearchExecutionSemantics,
+)
+from ditto_application.processes.experiments.execution_contracts import (
+    ExactResearchSnapshot,
+    ExactUniverseIdentity,
+    ResearchAssetLane,
+)
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
     ExperimentBudgetSpec,
     ResourceCostModel,
+)
+from ditto_application.processes.experiments.planning_probes import (
+    BaselineRuntimeExecutorEvidence,
 )
 from ditto_application.processes.experiments.planning_process import (
     R3_RESEARCH_CERTIFICATION_PROFILE,
@@ -36,6 +85,12 @@ from ditto_application.processes.experiments.planning_process import (
     ResearchExecutorProbeRequest,
     ResearchExecutorProbeResult,
     ResearchSnapshotEvidence,
+)
+from ditto_application.processes.experiments.research_policy_artifact import (
+    VerifiedInstrumentRulesArtifact,
+)
+from ditto_application.processes.experiments.research_snapshot_manifest import (
+    VerifiedResearchSnapshotManifest,
 )
 from ditto_application.research_validation_contracts import (
     ResearchValidationAuthorityEvidence,
@@ -56,6 +111,7 @@ from ditto_application.research_validation_protocol import (
     UniverseMembershipSource,
     ValidationProtocolRequest,
 )
+from ditto_features.expression.contracts import CompileIdentity
 from ditto_strategy.models import StrategySpecRecord
 
 _NOW = datetime(2026, 7, 19, 8, 30, tzinfo=UTC)
@@ -118,7 +174,7 @@ def _validation_request() -> ValidationProtocolRequest:
             source=TradingCalendarSourceIdentity(
                 dataset_id="etf_daily",
                 snapshot_id="provider-snapshot-task8",
-                manifest_hash="d" * 64,
+                manifest_hash=_exact_snapshot().manifest_hash,
                 certified_through=date(month.year, month.month, 1) - timedelta(days=1),
                 authority_as_of=date(month.year, month.month, 1) - timedelta(days=1),
             ),
@@ -147,7 +203,7 @@ def _validation_request() -> ValidationProtocolRequest:
             universe_id="csi_etf_broad",
             dataset_id="etf_daily",
             snapshot_id="provider-snapshot-task8",
-            manifest_hash="d" * 64,
+            manifest_hash=_exact_snapshot().manifest_hash,
         ),
         planning_decision_date=_NOW.date(),
     )
@@ -167,13 +223,17 @@ def _planning_request() -> ExperimentPlanningRequest:
         ),
         snapshot_identity=ExperimentSnapshotIdentity(
             snapshot_id="certified-snapshot-task8",
-            manifest_hash="d" * 64,
+            manifest_hash=_exact_snapshot().manifest_hash,
         ),
         validation_request=_validation_request(),
         matrix_spec=CandidateMatrixSpec(
             baseline=BaselineDescriptor(
                 descriptor_type="etf-current-active",
-                payload={"strategy_id": "seed_etf_rotation", "version": 2},
+                payload={
+                    "strategy_id": "seed_etf_rotation",
+                    "version": 2,
+                    "spec_hash": "f" * 64,
+                },
             ),
         ),
         dataset_requirements=(
@@ -230,6 +290,9 @@ class _ExecutorProbe:
         self,
         request: ResearchExecutorProbeRequest,
     ) -> ResearchExecutorProbeResult:
+        registry = default_baseline_registry()
+        baseline = resolve_planning_baseline(request.baseline, registry)
+        factor_binding = _exact_factor_binding()
         return ResearchExecutorProbeResult(
             available=True,
             code=None,
@@ -243,6 +306,8 @@ class _ExecutorProbe:
                     candidate_hash=candidate.candidate_hash,
                     resolved_spec_hash=f"{candidate.ordinal:064x}",
                     parameter_hash=f"{candidate.ordinal + 128:064x}",
+                    pipeline_execution_hash=f"{candidate.ordinal + 256:064x}",
+                    compiled_factor_set_hash=compiled_expressions_execution_hash(None),
                 )
                 for candidate in request.candidates
             ),
@@ -255,6 +320,27 @@ class _ExecutorProbe:
                 forward_horizon_sessions=2,
                 holding_period_sessions=5,
                 execution_lag_sessions=1,
+            ),
+            baseline_ref=baseline.ref.identity,
+            baseline_descriptor_hash=baseline.registration.descriptor.canonical_hash,
+            baseline_registry_manifest_hash=baseline.registry_manifest_hash,
+            baseline_exact_strategy_hash=(
+                None
+                if baseline.exact_strategy is None
+                else baseline.exact_strategy.canonical_hash
+            ),
+            factor_registry_manifest_hash="d" * 64,
+            factor_binding_hashes=(factor_binding.binding_hash,),
+            baseline_runtime=BaselineRuntimeExecutorEvidence(
+                base_spec_hash="f" * 64,
+                resolved_spec_hash="b" * 64,
+                parameter_hash="c" * 64,
+                pipeline_execution_hash=f"{258:064x}",
+                compiled_factor_set_hash=compiled_expressions_execution_hash(None),
+                max_lookback_sessions=0,
+                node_registry_manifest_hash="e" * 64,
+                factor_registry_manifest_hash="d" * 64,
+                factor_binding_hashes=(factor_binding.binding_hash,),
             ),
         )
 
@@ -372,3 +458,574 @@ def test_launch_is_durable_and_exact_hash_replay_is_zero_write(
         assert _persisted_snapshot(durable_reader, receipt) == snapshot
     finally:
         reopened.close_all()
+
+
+class _ExactStrategyReader:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, int]] = []
+
+    def get_spec(self, strategy_id: str, version: int) -> StrategySpecRecord | None:
+        self.calls.append((strategy_id, version))
+        if strategy_id != "seed_etf_rotation" or version not in {2, 3}:
+            return None
+        return StrategySpecRecord(
+            strategy_id=strategy_id,
+            name="ETF rotation",
+            spec_json={"strategy_id": strategy_id},
+            version=version,
+            status="published" if version == 2 else "draft",
+        )
+
+
+def _exact_factor_binding() -> ResearchFactorBinding:
+    return ResearchFactorBinding(
+        factor_id="etf_momentum",
+        version=1,
+        spec_hash="9" * 64,
+        compile_identity=CompileIdentity(
+            compile_input_hash="1" * 64,
+            operator_fingerprint="2" * 64,
+            compiler_fingerprint="3" * 64,
+            cache_key="4" * 64,
+            engine_codegen_version="polars-codegen-v1",
+            analysis_version="factor-analysis-v1",
+            polars_version="1.0.0",
+            expr_serialization_format="polars-expr-v1",
+            operator_versions=(("rank", "1"),),
+            global_compile_flags=("grain=1d",),
+        ),
+        compiled_expression_hash="8" * 64,
+        analysis_execution_hash="7" * 64,
+    )
+
+
+class _ExactRuntimeBuilder:
+    def __init__(
+        self,
+        *,
+        lane: str = "etf_rotation",
+        frequency: str = "M",
+        compiled_expressions: CompiledExpressions | None = None,
+        baseline_pipeline_execution_hash: str | None = None,
+        required_datasets: tuple[str, ...] = ("etf_daily",),
+        baseline_strategy_id: str = "seed_etf_rotation",
+        baseline_strategy_version: int = 2,
+    ) -> None:
+        self._lane = lane
+        self._frequency = frequency
+        self._compiled_expressions = compiled_expressions
+        self._baseline_pipeline_execution_hash = baseline_pipeline_execution_hash
+        self._required_datasets = required_datasets
+        self._baseline_strategy_id = baseline_strategy_id
+        self._baseline_strategy_version = baseline_strategy_version
+        self.calls: list[tuple[int, str]] = []
+
+    def build(self, **kwargs: object) -> ResearchStrategyRuntime:
+        record = cast("StrategySpecRecord", kwargs["record"])
+        self.calls.append((record.version, record.status))
+        if record.version == 2:
+            base_hash = "f" * 64
+            resolved_hash = "b" * 64
+            parameter_hash = "c" * 64
+            strategy_id = self._baseline_strategy_id
+            strategy_version = self._baseline_strategy_version
+        else:
+            base_hash = "a" * 64
+            resolved_hash = f"{2:064x}"
+            parameter_hash = f"{130:064x}"
+            strategy_id = record.strategy_id
+            strategy_version = record.version
+        factor_binding = _exact_factor_binding()
+        pipeline_execution_hash = f"{258:064x}"
+        if record.version == 2 and self._baseline_pipeline_execution_hash is not None:
+            pipeline_execution_hash = self._baseline_pipeline_execution_hash
+        return cast(
+            "ResearchStrategyRuntime",
+            SimpleNamespace(
+                strategy_id=strategy_id,
+                strategy_version=strategy_version,
+                version_status=record.status,
+                base_spec_hash=base_hash,
+                resolved_spec_hash=resolved_hash,
+                parameter_hash=parameter_hash,
+                node_registry_manifest_hash="e" * 64,
+                pipeline_execution_hash=pipeline_execution_hash,
+                compiled_expressions=self._compiled_expressions,
+                factor_registry_manifest_hash="d" * 64,
+                used_factor_bindings=(factor_binding,),
+                legacy_spec=SimpleNamespace(
+                    universe="csi_etf_broad",
+                    required_datasets=self._required_datasets,
+                    benchmark=None,
+                    execution=SimpleNamespace(
+                        frequency=self._frequency,
+                        default_order_type=SimpleNamespace(value="market"),
+                    ),
+                ),
+                resolved_spec=SimpleNamespace(
+                    strategy_kind=SimpleNamespace(value=self._lane)
+                ),
+            ),
+        )
+
+
+def _runtime_builders(
+    candidate: _ExactRuntimeBuilder,
+    published_baseline: _ExactRuntimeBuilder,
+) -> ResearchExecutionRuntimeBuilders:
+    return ResearchExecutionRuntimeBuilders(
+        candidate=cast("ResearchRuntimeBuilder", candidate),
+        published_baseline=cast(
+            "PublishedBaselineRuntimeBuilder",
+            published_baseline,
+        ),
+    )
+
+
+def _instrument_rules_artifact(
+    source_snapshot_id: str = "provider-snapshot-task8",
+) -> VerifiedInstrumentRulesArtifact:
+    rules_frame = pl.DataFrame(
+        {
+            "instrument_code": ["510300.SH"],
+            "instrument_id": [2_000_001],
+            "asset_class": ["etf"],
+            "exchange": ["XSHG"],
+            "currency": ["CNY"],
+            "tick_size": [0.001],
+            "lot_size": [100],
+            "multiplier": [1.0],
+            "board_segment": ["fund"],
+            "lifecycle_state": ["normal"],
+            "ipo_date": [date(2012, 5, 28)],
+            "delisting_date": [None],
+            "as_of_date": [date(2026, 1, 1)],
+            "known_at": [date(2025, 12, 31)],
+            "settlement_cycle": [1],
+            "fund_settlement_cycle": [0],
+            "price_limit_pct": [0.1],
+            "order_types_supported": [["market", "limit"]],
+            "call_auction_sessions": [["open", "close"]],
+            "commission_rate": [0.0003],
+            "min_commission": [5.0],
+            "stamp_duty_rate": [0.0],
+            "transfer_fee_rate": [0.00001],
+            "source_snapshot_id": [source_snapshot_id],
+        },
+        schema={
+            "instrument_code": pl.String,
+            "instrument_id": pl.Int64,
+            "asset_class": pl.String,
+            "exchange": pl.String,
+            "currency": pl.String,
+            "tick_size": pl.Float64,
+            "lot_size": pl.Int64,
+            "multiplier": pl.Float64,
+            "board_segment": pl.String,
+            "lifecycle_state": pl.String,
+            "ipo_date": pl.Date,
+            "delisting_date": pl.Date,
+            "as_of_date": pl.Date,
+            "known_at": pl.Date,
+            "settlement_cycle": pl.Int64,
+            "fund_settlement_cycle": pl.Int64,
+            "price_limit_pct": pl.Float64,
+            "order_types_supported": pl.List(pl.String),
+            "call_auction_sessions": pl.List(pl.String),
+            "commission_rate": pl.Float64,
+            "min_commission": pl.Float64,
+            "stamp_duty_rate": pl.Float64,
+            "transfer_fee_rate": pl.Float64,
+            "source_snapshot_id": pl.String,
+        },
+    )
+    rules_buffer = BytesIO()
+    rules_frame.write_parquet(rules_buffer)
+    rules_bytes = rules_buffer.getvalue()
+    rules_schema = tuple(
+        (name, str(dtype)) for name, dtype in rules_frame.schema.items()
+    )
+    return VerifiedInstrumentRulesArtifact(
+        input_evidence=ContentAddressedResearchInput(
+            input_id="instrument_rules",
+            artifact_kind="instrument_rules",
+            content_hash=hashlib.sha256(rules_bytes).hexdigest(),
+            schema_hash=hashlib.sha256(orjson.dumps(rules_schema)).hexdigest(),
+        ),
+        artifact_bytes=rules_bytes,
+    )
+
+
+def _snapshot_inputs(
+    instrument_rules: VerifiedInstrumentRulesArtifact,
+    *,
+    membership_hash: str = "9" * 64,
+) -> tuple[ContentAddressedResearchInput, ...]:
+    return (
+        ContentAddressedResearchInput("calendar", "calendar", "3" * 64, "4" * 64),
+        ContentAddressedResearchInput(
+            "etf_daily",
+            "bars",
+            "1" * 64,
+            "2" * 64,
+        ),
+        ContentAddressedResearchInput(
+            "etf_momentum@1",
+            "factor",
+            "7" * 64,
+            "a" * 64,
+        ),
+        instrument_rules.input_evidence,
+        ContentAddressedResearchInput(
+            "membership",
+            "membership",
+            membership_hash,
+            "8" * 64,
+        ),
+    )
+
+
+def _snapshot_manifest_bytes(
+    inputs: tuple[ContentAddressedResearchInput, ...],
+) -> bytes:
+    return orjson.dumps(
+        {
+            "schema_version": 1,
+            "snapshot_id": "certified-snapshot-task8",
+            "dataset_id": "research-etf-rotation",
+            "source_snapshot_ids": ["provider-snapshot-task8"],
+            "known_at_policy": "sample_time",
+            "builder_version": "research-builder-v1",
+            "inputs": [
+                dict(item.as_payload())
+                for item in sorted(inputs, key=lambda item: item.input_id)
+            ],
+        },
+        option=orjson.OPT_SORT_KEYS,
+    )
+
+
+def _exact_snapshot() -> ExactResearchSnapshot:
+    raw = _snapshot_manifest_bytes(
+        _snapshot_inputs(_instrument_rules_artifact()),
+    )
+    return ExactResearchSnapshot(
+        "certified-snapshot-task8",
+        hashlib.sha256(raw).hexdigest(),
+    )
+
+
+class _ExactInputsResolver:
+    def __init__(self, *, complete: bool = True) -> None:
+        self.calls: list[FrozenResearchInputRequest] = []
+        self._complete = complete
+
+    def resolve(
+        self,
+        request: FrozenResearchInputRequest,
+    ) -> FrozenResearchExecutionInputs:
+        self.calls.append(request)
+        instrument_rules = _instrument_rules_artifact(request.source_snapshot_ids[0])
+        all_inputs = _snapshot_inputs(
+            instrument_rules,
+            membership_hash=request.universe.membership_hash,
+        )
+        inputs = (
+            all_inputs
+            if self._complete
+            else tuple(
+                item
+                for item in all_inputs
+                if item.artifact_kind in {"membership", "instrument_rules"}
+            )
+        )
+        return FrozenResearchExecutionInputs(
+            snapshot_manifest=VerifiedResearchSnapshotManifest(
+                exact_snapshot=request.snapshot,
+                manifest_bytes=_snapshot_manifest_bytes(inputs),
+            ),
+            universe=request.universe,
+            membership_projection_hash=request.membership_projection_hash,
+            instrument_rules=instrument_rules,
+        )
+
+
+class _MissingFoldReader:
+    def __init__(self, delegate: SQLiteExperimentReader) -> None:
+        self._delegate = delegate
+
+    def get_launch_spec(self, experiment_id: ExperimentId):
+        return self._delegate.get_launch_spec(experiment_id)
+
+    def list_status_events(self, experiment_id: ExperimentId):
+        return self._delegate.list_status_events(experiment_id)
+
+    def list_folds(self, experiment_id: ExperimentId):
+        return self._delegate.list_folds(experiment_id)[1:]
+
+
+def _resolver_with_distinct_runtime_lanes(
+    reader: SQLiteExperimentReader,
+    strategy_reader: _ExactStrategyReader,
+    input_resolver: _ExactInputsResolver,
+) -> tuple[
+    DurableResearchExecutionResolver,
+    _ExactRuntimeBuilder,
+    _ExactRuntimeBuilder,
+]:
+    candidate = _ExactRuntimeBuilder()
+    published_baseline = _ExactRuntimeBuilder()
+    return (
+        DurableResearchExecutionResolver(
+            experiment_reader=reader,
+            strategy_reader=strategy_reader,
+            runtime_builders=_runtime_builders(candidate, published_baseline),
+            input_resolver=input_resolver,
+            environment=CodeEnvironmentLock("git:test", "7" * 64),
+        ),
+        candidate,
+        published_baseline,
+    )
+
+
+def _assert_exact_baseline_identity_drift_is_rejected(
+    *,
+    reader: SQLiteExperimentReader,
+    strategy_reader: _ExactStrategyReader,
+    baseline_fold: FoldView,
+) -> None:
+    drifted_builders = (
+        _ExactRuntimeBuilder(baseline_pipeline_execution_hash="0" * 64),
+        _ExactRuntimeBuilder(baseline_strategy_id="wrong-baseline"),
+        _ExactRuntimeBuilder(baseline_strategy_version=99),
+    )
+    for published_baseline in drifted_builders:
+        with pytest.raises(AppProcessError) as exc_info:
+            DurableResearchExecutionResolver(
+                experiment_reader=reader,
+                strategy_reader=strategy_reader,
+                runtime_builders=_runtime_builders(
+                    _ExactRuntimeBuilder(),
+                    published_baseline,
+                ),
+                input_resolver=_ExactInputsResolver(),
+                environment=CodeEnvironmentLock("git:test", "7" * 64),
+            ).resolve(baseline_fold)
+        assert exc_info.value.details["reason"] == "baseline_runtime_identity_drift"
+
+
+def _assert_exact_baseline_required_datasets_drift_is_rejected(
+    *,
+    reader: SQLiteExperimentReader,
+    strategy_reader: _ExactStrategyReader,
+    baseline_fold: FoldView,
+) -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        DurableResearchExecutionResolver(
+            experiment_reader=reader,
+            strategy_reader=strategy_reader,
+            runtime_builders=_runtime_builders(
+                _ExactRuntimeBuilder(),
+                _ExactRuntimeBuilder(required_datasets=("calendar", "etf_daily")),
+            ),
+            input_resolver=_ExactInputsResolver(),
+            environment=CodeEnvironmentLock("git:test", "7" * 64),
+        ).resolve(baseline_fold)
+    assert exc_info.value.details["reason"] == (
+        "baseline_runtime_validation_evidence_drift"
+    )
+
+
+def _assert_exact_baseline_runtime_is_frozen(
+    *,
+    reader: SQLiteExperimentReader,
+    baseline_fold: FoldView,
+    baseline: ResearchExecutionSemantics,
+) -> None:
+    assert baseline.is_baseline is True
+    assert baseline.baseline_plan is not None
+    assert baseline.baseline_plan.exact_strategy is not None
+    assert baseline.strategy.exact_strategy.version == 2
+    durable_launch = read_durable_launch(reader, baseline_fold)
+    assert durable_launch.executor["baseline_runtime"] == {
+        "base_spec_hash": "f" * 64,
+        "resolved_spec_hash": "b" * 64,
+        "parameter_hash": "c" * 64,
+        "pipeline_execution_hash": f"{258:064x}",
+        "compiled_factor_set_hash": compiled_expressions_execution_hash(None),
+        "max_lookback_sessions": 0,
+        "node_registry_manifest_hash": "e" * 64,
+        "factor_registry_manifest_hash": "d" * 64,
+        "factor_binding_hashes": [_exact_factor_binding().binding_hash],
+    }
+
+
+def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identity(
+    tmp_path: Path,
+) -> None:
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    reader = SQLiteExperimentReader(database)
+    process = ExperimentPlanningProcess(
+        reader=reader,
+        writer=SQLiteExperimentWriter(database),
+        certification_probe=_CertificationProbe(),
+        executor_probe=_ExecutorProbe(),
+        authority_probe=_AuthorityProbe(),
+    )
+    request = _planning_request()
+    strategy_reader = _ExactStrategyReader()
+    input_resolver = _ExactInputsResolver()
+
+    try:
+        report = process.preflight(request)
+        assert report.plan_hash is not None
+        process.launch(request, confirmed_plan_hash=report.plan_hash)
+        folds = reader.list_folds(ExperimentId(_EXPERIMENT_ID))
+        candidates = reader.list_candidates(ExperimentId(_EXPERIMENT_ID))
+        binder_id = next(
+            item.candidate_id for item in candidates if not item.is_baseline
+        )
+        baseline_id = next(item.candidate_id for item in candidates if item.is_baseline)
+        binder_fold = next(
+            item
+            for item in folds
+            if item.spec.key.candidate_id == binder_id
+            and item.spec.fold_role is FoldRole.WALK_FORWARD
+        )
+        baseline_fold = next(
+            item
+            for item in folds
+            if item.spec.key.candidate_id == baseline_id
+            and item.spec.fold_role is FoldRole.EXPLORATION
+        )
+        resolver, candidate_runtime_builder, published_baseline_builder = (
+            _resolver_with_distinct_runtime_lanes(
+                reader,
+                strategy_reader,
+                input_resolver,
+            )
+        )
+
+        binder = resolver.resolve(binder_fold)
+        replay = resolver.resolve(binder_fold)
+        baseline = resolver.resolve(baseline_fold)
+
+        assert (
+            binder.reproduction_fingerprint,
+            binder.is_baseline,
+            binder.baseline_plan,
+            binder.strategy.exact_strategy.version,
+        ) == (
+            replay.reproduction_fingerprint,
+            False,
+            None,
+            3,
+        )
+        assert binder.policy.lane is ResearchAssetLane.ETF
+        assert (
+            binder.backtest.engine_version,
+            binder.backtest.rebalance_frequency,
+            binder.backtest.participation_rate_ppm,
+            binder.backtest.benchmark,
+            len(binder.backtest.data_feed_manifest_hash),
+        ) == ("0.1.0", "monthly", 50_000, None, 64)
+        assert binder.snapshot.exact_snapshot == _exact_snapshot()
+        assert binder.membership_hash == "9" * 64
+        _assert_exact_baseline_runtime_is_frozen(
+            reader=reader,
+            baseline_fold=baseline_fold,
+            baseline=baseline,
+        )
+        assert strategy_reader.calls == [
+            ("seed_etf_rotation", 3),
+            ("seed_etf_rotation", 3),
+            ("seed_etf_rotation", 2),
+        ]
+        assert (
+            candidate_runtime_builder.calls,
+            published_baseline_builder.calls,
+        ) == ([(3, "draft"), (3, "draft")], [(2, "published")])
+        assert len(input_resolver.calls) == 3
+        assert all(item.snapshot == _exact_snapshot() for item in input_resolver.calls)
+        assert all(
+            item.universe == ExactUniverseIdentity("csi_etf_broad", "9" * 64)
+            for item in input_resolver.calls
+        )
+
+        with pytest.raises(AppProcessError) as missing_inputs:
+            DurableResearchExecutionResolver(
+                experiment_reader=reader,
+                strategy_reader=strategy_reader,
+                runtime_builders=_runtime_builders(
+                    _ExactRuntimeBuilder(),
+                    _ExactRuntimeBuilder(),
+                ),
+                input_resolver=_ExactInputsResolver(complete=False),
+                environment=CodeEnvironmentLock("git:test", "7" * 64),
+            ).resolve(binder_fold)
+        assert missing_inputs.value.details["reason"] == (
+            "snapshot_manifest_hash_mismatch"
+        )
+
+        with pytest.raises(AppProcessError) as lane_drift:
+            DurableResearchExecutionResolver(
+                experiment_reader=reader,
+                strategy_reader=strategy_reader,
+                runtime_builders=_runtime_builders(
+                    _ExactRuntimeBuilder(lane="stock_selection"),
+                    _ExactRuntimeBuilder(),
+                ),
+                input_resolver=_ExactInputsResolver(),
+                environment=CodeEnvironmentLock("git:test", "7" * 64),
+            ).resolve(binder_fold)
+        assert lane_drift.value.details["reason"] == (
+            "candidate_runtime_validation_evidence_drift"
+        )
+
+        with pytest.raises(AppProcessError) as compiled_factor_drift:
+            DurableResearchExecutionResolver(
+                experiment_reader=reader,
+                strategy_reader=strategy_reader,
+                runtime_builders=_runtime_builders(
+                    _ExactRuntimeBuilder(
+                        compiled_expressions=CompiledExpressions((), ()),
+                    ),
+                    _ExactRuntimeBuilder(),
+                ),
+                input_resolver=_ExactInputsResolver(),
+                environment=CodeEnvironmentLock("git:test", "7" * 64),
+            ).resolve(binder_fold)
+        assert compiled_factor_drift.value.details["reason"] == (
+            "candidate_runtime_identity_drift"
+        )
+
+        _assert_exact_baseline_identity_drift_is_rejected(
+            reader=reader,
+            strategy_reader=strategy_reader,
+            baseline_fold=baseline_fold,
+        )
+        _assert_exact_baseline_required_datasets_drift_is_rejected(
+            reader=reader,
+            strategy_reader=strategy_reader,
+            baseline_fold=baseline_fold,
+        )
+
+        with pytest.raises(AppProcessError) as missing_fold:
+            DurableResearchExecutionResolver(
+                experiment_reader=cast(
+                    "SQLiteExperimentReader",
+                    _MissingFoldReader(reader),
+                ),
+                strategy_reader=strategy_reader,
+                runtime_builders=_runtime_builders(
+                    _ExactRuntimeBuilder(),
+                    _ExactRuntimeBuilder(),
+                ),
+                input_resolver=_ExactInputsResolver(),
+                environment=CodeEnvironmentLock("git:test", "7" * 64),
+            ).resolve(binder_fold)
+        assert missing_fold.value.details["reason"] == "launch_spec_preflight_drift"
+        assert "persisted_folds" in missing_fold.value.details["fields"]
+    finally:
+        database.close_all()

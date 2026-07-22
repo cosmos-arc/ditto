@@ -1,0 +1,1412 @@
+"""Fail-closed execution tests for one durably claimed research fold."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
+from datetime import UTC, date, datetime
+from threading import Event, Lock
+from typing import cast
+from unittest.mock import MagicMock
+
+import pytest
+from ditto_analysis.experiments import (
+    AttemptId,
+    AttemptView,
+    BacktestRunId,
+    CandidateId,
+    ContentHash,
+    DateWindow,
+    ExperimentFailureCode,
+    ExperimentId,
+    ExperimentStage,
+    ExperimentStatus,
+    FoldId,
+    FoldKey,
+    FoldPersistenceSpec,
+    FoldProjection,
+    FoldRole,
+    FoldView,
+    SchedulerLease,
+)
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.backtest_process import BacktestService
+from ditto_application.processes.experiments._execution_resolution_evidence import (
+    research_execution_error,
+)
+from ditto_application.processes.experiments.backtest_service_wiring import (
+    ClosedBacktestServiceGraph,
+)
+from ditto_application.processes.experiments.coordinator import (
+    ExperimentDispatch,
+    PersistedAttemptStart,
+)
+from ditto_application.processes.experiments.execution_bundle import (
+    BacktestExecutionConfigBinding,
+    CodeEnvironmentLock,
+    ContentAddressedResearchInput,
+    ExactBenchmarkBinding,
+    ExecutionEvidenceSource,
+    PolicyModelEvidenceBinding,
+    ResearchExecutionAudit,
+    ResearchExecutionSemantics,
+    ResearchFactorExecutionBinding,
+    ResearchFillMode,
+    ResearchSnapshotBinding,
+    StrategyExecutionBinding,
+    VersionedExecutionComponent,
+)
+from ditto_application.processes.experiments.execution_contracts import (
+    ExactResearchSnapshot,
+    ExactStrategyIdentity,
+    default_stock_execution_policy,
+)
+from ditto_application.processes.experiments.research_data_feed import (
+    research_data_feed_manifest_hash,
+)
+from ditto_application.processes.experiments.worker import (
+    ExecutionBundleFirstAttemptFactory,
+    ExistingBacktestResearchFoldRunner,
+    ResearchBacktestBuildAttestation,
+    ResearchBacktestBuildSource,
+    ResearchCandidateExecutionError,
+    ResearchExperimentWorker,
+    ResearchFoldRunState,
+    ResearchWorkerState,
+    VerifiedResearchBacktestBuild,
+)
+from ditto_backtest.statistics import BacktestReport
+from ditto_features.expression.contracts import CompileIdentity
+
+_NOW = datetime(2026, 7, 20, 9, tzinfo=UTC)
+
+
+def _sha(character: str) -> str:
+    return character * 64
+
+
+def _forged_graph(service: BacktestService) -> ClosedBacktestServiceGraph:
+    """Claim an arbitrary service graph without providing verified components."""
+    return ClosedBacktestServiceGraph(
+        service=service,
+        audit=MagicMock(),
+        config=MagicMock(),
+        pipeline=MagicMock(),
+        planner=MagicMock(),
+        brokerage=MagicMock(),
+        pre_trade=MagicMock(),
+        feed=MagicMock(),
+        options=MagicMock(),
+        fee_model=MagicMock(),
+        slippage_model=MagicMock(),
+        rule_provider=MagicMock(),
+        compiled_expressions=None,
+        pipeline_attestation=None,
+        external_should_stop=lambda: False,
+        components=MagicMock(),
+    )
+
+
+def _factor_binding() -> ResearchFactorExecutionBinding:
+    return ResearchFactorExecutionBinding(
+        factor_id="momentum_1m",
+        version=1,
+        spec_hash=_sha("8"),
+        compile_identity=CompileIdentity(
+            compile_input_hash=_sha("1"),
+            operator_fingerprint=_sha("2"),
+            compiler_fingerprint=_sha("3"),
+            cache_key=_sha("4"),
+            engine_codegen_version="polars-codegen-v1",
+            analysis_version="factor-analysis-v1",
+            polars_version="1.0.0",
+            expr_serialization_format="polars-expr-v1",
+            operator_versions=(("rank", "1"),),
+            global_compile_flags=("grain=1d",),
+        ),
+        compiled_expression_hash="8" * 64,
+        analysis_execution_hash="7" * 64,
+        artifact=ContentAddressedResearchInput(
+            input_id="momentum_1m@1",
+            artifact_kind="factor",
+            content_hash=_sha("8"),
+            schema_hash=_sha("9"),
+        ),
+    )
+
+
+def _backtest_binding() -> BacktestExecutionConfigBinding:
+    fee_schedule = ContentAddressedResearchInput(
+        input_id="fee_schedule",
+        artifact_kind="parquet",
+        content_hash=_sha("9"),
+        schema_hash=_sha("a"),
+    )
+    instrument_rules = ContentAddressedResearchInput(
+        input_id="instrument_rules",
+        artifact_kind="instrument_rules",
+        content_hash=_sha("b"),
+        schema_hash=_sha("c"),
+    )
+    return BacktestExecutionConfigBinding(
+        initial_cash_minor_units=100_000_000,
+        currency="CNY",
+        engine=VersionedExecutionComponent("ditto_backtest.engine", 1),
+        engine_version="0.1.0",
+        rebalance_policy=VersionedExecutionComponent(
+            "ditto_strategy.rebalance_schedule",
+            1,
+        ),
+        rebalance_frequency="daily",
+        participation_rate_ppm=50_000,
+        fill_mode=ResearchFillMode.PARTIAL,
+        fill_model=VersionedExecutionComponent("ditto_backtest.a_share_fill", 1),
+        brokerage_model=VersionedExecutionComponent(
+            "ditto_backtest.brokerage",
+            1,
+        ),
+        execution_planner=VersionedExecutionComponent(
+            "ditto_execution.simple_planner",
+            1,
+        ),
+        slippage_basis_points=1,
+        benchmark=ExactBenchmarkBinding(
+            instrument_id=3_000_001,
+            instrument_identity_hash=_sha("d"),
+            mapping_input=instrument_rules,
+            bars_input=ContentAddressedResearchInput(
+                input_id="benchmark_bars",
+                artifact_kind="bars",
+                content_hash=_sha("f"),
+                schema_hash=_sha("0"),
+            ),
+        ),
+        policy_hash=default_stock_execution_policy().canonical_hash,
+        policy_model_evidence=(
+            PolicyModelEvidenceBinding(
+                role="fees",
+                implementation=VersionedExecutionComponent(
+                    "ditto_execution.a_share_fee",
+                    1,
+                ),
+                evidence_source=ExecutionEvidenceSource.FROZEN_SNAPSHOT_PIT,
+                inputs=(fee_schedule,),
+            ),
+            PolicyModelEvidenceBinding(
+                role="rules",
+                implementation=VersionedExecutionComponent(
+                    "ditto_kernel.instrument_rules",
+                    1,
+                ),
+                evidence_source=ExecutionEvidenceSource.FROZEN_SNAPSHOT_PIT,
+                inputs=(instrument_rules,),
+            ),
+            PolicyModelEvidenceBinding(
+                role="settlement",
+                implementation=VersionedExecutionComponent(
+                    "ditto_backtest.a_share_settlement",
+                    1,
+                ),
+                evidence_source=ExecutionEvidenceSource.FROZEN_SNAPSHOT_PIT,
+                inputs=(instrument_rules,),
+            ),
+            PolicyModelEvidenceBinding(
+                role="slippage",
+                implementation=VersionedExecutionComponent(
+                    "ditto_backtest.fixed_bps_slippage",
+                    1,
+                ),
+                evidence_source=ExecutionEvidenceSource.VERSIONED_CODE_REGISTRY,
+                inputs=(),
+            ),
+        ),
+        pre_trade_checks=(
+            VersionedExecutionComponent("ditto_risk.lot_size", 1),
+            VersionedExecutionComponent("ditto_risk.buying_power", 1),
+        ),
+        post_trade_guard=None,
+        data_feed_manifest_hash=_sha("1"),
+    )
+
+
+def _backtest_inputs(
+    binding: BacktestExecutionConfigBinding,
+) -> tuple[ContentAddressedResearchInput, ...]:
+    inputs = {
+        item.input_id: item
+        for model in binding.policy_model_evidence
+        for item in model.inputs
+    }
+    if binding.benchmark is not None:
+        inputs[binding.benchmark.bars_input.input_id] = binding.benchmark.bars_input
+    return tuple(sorted(inputs.values(), key=lambda item: item.input_id))
+
+
+def _fold(
+    status: ExperimentStatus = ExperimentStatus.RUNNING,
+) -> FoldView:
+    key = FoldKey(
+        ExperimentId("experiment-1"),
+        CandidateId("candidate-1"),
+        FoldId("fold-1"),
+    )
+    spec = FoldPersistenceSpec.create(
+        key,
+        2,
+        FoldRole.WALK_FORWARD,
+        DateWindow(date(2018, 1, 1), date(2023, 12, 31)),
+        DateWindow(date(2024, 1, 1), date(2024, 12, 31)),
+        5,
+        5,
+    )
+    return FoldView(
+        spec,
+        FoldProjection(
+            key=key,
+            status=status,
+            claim_owner_token=(
+                "worker-owner" if status is ExperimentStatus.RUNNING else None
+            ),
+            created_at=_NOW,
+            updated_at=_NOW,
+            revision=1,
+        ),
+    )
+
+
+def _semantics() -> ResearchExecutionSemantics:
+    bars_input = ContentAddressedResearchInput(
+        input_id="bars",
+        artifact_kind="bars",
+        content_hash=_sha("3"),
+        schema_hash=_sha("4"),
+    )
+    base_backtest = _backtest_binding()
+    assert base_backtest.benchmark is not None
+    declared_backtest = replace(
+        base_backtest,
+        benchmark=replace(base_backtest.benchmark, bars_input=bars_input),
+    )
+    factor_binding = _factor_binding()
+    snapshot = ResearchSnapshotBinding(
+        exact_snapshot=ExactResearchSnapshot("snapshot-1", _sha("2")),
+        dataset_id="research-stock-selection",
+        source_snapshot_ids=("provider-snapshot-1",),
+        known_at_policy="sample_time",
+        builder_version="research-builder-v1",
+        inputs=(
+            ContentAddressedResearchInput(
+                input_id="calendar",
+                artifact_kind="calendar",
+                content_hash=_sha("6"),
+                schema_hash=_sha("7"),
+            ),
+            ContentAddressedResearchInput(
+                input_id="membership",
+                artifact_kind="membership",
+                content_hash=_sha("5"),
+                schema_hash=_sha("6"),
+            ),
+            factor_binding.artifact,
+            *_backtest_inputs(declared_backtest),
+        ),
+    )
+    backtest = replace(
+        declared_backtest,
+        data_feed_manifest_hash=research_data_feed_manifest_hash(snapshot),
+    )
+    return ResearchExecutionSemantics(
+        experiment_id="experiment-1",
+        candidate_id="candidate-1",
+        fold_id="fold-1",
+        fold_role="walk_forward",
+        is_baseline=False,
+        plan_hash=_sha("a"),
+        launch_spec_hash=_sha("b"),
+        fold_spec_hash=str(_fold().spec.payload_hash),
+        strategy=StrategyExecutionBinding(
+            exact_strategy=ExactStrategyIdentity("stock-selection", 3, _sha("d")),
+            resolved_spec_hash=_sha("e"),
+            parameter_hash=_sha("f"),
+            node_registry_manifest_hash=_sha("1"),
+            pipeline_execution_hash=_sha("9"),
+            factor_registry_manifest_hash=_sha("0"),
+            compiled_factor_set_hash=_sha("a"),
+            factor_bindings=(factor_binding,),
+        ),
+        backtest=backtest,
+        snapshot=snapshot,
+        membership_hash=_sha("5"),
+        membership_projection_hash=_sha("6"),
+        train_start=date(2018, 1, 1),
+        train_end=date(2023, 12, 31),
+        test_start=date(2024, 1, 1),
+        test_end=date(2024, 12, 31),
+        purge_sessions=5,
+        embargo_sessions=5,
+        seed=17,
+        knowledge_lag_days=1,
+        execution_delay_sessions=1,
+        baseline_registry_manifest_hash=_sha("7"),
+        baseline_plan=None,
+        policy=default_stock_execution_policy(),
+        environment=CodeEnvironmentLock("git:abc123", _sha("8")),
+    )
+
+
+class _Resolver:
+    def __init__(self, semantics: ResearchExecutionSemantics | Exception) -> None:
+        self.value = semantics
+        self.calls = 0
+
+    def resolve(self, fold: FoldView) -> ResearchExecutionSemantics:
+        _ = fold
+        self.calls += 1
+        if isinstance(self.value, Exception):
+            raise self.value
+        return self.value
+
+
+def test_first_attempt_factory_freezes_semantics_before_atomic_claim() -> None:
+    resolver = _Resolver(_semantics())
+
+    fold = _fold(ExperimentStatus.QUEUED)
+    first = ExecutionBundleFirstAttemptFactory(resolver).create(fold, _NOW)
+
+    assert resolver.calls == 1
+    assert first.spec.fold_key == fold.spec.key
+    assert first.spec.ordinal == 1
+    assert first.spec.reproduction_fingerprint == _semantics().reproduction_fingerprint
+    assert first.projection.status is ExperimentStatus.QUEUED
+    assert first.projection.backtest_run_id is None
+    assert first.spec.attempt_id == AttemptId(
+        "attempt-9faccd3ec1168c57c9821def208e4a6ec4c852dadb4212fea6e92e51c9bcb0da"
+    )
+
+
+def test_first_attempt_factory_rejects_fold_semantic_lineage_drift() -> None:
+    resolver = _Resolver(replace(_semantics(), fold_id="different-fold"))
+
+    with pytest.raises(AppProcessError) as captured:
+        ExecutionBundleFirstAttemptFactory(resolver).create(
+            _fold(ExperimentStatus.QUEUED),
+            _NOW,
+        )
+
+    assert captured.value.details["code"] == "REPRODUCIBILITY_FAILED"
+    assert captured.value.details["reason"] == "execution_fold_lineage_mismatch"
+
+
+def test_research_runner_rejects_unverified_graph_before_numerics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Factory:
+        def __init__(self, service: BacktestService) -> None:
+            self.service = service
+            self.audits: list[ResearchExecutionAudit] = []
+            self.stop_callbacks: list[Callable[[], bool]] = []
+
+        def build(
+            self,
+            audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> VerifiedResearchBacktestBuild:
+            self.audits.append(audit)
+            self.stop_callbacks.append(external_should_stop)
+            return VerifiedResearchBacktestBuild(
+                service=self.service,
+                attestation=ResearchBacktestBuildAttestation.from_audit(audit),
+                graph=_forged_graph(self.service),
+            )
+
+    run_calls = 0
+
+    def _run(_self: BacktestService) -> BacktestReport:
+        nonlocal run_calls
+        run_calls += 1
+        return cast("BacktestReport", object())
+
+    monkeypatch.setattr(BacktestService, "run", _run)
+    semantics = _semantics()
+    audit = ResearchExecutionAudit.create(
+        semantics=semantics,
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    service = object.__new__(BacktestService)
+    object.__setattr__(service, "_last_run_cancelled", False)
+    factory = _Factory(service)
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(factory).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert (
+        captured.value.details["reason"] == "constructed_backtest_service_wiring_drift"
+    )
+    assert factory.audits == [audit]
+    assert len(factory.stop_callbacks) == 1
+    assert run_calls == 0
+
+
+def test_research_runner_rejects_backtest_subclass_with_forged_attestation() -> None:
+    class _PoisonedBacktestService(BacktestService):
+        def __init__(self) -> None:
+            self.called = False
+
+        @property
+        def last_run_cancelled(self) -> bool:
+            return False
+
+        def run(self) -> BacktestReport:
+            self.called = True
+            return cast("BacktestReport", object())
+
+    audit = ResearchExecutionAudit.create(
+        semantics=_semantics(),
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    service = _PoisonedBacktestService()
+    factory = MagicMock()
+    factory.build.return_value = VerifiedResearchBacktestBuild(
+        service=service,
+        attestation=ResearchBacktestBuildAttestation.from_audit(audit),
+        graph=_forged_graph(service),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(factory).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert captured.value.details["reason"] == "invalid_research_backtest_service"
+    assert service.called is False
+
+
+def test_research_runner_rejects_exact_service_callable_shadow_from_fake_factory() -> (
+    None
+):
+    called = False
+
+    def _shadowed_run() -> BacktestReport:
+        nonlocal called
+        called = True
+        return cast("BacktestReport", object())
+
+    audit = ResearchExecutionAudit.create(
+        semantics=_semantics(),
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    service = object.__new__(BacktestService)
+    object.__setattr__(service, "run", _shadowed_run)
+    object.__setattr__(service, "_last_run_cancelled", False)
+    factory = MagicMock()
+    factory.build.return_value = VerifiedResearchBacktestBuild(
+        service=service,
+        attestation=ResearchBacktestBuildAttestation.from_audit(audit),
+        graph=_forged_graph(service),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(factory).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert (
+        captured.value.details["reason"] == "constructed_backtest_service_wiring_drift"
+    )
+    assert called is False
+
+
+def test_research_runner_rejects_unverified_graph_before_cooperative_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _run(service: BacktestService) -> BacktestReport:
+        object.__setattr__(service, "_last_run_cancelled", True)
+        return cast("BacktestReport", object())
+
+    monkeypatch.setattr(BacktestService, "run", _run)
+    audit = ResearchExecutionAudit.create(
+        semantics=_semantics(),
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    service = object.__new__(BacktestService)
+    object.__setattr__(service, "_last_run_cancelled", None)
+    factory = MagicMock()
+    factory.build.return_value = VerifiedResearchBacktestBuild(
+        service=service,
+        attestation=ResearchBacktestBuildAttestation.from_audit(audit),
+        graph=_forged_graph(service),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(factory).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert (
+        captured.value.details["reason"] == "constructed_backtest_service_wiring_drift"
+    )
+
+
+def test_research_runner_checks_authority_before_factory_build() -> None:
+    audit = ResearchExecutionAudit.create(
+        semantics=_semantics(),
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    factory = MagicMock()
+
+    result = ExistingBacktestResearchFoldRunner(factory).run(
+        audit,
+        external_should_stop=lambda: True,
+    )
+
+    assert result is ResearchFoldRunState.STOPPED
+    factory.build.assert_not_called()
+
+
+def test_research_runner_checks_authority_after_build_before_service_run() -> None:
+    audit = ResearchExecutionAudit.create(
+        semantics=_semantics(),
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    service = MagicMock(spec=BacktestService)
+    factory = MagicMock()
+    factory.build.return_value = VerifiedResearchBacktestBuild(
+        service=service,
+        attestation=ResearchBacktestBuildAttestation.from_audit(audit),
+        graph=_forged_graph(cast("BacktestService", service)),
+    )
+    checks = iter((False, True))
+
+    result = ExistingBacktestResearchFoldRunner(factory).run(
+        audit,
+        external_should_stop=lambda: next(checks),
+    )
+
+    assert result is ResearchFoldRunState.STOPPED
+    factory.build.assert_called_once()
+    service.run.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        ResearchBacktestBuildSource.PROVIDER_LATEST,
+        ResearchBacktestBuildSource.CATALOG_LATEST,
+    ],
+)
+def test_research_runner_rejects_moving_factory_resolution(
+    source: ResearchBacktestBuildSource,
+) -> None:
+    audit = ResearchExecutionAudit.create(
+        semantics=_semantics(),
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    service = MagicMock(spec=BacktestService)
+    attestation = replace(
+        ResearchBacktestBuildAttestation.from_audit(audit),
+        source=source,
+    )
+    factory = MagicMock()
+    factory.build.return_value = VerifiedResearchBacktestBuild(
+        service=service,
+        attestation=attestation,
+        graph=_forged_graph(cast("BacktestService", service)),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(factory).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert captured.value.details["reason"] == "research_backtest_attestation_drift"
+    service.run.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "drifted_attestation",
+    [
+        lambda audit: replace(
+            ResearchBacktestBuildAttestation.from_audit(audit),
+            reproduction_fingerprint=ContentHash(_sha("0")),
+        ),
+        lambda audit: replace(
+            ResearchBacktestBuildAttestation.from_audit(audit),
+            strategy=replace(audit.semantics.strategy, parameter_hash=_sha("0")),
+        ),
+        lambda audit: replace(
+            ResearchBacktestBuildAttestation.from_audit(audit),
+            snapshot=replace(audit.semantics.snapshot, dataset_id="other-dataset"),
+        ),
+        lambda audit: replace(
+            ResearchBacktestBuildAttestation.from_audit(audit),
+            execution_config=replace(
+                audit.semantics.backtest,
+                participation_rate_ppm=100_000,
+            ),
+        ),
+        lambda audit: replace(
+            ResearchBacktestBuildAttestation.from_audit(audit),
+            policy_hash=_sha("0"),
+        ),
+        lambda audit: replace(
+            ResearchBacktestBuildAttestation.from_audit(audit),
+            environment=CodeEnvironmentLock("git:drift", _sha("0")),
+        ),
+    ],
+)
+def test_research_runner_rejects_any_attestation_drift(
+    drifted_attestation: Callable[
+        [ResearchExecutionAudit], ResearchBacktestBuildAttestation
+    ],
+) -> None:
+    audit = ResearchExecutionAudit.create(
+        semantics=_semantics(),
+        attempt_id="attempt-1",
+        attempt_ordinal=1,
+        backtest_run_id="run-1",
+        parent_attempt_id=None,
+        resume_from_run_id=None,
+        created_at=_NOW,
+    )
+    service = MagicMock(spec=BacktestService)
+    factory = MagicMock()
+    factory.build.return_value = VerifiedResearchBacktestBuild(
+        service=service,
+        attestation=drifted_attestation(audit),
+        graph=_forged_graph(cast("BacktestService", service)),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(factory).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert captured.value.details["reason"] == "research_backtest_attestation_drift"
+    service.run.assert_not_called()
+
+
+def test_research_runner_rejects_factory_coherent_audit_rewrite_before_numerics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from packages.application.tests.unit.process.experiments import (
+        test_research_backtest_factory_unit as factory_tests,
+    )
+
+    concrete, audit, *_ = factory_tests._fixture()
+    numerical_runs = 0
+
+    def _run(_service: BacktestService) -> BacktestReport:
+        nonlocal numerical_runs
+        numerical_runs += 1
+        return cast("BacktestReport", object())
+
+    monkeypatch.setattr(BacktestService, "run", _run)
+
+    class _CoherentAuditRewriteFactory:
+        def build(
+            self,
+            requested_audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> VerifiedResearchBacktestBuild:
+            build = concrete.build(
+                requested_audit,
+                external_should_stop=external_should_stop,
+            )
+            rewritten_semantics = replace(
+                requested_audit.semantics,
+                seed=9_999,
+            )
+            rewritten_audit = ResearchExecutionAudit.create(
+                semantics=rewritten_semantics,
+                attempt_id=requested_audit.attempt_id,
+                attempt_ordinal=requested_audit.attempt_ordinal,
+                backtest_run_id=requested_audit.backtest_run_id,
+                parent_attempt_id=requested_audit.parent_attempt_id,
+                resume_from_run_id=requested_audit.resume_from_run_id,
+                created_at=requested_audit.created_at,
+            )
+            object.__setattr__(
+                requested_audit,
+                "semantics",
+                rewritten_audit.semantics,
+            )
+            object.__setattr__(
+                requested_audit,
+                "canonical_payload",
+                rewritten_audit.canonical_payload,
+            )
+            object.__setattr__(
+                requested_audit,
+                "bundle_hash",
+                rewritten_audit.bundle_hash,
+            )
+            object.__setattr__(build.graph.config, "random_seed", 9_999)
+            object.__setattr__(
+                build,
+                "attestation",
+                ResearchBacktestBuildAttestation.from_audit(requested_audit),
+            )
+            return build
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(_CoherentAuditRewriteFactory()).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert captured.value.details["reason"] == "research_execution_audit_drift"
+    assert numerical_runs == 0
+
+
+@pytest.mark.parametrize("derived_hash", ["execution_config", "benchmark"])
+def test_research_runner_rejects_factory_derived_hash_rewrite_before_numerics(
+    monkeypatch: pytest.MonkeyPatch,
+    derived_hash: str,
+) -> None:
+    from packages.application.tests.unit.process.experiments import (
+        test_research_backtest_factory_unit as factory_tests,
+    )
+
+    concrete, audit, *_ = factory_tests._fixture()
+    numerical_runs = 0
+
+    def _run(_service: BacktestService) -> BacktestReport:
+        nonlocal numerical_runs
+        numerical_runs += 1
+        return cast("BacktestReport", object())
+
+    monkeypatch.setattr(BacktestService, "run", _run)
+
+    class _DerivedHashRewriteFactory:
+        def build(
+            self,
+            requested_audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> VerifiedResearchBacktestBuild:
+            build = concrete.build(
+                requested_audit,
+                external_should_stop=external_should_stop,
+            )
+            if derived_hash == "execution_config":
+                target = requested_audit.semantics.backtest
+            else:
+                target = requested_audit.semantics.backtest.benchmark
+                assert target is not None
+            object.__setattr__(target, "canonical_hash", ContentHash(_sha("0")))
+            object.__setattr__(
+                build,
+                "attestation",
+                ResearchBacktestBuildAttestation.from_audit(requested_audit),
+            )
+            return build
+
+    with pytest.raises(AppProcessError) as captured:
+        ExistingBacktestResearchFoldRunner(_DerivedHashRewriteFactory()).run(
+            audit,
+            external_should_stop=lambda: False,
+        )
+
+    assert captured.value.details["reason"] == "research_execution_audit_drift"
+    assert numerical_runs == 0
+
+
+class _Coordinator:
+    def __init__(
+        self,
+        renew_error_on_call: int | None = None,
+        *,
+        renew_error_code: str = "LEASE_LOST",
+        started_now: bool = True,
+        start_transform: Callable[[PersistedAttemptStart], PersistedAttemptStart]
+        | None = None,
+    ) -> None:
+        self.calls: list[tuple[str, object]] = []
+        self.renew_error_on_call = renew_error_on_call
+        self.renew_error_code = renew_error_code
+        self.renew_calls = 0
+        self.started_now = started_now
+        self.start_transform = start_transform
+
+    def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease:
+        self.calls.append(("renew", occurred_at))
+        self.renew_calls += 1
+        if self.renew_calls == self.renew_error_on_call:
+            raise AppProcessError(
+                "lease fence rejected",
+                details={"code": self.renew_error_code, "reason": "lease_expired"},
+            )
+        return cast("SchedulerLease", object())
+
+    def start_attempt(self, dispatch, *, occurred_at):
+        self.calls.append(("start", (dispatch, occurred_at)))
+        attempt = replace(
+            dispatch.attempt,
+            projection=replace(
+                dispatch.attempt.projection,
+                status=ExperimentStatus.RUNNING,
+                backtest_run_id=BacktestRunId("research-run-persisted"),
+                revision=dispatch.attempt.projection.revision + 1,
+                updated_at=occurred_at,
+            ),
+        )
+        persisted = PersistedAttemptStart(
+            attempt=attempt,
+            fold=dispatch.fold,
+            started_now=self.started_now,
+        )
+        if self.start_transform is not None:
+            return self.start_transform(persisted)
+        return persisted
+
+    def complete_attempt(self, attempt_id, *, occurred_at):
+        self.calls.append(("complete", (attempt_id, occurred_at)))
+        return cast("object", object())
+
+    def fail_attempt(self, attempt_id, failure_code, *, occurred_at):
+        self.calls.append(("fail", (attempt_id, failure_code, occurred_at)))
+        return cast("object", object())
+
+
+class _Runner:
+    def __init__(
+        self,
+        error: Exception | None = None,
+        *,
+        state: ResearchFoldRunState = ResearchFoldRunState.COMPLETED,
+        poll_control: bool = False,
+    ) -> None:
+        self.error = error
+        self.state = state
+        self.poll_control = poll_control
+        self.audits: list[ResearchExecutionAudit] = []
+
+    def run(
+        self,
+        audit: ResearchExecutionAudit,
+        *,
+        external_should_stop: Callable[[], bool],
+    ) -> ResearchFoldRunState:
+        self.audits.append(audit)
+        if self.error is not None:
+            raise self.error
+        if self.poll_control and external_should_stop():
+            return ResearchFoldRunState.STOPPED
+        return self.state
+
+
+def _dispatch() -> ExperimentDispatch:
+    queued = _fold(ExperimentStatus.QUEUED)
+    first = ExecutionBundleFirstAttemptFactory(_Resolver(_semantics())).create(
+        queued,
+        _NOW,
+    )
+    attempt = AttemptView(first.spec, first.projection)
+    fold = _fold()
+    return ExperimentDispatch(ExperimentStage.WALK_FORWARD, fold, attempt)
+
+
+def _replace_persisted_attempt_id(
+    start: PersistedAttemptStart,
+) -> PersistedAttemptStart:
+    attempt_id = AttemptId("attempt-durable-drift")
+    return replace(
+        start,
+        attempt=replace(
+            start.attempt,
+            spec=replace(start.attempt.spec, attempt_id=attempt_id),
+            projection=replace(start.attempt.projection, attempt_id=attempt_id),
+        ),
+    )
+
+
+def _replace_persisted_fold_key(
+    start: PersistedAttemptStart,
+) -> PersistedAttemptStart:
+    key = FoldKey(
+        ExperimentId("experiment-1"),
+        CandidateId("candidate-1"),
+        FoldId("fold-durable-drift"),
+    )
+    return replace(
+        start,
+        attempt=replace(
+            start.attempt,
+            spec=replace(start.attempt.spec, fold_key=key),
+        ),
+        fold=replace(
+            start.fold,
+            spec=replace(start.fold.spec, key=key),
+            projection=replace(start.fold.projection, key=key),
+        ),
+    )
+
+
+def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence() -> None:
+    coordinator = _Coordinator()
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.COMPLETED
+    assert result.failure_code is None
+    assert result.reproduction_fingerprint == ContentHash(
+        str(_semantics().reproduction_fingerprint)
+    )
+    assert [name for name, _ in coordinator.calls] == [
+        "renew",
+        "start",
+        "renew",
+        "renew",
+        "renew",
+        "complete",
+    ]
+    assert len(runner.audits) == 1
+    assert runner.audits[0].attempt_id == str(_dispatch().attempt.spec.attempt_id)
+    assert runner.audits[0].reproduction_fingerprint == (
+        _dispatch().attempt.spec.reproduction_fingerprint
+    )
+    assert runner.audits[0].backtest_run_id == "research-run-persisted"
+
+
+@pytest.mark.parametrize(
+    ("start_transform", "reason"),
+    [
+        (_replace_persisted_attempt_id, "persisted_attempt_identity_drift"),
+        (_replace_persisted_fold_key, "persisted_attempt_identity_drift"),
+        (
+            lambda start: replace(
+                start,
+                attempt=replace(
+                    start.attempt,
+                    spec=replace(
+                        start.attempt.spec,
+                        reproduction_fingerprint=ContentHash(_sha("0")),
+                    ),
+                ),
+            ),
+            "persisted_attempt_identity_drift",
+        ),
+        (
+            lambda start: replace(
+                start,
+                fold=replace(
+                    start.fold,
+                    spec=replace(
+                        start.fold.spec,
+                        payload_hash=ContentHash(_sha("0")),
+                    ),
+                ),
+            ),
+            "persisted_fold_identity_drift",
+        ),
+        (
+            lambda start: replace(
+                start,
+                fold=replace(
+                    start.fold,
+                    spec=replace(
+                        start.fold.spec,
+                        fold_role=FoldRole.EXPLORATION,
+                    ),
+                ),
+            ),
+            "persisted_stage_role_mismatch",
+        ),
+    ],
+)
+def test_worker_rejects_persisted_dispatch_identity_drift_before_numerics(
+    start_transform: Callable[[PersistedAttemptStart], PersistedAttemptStart],
+    reason: str,
+) -> None:
+    coordinator = _Coordinator(start_transform=start_transform)
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert captured.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
+    assert captured.value.details["reason"] == reason
+    assert runner.audits == []
+    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
+
+
+def test_worker_rejects_already_running_duplicate_without_numerical_execution() -> None:
+    coordinator = _Coordinator(started_now=False)
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert captured.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
+    assert captured.value.details["reason"] == "duplicate_attempt_delivery"
+    assert runner.audits == []
+    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
+
+
+@pytest.mark.parametrize(
+    ("terminal_status", "failure_code", "expected_state"),
+    [
+        (ExperimentStatus.COMPLETED, None, ResearchWorkerState.COMPLETED),
+        (
+            ExperimentStatus.FAILED,
+            ExperimentFailureCode.CANDIDATE_FAILED,
+            ResearchWorkerState.CANDIDATE_FAILED,
+        ),
+        (
+            ExperimentStatus.FAILED,
+            ExperimentFailureCode.INPUT_HASH_MISMATCH,
+            ResearchWorkerState.INPUT_FAILED,
+        ),
+        (
+            ExperimentStatus.FAILED,
+            ExperimentFailureCode.SYSTEM_ERROR,
+            ResearchWorkerState.SYSTEM_FAILED,
+        ),
+    ],
+)
+def test_worker_returns_terminal_replay_without_numerics_or_second_write(
+    terminal_status: ExperimentStatus,
+    failure_code: ExperimentFailureCode | None,
+    expected_state: ResearchWorkerState,
+) -> None:
+    class _TerminalReplayCoordinator(_Coordinator):
+        def start_attempt(self, dispatch, *, occurred_at):
+            self.calls.append(("start", (dispatch, occurred_at)))
+            attempt = replace(
+                dispatch.attempt,
+                projection=replace(
+                    dispatch.attempt.projection,
+                    status=terminal_status,
+                    backtest_run_id=BacktestRunId("research-run-persisted"),
+                    failure_code=failure_code,
+                    revision=dispatch.attempt.projection.revision + 2,
+                    updated_at=occurred_at,
+                ),
+            )
+            fold = replace(
+                dispatch.fold,
+                projection=replace(
+                    dispatch.fold.projection,
+                    status=terminal_status,
+                    claim_owner_token=None,
+                    revision=dispatch.fold.projection.revision + 1,
+                    updated_at=occurred_at,
+                ),
+            )
+            return PersistedAttemptStart(
+                attempt=attempt,
+                fold=fold,
+                started_now=False,
+            )
+
+    coordinator = _TerminalReplayCoordinator()
+    resolver = _Resolver(_semantics())
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=resolver,
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is expected_state
+    assert result.failure_code is failure_code
+    assert result.error_type is None
+    assert resolver.calls == 0
+    assert runner.audits == []
+    assert [name for name, _ in coordinator.calls] == ["renew", "start"]
+
+
+def test_concurrent_duplicate_delivery_runs_numerics_exactly_once() -> None:
+    class _DuplicateCoordinator(_Coordinator):
+        def __init__(self) -> None:
+            super().__init__()
+            self._start_count = 0
+            self._start_lock = Lock()
+
+        def start_attempt(self, dispatch, *, occurred_at):
+            with self._start_lock:
+                self.started_now = self._start_count == 0
+                self._start_count += 1
+                return super().start_attempt(dispatch, occurred_at=occurred_at)
+
+    class _BlockingRunner(_Runner):
+        def __init__(self) -> None:
+            super().__init__()
+            self.entered = Event()
+            self.release = Event()
+
+        def run(
+            self,
+            audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> ResearchFoldRunState:
+            _ = external_should_stop
+            self.audits.append(audit)
+            self.entered.set()
+            assert self.release.wait(timeout=5)
+            return ResearchFoldRunState.COMPLETED
+
+    coordinator = _DuplicateCoordinator()
+    runner = _BlockingRunner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+    dispatch = _dispatch()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(worker.execute, dispatch, occurred_at=_NOW)
+        assert runner.entered.wait(timeout=5)
+        duplicate = executor.submit(worker.execute, dispatch, occurred_at=_NOW)
+        try:
+            with pytest.raises(AppProcessError) as captured:
+                duplicate.result(timeout=5)
+        finally:
+            runner.release.set()
+        completed = first.result(timeout=5)
+
+    assert captured.value.details["reason"] == "duplicate_attempt_delivery"
+    assert completed.state is ResearchWorkerState.COMPLETED
+    assert len(runner.audits) == 1
+
+
+@pytest.mark.parametrize(
+    ("error", "state", "failure_code"),
+    [
+        (
+            ResearchCandidateExecutionError("candidate math failed"),
+            ResearchWorkerState.CANDIDATE_FAILED,
+            ExperimentFailureCode.CANDIDATE_FAILED,
+        ),
+        (
+            AppProcessError(
+                "frozen input drift",
+                details={
+                    "code": "REPRODUCIBILITY_FAILED",
+                    "reason": "frame_content_hash_mismatch",
+                },
+            ),
+            ResearchWorkerState.INPUT_FAILED,
+            ExperimentFailureCode.INPUT_HASH_MISMATCH,
+        ),
+        (
+            AppProcessError(
+                "invalid resolver request",
+                details={"code": "SPEC_INVALID", "reason": "invalid_request"},
+            ),
+            ResearchWorkerState.SYSTEM_FAILED,
+            ExperimentFailureCode.SYSTEM_ERROR,
+        ),
+        (
+            research_execution_error("candidate_runtime_identity_drift"),
+            ResearchWorkerState.INPUT_FAILED,
+            ExperimentFailureCode.INPUT_HASH_MISMATCH,
+        ),
+        (
+            AppProcessError(
+                "invalid reproducibility evidence",
+                details={
+                    "code": "REPRODUCIBILITY_FAILED",
+                    "reason": "invalid_execution_evidence_shape",
+                },
+            ),
+            ResearchWorkerState.SYSTEM_FAILED,
+            ExperimentFailureCode.SYSTEM_ERROR,
+        ),
+        (
+            RuntimeError("engine exploded"),
+            ResearchWorkerState.SYSTEM_FAILED,
+            ExperimentFailureCode.SYSTEM_ERROR,
+        ),
+    ],
+)
+def test_worker_persists_typed_failure_classification(
+    error: Exception,
+    state: ResearchWorkerState,
+    failure_code: ExperimentFailureCode,
+) -> None:
+    coordinator = _Coordinator()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(error),
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is state
+    assert result.failure_code is failure_code
+    assert [name for name, _ in coordinator.calls] == [
+        "renew",
+        "start",
+        "renew",
+        "renew",
+        "renew",
+        "fail",
+    ]
+
+
+def test_worker_marks_post_claim_semantic_drift_as_input_failure() -> None:
+    coordinator = _Coordinator()
+    resolver = _Resolver(replace(_semantics(), seed=18))
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=resolver,
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.INPUT_FAILED
+    assert result.failure_code is ExperimentFailureCode.INPUT_HASH_MISMATCH
+    assert runner.audits == []
+    assert [name for name, _ in coordinator.calls] == [
+        "renew",
+        "start",
+        "renew",
+        "renew",
+        "renew",
+        "fail",
+    ]
+
+
+def test_worker_renews_authority_before_resolving_persisted_semantics() -> None:
+    coordinator = _Coordinator(
+        renew_error_on_call=2,
+        renew_error_code="LEASE_LOST",
+    )
+    resolver = _Resolver(_semantics())
+    runner = _Runner()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=resolver,
+        runner=runner,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert captured.value.details["code"] == "LEASE_LOST"
+    assert resolver.calls == 0
+    assert runner.audits == []
+    assert [name for name, _ in coordinator.calls] == ["renew", "start", "renew"]
+
+
+@pytest.mark.parametrize("error_code", ["LEASE_LOST", "EXPERIMENT_INTEGRITY_FAILED"])
+def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
+    error_code: str,
+) -> None:
+    coordinator = _Coordinator(
+        renew_error_on_call=2,
+        renew_error_code=error_code,
+    )
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(poll_control=True),
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert captured.value.details["code"] == error_code
+    assert [name for name, _ in coordinator.calls] == ["renew", "start", "renew"]
+
+
+def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
+    coordinator = _Coordinator()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(state=ResearchFoldRunState.STOPPED),
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.SYSTEM_FAILED
+    assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert [name for name, _ in coordinator.calls] == [
+        "renew",
+        "start",
+        "renew",
+        "renew",
+        "renew",
+        "fail",
+    ]

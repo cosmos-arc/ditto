@@ -26,6 +26,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
+    PublishedBaselineRuntimeBuilder,
     ResearchRuntimeBuilder,
     StrategyRuntimeBuilder,
     StrategyServiceFactory,
@@ -88,6 +89,18 @@ class AppBuilderFactory(Provider):
     ) -> ResearchRuntimeBuilder:
         """Explicit-version research runtime with no catalog writer dependency."""
         return ResearchRuntimeBuilder(
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+        )
+
+    @provide
+    def published_baseline_runtime_builder(
+        self,
+        node_registry: NodeRegistry,
+        node_pipeline_builder: NodePipelineBuilder,
+    ) -> PublishedBaselineRuntimeBuilder:
+        """Build exact published ETF baselines through the constrained compiler."""
+        return PublishedBaselineRuntimeBuilder(
             node_registry=node_registry,
             node_pipeline_builder=node_pipeline_builder,
         )

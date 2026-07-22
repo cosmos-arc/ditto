@@ -77,6 +77,10 @@ class ExperimentReaderProtocol(Protocol):
 
     def list_attempts(self, key: FoldKey) -> tuple[AttemptView, ...]: ...
 
+    def list_experiment_attempts(
+        self, experiment_id: ExperimentId
+    ) -> tuple[AttemptView, ...]: ...
+
     def list_status_events(
         self, experiment_id: ExperimentId
     ) -> tuple[StatusEventRecord, ...]: ...

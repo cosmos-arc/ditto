@@ -83,11 +83,20 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunServiceConfig,
 )
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.baseline_registry import (
+    BaselinePlanKind,
+    BaselineRegistry,
+    default_baseline_registry,
+)
+from ditto_application.processes.experiments.execution_bundle import (
+    BaselineExecutorBinding,
+)
 
 __all__ = [
     "BacktestRuntimeBuilder",
     "PublishedBacktestRuntime",
     "StrategyServiceFactory",
+    "build_frozen_baseline_pipeline",
 ]
 
 
@@ -99,6 +108,61 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def build_frozen_baseline_pipeline(
+    binding: BaselineExecutorBinding,
+    *,
+    registry: BaselineRegistry | None = None,
+) -> StrategyPipeline:
+    """Build the one registered synthetic baseline without moving lookup."""
+    if type(binding) is not BaselineExecutorBinding:
+        raise AppBuilderError(
+            "frozen baseline execution binding is unsupported or drifted",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "baseline_execution_binding_drift",
+            },
+        )
+    resolved_registry = registry or default_baseline_registry()
+    if type(resolved_registry) is not BaselineRegistry:
+        raise AppBuilderError(
+            "frozen baseline execution binding is unsupported or drifted",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "baseline_execution_binding_drift",
+            },
+        )
+    matches = tuple(
+        descriptor
+        for descriptor in resolved_registry.descriptors
+        if descriptor.ref.identity == binding.baseline_ref
+    )
+    descriptor = matches[0] if len(matches) == 1 else None
+    if (
+        descriptor is None
+        or binding.baseline_ref != "stock_universe_equal_weight.v1"
+        or binding.kind is not BaselinePlanKind.STOCK_UNIVERSE_EQUAL_WEIGHT
+        or binding.implementation_key
+        != "research.baseline.stock_universe_equal_weight.v1"
+        or binding.executor_contract_version != 1
+        or binding.factor_versions != ()
+        or resolved_registry.manifest_hash != binding.registry_manifest_hash
+        or descriptor.ref.identity != binding.baseline_ref
+        or descriptor.kind is not binding.kind
+        or descriptor.implementation_key != binding.implementation_key
+        or descriptor.executor_contract_version != binding.executor_contract_version
+        or descriptor.canonical_hash != binding.descriptor_hash
+        or descriptor.requires_exact_strategy
+    ):
+        raise AppBuilderError(
+            "frozen baseline execution binding is unsupported or drifted",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "baseline_execution_binding_drift",
+            },
+        )
+    return StrategyPipeline(())
 
 
 def _compute_max_lookback(
@@ -313,7 +377,9 @@ def _resolve_backtest_catalog_request(
         research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
         rebalance_freq=config.rebalance_freq,
         engine_version=config.engine_version,
+        random_seed=config.random_seed,
         execution_delay=config.execution_delay,
+        knowledge_lag_days=config.knowledge_lag_days,
         code_version=config.code_version,
         data_catalog_identities=config.data_catalog_identities,
         factor_report_refs=config.factor_report_refs,
@@ -676,6 +742,7 @@ class StrategyServiceFactory:
             artifact_dir=options.artifact_dir,
             display_map=options.display_map,
             run_service=options.run_service or self._run_service,
+            external_should_stop=options.external_should_stop,
             checkpoint_writer=options.checkpoint_writer or self._checkpoint_writer,
             lineage_recorder=options.lineage_recorder or self._lineage_recorder,
             allow_experimental_data=options.allow_experimental_data,

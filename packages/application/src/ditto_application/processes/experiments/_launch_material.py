@@ -35,6 +35,9 @@ from ditto_analysis.experiments import (
 )
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._baseline_runtime_evidence import (
+    baseline_runtime_payload,
+)
 from ditto_application.processes.experiments._launch_saga import (
     PreparedExperimentLaunch,
 )
@@ -284,12 +287,21 @@ def _executor_payload(result: ResearchExecutorProbeResult) -> Mapping[str, objec
         "remediation": result.remediation,
         "strategy_spec_hash": result.strategy_spec_hash,
         "node_registry_manifest_hash": result.node_registry_manifest_hash,
+        "factor_registry_manifest_hash": result.factor_registry_manifest_hash,
+        "factor_binding_hashes": list(result.factor_binding_hashes),
+        "baseline_ref": result.baseline_ref,
+        "baseline_descriptor_hash": result.baseline_descriptor_hash,
+        "baseline_registry_manifest_hash": result.baseline_registry_manifest_hash,
+        "baseline_exact_strategy_hash": result.baseline_exact_strategy_hash,
+        "baseline_runtime": baseline_runtime_payload(result.baseline_runtime),
         "required_datasets": list(result.required_datasets),
         "candidates": [
             {
                 "candidate_hash": candidate.candidate_hash,
                 "resolved_spec_hash": candidate.resolved_spec_hash,
                 "parameter_hash": candidate.parameter_hash,
+                "pipeline_execution_hash": candidate.pipeline_execution_hash,
+                "compiled_factor_set_hash": candidate.compiled_factor_set_hash,
             }
             for candidate in result.candidates
         ],
@@ -502,11 +514,20 @@ def _plan_preimage(
         },
         "work_plan_hash": material.work.plan_hash,
         "node_registry_manifest_hash": executor.node_registry_manifest_hash,
+        "factor_registry_manifest_hash": executor.factor_registry_manifest_hash,
+        "factor_binding_hashes": list(executor.factor_binding_hashes),
+        "baseline_ref": executor.baseline_ref,
+        "baseline_descriptor_hash": executor.baseline_descriptor_hash,
+        "baseline_registry_manifest_hash": executor.baseline_registry_manifest_hash,
+        "baseline_exact_strategy_hash": executor.baseline_exact_strategy_hash,
+        "baseline_runtime": baseline_runtime_payload(executor.baseline_runtime),
         "executor_candidates": [
             {
                 "candidate_hash": item.candidate_hash,
                 "resolved_spec_hash": item.resolved_spec_hash,
                 "parameter_hash": item.parameter_hash,
+                "pipeline_execution_hash": item.pipeline_execution_hash,
+                "compiled_factor_set_hash": item.compiled_factor_set_hash,
             }
             for item in executor.candidates
         ],

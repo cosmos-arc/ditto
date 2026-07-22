@@ -1,6 +1,8 @@
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+import pytest
+
 _SCRIPT = (
     Path(__file__).resolve().parents[5]
     / "scripts"
@@ -291,6 +293,22 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "coordinator.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "execution_bundle.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_execution_resolution_evidence.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "lease_authority.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "planning.py"
         ),
         (
@@ -301,6 +319,11 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
             "packages/application/src/ditto_application/processes/experiments/"
             "planning_contracts.py"
         ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "scheduler_store.py"
+        ),
+        ("packages/application/src/ditto_application/processes/experiments/worker.py"),
         ("packages/application/src/ditto_application/research_validation_windows.py"),
         "packages/application/src/ditto_application/queries/experiments.py",
         "packages/application/src/ditto_application/queries/research.py",
@@ -343,6 +366,30 @@ def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
         "from ditto_analysis.experiments import FoldPersistenceSpec",
         near_miss,
     ) == [f"{near_miss}: production imports ditto_analysis (check import-linter)"]
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "coordinator.py",
+        "execution_bundle.py",
+        "_execution_resolution_evidence.py",
+        "lease_authority.py",
+        "scheduler_store.py",
+        "worker.py",
+    ],
+)
+def test_experiment_runtime_wiring_allowances_are_exact_paths(filename: str) -> None:
+    rel_path = (
+        f"packages/application/src/ditto_application/processes/experiments/{filename}"
+    )
+    near_miss = rel_path.removesuffix(".py") + "_extra.py"
+    source = "from ditto_analysis.experiments import ExperimentId"
+
+    assert check_production_no_analysis(source, rel_path) == []
+    assert check_production_no_analysis(source, near_miss) == [
+        f"{near_miss}: production imports ditto_analysis (check import-linter)"
+    ]
 
 
 def test_application_provider_modules_are_allowed_to_wire_analysis():

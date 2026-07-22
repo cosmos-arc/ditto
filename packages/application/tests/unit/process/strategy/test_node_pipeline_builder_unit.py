@@ -535,3 +535,29 @@ def test_unknown_implementation_key_fails_closed_without_dynamic_import() -> Non
             pipeline=resolved.pipeline,
             strategy_kind=resolved.strategy_kind,
         )
+
+
+def test_attested_pipeline_rejects_stage_process_instance_shadow() -> None:
+    """Frozen dataclass fields cannot hide a poisoned instance method."""
+    spec = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    resolved = adapt_legacy_strategy_spec(spec)
+    attested = _builder().build_attested(
+        legacy_spec=spec,
+        pipeline=resolved.pipeline,
+        strategy_kind=resolved.strategy_kind,
+    )
+    stage = attested.pipeline.stages[0]
+
+    def poisoned_process(frame: pl.DataFrame, context: object) -> pl.DataFrame:
+        return frame.clear()
+
+    object.__setattr__(stage, "process", poisoned_process)
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        attested.require_verified_pipeline(
+            expected_execution_hash=attested.execution_hash,
+        )
+
+    assert exc_info.value.details["reason"] == "invalid_pipeline_stage_state"
+    assert exc_info.value.details["path"] == "stages[0]"
+    assert exc_info.value.details["unexpected_fields"] == ("process",)

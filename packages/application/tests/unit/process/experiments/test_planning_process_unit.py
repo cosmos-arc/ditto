@@ -41,6 +41,12 @@ from ditto_application.processes.experiments._launch_saga import (
 from ditto_application.processes.experiments._planning_request_identity import (
     planning_request_hash,
 )
+from ditto_application.processes.experiments.baseline_planning import (
+    resolve_planning_baseline,
+)
+from ditto_application.processes.experiments.baseline_registry import (
+    default_baseline_registry,
+)
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
@@ -52,6 +58,9 @@ from ditto_application.processes.experiments.planning import (
     ResourceCostModel,
     ValidationWorkload,
     plan_experiment_work,
+)
+from ditto_application.processes.experiments.planning_probes import (
+    BaselineRuntimeExecutorEvidence,
 )
 from ditto_application.processes.experiments.planning_process import (
     R3_RESEARCH_CERTIFICATION_PROFILE,
@@ -204,7 +213,11 @@ def _request(month_count: int = 96) -> ExperimentPlanningRequest:
         matrix_spec=CandidateMatrixSpec(
             baseline=BaselineDescriptor(
                 descriptor_type="etf-current-active",
-                payload={"strategy_id": "seed_etf_rotation", "version": 2},
+                payload={
+                    "strategy_id": "seed_etf_rotation",
+                    "version": 2,
+                    "spec_hash": "f" * 64,
+                },
             ),
         ),
         dataset_requirements=(
@@ -319,6 +332,18 @@ class _ExecutorProbe:
                 required_datasets=(),
                 candidates=(),
             )
+        registry = default_baseline_registry()
+        baseline = resolve_planning_baseline(
+            BaselineDescriptor(
+                descriptor_type="etf-current-active",
+                payload={
+                    "strategy_id": "seed_etf_rotation",
+                    "version": 2,
+                    "spec_hash": "f" * 64,
+                },
+            ),
+            registry,
+        )
         return ResearchExecutorProbeResult(
             available=True,
             code=None,
@@ -332,6 +357,8 @@ class _ExecutorProbe:
                     candidate_hash=candidate.candidate_hash,
                     resolved_spec_hash=(hex(candidate.ordinal)[2:] * 64)[:64],
                     parameter_hash=(hex(candidate.ordinal + 2)[2:] * 64)[:64],
+                    pipeline_execution_hash=(hex(candidate.ordinal + 4)[2:] * 64)[:64],
+                    compiled_factor_set_hash=(hex(candidate.ordinal + 6)[2:] * 64)[:64],
                 )
                 for candidate in request.candidates
             ),
@@ -344,6 +371,27 @@ class _ExecutorProbe:
                 forward_horizon_sessions=self.isolation[0],
                 holding_period_sessions=self.isolation[1],
                 execution_lag_sessions=self.isolation[2],
+            ),
+            baseline_ref=baseline.ref.identity,
+            baseline_descriptor_hash=baseline.registration.descriptor.canonical_hash,
+            baseline_registry_manifest_hash=baseline.registry_manifest_hash,
+            baseline_exact_strategy_hash=(
+                None
+                if baseline.exact_strategy is None
+                else baseline.exact_strategy.canonical_hash
+            ),
+            factor_registry_manifest_hash="d" * 64,
+            factor_binding_hashes=("c" * 64,),
+            baseline_runtime=BaselineRuntimeExecutorEvidence(
+                base_spec_hash="f" * 64,
+                resolved_spec_hash="b" * 64,
+                parameter_hash="c" * 64,
+                pipeline_execution_hash="1" * 64,
+                compiled_factor_set_hash="2" * 64,
+                max_lookback_sessions=21,
+                node_registry_manifest_hash=self.node_registry_manifest_hash,
+                factor_registry_manifest_hash="d" * 64,
+                factor_binding_hashes=("c" * 64,),
             ),
         )
 

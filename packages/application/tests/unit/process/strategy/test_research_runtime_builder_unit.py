@@ -6,6 +6,7 @@ from copy import deepcopy
 from dataclasses import asdict, replace
 from inspect import signature
 from typing import Any
+from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
@@ -69,6 +70,26 @@ def _record(*, status: str = "draft", version: int = 3) -> StrategySpecRecord:
         name=spec.name,
         spec_json=asdict(spec),
         version=version,
+        status=status,
+        tags=spec.tags,
+    )
+
+
+def _factor_record(
+    factor_ids: tuple[str, ...],
+    *,
+    status: str = "draft",
+) -> StrategySpecRecord:
+    spec = replace(
+        _legacy_spec(),
+        signal_expressions=factor_ids,
+        signal_weights=(1.0,) * len(factor_ids),
+    )
+    return StrategySpecRecord(
+        strategy_id=spec.strategy_id,
+        name=spec.name,
+        spec_json=asdict(spec),
+        version=3,
         status=status,
         tags=spec.tags,
     )
@@ -157,6 +178,86 @@ def test_research_builder_has_no_catalog_or_allow_unpublished_switch() -> None:
     assert "record" in build_parameters
 
 
+def test_research_builder_rejects_an_overridable_pipeline_builder() -> None:
+    """Research execution cannot accept a builder that swaps the real stages."""
+    from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_strategy.alpha.node_registry import default_node_registry
+
+    class PoisonedPipelineBuilder(NodePipelineBuilder):
+        pass
+
+    registry = default_node_registry()
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        ResearchRuntimeBuilder(
+            node_registry=registry,
+            node_pipeline_builder=PoisonedPipelineBuilder(registry=registry),
+        )
+
+    assert exc_info.value.details["reason"] == "invalid_research_pipeline_builder"
+
+
+def test_research_runtime_binds_the_actual_compiled_pipeline() -> None:
+    """Resolved node config and concrete stage sequence have one exact hash."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+
+    builder = ResearchRuntimeBuilder()
+    original = builder.build(
+        record=_record(),
+        candidate_parameters=(
+            CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
+        ),
+        snapshot_identity=_snapshot(),
+    )
+    repeated = builder.build(
+        record=_record(),
+        candidate_parameters=(
+            CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
+        ),
+        snapshot_identity=_snapshot(),
+    )
+    changed = builder.build(
+        record=_record(),
+        candidate_parameters=(
+            CandidateParameter(path=legacy_parameter_path("top_k"), value=3),
+        ),
+        snapshot_identity=_snapshot(),
+    )
+
+    assert len(original.pipeline_execution_hash) == 64
+    assert repeated.pipeline_execution_hash == original.pipeline_execution_hash
+    assert changed.pipeline_execution_hash != original.pipeline_execution_hash
+
+
+def test_research_runtime_rejects_pipeline_replacement_with_preserved_hash() -> None:
+    """The execution hash cannot be detached from the runner it attests."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_application.exceptions import AppBuilderError
+    from ditto_strategy.alpha.pipeline import StrategyPipeline
+
+    runtime = ResearchRuntimeBuilder().build(
+        record=_record(),
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+    )
+    declared_hash = runtime.pipeline_execution_hash
+    object.__setattr__(runtime.attested_pipeline, "_pipeline", StrategyPipeline(()))
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        runtime.require_verified_pipeline(
+            expected_execution_hash=declared_hash,
+        )
+
+    assert exc_info.value.details["reason"] == "attested_pipeline_execution_drift"
+
+
 def test_research_builder_uses_explicit_record_candidate_and_snapshot() -> None:
     """One explicit draft version resolves all candidate and snapshot identities."""
     from ditto_application.builders.research_runtime_builder import (
@@ -193,6 +294,245 @@ def test_research_builder_uses_explicit_record_candidate_and_snapshot() -> None:
     )
     assert factor.config["params"]["top_k"] == 2
     assert factor.config["params"]["lookback"] == 30
+
+
+def test_research_runtime_exposes_exact_used_factor_and_registry_bindings() -> None:
+    """The runtime binds source factor order to exact compiler/cache identities."""
+    from ditto_application.builders.research_factor_registry import (
+        ResearchFactorRegistry,
+    )
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+
+    registry = ResearchFactorRegistry()
+    factor_ids = ("momentum_1m", "reversal_1w")
+
+    runtime = ResearchRuntimeBuilder(factor_registry=registry).build(
+        record=_factor_record(factor_ids),
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+    )
+
+    assert runtime.factor_registry_manifest == registry.manifest
+    assert runtime.factor_registry_manifest_hash == registry.manifest_hash
+    assert runtime.factor_versions == (("momentum_1m", 1), ("reversal_1w", 1))
+    assert tuple(item.factor_id for item in runtime.used_factor_bindings) == factor_ids
+    assert runtime.compiled_expressions is not None
+    for binding, compiled in zip(
+        runtime.used_factor_bindings,
+        runtime.compiled_expressions.expressions,
+        strict=True,
+    ):
+        registration = registry.registrations[binding.factor_id]
+        assert binding.version == registration.version
+        assert binding.spec_hash == registration.spec_hash
+        assert binding.compile_identity == compiled.compile_identity
+        assert len(binding.binding_hash) == 64
+
+
+@pytest.mark.parametrize("change", ["expression", "version"])
+def test_factor_content_or_version_changes_runtime_manifest_and_binding(
+    change: str,
+) -> None:
+    """Versioned code registration changes propagate through compile identity."""
+    from ditto_application.builders.research_factor_registry import (
+        ResearchFactorRegistration,
+        ResearchFactorRegistry,
+    )
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_features.factors.spec import FactorSpec
+
+    factor_id = "research.custom_factor"
+
+    def registry(*, version: int, expression: str) -> ResearchFactorRegistry:
+        return ResearchFactorRegistry(
+            extensions=(
+                ResearchFactorRegistration(
+                    factor_id=factor_id,
+                    version=version,
+                    spec=FactorSpec(id=factor_id, expression=expression),
+                ),
+            ),
+        )
+
+    original_registry = registry(version=1, expression="close")
+    changed_registry = registry(
+        version=2 if change == "version" else 1,
+        expression="open" if change == "expression" else "close",
+    )
+    record = _factor_record((factor_id,))
+
+    original = ResearchRuntimeBuilder(factor_registry=original_registry).build(
+        record=record,
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+    )
+    changed = ResearchRuntimeBuilder(factor_registry=changed_registry).build(
+        record=record,
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+    )
+
+    assert (
+        original.factor_registry_manifest_hash != changed.factor_registry_manifest_hash
+    )
+    assert original.used_factor_bindings[0].binding_hash != (
+        changed.used_factor_bindings[0].binding_hash
+    )
+    assert original.used_factor_bindings[0].compile_identity.cache_key != (
+        changed.used_factor_bindings[0].compile_identity.cache_key
+    )
+
+
+def test_compiler_identity_change_changes_used_binding_not_code_manifest() -> None:
+    """Attempt compiler drift is recorded separately from the code registry."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_features.expression.compiler import ExpressionCompiler
+
+    record = _factor_record(("momentum_1m",))
+    original = ResearchRuntimeBuilder().build(
+        record=record,
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+    )
+    delegate = ExpressionCompiler()
+    changed_compiler = MagicMock(spec=ExpressionCompiler)
+
+    def compile_with_changed_identity(spec: Any) -> Any:
+        compiled = delegate.compile(spec)
+        identity = replace(
+            compiled.compile_identity,
+            compiler_fingerprint="f" * 64,
+            cache_key="e" * 64,
+        )
+        return replace(compiled, compile_identity=identity)
+
+    changed_compiler.compile.side_effect = compile_with_changed_identity
+    changed = ResearchRuntimeBuilder(factor_compiler=changed_compiler).build(
+        record=record,
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+    )
+
+    assert (
+        original.factor_registry_manifest_hash == changed.factor_registry_manifest_hash
+    )
+    assert original.used_factor_bindings[0].spec_hash == (
+        changed.used_factor_bindings[0].spec_hash
+    )
+    assert original.used_factor_bindings[0].compile_identity != (
+        changed.used_factor_bindings[0].compile_identity
+    )
+    assert original.used_factor_bindings[0].binding_hash != (
+        changed.used_factor_bindings[0].binding_hash
+    )
+
+
+def test_research_builder_rejects_poisoned_compiled_factor_identity() -> None:
+    """A compiler result cannot claim a different factor ID or version."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_application.processes.execution.factor_bridge import build_signal_spec
+    from ditto_features.expression.compiler import ExpressionCompiler
+
+    compiler = MagicMock(spec=ExpressionCompiler)
+    compiled = ExpressionCompiler().compile(
+        build_signal_spec(
+            "ts_mean(close, 20) / close - 1",
+            index=0,
+            derived_id="momentum_1m",
+            version=1,
+        )
+    )
+    compiler.compile.return_value = replace(
+        compiled,
+        derived_id="poisoned_factor",
+        version=99,
+    )
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        ResearchRuntimeBuilder(factor_compiler=compiler).build(
+            record=_factor_record(("momentum_1m",)),
+            candidate_parameters=(),
+            snapshot_identity=_snapshot(),
+        )
+
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert (
+        exc_info.value.details["reason"] == "research_factor_compile_identity_mismatch"
+    )
+
+
+def test_research_builder_rejects_unknown_literal_before_compilation() -> None:
+    """Research signal_expressions contain factor IDs, never arbitrary DSL."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_features.expression.compiler import ExpressionCompiler
+
+    compiler = MagicMock(spec=ExpressionCompiler)
+    builder = ResearchRuntimeBuilder(factor_compiler=compiler)
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        builder.build(
+            record=_factor_record(("close",)),
+            candidate_parameters=(),
+            snapshot_identity=_snapshot(),
+        )
+
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert exc_info.value.details["reason"] == "unknown_registered_factor"
+    compiler.compile.assert_not_called()
+
+
+def test_research_builder_rejects_duplicate_factor_use_before_compilation() -> None:
+    """The exact used set cannot contain ambiguous duplicate factor IDs."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_features.expression.compiler import ExpressionCompiler
+
+    compiler = MagicMock(spec=ExpressionCompiler)
+    builder = ResearchRuntimeBuilder(factor_compiler=compiler)
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        builder.build(
+            record=_factor_record(("momentum_1m", "momentum_1m")),
+            candidate_parameters=(),
+            snapshot_identity=_snapshot(),
+        )
+
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert exc_info.value.details["reason"] == "duplicate_registered_factor"
+    compiler.compile.assert_not_called()
+
+
+def test_research_builder_rejects_python_factor_without_executor_identity() -> None:
+    """Python factors cannot receive a fabricated expression compile identity."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+    from ditto_features.expression.compiler import ExpressionCompiler
+
+    compiler = MagicMock(spec=ExpressionCompiler)
+    builder = ResearchRuntimeBuilder(factor_compiler=compiler)
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        builder.build(
+            record=_factor_record(("obv_ma20",)),
+            candidate_parameters=(),
+            snapshot_identity=_snapshot(),
+        )
+
+    assert exc_info.value.details["code"] == "EXECUTOR_UNAVAILABLE"
+    assert exc_info.value.details["reason"] == "research_factor_executor_unavailable"
+    compiler.compile.assert_not_called()
 
 
 def test_top_k_candidate_changes_the_real_pipeline_stage_and_result() -> None:
@@ -585,6 +925,42 @@ def test_research_builder_preserves_parameter_error_contract() -> None:
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
     assert exc_info.value.details["reason"] == "parameter_above_max"
+
+
+@pytest.mark.parametrize("strategy_id", tuple(SEED_STRATEGY_SPECS))
+def test_every_default_seed_builds_with_exact_registered_factor_bindings(
+    strategy_id: str,
+) -> None:
+    """All shipped legacy seeds resolve through the strict code-only registry."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchRuntimeBuilder,
+    )
+
+    spec = SEED_STRATEGY_SPECS[strategy_id]
+    record = StrategySpecRecord(
+        strategy_id=spec.strategy_id,
+        name=spec.name,
+        spec_json=asdict(spec),
+        version=1,
+        status="draft",
+        tags=spec.tags,
+    )
+
+    runtime = ResearchRuntimeBuilder().build(
+        record=record,
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+    )
+
+    assert tuple(item.factor_id for item in runtime.used_factor_bindings) == (
+        spec.signal_expressions
+    )
+    assert runtime.compiled_expressions is not None
+    assert (
+        tuple(item.derived_id for item in runtime.compiled_expressions.expressions)
+        == spec.signal_expressions
+    )
+    assert all(item.version == 1 for item in runtime.used_factor_bindings)
 
 
 @pytest.mark.parametrize(

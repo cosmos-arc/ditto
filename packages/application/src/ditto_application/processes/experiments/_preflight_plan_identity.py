@@ -7,6 +7,9 @@ import json
 from collections.abc import Mapping
 from typing import cast
 
+from ditto_application.processes.experiments._baseline_runtime_evidence import (
+    decode_baseline_runtime_evidence,
+)
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
 )
@@ -30,6 +33,13 @@ _PLAN_PREIMAGE_KEYS = {
     "validation_authority",
     "work_plan_hash",
     "node_registry_manifest_hash",
+    "factor_registry_manifest_hash",
+    "factor_binding_hashes",
+    "baseline_ref",
+    "baseline_descriptor_hash",
+    "baseline_registry_manifest_hash",
+    "baseline_exact_strategy_hash",
+    "baseline_runtime",
     "executor_candidates",
     "certification",
     "preflight_hash",
@@ -148,6 +158,23 @@ def _verify_links(
         and plan_preimage.get("work_plan_hash") == work.get("plan_hash")
         and plan_preimage.get("node_registry_manifest_hash")
         == executor.get("node_registry_manifest_hash")
+        and plan_preimage.get("factor_registry_manifest_hash")
+        == executor.get("factor_registry_manifest_hash")
+        and _same_json(
+            plan_preimage.get("factor_binding_hashes"),
+            executor.get("factor_binding_hashes"),
+        )
+        and plan_preimage.get("baseline_ref") == executor.get("baseline_ref")
+        and plan_preimage.get("baseline_descriptor_hash")
+        == executor.get("baseline_descriptor_hash")
+        and plan_preimage.get("baseline_registry_manifest_hash")
+        == executor.get("baseline_registry_manifest_hash")
+        and plan_preimage.get("baseline_exact_strategy_hash")
+        == executor.get("baseline_exact_strategy_hash")
+        and _same_json(
+            plan_preimage.get("baseline_runtime"),
+            executor.get("baseline_runtime"),
+        )
         and _same_json(
             plan_preimage.get("executor_candidates"), executor.get("candidates")
         )
@@ -183,11 +210,40 @@ def validate_plan_preimage(
         or not is_canonical_content_hash(payload.get("request_hash"))
         or not is_canonical_content_hash(payload.get("work_plan_hash"))
         or not is_canonical_content_hash(payload.get("node_registry_manifest_hash"))
+        or not is_canonical_content_hash(payload.get("factor_registry_manifest_hash"))
+        or not is_canonical_content_hash(payload.get("baseline_descriptor_hash"))
+        or not is_canonical_content_hash(payload.get("baseline_registry_manifest_hash"))
+        or (
+            payload.get("baseline_exact_strategy_hash") is not None
+            and not is_canonical_content_hash(
+                payload.get("baseline_exact_strategy_hash")
+            )
+        )
     ):
         raise experiment_process_error(
             "detail.plan_preimage content identity is invalid"
         )
     _string(payload.get("research_cycle_id"), "plan_preimage.research_cycle_id")
+    _string(payload.get("baseline_ref"), "plan_preimage.baseline_ref")
+    baseline_runtime = decode_baseline_runtime_evidence(payload.get("baseline_runtime"))
+    if (
+        payload.get("baseline_exact_strategy_hash") is None
+        and baseline_runtime is not None
+    ) or (
+        payload.get("baseline_exact_strategy_hash") is not None
+        and baseline_runtime is None
+    ):
+        raise experiment_process_error(
+            "plan_preimage baseline runtime identity is incomplete"
+        )
     _hash_list(payload.get("gate_payload_hashes"), "plan_preimage.gate_payload_hashes")
     _hash_list(payload.get("fold_payload_hashes"), "plan_preimage.fold_payload_hashes")
+    factor_binding_hashes = _list(
+        payload.get("factor_binding_hashes"),
+        "plan_preimage.factor_binding_hashes",
+    )
+    if any(not is_canonical_content_hash(item) for item in factor_binding_hashes):
+        raise experiment_process_error(
+            "plan_preimage.factor_binding_hashes must contain canonical hashes"
+        )
     _verify_links(payload, preflight)

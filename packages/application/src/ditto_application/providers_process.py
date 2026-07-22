@@ -53,7 +53,13 @@ from ditto_platform.services import AlertManager
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
+)
 
+from ditto_application.builders.published_baseline_runtime_builder import (
+    PublishedBaselineRuntimeBuilder,
+)
 from ditto_application.builders.research_executor_probe import (
     BuilderBackedResearchExecutorProbe as _BuilderBackedResearchExecutorProbe,
 )
@@ -78,6 +84,9 @@ from ditto_application.processes.execution.signal_snapshot import SignalSnapshot
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
+)
+from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentSchedulerStore,
 )
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.evidence_commit import (
@@ -233,9 +242,15 @@ class AppProcessProvider(Provider):
     def research_executor_probe(
         self,
         builder: ResearchRuntimeBuilder,
+        published_baseline_builder: PublishedBaselineRuntimeBuilder,
+        strategy_catalog: StrategyCatalogService,
     ) -> _BuilderBackedResearchExecutorProbe:
         """Validate every candidate against the explicit-version runtime builder."""
-        return _BuilderBackedResearchExecutorProbe(builder)
+        return _BuilderBackedResearchExecutorProbe(
+            builder,
+            published_baseline_builder=published_baseline_builder,
+            strategy_reader=strategy_catalog,
+        )
 
     @provide
     def research_validation_authority_probe(
@@ -261,6 +276,15 @@ class AppProcessProvider(Provider):
             executor_probe=executor_probe,
             authority_probe=authority_probe,
         )
+
+    @provide
+    def experiment_scheduler_store(
+        self,
+        reader: ExperimentReaderProtocol,
+        writer: ExperimentWriterProtocol,
+    ) -> ExperimentSchedulerStore:
+        """Bind Task 9 scheduling to the approved durable experiment ports."""
+        return ExperimentSchedulerStore(reader, writer)
 
     @provide
     def persisted_ingestion_evidence_verifier(

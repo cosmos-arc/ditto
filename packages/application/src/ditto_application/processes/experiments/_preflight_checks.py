@@ -5,12 +5,23 @@ from __future__ import annotations
 from datetime import date
 from typing import cast
 
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._baseline_runtime_evidence import (
+    baseline_runtime_payload,
+    is_valid_baseline_runtime_evidence,
+)
 from ditto_application.processes.experiments._planning_evidence import (
     candidate_evidence_tuple,
     canonical_text,
     canonical_text_tuple,
     snapshot_payload,
     text_tuple_payload,
+)
+from ditto_application.processes.experiments.baseline_planning import (
+    resolve_planning_baseline,
+)
+from ditto_application.processes.experiments.baseline_registry import (
+    default_baseline_registry,
 )
 from ditto_application.processes.experiments.planning import CandidateMatrixPlan
 from ditto_application.processes.experiments.planning_contracts import (
@@ -25,7 +36,9 @@ from ditto_application.processes.experiments.planning_probes import (
     ResearchExecutorProbeResult,
     ResearchSnapshotEvidence,
     is_canonical_content_hash,
+    is_canonical_identity,
 )
+from ditto_application.research_validation_contracts import RuntimeValidationEvidence
 
 __all__ = ["certification_check", "executor_check"]
 
@@ -50,6 +63,8 @@ def executor_check(
     ) + (
         tuple(item.resolved_spec_hash for item in candidates)
         + tuple(item.parameter_hash for item in candidates)
+        + tuple(item.pipeline_execution_hash for item in candidates)
+        + tuple(item.compiled_factor_set_hash for item in candidates)
         if candidates
         else ()
     )
@@ -57,6 +72,55 @@ def executor_check(
         is_canonical_content_hash(value) for value in evidence_hashes
     )
     registry_valid = is_canonical_content_hash(result.node_registry_manifest_hash)
+    factor_registry_valid = is_canonical_content_hash(
+        result.factor_registry_manifest_hash
+    )
+    factor_bindings_valid = (
+        type(result.factor_binding_hashes) is tuple
+        and all(
+            is_canonical_content_hash(value) for value in result.factor_binding_hashes
+        )
+        and len(set(result.factor_binding_hashes)) == len(result.factor_binding_hashes)
+    )
+    try:
+        registry = default_baseline_registry()
+        baseline = resolve_planning_baseline(
+            matrix.baseline_candidate.descriptor,
+            registry,
+        )
+        expected_exact_hash = (
+            None
+            if baseline.exact_strategy is None
+            else baseline.exact_strategy.canonical_hash
+        )
+        baseline_runtime_valid = (
+            result.baseline_runtime is None
+            if baseline.exact_strategy is None
+            else (
+                is_valid_baseline_runtime_evidence(result.baseline_runtime)
+                and result.baseline_runtime is not None
+                and result.baseline_runtime.base_spec_hash
+                == baseline.exact_strategy.spec_hash
+                and type(result.runtime_validation_evidence)
+                is RuntimeValidationEvidence
+                and result.baseline_runtime.max_lookback_sessions
+                <= result.runtime_validation_evidence.max_lookback_sessions
+            )
+        )
+        baseline_evidence_valid = (
+            is_canonical_identity(result.baseline_ref)
+            and result.baseline_ref == baseline.ref.identity
+            and is_canonical_content_hash(result.baseline_descriptor_hash)
+            and result.baseline_descriptor_hash
+            == baseline.registration.descriptor.canonical_hash
+            and is_canonical_content_hash(result.baseline_registry_manifest_hash)
+            and result.baseline_registry_manifest_hash
+            == baseline.registry_manifest_hash
+            and result.baseline_exact_strategy_hash == expected_exact_hash
+            and baseline_runtime_valid
+        )
+    except (AppProcessError, AttributeError, TypeError):
+        baseline_evidence_valid = False
     available = (
         type(result.available) is bool
         and result.available
@@ -66,6 +130,9 @@ def executor_check(
         and result.strategy_spec_hash is not None
         and evidence_hashes_valid
         and registry_valid
+        and factor_registry_valid
+        and factor_bindings_valid
+        and baseline_evidence_valid
         and required_valid
         and candidates_valid
         and required == declared
@@ -80,7 +147,11 @@ def executor_check(
             else (result.code if canonical_text(result.code) else None)
             or (
                 "REPRODUCIBILITY_FAILED"
-                if not evidence_hashes_valid or not registry_valid
+                if not evidence_hashes_valid
+                or not registry_valid
+                or not factor_registry_valid
+                or not factor_bindings_valid
+                or not baseline_evidence_valid
                 else "SPEC_INVALID"
             )
         ),
@@ -102,6 +173,18 @@ def executor_check(
             "available": result.available,
             "evidence_hashes_valid": evidence_hashes_valid,
             "node_registry_manifest_hash": result.node_registry_manifest_hash,
+            "factor_registry_manifest_hash": result.factor_registry_manifest_hash,
+            "factor_binding_hashes": list(result.factor_binding_hashes),
+            "baseline_ref": result.baseline_ref,
+            "baseline_descriptor_hash": result.baseline_descriptor_hash,
+            "baseline_registry_manifest_hash": result.baseline_registry_manifest_hash,
+            "baseline_exact_strategy_hash": result.baseline_exact_strategy_hash,
+            "baseline_runtime": (
+                baseline_runtime_payload(result.baseline_runtime)
+                if is_valid_baseline_runtime_evidence(result.baseline_runtime)
+                else None
+            ),
+            "baseline_evidence_valid": baseline_evidence_valid,
             "required_datasets": list(required),
             "candidate_hashes": list(candidate_hashes),
         },

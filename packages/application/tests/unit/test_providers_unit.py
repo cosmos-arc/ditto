@@ -9,6 +9,7 @@ import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
+    PublishedBaselineRuntimeBuilder,
     ResearchRuntimeBuilder,
     StrategyRuntimeBuilder,
     StrategyServiceFactory,
@@ -882,6 +883,15 @@ class TestAppProviderIntegration:
         assert isinstance(
             app_container.get(ResearchRuntimeBuilder),
             ResearchRuntimeBuilder,
+        )
+        assert isinstance(
+            app_container.get(PublishedBaselineRuntimeBuilder),
+            PublishedBaselineRuntimeBuilder,
+        )
+        probe = app_container.get(BuilderBackedResearchExecutorProbe)
+        assert probe._builder is app_container.get(ResearchRuntimeBuilder)
+        assert probe._published_baseline_builder is app_container.get(
+            PublishedBaselineRuntimeBuilder
         )
         assert isinstance(
             app_container.get(BacktestRuntimeBuilder),

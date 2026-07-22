@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
 from typing import cast
 
 import orjson
@@ -17,6 +16,9 @@ from ditto_analysis.experiments import (
 from ditto_strategy.alpha.parameters import ParameterValue
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._baseline_runtime_evidence import (
+    decode_baseline_runtime_evidence,
+)
 from ditto_application.processes.experiments._planning_values import (
     BaselineInputValue,
 )
@@ -25,6 +27,30 @@ from ditto_application.processes.experiments._preflight_certification_codec impo
 )
 from ditto_application.processes.experiments._preflight_check_codec import (
     decode_preflight_checks,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_boolean as _boolean,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_date as _date,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_integer as _integer,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_list as _list,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_mapping as _mapping,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_month as _month,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_string as _string,
+)
+from ditto_application.processes.experiments._preflight_decode_values import (
+    decode_window_dates,
 )
 from ditto_application.processes.experiments._preflight_plan_identity import (
     validate_plan_preimage,
@@ -70,7 +96,6 @@ from ditto_application.research_validation_contracts import (
     validation_authority_facts_match,
 )
 from ditto_application.research_validation_protocol import (
-    CalendarMonth,
     ReservedHoldoutPlan,
     UniverseCoveragePolicy,
     ValidationEligibility,
@@ -83,8 +108,6 @@ from ditto_application.research_validation_protocol import (
 )
 
 __all__ = ["DecodedPreflightReport", "decode_preflight_report"]
-
-_CALENDAR_MONTH_PART_COUNT = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,65 +128,8 @@ class DecodedPreflightReport:
     work_plan: ExperimentWorkPlan
 
 
-def _mapping(value: object, field_name: str) -> dict[str, object]:
-    if type(value) is not dict:
-        raise experiment_process_error(f"{field_name} must be an object")
-    return cast("dict[str, object]", value)
-
-
-def _list(value: object, field_name: str) -> list[object]:
-    if type(value) is not list:
-        raise experiment_process_error(f"{field_name} must be a list")
-    return cast("list[object]", value)
-
-
-def _string(value: object, field_name: str) -> str:
-    if type(value) is not str:
-        raise experiment_process_error(f"{field_name} must be a string")
-    return value
-
-
-def _integer(value: object, field_name: str) -> int:
-    if type(value) is not int:
-        raise experiment_process_error(f"{field_name} must be an integer")
-    return value
-
-
-def _boolean(value: object, field_name: str) -> bool:
-    if type(value) is not bool:
-        raise experiment_process_error(f"{field_name} must be a boolean")
-    return value
-
-
-def _date(value: object, field_name: str) -> date:
-    text = _string(value, field_name)
-    parsed = date.fromisoformat(text)
-    if parsed.isoformat() != text:
-        raise experiment_process_error(f"{field_name} is not a canonical date")
-    return parsed
-
-
-def _month(value: object, field_name: str) -> CalendarMonth:
-    text = _string(value, field_name)
-    parts = text.split("-")
-    if len(parts) != _CALENDAR_MONTH_PART_COUNT:
-        raise experiment_process_error(f"{field_name} is not a calendar month")
-    month = CalendarMonth(int(parts[0]), int(parts[1]))
-    if str(month) != text:
-        raise experiment_process_error(
-            f"{field_name} is not a canonical calendar month"
-        )
-    return month
-
-
 def _window(value: object, field_name: str) -> DateWindow:
-    payload = _mapping(value, field_name)
-    if set(payload) != {"start", "end"}:
-        raise experiment_process_error(f"{field_name} has an invalid shape")
-    return DateWindow(
-        _date(payload["start"], f"{field_name}.start"),
-        _date(payload["end"], f"{field_name}.end"),
-    )
+    return DateWindow(*decode_window_dates(value, field_name))
 
 
 def _coverage_policy(value: object, field_name: str) -> UniverseCoveragePolicy:
@@ -548,17 +514,38 @@ def _validate_executor_and_authority(
     executor = _mapping(preflight.get("executor"), "executor")
     if not _boolean(executor.get("available"), "executor.available"):
         raise experiment_process_error("persisted launch executor is unavailable")
-    strategy_hash = _string(
-        executor.get("strategy_spec_hash"), "executor.strategy_spec_hash"
+    identity_hashes = (
+        _string(executor.get(field), f"executor.{field}")
+        for field in (
+            "strategy_spec_hash",
+            "node_registry_manifest_hash",
+            "factor_registry_manifest_hash",
+        )
     )
-    registry_hash = _string(
-        executor.get("node_registry_manifest_hash"),
-        "executor.node_registry_manifest_hash",
+    factor_binding_hashes = tuple(
+        _string(item, "executor.factor_binding_hash")
+        for item in _list(
+            executor.get("factor_binding_hashes"),
+            "executor.factor_binding_hashes",
+        )
     )
-    if not is_canonical_content_hash(strategy_hash) or not is_canonical_content_hash(
-        registry_hash
-    ):
+    if any(
+        not is_canonical_content_hash(item)
+        for item in (*identity_hashes, *factor_binding_hashes)
+    ) or len(set(factor_binding_hashes)) != len(factor_binding_hashes):
         raise experiment_process_error("executor identity hash is invalid")
+    baseline_runtime = decode_baseline_runtime_evidence(
+        executor.get("baseline_runtime")
+    )
+    baseline_exact_strategy_hash = executor.get("baseline_exact_strategy_hash")
+    if (baseline_exact_strategy_hash is None and baseline_runtime is not None) or (
+        baseline_exact_strategy_hash is not None
+        and (
+            not is_canonical_content_hash(baseline_exact_strategy_hash)
+            or baseline_runtime is None
+        )
+    ):
+        raise experiment_process_error("baseline runtime identity is incomplete")
     runtime = _runtime_evidence(executor.get("runtime_validation_evidence"))
     candidates = tuple(
         CandidateExecutorEvidence(
@@ -572,6 +559,14 @@ def _validate_executor_and_authority(
             parameter_hash=_string(
                 item.get("parameter_hash"), "executor.candidate.parameter_hash"
             ),
+            pipeline_execution_hash=_string(
+                item.get("pipeline_execution_hash"),
+                "executor.candidate.pipeline_execution_hash",
+            ),
+            compiled_factor_set_hash=_string(
+                item.get("compiled_factor_set_hash"),
+                "executor.candidate.compiled_factor_set_hash",
+            ),
         )
         for raw_item in _list(executor.get("candidates"), "executor.candidates")
         for item in (_mapping(raw_item, "executor.candidate"),)
@@ -584,21 +579,21 @@ def _validate_executor_and_authority(
         is_canonical_content_hash(item.candidate_hash)
         and is_canonical_content_hash(item.resolved_spec_hash)
         and is_canonical_content_hash(item.parameter_hash)
+        and is_canonical_content_hash(item.pipeline_execution_hash)
+        and is_canonical_content_hash(item.compiled_factor_set_hash)
         for item in candidates
     ):
         raise experiment_process_error(
             "executor candidate identity does not match the work plan"
         )
-
     authority = _mapping(preflight.get("authority"), "authority")
     authority_protocol_hash = _string(
         authority.get("protocol_hash"),
         "authority.protocol_hash",
     )
     if authority_protocol_hash != canonical_validation_protocol_hash(protocol):
-        raise experiment_process_error(
-            "authority protocol does not match validation protocol"
-        )
+        msg = "authority protocol does not match validation protocol"
+        raise experiment_process_error(msg)
     snapshot = _mapping(
         authority.get("snapshot_identity"), "authority.snapshot_identity"
     )
@@ -705,15 +700,13 @@ def _decode(
         preflight_hash=preflight_hash,
         preflight=preflight,
     )
-
     validation = _mapping(preflight.get("validation"), "validation")
     protocol = decode_validation_protocol(validation.get("protocol"))
     stored_plan = _validation_plan(validation.get("plan"))
     compiled_plan = compile_validation_protocol(protocol)
     if stored_plan != compiled_plan:
-        raise experiment_process_error(
-            "validation plan does not match its protocol preimage"
-        )
+        msg = "validation plan does not match its protocol preimage"
+        raise experiment_process_error(msg)
     work = _work(preflight.get("work"))
     runtime, authority = _validate_executor_and_authority(
         preflight=preflight,

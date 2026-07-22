@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import cast
 
+from ditto_application.processes.experiments._baseline_runtime_evidence import (
+    BASELINE_RUNTIME_EVIDENCE_KEYS,
+)
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
 )
@@ -208,6 +211,13 @@ def _executor_shape(value: object) -> None:
             "remediation",
             "strategy_spec_hash",
             "node_registry_manifest_hash",
+            "factor_registry_manifest_hash",
+            "factor_binding_hashes",
+            "baseline_ref",
+            "baseline_descriptor_hash",
+            "baseline_registry_manifest_hash",
+            "baseline_exact_strategy_hash",
+            "baseline_runtime",
             "required_datasets",
             "candidates",
             "runtime_validation_evidence",
@@ -216,8 +226,25 @@ def _executor_shape(value: object) -> None:
     _objects(
         executor["candidates"],
         "executor.candidates",
-        {"candidate_hash", "resolved_spec_hash", "parameter_hash"},
+        {
+            "candidate_hash",
+            "resolved_spec_hash",
+            "parameter_hash",
+            "pipeline_execution_hash",
+            "compiled_factor_set_hash",
+        },
     )
+    _array(executor["factor_binding_hashes"], "executor.factor_binding_hashes")
+    if executor["baseline_runtime"] is not None:
+        baseline_runtime = _object(
+            executor["baseline_runtime"],
+            "executor.baseline_runtime",
+            set(BASELINE_RUNTIME_EVIDENCE_KEYS),
+        )
+        _array(
+            baseline_runtime["factor_binding_hashes"],
+            "executor.baseline_runtime.factor_binding_hashes",
+        )
     runtime = _object(
         executor["runtime_validation_evidence"],
         "executor.runtime_validation_evidence",

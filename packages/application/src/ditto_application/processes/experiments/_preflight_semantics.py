@@ -8,6 +8,9 @@ from typing import cast
 
 import orjson
 
+from ditto_application.processes.experiments._baseline_runtime_evidence import (
+    decode_baseline_runtime_evidence,
+)
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
 )
@@ -234,7 +237,7 @@ def _validate_certification(
         or not is_canonical_identity(snapshot.get("snapshot_id"))
         or not is_canonical_identity(snapshot.get("dataset_id"))
         or not is_canonical_content_hash(snapshot.get("manifest_hash"))
-        or snapshot.get("known_at_policy") not in {"sample_time", "explicit_cutoff"}
+        or snapshot.get("known_at_policy") != "sample_time"
         or not is_canonical_identity(snapshot.get("builder_version"))
     ):
         raise experiment_process_error(
@@ -268,6 +271,18 @@ def _validate_executor(
             "executor.required_datasets",
         )
     ]
+    baseline_ref = executor.get("baseline_ref")
+    baseline_exact_strategy_hash = executor.get("baseline_exact_strategy_hash")
+    baseline_runtime = decode_baseline_runtime_evidence(
+        executor.get("baseline_runtime")
+    )
+    baseline_spec_hash = (
+        work.candidate_matrix.baseline_candidate.descriptor.payload.get("spec_hash")
+    )
+    factor_binding_hashes = _list(
+        executor.get("factor_binding_hashes"),
+        "executor.factor_binding_hashes",
+    )
     if (
         executor.get("available") is not True
         or executor.get("code") is not None
@@ -275,6 +290,29 @@ def _validate_executor(
         or executor.get("remediation") is not None
         or not is_canonical_content_hash(executor.get("strategy_spec_hash"))
         or not is_canonical_content_hash(executor.get("node_registry_manifest_hash"))
+        or not is_canonical_content_hash(executor.get("factor_registry_manifest_hash"))
+        or any(not is_canonical_content_hash(item) for item in factor_binding_hashes)
+        or len(set(cast("list[str]", factor_binding_hashes)))
+        != len(factor_binding_hashes)
+        or not is_canonical_identity(baseline_ref)
+        or not is_canonical_content_hash(executor.get("baseline_descriptor_hash"))
+        or not is_canonical_content_hash(
+            executor.get("baseline_registry_manifest_hash")
+        )
+        or (
+            baseline_exact_strategy_hash is not None
+            and not is_canonical_content_hash(baseline_exact_strategy_hash)
+        )
+        or (baseline_exact_strategy_hash is None and baseline_runtime is not None)
+        or (
+            baseline_exact_strategy_hash is not None
+            and (
+                baseline_runtime is None
+                or baseline_runtime.base_spec_hash != baseline_spec_hash
+                or baseline_runtime.max_lookback_sessions
+                > runtime.max_lookback_sessions
+            )
+        )
         or candidate_hashes != expected_hashes
         or tuple(required_datasets) != runtime.required_datasets
     ):
@@ -337,6 +375,10 @@ def validate_launch_preflight_semantics(
         work=work,
         runtime=runtime,
     )
+    factor_binding_hashes = _list(
+        executor.get("factor_binding_hashes"),
+        "executor.factor_binding_hashes",
+    )
     authority = _mapping(preflight.get("authority"), "authority")
     authority_summaries = _mapping(authority.get("summaries"), "authority.summaries")
     expected_authority_summaries = {
@@ -372,6 +414,20 @@ def validate_launch_preflight_semantics(
             "available": True,
             "evidence_hashes_valid": True,
             "node_registry_manifest_hash": executor.get("node_registry_manifest_hash"),
+            "factor_registry_manifest_hash": executor.get(
+                "factor_registry_manifest_hash"
+            ),
+            "factor_binding_hashes": factor_binding_hashes,
+            "baseline_ref": executor.get("baseline_ref"),
+            "baseline_descriptor_hash": executor.get("baseline_descriptor_hash"),
+            "baseline_registry_manifest_hash": executor.get(
+                "baseline_registry_manifest_hash"
+            ),
+            "baseline_exact_strategy_hash": executor.get(
+                "baseline_exact_strategy_hash"
+            ),
+            "baseline_runtime": executor.get("baseline_runtime"),
+            "baseline_evidence_valid": True,
             "required_datasets": required_datasets,
             "candidate_hashes": candidate_hashes,
         },

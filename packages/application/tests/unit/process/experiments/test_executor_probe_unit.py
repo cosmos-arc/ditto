@@ -39,6 +39,8 @@ class _Probe:
             node_registry_manifest_hash="b" * 64,
             required_datasets=self._required_datasets,
             candidates=(),
+            factor_registry_manifest_hash="c" * 64,
+            factor_binding_hashes=(),
         )
 
 

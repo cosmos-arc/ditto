@@ -280,6 +280,52 @@ class TestBacktestServiceConfig:
 
         assert engine_config.spec_hash == canonical_spec_hash
 
+    def test_random_seed_propagates_to_engine_options(self) -> None:
+        """Service config must override the engine's ambient seed default."""
+        service = _make_minimal_service(
+            config=_make_service_config(random_seed=1729),
+        )
+
+        options = service._build_engine_options(
+            "run-deterministic-seed",
+            ExecutionAuditCollector(),
+        )
+
+        assert options.random_seed == 1729
+
+    def test_knowledge_lag_propagates_to_engine_config(self) -> None:
+        """Engine PIT semantics must use the service's frozen knowledge lag."""
+        service = _make_minimal_service(
+            config=_make_service_config(knowledge_lag_days=3),
+        )
+
+        engine_config = service._build_engine_config("run-knowledge-lag")
+
+        assert engine_config.knowledge_lag_days == 3
+
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value"),
+        [
+            pytest.param("random_seed", True, id="seed-bool"),
+            pytest.param("random_seed", -1, id="seed-negative"),
+            pytest.param("knowledge_lag_days", True, id="knowledge-lag-bool"),
+            pytest.param("knowledge_lag_days", -1, id="knowledge-lag-negative"),
+            pytest.param("execution_delay", True, id="execution-delay-bool"),
+            pytest.param("execution_delay", -1, id="execution-delay-negative"),
+        ],
+    )
+    def test_deterministic_controls_require_nonnegative_exact_integers(
+        self,
+        field_name: str,
+        invalid_value: object,
+    ) -> None:
+        """Invalid timing or seed controls must fail before engine assembly."""
+        with pytest.raises(AppProcessError) as exc_info:
+            _make_service_config(**{field_name: invalid_value})
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "invalid_deterministic_control"
+
 
 # ---------------------------------------------------------------------------
 # Tests: BacktestServiceOptions
@@ -298,6 +344,7 @@ class TestBacktestServiceOptions:
         assert options.audit_service is None
         assert options.artifact_service is None
         assert options.artifact_dir is None
+        assert options.external_should_stop is None
 
     def test_frozen(self) -> None:
         """BacktestServiceOptions 是 frozen，不可变。"""
@@ -316,6 +363,43 @@ class TestBacktestServiceOptions:
         assert options.fee_model is mock_fee
         assert options.audit_service is mock_audit
 
+    @pytest.mark.parametrize(
+        ("external_result", "lifecycle_result", "expected"),
+        [
+            (False, False, False),
+            (True, False, True),
+            (False, True, True),
+            (True, True, True),
+        ],
+    )
+    def test_external_stop_is_or_combined_with_lifecycle_cancellation(
+        self,
+        external_result: bool,
+        lifecycle_result: bool,
+        expected: bool,
+    ) -> None:
+        external_should_stop = MagicMock(return_value=external_result)
+        run_service = MagicMock()
+        run_service.is_cancelled.return_value = lifecycle_result
+        service = _make_minimal_service()
+        service._options = BacktestServiceOptions(
+            run_service=run_service,
+            external_should_stop=external_should_stop,
+        )
+
+        engine_options = service._build_engine_options(
+            "run-stop-control",
+            ExecutionAuditCollector(),
+        )
+
+        assert engine_options.should_stop is not None
+        assert engine_options.should_stop() is expected
+        external_should_stop.assert_called_once_with()
+        if external_result:
+            run_service.is_cancelled.assert_not_called()
+        else:
+            run_service.is_cancelled.assert_called_once_with("run-stop-control")
+
 
 # ---------------------------------------------------------------------------
 # Tests: BacktestService.run()
@@ -324,6 +408,58 @@ class TestBacktestServiceOptions:
 
 class TestBacktestServiceRun:
     """测试 BacktestService 核心运行流程。"""
+
+    def test_knowledge_lag_and_execution_delay_keep_distinct_semantics(
+        self,
+    ) -> None:
+        """Calendar-day knowledge lag must not become session execution delay."""
+        config = _make_service_config(
+            knowledge_lag_days=3,
+            execution_delay=5,
+        )
+        service = _make_minimal_service(config=config)
+        fake_report = MagicMock(spec=BacktestReport)
+
+        with (
+            patch(
+                "ditto_application.processes.execution.backtest_process."
+                "BacktestSynchronizer",
+            ) as synchronizer_type,
+            patch(
+                "ditto_application.processes.execution.backtest_process.EngineLoop",
+            ) as engine_loop_type,
+            patch(
+                "ditto_application.processes.execution.backtest_process.build_report",
+                return_value=fake_report,
+            ),
+        ):
+            engine_loop_type.return_value.run.return_value = _make_engine_result()
+
+            service.run()
+
+        synchronizer_kwargs = synchronizer_type.call_args.kwargs
+        engine_config = engine_loop_type.call_args.kwargs["config"]
+        assert synchronizer_kwargs["knowledge_lag_days"] == 3
+        assert engine_config.knowledge_lag_days == 3
+        assert engine_config.execution_delay == 5
+
+    @patch.object(
+        EngineLoop,
+        "run",
+        return_value=replace(_make_engine_result(), cancelled=True),
+    )
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_run_exposes_cooperative_stop_to_research_runner(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        mock_build_report.return_value = MagicMock(spec=BacktestReport)
+        service = _make_minimal_service()
+
+        service.run()
+
+        assert service.last_run_cancelled is True
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_application.processes.execution.backtest_process.build_report")
@@ -1255,17 +1391,6 @@ class TestWithoutPersistence:
 class TestBuildFactorAwareBundleBuilder:
     """测试 _build_factor_aware_bundle_builder — 因子信号注入构建器."""
 
-    def _make_compiled_expressions(
-        self,
-        expressions: list[object] | None = None,
-        weights: tuple[float, ...] = (1.0,),
-    ) -> MagicMock:
-        """构建 CompiledExpressions mock (含 expressions 列表或空)."""
-        compiled = MagicMock()
-        compiled.expressions = expressions or []
-        compiled.weights = weights
-        return compiled
-
     def _make_step_context(
         self,
         td: str = "2026-04-10",
@@ -1437,7 +1562,11 @@ class TestBuildFactorAwareBundleBuilder:
 
     def test_compiled_empty_expressions_skips_builder(self) -> None:
         """空 expressions 元组时 builder 可构建但信号为空."""
-        compiled = self._make_compiled_expressions(expressions=[], weights=())
+        from ditto_application.processes.execution.factor_bridge import (
+            CompiledExpressions,
+        )
+
+        compiled = CompiledExpressions(expressions=(), weights=())
 
         config = _make_service_config(strategy_id="empty-strat", run_id="run-empty")
         service = _make_minimal_service(config=config)
@@ -1517,11 +1646,7 @@ class TestBuildFactorAwareBundleBuilder:
             CompiledExpressions,
         )
 
-        compiled = self._make_compiled_expressions(
-            expressions=[],
-            weights=(),
-        )
-        compiled.__class__ = CompiledExpressions  # type: ignore[assignment]
+        compiled = CompiledExpressions(expressions=(), weights=())
 
         config = _make_service_config(strategy_id="test-strat", run_id="run-test")
         service = _make_minimal_service(config=config)
@@ -1763,6 +1888,45 @@ class TestRunServiceLifecycle:
         call_kwargs = mock_run_svc.create_run.call_args[1]
         config_data = orjson.loads(call_kwargs["config_json"])
         assert config_data["allow_experimental_data"] is True
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_run_config_records_deterministic_execution_controls(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """Lifecycle evidence must freeze seed and both timing controls."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+        mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None
+        service = BacktestService(
+            config=_make_service_config(
+                run_id="deterministic-controls",
+                random_seed=1729,
+                knowledge_lag_days=3,
+                execution_delay=5,
+            ),
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(run_service=mock_run_svc),
+        )
+
+        service.run()
+
+        import orjson
+
+        config_json = mock_run_svc.create_run.call_args.kwargs["config_json"]
+        config_data = orjson.loads(config_json)
+        assert config_data["random_seed"] == 1729
+        assert config_data["knowledge_lag_days"] == 3
+        assert config_data["execution_delay"] == 5
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_application.processes.execution.backtest_process.build_report")

@@ -29,7 +29,11 @@ from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
 )
 
-__all__ = ["validate_prepared_launch_rows"]
+__all__ = [
+    "reconstruct_launch_candidates",
+    "reconstruct_launch_folds",
+    "validate_prepared_launch_rows",
+]
 
 _PREFLIGHT_POLICY_VERSION = "r3-experiment-preflight-v1"
 
@@ -65,11 +69,11 @@ def _mapping(value: object, field_name: str) -> dict[str, object]:
     return dict(cast("Mapping[str, object]", value))
 
 
-def _expected_candidates(
-    prepared: _PreparedExperimentLaunch,
+def reconstruct_launch_candidates(
+    experiment_id: ExperimentId,
     decoded: DecodedPreflightReport,
 ) -> tuple[CandidateSpec, ...]:
-    experiment_id = prepared.spec.experiment_id
+    """Rebuild the complete ordered launch candidate set from preflight."""
     return tuple(
         CandidateSpec(
             candidate_id=CandidateId(
@@ -90,12 +94,12 @@ def _expected_candidates(
     )
 
 
-def _expected_folds(
-    prepared: _PreparedExperimentLaunch,
+def reconstruct_launch_folds(
+    experiment_id: ExperimentId,
     decoded: DecodedPreflightReport,
     candidates: tuple[CandidateSpec, ...],
 ) -> tuple[FoldPersistenceSpec, ...]:
-    experiment_id = prepared.spec.experiment_id
+    """Rebuild the complete ordered fold set for every launch candidate."""
     validation = decoded.validation_plan
     regular = tuple(
         FoldPersistenceSpec.create(
@@ -243,10 +247,14 @@ def validate_prepared_launch_rows(
         expected_policy_version=_PREFLIGHT_POLICY_VERSION,
     )
     preflight = _mapping(enqueue_detail.get("preflight"), "detail.preflight")
-    candidates = _expected_candidates(prepared, decoded)
+    candidates = reconstruct_launch_candidates(prepared.spec.experiment_id, decoded)
     _validate_spec(prepared, decoded, preflight, candidates)
     _validate_gates(prepared, decoded)
-    expected_folds = _expected_folds(prepared, decoded, candidates)
+    expected_folds = reconstruct_launch_folds(
+        prepared.spec.experiment_id,
+        decoded,
+        candidates,
+    )
     if (
         len(expected_folds) != decoded.planned_fold_count
         or prepared.folds != expected_folds

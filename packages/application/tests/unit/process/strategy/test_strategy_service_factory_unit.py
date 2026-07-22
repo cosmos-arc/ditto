@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import MagicMock
 
+import polars as pl
 import pytest
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
     PublishedBacktestRuntime,
     StrategyServiceFactory,
 )
+from ditto_application.builders.service_factory import build_frozen_baseline_pipeline
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestCatalogRequestConfig,
@@ -18,6 +21,13 @@ from ditto_application.processes.execution.backtest_process import (
     BacktestServiceOptions,
 )
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.baseline_registry import (
+    BaselinePlanKind,
+    default_baseline_registry,
+)
+from ditto_application.processes.experiments.execution_bundle import (
+    BaselineExecutorBinding,
+)
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import DataFeed
 from ditto_data.lineage import InMemoryDataLineage
@@ -26,8 +36,9 @@ from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.parameters import canonical_parameter_hash
-from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -81,6 +92,71 @@ def _make_runtime() -> PublishedBacktestRuntime:
             research_snapshot_manifest_hash=None,
         ),
     )
+
+
+def _stock_baseline_binding() -> BaselineExecutorBinding:
+    registry = default_baseline_registry()
+    descriptor = next(
+        item
+        for item in registry.descriptors
+        if item.ref.identity == "stock_universe_equal_weight.v1"
+    )
+    return BaselineExecutorBinding(
+        baseline_ref=descriptor.ref.identity,
+        kind=descriptor.kind,
+        descriptor_hash=descriptor.canonical_hash,
+        implementation_key=descriptor.implementation_key,
+        executor_contract_version=descriptor.executor_contract_version,
+        registry_manifest_hash=registry.manifest_hash,
+        factor_versions=(),
+    )
+
+
+def test_frozen_stock_baseline_pipeline_equal_weights_exact_pit_members() -> None:
+    pipeline = build_frozen_baseline_pipeline(_stock_baseline_binding())
+    members = (2_000_001, 2_000_002, 2_000_003)
+
+    target = pipeline.run(
+        StrategyContext(),
+        StrategyInputBundle(
+            trade_date="2026-07-20",
+            strategy_id="stock_universe_equal_weight.v1",
+            run_id="research-run-1",
+            instruments=pl.DataFrame({"instrument_id": members}),
+            market_data=pl.DataFrame(
+                {
+                    "instrument_id": members,
+                    "close": (10.0, 20.0, 30.0),
+                }
+            ),
+            require_canonical_target_ids=True,
+        ),
+    )
+
+    assert set(target.positions) == set(members)
+    assert tuple(target.positions.values()) == pytest.approx((1 / 3, 1 / 3, 1 / 3))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("baseline_ref", "unknown.v1"),
+        ("baseline_ref", "stock_universe_equal_weight.v2"),
+        ("kind", BaselinePlanKind.ETF_CURRENT_ACTIVE),
+        ("implementation_key", "provider.baseline.latest"),
+        ("descriptor_hash", "0" * 64),
+        ("executor_contract_version", 2),
+        ("registry_manifest_hash", "0" * 64),
+    ],
+)
+def test_frozen_stock_baseline_pipeline_rejects_registration_drift(
+    field: str,
+    value: object,
+) -> None:
+    with pytest.raises(AppBuilderError, match="baseline execution binding"):
+        build_frozen_baseline_pipeline(
+            replace(_stock_baseline_binding(), **{field: value})
+        )
 
 
 class TestStrategyServiceFactory:
@@ -171,6 +247,20 @@ class TestStrategyServiceFactory:
         options = BacktestServiceOptions(compiled_expressions=compiled)
         result = factory._build_backtest_options(options)
         assert result.compiled_expressions is compiled
+
+    def test_build_backtest_options_preserves_external_should_stop(self) -> None:
+        factory = StrategyServiceFactory(
+            audit_service=MagicMock(spec=ExecutionAuditService),
+            artifact_service=MagicMock(spec=StrategyArtifactService),
+            run_service=MagicMock(spec=RunLifecycleService),
+        )
+        external_should_stop = MagicMock(return_value=False)
+
+        result = factory._build_backtest_options(
+            BacktestServiceOptions(external_should_stop=external_should_stop)
+        )
+
+        assert result.external_should_stop is external_should_stop
 
     def test_build_backtest_options_injects_lineage_recorder(self) -> None:
         """factory 应把预接的 lineage recorder 注入回测服务选项。"""

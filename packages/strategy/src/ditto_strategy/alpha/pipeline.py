@@ -331,6 +331,11 @@ class StrategyPipeline:
         self._stages = tuple(stages)
         self._evidence_sink = evidence_sink
 
+    @property
+    def stages(self) -> tuple[DecisionStage, ...]:
+        """Return the immutable stage sequence executed by this pipeline."""
+        return self._stages
+
     @traced("engine.alpha.pipeline.process")
     def run(
         self,
