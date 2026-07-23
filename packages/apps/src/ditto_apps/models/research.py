@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-__all__ = ["ExperimentDetailResponse"]
+__all__ = ["ExperimentDetailResponse", "ExperimentGateResponse"]
 
 
 class ExperimentDetailResponse(BaseModel):
@@ -24,3 +24,17 @@ class ExperimentDetailResponse(BaseModel):
     fold_count: int
     created_at: datetime
     updated_at: datetime
+
+
+class ExperimentGateResponse(BaseModel):
+    """API view of one append-only gate evaluation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    evaluation_id: str
+    rule_id: str
+    policy_version: str
+    layer: str
+    outcome: str
+    artifact_id: str | None
+    evaluated_at: datetime

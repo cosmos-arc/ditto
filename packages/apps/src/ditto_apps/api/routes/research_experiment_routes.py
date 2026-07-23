@@ -15,13 +15,17 @@ from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.queries.experiments import (
     ExperimentDetailReadModel,
+    ExperimentGateReadModel,
     ExperimentQueryFacade,
 )
 from fastapi import APIRouter
 
 from ditto_apps.api.errors import NotFoundError
 from ditto_apps.models.common import APIResponse
-from ditto_apps.models.research import ExperimentDetailResponse
+from ditto_apps.models.research import (
+    ExperimentDetailResponse,
+    ExperimentGateResponse,
+)
 
 router = APIRouter(prefix="/research/experiments", tags=["research"])
 
@@ -68,3 +72,30 @@ async def get_experiment(
     if detail is None:
         raise NotFoundError(f"Experiment not found: {experiment_id}")
     return APIResponse(data=to_experiment_response(detail))
+
+
+def to_gate_response(gate: ExperimentGateReadModel) -> ExperimentGateResponse:
+    """将 ExperimentGateReadModel 转 API 响应."""
+    return ExperimentGateResponse(
+        evaluation_id=gate.evaluation_id,
+        rule_id=gate.rule_id,
+        policy_version=gate.policy_version,
+        layer=gate.layer,
+        outcome=gate.outcome,
+        artifact_id=gate.artifact_id,
+        evaluated_at=gate.evaluated_at,
+    )
+
+
+@router.get(
+    "/{experiment_id}/gates",
+    response_model=APIResponse[list[ExperimentGateResponse]],
+)
+@inject
+async def list_experiment_gates(
+    experiment_id: str,
+    facade: Annotated[ExperimentQueryFacade, FromComponent()],
+) -> APIResponse[list[ExperimentGateResponse]]:
+    """列出实验的门禁评估."""
+    gates = await run_blocking(facade.list_gate_evaluations, experiment_id)
+    return APIResponse(data=[to_gate_response(gate) for gate in gates])

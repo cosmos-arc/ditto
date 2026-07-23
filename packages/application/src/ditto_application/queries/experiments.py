@@ -421,6 +421,14 @@ class ExperimentQueryFacade:
             )
         return self._gate_model(record)
 
+    def list_gate_evaluations(
+        self, experiment_id: str
+    ) -> tuple[ExperimentGateReadModel, ...]:
+        """Return every gate evaluation for one experiment, in stored order."""
+        typed_id = self._experiment_id(experiment_id)
+        records = _analysis_read(lambda: self._reader.list_gate_evaluations(typed_id))
+        return tuple(self._gate_model(record) for record in records)
+
     @staticmethod
     def _experiment_id(value: str) -> ExperimentId:
         try:
