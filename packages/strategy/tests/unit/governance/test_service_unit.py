@@ -1,0 +1,155 @@
+"""Unit tests for the governance service orchestration over a real store."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from ditto_platform.foundation import SQLitePool
+from ditto_strategy.governance.models import (
+    GOVERNANCE_SCHEMA_VERSION,
+    ReviewOutcome,
+    StrategyDecision,
+    StrategyVersion,
+    StrategyVersionState,
+)
+from ditto_strategy.governance.service import (
+    GovernanceService,
+    StrategyGovernanceError,
+)
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    SQLiteStrategyGovernanceStore,
+)
+
+
+def _service(tmp_path: Path) -> GovernanceService:
+    pool = SQLitePool(str(tmp_path / "governance.sqlite"))
+    store = SQLiteStrategyGovernanceStore(pool)
+    store.init_schema()
+    return GovernanceService(store)
+
+
+def _seed_version(service: GovernanceService, version: int = 1) -> None:
+    service._store.insert_version(
+        StrategyVersion(
+            strategy_id="strategy-1",
+            version=version,
+            parent_version=None,
+            schema_version=GOVERNANCE_SCHEMA_VERSION,
+            spec_hash="a" * 64,
+            spec_json={"version": version},
+            created_at="2026-07-23T00:00:00Z",
+        )
+    )
+
+
+def test_submit_review_moves_draft_to_review(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    _seed_version(service)
+
+    record = service.submit_review(
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+    )
+
+    assert record.state is StrategyVersionState.REVIEW
+    assert record.review_outcome is ReviewOutcome.PENDING
+
+
+def test_approve_then_publish(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    _seed_version(service)
+    service.submit_review(
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+    )
+    service.approve(
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+    )
+
+    published = service.publish(
+        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+    )
+
+    assert published.state is StrategyVersionState.PUBLISHED
+
+
+def test_rejected_review_cannot_be_published(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    _seed_version(service)
+    service.submit_review(
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+    )
+    service.reject(
+        "strategy-1", 1, event_id="e2", actor="r", reason="no", decided_at="t2"
+    )
+
+    with pytest.raises(ValueError):
+        service.publish(
+            "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+        )
+
+
+def test_activate_switches_active_pointer(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    _seed_version(service)
+    service.submit_review(
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+    )
+    service.approve(
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+    )
+    service.publish(
+        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+    )
+
+    pointer = service.activate(
+        "strategy-1",
+        1,
+        event_id="a1",
+        actor="r",
+        reason="go live",
+        decided_at="t4",
+        kind=StrategyDecision.PUBLISH,
+    )
+
+    assert pointer.active_version == 1
+
+
+def test_deprecated_version_cannot_be_activated(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    _seed_version(service)
+    service.submit_review(
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+    )
+    service.approve(
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+    )
+    service.publish(
+        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+    )
+    service.deprecate(
+        "strategy-1", 1, event_id="e4", actor="r", reason="retire", decided_at="t4"
+    )
+
+    with pytest.raises(ValueError):
+        service.activate(
+            "strategy-1",
+            1,
+            event_id="a1",
+            actor="r",
+            reason="revive",
+            decided_at="t5",
+        )
+
+
+def test_unknown_version_raises(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+
+    with pytest.raises(StrategyGovernanceError):
+        service.submit_review(
+            "strategy-missing",
+            1,
+            event_id="e1",
+            actor="r",
+            reason="ok",
+            decided_at="t1",
+        )
