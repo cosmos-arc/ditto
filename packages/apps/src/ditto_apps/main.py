@@ -51,6 +51,7 @@ from ditto_apps.api.routes import (
     macro,
     market,
     metadata,
+    research_experiment_routes,
     source,
     strategy,
     trade,
@@ -239,6 +240,7 @@ app.include_router(ingestion.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(metadata.router, prefix="/api/v1")
+app.include_router(research_experiment_routes.router, prefix="/api/v1")
 app.include_router(source.router, prefix="/api/v1")
 app.include_router(strategy.router, prefix="/api/v1")
 app.include_router(trade.router, prefix="/api/v1")
