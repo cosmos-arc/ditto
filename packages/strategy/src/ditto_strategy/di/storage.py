@@ -6,6 +6,7 @@ from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLitePool
 
 from ditto_strategy.contracts import StrategyCatalogReader
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -21,6 +22,9 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 from ditto_strategy.storage.sqlite.strategy_artifact_store import (
     SQLiteStrategyArtifactReader,
     SQLiteStrategyArtifactWriter,
+)
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    SQLiteStrategyGovernanceStore,
 )
 from ditto_strategy.storage.sqlite.strategy_run_store import (
     SQLiteStrategyRunCheckpointReader,
@@ -56,6 +60,24 @@ class StrategyStorageProvider(Provider):
     ) -> SQLiteStrategySpecWriter:
         """提供策略规格写入器."""
         return SQLiteStrategySpecWriter(sqlite_pool)
+
+    @provide
+    def strategy_governance_store(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> SQLiteStrategyGovernanceStore:
+        """提供策略治理 append-only 存储（含 schema 初始化）."""
+        store = SQLiteStrategyGovernanceStore(sqlite_pool)
+        store.init_schema()
+        return store
+
+    @provide
+    def governance_service(
+        self,
+        store: SQLiteStrategyGovernanceStore,
+    ) -> GovernanceService:
+        """提供策略治理编排服务."""
+        return GovernanceService(store)
 
     @provide
     def strategy_artifact_reader(
