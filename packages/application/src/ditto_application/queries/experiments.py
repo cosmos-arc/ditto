@@ -17,6 +17,8 @@ from ditto_analysis.experiments import (
     ExperimentStatus,
     FoldView,
     GateEvaluationRecord,
+    ReviewPacket,
+    review_blocked_by_hard_gates,
 )
 
 from ditto_application.exceptions import AppQueryError
@@ -27,6 +29,9 @@ __all__ = [
     "ExperimentFoldReadModel",
     "ExperimentGateReadModel",
     "ExperimentQueryFacade",
+    "ExperimentReviewPacketReadModel",
+    "ReviewGateOutcome",
+    "build_review_packet_read_model",
 ]
 
 type ReadScalar = str | bool | int | float | None
@@ -186,6 +191,46 @@ class ExperimentGateReadModel:
     artifact_id: str | None
     payload_hash: str
     evaluated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewGateOutcome:
+    """One gate rule's identity and outcome in a review packet read model."""
+
+    rule_id: str
+    layer: str
+    outcome: str
+
+
+@dataclass(frozen=True, slots=True)
+class ExperimentReviewPacketReadModel:
+    """Application view of one immutable promotion review packet."""
+
+    experiment_id: str
+    candidate_id: str | None
+    bundle_hash: str
+    hard_review_blocked: bool
+    gate_outcomes: tuple[ReviewGateOutcome, ...]
+
+
+def build_review_packet_read_model(
+    packet: ReviewPacket,
+) -> ExperimentReviewPacketReadModel:
+    """Derive an application read model from an immutable review packet."""
+    return ExperimentReviewPacketReadModel(
+        experiment_id=packet.lineage.experiment_id,
+        candidate_id=packet.lineage.candidate_id,
+        bundle_hash=str(packet.bundle_hash),
+        hard_review_blocked=review_blocked_by_hard_gates(packet.gate_evaluations),
+        gate_outcomes=tuple(
+            ReviewGateOutcome(
+                rule_id=evaluation.rule_id,
+                layer=evaluation.layer.value,
+                outcome=evaluation.outcome.value,
+            )
+            for evaluation in packet.gate_evaluations
+        ),
+    )
 
 
 class ExperimentQueryFacade:

@@ -446,6 +446,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "evidence.py"
+        ),
+        owner="application R3 review evidence assembler",
+        reason=(
+            "The pure assembler evaluates the analysis-owned two-layer gate "
+            "engine and freezes an immutable review packet; it performs no "
+            "storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "coordinator.py"
         ),
         owner="application experiment execution coordinator",
