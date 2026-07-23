@@ -51,6 +51,7 @@ from ditto_features.storage.runtime.publication_safety import (
     ShadowReportWriter,
 )
 from ditto_platform.services import AlertManager
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -121,6 +122,7 @@ from ditto_application.processes.quality import (
     QualityCompletenessService,
     QualityPatrolService,
 )
+from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.data_readiness import (
@@ -594,6 +596,14 @@ class AppProcessProvider(Provider):
             run_model=run_model,
             verified_artifact_reader=verified_artifact_reader,
         )
+
+    @provide
+    def strategy_promotion_process(
+        self,
+        governance_service: GovernanceService,
+    ) -> StrategyPromotionProcess:
+        """R3 策略 promotion 流程（evidence-gated publish + activate）."""
+        return StrategyPromotionProcess(governance_service)
 
     @provide
     def factor_bridge(self) -> FactorBridge:
