@@ -433,6 +433,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/processes/execution/"
+            "_research_replay_artifacts.py"
+        ),
+        owner="application R3 verified replay artifact boundary",
+        reason=(
+            "The verified-read boundary reuses the analysis-owned immutable "
+            "Schema v1 artifact contract through a narrow indexed port; it "
+            "performs no storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "coordinator.py"
         ),

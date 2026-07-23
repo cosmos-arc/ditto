@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import cast
@@ -16,7 +16,7 @@ from ditto_analysis.errors import (
     ExperimentPersistenceError,
     ExperimentSpecError,
 )
-from ditto_analysis.experiments._validation import require_utc_datetime
+from ditto_analysis.experiments._time import epoch_us
 from ditto_analysis.experiments.persistence import (
     ArtifactRecord,
     GateEvaluationRecord,
@@ -29,8 +29,7 @@ from ditto_analysis.storage.sqlite.experiments.reader import SQLiteExperimentRea
 
 
 def _epoch_us(value: datetime) -> int:
-    require_utc_datetime(value, "datetime")
-    return int(value.timestamp() * 1_000_000)
+    return epoch_us(value)
 
 
 def _optional(value: object | None) -> str | None:
@@ -67,21 +66,20 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
 
     _reader: SQLiteExperimentReader
 
+    @property
+    def artifact_root(self) -> Path:
+        """Expose the database-owned canonical root to verified file I/O."""
+        return self._database.artifact_root
+
     def add_artifact(
         self,
         record: ArtifactRecord,
         *,
         lease_fence: LeaseFence,
         now_epoch_us: int,
+        commit_guard: Callable[[], None],
     ) -> None:
-        path = validate_artifact_relative_path(record.relative_path)
-        artifact_root = (self._database.path.parent / "artifacts").resolve()
-        candidate_path = (artifact_root / Path(*path.parts)).resolve()
-        if not candidate_path.is_relative_to(artifact_root):
-            raise ExperimentSpecError(
-                "artifact path escapes the canonical artifact root",
-                details={"reason_code": "invalid_artifact_relative_path"},
-            )
+        validate_artifact_relative_path(record.relative_path)
         manifest = canonical_payload(record.manifest)
         values = (
             record.artifact_id,
@@ -110,16 +108,35 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
         connection = self._database.get_connection()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            existing = connection.execute(
-                "SELECT * FROM research_artifact WHERE artifact_id=?",
-                (record.artifact_id,),
-            ).fetchone()
-            if existing is not None:
+            matches = connection.execute(
+                """
+                SELECT * FROM research_artifact
+                WHERE artifact_id=? OR relative_path=?
+                ORDER BY artifact_id
+                """,
+                (record.artifact_id, record.relative_path),
+            ).fetchall()
+            if len(matches) > 1:
+                raise _conflict(
+                    "artifact identity and path resolve to different facts",
+                    "artifact_identity_cross_conflict",
+                )
+            if matches:
+                existing = matches[0]
+                if (
+                    existing["artifact_id"] != record.artifact_id
+                    or existing["relative_path"] != record.relative_path
+                ):
+                    raise _conflict(
+                        "artifact path is bound to another identity",
+                        "artifact_path_identity_conflict",
+                    )
                 immutable_indexes = (*range(13), 15)
                 if tuple(existing[index] for index in immutable_indexes) != tuple(
                     values[index] for index in immutable_indexes
                 ):
                     raise _conflict("artifact replay drift", "artifact_replay_drift")
+                commit_guard()
                 connection.commit()
                 return
             self._validate_lease(
@@ -136,6 +153,7 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
                 """,
                 values,
             )
+            commit_guard()
             connection.commit()
         except (
             ExperimentConflictError,
@@ -154,6 +172,9 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
             raise _persistence_error(
                 "artifact insert failed", "artifact_insert_failed"
             ) from exc
+        except BaseException:
+            connection.rollback()
+            raise
 
     def pin_artifact(
         self,
@@ -161,6 +182,7 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
         *,
         expected_revision: int,
         pinned_at: datetime,
+        commit_guard: Callable[[], None],
     ) -> ArtifactRecord:
         connection = self._database.get_connection()
         try:
@@ -189,6 +211,7 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
             )
             if cursor.rowcount != 1:
                 raise _conflict("artifact pin CAS lost", "stale_artifact_revision")
+            commit_guard()
             connection.commit()
             result = self._reader.get_artifact(artifact_id)
             if result is None:
@@ -205,6 +228,9 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
             raise _persistence_error(
                 "artifact pin failed", "artifact_pin_failed"
             ) from exc
+        except BaseException:
+            connection.rollback()
+            raise
 
     def add_gate_evaluation(self, record: GateEvaluationRecord) -> None:
         values = (

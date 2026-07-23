@@ -10,6 +10,7 @@ import json
 import sqlite3
 from collections.abc import Mapping
 from datetime import date
+from pathlib import Path
 from typing import cast
 
 from ditto_analysis.errors import (
@@ -112,6 +113,11 @@ class SQLiteExperimentReader:
 
     def __init__(self, database: ResearchExperimentDatabase) -> None:
         self._database = database
+
+    @property
+    def artifact_root(self) -> Path:
+        """Expose the database-owned canonical root to the composed file service."""
+        return self._database.artifact_root
 
     def _one(self, sql: str, parameters: tuple[object, ...]) -> sqlite3.Row | None:
         try:
@@ -597,6 +603,16 @@ class SQLiteExperimentReader:
             created_at=_dt(row["created_at_epoch_us"]),
             revision=row["revision"],
         )
+
+    def get_artifact_by_relative_path(
+        self, relative_path: str
+    ) -> ArtifactRecord | None:
+        """Read one immutable artifact by its globally unique canonical path."""
+        row = self._one(
+            "SELECT artifact_id FROM research_artifact WHERE relative_path=?",
+            (relative_path,),
+        )
+        return None if row is None else self.get_artifact(row["artifact_id"])
 
     def get_gate_evaluation(self, evaluation_id: str) -> GateEvaluationRecord | None:
         row = self._one(

@@ -51,6 +51,11 @@ class ResearchExperimentDatabase:
         """Return the only database path this wrapper may open."""
         return self._path
 
+    @property
+    def artifact_root(self) -> Path:
+        """Return the sole canonical filesystem root for indexed artifacts."""
+        return (self._path.parent / "artifacts").resolve()
+
     def _ensure_open(self) -> None:
         with self._state_lock:
             self._raise_if_closed()

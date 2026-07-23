@@ -38,6 +38,10 @@ from ditto_application.processes.execution.manual_sizing import (
     AShareTradeDateResolver,
     ManualSizingContextBuilder,
 )
+from ditto_application.processes.execution.replay_process import (
+    IndexedResearchReplayArtifactReader,
+    ReplayProcess,
+)
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.experiments.planning_process import (
@@ -451,6 +455,28 @@ class TestAppProviderStructure:
         assert process._certification_probe is certification_probe
         assert process._executor_probe is executor_probe
         assert process._authority_probe is authority_probe
+
+    def test_replay_provider_wires_verified_schema_v1_reader(self) -> None:
+        provider = AppProcessProvider()
+        strategy_artifacts = MagicMock()
+        experiment_reader = MagicMock()
+        research_artifacts = MagicMock()
+
+        verified_reader = provider.verified_replay_artifact_reader(
+            strategy_artifact_service=strategy_artifacts,
+            experiment_reader=experiment_reader,
+            research_artifact_service=research_artifacts,
+        )
+        process = provider.replay_process(
+            strategy_facade=MagicMock(),
+            artifact_service=strategy_artifacts,
+            run_model=MagicMock(),
+            verified_artifact_reader=verified_reader,
+        )
+
+        assert isinstance(verified_reader, IndexedResearchReplayArtifactReader)
+        assert isinstance(process, ReplayProcess)
+        assert process._verified_artifact_reader is verified_reader
 
     def test_research_validation_authority_provider_is_production_fail_closed(
         self,

@@ -516,7 +516,10 @@ def _seed_all_tables(database: Any, writer: Any, api: SimpleNamespace) -> None:
     writer.add_fold(holdout, _fold_projection(api, holdout))
     lease = _dispatch_first_attempt(writer, api, fold, owner="owner-adversarial")
     writer.add_artifact(
-        _artifact(api), lease_fence=lease.fence, now_epoch_us=NOW_US + 1
+        _artifact(api),
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        commit_guard=lambda: None,
     )
     writer.add_gate_evaluation(_gate(api))
     _insert_holdout_claim_fixture(
@@ -1900,12 +1903,23 @@ def test_artifact_and_gate_are_typed_append_only_facts(tmp_path: Path) -> None:
         artifact,
         lease_fence=lease.fence,
         now_epoch_us=NOW_US + 1,
+        commit_guard=lambda: None,
     )
-    pinned = writer.pin_artifact("artifact-1", expected_revision=0, pinned_at=NOW)
+    pinned = writer.pin_artifact(
+        "artifact-1",
+        expected_revision=0,
+        pinned_at=NOW,
+        commit_guard=lambda: None,
+    )
     assert pinned.is_pinned is True
     assert pinned.revision == 1
     with pytest.raises(api.ExperimentConflictError):
-        writer.pin_artifact("artifact-1", expected_revision=0, pinned_at=NOW)
+        writer.pin_artifact(
+            "artifact-1",
+            expected_revision=0,
+            pinned_at=NOW,
+            commit_guard=lambda: None,
+        )
 
     gate = api.GateEvaluationRecord(
         evaluation_id="gate-1",
@@ -1924,6 +1938,15 @@ def test_artifact_and_gate_are_typed_append_only_facts(tmp_path: Path) -> None:
     )
     writer.add_gate_evaluation(gate)
     assert reader.get_gate_evaluation("gate-1") == gate
+
+
+def test_application_writer_port_does_not_expose_unverified_artifact_mutations() -> (
+    None
+):
+    from ditto_analysis.experiments.protocols import ExperimentWriterProtocol
+
+    assert "add_artifact" not in ExperimentWriterProtocol.__dict__
+    assert "pin_artifact" not in ExperimentWriterProtocol.__dict__
 
 
 def test_list_gate_evaluations_returns_empty_for_experiment_without_gates(
@@ -2025,9 +2048,13 @@ def test_artifact_create_exact_replay_after_pin_is_unfenced_noop(
         artifact,
         lease_fence=lease.fence,
         now_epoch_us=NOW_US + 1,
+        commit_guard=lambda: None,
     )
     pinned = writer.pin_artifact(
-        artifact.artifact_id, expected_revision=0, pinned_at=NOW
+        artifact.artifact_id,
+        expected_revision=0,
+        pinned_at=NOW,
+        commit_guard=lambda: None,
     )
     before_changes = database.get_connection().total_changes
 
@@ -2035,10 +2062,51 @@ def test_artifact_create_exact_replay_after_pin_is_unfenced_noop(
         artifact,
         lease_fence=lease.fence,
         now_epoch_us=NOW_US + 10,
+        commit_guard=lambda: None,
     )
 
     assert reader.get_artifact(artifact.artifact_id) == pinned
     assert database.get_connection().total_changes == before_changes
+
+
+def test_artifact_create_exact_replay_guard_failure_rolls_back_and_propagates(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    lease = _claim_queued_experiment(writer, owner="owner-artifact-replay-guard")
+    artifact = replace(
+        _artifact(api),
+        candidate_id=None,
+        fold_id=None,
+        attempt_id=None,
+    )
+    writer.add_artifact(
+        artifact,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 1,
+        commit_guard=lambda: None,
+    )
+    guard_calls = 0
+
+    def fail_guard() -> None:
+        nonlocal guard_calls
+        guard_calls += 1
+        raise RuntimeError("artifact files changed before replay commit")
+
+    with pytest.raises(
+        RuntimeError, match="artifact files changed before replay commit"
+    ):
+        writer.add_artifact(
+            artifact,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 2,
+            commit_guard=fail_guard,
+        )
+
+    assert guard_calls == 1
+    assert database.get_connection().in_transaction is False
+    assert reader.get_artifact(artifact.artifact_id) == artifact
 
 
 def test_artifact_create_drift_after_pin_fails_closed_before_lease_validation(
@@ -2072,9 +2140,13 @@ def test_artifact_create_drift_after_pin_fails_closed_before_lease_validation(
         artifact,
         lease_fence=lease.fence,
         now_epoch_us=NOW_US + 1,
+        commit_guard=lambda: None,
     )
     pinned = writer.pin_artifact(
-        artifact.artifact_id, expected_revision=0, pinned_at=NOW
+        artifact.artifact_id,
+        expected_revision=0,
+        pinned_at=NOW,
+        commit_guard=lambda: None,
     )
     before_changes = database.get_connection().total_changes
 
@@ -2083,6 +2155,7 @@ def test_artifact_create_drift_after_pin_fails_closed_before_lease_validation(
             replace(artifact, byte_size=artifact.byte_size + 1),
             lease_fence=lease.fence,
             now_epoch_us=NOW_US + 10,
+            commit_guard=lambda: None,
         )
 
     assert exc_info.value.details["reason_code"] == "artifact_replay_drift"
@@ -2131,6 +2204,494 @@ def test_artifact_path_validation_fails_before_sql(
             artifact,
             lease_fence=lease.fence,
             now_epoch_us=NOW_US + 1,
+            commit_guard=lambda: None,
         )
 
     assert exc_info.value.details["reason_code"] == "invalid_artifact_relative_path"
+
+
+def test_artifact_index_resolves_by_database_owned_canonical_root_and_path(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-artifact-root")
+    artifact = _artifact(api)
+
+    writer.add_artifact(
+        artifact,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+        commit_guard=lambda: None,
+    )
+
+    expected_root = (database.path.parent / "artifacts").resolve()
+    assert database.artifact_root == expected_root
+    assert reader.artifact_root == expected_root
+    assert writer.artifact_root == expected_root
+    assert reader.get_artifact_by_relative_path(artifact.relative_path) == artifact
+
+
+@pytest.mark.parametrize(
+    "mutated",
+    [
+        {"artifact_id": "artifact-other"},
+        {"relative_path": "experiments/experiment-1/other.parquet"},
+    ],
+)
+def test_artifact_id_or_path_conflict_is_typed_and_preserves_original(
+    tmp_path: Path,
+    mutated: dict[str, object],
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-artifact-key")
+    original = _artifact(api)
+    writer.add_artifact(
+        original,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+        commit_guard=lambda: None,
+    )
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.add_artifact(
+            replace(original, **mutated),
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 4,
+            commit_guard=lambda: None,
+        )
+
+    assert exc_info.value.details["reason_code"] in {
+        "artifact_path_identity_conflict",
+        "artifact_replay_drift",
+    }
+    assert reader.get_artifact(original.artifact_id) == original
+
+
+def test_artifact_id_and_path_cross_hit_two_rows_fails_closed(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-artifact-cross")
+    first = _artifact(api)
+    second = replace(
+        first,
+        artifact_id="artifact-2",
+        relative_path="experiments/experiment-1/second.parquet",
+        content_hash=ContentHash("3" * 64),
+    )
+    writer.add_artifact(
+        first,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+        commit_guard=lambda: None,
+    )
+    writer.add_artifact(
+        second,
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+        commit_guard=lambda: None,
+    )
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.add_artifact(
+            replace(first, relative_path=second.relative_path),
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 5,
+            commit_guard=lambda: None,
+        )
+
+    assert exc_info.value.details["reason_code"] == "artifact_identity_cross_conflict"
+    assert reader.get_artifact(first.artifact_id) == first
+    assert reader.get_artifact(second.artifact_id) == second
+
+
+def test_indexed_service_publishes_to_the_database_owned_root(
+    tmp_path: Path,
+) -> None:
+    from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-artifact-file")
+    relative_path = (
+        "experiments/experiment-1/candidates/candidate-1/folds/fold-1/"
+        "attempts/attempt-1/result.json"
+    )
+    service = ResearchArtifactService(
+        artifact_root=database.artifact_root,
+        artifact_reader=reader,
+        artifact_writer=writer,
+    )
+
+    record = service.publish_indexed_json(
+        ArtifactPublicationSpec(
+            artifact_id="artifact-file-1",
+            experiment_id=ExperimentId("experiment-1"),
+            candidate_id=CandidateId("candidate-1"),
+            fold_id=FoldId("fold-1"),
+            attempt_id=AttemptId("attempt-1"),
+            artifact_kind="result",
+            relative_path=relative_path,
+            reproduction_fingerprint=ContentHash("d" * 64),
+            audit={
+                "run_id": "run-1",
+                "attempt_id": "attempt-1",
+                "created_at": NOW.isoformat(),
+            },
+            created_at=NOW,
+        ),
+        {"result": "ok"},
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+    )
+
+    final_path = database.artifact_root / relative_path
+    assert final_path.is_file()
+    assert reader.get_artifact(record.artifact_id) == record
+    assert service.read_indexed_json(record.artifact_id) == {"result": "ok"}
+
+
+def test_committed_index_response_loss_replays_as_one_exact_fact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from collections.abc import Callable
+
+    from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
+    from ditto_analysis.experiments.persistence import ArtifactRecord, LeaseFence
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-response-loss")
+    relative_path = (
+        "experiments/experiment-1/candidates/candidate-1/folds/fold-1/"
+        "attempts/attempt-1/response.json"
+    )
+    spec = ArtifactPublicationSpec(
+        artifact_id="artifact-response-loss",
+        experiment_id=ExperimentId("experiment-1"),
+        candidate_id=CandidateId("candidate-1"),
+        fold_id=FoldId("fold-1"),
+        attempt_id=AttemptId("attempt-1"),
+        artifact_kind="response",
+        relative_path=relative_path,
+        reproduction_fingerprint=ContentHash("d" * 64),
+        audit={
+            "run_id": "run-response-loss",
+            "attempt_id": "attempt-1",
+            "created_at": NOW.isoformat(),
+        },
+        created_at=NOW,
+    )
+    service = ResearchArtifactService(
+        artifact_root=database.artifact_root,
+        artifact_reader=reader,
+        artifact_writer=writer,
+    )
+    original_add = writer.add_artifact
+    lost_once = False
+
+    def commit_then_lose_response(
+        record: ArtifactRecord,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        commit_guard: Callable[[], None],
+    ) -> None:
+        nonlocal lost_once
+        original_add(
+            record,
+            lease_fence=lease_fence,
+            now_epoch_us=now_epoch_us,
+            commit_guard=commit_guard,
+        )
+        if not lost_once:
+            lost_once = True
+            raise api.ExperimentPersistenceError("injected response loss")
+
+    monkeypatch.setattr(writer, "add_artifact", commit_then_lose_response)
+
+    with pytest.raises(api.ExperimentPersistenceError, match="response loss"):
+        service.publish_indexed_json(
+            spec,
+            {"result": "ok"},
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+        )
+
+    committed = reader.get_artifact(spec.artifact_id)
+    assert committed is not None
+    replayed = service.publish_indexed_json(
+        spec,
+        {"result": "ok"},
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+    )
+    assert replayed == committed
+    count = (
+        database.get_connection()
+        .execute(
+            "SELECT count(*) FROM research_artifact WHERE artifact_id=?",
+            (spec.artifact_id,),
+        )
+        .fetchone()[0]
+    )
+    assert count == 1
+
+
+def test_precommit_index_failure_repairs_exact_orphan_without_replacing_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
+    from ditto_analysis.research import _indexed_artifacts as artifact_module
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-orphan-repair")
+    relative_path = (
+        "experiments/experiment-1/candidates/candidate-1/folds/fold-1/"
+        "attempts/attempt-1/orphan.json"
+    )
+    spec = ArtifactPublicationSpec(
+        artifact_id="artifact-orphan-repair",
+        experiment_id=ExperimentId("experiment-1"),
+        candidate_id=CandidateId("candidate-1"),
+        fold_id=FoldId("fold-1"),
+        attempt_id=AttemptId("attempt-1"),
+        artifact_kind="orphan",
+        relative_path=relative_path,
+        reproduction_fingerprint=ContentHash("d" * 64),
+        audit={
+            "run_id": "run-orphan-repair",
+            "attempt_id": "attempt-1",
+            "created_at": NOW.isoformat(),
+        },
+        created_at=NOW,
+    )
+    service = ResearchArtifactService(
+        artifact_root=database.artifact_root,
+        artifact_reader=reader,
+        artifact_writer=writer,
+    )
+    original_add = writer.add_artifact
+
+    def fail_before_transaction(*_args: object, **_kwargs: object) -> None:
+        raise api.ExperimentPersistenceError("injected precommit failure")
+
+    monkeypatch.setattr(writer, "add_artifact", fail_before_transaction)
+    with pytest.raises(api.ExperimentPersistenceError, match="precommit failure"):
+        service.publish_indexed_json(
+            spec,
+            {"result": "ok"},
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+        )
+
+    target = database.artifact_root / relative_path
+    sidecar = target.with_name(artifact_module._manifest_sidecar_name(target.name))
+    before = (target.stat(), sidecar.stat())
+    assert reader.get_artifact(spec.artifact_id) is None
+    monkeypatch.setattr(writer, "add_artifact", original_add)
+
+    repaired = service.publish_indexed_json(
+        spec,
+        {"result": "ok"},
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 4,
+    )
+
+    after = (target.stat(), sidecar.stat())
+    assert tuple((item.st_ino, item.st_mtime_ns) for item in after) == tuple(
+        (item.st_ino, item.st_mtime_ns) for item in before
+    )
+    assert reader.get_artifact(spec.artifact_id) == repaired
+
+
+def test_actual_sqlite_ports_reject_a_different_service_root(tmp_path: Path) -> None:
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+
+    database, reader, writer, _api_values = _store(tmp_path)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        ResearchArtifactService(
+            artifact_root=tmp_path,
+            indexed_artifact_root=database.artifact_root / "wrong",
+            artifact_reader=reader,
+            artifact_writer=writer,
+        )
+
+    assert exc_info.value.details["reason_code"] == "artifact_root_mismatch"
+    assert (
+        database.get_connection()
+        .execute("SELECT count(*) FROM research_artifact")
+        .fetchone()[0]
+        == 0
+    )
+
+
+def test_parent_swap_inside_artifact_transaction_rolls_back_index(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-artifact-race")
+    relative_path = (
+        "experiments/experiment-1/candidates/candidate-1/folds/fold-1/"
+        "attempts/attempt-1/result.json"
+    )
+    service = ResearchArtifactService(
+        artifact_root=database.artifact_root,
+        artifact_reader=reader,
+        artifact_writer=writer,
+    )
+    original_validate = writer._validate_lease
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    swapped = False
+
+    def validate_then_swap(*args: object, **kwargs: object) -> object:
+        nonlocal swapped
+        result = original_validate(*args, **kwargs)
+        if not swapped:
+            parent = database.artifact_root / Path(relative_path).parent
+            moved = parent.with_name("attempt-1-original")
+            parent.rename(moved)
+            parent.symlink_to(outside, target_is_directory=True)
+            swapped = True
+        return result
+
+    monkeypatch.setattr(writer, "_validate_lease", validate_then_swap)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        service.publish_indexed_json(
+            ArtifactPublicationSpec(
+                artifact_id="artifact-file-race",
+                experiment_id=ExperimentId("experiment-1"),
+                candidate_id=CandidateId("candidate-1"),
+                fold_id=FoldId("fold-1"),
+                attempt_id=AttemptId("attempt-1"),
+                artifact_kind="result",
+                relative_path=relative_path,
+                reproduction_fingerprint=ContentHash("d" * 64),
+                audit={
+                    "run_id": "run-race",
+                    "attempt_id": "attempt-1",
+                    "created_at": NOW.isoformat(),
+                },
+                created_at=NOW,
+            ),
+            {"result": "ok"},
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 3,
+        )
+
+    assert exc_info.value.details["reason_code"] == "artifact_path_race_detected"
+    assert reader.get_artifact("artifact-file-race") is None
+    assert not database.get_connection().in_transaction
+    assert tuple(outside.iterdir()) == ()
+
+
+def test_parent_swap_inside_pin_transaction_rolls_back_cas(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from collections.abc import Callable
+
+    from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
+    from ditto_analysis.experiments.persistence import ArtifactRecord
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-pin-race")
+    relative_path = (
+        "experiments/experiment-1/candidates/candidate-1/folds/fold-1/"
+        "attempts/attempt-1/result.json"
+    )
+    service = ResearchArtifactService(
+        artifact_root=database.artifact_root,
+        artifact_reader=reader,
+        artifact_writer=writer,
+    )
+    record = service.publish_indexed_json(
+        ArtifactPublicationSpec(
+            artifact_id="artifact-pin-race",
+            experiment_id=ExperimentId("experiment-1"),
+            candidate_id=CandidateId("candidate-1"),
+            fold_id=FoldId("fold-1"),
+            attempt_id=AttemptId("attempt-1"),
+            artifact_kind="result",
+            relative_path=relative_path,
+            reproduction_fingerprint=ContentHash("d" * 64),
+            audit={
+                "run_id": "run-pin-race",
+                "attempt_id": "attempt-1",
+                "created_at": NOW.isoformat(),
+            },
+            created_at=NOW,
+        ),
+        {"result": "ok"},
+        lease_fence=lease.fence,
+        now_epoch_us=NOW_US + 3,
+    )
+    original_pin = writer.pin_artifact
+    outside = tmp_path / "outside-pin"
+    outside.mkdir()
+
+    def pin_with_swap(
+        artifact_id: str,
+        *,
+        expected_revision: int,
+        pinned_at: datetime,
+        commit_guard: Callable[[], None],
+    ) -> ArtifactRecord:
+        def swap_then_guard() -> None:
+            parent = database.artifact_root / Path(relative_path).parent
+            moved = parent.with_name("attempt-1-original")
+            parent.rename(moved)
+            parent.symlink_to(outside, target_is_directory=True)
+            commit_guard()
+
+        return original_pin(
+            artifact_id,
+            expected_revision=expected_revision,
+            pinned_at=pinned_at,
+            commit_guard=swap_then_guard,
+        )
+
+    monkeypatch.setattr(writer, "pin_artifact", pin_with_swap)
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        service.pin_indexed_artifact(
+            record.artifact_id,
+            expected_revision=0,
+            pinned_at=NOW,
+        )
+
+    assert exc_info.value.details["reason_code"] == "artifact_path_race_detected"
+    persisted = reader.get_artifact(record.artifact_id)
+    assert persisted is not None
+    assert persisted.is_pinned is False
+    assert persisted.pinned_at is None
+    assert persisted.revision == 0
+    assert not database.get_connection().in_transaction
+    assert tuple(outside.iterdir()) == ()

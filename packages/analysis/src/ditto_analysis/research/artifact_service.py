@@ -7,6 +7,7 @@ import os
 import tempfile
 from collections.abc import Callable, Mapping
 from contextlib import suppress
+from datetime import datetime
 from pathlib import Path
 from typing import Literal, cast
 
@@ -18,7 +19,17 @@ from ditto_analysis.errors import (
     ExperimentSpecError,
     ResearchDatasetError,
 )
-from ditto_analysis.experiments.persistence import validate_artifact_relative_path
+from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
+from ditto_analysis.experiments.persistence import (
+    ArtifactRecord,
+    LeaseFence,
+    validate_artifact_relative_path,
+)
+from ditto_analysis.research._indexed_artifacts import (
+    ArtifactIndexReader,
+    ArtifactIndexWriter,
+    IndexedArtifactIO,
+)
 
 __all__ = ["ResearchArtifactService"]
 
@@ -33,8 +44,61 @@ _EXPORT_WRITERS: dict[ExportFormat, str] = {
 class ResearchArtifactService:
     """Encapsulates analysis-owned research artifact file I/O."""
 
-    def __init__(self, *, artifact_root: Path) -> None:
+    def __init__(
+        self,
+        *,
+        artifact_root: Path,
+        indexed_artifact_root: Path | None = None,
+        artifact_reader: ArtifactIndexReader | None = None,
+        artifact_writer: ArtifactIndexWriter | None = None,
+    ) -> None:
         self._root = Path(artifact_root).resolve()
+        if (
+            indexed_artifact_root is not None
+            and artifact_reader is None
+            and artifact_writer is None
+        ):
+            raise ExperimentSpecError(
+                "an indexed artifact root requires both index ports",
+                details={"reason_code": "artifact_index_port_incomplete"},
+            )
+        configured_indexed_root = (
+            self._root
+            if indexed_artifact_root is None
+            else Path(indexed_artifact_root).resolve()
+        )
+        self._indexed_root = (
+            None
+            if artifact_reader is None and artifact_writer is None
+            else configured_indexed_root
+        )
+        self._indexed = (
+            None
+            if artifact_reader is None and artifact_writer is None
+            else IndexedArtifactIO(
+                artifact_root=configured_indexed_root,
+                reader=artifact_reader,
+                writer=artifact_writer,
+            )
+        )
+
+    @property
+    def artifact_root(self) -> Path:
+        """Return the legacy data-product artifact namespace."""
+        return self._root
+
+    @property
+    def indexed_artifact_root(self) -> Path | None:
+        """Return the reserved R3 evidence namespace when configured."""
+        return self._indexed_root
+
+    def _require_indexed(self) -> IndexedArtifactIO:
+        if self._indexed is None:
+            raise ExperimentSpecError(
+                "indexed artifact operation requires an experiment artifact index",
+                details={"reason_code": "artifact_index_not_configured"},
+            )
+        return self._indexed
 
     def _path(self, relative_path: str) -> Path:
         canonical = validate_artifact_relative_path(relative_path)
@@ -43,6 +107,13 @@ class ResearchArtifactService:
             raise ExperimentSpecError(
                 "artifact path escapes its resolved canonical root",
                 details={"reason_code": "invalid_artifact_relative_path"},
+            )
+        if self._indexed_root is not None and (
+            path == self._indexed_root or path.is_relative_to(self._indexed_root)
+        ):
+            raise ExperimentSpecError(
+                "indexed evidence requires identity-based verified APIs",
+                details={"reason_code": "indexed_artifact_requires_verified_api"},
             )
         return path
 
@@ -130,6 +201,60 @@ class ResearchArtifactService:
                     os.close(descriptor)
             with suppress(FileNotFoundError):
                 temporary.unlink()
+
+    def publish_indexed_json(
+        self,
+        spec: ArtifactPublicationSpec,
+        data: Mapping[str, object],
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> ArtifactRecord:
+        """Publish immutable JSON and append its Schema v1 index fact."""
+        return self._require_indexed().publish_json(
+            spec,
+            data,
+            lease_fence=lease_fence,
+            now_epoch_us=now_epoch_us,
+        )
+
+    def publish_indexed_parquet(
+        self,
+        spec: ArtifactPublicationSpec,
+        frame: pl.DataFrame,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> ArtifactRecord:
+        """Publish immutable Parquet and append measured index metadata."""
+        return self._require_indexed().publish_parquet(
+            spec,
+            frame,
+            lease_fence=lease_fence,
+            now_epoch_us=now_epoch_us,
+        )
+
+    def read_indexed_json(self, artifact_id: str) -> dict[str, object]:
+        """Read only an indexed JSON artifact after full verification."""
+        return self._require_indexed().read_json(artifact_id)
+
+    def read_indexed_parquet(self, artifact_id: str) -> pl.DataFrame:
+        """Read only indexed Parquet after full verification."""
+        return self._require_indexed().read_parquet(artifact_id)
+
+    def pin_indexed_artifact(
+        self,
+        artifact_id: str,
+        *,
+        expected_revision: int,
+        pinned_at: datetime,
+    ) -> ArtifactRecord:
+        """Verify file evidence, then perform the one-way index pin CAS."""
+        return self._require_indexed().pin(
+            artifact_id,
+            expected_revision=expected_revision,
+            pinned_at=pinned_at,
+        )
 
     @staticmethod
     def _fsync_parent_directory(target: Path) -> None:
@@ -246,7 +371,9 @@ class ResearchArtifactService:
         if matches:
             resolved = matches[0].resolve()
             if resolved.is_relative_to(self._root):
-                return str(resolved.relative_to(self._root))
+                relative_path = str(resolved.relative_to(self._root))
+                self._path(relative_path)
+                return relative_path
         return None
 
     def read_source_snapshot_ids(

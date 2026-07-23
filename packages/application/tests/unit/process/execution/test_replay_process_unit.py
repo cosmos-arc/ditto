@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 from datetime import datetime
 from pathlib import Path
-from types import MappingProxyType
+from types import MappingProxyType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import orjson
@@ -21,8 +21,13 @@ from ditto_application.processes.execution.backtest_process import (
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_application.processes.execution.replay_process import ReplayProcess
+from ditto_application.processes.execution.replay_process import (
+    IndexedResearchReplayArtifactReader,
+    ReplayProcess,
+    VerifiedReplayBundle,
+)
 from ditto_backtest.manifest import RunManifest, serialize_manifest
+from ditto_backtest.manifest_types import ReplayArtifactRef, ResearchReplayEvidence
 from ditto_backtest.replay import ManifestDiff, ReplayValidationResult
 from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_backtest.statistics import BacktestReport
@@ -114,6 +119,145 @@ def _make_report_dict(
     if nav_series is not None:
         report["nav_series"] = nav_series
     return report
+
+
+def _make_replay_evidence_raw(
+    *,
+    schema_version: int = 1,
+    reproduction_fingerprint: str = "f" * 64,
+    summary_hash: str = "1" * 64,
+    nav_hash: str = "2" * 64,
+    artifact_id_suffix: str = "",
+) -> dict[str, object]:
+    """Build canonical Schema v1 research replay evidence JSON."""
+    return {
+        "schema_version": schema_version,
+        "reproduction_fingerprint": reproduction_fingerprint,
+        "key_result_summary_artifact_id": f"artifact-summary{artifact_id_suffix}",
+        "required_artifacts": [
+            {
+                "artifact_id": f"artifact-nav{artifact_id_suffix}",
+                "artifact_kind": "nav",
+                "artifact_format": "parquet",
+                "content_hash": nav_hash,
+                "schema_hash": "e" * 64,
+                "row_count": 2,
+                "byte_size": 128,
+            },
+            {
+                "artifact_id": f"artifact-summary{artifact_id_suffix}",
+                "artifact_kind": "summary",
+                "artifact_format": "json",
+                "content_hash": summary_hash,
+                "schema_hash": "d" * 64,
+                "row_count": 1,
+                "byte_size": 64,
+            },
+        ],
+    }
+
+
+def _make_research_replay_metadata(
+    *,
+    artifact_id_suffix: str = "",
+    fill_log_artifact_id: str | None = None,
+) -> dict[str, object]:
+    return {
+        "research_replay_evidence_version": 1,
+        "research_replay_bundle": {
+            "schema_version": 1,
+            "manifest_artifact_id": f"artifact-manifest{artifact_id_suffix}",
+            "report_artifact_id": f"artifact-summary{artifact_id_suffix}",
+            "required_artifact_ids": [
+                f"artifact-nav{artifact_id_suffix}",
+                f"artifact-summary{artifact_id_suffix}",
+            ],
+            "fill_log_artifact_id": fill_log_artifact_id,
+        },
+    }
+
+
+def _make_verified_replay_bundle(
+    *,
+    run_id: str = "run-original",
+    reproduction_fingerprint: str = "f" * 64,
+    manifest_payload: dict[str, object] | None = None,
+    report_payload: dict[str, object] | None = None,
+    artifact_id_suffix: str = "",
+) -> VerifiedReplayBundle:
+    raw = manifest_payload or _make_manifest_raw(
+        run_id=run_id,
+        replay_evidence=_make_replay_evidence_raw(
+            reproduction_fingerprint=reproduction_fingerprint,
+            artifact_id_suffix=artifact_id_suffix,
+        ),
+    )
+    return VerifiedReplayBundle(
+        run_id=run_id,
+        manifest_payload=raw,
+        report_payload=report_payload or _make_report_dict(nav_series=[1.0, 1.01]),
+        manifest_artifact=ReplayArtifactRef(
+            artifact_id=f"artifact-manifest{artifact_id_suffix}",
+            artifact_kind="run_manifest",
+            artifact_format="json",
+            content_hash="3" * 64,
+            schema_hash="c" * 64,
+            row_count=1,
+            byte_size=512,
+        ),
+        reproduction_fingerprint=reproduction_fingerprint,
+        report_artifact_id=f"artifact-summary{artifact_id_suffix}",
+        verified_artifacts=(
+            ReplayArtifactRef(
+                artifact_id=f"artifact-nav{artifact_id_suffix}",
+                artifact_kind="nav",
+                artifact_format="parquet",
+                content_hash="2" * 64,
+                schema_hash="e" * 64,
+                row_count=2,
+                byte_size=128,
+            ),
+            ReplayArtifactRef(
+                artifact_id=f"artifact-summary{artifact_id_suffix}",
+                artifact_kind="summary",
+                artifact_format="json",
+                content_hash="1" * 64,
+                schema_hash="d" * 64,
+                row_count=1,
+                byte_size=64,
+            ),
+        ),
+    )
+
+
+def _make_indexed_artifact_record(
+    *,
+    artifact_id: str,
+    artifact_kind: str,
+    artifact_format: str,
+    run_id: str = "run-original",
+    experiment_id: str = "experiment-1",
+    candidate_id: str = "candidate-1",
+    fold_id: str = "fold-1",
+    attempt_id: str = "attempt-1",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        artifact_id=artifact_id,
+        artifact_kind=artifact_kind,
+        experiment_id=experiment_id,
+        candidate_id=candidate_id,
+        fold_id=fold_id,
+        attempt_id=attempt_id,
+        content_hash="1" * 64,
+        schema_hash="2" * 64,
+        row_count=1,
+        byte_size=128,
+        reproduction_fingerprint="f" * 64,
+        manifest={
+            "format": artifact_format,
+            "audit": {"run_id": run_id, "attempt_id": attempt_id},
+        },
+    )
 
 
 def _make_replay_validation_result(
@@ -290,6 +434,80 @@ class TestLoadManifest:
         assert manifest.strategy_version == "3"
         assert manifest.input_ref_details[0].source_snapshot_id == "snapshot-v1"
 
+    def test_load_manifest_preserves_all_deterministic_time_fields(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        raw = _make_manifest_raw(
+            pit_time_column="known_at",
+            pit_policy="strict_as_of",
+            unsafe_time_policy="explicit_unsafe_research",
+            knowledge_lag_days=3,
+        )
+        (tmp_path / "manifest.json").write_bytes(orjson.dumps(raw))
+
+        manifest = ReplayProcess._load_manifest(tmp_path)
+
+        assert manifest.pit_time_column == "known_at"
+        assert manifest.pit_policy == "strict_as_of"
+        assert manifest.unsafe_time_policy == "explicit_unsafe_research"
+        assert manifest.knowledge_lag_days == 3
+
+    def test_load_manifest_decodes_complete_r3_evidence(self, tmp_path: Path) -> None:
+        raw = _make_manifest_raw(replay_evidence=_make_replay_evidence_raw())
+        (tmp_path / "manifest.json").write_bytes(orjson.dumps(raw))
+
+        manifest = ReplayProcess._load_manifest(tmp_path)
+
+        assert type(manifest.replay_evidence) is ResearchReplayEvidence
+        assert manifest.replay_evidence.schema_version == 1
+        assert manifest.replay_evidence.reproduction_fingerprint == "f" * 64
+        assert manifest.replay_evidence.key_result_summary.content_hash == "1" * 64
+
+    def test_load_manifest_rejects_unknown_r3_evidence_version(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        raw = _make_manifest_raw(
+            replay_evidence=_make_replay_evidence_raw(schema_version=2)
+        )
+        (tmp_path / "manifest.json").write_bytes(orjson.dumps(raw))
+
+        with pytest.raises(AppProcessError, match="schema_version") as exc_info:
+            ReplayProcess._load_manifest(tmp_path)
+
+        assert exc_info.value.details["reason"] == "invalid_replay_evidence"
+
+    def test_load_manifest_rejects_unknown_r3_evidence_field(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        evidence = _make_replay_evidence_raw()
+        evidence["unknown"] = "must-not-be-ignored"
+        raw = _make_manifest_raw(replay_evidence=evidence)
+        (tmp_path / "manifest.json").write_bytes(orjson.dumps(raw))
+
+        with pytest.raises(AppProcessError, match="fields") as exc_info:
+            ReplayProcess._load_manifest(tmp_path)
+
+        assert exc_info.value.details["reason"] == "invalid_replay_evidence"
+
+    def test_load_manifest_rejects_duplicate_required_artifact(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        evidence = _make_replay_evidence_raw()
+        artifacts = list(evidence["required_artifacts"])
+        artifacts.append(dict(artifacts[0]))
+        evidence["required_artifacts"] = artifacts
+        raw = _make_manifest_raw(replay_evidence=evidence)
+        (tmp_path / "manifest.json").write_bytes(orjson.dumps(raw))
+
+        with pytest.raises(AppProcessError, match="unique") as exc_info:
+            ReplayProcess._load_manifest(tmp_path)
+
+        assert exc_info.value.details["reason"] == "invalid_replay_evidence"
+
     def test_load_manifest_file_not_found(self, tmp_path: Path) -> None:
         """manifest.json 不存在时抛出 FileNotFoundError."""
         from ditto_application.processes.execution.replay_process import ReplayProcess
@@ -409,6 +627,369 @@ class TestLoadReport:
 
         with pytest.raises(FileNotFoundError, match=r"backtest_report\.json not found"):
             ReplayProcess._load_report(tmp_path)
+
+
+class TestVerifiedReplayArtifactBoundary:
+    """R3 artifacts must enter ReplayProcess only through the verified index port."""
+
+    @staticmethod
+    def _record(*, marker: object = 1, path: str = "/must-not-be-read") -> MagicMock:
+        record = MagicMock()
+        record.run_id = "run-original"
+        record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        record.file_path = path
+        record.metadata = _make_research_replay_metadata()
+        record.metadata["research_replay_evidence_version"] = marker
+        return record
+
+    def test_r3_marker_requires_verified_reader(self) -> None:
+        process = ReplayProcess(MagicMock(), MagicMock())
+
+        with pytest.raises(AppProcessError, match="verified artifact reader") as exc:
+            process._load_replay_inputs(self._record())
+
+        assert exc.value.details["reason"] == "verified_artifact_reader_required"
+
+    @pytest.mark.parametrize("marker", [0, 2, True, "1", None])
+    def test_unknown_or_malformed_r3_marker_fails_closed(self, marker: object) -> None:
+        reader = MagicMock()
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with pytest.raises(AppProcessError, match="version") as exc:
+            process._load_replay_inputs(self._record(marker=marker))
+
+        assert exc.value.details["reason"] == "unsupported_replay_evidence_version"
+        reader.read_bundle.assert_not_called()
+
+    def test_indexed_r3_bundle_never_reads_raw_artifact_directory(self) -> None:
+        reader = MagicMock()
+        reader.read_bundle.return_value = _make_verified_replay_bundle()
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with (
+            patch.object(
+                ReplayProcess,
+                "_load_manifest",
+                side_effect=AssertionError("raw manifest bypassed the index"),
+            ),
+            patch.object(
+                ReplayProcess,
+                "_load_report",
+                side_effect=AssertionError("raw report bypassed the index"),
+            ),
+        ):
+            loaded = process._load_replay_inputs(self._record())
+
+        assert loaded.is_research_evidence is True
+        assert loaded.manifest.replay_evidence is not None
+        assert loaded.report["nav_series"] == [1.0, 1.01]
+        reader.read_bundle.assert_called_once_with("run-original")
+
+    def test_verified_bundle_fingerprint_must_match_manifest(self) -> None:
+        reader = MagicMock()
+        reader.read_bundle.return_value = _make_verified_replay_bundle(
+            reproduction_fingerprint="0" * 64,
+            manifest_payload=_make_manifest_raw(
+                replay_evidence=_make_replay_evidence_raw(
+                    reproduction_fingerprint="f" * 64,
+                )
+            ),
+        )
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with pytest.raises(AppProcessError, match="fingerprint") as exc:
+            process._load_replay_inputs(self._record())
+
+        assert exc.value.details["reason"] == "verified_replay_evidence_mismatch"
+
+    def test_verified_bundle_required_artifacts_must_be_exact(self) -> None:
+        bundle = _make_verified_replay_bundle()
+        reader = MagicMock()
+        reader.read_bundle.return_value = VerifiedReplayBundle(
+            run_id=bundle.run_id,
+            manifest_payload=bundle.manifest_payload,
+            report_payload=bundle.report_payload,
+            manifest_artifact=bundle.manifest_artifact,
+            reproduction_fingerprint=bundle.reproduction_fingerprint,
+            report_artifact_id=bundle.report_artifact_id,
+            verified_artifacts=(bundle.verified_artifacts[1],),
+        )
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with pytest.raises(AppProcessError, match="required artifacts") as exc:
+            process._load_replay_inputs(self._record())
+
+        assert exc.value.details["reason"] == "verified_replay_evidence_mismatch"
+
+    def test_manifest_r3_evidence_without_index_marker_cannot_fallback(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        (tmp_path / "manifest.json").write_bytes(
+            orjson.dumps(
+                _make_manifest_raw(replay_evidence=_make_replay_evidence_raw())
+            )
+        )
+        (tmp_path / "backtest_report.json").write_bytes(
+            orjson.dumps(_make_report_dict())
+        )
+        record = self._record(path=str(tmp_path))
+        record.metadata = {}
+        process = ReplayProcess(MagicMock(), MagicMock())
+
+        with pytest.raises(AppProcessError, match="index marker") as exc:
+            process._load_replay_inputs(record)
+
+        assert exc.value.details["reason"] == "r3_replay_index_marker_missing"
+
+    def test_verified_reader_integrity_failure_propagates(self) -> None:
+        reader = MagicMock()
+        reader.read_bundle.side_effect = RuntimeError("artifact checksum mismatch")
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with pytest.raises(RuntimeError, match="checksum mismatch"):
+            process._load_replay_inputs(self._record())
+
+    @pytest.mark.parametrize(
+        ("mutation", "expected_reason"),
+        [
+            ("missing_bundle", "invalid_replay_evidence_marker"),
+            ("unknown_bundle_field", "invalid_replay_evidence_marker"),
+            ("duplicate_required_id", "invalid_replay_evidence_marker"),
+        ],
+    )
+    def test_marker_pointer_corruption_fails_before_verified_read(
+        self,
+        mutation: str,
+        expected_reason: str,
+    ) -> None:
+        record = self._record()
+        if mutation == "missing_bundle":
+            del record.metadata["research_replay_bundle"]
+        else:
+            bundle = record.metadata["research_replay_bundle"]
+            assert isinstance(bundle, dict)
+            if mutation == "unknown_bundle_field":
+                bundle["unexpected"] = "unsafe"
+            else:
+                bundle["required_artifact_ids"] = [
+                    "artifact-summary",
+                    "artifact-summary",
+                ]
+        reader = MagicMock()
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with pytest.raises(AppProcessError) as exc:
+            process._load_replay_inputs(record)
+
+        assert exc.value.details["reason"] == expected_reason
+        reader.read_bundle.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "mismatch",
+        ["manifest", "report", "fill"],
+    )
+    def test_bundle_identity_must_exactly_match_persisted_pointer(
+        self,
+        mismatch: str,
+    ) -> None:
+        record = self._record()
+        pointer = record.metadata["research_replay_bundle"]
+        assert isinstance(pointer, dict)
+        if mismatch == "manifest":
+            pointer["manifest_artifact_id"] = "artifact-manifest-other"
+        elif mismatch == "report":
+            pointer["report_artifact_id"] = "artifact-nav"
+        else:
+            pointer["fill_log_artifact_id"] = "artifact-nav"
+        reader = MagicMock()
+        reader.read_bundle.return_value = _make_verified_replay_bundle()
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with pytest.raises(AppProcessError) as exc:
+            process._load_replay_inputs(record)
+
+        assert exc.value.details["reason"] == "verified_replay_evidence_mismatch"
+
+    def test_report_must_be_the_manifest_key_result_summary(self) -> None:
+        record = self._record()
+        pointer = record.metadata["research_replay_bundle"]
+        assert isinstance(pointer, dict)
+        pointer["report_artifact_id"] = "artifact-nav"
+        bundle = _make_verified_replay_bundle()
+        reader = MagicMock()
+        reader.read_bundle.return_value = VerifiedReplayBundle(
+            run_id=bundle.run_id,
+            manifest_payload=bundle.manifest_payload,
+            report_payload=bundle.report_payload,
+            manifest_artifact=bundle.manifest_artifact,
+            reproduction_fingerprint=bundle.reproduction_fingerprint,
+            report_artifact_id="artifact-nav",
+            verified_artifacts=bundle.verified_artifacts,
+        )
+        process = ReplayProcess(
+            MagicMock(),
+            MagicMock(),
+            verified_artifact_reader=reader,
+        )
+
+        with pytest.raises(AppProcessError) as exc:
+            process._load_replay_inputs(record)
+
+        assert exc.value.details["reason"] == "verified_replay_evidence_mismatch"
+
+
+class TestIndexedResearchReplayArtifactReader:
+    """The concrete adapter must assemble only one exact attempt lineage."""
+
+    @staticmethod
+    def _build(
+        *,
+        record_overrides: dict[str, dict[str, object]] | None = None,
+        report_run_id: str | None = None,
+    ) -> IndexedResearchReplayArtifactReader:
+        strategy_record = MagicMock()
+        strategy_record.run_id = "run-original"
+        strategy_record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        strategy_record.metadata = _make_research_replay_metadata()
+        strategy_service = MagicMock()
+        strategy_service.list_artifacts.return_value = [strategy_record]
+
+        records = {
+            "artifact-manifest": _make_indexed_artifact_record(
+                artifact_id="artifact-manifest",
+                artifact_kind="run_manifest",
+                artifact_format="json",
+            ),
+            "artifact-nav": _make_indexed_artifact_record(
+                artifact_id="artifact-nav",
+                artifact_kind="nav",
+                artifact_format="parquet",
+            ),
+            "artifact-summary": _make_indexed_artifact_record(
+                artifact_id="artifact-summary",
+                artifact_kind="summary",
+                artifact_format="json",
+            ),
+        }
+        for artifact_id, overrides in (record_overrides or {}).items():
+            record = records[artifact_id]
+            for field_name, value in overrides.items():
+                setattr(record, field_name, value)
+        index_reader = MagicMock()
+        index_reader.get_artifact.side_effect = records.get
+        content_reader = MagicMock()
+        report: dict[str, object] = {"nav_series": [1.0, 1.01]}
+        if report_run_id is not None:
+            report["run_id"] = report_run_id
+        content_reader.read_indexed_json.side_effect = lambda artifact_id: {
+            "artifact-manifest": {"run_id": "run-original"},
+            "artifact-summary": report,
+        }[artifact_id]
+        content_reader.read_indexed_parquet.return_value = pl.DataFrame(
+            {"nav": [1.0, 1.01]}
+        )
+        return IndexedResearchReplayArtifactReader(
+            strategy_artifact_service=strategy_service,
+            artifact_index_reader=index_reader,
+            artifact_content_reader=content_reader,
+        )
+
+    def test_reads_one_exact_attempt_bundle(self) -> None:
+        bundle = self._build(report_run_id="run-original").read_bundle("run-original")
+
+        assert bundle.manifest_artifact.artifact_id == "artifact-manifest"
+        assert bundle.report_artifact_id == "artifact-summary"
+        assert tuple(item.artifact_id for item in bundle.verified_artifacts) == (
+            "artifact-nav",
+            "artifact-summary",
+        )
+
+    @pytest.mark.parametrize(
+        ("artifact_id", "overrides"),
+        [
+            ("artifact-nav", {"attempt_id": "attempt-2"}),
+            ("artifact-summary", {"experiment_id": "experiment-2"}),
+        ],
+    )
+    def test_same_fingerprint_cannot_mix_cross_lineage_artifacts(
+        self,
+        artifact_id: str,
+        overrides: dict[str, object],
+    ) -> None:
+        if "attempt_id" in overrides:
+            overrides = {
+                **overrides,
+                "manifest": {
+                    "format": "parquet",
+                    "audit": {
+                        "run_id": "run-original",
+                        "attempt_id": "attempt-2",
+                    },
+                },
+            }
+        reader = self._build(record_overrides={artifact_id: overrides})
+
+        with pytest.raises(AppProcessError, match="lineage") as exc:
+            reader.read_bundle("run-original")
+
+        assert exc.value.details["reason"] == "verified_replay_evidence_mismatch"
+
+    def test_artifact_audit_must_match_typed_attempt(self) -> None:
+        reader = self._build(
+            record_overrides={
+                "artifact-summary": {
+                    "manifest": {
+                        "format": "json",
+                        "audit": {
+                            "run_id": "run-original",
+                            "attempt_id": "attempt-other",
+                        },
+                    }
+                }
+            }
+        )
+
+        with pytest.raises(AppProcessError, match="lineage") as exc:
+            reader.read_bundle("run-original")
+
+        assert exc.value.details["reason"] == "verified_replay_evidence_mismatch"
+
+    def test_report_payload_run_id_must_match_request(self) -> None:
+        reader = self._build(report_run_id="run-other")
+
+        with pytest.raises(AppProcessError, match="different run") as exc:
+            reader.read_bundle("run-original")
+
+        assert exc.value.details["reason"] == "verified_replay_evidence_mismatch"
 
 
 # ---------------------------------------------------------------------------
@@ -735,6 +1316,106 @@ class TestReplaySuccess:
         version = call_kwargs.kwargs.get("version") or call_kwargs[1].get("version")
         assert version == 3  # "3" 被转为 int
 
+    def test_r3_replay_uses_only_verified_bundles_and_accepts_new_artifact_ids(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        artifacts_root = tmp_path / "artifacts"
+        original_dir = artifacts_root / "run-original"
+        replay_dir = artifacts_root / "run-replay"
+        original_dir.mkdir(parents=True)
+
+        original_record = MagicMock()
+        original_record.run_id = "run-original"
+        original_record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        original_record.file_path = str(original_dir)
+        original_record.metadata = _make_research_replay_metadata(
+            artifact_id_suffix="-attempt-1"
+        )
+        replay_record = MagicMock()
+        replay_record.run_id = "run-replay"
+        replay_record.artifact_type = ArtifactKind.BACKTEST_REPORT
+        replay_record.file_path = str(replay_dir)
+        replay_record.metadata = _make_research_replay_metadata(
+            artifact_id_suffix="-attempt-2"
+        )
+
+        artifact_service = MagicMock()
+        artifact_service.list_artifacts.return_value = [original_record]
+        facade = MagicMock()
+
+        def _execute(**_kwargs: object) -> BacktestReport:
+            artifact_service.list_artifacts.return_value = [
+                replay_record,
+                original_record,
+            ]
+            return _make_backtest_report(
+                run_id="run-replay",
+                nav_series=(
+                    ("2026-01-01", 9.0),
+                    ("2026-01-02", 9.99),
+                ),
+            )
+
+        facade.run_backtest_from_catalog.side_effect = _execute
+        account_view = _make_account_view()
+        verified_report = _make_report_dict(nav_series=[1.0, 1.01])
+        verified_report["final_account_state"] = (
+            BacktestAccountStateSnapshot.from_account_view(account_view).to_payload()
+        )
+        reader = MagicMock()
+        reader.read_bundle.side_effect = lambda run_id: _make_verified_replay_bundle(
+            run_id=run_id,
+            artifact_id_suffix=(
+                "-attempt-1" if run_id == "run-original" else "-attempt-2"
+            ),
+            report_payload=verified_report,
+            manifest_payload=_make_manifest_raw(
+                run_id=run_id,
+                created_at=(
+                    "2026-07-22T00:00:00Z"
+                    if run_id == "run-original"
+                    else "2026-07-23T00:00:00Z"
+                ),
+                replay_evidence=_make_replay_evidence_raw(
+                    artifact_id_suffix=(
+                        "-attempt-1" if run_id == "run-original" else "-attempt-2"
+                    )
+                ),
+            ),
+        )
+        process = ReplayProcess(
+            facade,
+            artifact_service,
+            verified_artifact_reader=reader,
+        )
+
+        with (
+            patch.object(
+                ReplayProcess,
+                "_load_manifest",
+                side_effect=AssertionError("raw manifest bypassed index"),
+            ),
+            patch.object(
+                ReplayProcess,
+                "_load_report",
+                side_effect=AssertionError("raw report bypassed index"),
+            ),
+        ):
+            result = process.replay("run-original")
+
+        assert result.validation.is_reproducible is True
+        assert result.validation.reproduction_fingerprint_match is True
+        assert result.validation.key_result_summary_match is True
+        assert result.validation.required_artifact_hashes_match is True
+        assert result.validation.account_state_match is True
+        assert [item.args for item in reader.read_bundle.call_args_list] == [
+            ("run-original",),
+            ("run-replay",),
+        ]
+        proof = orjson.loads((replay_dir / "replay_proof.json").read_bytes())
+        assert proof["proof_version"] == 2
+
     def test_replay_persists_validation_proof_artifact(
         self,
         tmp_path: Path,
@@ -814,6 +1495,61 @@ class TestReplaySuccess:
         assert proof_record.metadata["original_run_id"] == "run-original"
         assert proof_record.metadata["is_reproducible"] is True
         assert proof_record.metadata["max_nav_diff_bps"] == 0.0
+
+    def test_r3_replay_proof_freezes_exact_evidence_hashes(self) -> None:
+        from ditto_application.processes.execution.replay_process import (
+            _build_replay_proof_payload,
+            _deserialize_manifest,
+        )
+
+        manifest = _deserialize_manifest(
+            _make_manifest_raw(replay_evidence=_make_replay_evidence_raw())
+        )
+        evidence = manifest.replay_evidence
+        assert evidence is not None
+        replay_manifest = _deserialize_manifest(
+            _make_manifest_raw(
+                run_id="run-replay",
+                replay_evidence=_make_replay_evidence_raw(artifact_id_suffix="-replay"),
+            )
+        )
+        replay_evidence = replay_manifest.replay_evidence
+        assert replay_evidence is not None
+        validation = ReplayValidationResult(
+            is_reproducible=True,
+            nav_correlation=1.0,
+            max_nav_diff_bps=0.0,
+            manifest_diff=ManifestDiff(),
+            input_data_match=True,
+            reproduction_fingerprint_match=True,
+            key_result_summary_match=True,
+            required_artifact_hashes_match=True,
+        )
+
+        payload = _build_replay_proof_payload(
+            original_run_id="run-original",
+            replay_run_id="run-replay",
+            validation=validation,
+            original_replay_evidence=evidence,
+            replay_replay_evidence=replay_evidence,
+            created_at="2026-07-23T00:00:00Z",
+        )
+
+        assert payload["proof_version"] == 2
+        assert payload["reproduction_fingerprint"] == "f" * 64
+        assert payload["key_result_summary_hash"] == "1" * 64
+        assert payload["reproduction_fingerprint_match"] is True
+        assert payload["key_result_summary_match"] is True
+        assert payload["required_artifact_hashes_match"] is True
+        required = payload["required_artifacts"]
+        assert isinstance(required, list)
+        assert [item["content_hash"] for item in required] == ["2" * 64, "1" * 64]
+        original = payload["original_replay_evidence"]
+        replay = payload["replay_replay_evidence"]
+        assert isinstance(original, dict)
+        assert isinstance(replay, dict)
+        assert original["key_result_summary_artifact_id"] == "artifact-summary"
+        assert replay["key_result_summary_artifact_id"] == "artifact-summary-replay"
 
     def test_replay_proof_preserves_original_resume_provenance(
         self,

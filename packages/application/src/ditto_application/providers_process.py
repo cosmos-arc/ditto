@@ -10,6 +10,7 @@ from ditto_analysis.experiments import (
     ExperimentReaderProtocol,
     ExperimentWriterProtocol,
 )
+from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.certification import (
@@ -78,7 +79,11 @@ from ditto_application.processes.execution.manual_sizing import (
 )
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.position_reader import StoredPositionReader
-from ditto_application.processes.execution.replay_process import ReplayProcess
+from ditto_application.processes.execution.replay_process import (
+    IndexedResearchReplayArtifactReader,
+    ReplayProcess,
+    VerifiedReplayArtifactReader,
+)
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
@@ -561,17 +566,33 @@ class AppProcessProvider(Provider):
         )
 
     @provide
+    def verified_replay_artifact_reader(
+        self,
+        strategy_artifact_service: StrategyArtifactService,
+        experiment_reader: ExperimentReaderProtocol,
+        research_artifact_service: ResearchArtifactService,
+    ) -> VerifiedReplayArtifactReader:
+        """Bind R3 replay to Schema v1 metadata and verified artifact reads."""
+        return IndexedResearchReplayArtifactReader(
+            strategy_artifact_service=strategy_artifact_service,
+            artifact_index_reader=experiment_reader,
+            artifact_content_reader=research_artifact_service,
+        )
+
+    @provide
     def replay_process(
         self,
         strategy_facade: StrategyFacade,
         artifact_service: StrategyArtifactService,
         run_model: RunReadModel,
+        verified_artifact_reader: VerifiedReplayArtifactReader,
     ) -> ReplayProcess:
         """回测重放流程."""
         return ReplayProcess(
             strategy_facade=strategy_facade,
             artifact_service=artifact_service,
             run_model=run_model,
+            verified_artifact_reader=verified_artifact_reader,
         )
 
     @provide

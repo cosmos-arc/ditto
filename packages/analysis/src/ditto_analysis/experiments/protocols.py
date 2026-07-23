@@ -91,6 +91,10 @@ class ExperimentReaderProtocol(Protocol):
 
     def get_artifact(self, artifact_id: str) -> ArtifactRecord | None: ...
 
+    def get_artifact_by_relative_path(
+        self, relative_path: str
+    ) -> ArtifactRecord | None: ...
+
     def get_gate_evaluation(
         self, evaluation_id: str
     ) -> GateEvaluationRecord | None: ...
@@ -275,22 +279,6 @@ class ExperimentWriterProtocol(Protocol):
         reason_code: str | None,
         detail: Mapping[str, object],
     ) -> AttemptProjection: ...
-
-    def add_artifact(
-        self,
-        record: ArtifactRecord,
-        *,
-        lease_fence: LeaseFence,
-        now_epoch_us: int,
-    ) -> None: ...
-
-    def pin_artifact(
-        self,
-        artifact_id: str,
-        *,
-        expected_revision: int,
-        pinned_at: datetime,
-    ) -> ArtifactRecord: ...
 
     def add_gate_evaluation(self, record: GateEvaluationRecord) -> None: ...
 

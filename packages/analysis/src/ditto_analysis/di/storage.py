@@ -104,6 +104,17 @@ class AnalysisStorageProvider(Provider):
         )
 
     @provide
-    def research_artifact_service(self, data_root: Path) -> ResearchArtifactService:
-        """Research artifact file I/O service."""
-        return ResearchArtifactService(artifact_root=data_root)
+    def research_artifact_service(
+        self,
+        data_root: Path,
+        database: ResearchExperimentDatabase,
+        reader: SQLiteExperimentReader,
+        writer: SQLiteExperimentWriter,
+    ) -> ResearchArtifactService:
+        """Provide legacy files plus the database-owned verified R3 namespace."""
+        return ResearchArtifactService(
+            artifact_root=data_root,
+            indexed_artifact_root=database.artifact_root,
+            artifact_reader=reader,
+            artifact_writer=writer,
+        )
