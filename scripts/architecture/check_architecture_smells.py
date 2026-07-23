@@ -457,6 +457,17 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/processes/strategy/promotion.py"
+        ),
+        owner="application R3 strategy promotion process",
+        reason=(
+            "The promotion process reads the analysis-owned immutable review "
+            "packet and gate outcomes to gate a governance publish/activate; "
+            "it performs no direct storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "coordinator.py"
         ),
