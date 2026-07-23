@@ -6,6 +6,24 @@ This package does not schedule work. Runtime database and storage adapters live 
 analysis-owned contracts and codecs.
 """
 
+from ditto_analysis.experiments.evidence import (
+    REVIEW_PACKET_SCHEMA_VERSION,
+    ReviewPacket,
+    ReviewPacketLineage,
+)
+from ditto_analysis.experiments.gates import (
+    GATE_POLICY_VERSION,
+    HARD_GATE_RULE_IDS,
+    EvidenceGateInput,
+    GateEvaluation,
+    GateFact,
+    GateLayer,
+    GateOutcome,
+    HardGateEvidence,
+    evaluate_evidence_gates,
+    evaluate_hard_gates,
+    review_blocked_by_hard_gates,
+)
 from ditto_analysis.experiments.holdout import (
     AtomicHoldoutClaimReceipt,
     HoldoutClaimAuthorityCommand,
@@ -104,9 +122,12 @@ from ditto_analysis.experiments.trial_family import (
 )
 
 __all__ = [
+    "GATE_POLICY_VERSION",
+    "HARD_GATE_RULE_IDS",
     "R3_COMPARISON_METRIC_IDS",
     "R3_DIAGNOSTIC_METRIC_IDS",
     "R3_RESEARCH_METRIC_SCHEMA",
+    "REVIEW_PACKET_SCHEMA_VERSION",
     "ArtifactRecord",
     "AtomicHoldoutClaimReceipt",
     "AttemptId",
@@ -122,6 +143,7 @@ __all__ = [
     "ConstraintOperator",
     "ContentHash",
     "DateWindow",
+    "EvidenceGateInput",
     "ExperimentBudget",
     "ExperimentDesiredState",
     "ExperimentFailureCode",
@@ -141,7 +163,12 @@ __all__ = [
     "FoldProtocolSpec",
     "FoldRole",
     "FoldView",
+    "GateEvaluation",
     "GateEvaluationRecord",
+    "GateFact",
+    "GateLayer",
+    "GateOutcome",
+    "HardGateEvidence",
     "HoldoutClaimAuthorityCommand",
     "HoldoutClaimRecord",
     "HoldoutSelectionReason",
@@ -165,6 +192,8 @@ __all__ = [
     "ResearchMetricUnit",
     "ResearchMetricValue",
     "ReturnFrequency",
+    "ReviewPacket",
+    "ReviewPacketLineage",
     "SamplingReturnUnit",
     "SchedulerLease",
     "SchedulerSlot",
@@ -179,7 +208,10 @@ __all__ = [
     "decode_launch_spec",
     "encode_candidate_parameters",
     "encode_launch_spec",
+    "evaluate_evidence_gates",
+    "evaluate_hard_gates",
     "holdout_request_payload",
     "partition_observation_date_grid_hash",
+    "review_blocked_by_hard_gates",
     "validate_status_transition",
 ]
