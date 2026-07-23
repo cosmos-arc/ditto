@@ -8,6 +8,7 @@ exists per strategy and is swapped via compare-and-swap revision.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -76,6 +77,7 @@ class StrategyVersion:
     parent_version: int | None
     schema_version: int
     spec_hash: str
+    spec_json: Mapping[str, object]
     created_at: str
 
 

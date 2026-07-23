@@ -30,6 +30,7 @@ def _version(
         parent_version=None,
         schema_version=GOVERNANCE_SCHEMA_VERSION,
         spec_hash=spec_hash,
+        spec_json={"version": version},
         created_at="2026-07-23T00:00:00Z",
     )
 
