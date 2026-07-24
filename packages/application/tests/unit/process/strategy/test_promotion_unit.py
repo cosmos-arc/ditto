@@ -45,7 +45,6 @@ def _seed_approved_version(service: GovernanceService, version: int = 1) -> None
             parent_version=None,
             schema_version=GOVERNANCE_SCHEMA_VERSION,
             spec_hash="a" * 64,
-            spec_json={"version": version},
             created_at="2026-07-23T00:00:00Z",
         )
     )

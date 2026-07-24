@@ -1255,6 +1255,7 @@ class TestArtifactPersistence:
                     "start_date=2026-01-01",
                     "end_date=2026-03-01",
                     "data_hash=sha256:abc123",
+                    "source_snapshot_id=",
                 ),
             ),
         )

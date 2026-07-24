@@ -17,6 +17,7 @@ from ditto_strategy.models import StrategySpecRecord
 
 def _bootstrap() -> tuple[SeedStrategyBootstrap, MagicMock, MagicMock, MagicMock]:
     catalog = MagicMock()
+    catalog.get_active_published.return_value = None
     create_port = MagicMock()
     create_port.create.return_value = 1
     publish_port = MagicMock()
@@ -87,6 +88,7 @@ def test_second_run_is_unchanged() -> None:
         )
 
     catalog.get_spec.side_effect = existing
+    catalog.get_active_published.side_effect = existing
 
     result = process.run()
 

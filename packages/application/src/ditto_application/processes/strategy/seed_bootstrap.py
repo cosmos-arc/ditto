@@ -146,16 +146,17 @@ class SeedStrategyBootstrap:
                 )
                 continue
 
-            if existing.status != "published":
+            active = self._catalog.get_active_published(strategy_id)
+            if active is not None and active.version == existing.version:
+                status = SeedBootstrapStatus.UNCHANGED
+                published = False
+            else:
                 self._publish_port.publish(
                     strategy_id=strategy_id,
                     version=existing.version,
                 )
                 status = SeedBootstrapStatus.PUBLISHED
                 published = True
-            else:
-                status = SeedBootstrapStatus.UNCHANGED
-                published = False
             results.append(
                 SeedBootstrapResult(
                     strategy_id=strategy_id,

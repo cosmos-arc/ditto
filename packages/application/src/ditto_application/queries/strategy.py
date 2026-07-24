@@ -30,8 +30,23 @@ class StrategyQueryFacade:
         record = self._service.get_spec(strategy_id, version)
         return to_spec_info(record) if record is not None else None
 
+    def get_active_published(self, strategy_id: str) -> StrategySpecInfo | None:
+        """
+        获取 governance active pointer 指向的 published payload.
+
+        生产读取（R1/EOD）的唯一入口：无 active pointer 返回 None，
+        由调用方走 NO_ACTIVE_STRATEGY fail-closed。
+        """
+        record = self._service.get_active_published(strategy_id)
+        return to_spec_info(record, status="active") if record is not None else None
+
     def get_latest_published(self, strategy_id: str) -> StrategySpecInfo | None:
-        """获取活动 published 版本，忽略更新的草稿."""
+        """
+        获取活动 published 版本，忽略更新的草稿.
+
+        .. deprecated:: R3
+            生产读取应改用 :meth:`get_active_published`。
+        """
         record = self._service.get_latest_published(strategy_id)
         return to_spec_info(record) if record is not None else None
 

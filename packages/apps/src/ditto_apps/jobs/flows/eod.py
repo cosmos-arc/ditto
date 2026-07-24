@@ -248,7 +248,7 @@ def _resolve_published_eod_request(strategy_id: str) -> EodStrategyRequest | Non
         catalog = bundle.catalog_service
         if catalog is None:
             return None
-        spec = catalog.get_latest_published(strategy_id)
+        spec = catalog.get_active_published(strategy_id)
         return _eod_request(spec) if spec is not None else None
 
 

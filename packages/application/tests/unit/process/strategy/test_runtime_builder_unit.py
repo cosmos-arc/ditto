@@ -294,7 +294,7 @@ class TestStrategyRuntimeBuilder:
         draft_v2 = _make_spec_record(spec, version=2, status="draft")
         catalog_service = MagicMock(spec=StrategyCatalogService)
         catalog_service.get_spec.return_value = draft_v2
-        catalog_service.get_latest_published.return_value = published_v1
+        catalog_service.get_active_published.return_value = published_v1
         builder = strategy_services.StrategyRuntimeBuilder(
             catalog_service=catalog_service,
         )
@@ -302,21 +302,8 @@ class TestStrategyRuntimeBuilder:
         runtime = builder.build_published_runtime("momentum-etf")
 
         assert runtime.record is published_v1
-        catalog_service.get_latest_published.assert_called_once_with("momentum-etf")
+        catalog_service.get_active_published.assert_called_once_with("momentum-etf")
         catalog_service.get_spec.assert_not_called()
-
-    def test_build_published_runtime_rejects_non_published_spec(self) -> None:
-        """builder 只接受 published spec。"""
-        spec = _make_rotation_spec()
-        record = _make_spec_record(spec, status="draft")
-        catalog_service = MagicMock(spec=StrategyCatalogService)
-        catalog_service.get_spec.return_value = record
-
-        builder_cls = strategy_services.StrategyRuntimeBuilder
-        builder = builder_cls(catalog_service=catalog_service)
-
-        with pytest.raises(AppBuilderError, match="published"):
-            builder.build_published_runtime("momentum-etf", 3)
 
     def test_default_slippage_bps_is_1(self) -> None:
         """反序列化时若 spec_json 缺失 slippage_bps，默认值应为 1.0 bps。"""
@@ -343,7 +330,7 @@ class TestStrategyRuntimeBuilder:
         )
 
         catalog_service = MagicMock(spec=StrategyCatalogService)
-        catalog_service.get_latest_published.return_value = record
+        catalog_service.get_active_published.return_value = record
         builder = strategy_services.StrategyRuntimeBuilder(
             catalog_service=catalog_service,
         )

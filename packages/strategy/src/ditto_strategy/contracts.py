@@ -48,12 +48,32 @@ class StrategyCatalogReader(Protocol):
         """列出策略的所有版本."""
         ...
 
+    def get_active_published(self, strategy_id: str) -> StrategySpecRecord | None:
+        """
+        获取 governance active pointer 指向的 published payload.
+
+        无 active pointer 时返回 None（调用方走 fail-closed）。
+        这是生产读取的唯一入口（R1/EOD/backtest）。
+        """
+        ...
+
     def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
-        """获取最高 published 版本，忽略更新的草稿."""
+        """
+        获取最高 published 版本，忽略更新的草稿.
+
+        .. deprecated:: R3
+            governance active pointer 已成为唯一状态源，生产读取应改用
+            :meth:`get_active_published`。保留仅为过渡，将在清理提交移除。
+        """
         ...
 
     def list_latest_published(self) -> list[StrategySpecRecord]:
-        """列出每个策略的最高 published 版本."""
+        """
+        列出每个策略的最高 published 版本.
+
+        .. deprecated:: R3
+            见 :meth:`get_latest_published`。
+        """
         ...
 
 

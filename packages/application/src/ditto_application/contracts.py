@@ -88,14 +88,21 @@ class StrategySpecInfo:
     tags: tuple[str, ...] = ()
 
 
-def to_spec_info(record: StrategySpecRecord) -> StrategySpecInfo:
-    """将 Data Record 转换为 App DTO."""
+def to_spec_info(
+    record: StrategySpecRecord, *, status: str | None = None
+) -> StrategySpecInfo:
+    """
+    将 Data Record 转换为 App DTO.
+
+    ``status`` 显式覆盖 governance-derived 状态（如 active 路径标 ``"active"``）；
+    省略时回退到 record 自带状态（过渡期 strategy_spec 仍保留 status 列）。
+    """
     return StrategySpecInfo(
         strategy_id=record.strategy_id,
         name=record.name,
         spec_json=dict(record.spec_json),
         version=record.version,
-        status=record.status,
+        status=status if status is not None else record.status,
         created_at=record.created_at,
         updated_at=record.updated_at,
         tags=record.tags,

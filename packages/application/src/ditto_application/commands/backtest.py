@@ -210,7 +210,7 @@ class BacktestRunHandler:
                 expected_version,
             )
         else:
-            selected = self._catalog_service.get_latest_published(command.strategy_id)
+            selected = self._catalog_service.get_active_published(command.strategy_id)
             if selected is None:
                 expected_version = None
                 exact = None
@@ -226,7 +226,6 @@ class BacktestRunHandler:
         if (
             exact.strategy_id != command.strategy_id
             or exact.version != expected_version
-            or exact.status != "published"
         ):
             raise AppCommandError(
                 "Backtest requires one exact published strategy version",
@@ -234,7 +233,6 @@ class BacktestRunHandler:
                     "strategy_id": command.strategy_id,
                     "expected_strategy_version": expected_version,
                     "actual_strategy_version": exact.version,
-                    "version_status": exact.status,
                 },
             )
         return exact

@@ -51,7 +51,7 @@ def mock_catalog_service() -> Mock:
         signal_expressions=("ts_mean(close, 20)",),
         signal_weights=(1.0,),
     )
-    svc.get_latest_published.return_value = record
+    svc.get_active_published.return_value = record
     svc.get_spec.return_value = record
     return svc
 
@@ -356,7 +356,7 @@ class TestBacktestRunHandler:
         """An explicit command version never resolves a moving latest pointer."""
         handler.handle(_make_command(strategy_version=7))
 
-        mock_catalog_service.get_latest_published.assert_not_called()
+        mock_catalog_service.get_active_published.assert_not_called()
         mock_catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
 
     def test_implicit_version_is_locked_by_exact_second_read(
@@ -367,7 +367,7 @@ class TestBacktestRunHandler:
         """Latest published selection is immediately frozen by exact version read."""
         handler.handle(_make_command())
 
-        mock_catalog_service.get_latest_published.assert_called_once_with(
+        mock_catalog_service.get_active_published.assert_called_once_with(
             "momentum-etf"
         )
         mock_catalog_service.get_spec.assert_called_once_with("momentum-etf", 7)
@@ -381,7 +381,7 @@ class TestBacktestRunHandler:
         explicit_version: int | None,
     ) -> None:
         """The exact-read contract fails closed if a catalog returns another row."""
-        selected = mock_catalog_service.get_latest_published.return_value
+        selected = mock_catalog_service.get_active_published.return_value
         mock_catalog_service.get_spec.return_value = replace(selected, version=8)
 
         with pytest.raises(AppCommandError, match="exact published"):
@@ -398,7 +398,7 @@ class TestBacktestRunHandler:
     ) -> None:
         """Strategy without signal_expressions skips factor compilation."""
         record = _catalog_record(strategy_id="simple-strategy")
-        mock_catalog_service.get_latest_published.return_value = record
+        mock_catalog_service.get_active_published.return_value = record
         mock_catalog_service.get_spec.return_value = record
 
         cmd = _make_command(strategy_id="simple-strategy")
@@ -420,7 +420,7 @@ class TestBacktestRunHandler:
             signal_expressions=("close",),
             signal_weights=("not-a-number",),
         )
-        mock_catalog_service.get_latest_published.return_value = record
+        mock_catalog_service.get_active_published.return_value = record
         mock_catalog_service.get_spec.return_value = record
 
         with pytest.raises(AppCommandError, match="signal_weights") as exc_info:

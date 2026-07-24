@@ -87,20 +87,14 @@ class StrategyRuntimeBuilder:
     ) -> PublishedStrategyRuntime:
         """读取 published spec 并构造 ``StrategySpec + StrategyPipeline``。"""
         record = (
-            self._catalog_service.get_latest_published(strategy_id)
+            self._catalog_service.get_active_published(strategy_id)
             if version is None
             else self._catalog_service.get_spec(strategy_id, version)
         )
         if record is None:
             msg = (
                 f"未找到策略定义: strategy_id={strategy_id}, "
-                f"version={version if version is not None else 'latest'}"
-            )
-            raise AppBuilderError(msg)
-        if record.status != "published":
-            msg = (
-                f"策略定义尚未发布为 published: strategy_id={strategy_id}, "
-                f"version={record.version}, status={record.status}"
+                f"version={version if version is not None else 'active'}"
             )
             raise AppBuilderError(msg)
 
