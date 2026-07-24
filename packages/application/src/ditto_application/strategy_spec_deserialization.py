@@ -14,6 +14,10 @@ from ditto_strategy.alpha.nodes import (
     NodeRef,
     PipelineSpec,
 )
+from ditto_strategy.alpha.spec_codec import (
+    adapt_legacy_strategy_spec,
+    canonical_spec_hash,
+)
 from ditto_strategy.alpha.specs import (
     STRATEGY_SPEC_V2_SCHEMA_VERSION,
     ConstraintSpec,
@@ -61,6 +65,7 @@ __all__ = [
     "_DEFAULT_TOP_K",
     "_DEFAULT_TRAILING_STOP_PCT",
     "_normalize_impact_model",
+    "canonical_spec_hash_for_record",
     "default_required_datasets_for_template",
     "deserialize_constraint",
     "deserialize_constraints",
@@ -172,6 +177,18 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
         required_datasets=required_datasets,
     )
     return inject_template_constraints(spec)
+
+
+def canonical_spec_hash_for_record(record: StrategySpecRecord) -> str:
+    """
+    计算 ``record.spec_json`` 的 canonical V2 hash.
+
+    走 legacy deserialize → V2 adapt → ``canonical_spec_hash``，与 backtest
+    manifest 的 spec_hash 同源，保证 governance 版本与回测版本内容寻址一致。
+    """
+    spec = deserialize_strategy_spec(record)
+    v2 = adapt_legacy_strategy_spec(spec)
+    return canonical_spec_hash(v2)
 
 
 def deserialize_strategy_spec_v2(record: StrategySpecRecord) -> StrategySpecV2:
