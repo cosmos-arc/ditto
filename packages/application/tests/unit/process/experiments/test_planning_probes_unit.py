@@ -145,7 +145,6 @@ def test_planning_identity_rejects_non_tuple_requirements_container() -> None:
                     name="ETF rotation",
                     spec_json={"strategy_id": "seed_etf_rotation"},
                     version=3,
-                    status="draft",
                 ),
                 snapshot_identity=ExperimentSnapshotIdentity(
                     snapshot_id="certified-snapshot-1",
@@ -267,7 +266,6 @@ class _StrategyReader:
             name="ETF rotation baseline",
             spec_json={"strategy_id": strategy_id},
             version=version,
-            status="published",
         )
 
     def get_version_state(self, strategy_id: str, version: int) -> str | None:
@@ -297,7 +295,6 @@ def test_production_probe_returns_exact_registered_baseline_evidence() -> None:
                 name="ETF rotation",
                 spec_json={"strategy_id": "seed_etf_rotation"},
                 version=3,
-                status="draft",
             ),
             snapshot_identity=ExperimentSnapshotIdentity(
                 snapshot_id="snapshot-1",
@@ -393,7 +390,6 @@ def test_production_probe_includes_longer_published_baseline_lookback() -> None:
                 name="ETF rotation",
                 spec_json={"strategy_id": "seed_etf_rotation"},
                 version=3,
-                status="draft",
             ),
             snapshot_identity=ExperimentSnapshotIdentity(
                 snapshot_id="snapshot-1",
@@ -448,7 +444,6 @@ def test_production_probe_rejects_rebuilt_baseline_strategy_identity_drift(
                 name="ETF rotation",
                 spec_json={"strategy_id": "seed_etf_rotation"},
                 version=3,
-                status="draft",
             ),
             snapshot_identity=ExperimentSnapshotIdentity(
                 snapshot_id="snapshot-1",
@@ -496,7 +491,6 @@ def test_production_probe_keeps_synthetic_stock_baseline_runtime_identity_empty(
                 name="Stock selection",
                 spec_json={"strategy_id": "seed_stock_selection"},
                 version=3,
-                status="draft",
             ),
             snapshot_identity=ExperimentSnapshotIdentity(
                 snapshot_id="snapshot-1",
@@ -530,7 +524,6 @@ def test_production_probe_rejects_moving_etf_baseline_identity() -> None:
                 name="ETF rotation",
                 spec_json={"strategy_id": "seed_etf_rotation"},
                 version=3,
-                status="draft",
             ),
             snapshot_identity=ExperimentSnapshotIdentity(
                 snapshot_id="snapshot-1",
@@ -563,7 +556,6 @@ def test_production_probe_rejects_baseline_runtime_lane_mismatch() -> None:
                 name="ETF rotation",
                 spec_json={"strategy_id": "seed_etf_rotation"},
                 version=3,
-                status="draft",
             ),
             snapshot_identity=ExperimentSnapshotIdentity(
                 snapshot_id="snapshot-1",

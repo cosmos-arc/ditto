@@ -273,7 +273,6 @@ def _request(month_count: int = 96) -> ExperimentPlanningRequest:
             name="ETF rotation",
             spec_json={"strategy_id": "seed_etf_rotation"},
             version=3,
-            status="draft",
         ),
         snapshot_identity=ExperimentSnapshotIdentity(
             snapshot_id="certified-snapshot-1",

@@ -307,7 +307,6 @@ class TestEodFlowHappyPath:
             name="Alpha",
             spec_json={"required_datasets": ["etf_daily"]},
             version=7,
-            status="published",
         )
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
@@ -354,7 +353,6 @@ class TestEodFlowHappyPath:
             name="Alpha",
             spec_json={"required_datasets": ["unknown_market_feed"]},
             version=7,
-            status="published",
         )
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
@@ -469,14 +467,12 @@ class TestEodFlowHappyPath:
             name="Alpha Momentum",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         spec2 = StrategySpecRecord(
             strategy_id="alpha_mean_revert",
             name="Alpha Mean Revert",
             spec_json={"required_datasets": ["etf_daily"]},
             version=2,
-            status="published",
         )
         mock_catalog = mocker.MagicMock()
         mock_catalog.get_active_published.side_effect = {
@@ -602,7 +598,6 @@ class TestEodFlowHappyPath:
             name="Alpha Momentum",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         batch_key = "eod-2026-04-15-alpha_momentum-1"
         target = self._make_target_portfolio("alpha_momentum", batch_key)
@@ -842,7 +837,6 @@ class TestEodFlowIngestionFailure:
             name="Alpha",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         catalog = mocker.MagicMock()
         catalog.get_active_published.return_value = spec
@@ -1193,7 +1187,6 @@ class TestEodFlowIngestionFailure:
             strategy_id="legacy-etf",
             name="Legacy ETF",
             version=2,
-            status="published",
             spec_json={
                 "template": "etf_rotation",
                 "universe": "csi_etf_broad",
@@ -1209,7 +1202,6 @@ class TestEodFlowIngestionFailure:
                 strategy_id="invalid",
                 name="Invalid",
                 version=1,
-                status="published",
                 spec_json={},
             )
         )
@@ -1344,7 +1336,6 @@ class TestEodFlowIngestionFailure:
             name="ETF Ready",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         catalog = mocker.MagicMock()
         catalog.get_active_published.return_value = etf_spec
@@ -1466,7 +1457,6 @@ class TestEodFlowStrategyPartialFailure:
             name="Alpha No Publisher",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         mock_catalog = mocker.MagicMock()
         mock_catalog.get_active_published.return_value = spec
@@ -1532,7 +1522,6 @@ class TestEodFlowStrategyPartialFailure:
             name="Alpha Bad",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
 
         mock_catalog = mocker.MagicMock()
@@ -1597,7 +1586,6 @@ class TestEodFlowStrategyPartialFailure:
             name="Alpha Bad Publish",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         target_bad = self._make_target_portfolio("alpha_bad_publish", "run-bad")
         mock_catalog = mocker.MagicMock()
@@ -1697,7 +1685,6 @@ class TestEodFlowMaterializationFailure:
             name="Alpha Test",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
 
         mock_catalog = mocker.MagicMock()

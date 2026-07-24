@@ -236,13 +236,10 @@ CREATE TABLE IF NOT EXISTS strategy_spec (
     spec_json         TEXT NOT NULL,
     spec_hash         TEXT NOT NULL DEFAULT '',
     parent_version    INTEGER,
-    status            TEXT NOT NULL DEFAULT 'draft',
     tags              TEXT NOT NULL DEFAULT '',
     created_at        TEXT NOT NULL DEFAULT '',
-    updated_at        TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (strategy_id, version)
 );
-CREATE INDEX IF NOT EXISTS idx_spec_status ON strategy_spec(status);
 CREATE INDEX IF NOT EXISTS idx_spec_strategy_id ON strategy_spec(strategy_id);
 CREATE INDEX IF NOT EXISTS idx_spec_hash ON strategy_spec(spec_hash);
 

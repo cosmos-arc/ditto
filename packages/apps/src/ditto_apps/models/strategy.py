@@ -46,7 +46,6 @@ class StrategyResponse(BaseModel):
     version: int
     status: str
     created_at: str = ""
-    updated_at: str = ""
     tags: list[str] = []
 
     model_config = ConfigDict(strict=True, extra="ignore")

@@ -93,7 +93,6 @@ def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
         name=spec.name,
         spec_json=asdict(spec),
         version=7,
-        status="published",
     )
     runtime = PublishedBaselineRuntimeBuilder().build(
         record=record,
@@ -134,7 +133,7 @@ def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
     published_builder = factory_fixtures._Builder(runtime)
     checkpoints = factory_fixtures._CheckpointStore()
     factory = FrozenAuditResearchBacktestFactory(
-        strategy_reader=factory_fixtures._Reader(record),
+        strategy_reader=factory_fixtures._Reader(record, version_state="published"),
         runtime_builder=candidate_builder,
         published_baseline_builder=published_builder,
         artifact_loader=loader,
@@ -174,7 +173,7 @@ def test_factory_rejects_invalid_published_baseline_lane_or_status(
 ) -> None:
     _, candidate_audit, reader, candidate_builder, loader = factory_fixtures._fixture()
     runtime = replace(candidate_builder.runtime, version_status=status)
-    reader.record = replace(reader.record, status=status)
+    reader.version_state = status
     binding = candidate_audit.semantics.strategy
     plan = BaselineExecutionPlan(
         baseline_ref=BaselineRef("test_exact_stock_extension", 1),

@@ -25,6 +25,7 @@ from ditto_features.di import FeaturesStorageProvider
 from ditto_features.services import DerivedCatalogService, DerivedShadowSlotService
 from ditto_kernel.strategy import RiskScope
 from ditto_strategy.di import StrategyStorageProvider
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.models import (
     ArtifactKind,
     StrategyArtifactRecord,
@@ -185,23 +186,33 @@ class TestCapabilityStorageProviderDerivedWiring:
         container = _make_container()
 
         service = container.get(StrategyCatalogService)
-        service.save_spec(
-            StrategySpecRecord(
-                strategy_id="momentum-etf",
-                name="Momentum ETF",
-                spec_json={"lookback": 20, "top_k": 10},
-                version=1,
-                tags=("momentum", "etf"),
-            )
+        record = StrategySpecRecord(
+            strategy_id="momentum-etf",
+            name="Momentum ETF",
+            spec_json={"lookback": 20, "top_k": 10},
+            version=1,
+            tags=("momentum", "etf"),
         )
-        service.publish_spec("momentum-etf", 1)
-        record = service.get_spec("momentum-etf", 1)
+        governance = container.get(GovernanceService)
+        governance.create_draft(
+            strategy_id="momentum-etf",
+            version=1,
+            spec_record=record,
+            created_at="2026-01-01T00:00:00Z",
+        )
+        governance.publish_and_activate(
+            strategy_id="momentum-etf",
+            version=1,
+            actor="test",
+            reason="test setup",
+            decided_at="2026-01-01T00:00:01Z",
+        )
+        active = service.get_active_published("momentum-etf")
 
         assert isinstance(service, StrategyCatalogService)
-        assert record is not None
-        assert record.name == "Momentum ETF"
-        assert record.status == "published"
-        assert record.tags == ("momentum", "etf")
+        assert active is not None
+        assert active.name == "Momentum ETF"
+        assert active.tags == ("momentum", "etf")
         container.close()
 
     def test_runtime_provider_provides_strategy_artifact_service(

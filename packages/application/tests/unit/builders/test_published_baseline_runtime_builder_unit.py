@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from inspect import signature
 
 import pytest
@@ -25,7 +25,6 @@ from ditto_strategy.models import StrategySpecRecord
 
 def _record(
     *,
-    status: str = "published",
     template: str = "etf_rotation",
 ) -> StrategySpecRecord:
     asset_class = "etf" if template == "etf_rotation" else "equity"
@@ -52,7 +51,6 @@ def _record(
         name=spec.name,
         spec_json=asdict(spec),
         version=7,
-        status=status,
         tags=spec.tags,
     )
 
@@ -95,7 +93,7 @@ def test_published_baseline_builder_rejects_every_non_published_status(
 ) -> None:
     with pytest.raises(AppBuilderError) as exc_info:
         PublishedBaselineRuntimeBuilder().build(
-            record=_record(status=status),
+            record=_record(),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
             version_status=status,
@@ -147,7 +145,7 @@ def test_research_runtime_builder_still_rejects_the_same_published_record() -> N
 
     with pytest.raises(AppBuilderError) as exc_info:
         ResearchRuntimeBuilder().build(
-            record=replace(record, status="published"),
+            record=record,
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
             version_status="published",

@@ -68,9 +68,7 @@ class _SeedCreateAdapter:
             spec_json=spec_json,
             tags=tags,
             version=_SEED_VERSION,
-            status="draft",
             created_at=now,
-            updated_at=now,
         )
         record = replace(record, spec_hash=canonical_spec_hash_for_record(record))
         self.governance.create_draft(

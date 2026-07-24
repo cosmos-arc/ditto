@@ -81,7 +81,6 @@ def _make_published_strategy_runtime(
             name=spec.name,
             spec_json=asdict(spec),
             version=version,
-            status="published",
             tags=spec.tags,
         ),
         spec=spec,

@@ -63,23 +63,18 @@ def _legacy_spec() -> StrategySpec:
     )
 
 
-def _record(*, status: str = "draft", version: int = 3) -> StrategySpecRecord:
+def _record(*, version: int = 3) -> StrategySpecRecord:
     spec = _legacy_spec()
     return StrategySpecRecord(
         strategy_id=spec.strategy_id,
         name=spec.name,
         spec_json=asdict(spec),
         version=version,
-        status=status,
         tags=spec.tags,
     )
 
 
-def _factor_record(
-    factor_ids: tuple[str, ...],
-    *,
-    status: str = "draft",
-) -> StrategySpecRecord:
+def _factor_record(factor_ids: tuple[str, ...]) -> StrategySpecRecord:
     spec = replace(
         _legacy_spec(),
         signal_expressions=factor_ids,
@@ -90,7 +85,6 @@ def _factor_record(
         name=spec.name,
         spec_json=asdict(spec),
         version=3,
-        status=status,
         tags=spec.tags,
     )
 
@@ -119,7 +113,6 @@ def _stock_record(
         name=spec.name,
         spec_json=asdict(spec),
         version=1,
-        status="draft",
         tags=spec.tags,
     )
 
@@ -268,7 +261,7 @@ def test_research_builder_uses_explicit_record_candidate_and_snapshot() -> None:
         ResearchRuntimeBuilder,
     )
 
-    record = _record(status="draft", version=7)
+    record = _record(version=7)
     record_before = deepcopy(record.spec_json)
     builder = ResearchRuntimeBuilder()
 
@@ -716,7 +709,7 @@ def test_research_builder_accepts_review_status_through_explicit_guard() -> None
     )
 
     runtime = ResearchRuntimeBuilder().build(
-        record=_record(status="review"),
+        record=_record(),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
         version_status="review",
@@ -851,7 +844,6 @@ def test_research_builder_rejects_native_v2_family_mismatch_before_gate() -> Non
         name=adapted.name,
         spec_json=payload,
         version=1,
-        status="draft",
     )
 
     with pytest.raises(AppBuilderError) as exc_info:
@@ -881,7 +873,7 @@ def test_custom_research_guard_cannot_broaden_draft_review_status_boundary() -> 
 
     with pytest.raises(AppBuilderError) as exc_info:
         ResearchRuntimeBuilder(version_guard=AllowAllGuard()).build(
-            record=_record(status="published"),
+            record=_record(),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
             version_status="published",
@@ -900,7 +892,7 @@ def test_research_builder_rejects_published_version_without_boolean_bypass() -> 
 
     with pytest.raises(AppBuilderError) as exc_info:
         ResearchRuntimeBuilder().build(
-            record=_record(status="published"),
+            record=_record(),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
             version_status="published",
@@ -924,7 +916,6 @@ def test_research_builder_fails_closed_for_native_v2_without_executor() -> None:
         name=adapted.name,
         spec_json=payload,
         version=1,
-        status="draft",
     )
 
     with pytest.raises(AppBuilderError) as exc_info:
@@ -974,7 +965,6 @@ def test_every_default_seed_builds_with_exact_registered_factor_bindings(
         name=spec.name,
         spec_json=asdict(spec),
         version=1,
-        status="draft",
         tags=spec.tags,
     )
 
@@ -1037,7 +1027,6 @@ def test_etf_legacy_records_inject_only_registered_template_parameters(
         name=spec.name,
         spec_json=asdict(spec),
         version=1,
-        status="draft",
         tags=spec.tags,
     )
 

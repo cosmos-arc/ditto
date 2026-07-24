@@ -375,7 +375,6 @@ class _RuntimeBuilderStub:
                 name=self._spec.name,
                 spec_json=asdict(self._spec),
                 version=1,
-                status="published",
                 tags=self._spec.tags,
             ),
             spec=self._spec,

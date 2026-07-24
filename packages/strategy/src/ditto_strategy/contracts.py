@@ -57,36 +57,13 @@ class StrategyCatalogReader(Protocol):
         """
         ...
 
-    def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
-        """
-        获取最高 published 版本，忽略更新的草稿.
-
-        .. deprecated:: R3
-            governance active pointer 已成为唯一状态源，生产读取应改用
-            :meth:`get_active_published`。保留仅为过渡，将在清理提交移除。
-        """
-        ...
-
-    def list_latest_published(self) -> list[StrategySpecRecord]:
-        """
-        列出每个策略的最高 published 版本.
-
-        .. deprecated:: R3
-            见 :meth:`get_latest_published`。
-        """
-        ...
-
 
 @runtime_checkable
 class StrategyCatalogWriter(Protocol):
     """Stable strategy catalog write contract for application composition."""
 
     def save(self, record: StrategySpecRecord) -> None:
-        """保存策略 Spec 记录."""
-        ...
-
-    def update_status(self, strategy_id: str, version: int, status: str) -> bool:
-        """更新策略 Spec 状态，成功返回 True."""
+        """保存策略 Spec 记录（append-only immutable payload）."""
         ...
 
 

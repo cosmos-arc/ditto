@@ -13,14 +13,12 @@ def _make_record(
     strategy_id: str = "s-1",
     name: str = "test",
     version: int = 1,
-    status: str = "draft",
 ) -> StrategySpecRecord:
     return StrategySpecRecord(
         strategy_id=strategy_id,
         name=name,
         spec_json={},
         version=version,
-        status=status,
     )
 
 
@@ -28,7 +26,7 @@ def _make_spec_info(
     strategy_id: str = "s-1",
     name: str = "test",
     version: int = 1,
-    status: str = "draft",
+    status: str = "unknown",
 ) -> StrategySpecInfo:
     return StrategySpecInfo(
         strategy_id=strategy_id,

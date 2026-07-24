@@ -97,7 +97,10 @@ class MarketState:
 @dataclass(frozen=True)
 class StrategySpecRecord:
     """
-    策略 Spec 存储记录.
+    策略 Spec 存储记录（immutable payload，无状态）.
+
+    状态由 governance 唯一管理（draft/review/published/deprecated + active
+    pointer）；spec payload 只保留内容寻址锚点与血缘。
 
     Attributes:
         strategy_id: 策略唯一标识.
@@ -106,9 +109,7 @@ class StrategySpecRecord:
         spec_hash: spec_json 的 canonical hash（内容寻址锚点）.
         version: 版本号（默认 1）.
         parent_version: 父版本（governance 血缘对齐）.
-        status: 状态（draft / published）.
         created_at: 创建时间.
-        updated_at: 更新时间.
         tags: 标签.
 
     """
@@ -119,9 +120,7 @@ class StrategySpecRecord:
     spec_hash: str = ""
     version: int = 1
     parent_version: int | None = None
-    status: str = "draft"
     created_at: str = ""
-    updated_at: str = ""
     tags: tuple[str, ...] = ()
 
 

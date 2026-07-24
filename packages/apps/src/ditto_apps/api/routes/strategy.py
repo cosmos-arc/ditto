@@ -62,7 +62,6 @@ def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
         version=info.version,
         status=info.status,
         created_at=info.created_at,
-        updated_at=info.updated_at,
         tags=list(info.tags),
     )
 

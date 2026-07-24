@@ -302,7 +302,6 @@ def _planning_request() -> ExperimentPlanningRequest:
             name="ETF rotation",
             spec_json={"strategy_id": "seed_etf_rotation"},
             version=3,
-            status="draft",
         ),
         snapshot_identity=ExperimentSnapshotIdentity(
             snapshot_id="certified-snapshot-task8",
@@ -791,7 +790,6 @@ class _ExactStrategyReader:
             name="ETF rotation",
             spec_json={"strategy_id": strategy_id},
             version=version,
-            status="published" if version == 2 else "draft",
         )
 
     def get_version_state(self, strategy_id: str, version: int) -> str | None:
@@ -845,7 +843,7 @@ class _ExactRuntimeBuilder:
 
     def build(self, **kwargs: object) -> ResearchStrategyRuntime:
         record = cast("StrategySpecRecord", kwargs["record"])
-        self.calls.append((record.version, record.status))
+        self.calls.append((record.version, cast("str", kwargs["version_status"])))
         if record.version == 2:
             base_hash = "f" * 64
             resolved_hash = "b" * 64
@@ -867,7 +865,7 @@ class _ExactRuntimeBuilder:
             SimpleNamespace(
                 strategy_id=strategy_id,
                 strategy_version=strategy_version,
-                version_status=record.status,
+                version_status=cast("str", kwargs["version_status"]),
                 base_spec_hash=base_hash,
                 resolved_spec_hash=resolved_hash,
                 parameter_hash=parameter_hash,

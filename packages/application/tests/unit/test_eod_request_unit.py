@@ -10,7 +10,6 @@ def _record(required_datasets: object) -> StrategySpecRecord:
         strategy_id="stock-selection",
         name="Stock Selection",
         version=1,
-        status="published",
         spec_json={
             "template": "stock_selection",
             "universe": "csi_a_share",

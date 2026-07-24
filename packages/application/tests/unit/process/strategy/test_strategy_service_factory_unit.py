@@ -63,7 +63,6 @@ def _make_runtime() -> PublishedBacktestRuntime:
             name=spec.name,
             spec_json={},
             version=4,
-            status="published",
             tags=spec.tags,
         ),
         spec=spec,

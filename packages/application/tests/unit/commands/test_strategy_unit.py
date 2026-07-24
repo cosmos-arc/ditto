@@ -64,7 +64,6 @@ class TestCreateStrategyHandler:
         assert result.version == 1
         assert result.tags == ()
         assert result.created_at != ""
-        assert result.updated_at != ""
         gov_mock.create_draft.assert_called_once()
         call_kwargs = gov_mock.create_draft.call_args.kwargs
         assert call_kwargs["strategy_id"] == "strat-1"
@@ -160,9 +159,7 @@ class TestUpdateStrategyHandler:
             name="Old Name",
             spec_json={"type": "momentum"},
             version=1,
-            status="draft",
             created_at="2026-01-01T00:00:00Z",
-            updated_at="2026-01-01T00:00:00Z",
         )
         catalog_mock.get_spec.return_value = existing
 
@@ -185,7 +182,6 @@ class TestUpdateStrategyHandler:
         assert result.version == 2  # existing.version + 1
         assert result.status == "draft"
         assert result.created_at == "2026-01-01T00:00:00Z"
-        assert result.updated_at != ""
         gov_mock.create_draft.assert_called_once()
         call_kwargs = gov_mock.create_draft.call_args.kwargs
         assert call_kwargs["strategy_id"] == "strat-1"
@@ -210,9 +206,7 @@ class TestUpdateStrategyHandler:
             name="Old Name",
             spec_json={"type": "momentum"},
             version=3,
-            status="draft",
             created_at="2026-01-01T00:00:00Z",
-            updated_at="2026-01-01T00:00:00Z",
         )
         catalog_mock.get_spec.return_value = existing
 
@@ -248,9 +242,7 @@ class TestUpdateStrategyHandler:
             name="Old Name",
             spec_json={"type": "momentum"},
             version=1,
-            status="draft",
             created_at="2026-01-01T00:00:00Z",
-            updated_at="2026-01-01T00:00:00Z",
         )
         catalog_mock.get_spec.return_value = existing
 

@@ -56,7 +56,6 @@ def test_governance_publish_makes_spec_resolvable_as_active(tmp_path: Path) -> N
         spec_json=spec_json,
         version=1,
         created_at="2026-07-24T00:00:00Z",
-        updated_at="2026-07-24T00:00:00Z",
         tags=seed.tags,
     )
     record = replace(record, spec_hash=canonical_spec_hash_for_record(record))
@@ -103,7 +102,6 @@ def test_active_pointer_switches_to_new_version(tmp_path: Path) -> None:
             version=version,
             parent_version=None if version == 1 else 1,
             created_at=created_at,
-            updated_at=created_at,
             tags=seed.tags,
         )
         return replace(base, spec_hash=canonical_spec_hash_for_record(base))

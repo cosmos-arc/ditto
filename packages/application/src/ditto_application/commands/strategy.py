@@ -83,9 +83,7 @@ class CreateStrategyHandler:
             spec_json=command.spec_json,
             tags=command.tags,
             version=1,
-            status="draft",
             created_at=now,
-            updated_at=now,
         )
         record = replace(record, spec_hash=canonical_spec_hash_for_record(record))
         try:
@@ -139,9 +137,7 @@ class UpdateStrategyHandler:
             spec_json=command.spec_json,
             version=new_version,
             parent_version=existing.version,
-            status="draft",
             created_at=existing.created_at,
-            updated_at=now,
             tags=command.tags,
         )
         record = replace(record, spec_hash=canonical_spec_hash_for_record(record))

@@ -76,7 +76,6 @@ def _make_record(default_order_type: OrderType) -> StrategySpecRecord:
         name=spec.name,
         spec_json=asdict(spec),
         version=7,
-        status="published",
         tags=spec.tags,
     )
 

@@ -19,9 +19,7 @@ def _make_spec(**overrides: object) -> StrategySpecRecord:
         "name": "20 日动量策略",
         "spec_json": {"lookback": 20, "instrument_type": "etf"},
         "version": 1,
-        "status": "draft",
         "created_at": "2026-03-23T10:00:00+08:00",
-        "updated_at": "2026-03-23T10:00:00+08:00",
         "tags": ("momentum", "etf"),
     }
     return StrategySpecRecord(**{**defaults, **overrides})
@@ -39,7 +37,6 @@ class TestStrategySpecRecord:
         assert record.strategy_id == "strat.momentum_20d"
         assert record.name == "20 日动量策略"
         assert record.version == 1
-        assert record.status == "draft"
         assert record.tags == ("momentum", "etf")
 
     def test_default_values(self) -> None:
@@ -50,16 +47,14 @@ class TestStrategySpecRecord:
             spec_json={},
         )
         assert record.version == 1
-        assert record.status == "draft"
         assert record.created_at == ""
-        assert record.updated_at == ""
         assert record.tags == ()
 
     def test_record_is_frozen(self) -> None:
         """frozen=True 不可变."""
         record = _make_spec()
         with pytest.raises(FrozenInstanceError):
-            record.status = "published"  # type: ignore[misc]
+            record.name = "changed"  # type: ignore[misc]
 
 
 # ── Service Tests ────────────────────────────────────────────────────────────
@@ -155,38 +150,6 @@ class TestStrategyCatalogService:
 
         assert result == versions
         reader.list_versions.assert_called_once_with("s1")
-
-    def test_publish_spec_calls_writer(self, mocker: MockerFixture) -> None:
-        """publish_spec() 调用 writer.update_status 并传入 published 状态."""
-        writer = mocker.Mock()
-        writer.update_status = mocker.Mock(return_value=True)
-        service = StrategyCatalogService(
-            reader=mocker.Mock(),
-            writer=writer,
-        )
-
-        result = service.publish_spec("strat.momentum_20d", 1)
-
-        assert result is True
-        writer.update_status.assert_called_once_with(
-            "strat.momentum_20d", 1, "published"
-        )
-
-    def test_publish_spec_not_found(self, mocker: MockerFixture) -> None:
-        """publish_spec() 策略不存在时返回 False."""
-        writer = mocker.Mock()
-        writer.update_status = mocker.Mock(return_value=False)
-        service = StrategyCatalogService(
-            reader=mocker.Mock(),
-            writer=writer,
-        )
-
-        result = service.publish_spec("strat.nonexistent", 99)
-
-        assert result is False
-        writer.update_status.assert_called_once_with(
-            "strat.nonexistent", 99, "published"
-        )
 
     def test_get_active_published_resolves_pointer_to_payload(
         self, mocker: MockerFixture

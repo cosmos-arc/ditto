@@ -53,7 +53,6 @@ def _probe_result(required_datasets: tuple[str, ...]) -> ResearchExecutorProbeRe
                 name="ETF rotation",
                 spec_json={"strategy_id": "seed_etf_rotation"},
                 version=1,
-                status="draft",
             ),
             snapshot_identity=ExperimentSnapshotIdentity(
                 "certified-snapshot-1",

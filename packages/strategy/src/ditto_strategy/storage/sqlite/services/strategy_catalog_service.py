@@ -41,25 +41,13 @@ class StrategySpecReaderProtocol(Protocol):
         """列出策略的所有版本."""
         ...
 
-    def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
-        """获取最高 published 版本，忽略更新的草稿."""
-        ...
-
-    def list_latest_published(self) -> list[StrategySpecRecord]:
-        """列出每个策略的最高 published 版本."""
-        ...
-
 
 @runtime_checkable
 class StrategySpecWriterProtocol(Protocol):
-    """策略 Spec 写入协议."""
+    """策略 Spec 写入协议（append-only immutable payload）."""
 
     def save(self, record: StrategySpecRecord) -> None:
         """保存策略 Spec 记录."""
-        ...
-
-    def update_status(self, strategy_id: str, version: int, status: str) -> bool:
-        """更新策略 Spec 状态，成功返回 True."""
         ...
 
 
@@ -125,15 +113,3 @@ class StrategyCatalogService:
         if state_record is None:
             return None
         return str(state_record.state)
-
-    def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
-        """获取最高 published 版本，忽略更新的草稿."""
-        return self._reader.get_latest_published(strategy_id)
-
-    def list_latest_published(self) -> list[StrategySpecRecord]:
-        """列出每个策略的最高 published 版本."""
-        return self._reader.list_latest_published()
-
-    def publish_spec(self, strategy_id: str, version: int) -> bool:
-        """发布策略 Spec（draft -> published）."""
-        return self._writer.update_status(strategy_id, version, "published")

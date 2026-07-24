@@ -69,7 +69,6 @@ def _make_spec_record(
     spec: StrategySpec,
     *,
     version: int = 3,
-    status: str = "published",
 ) -> StrategySpecRecord:
     """构造测试用 StrategySpecRecord。"""
     return StrategySpecRecord(
@@ -77,7 +76,6 @@ def _make_spec_record(
         name=spec.name,
         spec_json=asdict(spec),
         version=version,
-        status=status,
         tags=spec.tags,
     )
 
@@ -242,7 +240,6 @@ class TestStrategyRuntimeBuilder:
             name=record.name,
             spec_json=spec_json,
             version=record.version,
-            status=record.status,
             tags=record.tags,
         )
         catalog_service = MagicMock(spec=StrategyCatalogService)
@@ -268,7 +265,6 @@ class TestStrategyRuntimeBuilder:
             name=record.name,
             spec_json=spec_json,
             version=record.version,
-            status=record.status,
             tags=record.tags,
         )
         catalog_service = MagicMock(spec=StrategyCatalogService)
@@ -291,7 +287,7 @@ class TestStrategyRuntimeBuilder:
         """未指定版本时应忽略更新的 draft。"""
         spec = _make_rotation_spec()
         published_v1 = _make_spec_record(spec, version=1)
-        draft_v2 = _make_spec_record(spec, version=2, status="draft")
+        draft_v2 = _make_spec_record(spec, version=2)
         catalog_service = MagicMock(spec=StrategyCatalogService)
         catalog_service.get_spec.return_value = draft_v2
         catalog_service.get_active_published.return_value = published_v1
@@ -325,7 +321,6 @@ class TestStrategyRuntimeBuilder:
             name=record.name,
             spec_json=spec_json,
             version=record.version,
-            status=record.status,
             tags=record.tags,
         )
 

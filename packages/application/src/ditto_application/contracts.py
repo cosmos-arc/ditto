@@ -84,27 +84,24 @@ class StrategySpecInfo:
     version: int = 1
     status: str = "draft"
     created_at: str = ""
-    updated_at: str = ""
     tags: tuple[str, ...] = ()
 
 
-def to_spec_info(
-    record: StrategySpecRecord, *, status: str | None = None
-) -> StrategySpecInfo:
+def to_spec_info(record: StrategySpecRecord, *, status: str) -> StrategySpecInfo:
     """
     将 Data Record 转换为 App DTO.
 
-    ``status`` 显式覆盖 governance-derived 状态（如 active 路径标 ``"active"``）；
-    省略时回退到 record 自带状态（过渡期 strategy_spec 仍保留 status 列）。
+    ``status`` 是 governance-derived 版本状态（active/draft/review/published/...），
+    由调用方从 governance version state 解析后显式传入；strategy_spec payload
+    本身不再携带状态（governance 是唯一状态源）。
     """
     return StrategySpecInfo(
         strategy_id=record.strategy_id,
         name=record.name,
         spec_json=dict(record.spec_json),
         version=record.version,
-        status=status if status is not None else record.status,
+        status=status,
         created_at=record.created_at,
-        updated_at=record.updated_at,
         tags=record.tags,
     )
 

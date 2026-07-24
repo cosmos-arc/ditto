@@ -95,7 +95,6 @@ def _catalog_record(
         name=strategy_id,
         spec_json=payload,
         version=7,
-        status="published",
     )
 
 

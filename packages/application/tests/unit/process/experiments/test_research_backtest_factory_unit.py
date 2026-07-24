@@ -478,7 +478,6 @@ def _strategy_record() -> StrategySpecRecord:
         name=spec.name,
         spec_json=asdict(spec),
         version=3,
-        status="draft",
     )
 
 
@@ -562,8 +561,11 @@ def _audit(
 
 
 class _Reader:
-    def __init__(self, record: StrategySpecRecord) -> None:
+    def __init__(
+        self, record: StrategySpecRecord, version_state: str = "draft"
+    ) -> None:
         self.record = record
+        self.version_state = version_state
         self.calls: list[tuple[str, int]] = []
 
     def get_spec(self, strategy_id: str, version: int) -> StrategySpecRecord:
@@ -572,7 +574,7 @@ class _Reader:
 
     def get_version_state(self, strategy_id: str, version: int) -> str | None:
         del strategy_id, version
-        return self.record.status
+        return self.version_state
 
 
 class _Builder:

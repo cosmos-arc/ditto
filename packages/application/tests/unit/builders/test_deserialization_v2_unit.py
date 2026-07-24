@@ -61,7 +61,6 @@ def _record(payload: dict[str, object]) -> StrategySpecRecord:
         name="ETF Alpha",
         spec_json=payload,
         version=1,
-        status="draft",
     )
 
 

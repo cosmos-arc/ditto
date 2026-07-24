@@ -63,7 +63,6 @@ def test_stock_selection_seed_is_runtime_valid_after_catalog_round_trip() -> Non
         name=seed.name,
         spec_json=asdict(seed),
         version=1,
-        status="published",
         tags=seed.tags,
     )
 
@@ -83,7 +82,6 @@ def test_second_run_is_unchanged() -> None:
             name=spec.name,
             spec_json=asdict(spec),
             version=1,
-            status="published",
             tags=spec.tags,
         )
 
@@ -110,7 +108,6 @@ def test_matching_draft_is_published_without_being_created() -> None:
             name=spec.name,
             spec_json=asdict(spec),
             version=2,
-            status="draft",
             tags=spec.tags,
         )
 
@@ -134,7 +131,6 @@ def test_existing_different_seed_fails_closed_with_diff() -> None:
             name="operator strategy",
             spec_json={"template": "different"},
             version=1,
-            status="published",
         )
         if strategy_id == seed_id
         else None

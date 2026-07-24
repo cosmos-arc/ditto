@@ -55,8 +55,8 @@ class StrategyQueryFacade:
 
     def _resolve_status(self, record: StrategySpecRecord) -> str:
         if self._version_state_reader is None:
-            return record.status
+            return "unknown"
         state = self._version_state_reader.get_state(record.strategy_id, record.version)
         if state is None:
-            return record.status
+            return "unknown"
         return str(state.state)
