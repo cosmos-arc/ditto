@@ -187,3 +187,48 @@ class TestStrategyCatalogService:
         writer.update_status.assert_called_once_with(
             "strat.nonexistent", 99, "published"
         )
+
+    def test_get_active_published_resolves_pointer_to_payload(
+        self, mocker: MockerFixture
+    ) -> None:
+        """get_active_published resolves governance pointer to spec payload."""
+        spec = _make_spec(version=2)
+        reader = mocker.Mock()
+        reader.get_spec = mocker.Mock(return_value=spec)
+        active_reader = mocker.Mock()
+        active_reader.get_active_pointer = mocker.Mock(
+            return_value=mocker.Mock(active_version=2)
+        )
+        service = StrategyCatalogService(
+            reader=reader,
+            writer=mocker.Mock(),
+            active_pointer_reader=active_reader,
+        )
+
+        result = service.get_active_published("strat.momentum_20d")
+
+        assert result is spec
+        active_reader.get_active_pointer.assert_called_once_with("strat.momentum_20d")
+        reader.get_spec.assert_called_once_with("strat.momentum_20d", 2)
+
+    def test_get_active_published_returns_none_without_reader(
+        self, mocker: MockerFixture
+    ) -> None:
+        """get_active_published returns None when no active pointer reader wired."""
+        service = StrategyCatalogService(reader=mocker.Mock(), writer=mocker.Mock())
+
+        assert service.get_active_published("strat.x") is None
+
+    def test_get_active_published_returns_none_when_no_pointer(
+        self, mocker: MockerFixture
+    ) -> None:
+        """get_active_published returns None when no active pointer exists."""
+        active_reader = mocker.Mock()
+        active_reader.get_active_pointer = mocker.Mock(return_value=None)
+        service = StrategyCatalogService(
+            reader=mocker.Mock(),
+            writer=mocker.Mock(),
+            active_pointer_reader=active_reader,
+        )
+
+        assert service.get_active_published("strat.x") is None

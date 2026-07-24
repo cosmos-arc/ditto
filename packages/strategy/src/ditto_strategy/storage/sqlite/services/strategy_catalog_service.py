@@ -1,13 +1,16 @@
 """
-StrategyCatalogService -- 策略 Spec CRUD 与状态治理.
+StrategyCatalogService -- 策略 Spec CRUD 与 governance active pointer 读取.
 
 Protocol 方法名与 contracts.py 对齐：get_spec / list_specs / list_versions。
+governance active pointer 读取通过可选窄 port 注入，无注入时 get_active_published
+返回 None（调用方走 NO_ACTIVE_STRATEGY fail-closed）。
 """
 
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from ditto_strategy.governance.protocols import StrategyActivePointerReader
 from ditto_strategy.models import StrategySpecRecord
 
 __all__ = [
@@ -58,15 +61,17 @@ class StrategySpecWriterProtocol(Protocol):
 
 
 class StrategyCatalogService:
-    """策略目录服务 -- Spec CRUD + DRAFT/PUBLISHED 状态治理."""
+    """策略目录服务 -- Spec CRUD + governance active pointer 读取."""
 
     def __init__(
         self,
         reader: StrategySpecReaderProtocol,
         writer: StrategySpecWriterProtocol,
+        active_pointer_reader: StrategyActivePointerReader | None = None,
     ) -> None:
         self._reader = reader
         self._writer = writer
+        self._active_pointer_reader = active_pointer_reader
 
     def save_spec(self, record: StrategySpecRecord) -> None:
         """保存策略 Spec."""
@@ -85,6 +90,21 @@ class StrategyCatalogService:
     def list_versions(self, strategy_id: str) -> list[StrategySpecRecord]:
         """列出策略的所有版本."""
         return self._reader.list_versions(strategy_id)
+
+    def get_active_published(self, strategy_id: str) -> StrategySpecRecord | None:
+        """
+        返回 governance active pointer 指向的 spec payload.
+
+        解析顺序：governance active pointer → 回查 spec payload。无 active
+        pointer reader、无 pointer 或 pointer 指向的 payload 缺失时返回
+        None，由调用方走 NO_ACTIVE_STRATEGY fail-closed。
+        """
+        if self._active_pointer_reader is None:
+            return None
+        pointer = self._active_pointer_reader.get_active_pointer(strategy_id)
+        if pointer is None:
+            return None
+        return self._reader.get_spec(strategy_id, pointer.active_version)
 
     def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
         """获取最高 published 版本，忽略更新的草稿."""

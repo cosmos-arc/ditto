@@ -11,15 +11,18 @@ upstream promotion process, not this service.
 from __future__ import annotations
 
 from ditto_strategy.governance.models import (
+    GOVERNANCE_SCHEMA_VERSION,
     StrategyActivationEvent,
     StrategyActivePointer,
     StrategyDecision,
     StrategyDecisionEvent,
+    StrategyVersion,
     StrategyVersionStateRecord,
     next_lifecycle,
     validate_reactivation_target,
 )
 from ditto_strategy.governance.protocols import StrategyGovernanceStoreProtocol
+from ditto_strategy.models import StrategySpecRecord
 
 __all__ = ["GovernanceService", "StrategyGovernanceError"]
 
@@ -33,6 +36,33 @@ class GovernanceService:
 
     def __init__(self, store: StrategyGovernanceStoreProtocol) -> None:
         self._store = store
+
+    def create_draft(
+        self,
+        *,
+        strategy_id: str,
+        version: int,
+        spec_record: StrategySpecRecord,
+        created_at: str,
+        schema_version: int = GOVERNANCE_SCHEMA_VERSION,
+    ) -> None:
+        """
+        Create a draft version: persist spec payload + governance version.
+
+        The spec payload and governance version are written atomically; the
+        version starts ``draft``/``pending`` and must be reviewed before
+        publish. ``spec_record.spec_hash`` is reused as the governance version
+        hash so payload and version stay content-addressed together.
+        """
+        gov_version = StrategyVersion(
+            strategy_id=strategy_id,
+            version=version,
+            parent_version=spec_record.parent_version,
+            schema_version=schema_version,
+            spec_hash=spec_record.spec_hash,
+            created_at=created_at,
+        )
+        self._store.create_draft_version(spec_record, gov_version)
 
     def submit_review(
         self,

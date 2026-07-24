@@ -22,6 +22,8 @@ from ditto_strategy.governance.models import (
     StrategyVersionState,
     StrategyVersionStateRecord,
 )
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.strategy_spec_store import insert_spec_payload
 
 __all__ = ["SQLiteStrategyGovernanceStore", "StrategyGovernanceCasConflict"]
 
@@ -209,6 +211,43 @@ class SQLiteStrategyGovernanceStore:
         are never replaced (no ``OR REPLACE``).
         """
         conn = self._pool.get_connection()
+        self._insert_version_rows(conn, version)
+        self._pool.commit()
+        logger.debug(
+            "governance version inserted",
+            event="governance_version_insert",
+            strategy_id=version.strategy_id,
+            version=version.version,
+        )
+
+    @traced("governance.create_draft_version")
+    def create_draft_version(
+        self, spec_record: StrategySpecRecord, version: StrategyVersion
+    ) -> None:
+        """
+        Atomically persist the spec payload plus a draft governance version.
+
+        Writes the immutable ``strategy_spec`` payload and the governance
+        version + initial draft state in one transaction, so a partial write
+        never leaves an orphan payload or a payload-less version. Rejects
+        duplicate ``(strategy_id, version)`` via primary key.
+        """
+        conn = self._pool.get_connection()
+        insert_spec_payload(conn, spec_record)
+        self._insert_version_rows(conn, version)
+        self._pool.commit()
+        logger.debug(
+            "governance draft version created",
+            event="governance_draft_created",
+            strategy_id=version.strategy_id,
+            version=version.version,
+        )
+
+    @staticmethod
+    def _insert_version_rows(
+        conn: sqlite3.Connection, version: StrategyVersion
+    ) -> None:
+        """Write the version + initial draft state rows without committing."""
         conn.execute(
             _INSERT_VERSION,
             (
@@ -229,13 +268,6 @@ class SQLiteStrategyGovernanceStore:
                 ReviewOutcome.PENDING.value,
                 0,
             ),
-        )
-        self._pool.commit()
-        logger.debug(
-            "governance version inserted",
-            event="governance_version_insert",
-            strategy_id=version.strategy_id,
-            version=version.version,
         )
 
     @traced("governance.get_version")

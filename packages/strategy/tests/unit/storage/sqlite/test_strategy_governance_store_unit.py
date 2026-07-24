@@ -16,9 +16,14 @@ from ditto_strategy.governance.models import (
     StrategyVersion,
     StrategyVersionState,
 )
+from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.strategy_governance_store import (
     SQLiteStrategyGovernanceStore,
     StrategyGovernanceCasConflict,
+)
+from ditto_strategy.storage.sqlite.strategy_spec_store import (
+    SQLiteStrategySpecReader,
+    SQLiteStrategySpecWriter,
 )
 
 
@@ -223,3 +228,58 @@ def test_list_versions_returns_newest_first(tmp_path: Path) -> None:
 
     versions = store.list_versions("strategy-1")
     assert [item.version for item in versions] == [2, 1]
+
+
+def test_create_draft_version_writes_payload_and_governance_atomically(
+    tmp_path: Path,
+) -> None:
+    """create_draft_version persists spec payload + governance version in one tx."""
+    pool = SQLitePool(str(tmp_path / "governance.sqlite"))
+    SQLiteStrategySpecWriter(pool).init_schema()
+    store = SQLiteStrategyGovernanceStore(pool)
+    store.init_schema()
+
+    spec_record = StrategySpecRecord(
+        strategy_id="strategy-1",
+        name="Test",
+        spec_json={"version": 1},
+        spec_hash="d" * 64,
+        version=1,
+    )
+    version = _version(spec_hash="d" * 64)
+    store.create_draft_version(spec_record, version)
+
+    fetched = store.get_version("strategy-1", 1)
+    assert fetched is not None
+    assert fetched.spec_hash == "d" * 64
+    state = store.get_state("strategy-1", 1)
+    assert state is not None
+    assert state.state is StrategyVersionState.DRAFT
+
+    payload = SQLiteStrategySpecReader(pool).get_spec("strategy-1", 1)
+    assert payload is not None
+    assert payload.spec_hash == "d" * 64
+    assert payload.spec_json == {"version": 1}
+
+
+def test_create_draft_version_rejects_duplicate_primary_key(
+    tmp_path: Path,
+) -> None:
+    """create_draft_version rejects duplicate (strategy_id, version) atomically."""
+    pool = SQLitePool(str(tmp_path / "governance.sqlite"))
+    SQLiteStrategySpecWriter(pool).init_schema()
+    store = SQLiteStrategyGovernanceStore(pool)
+    store.init_schema()
+
+    spec_record = StrategySpecRecord(
+        strategy_id="strategy-1",
+        name="Test",
+        spec_json={"version": 1},
+        spec_hash="d" * 64,
+        version=1,
+    )
+    version = _version(spec_hash="d" * 64)
+    store.create_draft_version(spec_record, version)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        store.create_draft_version(spec_record, version)

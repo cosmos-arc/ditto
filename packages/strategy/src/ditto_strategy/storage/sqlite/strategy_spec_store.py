@@ -148,6 +148,31 @@ def _row_to_record(row: sqlite3.Row) -> StrategySpecRecord:
     )
 
 
+def insert_spec_payload(conn: sqlite3.Connection, record: StrategySpecRecord) -> None:
+    """
+    INSERT one spec payload on the given connection without committing.
+
+    Shared by :meth:`SQLiteStrategySpecWriter.save` and atomic governance
+    version creation so the payload and its governance version land in one
+    transaction.
+    """
+    conn.execute(
+        _UPSERT_SQL,
+        (
+            record.strategy_id,
+            record.version,
+            record.name,
+            orjson.dumps(record.spec_json).decode(),
+            record.spec_hash,
+            record.parent_version,
+            record.status,
+            orjson.dumps(record.tags).decode(),
+            record.created_at,
+            record.updated_at,
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Writer
 # ---------------------------------------------------------------------------
@@ -179,21 +204,7 @@ class SQLiteStrategySpecWriter:
     def save(self, record: StrategySpecRecord) -> None:
         """INSERT OR REPLACE a StrategySpecRecord."""
         conn = self._pool.get_connection()
-        conn.execute(
-            _UPSERT_SQL,
-            (
-                record.strategy_id,
-                record.version,
-                record.name,
-                orjson.dumps(record.spec_json).decode(),
-                record.spec_hash,
-                record.parent_version,
-                record.status,
-                orjson.dumps(record.tags).decode(),
-                record.created_at,
-                record.updated_at,
-            ),
-        )
+        insert_spec_payload(conn, record)
         self._pool.commit()
         logger.debug(
             "strategy_spec saved",

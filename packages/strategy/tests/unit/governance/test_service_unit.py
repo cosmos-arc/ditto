@@ -17,9 +17,11 @@ from ditto_strategy.governance.service import (
     GovernanceService,
     StrategyGovernanceError,
 )
+from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.strategy_governance_store import (
     SQLiteStrategyGovernanceStore,
 )
+from ditto_strategy.storage.sqlite.strategy_spec_store import SQLiteStrategySpecWriter
 
 
 def _service(tmp_path: Path) -> GovernanceService:
@@ -152,3 +154,33 @@ def test_unknown_version_raises(tmp_path: Path) -> None:
             reason="ok",
             decided_at="t1",
         )
+
+
+def test_create_draft_persists_payload_and_draft_version(tmp_path: Path) -> None:
+    """create_draft writes spec payload + draft governance version atomically."""
+    pool = SQLitePool(str(tmp_path / "governance.sqlite"))
+    SQLiteStrategySpecWriter(pool).init_schema()
+    store = SQLiteStrategyGovernanceStore(pool)
+    store.init_schema()
+    service = GovernanceService(store)
+
+    spec_record = StrategySpecRecord(
+        strategy_id="strategy-1",
+        name="Test",
+        spec_json={"version": 1},
+        spec_hash="e" * 64,
+        version=1,
+    )
+    service.create_draft(
+        strategy_id="strategy-1",
+        version=1,
+        spec_record=spec_record,
+        created_at="2026-07-24T00:00:00Z",
+    )
+
+    state = store.get_state("strategy-1", 1)
+    assert state is not None
+    assert state.state is StrategyVersionState.DRAFT
+    version = store.get_version("strategy-1", 1)
+    assert version is not None
+    assert version.spec_hash == "e" * 64

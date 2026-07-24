@@ -13,8 +13,9 @@ from ditto_strategy.governance.models import (
     StrategyVersionState,
     StrategyVersionStateRecord,
 )
+from ditto_strategy.models import StrategySpecRecord
 
-__all__ = ["StrategyGovernanceStoreProtocol"]
+__all__ = ["StrategyActivePointerReader", "StrategyGovernanceStoreProtocol"]
 
 
 class StrategyGovernanceStoreProtocol(Protocol):
@@ -22,6 +23,12 @@ class StrategyGovernanceStoreProtocol(Protocol):
 
     def insert_version(self, version: StrategyVersion) -> None:
         """Insert one immutable version plus its initial draft state."""
+        ...
+
+    def create_draft_version(
+        self, spec_record: StrategySpecRecord, version: StrategyVersion
+    ) -> None:
+        """Atomically persist spec payload + draft governance version in one tx."""
         ...
 
     def get_version(self, strategy_id: str, version: int) -> StrategyVersion | None:
@@ -57,6 +64,14 @@ class StrategyGovernanceStoreProtocol(Protocol):
     ) -> StrategyActivePointer:
         """Append an activation event and CAS-swap the active pointer."""
         ...
+
+    def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
+        """Return the single active pointer for a strategy, or None."""
+        ...
+
+
+class StrategyActivePointerReader(Protocol):
+    """Narrow read port for resolving the active strategy version."""
 
     def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
         """Return the single active pointer for a strategy, or None."""
