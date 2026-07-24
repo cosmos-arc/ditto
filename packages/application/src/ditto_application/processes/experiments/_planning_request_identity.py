@@ -201,9 +201,8 @@ def _validated_request_graph(
     strategy_fields = (
         strategy.strategy_id,
         strategy.name,
-        strategy.status,
+        strategy.spec_hash,
         strategy.created_at,
-        strategy.updated_at,
     )
     if (
         not all(type(value) is str for value in strategy_fields)
@@ -303,9 +302,8 @@ def _request_payload(request: ExperimentPlanningRequest) -> Mapping[str, object]
             "name": strategy.name,
             "spec_json": _plain(strategy.spec_json),
             "version": strategy.version,
-            "status": strategy.status,
+            "spec_hash": strategy.spec_hash,
             "created_at": strategy.created_at,
-            "updated_at": strategy.updated_at,
             "tags": list(strategy.tags),
         },
         "snapshot_identity": {

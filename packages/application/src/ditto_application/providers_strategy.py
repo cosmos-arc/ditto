@@ -19,6 +19,9 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    SQLiteStrategyGovernanceStore,
+)
 
 from ditto_application.queries.backtest import BacktestQueryFacade
 from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
@@ -74,9 +77,13 @@ class AppStrategyQueryProvider(Provider):
     def strategy_query_facade(
         self,
         catalog_service: StrategyCatalogReader,
+        strategy_governance_store: SQLiteStrategyGovernanceStore,
     ) -> StrategyQueryFacade:
-        """策略只读查询 facade — 封装 StrategyCatalogReader."""
-        return StrategyQueryFacade(catalog_service=catalog_service)
+        """策略只读查询 facade — status 由 governance state 投影."""
+        return StrategyQueryFacade(
+            catalog_service=catalog_service,
+            version_state_reader=strategy_governance_store,
+        )
 
     @provide
     def experiment_query_facade(

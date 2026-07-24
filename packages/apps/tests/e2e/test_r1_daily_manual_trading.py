@@ -113,6 +113,7 @@ from ditto_platform.foundation.storage.sqlite_backup import (
 )
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
@@ -126,6 +127,9 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 from ditto_strategy.storage.sqlite.strategy_artifact_store import (
     SQLiteStrategyArtifactReader,
     SQLiteStrategyArtifactWriter,
+)
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    SQLiteStrategyGovernanceStore,
 )
 from ditto_strategy.storage.sqlite.strategy_run_store import (
     SQLiteStrategyRunReader,
@@ -222,6 +226,7 @@ class _R1Harness:
     account_query: AccountBaselineQuery
     sizing_builder: ManualSizingContextBuilder
     publisher: SignalPackagePublisher
+    governance: GovernanceService
 
     def opening_baseline_resolver(self) -> OpeningBaselineResolver:
         return OpeningBaselineResolver(
@@ -232,12 +237,12 @@ class _R1Harness:
     def bootstrap(self) -> tuple[SeedBootstrapResult, ...]:
         return SeedStrategyBootstrap(
             catalog=self.catalog,
-            create_port=_SeedCreateAdapter(CreateStrategyHandler(self.catalog)),
-            publish_port=_SeedPublishAdapter(PublishStrategyHandler(self.catalog)),
+            create_port=_SeedCreateAdapter(CreateStrategyHandler(self.governance)),
+            publish_port=_SeedPublishAdapter(PublishStrategyHandler(self.governance)),
         ).run()
 
     def published_seed(self) -> StrategySpecRecord:
-        record = self.catalog.get_latest_published(STRATEGY_ID)
+        record = self.catalog.get_active_published(STRATEGY_ID)
         if record is None:
             raise AssertionError("designated R1 seed was not published")
         return record
@@ -439,10 +444,15 @@ def _harness(database: Path) -> _R1Harness:
 
     spec_writer = SQLiteStrategySpecWriter(pool)
     spec_writer.init_schema()
+    governance_store = SQLiteStrategyGovernanceStore(pool)
+    governance_store.init_schema()
     catalog = StrategyCatalogService(
         reader=SQLiteStrategySpecReader(pool),
         writer=spec_writer,
+        active_pointer_reader=governance_store,
+        version_state_reader=governance_store,
     )
+    governance = GovernanceService(governance_store)
 
     artifact_writer = SQLiteStrategyArtifactWriter(pool)
     artifact_writer.init_schema()
@@ -487,6 +497,7 @@ def _harness(database: Path) -> _R1Harness:
         account_query=account_query,
         sizing_builder=sizing_builder,
         publisher=publisher,
+        governance=governance,
     )
 
 

@@ -81,9 +81,8 @@ def _request_payload(
             for value in (
                 strategy.strategy_id,
                 strategy.name,
-                strategy.status,
+                strategy.spec_hash,
                 strategy.created_at,
-                strategy.updated_at,
             )
         )
         or type(snapshot) is not ExperimentSnapshotIdentity
@@ -126,9 +125,8 @@ def _request_payload(
             "name": strategy.name,
             "spec_json": strategy.spec_json,
             "version": strategy.version,
-            "status": strategy.status,
+            "spec_hash": strategy.spec_hash,
             "created_at": strategy.created_at,
-            "updated_at": strategy.updated_at,
             "tags": list(strategy.tags),
         },
         "snapshot_identity": {
@@ -178,9 +176,8 @@ def _isolated_request(
             name=_string(strategy.get("name"), "name"),
             spec_json=_mapping(strategy.get("spec_json"), "spec_json"),
             version=_integer(strategy.get("version"), "version"),
-            status=_string(strategy.get("status"), "status"),
+            spec_hash=_string(strategy.get("spec_hash"), "spec_hash"),
             created_at=_string(strategy.get("created_at"), "created_at"),
-            updated_at=_string(strategy.get("updated_at"), "updated_at"),
             tags=tuple(
                 _string(tag, "tag") for tag in _list(strategy.get("tags"), "tags")
             ),

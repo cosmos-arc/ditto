@@ -36,6 +36,7 @@ from ditto_execution.contracts import (
     IntentDataPort,
     PositionDataPort,
 )
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -314,26 +315,30 @@ class AppCommandProvider(Provider):
     @provide
     def create_strategy_handler(
         self,
-        catalog_service: StrategyCatalogService,
+        governance_service: GovernanceService,
     ) -> CreateStrategyHandler:
-        """策略创建 Handler."""
-        return CreateStrategyHandler(catalog_service=catalog_service)
+        """策略创建 Handler（governance-backed append-only）."""
+        return CreateStrategyHandler(governance=governance_service)
 
     @provide
     def update_strategy_handler(
         self,
         catalog_service: StrategyCatalogService,
+        governance_service: GovernanceService,
     ) -> UpdateStrategyHandler:
-        """策略更新 Handler."""
-        return UpdateStrategyHandler(catalog_service=catalog_service)
+        """策略更新 Handler（catalog 读 existing + governance 写 draft）."""
+        return UpdateStrategyHandler(
+            catalog_service=catalog_service,
+            governance=governance_service,
+        )
 
     @provide
     def publish_strategy_handler(
         self,
-        catalog_service: StrategyCatalogService,
+        governance_service: GovernanceService,
     ) -> PublishStrategyHandler:
-        """策略发布 Handler."""
-        return PublishStrategyHandler(catalog_service=catalog_service)
+        """策略发布 Handler（governance publish_and_activate）."""
+        return PublishStrategyHandler(governance=governance_service)
 
     @provide
     def record_fill_handler(
