@@ -66,16 +66,25 @@ def build_research_replay_metadata(
         manifest_artifact.artifact_kind != RUN_MANIFEST_ARTIFACT_KIND
         or manifest_artifact.artifact_format != "json"
     ):
-        raise ValueError("manifest_artifact must be a run_manifest JSON artifact")
+        raise AppProcessError(
+            "manifest_artifact must be a run_manifest JSON artifact",
+            reason="invalid_replay_evidence",
+        )
     required_ids = tuple(
         item.artifact_id for item in replay_evidence.required_artifacts
     )
     if manifest_artifact.artifact_id in set(required_ids):
-        raise ValueError("manifest artifact must be separate from required results")
+        raise AppProcessError(
+            "manifest artifact must be separate from required results",
+            reason="invalid_replay_evidence",
+        )
     if fill_log_artifact_id is not None and fill_log_artifact_id not in set(
         required_ids
     ):
-        raise ValueError("fill_log_artifact_id must reference one required artifact")
+        raise AppProcessError(
+            "fill_log_artifact_id must reference one required artifact",
+            reason="invalid_replay_evidence",
+        )
     return {
         _RESEARCH_REPLAY_MARKER: RESEARCH_REPLAY_EVIDENCE_VERSION,
         _RESEARCH_REPLAY_BUNDLE: {
@@ -304,11 +313,11 @@ def _deserialize_replay_evidence(raw: object) -> ResearchReplayEvidence | None:
     value = cast(dict[object, object], raw)
     if set(value) != _EVIDENCE_KEYS:
         _evidence_error("replay_evidence fields do not match Schema v1")
-    schema_version = value["schema_version"]
+    schema_version = value.get("schema_version")
     if type(schema_version) is not int:
         _evidence_error("replay_evidence schema_version must be an exact integer")
     schema_version = cast(int, schema_version)
-    raw_artifacts = value["required_artifacts"]
+    raw_artifacts = value.get("required_artifacts")
     if not isinstance(raw_artifacts, list):
         _evidence_error("replay_evidence required_artifacts must be an array")
     artifacts = tuple(
@@ -361,12 +370,18 @@ def _evidence_error(message: str) -> None:
 def _evidence_str(payload: Mapping[object, object], field_name: str) -> str:
     value = payload[field_name]
     if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be a string")
+        raise AppProcessError(
+            f"{field_name} must be a string",
+            reason="invalid_replay_evidence",
+        )
     return value
 
 
 def _evidence_int(payload: Mapping[object, object], field_name: str) -> int:
     value = payload[field_name]
     if type(value) is not int:
-        raise ValueError(f"{field_name} must be an exact integer")
+        raise AppProcessError(
+            f"{field_name} must be an exact integer",
+            reason="invalid_replay_evidence",
+        )
     return value

@@ -168,6 +168,7 @@ OpenAPI prefix registry.
 | `/fundamental` | experimental | `api/routes/fundamental.py` |
 | `/fx` | experimental | `api/routes/fx.py` |
 | `/macro` | experimental | `api/routes/macro.py` |
+| `/research` | experimental | `api/routes/research_experiment_routes.py` |
 | `/trade` | initial-focus | `api/routes/trade.py` |
 | `/ingestion` | infrastructure | `api/routes/ingestion.py` |
 | `/source` | infrastructure | `api/routes/source.py` |

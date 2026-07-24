@@ -80,19 +80,29 @@ def _validate_bundle_header(bundle: VerifiedReplayBundle) -> None:
     if type(bundle.schema_version) is not int or (
         bundle.schema_version != RESEARCH_REPLAY_EVIDENCE_VERSION
     ):
-        raise ValueError("unsupported verified replay bundle schema_version")
+        raise AppProcessError(
+            "unsupported verified replay bundle schema_version",
+            reason="invalid_verified_replay_bundle",
+        )
     if not bundle.run_id or bundle.run_id != bundle.run_id.strip():
-        raise ValueError("verified replay bundle run_id must be canonical")
+        raise AppProcessError(
+            "verified replay bundle run_id must be canonical",
+            reason="invalid_verified_replay_bundle",
+        )
     if not isinstance(cast(object, bundle.manifest_payload), Mapping) or not isinstance(
         cast(object, bundle.report_payload), Mapping
     ):
-        raise ValueError("verified replay JSON payloads must be mappings")
+        raise AppProcessError(
+            "verified replay JSON payloads must be mappings",
+            reason="invalid_verified_replay_bundle",
+        )
     if type(bundle.manifest_artifact) is not ReplayArtifactRef or (
         bundle.manifest_artifact.artifact_kind != RUN_MANIFEST_ARTIFACT_KIND
         or bundle.manifest_artifact.artifact_format != "json"
     ):
-        raise ValueError(
-            "manifest_artifact must be one verified run_manifest JSON artifact"
+        raise AppProcessError(
+            "manifest_artifact must be one verified run_manifest JSON artifact",
+            reason="invalid_verified_replay_bundle",
         )
     validate_canonical_sha256(
         bundle.reproduction_fingerprint,
@@ -101,24 +111,35 @@ def _validate_bundle_header(bundle: VerifiedReplayBundle) -> None:
     if not bundle.report_artifact_id or (
         bundle.report_artifact_id != bundle.report_artifact_id.strip()
     ):
-        raise ValueError("report_artifact_id must be canonical")
+        raise AppProcessError(
+            "report_artifact_id must be canonical",
+            reason="invalid_verified_replay_bundle",
+        )
 
 
 def _validate_bundle_artifacts(bundle: VerifiedReplayBundle) -> None:
     if not isinstance(cast(object, bundle.verified_artifacts), tuple) or not (
         bundle.verified_artifacts
     ):
-        raise ValueError("verified_artifacts must be a non-empty tuple")
+        raise AppProcessError(
+            "verified_artifacts must be a non-empty tuple",
+            reason="invalid_verified_replay_bundle",
+        )
     if any(type(item) is not ReplayArtifactRef for item in bundle.verified_artifacts):
-        raise ValueError(
-            "verified_artifacts must contain exact ReplayArtifactRef values"
+        raise AppProcessError(
+            "verified_artifacts must contain exact ReplayArtifactRef values",
+            reason="invalid_verified_replay_bundle",
         )
     verified_ids = tuple(item.artifact_id for item in bundle.verified_artifacts)
     if len(set(verified_ids)) != len(verified_ids):
-        raise ValueError("verified artifact IDs must be unique")
+        raise AppProcessError(
+            "verified artifact IDs must be unique",
+            reason="invalid_verified_replay_bundle",
+        )
     if bundle.manifest_artifact.artifact_id in set(verified_ids):
-        raise ValueError(
-            "manifest artifact must be separate from replay result artifacts"
+        raise AppProcessError(
+            "manifest artifact must be separate from replay result artifacts",
+            reason="invalid_verified_replay_bundle",
         )
 
 
@@ -126,9 +147,15 @@ def _validate_bundle_fill(bundle: VerifiedReplayBundle) -> None:
     if bundle.fill_log is not None and not isinstance(
         cast(object, bundle.fill_log), tuple
     ):
-        raise ValueError("fill_log must be an immutable tuple when present")
+        raise AppProcessError(
+            "fill_log must be an immutable tuple when present",
+            reason="invalid_verified_replay_bundle",
+        )
     if (bundle.fill_log is None) != (bundle.fill_log_artifact_id is None):
-        raise ValueError("fill_log and fill_log_artifact_id must be provided together")
+        raise AppProcessError(
+            "fill_log and fill_log_artifact_id must be provided together",
+            reason="invalid_verified_replay_bundle",
+        )
 
 
 class VerifiedReplayArtifactReader(Protocol):
@@ -294,7 +321,11 @@ class IndexedResearchReplayArtifactReader:
         record = self._indexed_record(artifact_id)
         try:
             if record.artifact_id != artifact_id:
-                raise ValueError("indexed artifact identity mismatch")
+                raise AppProcessError(
+                    "indexed artifact identity mismatch",
+                    reason="verified_replay_evidence_mismatch",
+                    artifact_id=artifact_id,
+                )
             return ReplayArtifactRef(
                 artifact_id=record.artifact_id,
                 artifact_kind=record.artifact_kind,

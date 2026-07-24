@@ -14,6 +14,7 @@ from ditto_data.lineage.contracts import (
 )
 from ditto_platform.foundation import logger
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process_types import (
     BacktestLineageConfig,
 )
@@ -23,11 +24,11 @@ __all__ = ["record_backtest_lineage"]
 
 def _parse_manifest_timestamp(value: str) -> datetime:
     if not value:
-        raise ValueError("manifest created_at is required for lineage")
+        raise AppProcessError("manifest created_at is required for lineage")
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise ValueError("manifest created_at is invalid") from exc
+        raise AppProcessError("manifest created_at is invalid") from exc
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)

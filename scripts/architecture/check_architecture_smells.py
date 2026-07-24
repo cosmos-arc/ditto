@@ -315,12 +315,15 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             {
                 "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
                 "ditto_strategy.storage.sqlite.services.strategy_run_service",
+                "ditto_strategy.governance.service",
+                "ditto_strategy.models",
             }
         ),
         owner="apps strategy registry context",
         reason=(
-            "Strategy registry context owns concrete strategy storage wiring for "
-            "application execution facades."
+            "Strategy registry context owns concrete strategy storage and "
+            "governance wiring (seed draft/publish via GovernanceService plus "
+            "StrategySpecRecord construction) for application execution facades."
         ),
     ),
     CompositionImportAllowance(
