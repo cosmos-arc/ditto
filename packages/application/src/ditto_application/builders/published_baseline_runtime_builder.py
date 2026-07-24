@@ -49,19 +49,20 @@ class PublishedBaselineRuntimeBuilder:
         record: StrategySpecRecord,
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
         evidence_sink: SelectionEvidenceSink | None = None,
     ) -> ResearchStrategyRuntime:
         """Compile an explicit published ETF record with no catalog lookup or tuning."""
         record = require_exact_research_record(record)
         snapshot_identity = require_research_snapshot_identity(snapshot_identity)
-        if record.status != _PUBLISHED_STATUS:
+        if version_status != _PUBLISHED_STATUS:
             raise research_runtime_error(
                 "exact baseline strategy version must be published",
                 reason="published_baseline_version_required",
-                path="record.status",
+                path="version_status",
                 strategy_id=record.strategy_id,
                 strategy_version=record.version,
-                version_status=record.status,
+                version_status=version_status,
             )
         if candidate_parameters:
             raise research_runtime_error(
@@ -74,6 +75,7 @@ class PublishedBaselineRuntimeBuilder:
             record=record,
             candidate_parameters=(),
             snapshot_identity=snapshot_identity,
+            version_status=version_status,
             evidence_sink=evidence_sink,
         )
         actual_lane = runtime.resolved_spec.strategy_kind.value

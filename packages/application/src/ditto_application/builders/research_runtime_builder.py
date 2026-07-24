@@ -212,25 +212,25 @@ class ResearchSnapshotIdentity:
 class ResearchVersionGuard(Protocol):
     """Task15 extension seam for deciding whether an explicit version is buildable."""
 
-    def ensure_buildable(self, record: StrategySpecRecord) -> None:
+    def ensure_buildable(self, record: StrategySpecRecord, version_status: str) -> None:
         """Raise a typed builder error when the exact version is not researchable."""
         ...
 
 
 class _DraftReviewResearchVersionGuard:
-    """Pre-governance policy for explicit draft/review records only."""
+    """Governance-aware policy: only draft/review versions are buildable candidates."""
 
     _ALLOWED_STATUSES = frozenset({"draft", "review"})
 
-    def ensure_buildable(self, record: StrategySpecRecord) -> None:
-        if record.status not in self._ALLOWED_STATUSES:
+    def ensure_buildable(self, record: StrategySpecRecord, version_status: str) -> None:
+        if version_status not in self._ALLOWED_STATUSES:
             raise _builder_error(
                 "strategy version is not buildable by the research runtime",
                 reason="research_version_not_buildable",
-                path="record.status",
+                path="version_status",
                 strategy_id=record.strategy_id,
                 strategy_version=record.version,
-                version_status=record.status,
+                version_status=version_status,
                 allowed_statuses=tuple(sorted(self._ALLOWED_STATUSES)),
             )
 
@@ -355,6 +355,7 @@ class _ConstrainedResearchRuntimeCompiler:
         record: StrategySpecRecord,
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
         evidence_sink: SelectionEvidenceSink | None = None,
     ) -> ResearchStrategyRuntime:
         """Compile a validated exact record without choosing its lifecycle lane."""
@@ -398,7 +399,7 @@ class _ConstrainedResearchRuntimeCompiler:
         return ResearchStrategyRuntime(
             strategy_id=record.strategy_id,
             strategy_version=record.version,
-            version_status=record.status,
+            version_status=version_status,
             legacy_spec=resolved.legacy_spec,
             base_spec=resolved.base_spec,
             resolved_spec=resolved.resolved_spec,
@@ -456,17 +457,19 @@ class ResearchRuntimeBuilder:
         record: StrategySpecRecord,
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
         evidence_sink: SelectionEvidenceSink | None = None,
     ) -> ResearchStrategyRuntime:
         """Resolve one explicit draft/review record through the constrained compiler."""
         record = _require_research_record(record)
         snapshot_identity = _require_snapshot_identity(snapshot_identity)
-        self._status_guard.ensure_buildable(record)
+        self._status_guard.ensure_buildable(record, version_status)
         if self._version_guard is not None:
-            self._version_guard.ensure_buildable(record)
+            self._version_guard.ensure_buildable(record, version_status)
         return self._compiler.compile(
             record=record,
             candidate_parameters=candidate_parameters,
             snapshot_identity=snapshot_identity,
+            version_status=version_status,
             evidence_sink=evidence_sink,
         )

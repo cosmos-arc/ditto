@@ -232,3 +232,42 @@ class TestStrategyCatalogService:
         )
 
         assert service.get_active_published("strat.x") is None
+
+    def test_get_version_state_returns_state_string(
+        self, mocker: MockerFixture
+    ) -> None:
+        """get_version_state returns governance lifecycle state as string."""
+        state_record = mocker.Mock()
+        state_record.state = "published"
+        version_state_reader = mocker.Mock()
+        version_state_reader.get_state = mocker.Mock(return_value=state_record)
+        service = StrategyCatalogService(
+            reader=mocker.Mock(),
+            writer=mocker.Mock(),
+            version_state_reader=version_state_reader,
+        )
+
+        assert service.get_version_state("strat.x", 2) == "published"
+        version_state_reader.get_state.assert_called_once_with("strat.x", 2)
+
+    def test_get_version_state_returns_none_without_reader(
+        self, mocker: MockerFixture
+    ) -> None:
+        """get_version_state returns None when no version state reader wired."""
+        service = StrategyCatalogService(reader=mocker.Mock(), writer=mocker.Mock())
+
+        assert service.get_version_state("strat.x", 2) is None
+
+    def test_get_version_state_returns_none_when_no_state(
+        self, mocker: MockerFixture
+    ) -> None:
+        """get_version_state returns None when version has no governance state."""
+        version_state_reader = mocker.Mock()
+        version_state_reader.get_state = mocker.Mock(return_value=None)
+        service = StrategyCatalogService(
+            reader=mocker.Mock(),
+            writer=mocker.Mock(),
+            version_state_reader=version_state_reader,
+        )
+
+        assert service.get_version_state("strat.x", 2) is None

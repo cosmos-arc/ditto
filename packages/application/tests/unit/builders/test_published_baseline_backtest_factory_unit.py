@@ -102,6 +102,7 @@ def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
             snapshot.exact_snapshot.snapshot_id,
             snapshot.exact_snapshot.manifest_hash,
         ),
+        version_status="published",
     )
     binding = factory_fixtures._binding(runtime)
     registry = default_baseline_registry()

@@ -134,10 +134,14 @@ def _require_compiled_expression_parity(
 
 
 class ExactResearchStrategyReader(Protocol):
-    """Read exactly one strategy version; no latest/active method is exposed."""
+    """Read exactly one strategy version's payload and governance lifecycle state."""
 
     def get_spec(self, strategy_id: str, version: int) -> StrategySpecRecord | None:
         """Return the requested immutable catalog record only."""
+        ...
+
+    def get_version_state(self, strategy_id: str, version: int) -> str | None:
+        """Return the version's governance lifecycle state."""
         ...
 
 
@@ -150,6 +154,7 @@ class ExactResearchRuntimeBuilder(Protocol):
         record: StrategySpecRecord,
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
     ) -> ResearchStrategyRuntime:
         """Build without performing catalog or provider lookup."""
         ...
@@ -164,6 +169,7 @@ class ExactPublishedBaselineRuntimeBuilder(Protocol):
         record: StrategySpecRecord,
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
     ) -> ResearchStrategyRuntime:
         """Build without catalog lookup, moving pointers, or candidate tuning."""
         ...
@@ -482,7 +488,14 @@ class FrozenAuditResearchBacktestFactory:
             or record.version != declared.exact_strategy.version
         ):
             raise _error("exact_strategy_version_missing")
-        runtime_builder = self._select_runtime_builder(semantics, declared, record)
+        version_status = self._strategies.get_version_state(
+            record.strategy_id, record.version
+        )
+        if version_status is None:
+            raise _error("exact_strategy_version_state_missing")
+        runtime_builder = self._select_runtime_builder(
+            semantics, declared, version_status
+        )
         runtime = runtime_builder.build(
             record=record,
             candidate_parameters=declared.candidate_parameters,
@@ -490,10 +503,11 @@ class FrozenAuditResearchBacktestFactory:
                 semantics.snapshot.exact_snapshot.snapshot_id,
                 semantics.snapshot.exact_snapshot.manifest_hash,
             ),
+            version_status=version_status,
         )
         if type(runtime) is not ResearchStrategyRuntime:
             raise _error("exact_strategy_runtime_unavailable")
-        if runtime.version_status != record.status:
+        if runtime.version_status != version_status:
             raise _error("rebuilt_strategy_runtime_type_drift")
         runtime_lane = self._runtime_lane(runtime)
         if semantics.is_baseline and runtime_lane is not ResearchAssetLane.ETF:
@@ -506,23 +520,23 @@ class FrozenAuditResearchBacktestFactory:
         self,
         semantics: ResearchExecutionSemantics,
         declared: StrategyExecutionBinding,
-        record: StrategySpecRecord,
+        version_status: str,
     ) -> ExactResearchRuntimeBuilder | ExactPublishedBaselineRuntimeBuilder:
         if semantics.is_baseline:
-            if record.status != "published":
+            if version_status != "published":
                 raise _error(
                     "published_baseline_version_required",
-                    version_status=record.status,
+                    version_status=version_status,
                 )
             if declared.candidate_parameters:
                 raise _error("published_baseline_parameters_forbidden")
             if self._published_baseline_builder is None:
                 raise _error("published_baseline_runtime_builder_unavailable")
             return self._published_baseline_builder
-        if record.status not in {"draft", "review"}:
+        if version_status not in {"draft", "review"}:
             raise _error(
                 "candidate_strategy_version_not_researchable",
-                version_status=record.status,
+                version_status=version_status,
             )
         return self._candidate_runtime_builder
 

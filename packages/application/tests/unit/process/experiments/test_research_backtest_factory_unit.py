@@ -570,6 +570,10 @@ class _Reader:
         self.calls.append((strategy_id, version))
         return self.record
 
+    def get_version_state(self, strategy_id: str, version: int) -> str | None:
+        del strategy_id, version
+        return self.record.status
+
 
 class _Builder:
     def __init__(self, runtime: ResearchStrategyRuntime) -> None:
@@ -661,6 +665,7 @@ def _fixture(
             snapshot.exact_snapshot.snapshot_id,
             snapshot.exact_snapshot.manifest_hash,
         ),
+        version_status="draft",
     )
     binding = _binding(runtime)
     reader = _Reader(record)

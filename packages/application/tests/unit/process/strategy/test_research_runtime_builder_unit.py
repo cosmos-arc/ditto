@@ -213,6 +213,7 @@ def test_research_runtime_binds_the_actual_compiled_pipeline() -> None:
             CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
         ),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     repeated = builder.build(
         record=_record(),
@@ -220,6 +221,7 @@ def test_research_runtime_binds_the_actual_compiled_pipeline() -> None:
             CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
         ),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     changed = builder.build(
         record=_record(),
@@ -227,6 +229,7 @@ def test_research_runtime_binds_the_actual_compiled_pipeline() -> None:
             CandidateParameter(path=legacy_parameter_path("top_k"), value=3),
         ),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     assert len(original.pipeline_execution_hash) == 64
@@ -246,6 +249,7 @@ def test_research_runtime_rejects_pipeline_replacement_with_preserved_hash() -> 
         record=_record(),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     declared_hash = runtime.pipeline_execution_hash
     object.__setattr__(runtime.attested_pipeline, "_pipeline", StrategyPipeline(()))
@@ -275,6 +279,7 @@ def test_research_builder_uses_explicit_record_candidate_and_snapshot() -> None:
             CandidateParameter(path=legacy_parameter_path("lookback"), value=30),
         ),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     assert runtime.strategy_id == "research-etf"
@@ -312,6 +317,7 @@ def test_research_runtime_exposes_exact_used_factor_and_registry_bindings() -> N
         record=_factor_record(factor_ids),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     assert runtime.factor_registry_manifest == registry.manifest
@@ -369,11 +375,13 @@ def test_factor_content_or_version_changes_runtime_manifest_and_binding(
         record=record,
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     changed = ResearchRuntimeBuilder(factor_registry=changed_registry).build(
         record=record,
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     assert (
@@ -399,6 +407,7 @@ def test_compiler_identity_change_changes_used_binding_not_code_manifest() -> No
         record=record,
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     delegate = ExpressionCompiler()
     changed_compiler = MagicMock(spec=ExpressionCompiler)
@@ -417,6 +426,7 @@ def test_compiler_identity_change_changes_used_binding_not_code_manifest() -> No
         record=record,
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     assert (
@@ -461,6 +471,7 @@ def test_research_builder_rejects_poisoned_compiled_factor_identity() -> None:
             record=_factor_record(("momentum_1m",)),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -484,6 +495,7 @@ def test_research_builder_rejects_unknown_literal_before_compilation() -> None:
             record=_factor_record(("close",)),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -506,6 +518,7 @@ def test_research_builder_rejects_duplicate_factor_use_before_compilation() -> N
             record=_factor_record(("momentum_1m", "momentum_1m")),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -528,6 +541,7 @@ def test_research_builder_rejects_python_factor_without_executor_identity() -> N
             record=_factor_record(("obv_ma20",)),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "EXECUTOR_UNAVAILABLE"
@@ -547,6 +561,7 @@ def test_top_k_candidate_changes_the_real_pipeline_stage_and_result() -> None:
         record=_record(),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     candidate = builder.build(
         record=_record(),
@@ -554,6 +569,7 @@ def test_top_k_candidate_changes_the_real_pipeline_stage_and_result() -> None:
             CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
         ),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     baseline_selection = next(
         stage
@@ -587,6 +603,7 @@ def test_stock_selection_materializes_true_tunable_defaults_before_binding() -> 
         record=_stock_record(),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     overridden = builder.build(
         record=_stock_record(
@@ -599,6 +616,7 @@ def test_stock_selection_materializes_true_tunable_defaults_before_binding() -> 
         ),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     expected_baseline = {
@@ -651,6 +669,7 @@ def test_research_stock_runtime_preserves_one_evidence_sink_identity() -> None:
         record=_stock_record(),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
         evidence_sink=collector,
     )
 
@@ -676,6 +695,7 @@ def test_lookback_candidate_changes_resolved_compiled_config_only() -> None:
             CandidateParameter(path=legacy_parameter_path("lookback"), value=35),
         ),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
     factor = next(
         node
@@ -699,6 +719,7 @@ def test_research_builder_accepts_review_status_through_explicit_guard() -> None
         record=_record(status="review"),
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="review",
     )
 
     assert runtime.version_status == "review"
@@ -727,6 +748,7 @@ def test_research_builder_rejects_non_positive_exact_record_version(
             record=record,
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -748,6 +770,7 @@ def test_research_builder_rejects_empty_record_strategy_identity(
             record=replace(_record(), strategy_id=invalid_strategy_id),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -770,6 +793,7 @@ def test_research_builder_rejects_legacy_payload_family_mismatch() -> None:
             record=replace(record, spec_json=payload),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -800,6 +824,7 @@ def test_research_builder_requires_explicit_legacy_payload_identity(
             record=replace(record, spec_json=payload),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -834,6 +859,7 @@ def test_research_builder_rejects_native_v2_family_mismatch_before_gate() -> Non
             record=record,
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -848,19 +874,22 @@ def test_custom_research_guard_cannot_broaden_draft_review_status_boundary() -> 
     )
 
     class AllowAllGuard:
-        def ensure_buildable(self, record: StrategySpecRecord) -> None:
-            del record
+        def ensure_buildable(
+            self, record: StrategySpecRecord, version_status: str
+        ) -> None:
+            del record, version_status
 
     with pytest.raises(AppBuilderError) as exc_info:
         ResearchRuntimeBuilder(version_guard=AllowAllGuard()).build(
             record=_record(status="published"),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="published",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
     assert exc_info.value.details["reason"] == "research_version_not_buildable"
-    assert exc_info.value.details["path"] == "record.status"
+    assert exc_info.value.details["path"] == "version_status"
 
 
 def test_research_builder_rejects_published_version_without_boolean_bypass() -> None:
@@ -874,6 +903,7 @@ def test_research_builder_rejects_published_version_without_boolean_bypass() -> 
             record=_record(status="published"),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="published",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -902,6 +932,7 @@ def test_research_builder_fails_closed_for_native_v2_without_executor() -> None:
             record=record,
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -921,6 +952,7 @@ def test_research_builder_preserves_parameter_error_contract() -> None:
                 CandidateParameter(path=legacy_parameter_path("top_k"), value=99),
             ),
             snapshot_identity=_snapshot(),
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -950,6 +982,7 @@ def test_every_default_seed_builds_with_exact_registered_factor_bindings(
         record=record,
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     assert tuple(item.factor_id for item in runtime.used_factor_bindings) == (
@@ -1012,6 +1045,7 @@ def test_etf_legacy_records_inject_only_registered_template_parameters(
         record=record,
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="draft",
     )
 
     effective = {
@@ -1066,6 +1100,7 @@ def test_research_builder_revalidates_bypassed_snapshot_identity(
             record=_record(),
             candidate_parameters=(),
             snapshot_identity=snapshot,
+            version_status="draft",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -1082,6 +1117,7 @@ def test_research_builder_copies_valid_snapshot_identity() -> None:
         record=_record(),
         candidate_parameters=(),
         snapshot_identity=snapshot,
+        version_status="draft",
     )
 
     assert runtime.snapshot_identity == snapshot

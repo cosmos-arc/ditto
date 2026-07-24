@@ -291,10 +291,14 @@ def require_evidence_integer(value: object, field_name: str) -> int:
 
 
 class ExactStrategyVersionReader(Protocol):
-    """Read one explicit strategy version; no moving-state method is exposed."""
+    """Read one explicit strategy version's payload and governance lifecycle state."""
 
     def get_spec(self, strategy_id: str, version: int) -> StrategySpecRecord | None:
         """Return only the requested exact version."""
+        ...
+
+    def get_version_state(self, strategy_id: str, version: int) -> str | None:
+        """Return the version's governance lifecycle state."""
         ...
 
 

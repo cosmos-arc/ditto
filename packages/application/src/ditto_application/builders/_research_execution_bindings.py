@@ -76,7 +76,7 @@ _REBALANCE_FREQUENCIES = {
 def read_exact_strategy_record(
     reader: ExactStrategyVersionReader,
     identity: ExactStrategyIdentity,
-) -> StrategySpecRecord:
+) -> tuple[StrategySpecRecord, str]:
     record = reader.get_spec(identity.strategy_id, identity.version)
     if (
         type(record) is not StrategySpecRecord
@@ -88,13 +88,21 @@ def read_exact_strategy_record(
             strategy_id=identity.strategy_id,
             strategy_version=identity.version,
         )
-    return record
+    version_status = reader.get_version_state(identity.strategy_id, identity.version)
+    if version_status is None:
+        raise research_execution_error(
+            "exact_strategy_version_state_missing",
+            strategy_id=identity.strategy_id,
+            strategy_version=identity.version,
+        )
+    return record, version_status
 
 
 def build_research_runtime(
     *,
     builder: ResearchRuntimeBuilder | PublishedBaselineRuntimeBuilder,
     record: StrategySpecRecord,
+    version_status: str,
     parameters: tuple[CandidateParameter, ...],
     snapshot: ExactResearchSnapshot,
 ) -> ResearchStrategyRuntime:
@@ -106,6 +114,7 @@ def build_research_runtime(
                 snapshot.snapshot_id,
                 snapshot.manifest_hash,
             ),
+            version_status=version_status,
         )
     except (AppBuilderError, AppProcessError) as exc:
         raise research_execution_error(

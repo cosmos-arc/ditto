@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from ditto_strategy.governance.protocols import StrategyActivePointerReader
+from ditto_strategy.governance.protocols import (
+    StrategyActivePointerReader,
+    StrategyVersionStateReader,
+)
 from ditto_strategy.models import StrategySpecRecord
 
 __all__ = [
@@ -68,10 +71,12 @@ class StrategyCatalogService:
         reader: StrategySpecReaderProtocol,
         writer: StrategySpecWriterProtocol,
         active_pointer_reader: StrategyActivePointerReader | None = None,
+        version_state_reader: StrategyVersionStateReader | None = None,
     ) -> None:
         self._reader = reader
         self._writer = writer
         self._active_pointer_reader = active_pointer_reader
+        self._version_state_reader = version_state_reader
 
     def save_spec(self, record: StrategySpecRecord) -> None:
         """保存策略 Spec."""
@@ -105,6 +110,21 @@ class StrategyCatalogService:
         if pointer is None:
             return None
         return self._reader.get_spec(strategy_id, pointer.active_version)
+
+    def get_version_state(self, strategy_id: str, version: int) -> str | None:
+        """
+        返回 governance 版本状态字符串（draft/review/published/deprecated）.
+
+        research runtime 的 I/O-free builder 通过此方法获取 version_status，
+        不再读 StrategySpecRecord.status。无 state reader 或版本未在 governance
+        登记时返回 None（调用方走 fail-closed）。
+        """
+        if self._version_state_reader is None:
+            return None
+        state_record = self._version_state_reader.get_state(strategy_id, version)
+        if state_record is None:
+            return None
+        return str(state_record.state)
 
     def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
         """获取最高 published 版本，忽略更新的草稿."""

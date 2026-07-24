@@ -794,6 +794,11 @@ class _ExactStrategyReader:
             status="published" if version == 2 else "draft",
         )
 
+    def get_version_state(self, strategy_id: str, version: int) -> str | None:
+        if strategy_id != "seed_etf_rotation" or version not in {2, 3}:
+            return None
+        return "published" if version == 2 else "draft"
+
 
 def _exact_factor_binding() -> ResearchFactorBinding:
     return ResearchFactorBinding(

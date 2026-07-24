@@ -254,9 +254,11 @@ class DurableResearchExecutionResolver:
                 "executor.strategy_spec_hash",
             ),
         )
+        record, version_status = read_exact_strategy_record(self._strategies, exact)
         runtime = build_research_runtime(
             builder=self._candidate_runtime_builder,
-            record=read_exact_strategy_record(self._strategies, exact),
+            record=record,
+            version_status=version_status,
             parameters=planned.binder_parameters,
             snapshot=inputs.snapshot_binding.exact_snapshot,
         )
@@ -356,11 +358,13 @@ class DurableResearchExecutionResolver:
         else:
             if launch.executor.get("baseline_runtime") is None:
                 raise research_execution_error("baseline_runtime_identity_missing")
+            baseline_record, baseline_version_status = read_exact_strategy_record(
+                self._strategies, resolution.exact_strategy
+            )
             runtime = build_research_runtime(
                 builder=self._published_baseline_builder,
-                record=read_exact_strategy_record(
-                    self._strategies, resolution.exact_strategy
-                ),
+                record=baseline_record,
+                version_status=baseline_version_status,
                 parameters=(),
                 snapshot=inputs.snapshot_binding.exact_snapshot,
             )

@@ -270,6 +270,11 @@ class _StrategyReader:
             status="published",
         )
 
+    def get_version_state(self, strategy_id: str, version: int) -> str | None:
+        if (strategy_id, version) == ("seed_etf_rotation", 2):
+            return "published"
+        return "draft"
+
 
 def test_production_probe_returns_exact_registered_baseline_evidence() -> None:
     candidate_builder = _Builder()
@@ -515,6 +520,7 @@ def test_production_probe_keeps_synthetic_stock_baseline_runtime_identity_empty(
 def test_production_probe_rejects_moving_etf_baseline_identity() -> None:
     probe = BuilderBackedResearchExecutorProbe(
         cast("ResearchRuntimeBuilder", _Builder()),
+        strategy_reader=cast("object", _StrategyReader()),
     )
 
     result = probe.probe(
@@ -547,6 +553,7 @@ def test_production_probe_rejects_moving_etf_baseline_identity() -> None:
 def test_production_probe_rejects_baseline_runtime_lane_mismatch() -> None:
     probe = BuilderBackedResearchExecutorProbe(
         cast("ResearchRuntimeBuilder", _Builder()),
+        strategy_reader=cast("object", _StrategyReader()),
     )
 
     result = probe.probe(

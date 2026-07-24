@@ -85,7 +85,7 @@ def _baseline_runtime_evidence(
 def _require_exact_baseline_record(
     reader: ExactStrategyVersionReader | None,
     identity: ExactStrategyIdentity,
-) -> StrategySpecRecord:
+) -> tuple[StrategySpecRecord, str]:
     if reader is None:
         raise AppProcessError(
             "exact baseline strategy reader is unavailable",
@@ -107,7 +107,16 @@ def _require_exact_baseline_record(
                 "reason": "exact_baseline_strategy_version_missing",
             },
         )
-    return record
+    version_status = reader.get_version_state(identity.strategy_id, identity.version)
+    if version_status is None:
+        raise AppProcessError(
+            "exact baseline strategy version state is unavailable",
+            details={
+                "code": "EXECUTOR_UNAVAILABLE",
+                "reason": "exact_baseline_strategy_version_state_missing",
+            },
+        )
+    return record, version_status
 
 
 def _require_baseline_runtime_identity(
@@ -169,7 +178,7 @@ def _build_exact_baseline_runtime(
                 "reason": "published_baseline_runtime_builder_unavailable",
             },
         )
-    record = _require_exact_baseline_record(reader, exact)
+    record, version_status = _require_exact_baseline_record(reader, exact)
     runtime = builder.build(
         record=record,
         candidate_parameters=(),
@@ -177,6 +186,7 @@ def _build_exact_baseline_runtime(
             request.snapshot_identity.snapshot_id,
             request.snapshot_identity.manifest_hash,
         ),
+        version_status=version_status,
     )
     return _require_baseline_runtime_identity(
         runtime,
@@ -203,12 +213,36 @@ class BuilderBackedResearchExecutorProbe:
         self._baseline_registry = baseline_registry or default_baseline_registry()
         self._strategy_reader = strategy_reader
 
+    def _require_version_status(self, record: StrategySpecRecord) -> str:
+        """Resolve the governance version state for a candidate record."""
+        if self._strategy_reader is None:
+            raise AppProcessError(
+                "strategy version state reader is unavailable",
+                details={
+                    "code": "EXECUTOR_UNAVAILABLE",
+                    "reason": "strategy_version_state_reader_unavailable",
+                },
+            )
+        version_status = self._strategy_reader.get_version_state(
+            record.strategy_id, record.version
+        )
+        if version_status is None:
+            raise AppProcessError(
+                "strategy version state is unavailable",
+                details={
+                    "code": "EXECUTOR_UNAVAILABLE",
+                    "reason": "strategy_version_state_missing",
+                },
+            )
+        return version_status
+
     def probe(
         self,
         request: ResearchExecutorProbeRequest,
     ) -> ResearchExecutorProbeResult:
         """Return fail-closed evidence without touching persistence."""
         runtimes: list[tuple[BinderCandidatePlan, ResearchStrategyRuntime]] = []
+        version_status = self._require_version_status(request.strategy_record)
         for candidate in request.candidates:
             try:
                 runtimes.append(
@@ -221,6 +255,7 @@ class BuilderBackedResearchExecutorProbe:
                                 request.snapshot_identity.snapshot_id,
                                 request.snapshot_identity.manifest_hash,
                             ),
+                            version_status=version_status,
                         ),
                     )
                 )

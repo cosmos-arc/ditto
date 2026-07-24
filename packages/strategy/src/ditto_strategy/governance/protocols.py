@@ -15,7 +15,11 @@ from ditto_strategy.governance.models import (
 )
 from ditto_strategy.models import StrategySpecRecord
 
-__all__ = ["StrategyActivePointerReader", "StrategyGovernanceStoreProtocol"]
+__all__ = [
+    "StrategyActivePointerReader",
+    "StrategyGovernanceStoreProtocol",
+    "StrategyVersionStateReader",
+]
 
 
 class StrategyGovernanceStoreProtocol(Protocol):
@@ -75,4 +79,14 @@ class StrategyActivePointerReader(Protocol):
 
     def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
         """Return the single active pointer for a strategy, or None."""
+        ...
+
+
+class StrategyVersionStateReader(Protocol):
+    """Narrow read port for resolving one version's governance lifecycle state."""
+
+    def get_state(
+        self, strategy_id: str, version: int
+    ) -> StrategyVersionStateRecord | None:
+        """Return the rebuildable lifecycle projection for one version, or None."""
         ...

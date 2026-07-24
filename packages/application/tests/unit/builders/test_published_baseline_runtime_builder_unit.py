@@ -79,6 +79,7 @@ def test_published_baseline_builder_builds_only_exact_published_etf_record() -> 
         record=record,
         candidate_parameters=(),
         snapshot_identity=_snapshot(),
+        version_status="published",
     )
 
     assert runtime.strategy_id == record.strategy_id
@@ -97,12 +98,13 @@ def test_published_baseline_builder_rejects_every_non_published_status(
             record=_record(status=status),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status=status,
         )
 
     assert exc_info.value.details == {
         "code": "SPEC_INVALID",
         "reason": "published_baseline_version_required",
-        "path": "record.status",
+        "path": "version_status",
         "strategy_id": "published-baseline",
         "strategy_version": 7,
         "version_status": status,
@@ -115,6 +117,7 @@ def test_published_baseline_builder_rejects_non_etf_runtime_lane() -> None:
             record=_record(template="stock_selection"),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="published",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -130,6 +133,7 @@ def test_published_baseline_builder_forbids_candidate_parameter_binding() -> Non
                 CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
             ),
             snapshot_identity=_snapshot(),
+            version_status="published",
         )
 
     assert exc_info.value.details["code"] == "SPEC_INVALID"
@@ -146,6 +150,7 @@ def test_research_runtime_builder_still_rejects_the_same_published_record() -> N
             record=replace(record, status="published"),
             candidate_parameters=(),
             snapshot_identity=_snapshot(),
+            version_status="published",
         )
 
     assert exc_info.value.details["reason"] == "research_version_not_buildable"
