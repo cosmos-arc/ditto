@@ -41,7 +41,6 @@ def _version(
         parent_version=None,
         schema_version=GOVERNANCE_SCHEMA_VERSION,
         spec_hash=spec_hash,
-        spec_json={"version": version},
         created_at="2026-07-23T00:00:00Z",
     )
 
@@ -87,7 +86,6 @@ def test_insert_version_persists_immutable_payload(tmp_path: Path) -> None:
     fetched = store.get_version("strategy-1", 1)
     assert fetched is not None
     assert fetched.spec_hash == "b" * 64
-    assert fetched.spec_json == {"version": 1}
 
 
 def test_insert_version_rejects_duplicate_primary_key(tmp_path: Path) -> None:

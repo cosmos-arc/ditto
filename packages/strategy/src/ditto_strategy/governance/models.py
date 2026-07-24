@@ -8,7 +8,6 @@ exists per strategy and is swapped via compare-and-swap revision.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -70,14 +69,18 @@ REVIEW_ONLY_DECISIONS = (
 
 @dataclass(frozen=True, slots=True)
 class StrategyVersion:
-    """Immutable strategy version; payload is insert-only and never updated."""
+    """
+    Immutable strategy version; payload lives in the content-addressed store.
+
+    ``spec_hash`` references the immutable payload persisted once in
+    ``strategy_spec``; governance never duplicates payload bytes.
+    """
 
     strategy_id: str
     version: int
     parent_version: int | None
     schema_version: int
     spec_hash: str
-    spec_json: Mapping[str, object]
     created_at: str
 
 

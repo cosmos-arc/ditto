@@ -35,7 +35,9 @@ def _make_spec(
     strategy_id: str = "strat-001",
     name: str = "Test Strategy",
     spec_json: dict[str, object] | None = None,
+    spec_hash: str = "",
     version: int = 1,
+    parent_version: int | None = None,
     status: str = "draft",
     created_at: str = "2026-03-24T10:00:00+08:00",
     updated_at: str = "2026-03-24T10:00:00+08:00",
@@ -45,7 +47,9 @@ def _make_spec(
         strategy_id=strategy_id,
         name=name,
         spec_json=spec_json or {"type": "etf_momentum", "params": {"lookback": 20}},
+        spec_hash=spec_hash,
         version=version,
+        parent_version=parent_version,
         status=status,
         created_at=created_at,
         updated_at=updated_at,
@@ -143,6 +147,19 @@ class TestSQLiteStrategySpecReader:
         result = reader.get_spec("strat-001")
         assert result is not None
         assert result.spec_json == spec.spec_json
+
+    def test_get_spec_preserves_spec_hash_and_parent_version(
+        self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
+    ) -> None:
+        """spec_hash/parent_version roundtrip as content-addressed identity."""
+        writer.init_schema()
+        spec = _make_spec(spec_hash="a" * 64, parent_version=3)
+        writer.save(spec)
+
+        result = reader.get_spec("strat-001")
+        assert result is not None
+        assert result.spec_hash == "a" * 64
+        assert result.parent_version == 3
 
     def test_get_spec_preserves_tags(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader

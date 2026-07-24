@@ -103,7 +103,9 @@ class StrategySpecRecord:
         strategy_id: 策略唯一标识.
         name: 策略名称.
         spec_json: 策略定义 JSON.
+        spec_hash: spec_json 的 canonical hash（内容寻址锚点）.
         version: 版本号（默认 1）.
+        parent_version: 父版本（governance 血缘对齐）.
         status: 状态（draft / published）.
         created_at: 创建时间.
         updated_at: 更新时间.
@@ -114,7 +116,9 @@ class StrategySpecRecord:
     strategy_id: str
     name: str
     spec_json: dict[str, object]
+    spec_hash: str = ""
     version: int = 1
+    parent_version: int | None = None
     status: str = "draft"
     created_at: str = ""
     updated_at: str = ""

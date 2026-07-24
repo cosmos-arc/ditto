@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import sqlite3
 
-import orjson
 from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_strategy.governance.models import (
@@ -38,7 +37,6 @@ CREATE TABLE IF NOT EXISTS strategy_version (
     parent_version INT,
     schema_version INT  NOT NULL,
     spec_hash      TEXT NOT NULL,
-    spec_json      TEXT NOT NULL,
     created_at     TEXT NOT NULL,
     PRIMARY KEY (strategy_id, version)
 );
@@ -90,9 +88,8 @@ CREATE TABLE IF NOT EXISTS strategy_activation_event (
 
 _INSERT_VERSION = """
 INSERT INTO strategy_version (
-    strategy_id, version, parent_version, schema_version, spec_hash,
-    spec_json, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+    strategy_id, version, parent_version, schema_version, spec_hash, created_at
+) VALUES (?, ?, ?, ?, ?, ?)
 """
 _INSERT_STATE = """
 INSERT INTO strategy_version_state (
@@ -100,14 +97,12 @@ INSERT INTO strategy_version_state (
 ) VALUES (?, ?, ?, ?, ?)
 """
 _GET_VERSION = """
-SELECT strategy_id, version, parent_version, schema_version, spec_hash,
-       spec_json, created_at
+SELECT strategy_id, version, parent_version, schema_version, spec_hash, created_at
 FROM strategy_version
 WHERE strategy_id = ? AND version = ?
 """
 _LIST_VERSIONS = """
-SELECT strategy_id, version, parent_version, schema_version, spec_hash,
-       spec_json, created_at
+SELECT strategy_id, version, parent_version, schema_version, spec_hash, created_at
 FROM strategy_version
 WHERE strategy_id = ?
 ORDER BY version DESC
@@ -160,7 +155,6 @@ def _row_to_version(row: sqlite3.Row) -> StrategyVersion:
         parent_version=None if parent is None else int(parent),  # type: ignore[arg-type]
         schema_version=int(d["schema_version"]),  # type: ignore[arg-type]
         spec_hash=str(d["spec_hash"]),
-        spec_json=dict(orjson.loads(str(d["spec_json"]))),
         created_at=str(d["created_at"]),
     )
 
@@ -223,7 +217,6 @@ class SQLiteStrategyGovernanceStore:
                 version.parent_version,
                 version.schema_version,
                 version.spec_hash,
-                orjson.dumps(version.spec_json).decode(),
                 version.created_at,
             ),
         )
