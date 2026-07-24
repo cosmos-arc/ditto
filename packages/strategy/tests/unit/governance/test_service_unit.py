@@ -184,3 +184,78 @@ def test_create_draft_persists_payload_and_draft_version(tmp_path: Path) -> None
     version = store.get_version("strategy-1", 1)
     assert version is not None
     assert version.spec_hash == "e" * 64
+
+
+def test_publish_and_activate_advances_draft_to_active(tmp_path: Path) -> None:
+    """publish_and_activate walks draft→published→active (seed fast-path)."""
+    pool = SQLitePool(str(tmp_path / "governance.sqlite"))
+    SQLiteStrategySpecWriter(pool).init_schema()
+    store = SQLiteStrategyGovernanceStore(pool)
+    store.init_schema()
+    service = GovernanceService(store)
+
+    spec_record = StrategySpecRecord(
+        strategy_id="strategy-1",
+        name="Test",
+        spec_json={"version": 1},
+        spec_hash="f" * 64,
+        version=1,
+    )
+    service.create_draft(
+        strategy_id="strategy-1",
+        version=1,
+        spec_record=spec_record,
+        created_at="2026-07-24T00:00:00Z",
+    )
+
+    pointer = service.publish_and_activate(
+        strategy_id="strategy-1",
+        version=1,
+        actor="seed",
+        reason="bootstrap",
+        decided_at="2026-07-24T00:00:01Z",
+    )
+
+    assert pointer.active_version == 1
+    state = store.get_state("strategy-1", 1)
+    assert state is not None
+    assert state.state is StrategyVersionState.PUBLISHED
+
+
+def test_publish_and_activate_is_idempotent(tmp_path: Path) -> None:
+    """Repeated publish_and_activate on an active version is a no-op."""
+    pool = SQLitePool(str(tmp_path / "governance.sqlite"))
+    SQLiteStrategySpecWriter(pool).init_schema()
+    store = SQLiteStrategyGovernanceStore(pool)
+    store.init_schema()
+    service = GovernanceService(store)
+
+    spec_record = StrategySpecRecord(
+        strategy_id="strategy-1",
+        name="Test",
+        spec_json={"version": 1},
+        spec_hash="f" * 64,
+        version=1,
+    )
+    service.create_draft(
+        strategy_id="strategy-1",
+        version=1,
+        spec_record=spec_record,
+        created_at="2026-07-24T00:00:00Z",
+    )
+    first = service.publish_and_activate(
+        strategy_id="strategy-1",
+        version=1,
+        actor="seed",
+        reason="bootstrap",
+        decided_at="2026-07-24T00:00:01Z",
+    )
+    second = service.publish_and_activate(
+        strategy_id="strategy-1",
+        version=1,
+        actor="seed",
+        reason="bootstrap",
+        decided_at="2026-07-24T00:00:02Z",
+    )
+
+    assert second.active_version == first.active_version

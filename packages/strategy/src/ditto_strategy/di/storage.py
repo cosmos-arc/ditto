@@ -138,11 +138,13 @@ class StrategyStorageProvider(Provider):
         self,
         strategy_spec_reader: SQLiteStrategySpecReader,
         strategy_spec_writer: SQLiteStrategySpecWriter,
+        strategy_governance_store: SQLiteStrategyGovernanceStore,
     ) -> StrategyCatalogService:
-        """提供策略目录服务."""
+        """提供策略目录服务（注入 governance active pointer reader）."""
         return StrategyCatalogService(
             reader=strategy_spec_reader,
             writer=strategy_spec_writer,
+            active_pointer_reader=strategy_governance_store,
         )
 
     @provide

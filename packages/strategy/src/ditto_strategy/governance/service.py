@@ -12,11 +12,13 @@ from __future__ import annotations
 
 from ditto_strategy.governance.models import (
     GOVERNANCE_SCHEMA_VERSION,
+    ReviewOutcome,
     StrategyActivationEvent,
     StrategyActivePointer,
     StrategyDecision,
     StrategyDecisionEvent,
     StrategyVersion,
+    StrategyVersionState,
     StrategyVersionStateRecord,
     next_lifecycle,
     validate_reactivation_target,
@@ -195,6 +197,68 @@ class GovernanceService:
             decided_at,
         )
         return self._store.activate(strategy_id, version, event, expected)
+
+    def publish_and_activate(
+        self,
+        *,
+        strategy_id: str,
+        version: int,
+        actor: str,
+        reason: str,
+        decided_at: str,
+    ) -> StrategyActivePointer:
+        """
+        Advance a draft to published and activate it (seed/system fast-path).
+
+        Walks the full lifecycle submit→approve→publish then activates the
+        pointer. Idempotent: a version already active is a no-op; a published
+        version is only (re-)activated. Deprecated versions cannot be revived.
+        """
+        state = self._require_state(strategy_id, version)
+        if state.state is StrategyVersionState.DEPRECATED:
+            raise StrategyGovernanceError(
+                f"cannot revive deprecated version: {strategy_id}/{version}"
+            )
+        prefix = f"{strategy_id}:{version}"
+        if state.state is StrategyVersionState.DRAFT:
+            state = self.submit_review(
+                strategy_id,
+                version,
+                event_id=f"{prefix}:submit_review:{decided_at}",
+                actor=actor,
+                reason=reason,
+                decided_at=decided_at,
+            )
+        if state.review_outcome is ReviewOutcome.PENDING:
+            state = self.approve(
+                strategy_id,
+                version,
+                event_id=f"{prefix}:approve:{decided_at}",
+                actor=actor,
+                reason=reason,
+                decided_at=decided_at,
+            )
+        if state.state is StrategyVersionState.REVIEW:
+            self.publish(
+                strategy_id,
+                version,
+                event_id=f"{prefix}:publish:{decided_at}",
+                actor=actor,
+                reason=reason,
+                decided_at=decided_at,
+            )
+        pointer = self._store.get_active_pointer(strategy_id)
+        if pointer is not None and pointer.active_version == version:
+            return pointer
+        return self.activate(
+            strategy_id,
+            version,
+            event_id=f"{prefix}:activate:{decided_at}",
+            actor=actor,
+            reason=reason,
+            decided_at=decided_at,
+            kind=StrategyDecision.PUBLISH,
+        )
 
     def _apply(
         self,
