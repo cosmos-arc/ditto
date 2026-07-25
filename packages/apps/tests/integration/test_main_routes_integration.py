@@ -73,6 +73,7 @@ class TestMainRoutesAssembly:
             "macro",
             "market",
             "metadata",
+            "research_experiment_routes",
             "source",
             "strategy",
             "trade",

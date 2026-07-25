@@ -2,7 +2,7 @@
 
 > **设计事实源补充**：修订 [2026-07-19 R3 design](2026-07-19-r3-a-share-research-strategy-governance-design.md) §10.1（见本文 §2.2）
 > **实施计划**：[2026-07-19 R3 plan](2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md) Task 16b（剩余接入）+ Task 17
-> **状态**：DESIGN APPROVED（架构 §1、schema §2 已批准）；进入实施
+> **状态**：✅ 已实施完成（2026-07-25，commit #3c 三子 commit `763f6d99`/`2646b067`/`9ca0dad5`）。Task 16b 全部接入 + strategy_spec 纯 payload 收尾。test --fast 11160 passed + 37 contracts + type/lint 全绿。预先存在 slow integration/e2e 失败（路由期望/EngineConfig golden/backtest published e2e）是 R3 历史遗留（commit #3b 就存在，--fast 跳过），属 Task 17/backtest golden 范围，独立修复。
 > **分支**：`docs/r3-research-governance-design`
 
 ---
