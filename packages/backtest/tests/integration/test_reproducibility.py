@@ -46,6 +46,7 @@ from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.synchronizer import TimeSlice
 from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
@@ -279,21 +280,22 @@ class _AuditedEngineLoop(EngineLoop):
         super().__init__(**kwargs)
         self._audit_collector = collector
 
-    def _step(self, date: str) -> bool:
+    def _step(self, time_slice: TimeSlice) -> bool:
         """执行单日步骤并记录审计数据。"""
+        trade_date = time_slice.time_context.trade_date
         # 记录步骤前账户快照
         account_view_before = self._brokerage.get_account()
         self._audit_collector.record_account_view(
-            f"{date}-before",
+            f"{trade_date}-before",
             account_view_before,
         )
 
         # 执行原始步骤
-        result = super()._step(date)
+        result = super()._step(time_slice)
 
         # 记录步骤后账户快照
         account_view_after = self._brokerage.get_account()
-        self._audit_collector.record_account_view(date, account_view_after)
+        self._audit_collector.record_account_view(trade_date, account_view_after)
 
         return result
 
@@ -673,7 +675,7 @@ class TestReproducibilityLayer1:
         composite_pre_trade_check: CompositePreTradeCheck,
         three_day_test_data: dict[int, pl.DataFrame],
     ) -> None:
-        """manifest 应冻结策略版本、参数覆盖、输入引用与配置哈希。"""
+        """manifest 应冻结策略版本、有效参数、输入引用与配置哈希。"""
         config = EngineConfig(
             start_date="2026-01-05",
             end_date="2026-01-07",
@@ -688,7 +690,6 @@ class TestReproducibilityLayer1:
             strategy_id="test-etf-rotation",
             strategy_version="2026.03",
             strategy_run_id="run-manifest-meta",
-            parameter_overrides=("top_k=3", "cash_target=0.0"),
             engine_version="0.2.0",
         )
         loop = _build_engine_loop(
@@ -705,10 +706,7 @@ class TestReproducibilityLayer1:
 
         assert result.manifest is not None
         assert result.manifest.strategy_version == "2026.03"
-        assert result.manifest.parameter_overrides == (
-            "top_k=3",
-            "cash_target=0.0",
-        )
+        assert result.manifest.effective_parameters == ()
         assert result.manifest.rule_resolution_policy == "as_of_date"
         assert result.manifest.engine_version == "0.2.0"
         assert result.manifest.config_hash != ""
@@ -947,8 +945,13 @@ class TestProofTests:
             strategy_version="1.0.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-07T12:00:00Z",
+            spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             input_refs=(1, 2),
-            parameter_overrides=("top_k=3",),
             rule_refs=(
                 RuleRef(
                     instrument_id=1,
@@ -998,6 +1001,12 @@ class TestProofTests:
             strategy_version="1.0.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-07T12:00:00Z",
+            spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             rule_refs=(rule_a, rule_b),
         )
 
@@ -1012,6 +1021,12 @@ class TestProofTests:
             strategy_version="1.0.0",
             mode=RunMode.BACKTEST,
             created_at="2026-01-07T12:00:00Z",
+            spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             rule_refs=(rule_a, rule_b, rule_c),
         )
 
@@ -1058,6 +1073,12 @@ class TestProofTests:
             strategy_version="",
             mode=RunMode.RESEARCH,
             created_at="2026-01-01T00:00:00Z",
+            spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         )
 
         json1 = serialize_manifest(manifest)

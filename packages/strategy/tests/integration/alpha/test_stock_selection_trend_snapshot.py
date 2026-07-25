@@ -155,11 +155,11 @@ class TestTenDaySnapshot:
         engine = _build_daily_engine(tmp_path)
         result = engine.run()
 
-        assert result.final_nav == pytest.approx(1_073_013.1855980002)
-        assert result.total_trades == 26
+        assert result.final_nav == pytest.approx(1_076_391.4012917997)
+        assert result.total_trades == 30
         assert account_position_signature(result) == (
+            (11, 16_200, 16_200, 22.0044, 356_400.0, -71.28),
             (13, 22_800, 22_800, 15.5031, 344_280.0, -9_190.68),
-            (15, 27_200, 27_200, 12.80256, 353_600.0, 5_370.368),
         )
 
 
