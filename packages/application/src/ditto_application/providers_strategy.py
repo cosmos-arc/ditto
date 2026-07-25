@@ -36,6 +36,10 @@ from ditto_application.queries.remediation import CatalogRemediationQueryFacade
 from ditto_application.queries.remediation_approval import (
     CatalogRemediationApprovalQueryFacade,
 )
+from ditto_application.queries.research_catalog import (
+    ResearchCatalogQueryFacade,
+    default_research_catalog_facade,
+)
 from ditto_application.queries.run import RunReadModel
 from ditto_application.queries.source_fallback_policy_state import (
     CatalogSourceFallbackPolicyQueryFacade,
@@ -93,6 +97,11 @@ class AppStrategyQueryProvider(Provider):
     ) -> ExperimentQueryFacade:
         """Expose durable research experiments through application read models."""
         return ExperimentQueryFacade(reader=reader)
+
+    @provide
+    def research_catalog_query_facade(self) -> ResearchCatalogQueryFacade:
+        """Research catalog facade — static R3 node + factor registry projection."""
+        return default_research_catalog_facade()
 
     @provide
     def backtest_query_facade(
