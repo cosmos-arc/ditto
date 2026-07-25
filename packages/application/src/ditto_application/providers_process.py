@@ -72,6 +72,7 @@ from ditto_application.builders.research_validation_authority import (
     ProductionResearchValidationAuthorityProbe as _ValidationAuthorityProbe,
 )
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+from ditto_application.commands.experiments import ExperimentControlNotifier
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_sizing import (
     AShareTradeDateResolver,
@@ -88,6 +89,15 @@ from ditto_application.processes.execution.replay_process import (
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.experiments._control_runtime import (
+    CONTROL_COORDINATOR_LEASE_DURATION,
+    CONTROL_COORDINATOR_OWNER_TOKEN,
+    ControlOnlyFirstAttemptFactory,
+    LoggingExperimentControlNotifier,
+)
+from ditto_application.processes.experiments.coordinator import (
+    ExperimentExecutionCoordinator,
+)
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
@@ -292,6 +302,31 @@ class AppProcessProvider(Provider):
     ) -> ExperimentSchedulerStore:
         """Bind Task 9 scheduling to the approved durable experiment ports."""
         return ExperimentSchedulerStore(reader, writer)
+
+    @provide
+    def experiment_control_notifier(self) -> ExperimentControlNotifier:
+        """R3 best-effort logging notifier for the single-machine durable-tick model."""
+        return LoggingExperimentControlNotifier()
+
+    @provide
+    def experiment_execution_coordinator(
+        self,
+        store: ExperimentSchedulerStore,
+    ) -> ExperimentExecutionCoordinator:
+        """
+        Wire the R3 control-only coordinator.
+
+        Control routes (pause/cancel/resume/retry-fold) never dispatch attempts;
+        the placeholder factory fails loudly if tick dispatch is ever connected
+        through this instance. Replace the factory when the execution bundle
+        resolver (Task 9/13) is assembled.
+        """
+        return ExperimentExecutionCoordinator(
+            store=store,
+            first_attempt_factory=ControlOnlyFirstAttemptFactory(),
+            owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
+            lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
+        )
 
     @provide
     def persisted_ingestion_evidence_verifier(

@@ -73,7 +73,15 @@ from ditto_application.commands.catalog_remediation import (
 from ditto_application.commands.data_product_certification import (
     DataProductCertificationCommands,
 )
-from ditto_application.commands.experiments import LaunchExperimentHandler
+from ditto_application.commands.experiments import (
+    CancelExperimentHandler,
+    ClaimHoldoutCandidateHandler,
+    ExperimentControlNotifier,
+    LaunchExperimentHandler,
+    PauseExperimentHandler,
+    ResumeExperimentHandler,
+    RetryExperimentFoldHandler,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
 from ditto_application.commands.source_fallback_policy import (
@@ -111,6 +119,9 @@ from ditto_application.opening_baseline import OpeningBaselinePort
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.coordinator import (
+    ExperimentExecutionCoordinator,
+)
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
@@ -130,6 +141,51 @@ class AppCommandProvider(Provider):
     ) -> LaunchExperimentHandler:
         """Expose confirmed experiment launch through the command boundary."""
         return LaunchExperimentHandler(process)
+
+    @provide
+    def pause_experiment_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> PauseExperimentHandler:
+        """Persist pause intent, then notify each persisted live run to stop."""
+        return PauseExperimentHandler(process=process, notifier=notifier)
+
+    @provide
+    def cancel_experiment_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> CancelExperimentHandler:
+        """Persist cancel intent, then notify each persisted live run to stop."""
+        return CancelExperimentHandler(process=process, notifier=notifier)
+
+    @provide
+    def resume_experiment_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> ResumeExperimentHandler:
+        """Persist resume intent, then wake the scheduler for one paused experiment."""
+        return ResumeExperimentHandler(process=process, notifier=notifier)
+
+    @provide
+    def retry_experiment_fold_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> RetryExperimentFoldHandler:
+        """Persist one fold retry intent, then wake the scheduler to dispatch it."""
+        return RetryExperimentFoldHandler(process=process, notifier=notifier)
+
+    @provide
+    def claim_holdout_candidate_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> ClaimHoldoutCandidateHandler:
+        """Commit one holdout claim, then wake the scheduler for dispatch."""
+        return ClaimHoldoutCandidateHandler(process=process, notifier=notifier)
 
     @provide
     def data_product_certification_commands(

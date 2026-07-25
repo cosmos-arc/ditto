@@ -25,6 +25,10 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import (
     _coordinator_snapshot as _snapshot_rules,
 )
+from ditto_application.processes.experiments._control_runtime import (
+    RetryFoldControlRequest,
+    retry_fold_under_transient_lease,
+)
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
     ExperimentDispatch,
@@ -285,18 +289,19 @@ class ExperimentExecutionCoordinator:
         expected_revision: int,
         occurred_at: datetime,
     ) -> ExperimentControlReceipt:
-        """Requeue one eligible terminal fold under the current scheduler fence."""
+        """Requeue one eligible terminal fold via a transient control-route lease."""
         _require_utc_event_time(occurred_at)
-        return self._authority.execute_operator(
-            lambda lease, now_epoch_us: self._recovery.retry_fold(
+        return retry_fold_under_transient_lease(
+            store=self._store,
+            authority=self._authority,
+            recovery=self._recovery,
+            request=RetryFoldControlRequest(
                 experiment_id=experiment_id,
                 candidate_id=candidate_id,
                 fold_id=fold_id,
                 expected_revision=expected_revision,
                 occurred_at=occurred_at,
-                lease=lease,
-                now_epoch_us=now_epoch_us(),
-            )
+            ),
         )
 
     def claim_holdout_candidate(

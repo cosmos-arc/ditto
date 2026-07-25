@@ -484,6 +484,19 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "_control_runtime.py"
+        ),
+        owner="application experiment control runtime",
+        reason=(
+            "The R3 control-only runtime wires analysis-owned fold/attempt "
+            "contracts into the placeholder first-attempt factory, logging "
+            "notifier and transient retry-lease helper; it performs no storage "
+            "or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "execution_bundle.py"
         ),
         owner="application experiment execution evidence compiler",

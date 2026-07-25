@@ -582,6 +582,24 @@ class _SchedulerStore:
         with self._active_lock:
             self._active_writes -= 1
 
+    def release_lease(
+        self,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+    ) -> SchedulerSlot:
+        """Release the singleton slot back to free state (test double)."""
+        self.slot = SchedulerSlot(
+            self.slot.slot_id,
+            None,
+            None,
+            None,
+            self.slot.acquired_at_epoch_us,
+            self.slot.renewed_at_epoch_us,
+            self.slot.revision + 1,
+        )
+        return self.slot
+
 
 def _coordinator(
     store: _SchedulerStore,
@@ -1686,3 +1704,47 @@ def test_stale_event_timestamp_cannot_extend_an_expired_physical_lease() -> None
 
     assert exc_info.value.details["code"] == "LEASE_LOST"
     assert len(store.write_fences) == write_count
+
+
+def test_retry_fold_fails_closed_when_scheduler_slot_busy() -> None:
+    """Control-route retry fails closed (LEASE_LOST) when the slot is leased."""
+    store = _SchedulerStore()
+    store.slot = SchedulerSlot(
+        "global",
+        ExperimentId("experiment-1"),
+        "tick-owner",
+        NOW_US + 1_000_000,
+        NOW_US,
+        NOW_US,
+        0,
+    )
+    coordinator, _ = _coordinator(store)
+    with pytest.raises(AppProcessError) as info:
+        coordinator.retry_fold(
+            experiment_id="experiment-1",
+            candidate_id="candidate-1",
+            fold_id="fold-1-1",
+            expected_revision=0,
+            occurred_at=NOW,
+        )
+    details = info.value.details
+    assert details["code"] == "LEASE_LOST"
+    assert details["reason"] == "scheduler_slot_busy"
+
+
+def test_retry_fold_releases_transient_lease_when_fold_not_failed() -> None:
+    """Control-route retry releases the transient lease even when recovery rejects."""
+    store = _SchedulerStore()
+    coordinator, _ = _coordinator(store)
+    with pytest.raises(AppProcessError) as info:
+        coordinator.retry_fold(
+            experiment_id="experiment-1",
+            candidate_id="candidate-1",
+            fold_id="fold-1-1",
+            expected_revision=0,
+            occurred_at=NOW,
+        )
+    details = info.value.details
+    assert details["code"] == "SPEC_INVALID"
+    assert details["reason"] == "terminal_fold_retry_requires_failed_fold"
+    assert store.slot.owner_token is None
