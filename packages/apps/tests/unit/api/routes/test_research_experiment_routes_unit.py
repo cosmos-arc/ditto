@@ -2,18 +2,32 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_application.commands.experiments import (
+    PauseExperimentHandler,
+    RetryExperimentFoldHandler,
+)
+from ditto_application.exceptions import AppCommandError
+from ditto_application.processes.experiments._coordinator_contract import (
+    ExperimentControlReceipt,
+)
 from ditto_application.queries.experiments import (
     ExperimentDetailReadModel,
     ExperimentQueryFacade,
 )
-from ditto_apps.api.errors import NotFoundError
+from ditto_apps.api.errors import ConflictError, NotFoundError
 from ditto_apps.api.routes.research_experiment_routes import (
     get_experiment,
+    pause_experiment,
+    retry_fold_experiment,
     to_experiment_response,
+)
+from ditto_apps.models.research import (
+    ExperimentControlRequest,
+    ExperimentRetryFoldRequest,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -78,3 +92,76 @@ async def test_get_experiment_raises_not_found() -> None:
 
     with pytest.raises(NotFoundError):
         await _call_get("missing", facade)
+
+
+def _receipt() -> ExperimentControlReceipt:
+    return ExperimentControlReceipt(
+        experiment_id="exp-1",
+        status="pause_requested",
+        desired_state="pause",
+        revision=2,
+        occurred_at=datetime(2026, 7, 25, 0, 0, 0, tzinfo=UTC),
+        live_run_ids=("run-1", "run-2"),
+    )
+
+
+def _control_error(reason: str, *, code: str = "SPEC_INVALID") -> AppCommandError:
+    return AppCommandError("control failed", details={"code": code, "reason": reason})
+
+
+async def _call_pause(request: ExperimentControlRequest, handler: MagicMock) -> object:
+    route = getattr(pause_experiment, "__dishka_orig_func__", pause_experiment)
+    return await route(experiment_id="exp-1", request=request, handler=handler)
+
+
+async def test_pause_experiment_returns_receipt() -> None:
+    handler = MagicMock(spec=PauseExperimentHandler)
+    handler.handle.return_value = _receipt()
+
+    response = await _call_pause(ExperimentControlRequest(expected_revision=1), handler)
+
+    assert response.data.status == "pause_requested"
+    assert response.data.live_run_ids == ["run-1", "run-2"]
+    command = handler.handle.call_args.args[0]
+    assert command.experiment_id == "exp-1"
+    assert command.expected_revision == 1
+
+
+async def test_pause_experiment_maps_stale_revision_to_conflict() -> None:
+    handler = MagicMock(spec=PauseExperimentHandler)
+    handler.handle.side_effect = _control_error("stale_projection_revision")
+
+    with pytest.raises(ConflictError):
+        await _call_pause(ExperimentControlRequest(expected_revision=1), handler)
+
+
+async def test_pause_experiment_maps_not_found_reason_to_not_found() -> None:
+    handler = MagicMock(spec=PauseExperimentHandler)
+    handler.handle.side_effect = _control_error(
+        "experiment_not_found", code="EXPERIMENT_INTEGRITY_FAILED"
+    )
+
+    with pytest.raises(NotFoundError):
+        await _call_pause(ExperimentControlRequest(expected_revision=1), handler)
+
+
+async def test_retry_fold_experiment_passes_fold_fields() -> None:
+    handler = MagicMock(spec=RetryExperimentFoldHandler)
+    handler.handle.return_value = _receipt()
+
+    route = getattr(
+        retry_fold_experiment, "__dishka_orig_func__", retry_fold_experiment
+    )
+    response = await route(
+        experiment_id="exp-1",
+        request=ExperimentRetryFoldRequest(
+            candidate_id="cand-1", fold_id="fold-1", expected_revision=3
+        ),
+        handler=handler,
+    )
+
+    assert response.data.revision == 2
+    command = handler.handle.call_args.args[0]
+    assert command.candidate_id == "cand-1"
+    assert command.fold_id == "fold-1"
+    assert command.expected_revision == 3

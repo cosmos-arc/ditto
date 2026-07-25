@@ -8,8 +8,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 __all__ = [
+    "ExperimentControlReceiptResponse",
+    "ExperimentControlRequest",
     "ExperimentDetailResponse",
     "ExperimentGateResponse",
+    "ExperimentRetryFoldRequest",
     "ExperimentSummaryResponse",
     "FactorDescriptorResponse",
     "NodeDescriptorResponse",
@@ -87,3 +90,38 @@ class FactorDescriptorResponse(BaseModel):
     resolved_payload: dict[str, Any]
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class ExperimentControlRequest(BaseModel):
+    """Body for one revision-fenced experiment control action (pause/cancel/resume)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    expected_revision: int
+
+
+class ExperimentRetryFoldRequest(BaseModel):
+    """
+    Body for one revision-fenced terminal fold retry.
+
+    expected_revision is the fold projection revision (not experiment revision).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    fold_id: str
+    expected_revision: int
+
+
+class ExperimentControlReceiptResponse(BaseModel):
+    """API view of one durable control receipt (CAS post-state)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    experiment_id: str
+    status: str
+    desired_state: str
+    revision: int
+    occurred_at: datetime
+    live_run_ids: list[str]
