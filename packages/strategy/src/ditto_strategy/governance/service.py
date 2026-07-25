@@ -175,27 +175,25 @@ class GovernanceService:
         self,
         strategy_id: str,
         version: int,
+        event: StrategyActivationEvent,
         *,
-        event_id: str,
-        actor: str,
-        reason: str,
-        decided_at: str,
-        kind: StrategyDecision = StrategyDecision.REACTIVATE,
+        expected_pointer_revision: int | None = None,
     ) -> StrategyActivePointer:
-        """Switch the active pointer to a published, non-deprecated version."""
+        """
+        Switch the active pointer to a published, non-deprecated version.
+
+        When ``expected_pointer_revision`` is supplied it is used as the
+        compare-and-swap guard verbatim, letting a caller hold an optimistic
+        lock over the pointer it last read. When it is ``None`` the service
+        reads the current revision, preserving the legacy seed/system path.
+        """
         state = self._require_state(strategy_id, version)
         validate_reactivation_target(state.state, state.review_outcome)
-        pointer = self._store.get_active_pointer(strategy_id)
-        expected = 0 if pointer is None else pointer.pointer_revision
-        event = StrategyActivationEvent(
-            event_id,
-            strategy_id,
-            version,
-            kind,
-            actor,
-            reason,
-            decided_at,
-        )
+        if expected_pointer_revision is None:
+            pointer = self._store.get_active_pointer(strategy_id)
+            expected = 0 if pointer is None else pointer.pointer_revision
+        else:
+            expected = expected_pointer_revision
         return self._store.activate(strategy_id, version, event, expected)
 
     def publish_and_activate(
@@ -250,15 +248,16 @@ class GovernanceService:
         pointer = self._store.get_active_pointer(strategy_id)
         if pointer is not None and pointer.active_version == version:
             return pointer
-        return self.activate(
+        activate_event = StrategyActivationEvent(
+            f"{prefix}:activate:{decided_at}",
             strategy_id,
             version,
-            event_id=f"{prefix}:activate:{decided_at}",
-            actor=actor,
-            reason=reason,
-            decided_at=decided_at,
-            kind=StrategyDecision.PUBLISH,
+            StrategyDecision.PUBLISH,
+            actor,
+            reason,
+            decided_at,
         )
+        return self.activate(strategy_id, version, activate_event)
 
     def _apply(
         self,

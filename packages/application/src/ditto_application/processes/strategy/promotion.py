@@ -14,7 +14,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ditto_analysis.experiments import ReviewPacket, review_blocked_by_hard_gates
-from ditto_strategy.governance.models import StrategyActivePointer, StrategyDecision
+from ditto_strategy.governance.models import (
+    StrategyActivationEvent,
+    StrategyActivePointer,
+    StrategyDecision,
+)
 from ditto_strategy.governance.service import GovernanceService
 
 from ditto_application.exceptions import AppProcessError
@@ -89,14 +93,17 @@ class StrategyPromotionProcess:
         activate_event_id = (
             f"{request.strategy_id}:{request.version}:activate:{request.decided_at}"
         )
-        pointer = self._governance.activate(
+        activate_event = StrategyActivationEvent(
+            activate_event_id,
             request.strategy_id,
             request.version,
-            event_id=activate_event_id,
-            actor=request.actor,
-            reason=request.reason,
-            decided_at=request.decided_at,
-            kind=StrategyDecision.PUBLISH,
+            StrategyDecision.PUBLISH,
+            request.actor,
+            request.reason,
+            request.decided_at,
+        )
+        pointer = self._governance.activate(
+            request.strategy_id, request.version, activate_event
         )
         return PromotionResult(
             strategy_id=request.strategy_id,

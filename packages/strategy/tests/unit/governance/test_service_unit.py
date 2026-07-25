@@ -9,6 +9,7 @@ from ditto_platform.foundation import SQLitePool
 from ditto_strategy.governance.models import (
     GOVERNANCE_SCHEMA_VERSION,
     ReviewOutcome,
+    StrategyActivationEvent,
     StrategyDecision,
     StrategyVersion,
     StrategyVersionState,
@@ -20,6 +21,7 @@ from ditto_strategy.governance.service import (
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.strategy_governance_store import (
     SQLiteStrategyGovernanceStore,
+    StrategyGovernanceCasConflict,
 )
 from ditto_strategy.storage.sqlite.strategy_spec_store import SQLiteStrategySpecWriter
 
@@ -103,13 +105,7 @@ def test_activate_switches_active_pointer(tmp_path: Path) -> None:
     )
 
     pointer = service.activate(
-        "strategy-1",
-        1,
-        event_id="a1",
-        actor="r",
-        reason="go live",
-        decided_at="t4",
-        kind=StrategyDecision.PUBLISH,
+        "strategy-1", 1, _activation_event(kind=StrategyDecision.PUBLISH)
     )
 
     assert pointer.active_version == 1
@@ -133,12 +129,7 @@ def test_deprecated_version_cannot_be_activated(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         service.activate(
-            "strategy-1",
-            1,
-            event_id="a1",
-            actor="r",
-            reason="revive",
-            decided_at="t5",
+            "strategy-1", 1, _activation_event(reason="revive", decided_at="t5")
         )
 
 
@@ -259,3 +250,88 @@ def test_publish_and_activate_is_idempotent(tmp_path: Path) -> None:
     )
 
     assert second.active_version == first.active_version
+
+
+def _advance_to_published(service: GovernanceService, *, version: int = 1) -> None:
+    """Walk one seeded version through submit→approve→publish."""
+    prefix = f"strategy-1:{version}"
+    service.submit_review(
+        "strategy-1",
+        version,
+        event_id=f"{prefix}:submit",
+        actor="r",
+        reason="ok",
+        decided_at="t1",
+    )
+    service.approve(
+        "strategy-1",
+        version,
+        event_id=f"{prefix}:approve",
+        actor="r",
+        reason="ok",
+        decided_at="t2",
+    )
+    service.publish(
+        "strategy-1",
+        version,
+        event_id=f"{prefix}:publish",
+        actor="r",
+        reason="go",
+        decided_at="t3",
+    )
+
+
+def _activation_event(
+    event_id: str = "a1",
+    *,
+    kind: StrategyDecision = StrategyDecision.REACTIVATE,
+    reason: str = "go live",
+    decided_at: str = "t4",
+) -> StrategyActivationEvent:
+    """Build one activation event for the seeded strategy-1/version-1 target."""
+    return StrategyActivationEvent(
+        event_id, "strategy-1", 1, kind, "r", reason, decided_at
+    )
+
+
+def test_activate_with_expected_pointer_revision_match(tmp_path: Path) -> None:
+    """activate accepts a client-supplied expected_pointer_revision that matches."""
+    service = _service(tmp_path)
+    _seed_version(service)
+    _advance_to_published(service)
+
+    pointer = service.activate(
+        "strategy-1", 1, _activation_event(), expected_pointer_revision=0
+    )
+
+    assert pointer.active_version == 1
+    assert pointer.pointer_revision == 1
+
+
+def test_activate_with_stale_expected_pointer_revision_conflicts(
+    tmp_path: Path,
+) -> None:
+    """activate with a stale expected_pointer_revision raises a CAS conflict."""
+    service = _service(tmp_path)
+    _seed_version(service)
+    _advance_to_published(service)
+    service.activate("strategy-1", 1, _activation_event(), expected_pointer_revision=0)
+
+    with pytest.raises(StrategyGovernanceCasConflict):
+        service.activate(
+            "strategy-1",
+            1,
+            _activation_event(event_id="a2", reason="reapply", decided_at="t5"),
+            expected_pointer_revision=0,
+        )
+
+
+def test_activate_without_expected_reads_current(tmp_path: Path) -> None:
+    """activate without expected_pointer_revision keeps the legacy read-current path."""
+    service = _service(tmp_path)
+    _seed_version(service)
+    _advance_to_published(service)
+
+    pointer = service.activate("strategy-1", 1, _activation_event())
+
+    assert pointer.active_version == 1

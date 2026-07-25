@@ -87,6 +87,13 @@ from ditto_application.commands.strategy import (
     PublishStrategyHandler,
     UpdateStrategyHandler,
 )
+from ditto_application.commands.strategy_governance import (
+    ApproveReviewHandler,
+    DeprecateStrategyHandler,
+    ReactivateStrategyHandler,
+    RejectReviewHandler,
+    SubmitReviewHandler,
+)
 from ditto_application.commands.trade import (
     ProjectedFillAppendAdapter,
     ProjectedFillCorrectionAdapter,
@@ -339,6 +346,46 @@ class AppCommandProvider(Provider):
     ) -> PublishStrategyHandler:
         """策略发布 Handler（governance publish_and_activate）."""
         return PublishStrategyHandler(governance=governance_service)
+
+    @provide
+    def submit_review_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> SubmitReviewHandler:
+        """策略版本提交审查 Handler（governance submit_review）."""
+        return SubmitReviewHandler(governance=governance_service)
+
+    @provide
+    def approve_review_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> ApproveReviewHandler:
+        """策略版本审批 Handler（governance approve）."""
+        return ApproveReviewHandler(governance=governance_service)
+
+    @provide
+    def reject_review_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> RejectReviewHandler:
+        """策略版本驳回 Handler（governance reject）."""
+        return RejectReviewHandler(governance=governance_service)
+
+    @provide
+    def deprecate_strategy_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> DeprecateStrategyHandler:
+        """策略版本弃用 Handler（governance deprecate）."""
+        return DeprecateStrategyHandler(governance=governance_service)
+
+    @provide
+    def reactivate_strategy_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> ReactivateStrategyHandler:
+        """策略版本重新激活 Handler（governance activate + expected pointer CAS）."""
+        return ReactivateStrategyHandler(governance=governance_service)
 
     @provide
     def record_fill_handler(

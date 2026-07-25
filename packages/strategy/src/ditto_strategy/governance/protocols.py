@@ -18,6 +18,7 @@ from ditto_strategy.models import StrategySpecRecord
 __all__ = [
     "StrategyActivePointerReader",
     "StrategyGovernanceStoreProtocol",
+    "StrategyGovernanceVersionReader",
     "StrategyVersionStateReader",
 ]
 
@@ -89,4 +90,16 @@ class StrategyVersionStateReader(Protocol):
         self, strategy_id: str, version: int
     ) -> StrategyVersionStateRecord | None:
         """Return the rebuildable lifecycle projection for one version, or None."""
+        ...
+
+
+class StrategyGovernanceVersionReader(Protocol):
+    """Narrow read port for listing versions and resolving the active pointer."""
+
+    def list_versions(self, strategy_id: str) -> tuple[StrategyVersion, ...]:
+        """List every immutable version for a strategy, newest first."""
+        ...
+
+    def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
+        """Return the single active pointer for a strategy, or None."""
         ...

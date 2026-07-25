@@ -4,8 +4,19 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from ditto_application.contracts import StrategySpecInfo
+from ditto_application.contracts import (
+    StrategyActiveInfo,
+    StrategySpecInfo,
+    StrategyVersionInfo,
+)
 from ditto_application.queries.strategy import StrategyQueryFacade
+from ditto_strategy.governance.models import (
+    ReviewOutcome,
+    StrategyActivePointer,
+    StrategyVersion,
+    StrategyVersionState,
+    StrategyVersionStateRecord,
+)
 from ditto_strategy.models import StrategySpecRecord
 
 
@@ -94,3 +105,123 @@ class TestStrategyQueryFacadeGetSpec:
         facade.get_spec("s-1", version=3)
 
         service.get_spec.assert_called_once_with("s-1", 3)
+
+
+def _make_version(version: int = 1, parent: int | None = None) -> StrategyVersion:
+    return StrategyVersion(
+        strategy_id="s-1",
+        version=version,
+        parent_version=parent,
+        schema_version=1,
+        spec_hash="a" * 64,
+        created_at="2026-07-25T00:00:00Z",
+    )
+
+
+def _make_state(
+    version: int = 1,
+    state: StrategyVersionState = StrategyVersionState.PUBLISHED,
+    review: ReviewOutcome = ReviewOutcome.APPROVED,
+) -> StrategyVersionStateRecord:
+    return StrategyVersionStateRecord(
+        strategy_id="s-1",
+        version=version,
+        state=state,
+        review_outcome=review,
+        state_revision=1,
+    )
+
+
+def _make_pointer(version: int = 1, revision: int = 1) -> StrategyActivePointer:
+    return StrategyActivePointer(
+        strategy_id="s-1",
+        active_version=version,
+        pointer_revision=revision,
+        activation_event_id="e1",
+    )
+
+
+class TestStrategyQueryFacadeListVersions:
+    """list_versions projects governance versions + state into StrategyVersionInfo."""
+
+    def test_returns_version_info_from_governance(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        state_reader = MagicMock(spec=["get_state"])
+        governance_reader.list_versions.return_value = (_make_version(2, parent=1),)
+        state_reader.get_state.return_value = _make_state(2)
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            version_state_reader=state_reader,
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.list_versions("s-1")
+
+        assert result == [
+            StrategyVersionInfo(
+                strategy_id="s-1",
+                version=2,
+                parent_version=1,
+                spec_hash="a" * 64,
+                state="published",
+                review_outcome="approved",
+                created_at="2026-07-25T00:00:00Z",
+            )
+        ]
+        governance_reader.list_versions.assert_called_once_with("s-1")
+        state_reader.get_state.assert_called_once_with("s-1", 2)
+
+    def test_returns_empty_when_no_versions(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = ()
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            governance_version_reader=governance_reader,
+        )
+
+        assert facade.list_versions("s-1") == []
+
+    def test_returns_empty_without_governance_reader(self) -> None:
+        facade = StrategyQueryFacade(MagicMock(spec=["list_specs", "get_spec"]))
+
+        assert facade.list_versions("s-1") == []
+
+
+class TestStrategyQueryFacadeGetActive:
+    """get_active joins the active pointer with the published payload."""
+
+    def test_returns_pointer_and_payload(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        catalog = MagicMock(spec=["list_specs", "get_spec", "get_active_published"])
+        governance_reader.get_active_pointer.return_value = _make_pointer(
+            version=2, revision=3
+        )
+        catalog.get_active_published.return_value = _make_record("s-1", version=2)
+        facade = StrategyQueryFacade(
+            catalog, governance_version_reader=governance_reader
+        )
+
+        result = facade.get_active("s-1")
+
+        assert result is not None
+        assert isinstance(result, StrategyActiveInfo)
+        assert result.active_version == 2
+        assert result.pointer_revision == 3
+        assert result.spec.version == 2
+        assert result.spec.status == "active"
+        catalog.get_active_published.assert_called_once_with("s-1")
+
+    def test_returns_none_when_no_pointer(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.get_active_pointer.return_value = None
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec", "get_active_published"]),
+            governance_version_reader=governance_reader,
+        )
+
+        assert facade.get_active("s-1") is None
+
+    def test_returns_none_without_governance_reader(self) -> None:
+        facade = StrategyQueryFacade(MagicMock(spec=["list_specs", "get_spec"]))
+
+        assert facade.get_active("s-1") is None

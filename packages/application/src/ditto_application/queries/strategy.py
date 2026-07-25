@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from ditto_strategy.contracts import StrategyCatalogReader
-from ditto_strategy.governance.protocols import StrategyVersionStateReader
+from ditto_strategy.governance.protocols import (
+    StrategyGovernanceVersionReader,
+    StrategyVersionStateReader,
+)
 from ditto_strategy.models import StrategySpecRecord
 
-from ditto_application.contracts import StrategySpecInfo, to_spec_info
+from ditto_application.contracts import (
+    StrategyActiveInfo,
+    StrategySpecInfo,
+    StrategyVersionInfo,
+    to_spec_info,
+)
 
 __all__ = ["StrategyQueryFacade"]
 
@@ -17,17 +25,18 @@ class StrategyQueryFacade:
 
     封装 StrategyCatalogReader，对外只暴露 App DTO。``StrategySpecInfo.status``
     由 governance version state 投影（active/draft/review/published/...）；
-    无 state reader 注入时过渡回退 ``record.status``（commit #3c-3 移除字段后
-    必须注入 reader）。
+    未注入 state reader 时标记 ``unknown``（governance 是唯一状态源）。
     """
 
     def __init__(
         self,
         catalog_service: StrategyCatalogReader,
         version_state_reader: StrategyVersionStateReader | None = None,
+        governance_version_reader: StrategyGovernanceVersionReader | None = None,
     ) -> None:
         self._service = catalog_service
         self._version_state_reader = version_state_reader
+        self._governance_version_reader = governance_version_reader
 
     def list_specs(self) -> list[StrategySpecInfo]:
         """列出所有策略（最新版本）."""
@@ -49,6 +58,59 @@ class StrategyQueryFacade:
         """
         record = self._service.get_active_published(strategy_id)
         return to_spec_info(record, status="active") if record is not None else None
+
+    def list_versions(self, strategy_id: str) -> list[StrategyVersionInfo]:
+        """
+        列出策略的所有 governance 版本（newest first）.
+
+        投影 governance version + lifecycle state，不拉取 payload bytes。
+        未注入 governance reader 时返回空列表（降级，不伪造状态）。
+        """
+        if (
+            self._governance_version_reader is None
+            or self._version_state_reader is None
+        ):
+            return []
+        versions = self._governance_version_reader.list_versions(strategy_id)
+        infos: list[StrategyVersionInfo] = []
+        for version in versions:
+            state = self._version_state_reader.get_state(strategy_id, version.version)
+            if state is None:
+                continue
+            infos.append(
+                StrategyVersionInfo(
+                    strategy_id=version.strategy_id,
+                    version=version.version,
+                    parent_version=version.parent_version,
+                    spec_hash=version.spec_hash,
+                    state=str(state.state),
+                    review_outcome=str(state.review_outcome),
+                    created_at=version.created_at,
+                )
+            )
+        return infos
+
+    def get_active(self, strategy_id: str) -> StrategyActiveInfo | None:
+        """
+        返回 active pointer + published payload；无 pointer/payload 返回 None.
+
+        与 ``get_active_published`` 互补：后者只返回 payload，本方法额外暴露
+        ``pointer_revision`` 供 governance UI 的乐观锁（reactivate）。
+        """
+        if self._governance_version_reader is None:
+            return None
+        pointer = self._governance_version_reader.get_active_pointer(strategy_id)
+        if pointer is None:
+            return None
+        record = self._service.get_active_published(strategy_id)
+        if record is None:
+            return None
+        return StrategyActiveInfo(
+            strategy_id=pointer.strategy_id,
+            active_version=pointer.active_version,
+            pointer_revision=pointer.pointer_revision,
+            spec=to_spec_info(record, status="active"),
+        )
 
     def _to_info(self, record: StrategySpecRecord) -> StrategySpecInfo:
         return to_spec_info(record, status=self._resolve_status(record))

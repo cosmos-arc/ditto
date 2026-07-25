@@ -51,9 +51,83 @@ class StrategyResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+# ---------------------------------------------------------------------------
+# Strategy governance (R3) — review/publish/reactivate control plane
+# ---------------------------------------------------------------------------
+
+
+class GovernanceDecisionRequest(BaseModel):
+    """Shared actor + reason body for one governance state-machine decision."""
+
+    actor: str = Field(description="决策执行者")
+    reason: str = Field(description="决策原因")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class ReactivateStrategyRequest(GovernanceDecisionRequest):
+    """Reactivate one published version with an optimistic pointer CAS guard."""
+
+    expected_pointer_revision: int = Field(
+        ge=0, description="最后读到的 active pointer revision (optimistic CAS)"
+    )
+
+
+class StrategyVersionResponse(BaseModel):
+    """One immutable governance version (list-versions view, no payload bytes)."""
+
+    strategy_id: str
+    version: int
+    parent_version: int | None
+    spec_hash: str
+    state: str
+    review_outcome: str
+    created_at: str
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class StrategyVersionStateResponse(BaseModel):
+    """Lifecycle projection returned after one governance state-machine decision."""
+
+    strategy_id: str
+    version: int
+    state: str
+    review_outcome: str
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class StrategyActivePointerResponse(BaseModel):
+    """Active pointer returned after a reactivate decision."""
+
+    strategy_id: str
+    active_version: int
+    pointer_revision: int
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class StrategyActiveResponse(BaseModel):
+    """Active pointer joined with its published payload (get-active view)."""
+
+    strategy_id: str
+    active_version: int
+    pointer_revision: int
+    spec: StrategyResponse
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 __all__ = [
     "CreateStrategyRequest",
+    "GovernanceDecisionRequest",
     "PublishStrategyRequest",
+    "ReactivateStrategyRequest",
+    "StrategyActivePointerResponse",
+    "StrategyActiveResponse",
     "StrategyResponse",
+    "StrategyVersionResponse",
+    "StrategyVersionStateResponse",
     "UpdateStrategyRequest",
 ]

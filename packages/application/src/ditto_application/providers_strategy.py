@@ -79,10 +79,11 @@ class AppStrategyQueryProvider(Provider):
         catalog_service: StrategyCatalogReader,
         strategy_governance_store: SQLiteStrategyGovernanceStore,
     ) -> StrategyQueryFacade:
-        """策略只读查询 facade — status 由 governance state 投影."""
+        """策略只读查询 facade — status/version/active 由 governance 投影."""
         return StrategyQueryFacade(
             catalog_service=catalog_service,
             version_state_reader=strategy_governance_store,
+            governance_version_reader=strategy_governance_store,
         )
 
     @provide

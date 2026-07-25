@@ -106,10 +106,62 @@ def to_spec_info(record: StrategySpecRecord, *, status: str) -> StrategySpecInfo
     )
 
 
+@dataclass(frozen=True)
+class StrategyVersionInfo:
+    """
+    Governance view of one immutable strategy version (no payload bytes).
+
+    ``state``/``review_outcome`` are the rebuildable lifecycle projection;
+    ``spec_hash`` references the content-addressed payload held by the spec
+    store. Used to list version history without pulling every payload.
+    """
+
+    strategy_id: str
+    version: int
+    parent_version: int | None
+    spec_hash: str
+    state: str
+    review_outcome: str
+    created_at: str
+
+
+@dataclass(frozen=True)
+class StrategyActiveInfo:
+    """Active pointer joined with its published payload, for one strategy."""
+
+    strategy_id: str
+    active_version: int
+    pointer_revision: int
+    spec: StrategySpecInfo
+
+
+@dataclass(frozen=True)
+class StrategyVersionStateInfo:
+    """Application view of one governance state-machine decision outcome."""
+
+    strategy_id: str
+    version: int
+    state: str
+    review_outcome: str
+
+
+@dataclass(frozen=True)
+class StrategyActivePointerInfo:
+    """Application view of the active pointer after a reactivate decision."""
+
+    strategy_id: str
+    active_version: int
+    pointer_revision: int
+
+
 __all__ = [
     "CheckDataQualityCommand",
     "CostConfig",
     "IngestDateCommand",
+    "StrategyActiveInfo",
+    "StrategyActivePointerInfo",
     "StrategySpecInfo",
+    "StrategyVersionInfo",
+    "StrategyVersionStateInfo",
     "to_spec_info",
 ]

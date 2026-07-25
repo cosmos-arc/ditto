@@ -2,7 +2,8 @@
 
 > **设计事实源补充**：修订 [2026-07-19 R3 design](2026-07-19-r3-a-share-research-strategy-governance-design.md) §10.1（见本文 §2.2）
 > **实施计划**：[2026-07-19 R3 plan](2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md) Task 16b（剩余接入）+ Task 17
-> **状态**：✅ 已实施完成（2026-07-25，commit #3c 三子 commit `763f6d99`/`2646b067`/`9ca0dad5`）。Task 16b 全部接入 + strategy_spec 纯 payload 收尾。test --fast 11160 passed + 37 contracts + type/lint 全绿。预先存在 slow integration/e2e 失败（路由期望/EngineConfig golden/backtest published e2e）是 R3 历史遗留（commit #3b 就存在，--fast 跳过），属 Task 17/backtest golden 范围，独立修复。
+> **状态**：✅ Task 16b 已实施完成（2026-07-25，commit #3c 三子 commit `763f6d99`/`2646b067`/`9ca0dad5`）；✅ Task 17 commit #5（strategy governance 状态机 routes）已实施完成（2026-07-25）。commit #5 范围：application `commands/strategy_governance.py`（submit-review/approve/reject/deprecate/reactivate 5 handler，typed error 映射）+ `queries/strategy.py` 扩展 `list_versions`/`get_active` + contracts 加 `StrategyVersionInfo`/`StrategyActiveInfo`/`StrategyVersionStateInfo`/`StrategyActivePointerInfo` + governance `activate` 加 `expected_pointer_revision`（reactivate 乐观锁）+ governance `activate` 重构接收 `StrategyActivationEvent`（消除 PLR0913）+ apps governance DTO + 7 routes（list versions/get active/submit-review/approve/reject/deprecate/reactivate）+ DI。边界返回 application read model，不泄漏 capability 类型（apps route 不 import strategy.governance.models）。evidence-gated publish（经 `StrategyPromotionProcess`）待 ReviewPacket 链路就绪后独立暴露（commit #6 范围）。`pixi run -e dev check` 全绿（37 contracts + type/lint + test --fast）。剩余：commit #6（research catalog routes + CLI + context + OpenAPI codegen 验证）+ W5（Task 18-22 ditto-app 前端）。
+> **历史**：Task 16b 全部接入 + strategy_spec 纯 payload 收尾（commit #3c）。预先存在 slow integration/e2e 失败（路由期望/EngineConfig golden/backtest published e2e）是 R3 历史遗留（commit #3b 就存在，--fast 跳过），属 Task 17/backtest golden 范围，已独立修复（`4fb09ff3`/`5222c5f4`）。
 > **分支**：`docs/r3-research-governance-design`
 
 ---
@@ -197,7 +198,7 @@ CREATE TABLE IF NOT EXISTS strategy_version (
 | 2 | `feat(strategy): bridge catalog to governance active pointer` | contracts/catalog_service 接 governance + `get_active_published` + `create_draft`（同事务原子写，落地点 §4.B） | get_active_published(pointer→payload)；create_draft 原子性；无 pointer→None |
 | 3 | `feat(strategy): read active pointer in production paths` | R1/EOD/runtime_builder 切读(§4.C) + queries/strategy + commands/strategy 重构(§4.D) + seed_bootstrap(§4.E) | 三处切读；fail-closed 复用；seed 全流程；to_spec_info status 映射 |
 | 4 | `feat(strategy): govern active strategy publication` | strategy_governance commands(§4.D) + 集成测试(§5) | promotion 全流程；active 切换；CAS；fail-closed |
-| 5 | `feat(api): expose governed strategy workflows` | strategy governance routes + 测试 + maturity | route 契约；409/422；DI；reactivate 语义 |
+| 5 | ✅ `feat(api): expose governed strategy workflows`（2026-07-25） | strategy governance routes（list versions/get active/submit-review/approve/reject/deprecate/reactivate）+ application `commands/strategy_governance.py` 5 handler + `queries/strategy.py` list_versions/get_active + governance `activate` 加 `expected_pointer_revision`（重构接收 `StrategyActivationEvent` 消除 PLR0913）+ DI + 测试 | route 契约；404/409/400 映射（not found/conflict/transition）；reactivate 乐观 CAS；边界返回 application read model；evidence-gated publish 待 ReviewPacket 链路（commit #6） |
 | 6 | `feat(api): expose governed research workflows` | research catalog routes + CLI + context + OpenAPI codegen 验证 | live boundary；OpenAPI 零 diff |
 
 每个提交：RED → GREEN → REFACTOR，独立 `pytest` + `type`。提交 4 后跑 `arch-check`（W4 门禁）。提交 6 后跑 `pixi run -e dev check`。
