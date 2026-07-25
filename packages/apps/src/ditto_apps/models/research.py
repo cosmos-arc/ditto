@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 __all__ = [
     "ExperimentDetailResponse",
     "ExperimentGateResponse",
+    "ExperimentSummaryResponse",
     "FactorDescriptorResponse",
     "NodeDescriptorResponse",
 ]
@@ -44,6 +45,22 @@ class ExperimentGateResponse(BaseModel):
     outcome: str
     artifact_id: str | None
     evaluated_at: datetime
+
+
+class ExperimentSummaryResponse(BaseModel):
+    """API view of one experiment root in list views (no candidate/fold expansion)."""
+
+    experiment_id: str
+    status: str
+    desired_state: str
+    stage: str
+    failure_code: str | None
+    queue_ordinal: int | None
+    revision: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(frozen=True)
 
 
 class NodeDescriptorResponse(BaseModel):

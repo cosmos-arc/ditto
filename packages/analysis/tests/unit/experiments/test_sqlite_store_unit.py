@@ -2695,3 +2695,17 @@ def test_parent_swap_inside_pin_transaction_rolls_back_cas(
     assert persisted.revision == 0
     assert not database.get_connection().in_transaction
     assert tuple(outside.iterdir()) == ()
+
+
+def test_list_experiments_returns_every_seeded_root_newest_first(
+    tmp_path: Path,
+) -> None:
+    """list_experiments projects every experiment row, newest first."""
+    _, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    seeded = reader.get_experiment_projection(ExperimentId("experiment-1"))
+    assert seeded is not None
+
+    result = reader.list_experiments()
+
+    assert result == (seeded,)

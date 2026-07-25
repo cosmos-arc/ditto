@@ -30,6 +30,7 @@ __all__ = [
     "ExperimentGateReadModel",
     "ExperimentQueryFacade",
     "ExperimentReviewPacketReadModel",
+    "ExperimentSummaryReadModel",
     "ReviewGateOutcome",
     "build_review_packet_read_model",
 ]
@@ -130,6 +131,21 @@ class ExperimentFoldReadModel:
     embargo_sessions: int
     claim_owner_token: str | None
     revision: int
+    updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ExperimentSummaryReadModel:
+    """One experiment root projected for list views (no candidate/fold expansion)."""
+
+    experiment_id: str
+    status: str
+    desired_state: str
+    stage: str
+    failure_code: str | None
+    queue_ordinal: int | None
+    revision: int
+    created_at: datetime
     updated_at: datetime
 
 
@@ -238,6 +254,29 @@ class ExperimentQueryFacade:
 
     def __init__(self, *, reader: ExperimentReaderProtocol) -> None:
         self._reader = reader
+
+    def list_experiments(self) -> list[ExperimentSummaryReadModel]:
+        """List every experiment root as a summary read model (newest first)."""
+        projections = _analysis_read(self._reader.list_experiments)
+        return [self._to_summary(projection) for projection in projections]
+
+    @staticmethod
+    def _to_summary(projection: ExperimentProjection) -> ExperimentSummaryReadModel:
+        """Project one experiment root into a list-view read model."""
+        record = projection.record
+        return ExperimentSummaryReadModel(
+            experiment_id=str(record.experiment_id),
+            status=record.status.value,
+            desired_state=record.desired_state.value,
+            stage=record.stage.value,
+            failure_code=(
+                None if record.failure_code is None else record.failure_code.value
+            ),
+            queue_ordinal=projection.queue_ordinal,
+            revision=projection.revision,
+            created_at=record.created_at,
+            updated_at=projection.updated_at,
+        )
 
     def get(self, experiment_id: str) -> ExperimentDetailReadModel | None:
         """

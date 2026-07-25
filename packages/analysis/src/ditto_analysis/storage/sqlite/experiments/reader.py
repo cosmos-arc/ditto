@@ -245,6 +245,15 @@ class SQLiteExperimentReader:
         rows = scheduler_queue_candidates(self._database.get_connection())
         return tuple(self._experiment_projection(row) for row in rows)
 
+    def list_experiments(self) -> tuple[ExperimentProjection, ...]:
+        """List every experiment projection, newest first."""
+        rows = (
+            self._database.get_connection()
+            .execute("SELECT * FROM experiment ORDER BY created_at_epoch_us DESC")
+            .fetchall()
+        )
+        return tuple(self._experiment_projection(row) for row in rows)
+
     def list_candidates(self, experiment_id: ExperimentId) -> tuple[CandidateSpec, ...]:
         rows = (
             self._database.get_connection()

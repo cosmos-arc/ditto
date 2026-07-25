@@ -17,6 +17,7 @@ from ditto_application.queries.experiments import (
     ExperimentDetailReadModel,
     ExperimentGateReadModel,
     ExperimentQueryFacade,
+    ExperimentSummaryReadModel,
 )
 from fastapi import APIRouter
 
@@ -25,6 +26,7 @@ from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
     ExperimentDetailResponse,
     ExperimentGateResponse,
+    ExperimentSummaryResponse,
 )
 
 router = APIRouter(prefix="/research/experiments", tags=["research"])
@@ -58,6 +60,46 @@ def to_experiment_response(
     )
 
 
+def to_gate_response(gate: ExperimentGateReadModel) -> ExperimentGateResponse:
+    """将 ExperimentGateReadModel 转 API 响应."""
+    return ExperimentGateResponse(
+        evaluation_id=gate.evaluation_id,
+        rule_id=gate.rule_id,
+        policy_version=gate.policy_version,
+        layer=gate.layer,
+        outcome=gate.outcome,
+        artifact_id=gate.artifact_id,
+        evaluated_at=gate.evaluated_at,
+    )
+
+
+def _to_summary_response(
+    summary: ExperimentSummaryReadModel,
+) -> ExperimentSummaryResponse:
+    """将 ExperimentSummaryReadModel 转 API 响应."""
+    return ExperimentSummaryResponse(
+        experiment_id=summary.experiment_id,
+        status=summary.status,
+        desired_state=summary.desired_state,
+        stage=summary.stage,
+        failure_code=summary.failure_code,
+        queue_ordinal=summary.queue_ordinal,
+        revision=summary.revision,
+        created_at=summary.created_at,
+        updated_at=summary.updated_at,
+    )
+
+
+@router.get("", response_model=APIResponse[list[ExperimentSummaryResponse]])
+@inject
+async def list_research_experiments(
+    facade: Annotated[ExperimentQueryFacade, FromComponent()],
+) -> APIResponse[list[ExperimentSummaryResponse]]:
+    """列出研究实验（newest first，不含候选/fold 展开）."""
+    summaries = await run_blocking(facade.list_experiments)
+    return APIResponse(data=[_to_summary_response(s) for s in summaries])
+
+
 @router.get(
     "/{experiment_id}",
     response_model=APIResponse[ExperimentDetailResponse],
@@ -72,19 +114,6 @@ async def get_experiment(
     if detail is None:
         raise NotFoundError(f"Experiment not found: {experiment_id}")
     return APIResponse(data=to_experiment_response(detail))
-
-
-def to_gate_response(gate: ExperimentGateReadModel) -> ExperimentGateResponse:
-    """将 ExperimentGateReadModel 转 API 响应."""
-    return ExperimentGateResponse(
-        evaluation_id=gate.evaluation_id,
-        rule_id=gate.rule_id,
-        policy_version=gate.policy_version,
-        layer=gate.layer,
-        outcome=gate.outcome,
-        artifact_id=gate.artifact_id,
-        evaluated_at=gate.evaluated_at,
-    )
 
 
 @router.get(
