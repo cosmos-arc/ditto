@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
+from ditto_application.builders.code_environment import build_code_environment_lock
 from ditto_application.builders.published_baseline_runtime_builder import (
     PublishedBaselineRuntimeBuilder,
+)
+from ditto_application.builders.research_artifact_loader import (
+    IndexedResearchArtifactLoader,
+)
+from ditto_application.builders.research_input_resolver import (
+    IndexedResearchInputsResolver,
 )
 from ditto_application.builders.research_runtime_builder import (
     ResearchRuntimeBuilder,
@@ -23,6 +30,8 @@ from ditto_application.builders.slice_builder import StrategySliceBuilder
 
 __all__ = [
     "BacktestRuntimeBuilder",
+    "IndexedResearchArtifactLoader",
+    "IndexedResearchInputsResolver",
     "PublishedBacktestRuntime",
     "PublishedBaselineRuntimeBuilder",
     "PublishedStrategyRuntime",
@@ -32,4 +41,5 @@ __all__ = [
     "StrategyRuntimeBuilder",
     "StrategyServiceFactory",
     "StrategySliceBuilder",
+    "build_code_environment_lock",
 ]

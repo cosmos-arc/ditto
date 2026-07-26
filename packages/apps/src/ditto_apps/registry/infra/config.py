@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from dishka import Provider, Scope, provide
-from ditto_application.settings import TradingSettings
+from ditto_application.settings import ResearchExecutionSettings, TradingSettings
 from ditto_data.config import DataSourceSettings, FileStorageSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
 from ditto_data.config.data_store import DataStoreSettings as _DataStoreSettings
@@ -296,6 +296,28 @@ class ConfigProvider(Provider):
         if override := os.getenv("DITTO_TRADING_CALENDAR_END"):
             values["trading_calendar_end"] = override
         return TradingSettings(**values) if values else TradingSettings()
+
+    @provide
+    def research_execution_settings(self) -> ResearchExecutionSettings:
+        """
+        R3 研究执行 bundle 配置。
+
+        C2 阶段返回 testing/staging 默认值（``CodeEnvironmentLock`` 校验需要非空
+        code_version + 合法 SHA-256 摘要）；C3 会从 ``git rev-parse HEAD`` 与
+        ``pixi.lock`` sha256 覆盖这两个字段。显式环境变量
+        ``DITTO_RESEARCH_CODE_VERSION`` / ``DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH``
+        用于 staging/local 覆盖。
+        """
+        values: dict[str, Any] = {}
+        if override := os.getenv("DITTO_RESEARCH_CODE_VERSION"):
+            values["code_version"] = override
+        if override := os.getenv("DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH"):
+            values["environment_lock_hash"] = override
+        return (
+            ResearchExecutionSettings(**values)
+            if values
+            else ResearchExecutionSettings()
+        )
 
     @provide
     def runtime_flags(self, environment: Environment) -> RuntimeFlags:

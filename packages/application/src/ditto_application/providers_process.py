@@ -93,7 +93,6 @@ from ditto_application.processes.execution.strategy_run_process import StrategyF
 from ditto_application.processes.experiments._control_runtime import (
     CONTROL_COORDINATOR_LEASE_DURATION,
     CONTROL_COORDINATOR_OWNER_TOKEN,
-    ControlOnlyFirstAttemptFactory,
     LoggingExperimentControlNotifier,
 )
 from ditto_application.processes.experiments.coordinator import (
@@ -104,6 +103,7 @@ from ditto_application.processes.experiments.planning_process import (
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
+    FirstAttemptFactory,
 )
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.evidence_commit import (
@@ -321,18 +321,18 @@ class AppProcessProvider(Provider):
     def experiment_execution_coordinator(
         self,
         store: ExperimentSchedulerStore,
+        first_attempt_factory: FirstAttemptFactory,
     ) -> ExperimentExecutionCoordinator:
         """
-        Wire the R3 control-only coordinator.
+        Wire the R3 coordinator with the real execution bundle factory.
 
         Control routes (pause/cancel/resume/retry-fold) never dispatch attempts;
-        the placeholder factory fails loudly if tick dispatch is ever connected
-        through this instance. Replace the factory when the execution bundle
-        resolver (Task 9/13) is assembled.
+        the injected :class:`ExecutionBundleFirstAttemptFactory` only fires when
+        a fold is actually claimed and dispatched through the worker.
         """
         return ExperimentExecutionCoordinator(
             store=store,
-            first_attempt_factory=ControlOnlyFirstAttemptFactory(),
+            first_attempt_factory=first_attempt_factory,
             owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
             lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
         )

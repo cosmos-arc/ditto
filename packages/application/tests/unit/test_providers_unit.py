@@ -47,6 +47,13 @@ from ditto_application.processes.execution.strategy_run_process import StrategyF
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
+from ditto_application.processes.experiments.scheduler_store import (
+    FirstAttemptFactory,
+)
+from ditto_application.processes.experiments.worker import (
+    ResearchExperimentWorker,
+    ResearchFoldRunner,
+)
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -81,7 +88,7 @@ from ditto_application.queries.research_certification import (
     DataReadinessCertificationProbe,
 )
 from ditto_application.queries.source import SourceDataPort
-from ditto_application.settings import TradingSettings
+from ditto_application.settings import ResearchExecutionSettings, TradingSettings
 from ditto_data.catalog import InMemoryDataCatalog
 from ditto_data.config.data_source import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings
@@ -151,6 +158,11 @@ class _TestConfigProvider(Provider):
     def trading_settings(self) -> TradingSettings:
         """提供测试用交易配置."""
         return TradingSettings()
+
+    @provide
+    def research_execution_settings(self) -> ResearchExecutionSettings:
+        """提供测试用 R3 研究执行 bundle 配置（默认 testing/staging sentinel 值）。"""
+        return ResearchExecutionSettings()
 
     @provide
     def data_cache(self) -> DataCache[Any]:  # type: ignore[misc]
@@ -277,10 +289,10 @@ class _ProtocolAdapterProvider(Provider):
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
-    def test_get_app_providers_returns_six_providers(self) -> None:
-        """get_app_providers() 应返回 6 个 Provider 实例."""
+    def test_get_app_providers_returns_seven_providers(self) -> None:
+        """get_app_providers() 应返回 7 个 Provider 实例."""
         providers = get_app_providers()
-        assert len(providers) == 6
+        assert len(providers) == 7
         names = [type(p).__name__ for p in providers]
         assert "AppCommandProvider" in names
         assert "AppMarketQueryProvider" in names
@@ -288,6 +300,7 @@ class TestAppProviderStructure:
         assert "AppPortfolioQueryProvider" in names
         assert "AppProcessProvider" in names
         assert "AppBuilderFactory" in names
+        assert "AppResearchExecutionProvider" in names
 
     def test_app_market_query_provider_methods(self) -> None:
         """AppMarketQueryProvider 应包含市场数据查询的 provide 方法."""
@@ -947,6 +960,85 @@ class TestAppProviderIntegration:
             app_container.get(ExecuteCatalogRemediationApprovalHandler),
             ExecuteCatalogRemediationApprovalHandler,
         )
+
+    def test_research_execution_bundle_resolved(self, app_container) -> None:
+        """AppResearchExecutionProvider 的 execution bundle 链路应可从容器解析。
+
+        Providers 注册的是消费侧 ``__init__`` 注解用的 Protocol 类型；返回的实例
+        必须是 C1/C2 的具体实现类。
+        """
+        from ditto_application.builders.research_artifact_loader import (
+            IndexedResearchArtifactLoader,
+        )
+        from ditto_application.builders.research_backtest_factory import (
+            ExactResearchArtifactLoader,
+            FrozenAuditResearchBacktestFactory,
+        )
+        from ditto_application.builders.research_execution_resolver import (
+            DurableResearchExecutionResolver,
+            ResearchExecutionRuntimeBuilders,
+        )
+        from ditto_application.builders.research_input_resolver import (
+            IndexedResearchInputsResolver,
+        )
+        from ditto_application.processes.experiments._execution_resolution_evidence import (  # noqa: E501
+            FrozenResearchInputsResolver,
+        )
+        from ditto_application.processes.experiments.execution_bundle import (
+            CodeEnvironmentLock,
+        )
+        from ditto_application.processes.experiments.worker import (
+            ExecutionBundleFirstAttemptFactory,
+            ExistingBacktestResearchFoldRunner,
+            ResearchBacktestServiceFactory,
+            ResearchExecutionSemanticsResolver,
+        )
+
+        assert isinstance(
+            app_container.get(FrozenResearchInputsResolver),
+            IndexedResearchInputsResolver,
+        )
+        assert isinstance(
+            app_container.get(ExactResearchArtifactLoader),
+            IndexedResearchArtifactLoader,
+        )
+        assert isinstance(
+            app_container.get(CodeEnvironmentLock),
+            CodeEnvironmentLock,
+        )
+        assert isinstance(
+            app_container.get(ResearchExecutionRuntimeBuilders),
+            ResearchExecutionRuntimeBuilders,
+        )
+        assert isinstance(
+            app_container.get(ResearchExecutionSemanticsResolver),
+            DurableResearchExecutionResolver,
+        )
+        assert isinstance(
+            app_container.get(ResearchBacktestServiceFactory),
+            FrozenAuditResearchBacktestFactory,
+        )
+        assert isinstance(
+            app_container.get(ResearchFoldRunner),
+            ExistingBacktestResearchFoldRunner,
+        )
+        assert isinstance(
+            app_container.get(FirstAttemptFactory),
+            ExecutionBundleFirstAttemptFactory,
+        )
+        assert isinstance(
+            app_container.get(ResearchExperimentWorker),
+            ResearchExperimentWorker,
+        )
+
+    def test_coordinator_uses_execution_bundle_factory(self, app_container) -> None:
+        """FirstAttemptFactory resolves to the real execution bundle factory."""
+        from ditto_application.processes.experiments.worker import (
+            ExecutionBundleFirstAttemptFactory,
+        )
+
+        factory = app_container.get(FirstAttemptFactory)
+        assert isinstance(factory, ExecutionBundleFirstAttemptFactory)
 
     def test_manual_tracker_receives_trading_calendar(self, app_container) -> None:
         """ManualTracker 应从 MetadataService 加载交易日历（非空 tuple）."""

@@ -819,6 +819,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "no storage I/O."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/providers_research_execution.py"
+        ),
+        owner="application R3 research execution bundle DI provider",
+        reason=(
+            "The DI provider wires the C1 indexed builders and durable execution "
+            "resolver into a complete attempt dispatch graph; it only injects "
+            "analysis-owned ExperimentReaderProtocol and ResearchArtifactService "
+            "ports that are already registered in the host container."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
