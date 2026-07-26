@@ -725,8 +725,8 @@ class IndexedArtifactIO:
             now_epoch_us=now_epoch_us,
         )
 
-    def read_json(self, artifact_id: str) -> dict[str, object]:
-        """Load a JSON artifact only after index and file verification."""
+    def _require_indexed_record(self, artifact_id: str) -> ArtifactRecord:
+        """Return one indexed artifact record or fail closed."""
         record = self._reader.get_artifact(artifact_id)
         if record is None:
             _integrity(
@@ -734,20 +734,26 @@ class IndexedArtifactIO:
                 "artifact_not_indexed",
                 artifact_id=artifact_id,
             )
+        return record
+
+    def read_json(self, artifact_id: str) -> dict[str, object]:
+        """Load a JSON artifact only after index and file verification."""
+        record = self._require_indexed_record(artifact_id)
         _manifest, verified_bytes = self._verify_record(record, ArtifactFormat.JSON)
         return cast("dict[str, object]", orjson.loads(verified_bytes))
 
     def read_parquet(self, artifact_id: str) -> pl.DataFrame:
         """Load Parquet only after index and file verification."""
-        record = self._reader.get_artifact(artifact_id)
-        if record is None:
-            _integrity(
-                "artifact is not indexed",
-                "artifact_not_indexed",
-                artifact_id=artifact_id,
-            )
+        record = self._require_indexed_record(artifact_id)
         _manifest, verified_bytes = self._verify_record(record, ArtifactFormat.PARQUET)
         return pl.read_parquet(BytesIO(verified_bytes))
+
+    def read_indexed_artifact_bytes(self, artifact_id: str) -> bytes:
+        """Load verified raw artifact bytes keyed by artifact_id."""
+        record = self._require_indexed_record(artifact_id)
+        manifest = ArtifactManifest.from_record(record)
+        _manifest, payload = self._verify_record(record, manifest.artifact_format)
+        return payload
 
     def pin(
         self,
@@ -757,13 +763,7 @@ class IndexedArtifactIO:
         pinned_at: datetime,
     ) -> ArtifactRecord:
         """Verify immutable evidence before its one-way review pin CAS."""
-        record = self._reader.get_artifact(artifact_id)
-        if record is None:
-            _integrity(
-                "artifact is not indexed",
-                "artifact_not_indexed",
-                artifact_id=artifact_id,
-            )
+        record = self._require_indexed_record(artifact_id)
         manifest = ArtifactManifest.from_record(record)
         with self._open_parent(
             record.relative_path,

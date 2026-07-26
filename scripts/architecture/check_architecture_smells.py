@@ -794,6 +794,31 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "analysis import allowance as the parent facade module."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/builders/"
+            "research_input_resolver.py"
+        ),
+        owner="application indexed frozen research inputs resolver",
+        reason=(
+            "The production resolver reads analysis-owned indexed artifact bytes "
+            "through the narrow ResearchArtifactService port and rebuilds the "
+            "frozen input trust boundary; it performs no storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/builders/"
+            "research_artifact_loader.py"
+        ),
+        owner="application indexed research artifact loader",
+        reason=(
+            "The production loader reads analysis-owned indexed artifact bytes "
+            "through the narrow ResearchArtifactService port and rebuilds "
+            "verified frame and instrument-rules trust boundaries; it performs "
+            "no storage I/O."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (

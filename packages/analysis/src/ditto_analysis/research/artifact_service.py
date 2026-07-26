@@ -238,6 +238,10 @@ class ResearchArtifactService:
         """Read only an indexed JSON artifact after full verification."""
         return self._require_indexed().read_json(artifact_id)
 
+    def read_indexed_artifact_bytes(self, artifact_id: str) -> bytes:
+        """Load verified raw artifact bytes keyed by artifact_id."""
+        return self._require_indexed().read_indexed_artifact_bytes(artifact_id)
+
     def read_indexed_parquet(self, artifact_id: str) -> pl.DataFrame:
         """Read only indexed Parquet after full verification."""
         return self._require_indexed().read_parquet(artifact_id)
