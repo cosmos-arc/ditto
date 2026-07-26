@@ -98,8 +98,10 @@ from ditto_application.commands.strategy import (
 from ditto_application.commands.strategy_governance import (
     ApproveReviewHandler,
     DeprecateStrategyHandler,
+    PublishStrategyVersionHandler,
     ReactivateStrategyHandler,
     RejectReviewHandler,
+    ReviewPacketReader,
     SubmitReviewHandler,
 )
 from ditto_application.commands.trade import (
@@ -124,6 +126,9 @@ from ditto_application.processes.experiments.coordinator import (
 )
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
+)
+from ditto_application.processes.strategy.promotion import (
+    StrategyPromotionProcess,
 )
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.opening_baseline import OpeningBaselineResolver
@@ -442,6 +447,15 @@ class AppCommandProvider(Provider):
     ) -> ReactivateStrategyHandler:
         """策略版本重新激活 Handler（governance activate + expected pointer CAS）."""
         return ReactivateStrategyHandler(governance=governance_service)
+
+    @provide
+    def publish_strategy_version_handler(
+        self,
+        process: StrategyPromotionProcess,
+        reader: ReviewPacketReader,
+    ) -> PublishStrategyVersionHandler:
+        """Promote one reviewed version after evidence-gated validation."""
+        return PublishStrategyVersionHandler(process=process, reader=reader)
 
     @provide
     def record_fill_handler(

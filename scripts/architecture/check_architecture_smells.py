@@ -483,6 +483,17 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/commands/strategy_governance.py"
+        ),
+        owner="application R3 evidence-gated publish command boundary",
+        reason=(
+            "The evidence-gated publish command reads the analysis-owned immutable "
+            "review packet through a narrow reader port and forwards it to the "
+            "promotion process; it performs no direct storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_control_runtime.py"
         ),

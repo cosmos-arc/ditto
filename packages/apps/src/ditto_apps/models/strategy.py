@@ -131,3 +131,13 @@ __all__ = [
     "StrategyVersionStateResponse",
     "UpdateStrategyRequest",
 ]
+
+
+class PublishStrategyVersionRequest(BaseModel):
+    """Body for one evidence-gated strategy version publish."""
+
+    model_config = ConfigDict(frozen=True)
+
+    bundle_hash: str
+    actor: str
+    reason: str

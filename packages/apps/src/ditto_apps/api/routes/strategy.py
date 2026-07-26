@@ -39,6 +39,8 @@ from ditto_application.commands.strategy_governance import (
     ApproveReviewHandler,
     DeprecateStrategyCommand,
     DeprecateStrategyHandler,
+    PublishStrategyVersionCommand,
+    PublishStrategyVersionHandler,
     ReactivateStrategyCommand,
     ReactivateStrategyHandler,
     RejectReviewCommand,
@@ -64,6 +66,7 @@ from ditto_apps.models.strategy import (
     CreateStrategyRequest,
     GovernanceDecisionRequest,
     PublishStrategyRequest,
+    PublishStrategyVersionRequest,
     ReactivateStrategyRequest,
     StrategyActivePointerResponse,
     StrategyActiveResponse,
@@ -375,6 +378,32 @@ async def reactivate_strategy_version(
         actor=request.actor,
         reason=request.reason,
         expected_pointer_revision=request.expected_pointer_revision,
+    )
+    try:
+        pointer = await run_blocking(handler.handle, cmd)
+    except AppError as exc:
+        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+    return APIResponse(data=to_active_pointer_response(pointer))
+
+
+@router.post(
+    "/{strategy_id}/versions/{version}/publish",
+    response_model=APIResponse[StrategyActivePointerResponse],
+)
+@inject
+async def publish_strategy_version(
+    strategy_id: str,
+    version: int,
+    request: PublishStrategyVersionRequest,
+    handler: Annotated[PublishStrategyVersionHandler, FromComponent()],
+) -> APIResponse[StrategyActivePointerResponse]:
+    """证据门控发布（经 StrategyPromotionProcess 验证 review packet hard gates）."""
+    cmd = PublishStrategyVersionCommand(
+        strategy_id=strategy_id,
+        version=version,
+        bundle_hash=request.bundle_hash,
+        actor=request.actor,
+        reason=request.reason,
     )
     try:
         pointer = await run_blocking(handler.handle, cmd)

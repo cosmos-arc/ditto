@@ -11,17 +11,18 @@ carries the keyword the API error mapper keys off (``not found`` / ``conflict``
 / ``transition``), and returns an application-owned read model so capability
 types never leak past this boundary.
 
-Evidence-gated publish is intentionally not exposed here: the promotion path
-runs through :class:`StrategyPromotionProcess` once a review packet is
-available, and the seed/system fast-path lives in
-``commands.strategy.PublishStrategyHandler``.
+Evidence-gated publish runs through :class:`StrategyPromotionProcess` once a
+review packet is available (see :class:`PublishStrategyVersionHandler`); the
+seed/system fast-path lives in ``commands.strategy.PublishStrategyHandler``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Protocol
 
+from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_strategy.governance.models import (
     StrategyActivationEvent,
     StrategyActivePointer,
@@ -40,17 +41,24 @@ from ditto_application.contracts import (
     StrategyActivePointerInfo,
     StrategyVersionStateInfo,
 )
-from ditto_application.exceptions import AppCommandError
+from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.processes.strategy.promotion import (
+    PromotionRequest,
+    StrategyPromotionProcess,
+)
 
 __all__ = [
     "ApproveReviewCommand",
     "ApproveReviewHandler",
     "DeprecateStrategyCommand",
     "DeprecateStrategyHandler",
+    "PublishStrategyVersionCommand",
+    "PublishStrategyVersionHandler",
     "ReactivateStrategyCommand",
     "ReactivateStrategyHandler",
     "RejectReviewCommand",
     "RejectReviewHandler",
+    "ReviewPacketReader",
     "SubmitReviewCommand",
     "SubmitReviewHandler",
 ]
@@ -308,3 +316,69 @@ class ReactivateStrategyHandler:
                 command.strategy_id, command.version, exc
             ) from exc
         return _to_pointer_info(pointer)
+
+
+class ReviewPacketReader(Protocol):
+    """Read one immutable review packet by its canonical bundle hash."""
+
+    def get_review_packet(self, bundle_hash: str) -> ReviewPacket | None:
+        """Load one review packet or return None if the bundle hash is unknown."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class PublishStrategyVersionCommand:
+    """Promote one reviewed version using a frozen evidence bundle hash."""
+
+    strategy_id: str
+    version: int
+    bundle_hash: str
+    actor: str
+    reason: str
+
+
+class PublishStrategyVersionHandler:
+    """Promote a reviewed version after evidence-gated validation."""
+
+    def __init__(
+        self,
+        process: StrategyPromotionProcess,
+        reader: ReviewPacketReader,
+    ) -> None:
+        self._process = process
+        self._reader = reader
+
+    def handle(
+        self, command: PublishStrategyVersionCommand
+    ) -> StrategyActivePointerInfo:
+        """Load the packet, run evidence gates, and switch the active pointer."""
+        packet = self._reader.get_review_packet(command.bundle_hash)
+        if packet is None:
+            raise AppCommandError(
+                f"Review packet not found for bundle hash: {command.bundle_hash}",
+                details={
+                    "code": "REVIEW_PACKET_NOT_FOUND",
+                    "strategy_id": command.strategy_id,
+                    "version": command.version,
+                    "bundle_hash": command.bundle_hash,
+                },
+            )
+        decided_at = _utc_now_iso()
+        request = PromotionRequest(
+            strategy_id=command.strategy_id,
+            version=command.version,
+            packet=packet,
+            actor=command.actor,
+            reason=command.reason,
+            decided_at=decided_at,
+            expected_bundle_hash=command.bundle_hash,
+        )
+        try:
+            result = self._process.promote(request)
+        except AppProcessError as exc:
+            details = dict(exc.details)
+            details.update(
+                {"strategy_id": command.strategy_id, "version": command.version}
+            )
+            raise AppCommandError(str(exc), details=details) from exc
+        return _to_pointer_info(result.active_pointer)

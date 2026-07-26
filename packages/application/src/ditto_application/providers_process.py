@@ -73,6 +73,7 @@ from ditto_application.builders.research_validation_authority import (
 )
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.commands.experiments import ExperimentControlNotifier
+from ditto_application.commands.strategy_governance import ReviewPacketReader
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_sizing import (
     AShareTradeDateResolver,
@@ -307,6 +308,14 @@ class AppProcessProvider(Provider):
     def experiment_control_notifier(self) -> ExperimentControlNotifier:
         """R3 best-effort logging notifier for the single-machine durable-tick model."""
         return LoggingExperimentControlNotifier()
+
+    @provide
+    def review_packet_reader(
+        self,
+        reader: ExperimentReaderProtocol,
+    ) -> ReviewPacketReader:
+        """Expose the experiment reader as the narrow review-packet port."""
+        return reader
 
     @provide
     def experiment_execution_coordinator(
