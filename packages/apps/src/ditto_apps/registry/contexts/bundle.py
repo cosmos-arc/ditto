@@ -18,6 +18,10 @@ from ditto_application.processes.execution.manual_sizing import (
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.coordinator import (
+    ExperimentExecutionCoordinator,
+)
+from ditto_application.processes.experiments.worker import ResearchExperimentWorker
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.processes.ingestion.source_selection import (
@@ -101,3 +105,20 @@ class ResearchBundle:
     cancel_handler: CancelExperimentHandler
     resume_handler: ResumeExperimentHandler
     retry_fold_handler: RetryExperimentFoldHandler
+
+
+@dataclass(frozen=True)
+class ExperimentExecutionBundle:
+    """
+    Experiment scheduler tick composition root bundle.
+
+    Holds the concrete coordinator + worker wired by the DI container; the
+    flow entrypoint adapts this into the Protocol-typed
+    :class:`ExperimentTickRuntime` required by ``experiment_scheduler_tick_flow``.
+    Keeping the bundle concrete (not Protocol-typed) lets the composition root
+    stay decoupled from the jobs/flows layer and avoids a registry -> jobs
+    reverse dependency.
+    """
+
+    coordinator: ExperimentExecutionCoordinator
+    worker: ResearchExperimentWorker

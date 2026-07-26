@@ -5,7 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Protocol, cast
+from typing import Protocol, cast, runtime_checkable
 
 from ditto_application.processes.experiments.coordinator import (
     ExperimentDispatch,
@@ -20,7 +20,15 @@ from ditto_application.processes.experiments.worker import (
 )
 from prefect import flow
 
-__all__ = ["ExperimentTickRuntime", "experiment_scheduler_tick_flow"]
+from ditto_apps.registry.contexts.research_execution import (
+    create_experiment_tick_bundle,
+)
+
+__all__ = [
+    "ExperimentTickRuntime",
+    "experiment_scheduler_tick_flow",
+    "run_experiment_scheduler_tick",
+]
 
 _ALLOWED_WORKER_LIMITS = frozenset({2, 4})
 _THREAD_NAME_PREFIX = "ditto-research-worker"
@@ -40,12 +48,14 @@ _WORKER_STATE_FAILURE_PAIRS = frozenset(
 )
 
 
+@runtime_checkable
 class _TickCoordinator(Protocol):
     def tick(self, *, occurred_at: datetime) -> SchedulerTickResult:
         """Claim at most one persisted worker-capacity batch."""
         ...
 
 
+@runtime_checkable
 class _TickWorker(Protocol):
     def execute(
         self,
@@ -250,3 +260,28 @@ def experiment_scheduler_tick_flow(
         ),
         "worker_results": [_worker_payload(item) for item in worker_results],
     }
+
+
+def run_experiment_scheduler_tick(
+    *,
+    occurred_at: datetime,
+) -> dict[str, object]:
+    """
+    Run one scheduler tick using the production composition root.
+
+    Resolves the concrete :class:`ExperimentExecutionCoordinator` +
+    :class:`ResearchExperimentWorker` from the apps DI container, adapts them
+    into the Protocol-typed :class:`ExperimentTickRuntime` and delegates to
+    :func:`experiment_scheduler_tick_flow`. The tick reads all dispatchable
+    experiments under the singleton lease, so no ``experiment_id`` argument
+    is required.
+    """
+    with create_experiment_tick_bundle() as bundle:
+        runtime = ExperimentTickRuntime(
+            coordinator=bundle.coordinator,
+            worker=bundle.worker,
+        )
+        return experiment_scheduler_tick_flow(
+            runtime=runtime,
+            occurred_at=occurred_at,
+        )
