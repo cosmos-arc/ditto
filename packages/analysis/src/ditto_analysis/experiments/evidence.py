@@ -9,9 +9,11 @@ hash lets promotion refuse any stale evidence drift.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from typing import cast
 
-from ditto_analysis.experiments.gates import GateEvaluation
+from ditto_analysis.experiments.gates import GateEvaluation, GateLayer, GateOutcome
 from ditto_analysis.experiments.models import ContentHash
 from ditto_analysis.experiments.persistence import canonical_payload
 
@@ -19,6 +21,7 @@ __all__ = [
     "REVIEW_PACKET_SCHEMA_VERSION",
     "ReviewPacket",
     "ReviewPacketLineage",
+    "review_packet_from_payload",
 ]
 
 REVIEW_PACKET_SCHEMA_VERSION = 1
@@ -145,3 +148,83 @@ def _gate_payload(evaluation: GateEvaluation) -> dict[str, object]:
 
 def _opt_hash(value: ContentHash | None) -> str | None:
     return None if value is None else str(value)
+
+
+def _payload_str(payload: Mapping[str, object], key: str) -> str:
+    """Read one required string field from a canonical payload."""
+    return cast("str", payload[key])
+
+
+def _payload_optional_str(payload: Mapping[str, object], key: str) -> str | None:
+    """Read one optional string field from a canonical payload."""
+    return cast("str | None", payload[key])
+
+
+def review_packet_from_payload(payload: Mapping[str, object]) -> ReviewPacket:
+    """Rebuild an immutable review packet from its canonical payload."""
+    return ReviewPacket(
+        schema_version=cast("int", payload["schema_version"]),
+        lineage=_lineage_from_payload(payload["lineage"]),
+        spec_hash=ContentHash(_payload_str(payload, "spec_hash")),
+        resolved_spec_hash=ContentHash(_payload_str(payload, "resolved_spec_hash")),
+        parameter_hash=ContentHash(_payload_str(payload, "parameter_hash")),
+        snapshot_hash=ContentHash(_payload_str(payload, "snapshot_hash")),
+        registry_hash=ContentHash(_payload_str(payload, "registry_hash")),
+        objective_payload_hash=ContentHash(
+            _payload_str(payload, "objective_payload_hash")
+        ),
+        gate_evaluations=_gate_tuple_from_payload(payload["gate_evaluations"]),
+        comparison_payload_hash=_opt_hash_from_payload(
+            payload["comparison_payload_hash"]
+        ),
+        r1_impact_payload_hash=_opt_hash_from_payload(
+            payload["r1_impact_payload_hash"]
+        ),
+        selection_evidence_artifact_id=_payload_optional_str(
+            payload,
+            "selection_evidence_artifact_id",
+        ),
+        holdout_claim_id=_payload_optional_str(payload, "holdout_claim_id"),
+        candidate_rationale=_payload_str(payload, "candidate_rationale"),
+    )
+
+
+def _lineage_from_payload(payload: object) -> ReviewPacketLineage:
+    """Rebuild one lineage identity from its canonical payload."""
+    data: Mapping[str, object] = (
+        cast("Mapping[str, object]", payload) if isinstance(payload, Mapping) else {}
+    )
+    return ReviewPacketLineage(
+        experiment_id=_payload_str(data, "experiment_id"),
+        candidate_id=_payload_optional_str(data, "candidate_id"),
+        fold_ids=tuple(
+            cast("str", item) for item in cast("Iterable[object]", data["fold_ids"])
+        ),
+        attempt_ids=tuple(
+            cast("str", item) for item in cast("Iterable[object]", data["attempt_ids"])
+        ),
+    )
+
+
+def _gate_from_payload(payload: object) -> GateEvaluation:
+    """Rebuild one gate evaluation from its canonical payload."""
+    data: Mapping[str, object] = (
+        cast("Mapping[str, object]", payload) if isinstance(payload, Mapping) else {}
+    )
+    return GateEvaluation(
+        rule_id=_payload_str(data, "rule_id"),
+        layer=GateLayer(_payload_str(data, "layer")),
+        outcome=GateOutcome(_payload_str(data, "outcome")),
+        observed=data["observed"],
+        policy=data["policy"],
+        artifact_id=_payload_optional_str(data, "artifact_id"),
+    )
+
+
+def _gate_tuple_from_payload(payload: object) -> tuple[GateEvaluation, ...]:
+    items = cast("Iterable[object]", payload)
+    return tuple(_gate_from_payload(item) for item in items)
+
+
+def _opt_hash_from_payload(value: object) -> ContentHash | None:
+    return None if value is None else ContentHash(cast("str", value))

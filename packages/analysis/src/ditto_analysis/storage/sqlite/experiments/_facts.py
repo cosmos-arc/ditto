@@ -27,6 +27,10 @@ from ditto_analysis.experiments.persistence import (
 from ditto_analysis.storage.sqlite.experiments._lease import SQLiteSchedulerLeaseMixin
 from ditto_analysis.storage.sqlite.experiments.reader import SQLiteExperimentReader
 
+#: Artifact kinds produced after the scheduler lease has released; their
+#: integrity is anchored by content-addressed hashes, not in-flight lease state.
+_LEASE_EXEMPT_KINDS = frozenset({"review_packet"})
+
 
 def _epoch_us(value: datetime) -> int:
     return epoch_us(value)
@@ -139,8 +143,8 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
                 commit_guard()
                 connection.commit()
                 return
-            self._validate_lease(
-                connection, lease_fence, now_epoch_us, record.experiment_id
+            self._enforce_lease_if_required(
+                connection, record, lease_fence, now_epoch_us
             )
             connection.execute(
                 """
@@ -175,6 +179,19 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
         except BaseException:
             connection.rollback()
             raise
+
+    def _enforce_lease_if_required(
+        self,
+        connection: sqlite3.Connection,
+        record: ArtifactRecord,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> None:
+        """Enforce the scheduler lease unless the artifact kind is exempt."""
+        if record.artifact_kind not in _LEASE_EXEMPT_KINDS:
+            self._validate_lease(
+                connection, lease_fence, now_epoch_us, record.experiment_id
+            )
 
     def pin_artifact(
         self,

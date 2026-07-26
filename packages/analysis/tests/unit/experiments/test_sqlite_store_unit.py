@@ -2709,3 +2709,100 @@ def test_list_experiments_returns_every_seeded_root_newest_first(
     result = reader.list_experiments()
 
     assert result == (seeded,)
+
+
+def _review_packet() -> Any:
+    """Construct one review packet for persistence tests (no assemble_review_packet)."""
+    from ditto_analysis.experiments.evidence import (
+        REVIEW_PACKET_SCHEMA_VERSION,
+        ReviewPacket,
+        ReviewPacketLineage,
+    )
+    from ditto_analysis.experiments.gates import GateEvaluation, GateLayer, GateOutcome
+
+    return ReviewPacket(
+        schema_version=REVIEW_PACKET_SCHEMA_VERSION,
+        lineage=ReviewPacketLineage(
+            experiment_id="experiment-1",
+            candidate_id="candidate-1",
+            fold_ids=("fold-1",),
+            attempt_ids=("attempt-1",),
+        ),
+        spec_hash=ContentHash("a" * 64),
+        resolved_spec_hash=ContentHash("b" * 64),
+        parameter_hash=ContentHash("c" * 64),
+        snapshot_hash=ContentHash("d" * 64),
+        registry_hash=ContentHash("e" * 64),
+        objective_payload_hash=ContentHash("f" * 64),
+        gate_evaluations=(
+            GateEvaluation(
+                rule_id="certified_snapshot",
+                layer=GateLayer.HARD,
+                outcome=GateOutcome.PASS,
+                observed="verified",
+                policy={"required": True},
+            ),
+        ),
+        comparison_payload_hash=ContentHash("9" * 64),
+        r1_impact_payload_hash=None,
+        selection_evidence_artifact_id=None,
+        holdout_claim_id=None,
+        candidate_rationale="Captures durable net return after costs.",
+    )
+
+
+def test_publish_review_packet_round_trips_through_bundle_hash(
+    tmp_path: Path,
+) -> None:
+    """ReviewPacket persists content-addressed and reloads via bundle hash."""
+    from ditto_analysis.experiments.persistence import LeaseFence
+
+    _, reader, writer, _api = _store(tmp_path)
+    _create_experiment(writer, _api)
+    packet = _review_packet()
+    fence = LeaseFence(
+        experiment_id=ExperimentId("experiment-1"),
+        owner_token="promotion-owner",
+        revision=0,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+
+    record = writer.publish_review_packet(
+        packet,
+        lease_fence=fence,
+        now_epoch_us=NOW_US + 1,
+        created_at=NOW,
+    )
+
+    assert record.artifact_kind == "review_packet"
+    assert str(record.reproduction_fingerprint) == str(packet.bundle_hash)
+
+    restored = reader.get_review_packet(str(packet.bundle_hash))
+    assert restored is not None
+    assert restored == packet
+    assert reader.get_review_packet("0" * 64) is None
+
+
+def test_publish_review_packet_does_not_require_active_lease(tmp_path: Path) -> None:
+    """ReviewPacket is a post-execution governance artifact; lease is exempt."""
+    from ditto_analysis.experiments.persistence import LeaseFence
+
+    _, reader, writer, _api = _store(tmp_path)
+    _create_experiment(writer, _api)
+    packet = _review_packet()
+    stale_fence = LeaseFence(
+        experiment_id=ExperimentId("experiment-1"),
+        owner_token="promotion-owner",
+        revision=0,
+        lease_until_epoch_us=NOW_US - 1,
+    )
+
+    record = writer.publish_review_packet(
+        packet,
+        lease_fence=stale_fence,
+        now_epoch_us=NOW_US,
+        created_at=NOW,
+    )
+
+    assert record.artifact_kind == "review_packet"
+    assert reader.get_review_packet(str(packet.bundle_hash)) == packet

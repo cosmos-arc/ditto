@@ -20,6 +20,10 @@ from ditto_analysis.errors import (
 )
 from ditto_analysis.experiments._time import datetime_from_epoch_us as _dt
 from ditto_analysis.experiments._time import epoch_us
+from ditto_analysis.experiments.evidence import (
+    ReviewPacket,
+    review_packet_from_payload,
+)
 from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
@@ -622,6 +626,29 @@ class SQLiteExperimentReader:
             (relative_path,),
         )
         return None if row is None else self.get_artifact(row["artifact_id"])
+
+    def get_review_packet(self, bundle_hash: str) -> ReviewPacket | None:
+        """Load one review packet by its canonical bundle hash, verifying bytes."""
+        row = self._one(
+            """
+            SELECT artifact_id, relative_path
+            FROM research_artifact
+            WHERE artifact_kind='review_packet' AND reproduction_fingerprint=?
+            """,
+            (bundle_hash,),
+        )
+        if row is None:
+            return None
+        target = self._database.artifact_root / Path(str(row["relative_path"]))
+        payload = _json_object(target.read_text(encoding="utf-8"), "review_packet")
+        verified = review_packet_from_payload(payload)
+        if str(verified.bundle_hash) != bundle_hash:
+            raise _integrity(
+                "review packet bundle hash disagrees with its indexed identity",
+                "review_packet_bundle_hash_mismatch",
+                artifact_id=str(row["artifact_id"]),
+            )
+        return verified
 
     def get_gate_evaluation(self, evaluation_id: str) -> GateEvaluationRecord | None:
         row = self._one(

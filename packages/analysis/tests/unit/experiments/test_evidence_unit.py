@@ -10,6 +10,7 @@ from ditto_analysis.experiments.evidence import (
     REVIEW_PACKET_SCHEMA_VERSION,
     ReviewPacket,
     ReviewPacketLineage,
+    review_packet_from_payload,
 )
 from ditto_analysis.experiments.gates import (
     GateEvaluation,
@@ -129,3 +130,27 @@ def test_review_packet_rejects_unsupported_schema_version() -> None:
 def test_review_packet_rejects_unpadded_rationale() -> None:
     with pytest.raises(ValueError):
         _packet(candidate_rationale="  padded rationale  ")
+
+
+def test_review_packet_round_trip_via_canonical_payload() -> None:
+    """Canonical payload survives serialization and deserialization unchanged."""
+    original = _packet()
+    restored = review_packet_from_payload(original.canonical_payload())
+
+    assert restored == original
+    assert restored.bundle_hash == original.bundle_hash
+
+
+def test_review_packet_round_trip_preserves_optional_none_fields() -> None:
+    """Optional None hashes and ids round-trip as None, not strings."""
+    original = _packet(
+        comparison_payload_hash=None,
+        r1_impact_payload_hash=None,
+        selection_evidence_artifact_id=None,
+        holdout_claim_id=None,
+    )
+    restored = review_packet_from_payload(original.canonical_payload())
+
+    assert restored == original
+    assert restored.comparison_payload_hash is None
+    assert restored.holdout_claim_id is None

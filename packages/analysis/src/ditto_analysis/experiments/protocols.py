@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Protocol
 
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
+from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_analysis.experiments.holdout import (
     AtomicHoldoutClaimReceipt,
     HoldoutClaimAuthorityCommand,
@@ -96,6 +97,8 @@ class ExperimentReaderProtocol(Protocol):
     def get_artifact_by_relative_path(
         self, relative_path: str
     ) -> ArtifactRecord | None: ...
+
+    def get_review_packet(self, bundle_hash: str) -> ReviewPacket | None: ...
 
     def get_gate_evaluation(
         self, evaluation_id: str
@@ -281,6 +284,15 @@ class ExperimentWriterProtocol(Protocol):
         reason_code: str | None,
         detail: Mapping[str, object],
     ) -> AttemptProjection: ...
+
+    def publish_review_packet(
+        self,
+        packet: ReviewPacket,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        created_at: datetime,
+    ) -> ArtifactRecord: ...
 
     def add_gate_evaluation(self, record: GateEvaluationRecord) -> None: ...
 

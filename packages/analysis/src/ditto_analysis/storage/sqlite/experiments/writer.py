@@ -1,8 +1,4 @@
-"""Insert-only commands, revisioned projections, and lease fencing for experiments."""
-
-# Approved typed command surfaces intentionally carry explicit fencing/event fields.
 # ruff: noqa: PLR0913
-
 from __future__ import annotations
 
 import hashlib
@@ -63,6 +59,9 @@ from ditto_analysis.storage.sqlite.experiments._holdout_authority import (
     reject_unbound_holdout_dispatch,
     validate_holdout_attempt_row,
     validate_holdout_work_authority,
+)
+from ditto_analysis.storage.sqlite.experiments._review_packet_store import (
+    SQLiteExperimentReviewPacketMixin,
 )
 from ditto_analysis.storage.sqlite.experiments._terminal_retry import (
     SQLiteTerminalFoldRetryMixin,
@@ -134,6 +133,7 @@ class SQLiteExperimentWriter(
     SQLiteAtomicDispatchMixin,
     SQLiteTerminalFoldRetryMixin,
     SQLiteExperimentControlMixin,
+    SQLiteExperimentReviewPacketMixin,
 ):
     """Implement the approved aggregate, evidence, CAS, and lease commands."""
 
