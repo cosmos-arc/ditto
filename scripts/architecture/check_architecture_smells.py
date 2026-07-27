@@ -831,6 +831,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "ports that are already registered in the host container."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_evidence_inputs.py"
+        ),
+        owner="application R3 evidence-input assembly boundary",
+        reason=(
+            "The pure assembler binds persisted fold and attempt views with their "
+            "artifact record and optional backtest report into analysis-owned "
+            "CandidateFoldEvidence rows; it performs no storage or execution I/O."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
