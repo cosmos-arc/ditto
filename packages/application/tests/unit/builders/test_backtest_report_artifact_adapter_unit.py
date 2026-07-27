@@ -226,6 +226,34 @@ def test_missing_index_fact_returns_none_without_fabricating_evidence(
     assert adapter_value.read(_identity()) is None
 
 
+def test_verified_read_maps_non_object_json_to_report_integrity(
+    tmp_path: Path,
+) -> None:
+    from ditto_application.builders.research_artifact_loader import (
+        IndexedBacktestReportArtifactAdapter,
+    )
+
+    adapter_value, _index = _adapter(tmp_path)
+    assert isinstance(adapter_value, IndexedBacktestReportArtifactAdapter)
+    identity = _identity()
+    adapter_value.publish(
+        identity,
+        BacktestReportEvidence.from_report(_report()),
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+        created_at=NOW,
+    )
+    (tmp_path / identity.relative_path).write_bytes(b"[]")
+
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        adapter_value.read(identity)
+
+    assert (
+        exc_info.value.details["reason_code"]
+        == "backtest_report_artifact_integrity_mismatch"
+    )
+
+
 def test_identical_replay_is_allowed_but_different_content_conflicts(
     tmp_path: Path,
 ) -> None:

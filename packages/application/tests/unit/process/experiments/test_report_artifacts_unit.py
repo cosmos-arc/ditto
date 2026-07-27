@@ -97,6 +97,16 @@ def _mutate_schema_id(payload: dict[str, object]) -> None:
     cast("dict[str, object]", payload["artifact_schema"])["id"] = "unknown"
 
 
+class _SchemaId(str):
+    """Prove schema identity requires an exact built-in string."""
+
+
+def _make_schema_id_str_subclass(payload: dict[str, object]) -> None:
+    cast("dict[str, object]", payload["artifact_schema"])["id"] = _SchemaId(
+        "ditto.r3.backtest-report-evidence"
+    )
+
+
 def _mutate_schema_version(payload: dict[str, object]) -> None:
     cast("dict[str, object]", payload["artifact_schema"])["version"] = 2
 
@@ -186,6 +196,7 @@ def _duplicate_fill(payload: dict[str, object]) -> None:
     "mutate",
     [
         _mutate_schema_id,
+        _make_schema_id_str_subclass,
         _mutate_schema_version,
         _add_top_level_field,
         _pad_run_id,

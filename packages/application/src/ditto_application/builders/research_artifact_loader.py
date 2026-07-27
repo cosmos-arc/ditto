@@ -7,7 +7,7 @@ from io import BytesIO
 from typing import NoReturn
 
 import polars as pl
-from ditto_analysis.errors import ExperimentIntegrityError
+from ditto_analysis.errors import ExperimentIntegrityError, ResearchDatasetError
 from ditto_analysis.experiments import (
     ArtifactRecord,
     ContentHash,
@@ -253,10 +253,14 @@ class IndexedBacktestReportArtifactAdapter:
         if record is None:
             return None
         _require_record_identity(typed_identity, record)
-        payload = self._artifacts.read_indexed_json(typed_identity.artifact_id)
         try:
+            payload = self._artifacts.read_indexed_json(typed_identity.artifact_id)
             evidence = decode_backtest_report_evidence(payload)
-        except AppProcessError as exc:
+        except (
+            AppProcessError,
+            ExperimentIntegrityError,
+            ResearchDatasetError,
+        ) as exc:
             raise ExperimentIntegrityError(
                 "indexed backtest report payload violates Schema v1",
                 details={

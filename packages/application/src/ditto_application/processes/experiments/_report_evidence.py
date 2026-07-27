@@ -451,7 +451,8 @@ def decode_backtest_report_evidence(
         field_name="artifact_schema",
     )
     if (
-        schema["id"] != BACKTEST_REPORT_EVIDENCE_SCHEMA_ID
+        type(schema["id"]) is not str
+        or schema["id"] != BACKTEST_REPORT_EVIDENCE_SCHEMA_ID
         or type(schema["version"]) is not int
         or schema["version"] != BACKTEST_REPORT_EVIDENCE_SCHEMA_VERSION
     ):
