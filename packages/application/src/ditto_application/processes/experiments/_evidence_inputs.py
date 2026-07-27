@@ -23,13 +23,18 @@ from typing import cast
 from ditto_analysis.experiments import (
     AttemptView,
     ContentHash,
+    ExperimentId,
     FoldView,
     SnapshotId,
+    StatusEventRecord,
 )
 
 from ditto_application.processes.experiments._evidence_values import comparison_error
 from ditto_application.processes.experiments._persisted_execution_evidence import (
     _bind_persisted_fold_execution,
+)
+from ditto_application.processes.experiments._process_error import (
+    experiment_process_error,
 )
 from ditto_application.processes.experiments._report_evidence import (
     LoadedBacktestReportArtifact,
@@ -44,6 +49,7 @@ __all__ = [
     "SnapshotManifestProjection",
     "assemble_candidate_fold_evidence",
     "project_snapshot_manifest",
+    "read_unique_preflight_detail",
 ]
 
 
@@ -119,6 +125,26 @@ def project_snapshot_manifest(
         registry_hash=registry_hash,
         pit_policy=pit_policy,
     )
+
+
+def read_unique_preflight_detail(
+    events: tuple[StatusEventRecord, ...],
+    experiment_id: ExperimentId,
+) -> Mapping[str, object]:
+    """Return the unique persisted ``preflight_passed`` event detail."""
+    matches = tuple(
+        event.detail
+        for event in events
+        if (
+            event.experiment_id == experiment_id
+            and event.reason_code == "preflight_passed"
+        )
+    )
+    if not matches:
+        raise experiment_process_error("preflight_passed_event_not_found")
+    if len(matches) != 1:
+        raise experiment_process_error("preflight_passed_event_not_unique")
+    return matches[0]
 
 
 @dataclass(frozen=True, slots=True)

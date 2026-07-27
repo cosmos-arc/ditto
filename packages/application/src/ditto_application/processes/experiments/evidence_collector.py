@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from typing import cast
+from typing import Protocol, cast
 
 from ditto_analysis.experiments import (
     R3_COMPARISON_METRIC_IDS,
@@ -38,7 +38,6 @@ from ditto_analysis.experiments import (
     ResearchMetricId,
     ResearchMetricValue,
     ReviewPacket,
-    StatusEventRecord,
     collect_hard_gate_evidence,
     encode_launch_spec,
 )
@@ -49,12 +48,16 @@ from ditto_analysis.experiments.trial_ledger import (
 from ditto_application.processes.experiments._evidence_inputs import (
     SnapshotManifestProjection,
     project_snapshot_manifest,
+    read_unique_preflight_detail,
 )
 from ditto_application.processes.experiments._holdout_contract import (
     PersistedHoldoutClaim,
 )
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
+)
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
 )
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     CollectedWalkForwardEvidence,
@@ -88,6 +91,16 @@ _PLACEHOLDER_COST_CONFIG_HASH = ContentHash("0" * 64)
 _REQUIRED_SELECTED_WALK_FORWARD_FOLDS = 2
 
 
+class _SelectionEvidenceReader(Protocol):
+    """Read one claim-bound immutable trial ledger with its artifact identity."""
+
+    def read_selection_evidence(
+        self,
+        experiment_id: ExperimentId,
+        expected_content_hash: ContentHash,
+    ) -> PublishedSelectionEvidence: ...
+
+
 @dataclass(frozen=True, slots=True)
 class ExperimentEvidenceCollector:
     """Collect and publish R3 review packets from persisted experiment evidence."""
@@ -96,6 +109,7 @@ class ExperimentEvidenceCollector:
     reader: ExperimentReaderProtocol
     writer: ExperimentWriterProtocol
     walk_forward_assembler: WalkForwardEvidenceAssembler
+    selection_evidence_reader: _SelectionEvidenceReader
 
     def collect(
         self,
@@ -112,9 +126,15 @@ class ExperimentEvidenceCollector:
             raise experiment_process_error("evidence_requires_holdout_claim")
         selected_id = _validate_holdout_claim_lineage(snapshot, claim)
         events = self.reader.list_status_events(experiment_id)
-        detail = _read_preflight_detail(events, experiment_id)
+        detail = read_unique_preflight_detail(events, experiment_id)
         preflight = reconstruct_preflight_report(detail)
         manifest = project_snapshot_manifest(detail)
+        selection_evidence = self.selection_evidence_reader.read_selection_evidence(
+            experiment_id,
+            ContentHash(claim.selection_evidence_hash),
+        )
+        if type(selection_evidence) is not PublishedSelectionEvidence:
+            raise experiment_process_error("selection_evidence_reader_contract_invalid")
         collected = self.walk_forward_assembler.assemble(snapshot, manifest)
         selected, selected_rows = _selected_walk_forward_evidence(
             collected,
@@ -125,20 +145,18 @@ class ExperimentEvidenceCollector:
             detail,
             manifest,
             preflight,
-            claim,
             collected,
             selected_rows,
+            selection_evidence,
         )
         hard_evidence = collect_hard_gate_evidence(hard_view)
-        rationale = _candidate_rationale(snapshot.launch_spec, claim.candidate_id)
         packet_input = _build_packet_input(
             snapshot,
             manifest,
-            claim,
             hard_evidence,
-            rationale,
             selected,
             selected_rows,
+            selection_evidence,
         )
         packet = assemble_review_packet(packet_input)
         self.writer.publish_review_packet(
@@ -148,34 +166,6 @@ class ExperimentEvidenceCollector:
             created_at=created_at,
         )
         return packet
-
-
-def _read_preflight_detail(
-    events: tuple[StatusEventRecord, ...],
-    experiment_id: ExperimentId,
-) -> Mapping[str, object]:
-    """
-    Return the persisted detail of the unique ``preflight_passed`` event.
-
-    The hardcoded ``preflight.identities.certification.ready`` path traced below
-    mirrors the writer side: keep in sync with ``_launch_material.py`` (builds
-    the detail payload), ``_preflight_shape.py`` (validates the payload shape),
-    and ``_preflight_semantics.py`` (semantic checks on the parsed shape)
-    whenever the preflight detail payload shape evolves.
-    """
-    matches = tuple(
-        event.detail
-        for event in events
-        if (
-            event.experiment_id == experiment_id
-            and event.reason_code == "preflight_passed"
-        )
-    )
-    if not matches:
-        raise experiment_process_error("preflight_passed_event_not_found")
-    if len(matches) != 1:
-        raise experiment_process_error("preflight_passed_event_not_unique")
-    return matches[0]
 
 
 def _mapping_field(
@@ -237,12 +227,15 @@ def _build_hard_gate_view(
     detail: Mapping[str, object],
     manifest: SnapshotManifestProjection,
     preflight: ExperimentPreflightReport,
-    claim: PersistedHoldoutClaim,
     collected: CollectedWalkForwardEvidence,
     selected_rows: tuple[CandidateFoldEvidence, ...],
+    selection_evidence: PublishedSelectionEvidence,
 ) -> HardGateEvidenceView:
     """Assemble the thirteen hard-gate view fields from persisted evidence."""
     launch_spec = snapshot.launch_spec
+    claim = snapshot.holdout_claim
+    if claim is None:
+        raise experiment_process_error("evidence_requires_holdout_claim")
     all_walk_forward = tuple(fold for fold in snapshot.folds if _is_walk_forward(fold))
     return HardGateEvidenceView(
         certified_snapshot=_certified_snapshot(detail),
@@ -257,15 +250,8 @@ def _build_hard_gate_view(
         baseline_candidate_id=str(
             launch_spec.promotion_objective.baseline_candidate_id
         ),
-        # Objective per design section 6: ``expected_trial_count`` is the
-        # pre-registered current-trial declaration
-        # (``trial_family.current_members``) and ``trial_count`` is the actually
-        # expanded candidate count; mismatches fail the ``trial_declaration``
-        # gate objectively.
-        trial_count=len(launch_spec.candidates),
-        expected_trial_count=len(
-            launch_spec.promotion_objective.trial_family.current_members
-        ),
+        trial_count=selection_evidence.ledger.observed_trial_count,
+        expected_trial_count=selection_evidence.ledger.declared_trial_count,
         holdout_claim_id=claim.claim_id,
         artifact_complete=_artifact_complete(
             all_walk_forward,
@@ -384,14 +370,16 @@ def _metric_values(
 def _build_packet_input(
     snapshot: ExperimentSchedulerSnapshot,
     manifest: SnapshotManifestProjection,
-    claim: PersistedHoldoutClaim,
     hard_evidence: HardGateEvidence,
-    rationale: str,
     selected: WalkForwardCandidate,
     selected_rows: tuple[CandidateFoldEvidence, ...],
+    selection_evidence: PublishedSelectionEvidence,
 ) -> ReviewPacketInput:
     """Assemble the review packet from exact selected walk-forward evidence."""
     launch_spec = snapshot.launch_spec
+    claim = snapshot.holdout_claim
+    if claim is None:
+        raise experiment_process_error("evidence_requires_holdout_claim")
     selected_id = CandidateId(claim.candidate_id)
     candidate = _selected_candidate(launch_spec, selected_id)
     binding = _selected_binding(launch_spec, selected_id)
@@ -412,12 +400,13 @@ def _build_packet_input(
         hard_evidence=hard_evidence,
         metric_values=_metric_values(selected),
         comparison_payload_hash=selected.content_hash,
-        # Explicit later-stage fields: neither is inferred from comparison
-        # evidence. The selection-ledger publisher will supply its artifact id.
         r1_impact_payload_hash=None,
-        selection_evidence_artifact_id=None,
+        selection_evidence_artifact_id=selection_evidence.record.artifact_id,
         holdout_claim_id=claim.claim_id,
-        candidate_rationale=rationale,
+        candidate_rationale=_candidate_rationale(
+            launch_spec,
+            claim.candidate_id,
+        ),
     )
 
 

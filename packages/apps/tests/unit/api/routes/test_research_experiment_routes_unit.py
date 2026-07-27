@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
@@ -31,6 +32,19 @@ from ditto_apps.models.research import (
 )
 
 pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture(autouse=True)
+def _inline_experiment_route_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def run_inline(
+        func: Callable[..., object], /, *args: object, **kwargs: object
+    ) -> object:
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "ditto_apps.api.routes.research_experiment_routes.run_blocking",
+        run_inline,
+    )
 
 
 def _detail() -> ExperimentDetailReadModel:

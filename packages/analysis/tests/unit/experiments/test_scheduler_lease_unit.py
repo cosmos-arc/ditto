@@ -1644,6 +1644,29 @@ def test_scheduler_experiment_transition_requires_the_current_lease_fence(
     assert terminal_exc.value.details["reason_code"] == "terminal_stage_not_evidence"
 
 
+def test_resumed_scheduler_dispatch_preserves_later_stage() -> None:
+    from ditto_analysis.storage.sqlite.experiments._experiment_control import (
+        validate_experiment_status_stage_transition,
+    )
+
+    validate_experiment_status_stage_transition(
+        ExperimentStatus.QUEUED,
+        ExperimentStage.CANDIDATE_SELECTION,
+        ExperimentStatus.RUNNING,
+        ExperimentStage.CANDIDATE_SELECTION,
+    )
+
+    with pytest.raises(ExperimentSpecError) as captured:
+        validate_experiment_status_stage_transition(
+            ExperimentStatus.QUEUED,
+            ExperimentStage.CANDIDATE_SELECTION,
+            ExperimentStatus.RUNNING,
+            ExperimentStage.HOLDOUT,
+        )
+
+    assert captured.value.details["reason_code"] == "experiment_stage_must_be_preserved"
+
+
 @pytest.mark.parametrize(
     ("current_status", "target_status", "source_desired", "wrong_target_desired"),
     [

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime
 
 from ditto_application.processes.experiments._coordinator_contract import (
@@ -56,12 +56,14 @@ class ExperimentRecoveryOrchestrator:
         checkpoint_available: Callable[[str], bool],
         checkpoint_resumable: Callable[[str], bool],
         run_id_factory: Callable[[AttemptId, ContentHash], BacktestRunId],
+        retryable_stage_roles: Mapping[object, object],
     ) -> None:
         self._store = store
         self._attempt_factory = attempt_factory
         self._checkpoint_available = checkpoint_available
         self._checkpoint_resumable = checkpoint_resumable
         self._run_id_factory = run_id_factory
+        self._retryable_stage_roles = retryable_stage_roles
 
     def pause(
         self,
@@ -130,6 +132,14 @@ class ExperimentRecoveryOrchestrator:
             FoldId(fold_id),
         )
         fold = _find_fold(snapshot, key)
+        retryable_role = self._retryable_stage_roles.get(
+            snapshot.projection.record.stage,
+        )
+        if fold.spec.fold_role is not retryable_role:
+            raise scheduler_error(
+                "SPEC_INVALID",
+                "terminal_fold_retry_stage_closed",
+            )
         if fold.projection.revision != expected_revision:
             raise scheduler_error("SPEC_INVALID", "stale_fold_revision")
         if fold.projection.status is not ExperimentStatus.FAILED:

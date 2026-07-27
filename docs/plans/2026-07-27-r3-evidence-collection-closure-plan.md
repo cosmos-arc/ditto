@@ -521,8 +521,8 @@ collector 接通 `assemble_candidate_fold_evidence` → `build_candidate_compari
 实现还将 96 个月门禁纠正为唯一 preflight 事件经
 `reconstruct_preflight_report` 验证后的 `eligible_month_count`；artifact
 completeness 使用全 candidate family 的 fold 终态与 report 缺失引用，不再使用
-attempt-status 代理。selection artifact、真实 cost hash 与 trial-ledger count
-仍按后续任务保留。
+attempt-status 代理。selection artifact 与 trial-ledger count 已在 Task 5d
+闭合；真实 cost hash 仍按后续任务保留。
 
 ### Task 5c: golden 升级验证真实 metric（已完成，2026-07-27）
 
@@ -530,12 +530,35 @@ attempt-status 代理。selection artifact、真实 cost hash 与 trial-ledger c
 walk-forward fold 的 4 个 indexed backtest report，并断言 selected candidate 的
 NET_RETURN / SHARPE 非空、canonical `comparison_payload_hash`、两组
 fold/attempt paired lineage 以及 artifact completeness PASS。fixture 仍明确为
-deterministic；cost hash 与 trial-ledger count 保持 interim，`r2_live_gate`
-保持 `NOT_EVALUATED`。
+deterministic；cost hash 保持 interim，`r2_live_gate` 保持
+`NOT_EVALUATED`。
 
-### Task 5d: 其余 3 个场景(后续)
+### Task 5d: durable selection evidence 与真实 trial count（已完成，2026-07-27）
 
-`test_r3_governance_recovery`(append review decision + reactivate CAS + stale 409)、`test_r3_scheduler_capacity`(128 预检 + 2/4 worker + lease reclaim 组装)、ETF lane golden。按 5a/5b/5c 闭合后按缺口优先级推进。
+coordinator 在进入并重载 `CANDIDATE_SELECTION` 后，以阶段完成事件的时间与
+revision 为唯一发布身份，原子发布固定路径的 content-addressed
+`selection_evidence`。holdout claim 必须携带该 artifact 的 exact content hash，
+collector 重新验证同一 artifact 后把真实 artifact ID、observed/declared trial
+count 写入 ReviewPacket。重启、晚时钟 replay 以及
+`CANDIDATE_SELECTION → PAUSED → QUEUED → RUNNING` 恢复均重新绑定原始阶段
+完成事件，保持 artifact ID、created_at、canonical bytes 与 index 行数不变；
+artifact 丢失、manifest/bytes 漂移、claim hash 漂移和 claim 时间倒退均 fail
+closed。该链路由真实 `tmp_path` SQLite golden 覆盖，未使用手造 selection
+ledger。
+
+### Task 5e: 其余后端闭环场景（后续）
+
+governance recovery 已由
+`packages/application/tests/integration/test_r3_governance_recovery_golden.py`
+覆盖 append-only review decision、active pointer CAS/reactivate 与 stale
+conflict，不再列为待实施项。剩余按依赖顺序推进：
+
+1. 以每个 fold 的 execution policy canonical hash 替换 interim cost hash，
+   一致才 PASS、漂移即 FAIL；
+2. stock/ETF 双 lane golden，并在 `r2_live_gate=NOT_EVALUATED` 下如实断言
+   promotion 被阻断且 active pointer 不变；
+3. `test_r3_scheduler_capacity`：128 预检、2/4 worker、单 slot、lease reclaim、
+   无重复 claim 与 artifact lineage。
 
 **Step 1: Write golden e2e tests**
 

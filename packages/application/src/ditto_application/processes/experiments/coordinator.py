@@ -58,6 +58,9 @@ from ditto_application.processes.experiments._coordinator_worker_authority impor
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     deterministic_backtest_run_id,
 )
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    SelectionEvidencePublisher,
+)
 from ditto_application.processes.experiments.evidence_collector import (
     ExperimentEvidenceCollector,
 )
@@ -192,6 +195,7 @@ class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
         checkpoint_available: Callable[[str], bool] | None = None,
         checkpoint_resumable: Callable[[str], bool] | None = None,
         evidence_collector: ExperimentEvidenceCollector | None = None,
+        selection_evidence_publisher: SelectionEvidencePublisher | None = None,
     ) -> None:
         self._store = store
         self._authority = LeaseAuthority(
@@ -212,8 +216,10 @@ class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
             checkpoint_available=checkpoint_available or (lambda _run_id: False),
             checkpoint_resumable=checkpoint_resumable or (lambda _run_id: False),
             run_id_factory=deterministic_backtest_run_id,
+            retryable_stage_roles=_snapshot_rules.erase_mapping_keys(_STAGE_ROLE),
         )
         self._evidence_collector = evidence_collector
+        self._selection_evidence_publisher = selection_evidence_publisher
 
     def tick(self, *, occurred_at: datetime) -> SchedulerTickResult:
         """Acquire the queue head and dispatch at most DB-derived capacity."""
@@ -585,12 +591,15 @@ class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
             _SNAPSHOT_VOCABULARY,
         ):
             return _result(SchedulerTickState.FAIL_FAST, snapshot, ())
-        snapshot = self._isolate_failed_candidates(
-            snapshot,
-            lease,
+        if cancel_failed_candidate_folds(
+            store=self._store,
+            snapshot=snapshot,
+            lease=lease,
             now_epoch_us=now_epoch_us,
             occurred_at=occurred_at,
-        )
+            vocabulary=_SNAPSHOT_VOCABULARY,
+        ):
+            snapshot = self._load_snapshot(lease.experiment_id)
         snapshot, terminal_state = self._advance_completed_stages(
             snapshot,
             lease,
@@ -611,24 +620,6 @@ class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
         )
         return _result(state, refreshed, dispatches)
 
-    def _isolate_failed_candidates(
-        self,
-        snapshot: ExperimentSchedulerSnapshot,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: Callable[[], int],
-        occurred_at: datetime,
-    ) -> ExperimentSchedulerSnapshot:
-        cancelled = cancel_failed_candidate_folds(
-            store=self._store,
-            snapshot=snapshot,
-            lease=lease,
-            now_epoch_us=now_epoch_us,
-            occurred_at=occurred_at,
-            vocabulary=_SNAPSHOT_VOCABULARY,
-        )
-        return self._load_snapshot(lease.experiment_id) if cancelled else snapshot
-
     def _advance_completed_stages(
         self,
         snapshot: ExperimentSchedulerSnapshot,
@@ -640,6 +631,16 @@ class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
         for _step in range(2):
             stage = snapshot.projection.record.stage
             if stage is ExperimentStage.CANDIDATE_SELECTION:
+                if self._selection_evidence_publisher is None:
+                    raise _scheduler_error(
+                        "SPEC_INVALID",
+                        "selection_evidence_publisher_unavailable",
+                    )
+                self._selection_evidence_publisher.publish_selection_evidence(
+                    snapshot,
+                    lease_fence=lease.fence,
+                    now_epoch_us=now_epoch_us(),
+                )
                 return snapshot, SchedulerTickState.CANDIDATE_SELECTION
             if stage is ExperimentStage.HOLDOUT and snapshot.holdout_claim is None:
                 return snapshot, SchedulerTickState.HOLDOUT_GATED

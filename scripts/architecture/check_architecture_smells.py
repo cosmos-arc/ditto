@@ -460,6 +460,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_selection_evidence_artifact.py"
+        ),
+        owner="application R3 durable selection-evidence boundary",
+        reason=(
+            "The pre-holdout boundary rebuilds the analysis-owned typed trial "
+            "ledger and verifies its immutable Schema v1 indexed artifact; "
+            "storage access remains behind approved reader and artifact ports."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/processes/strategy/promotion.py"
         ),
         owner="application R3 strategy promotion process",

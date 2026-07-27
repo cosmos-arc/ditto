@@ -39,12 +39,16 @@ from ditto_analysis.experiments import (
     collect_hard_gate_evidence,
     evaluate_hard_gates,
 )
+from ditto_analysis.experiments.trial_ledger import build_trial_ledger
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import (
     evidence_collector as collector_module,
 )
 from ditto_application.processes.experiments._holdout_contract import (
     PersistedHoldoutClaim,
+)
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
 )
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
@@ -58,6 +62,9 @@ from ditto_application.processes.experiments.evidence_collector import (
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
+)
+from ditto_application.processes.experiments.trial_evidence_bridge import (
+    project_walk_forward_trial_outcomes,
 )
 
 from .walk_forward_evidence_collection_fixtures import (
@@ -256,6 +263,61 @@ class _Writer:
         return _review_artifact()
 
 
+def _selection_evidence(case: EvidenceCase) -> PublishedSelectionEvidence:
+    collected = case.assemble()
+    launch = case.snapshot().launch_spec
+    ledger = build_trial_ledger(
+        launch.promotion_objective,
+        project_walk_forward_trial_outcomes(
+            launch,
+            collected.aggregation,
+            prior_outcomes=(),
+        ),
+    )
+    record = ArtifactRecord(
+        artifact_id=f"selection-evidence-{ledger.content_hash}",
+        experiment_id=EXPERIMENT_ID,
+        candidate_id=None,
+        fold_id=None,
+        attempt_id=None,
+        artifact_kind="selection_evidence",
+        relative_path=f"experiments/{EXPERIMENT_ID}/selection-evidence.json",
+        content_hash=ledger.content_hash,
+        schema_hash=ContentHash("4" * 64),
+        row_count=1,
+        byte_size=1,
+        reproduction_fingerprint=ContentHash("5" * 64),
+        manifest={},
+        is_pinned=False,
+        pinned_at=None,
+        created_at=NOW,
+        revision=0,
+    )
+    return PublishedSelectionEvidence(record, ledger)
+
+
+class _SelectionReader:
+    def __init__(self, evidence: PublishedSelectionEvidence) -> None:
+        self.evidence = evidence
+        self.calls: list[tuple[ExperimentId, ContentHash]] = []
+
+    def read_selection_evidence(
+        self,
+        experiment_id: ExperimentId,
+        expected_content_hash: ContentHash,
+    ) -> PublishedSelectionEvidence:
+        self.calls.append((experiment_id, expected_content_hash))
+        if expected_content_hash != self.evidence.ledger.content_hash:
+            raise AppProcessError(
+                "selection evidence is invalid",
+                details={
+                    "code": "SPEC_INVALID",
+                    "reason": "selection_evidence_expected_hash_mismatch",
+                },
+            )
+        return self.evidence
+
+
 def _collector(
     monkeypatch: pytest.MonkeyPatch,
     case: EvidenceCase,
@@ -263,6 +325,8 @@ def _collector(
     eligible_month_count: int = 96,
     snapshot: ExperimentSchedulerSnapshot | None = None,
     events: tuple[StatusEventRecord, ...] | None = None,
+    selection_evidence: PublishedSelectionEvidence | None = None,
+    selection_evidence_reader: Any | None = None,
 ) -> tuple[ExperimentEvidenceCollector, _Writer, list[object]]:
     reconstructed: list[object] = []
 
@@ -276,13 +340,28 @@ def _collector(
         _reconstruct,
     )
     writer = _Writer()
+    published_selection = selection_evidence or _selection_evidence(case)
+    collector_snapshot = _snapshot(case) if snapshot is None else snapshot
+    if collector_snapshot.holdout_claim is not None:
+        collector_snapshot = replace(
+            collector_snapshot,
+            holdout_claim=replace(
+                collector_snapshot.holdout_claim,
+                selection_evidence_hash=str(published_selection.ledger.content_hash),
+            ),
+        )
     collector = ExperimentEvidenceCollector(
-        scheduler_store=_Store(_snapshot(case) if snapshot is None else snapshot),
+        scheduler_store=_Store(collector_snapshot),
         reader=_Reader((_preflight_event(),) if events is None else events),
         writer=writer,
         walk_forward_assembler=WalkForwardEvidenceAssembler(
             report_reader=case.adapter,
             semantics_resolver=Resolver(case.semantics),
+        ),
+        selection_evidence_reader=(
+            _SelectionReader(published_selection)
+            if selection_evidence_reader is None
+            else selection_evidence_reader
         ),
     )
     return collector, writer, reconstructed
@@ -327,7 +406,14 @@ def test_collect_publishes_real_selected_metrics_and_paired_lineage(
         str(row.attempt_id) for row in selected_rows
     )
     assert packet.r1_impact_payload_hash is None
-    assert packet.selection_evidence_artifact_id is None
+    assert packet.selection_evidence_artifact_id == (
+        f"selection-evidence-{_selection_evidence(case).ledger.content_hash}"
+    )
+    assert _gate(packet, "trial_declaration").outcome is GateOutcome.PASS
+    assert _gate(packet, "trial_declaration").observed == {
+        "trial_count": 2,
+        "expected": 2,
+    }
     assert _gate(packet, "ninety_six_month_protocol").outcome is GateOutcome.PASS
     assert _gate(packet, "primary_objective_metric").outcome is GateOutcome.PASS
     assert _gate(packet, "primary_objective_metric").observed == pytest.approx(17.6)
@@ -568,13 +654,73 @@ def test_corrupt_report_fails_closed_without_publication(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     case = build_case(tmp_path)
+    selection = _selection_evidence(case)
     record = next(iter(case.index.records.values()))
     (tmp_path / record.relative_path).write_bytes(b"corrupt-report")
-    collector, writer, _ = _collector(monkeypatch, case)
+    collector, writer, _ = _collector(
+        monkeypatch,
+        case,
+        selection_evidence=selection,
+    )
 
     with pytest.raises(ExperimentIntegrityError):
         _collect(collector)
 
+    assert writer.calls == []
+
+
+def test_selection_reader_contract_drift_fails_without_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    reader = SimpleNamespace(
+        read_selection_evidence=lambda _experiment_id, _expected_hash: object()
+    )
+    collector, writer, _ = _collector(
+        monkeypatch,
+        case,
+        selection_evidence_reader=reader,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _collect(collector)
+
+    assert (
+        exc_info.value.details["reason"] == "selection_evidence_reader_contract_invalid"
+    )
+    assert writer.calls == []
+
+
+def test_selection_artifact_integrity_failure_prevents_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    integrity_error = ExperimentIntegrityError(
+        "selection evidence is corrupt",
+        details={
+            "reason_code": "selection_evidence_artifact_integrity_mismatch",
+        },
+    )
+
+    def _raise_integrity(
+        _experiment_id: ExperimentId,
+        _expected_hash: ContentHash,
+    ) -> PublishedSelectionEvidence:
+        raise integrity_error
+
+    reader = SimpleNamespace(read_selection_evidence=_raise_integrity)
+    collector, writer, _ = _collector(
+        monkeypatch,
+        case,
+        selection_evidence_reader=reader,
+    )
+
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        _collect(collector)
+
+    assert exc_info.value is integrity_error
     assert writer.calls == []
 
 

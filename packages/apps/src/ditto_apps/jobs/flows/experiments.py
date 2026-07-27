@@ -276,6 +276,7 @@ def run_experiment_scheduler_tick(
     experiments under the singleton lease, so no ``experiment_id`` argument
     is required.
     """
+    _require_utc(occurred_at)
     with create_experiment_tick_bundle() as bundle:
         runtime = ExperimentTickRuntime(
             coordinator=bundle.coordinator,

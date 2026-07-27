@@ -471,7 +471,10 @@ class TestAppProviderStructure:
         assert process._authority_probe is authority_probe
 
     def test_evidence_providers_wire_walk_forward_assembler(self) -> None:
-        """Construct the assembler and inject the same instance into collector."""
+        """Reuse one assembler/service across selection, holdout, and collector."""
+        from ditto_application.processes.experiments._selection_evidence_artifact import (  # noqa: E501
+            DurableSelectionEvidenceService,
+        )
         from ditto_application.processes.experiments._walk_forward_evidence_collection import (  # noqa: E501
             WalkForwardEvidenceAssembler,
         )
@@ -485,18 +488,33 @@ class TestAppProviderStructure:
             report_reader=report_reader,
             semantics_resolver=semantics_resolver,
         )
-        collector = AppProcessProvider().experiment_evidence_collector(
-            scheduler_store=MagicMock(),
-            reader=MagicMock(),
+        process_provider = AppProcessProvider()
+        scheduler_store = MagicMock()
+        reader = MagicMock()
+        artifact_service = MagicMock()
+        selection_service = process_provider.durable_selection_evidence_service(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            research_artifact_service=artifact_service,
+            walk_forward_assembler=assembler,
+        )
+        collector = process_provider.experiment_evidence_collector(
+            scheduler_store=scheduler_store,
+            reader=reader,
             writer=MagicMock(),
             walk_forward_assembler=assembler,
+            selection_evidence_reader=selection_service,
         )
 
         assert isinstance(assembler, WalkForwardEvidenceAssembler)
         assert assembler._report_reader is report_reader
         assert assembler._semantics_resolver is semantics_resolver
+        assert isinstance(selection_service, DurableSelectionEvidenceService)
+        assert selection_service.walk_forward_assembler is assembler
+        assert selection_service.artifact_service is artifact_service
         assert isinstance(collector, ExperimentEvidenceCollector)
         assert collector.walk_forward_assembler is assembler
+        assert collector.selection_evidence_reader is selection_service
 
     def test_replay_provider_wires_verified_schema_v1_reader(self) -> None:
         provider = AppProcessProvider()
@@ -1018,8 +1036,14 @@ class TestAppProviderIntegration:
             BacktestReportArtifactPublisher,
             BacktestReportArtifactReader,
         )
+        from ditto_application.processes.experiments._selection_evidence_artifact import (  # noqa: E501
+            DurableSelectionEvidenceService,
+        )
         from ditto_application.processes.experiments._walk_forward_evidence_collection import (  # noqa: E501
             WalkForwardEvidenceAssembler,
+        )
+        from ditto_application.processes.experiments.coordinator import (
+            ExperimentExecutionCoordinator,
         )
         from ditto_application.processes.experiments.evidence_collector import (
             ExperimentEvidenceCollector,
@@ -1068,9 +1092,19 @@ class TestAppProviderIntegration:
         assert app_container.get(BacktestReportArtifactReader) is report_adapter
         assembler = app_container.get(WalkForwardEvidenceAssembler)
         assert isinstance(assembler, WalkForwardEvidenceAssembler)
+        selection_service = app_container.get(DurableSelectionEvidenceService)
+        assert isinstance(selection_service, DurableSelectionEvidenceService)
+        assert selection_service.walk_forward_assembler is assembler
         collector = app_container.get(ExperimentEvidenceCollector)
         assert isinstance(collector, ExperimentEvidenceCollector)
         assert collector.walk_forward_assembler is assembler
+        assert collector.selection_evidence_reader is selection_service
+        coordinator = app_container.get(ExperimentExecutionCoordinator)
+        assert coordinator._selection_evidence_publisher is selection_service
+        assert (
+            coordinator._holdout._process._selection_evidence_provider
+            is selection_service
+        )
         assert isinstance(
             app_container.get(FirstAttemptFactory),
             ExecutionBundleFirstAttemptFactory,

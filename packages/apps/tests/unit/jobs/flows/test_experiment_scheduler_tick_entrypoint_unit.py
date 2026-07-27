@@ -79,10 +79,13 @@ def test_run_experiment_scheduler_tick_propagates_flow_result(mocker) -> None:
 
 
 def test_run_experiment_scheduler_tick_requires_utc_occurred_at(mocker) -> None:
-    """A naive occurred_at must surface the underlying flow's UTC invariant."""
+    """A naive occurred_at must fail before composition or Prefect startup."""
+    bundle_entered = False
 
     @contextmanager
     def fake_bundle():
+        nonlocal bundle_entered
+        bundle_entered = True
         yield ExperimentExecutionBundle(
             coordinator=MagicMock(),
             worker=MagicMock(),
@@ -100,3 +103,4 @@ def test_run_experiment_scheduler_tick_requires_utc_occurred_at(mocker) -> None:
         experiments_module.run_experiment_scheduler_tick(
             occurred_at=datetime(2026, 7, 26, 10, 0, 0),
         )
+    assert bundle_entered is False

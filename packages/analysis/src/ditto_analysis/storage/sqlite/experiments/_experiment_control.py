@@ -63,10 +63,21 @@ def validate_experiment_status_stage_transition(
         current_status is ExperimentStatus.QUEUED
         and target_status is ExperimentStatus.RUNNING
     ):
-        if target_stage is not ExperimentStage.EXPLORATION:
+        if (
+            current_stage is ExperimentStage.PREFLIGHT
+            and target_stage is not ExperimentStage.EXPLORATION
+        ):
             raise ExperimentSpecError(
                 "scheduler dispatch must enter exploration",
                 details={"reason_code": "scheduler_dispatch_requires_exploration"},
+            )
+        if (
+            current_stage is not ExperimentStage.PREFLIGHT
+            and target_stage is not current_stage
+        ):
+            raise ExperimentSpecError(
+                "resumed scheduler dispatch must preserve experiment stage",
+                details={"reason_code": "experiment_stage_must_be_preserved"},
             )
     elif target_stage is not current_stage:
         raise ExperimentSpecError(

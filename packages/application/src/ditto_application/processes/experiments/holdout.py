@@ -11,6 +11,9 @@ from ditto_application.processes.experiments._holdout_contract import (
     HoldoutClaimPersistenceRequest,
     PersistedHoldoutClaim,
 )
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
+)
 from ditto_application.processes.experiments.scheduler_store import (
     CandidateId,
     ContentHash,
@@ -155,8 +158,12 @@ class HoldoutClaimReceipt:
 class HoldoutSelectionEvidenceProvider(Protocol):
     """Read the immutable Task 11 trial ledger selected by an operator."""
 
-    def load_selection_evidence(self, experiment_id: ExperimentId) -> object:
-        """Return the exact content-addressed selection ledger."""
+    def read_selection_evidence(
+        self,
+        experiment_id: ExperimentId,
+        expected_content_hash: ContentHash,
+    ) -> PublishedSelectionEvidence:
+        """Return the exact content-addressed selection artifact and ledger."""
         ...
 
 
@@ -230,9 +237,16 @@ class HoldoutClaimProcess:
         provider = self._selection_evidence_provider
         if provider is None:
             _holdout_error("selection_evidence_provider_unavailable")
-        ledger = provider.load_selection_evidence(experiment_id)
+        published = provider.read_selection_evidence(experiment_id, evidence_hash)
+        if type(published) is not PublishedSelectionEvidence:
+            _holdout_error("selection_evidence_provider_contract_invalid")
+        if request.occurred_at < published.record.created_at:
+            _holdout_error(
+                "holdout_claim_precedes_selection_evidence",
+                selection_evidence_created_at=published.record.created_at.isoformat(),
+            )
         verified = verify_pre_holdout_selection_evidence(
-            ledger,
+            published.ledger,
             launch_spec=snapshot.launch_spec,
             experiment_id=experiment_id,
             candidate_id=candidate_id,

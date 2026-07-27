@@ -641,6 +641,7 @@ def _coordinator(
     owner_token: str | None = None,
     clock_now: datetime = NOW,
     evidence_collector: _FakeEvidenceCollector | None = None,
+    selection_evidence_publisher: _FakeSelectionEvidencePublisher | None = None,
 ) -> tuple[ExperimentExecutionCoordinator, _FirstAttemptFactory]:
     factory = _FirstAttemptFactory()
     return (
@@ -651,9 +652,36 @@ def _coordinator(
             lease_duration=timedelta(minutes=5),
             clock=lambda: clock_now,
             evidence_collector=evidence_collector,
+            selection_evidence_publisher=selection_evidence_publisher,
         ),
         factory,
     )
+
+
+class _FakeSelectionEvidencePublisher:
+    """Record candidate-selection publication attempts at the coordinator edge."""
+
+    def __init__(self, *, raise_error: Exception | None = None) -> None:
+        self.publish_calls: list[dict[str, object]] = []
+        self.raise_error = raise_error
+
+    def publish_selection_evidence(
+        self,
+        snapshot: ExperimentSchedulerSnapshot,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> object:
+        self.publish_calls.append(
+            {
+                "snapshot": snapshot,
+                "lease_fence": lease_fence,
+                "now_epoch_us": now_epoch_us,
+            },
+        )
+        if self.raise_error is not None:
+            raise self.raise_error
+        return object()
 
 
 class _FakeEvidenceCollector:
@@ -724,6 +752,18 @@ def _set_running_stage(
         NOW_US - 10,
         1,
     )
+
+
+def _complete_prior_folds(store: _SchedulerStore) -> None:
+    for index, fold in enumerate(store.folds):
+        if fold.spec.fold_role in {FoldRole.EXPLORATION, FoldRole.WALK_FORWARD}:
+            store.folds[index] = replace(
+                fold,
+                projection=replace(
+                    fold.projection,
+                    status=ExperimentStatus.COMPLETED,
+                ),
+            )
 
 
 def _persist_attempt(
@@ -1005,7 +1045,11 @@ def test_completed_exploration_advances_then_dispatches_only_walk_forward() -> N
 
 def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() -> None:
     store = _SchedulerStore(worker_count=4, candidate_count=1)
-    coordinator, _factory = _coordinator(store)
+    publisher = _FakeSelectionEvidencePublisher()
+    coordinator, _factory = _coordinator(
+        store,
+        selection_evidence_publisher=publisher,
+    )
     exploration = coordinator.tick(occurred_at=NOW)
     _start_all_dispatched(coordinator, exploration)
     coordinator.complete_attempt(
@@ -1025,10 +1069,105 @@ def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() 
     assert result.state is SchedulerTickState.CANDIDATE_SELECTION
     assert result.dispatches == ()
     assert store.projection.record.stage is ExperimentStage.CANDIDATE_SELECTION
+    assert len(publisher.publish_calls) == 1
+    publish_call = publisher.publish_calls[0]
+    published_snapshot = publish_call["snapshot"]
+    assert isinstance(published_snapshot, ExperimentSchedulerSnapshot)
+    assert (
+        published_snapshot.projection.record.stage
+        is ExperimentStage.CANDIDATE_SELECTION
+    )
+    fence = publish_call["lease_fence"]
+    assert isinstance(fence, LeaseFence)
+    assert fence.experiment_id == store.launch.experiment_id
+    assert fence.owner_token == store.slot.owner_token
+    assert fence.revision == store.slot.revision
+    assert fence.lease_until_epoch_us == store.slot.lease_until_epoch_us
+    assert publish_call["now_epoch_us"] == NOW_US
     assert all(
         fold.projection.status is ExperimentStatus.QUEUED
         for fold in store.folds
         if fold.spec.fold_role is FoldRole.HOLDOUT
+    )
+
+
+def test_candidate_selection_fails_closed_without_evidence_publisher() -> None:
+    store = _SchedulerStore(worker_count=2, candidate_count=1)
+    _set_running_stage(store, ExperimentStage.CANDIDATE_SELECTION)
+    _complete_prior_folds(store)
+    coordinator, _factory = _coordinator(
+        store,
+        selection_evidence_publisher=None,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.tick(occurred_at=NOW)
+
+    assert (
+        exc_info.value.details["reason"] == "selection_evidence_publisher_unavailable"
+    )
+    assert store.projection.record.stage is ExperimentStage.CANDIDATE_SELECTION
+
+
+def test_candidate_selection_replays_evidence_publication_on_every_tick() -> None:
+    store = _SchedulerStore(worker_count=2, candidate_count=1)
+    _set_running_stage(store, ExperimentStage.CANDIDATE_SELECTION)
+    _complete_prior_folds(store)
+    publisher = _FakeSelectionEvidencePublisher()
+    coordinator, _factory = _coordinator(
+        store,
+        selection_evidence_publisher=publisher,
+    )
+
+    first = coordinator.tick(occurred_at=NOW)
+    second = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
+
+    assert first.state is SchedulerTickState.CANDIDATE_SELECTION
+    assert second.state is SchedulerTickState.CANDIDATE_SELECTION
+    assert len(publisher.publish_calls) == 2
+    assert all(
+        call["snapshot"].projection.record.stage is ExperimentStage.CANDIDATE_SELECTION
+        for call in publisher.publish_calls
+    )
+
+
+def test_failed_selection_publication_is_replayed_by_a_new_lease() -> None:
+    store = _SchedulerStore(worker_count=2, candidate_count=1)
+    _set_running_stage(store, ExperimentStage.WALK_FORWARD)
+    _complete_prior_folds(store)
+    failure = AppProcessError(
+        "selection publication failed",
+        details={"code": "SPEC_INVALID", "reason": "selection_publish_failed"},
+    )
+    failing = _FakeSelectionEvidencePublisher(raise_error=failure)
+    first, _factory = _coordinator(
+        store,
+        owner_token="selection-owner-a",
+        selection_evidence_publisher=failing,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        first.tick(occurred_at=NOW)
+
+    assert exc_info.value is failure
+    assert store.projection.record.stage is ExperimentStage.CANDIDATE_SELECTION
+    assert len(failing.publish_calls) == 1
+
+    replay = _FakeSelectionEvidencePublisher()
+    second, _factory = _coordinator(
+        store,
+        owner_token="selection-owner-b",
+        clock_now=NOW + timedelta(minutes=6),
+        selection_evidence_publisher=replay,
+    )
+
+    result = second.tick(occurred_at=NOW + timedelta(minutes=6))
+
+    assert result.state is SchedulerTickState.CANDIDATE_SELECTION
+    assert len(replay.publish_calls) == 1
+    assert (
+        replay.publish_calls[0]["snapshot"].projection.record.stage
+        is ExperimentStage.CANDIDATE_SELECTION
     )
 
 
@@ -1894,6 +2033,7 @@ def test_evidence_no_op_when_collector_not_configured() -> None:
 def test_retry_fold_releases_transient_lease_when_fold_not_failed() -> None:
     """Control-route retry releases the transient lease even when recovery rejects."""
     store = _SchedulerStore()
+    _set_running_stage(store, ExperimentStage.EXPLORATION)
     coordinator, _ = _coordinator(store)
     with pytest.raises(AppProcessError) as info:
         coordinator.retry_fold(
@@ -1906,4 +2046,61 @@ def test_retry_fold_releases_transient_lease_when_fold_not_failed() -> None:
     details = info.value.details
     assert details["code"] == "SPEC_INVALID"
     assert details["reason"] == "terminal_fold_retry_requires_failed_fold"
+    assert store.slot.owner_token is None
+
+
+@pytest.mark.parametrize(
+    ("stage", "fold_role"),
+    [
+        (ExperimentStage.WALK_FORWARD, FoldRole.EXPLORATION),
+        (ExperimentStage.CANDIDATE_SELECTION, FoldRole.EXPLORATION),
+        (ExperimentStage.CANDIDATE_SELECTION, FoldRole.WALK_FORWARD),
+        (ExperimentStage.HOLDOUT, FoldRole.WALK_FORWARD),
+        (ExperimentStage.EVIDENCE, FoldRole.HOLDOUT),
+    ],
+)
+def test_retry_fold_rejects_a_terminal_fold_outside_the_current_stage(
+    stage: ExperimentStage,
+    fold_role: FoldRole,
+) -> None:
+    store = _SchedulerStore()
+    _set_running_stage(store, stage)
+    fold_index = next(
+        index
+        for index, fold in enumerate(store.folds)
+        if fold.spec.key.candidate_id == CandidateId("candidate-1")
+        and fold.spec.fold_role is fold_role
+    )
+    fold = store.folds[fold_index]
+    failed_fold = replace(
+        fold,
+        projection=replace(
+            fold.projection,
+            status=ExperimentStatus.FAILED,
+        ),
+    )
+    store.folds[fold_index] = failed_fold
+    first_attempt = _FirstAttemptFactory().create(failed_fold, NOW)
+    store.attempts[first_attempt.spec.attempt_id] = AttemptView(
+        first_attempt.spec,
+        replace(
+            first_attempt.projection,
+            status=ExperimentStatus.FAILED,
+            backtest_run_id=BacktestRunId("run-failed-prior-stage"),
+            failure_code=ExperimentFailureCode.SYSTEM_ERROR,
+        ),
+    )
+    coordinator, _factory = _coordinator(store)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.retry_fold(
+            experiment_id=str(store.launch.experiment_id),
+            candidate_id=str(failed_fold.spec.key.candidate_id),
+            fold_id=str(failed_fold.spec.key.fold_id),
+            expected_revision=failed_fold.projection.revision,
+            occurred_at=NOW,
+        )
+
+    assert exc_info.value.details["reason"] == "terminal_fold_retry_stage_closed"
+    assert store.folds[fold_index] == failed_fold
     assert store.slot.owner_token is None

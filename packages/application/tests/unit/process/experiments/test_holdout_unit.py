@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, fields
-from datetime import UTC, date, datetime
+from dataclasses import asdict, fields, replace
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -50,6 +51,9 @@ from ditto_analysis.experiments.trial_ledger import (
     build_trial_ledger,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
+)
 from ditto_application.processes.experiments.scheduler_store import FirstAttempt
 
 NOW = datetime(2026, 7, 22, 3, 0, tzinfo=UTC)
@@ -223,6 +227,31 @@ def _selection_ledger() -> TrialLedger:
     return build_trial_ledger(objective, outcomes)
 
 
+def _published_selection_evidence(ledger: TrialLedger) -> PublishedSelectionEvidence:
+    return PublishedSelectionEvidence(
+        ArtifactRecord(
+            artifact_id=f"selection-evidence-{ledger.content_hash}",
+            experiment_id=ExperimentId("experiment-1"),
+            candidate_id=None,
+            fold_id=None,
+            attempt_id=None,
+            artifact_kind="selection_evidence",
+            relative_path="experiments/experiment-1/selection-evidence.json",
+            content_hash=ledger.content_hash,
+            schema_hash=ContentHash("f" * 64),
+            row_count=1,
+            byte_size=1,
+            reproduction_fingerprint=ContentHash("0" * 64),
+            manifest={},
+            is_pinned=False,
+            pinned_at=None,
+            created_at=NOW,
+            revision=0,
+        ),
+        ledger,
+    )
+
+
 def _launch_spec() -> ExperimentLaunchSpec:
     ledger = _selection_ledger()
     candidates = (
@@ -258,11 +287,36 @@ def _launch_spec() -> ExperimentLaunchSpec:
 class _SelectionProvider:
     def __init__(self) -> None:
         self.ledger = _selection_ledger()
-        self.calls: list[ExperimentId] = []
+        self.published = _published_selection_evidence(self.ledger)
+        self.calls: list[tuple[ExperimentId, ContentHash]] = []
 
-    def load_selection_evidence(self, experiment_id: ExperimentId) -> object:
-        self.calls.append(experiment_id)
-        return self.ledger
+    def read_selection_evidence(
+        self,
+        experiment_id: ExperimentId,
+        expected_content_hash: ContentHash,
+    ) -> PublishedSelectionEvidence:
+        self.calls.append((experiment_id, expected_content_hash))
+        return self.published
+
+
+class _UnavailableSelectionProvider:
+    def __init__(self) -> None:
+        self.calls: list[tuple[ExperimentId, ContentHash]] = []
+        self.error = AppProcessError(
+            "selection evidence is unavailable",
+            details={
+                "code": "SPEC_INVALID",
+                "reason": "selection_evidence_not_published",
+            },
+        )
+
+    def read_selection_evidence(
+        self,
+        experiment_id: ExperimentId,
+        expected_content_hash: ContentHash,
+    ) -> PublishedSelectionEvidence:
+        self.calls.append((experiment_id, expected_content_hash))
+        raise self.error
 
 
 class _Store:
@@ -374,16 +428,44 @@ def test_process_resolves_real_fingerprint_before_atomic_store_command() -> None
     assert store.calls[0]["now_epoch_us"] == 2
     assert receipt.logical_run_id == "holdout-logical-run-1"
     assert receipt.experiment_revision == 8
-    assert provider.calls == [ExperimentId("experiment-1")]
+    assert provider.calls == [
+        (ExperimentId("experiment-1"), provider.ledger.content_hash)
+    ]
 
 
-def test_exact_replay_uses_persisted_fingerprint_without_resolving_moving_inputs() -> (
-    None
-):
+def test_new_claim_cannot_precede_candidate_selection_evidence() -> None:
+    api = _api()
+    store = _Store()
+    factory = _Factory()
+    provider = _SelectionProvider()
+    process = api.HoldoutClaimProcess(
+        store=store,
+        first_attempt_factory=factory,
+        selection_evidence_provider=provider,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        process.claim_candidate(
+            replace(_request(api), occurred_at=NOW - timedelta(microseconds=1)),
+            lease=_lease(),
+            now_epoch_us=2,
+        )
+
+    assert exc_info.value.details == {
+        "code": "SPEC_INVALID",
+        "reason": "holdout_claim_precedes_selection_evidence",
+        "selection_evidence_created_at": NOW.isoformat(),
+    }
+    assert provider.calls == [(ExperimentId("experiment-1"), ContentHash("a" * 64))]
+    assert factory.calls == 0
+    assert store.calls == []
+
+
+def test_restart_replay_uses_persisted_claim_without_selection_provider_read() -> None:
     api = _api()
     store = _Store(existing=True)
     factory = _Factory()
-    provider = _SelectionProvider()
+    provider = _UnavailableSelectionProvider()
     process = api.HoldoutClaimProcess(
         store=store,
         first_attempt_factory=factory,
@@ -424,7 +506,37 @@ def test_new_claim_rejects_selection_provider_hash_mismatch_before_fingerprint()
             now_epoch_us=2,
         )
 
-    assert exc_info.value.details["reason"] == "selection_evidence_hash_mismatch"
+    assert exc_info.value.details == {
+        "code": "SPEC_INVALID",
+        "reason": "selection_evidence_hash_mismatch",
+        "expected_content_hash": "a" * 64,
+        "observed_content_hash": str(provider.ledger.content_hash),
+    }
+    assert provider.calls == [(ExperimentId("experiment-1"), ContentHash("a" * 64))]
+    assert factory.calls == 0
+    assert store.calls == []
+
+
+def test_new_claim_does_not_persist_when_selection_artifact_is_unpublished() -> None:
+    api = _api()
+    store = _Store()
+    factory = _Factory()
+    provider = _UnavailableSelectionProvider()
+    process = api.HoldoutClaimProcess(
+        store=store,
+        first_attempt_factory=factory,
+        selection_evidence_provider=provider,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        process.claim_candidate(
+            _request(api),
+            lease=_lease(),
+            now_epoch_us=2,
+        )
+
+    assert exc_info.value is provider.error
+    assert provider.calls == [(ExperimentId("experiment-1"), ContentHash("a" * 64))]
     assert factory.calls == 0
     assert store.calls == []
 

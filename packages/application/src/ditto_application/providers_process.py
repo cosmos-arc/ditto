@@ -95,6 +95,9 @@ from ditto_application.processes.experiments._control_runtime import (
     CONTROL_COORDINATOR_OWNER_TOKEN,
     LoggingExperimentControlNotifier,
 )
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    DurableSelectionEvidenceService,
+)
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
 )
@@ -329,6 +332,7 @@ class AppProcessProvider(Provider):
         store: ExperimentSchedulerStore,
         first_attempt_factory: FirstAttemptFactory,
         evidence_collector: ExperimentEvidenceCollector,
+        selection_evidence: DurableSelectionEvidenceService,
     ) -> ExperimentExecutionCoordinator:
         """
         Wire the R3 coordinator with the real execution bundle factory.
@@ -345,7 +349,25 @@ class AppProcessProvider(Provider):
             first_attempt_factory=first_attempt_factory,
             owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
             lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
+            selection_evidence_provider=selection_evidence,
             evidence_collector=evidence_collector,
+            selection_evidence_publisher=selection_evidence,
+        )
+
+    @provide
+    def durable_selection_evidence_service(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        reader: ExperimentReaderProtocol,
+        research_artifact_service: ResearchArtifactService,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
+    ) -> DurableSelectionEvidenceService:
+        """Bind selection publication and restart reads to one APP-scoped service."""
+        return DurableSelectionEvidenceService(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            artifact_service=research_artifact_service,
+            walk_forward_assembler=walk_forward_assembler,
         )
 
     @provide
@@ -355,6 +377,7 @@ class AppProcessProvider(Provider):
         reader: ExperimentReaderProtocol,
         writer: ExperimentWriterProtocol,
         walk_forward_assembler: WalkForwardEvidenceAssembler,
+        selection_evidence_reader: DurableSelectionEvidenceService,
     ) -> ExperimentEvidenceCollector:
         """Wire the R3 review-packet collector behind the durable experiment ports."""
         return ExperimentEvidenceCollector(
@@ -362,6 +385,7 @@ class AppProcessProvider(Provider):
             reader=reader,
             writer=writer,
             walk_forward_assembler=walk_forward_assembler,
+            selection_evidence_reader=selection_evidence_reader,
         )
 
     @provide

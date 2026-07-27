@@ -20,6 +20,7 @@ from ditto_analysis.errors import (
     ExperimentSpecError,
 )
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -82,6 +83,9 @@ from ditto_application.commands.experiments import (
     ClaimHoldoutCandidateHandler,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
     SchedulerTickState,
@@ -2196,8 +2200,44 @@ class _SelectionProvider:
             failed_candidate_ids=failed_candidate_ids,
         )
 
-    def load_selection_evidence(self, _experiment_id: ExperimentId) -> TrialLedger:
-        return self.ledger
+    def read_selection_evidence(
+        self,
+        experiment_id: ExperimentId,
+        _expected_content_hash: ContentHash,
+    ) -> PublishedSelectionEvidence:
+        return PublishedSelectionEvidence(
+            ArtifactRecord(
+                artifact_id=f"selection-evidence-{self.ledger.content_hash}",
+                experiment_id=experiment_id,
+                candidate_id=None,
+                fold_id=None,
+                attempt_id=None,
+                artifact_kind="selection_evidence",
+                relative_path=(f"experiments/{experiment_id}/selection-evidence.json"),
+                content_hash=self.ledger.content_hash,
+                schema_hash=ContentHash("8" * 64),
+                row_count=1,
+                byte_size=1,
+                reproduction_fingerprint=ContentHash("9" * 64),
+                manifest={},
+                is_pinned=False,
+                pinned_at=None,
+                created_at=NOW,
+                revision=0,
+            ),
+            self.ledger,
+        )
+
+    def publish_selection_evidence(
+        self,
+        _snapshot: Any,
+        *,
+        lease_fence: Any,
+        now_epoch_us: int,
+    ) -> Any:
+        """Stand in for the durable publisher in holdout-only integration cases."""
+        del lease_fence, now_epoch_us
+        return None
 
 
 def _application_request(ledger: TrialLedger) -> Any:
@@ -2233,6 +2273,7 @@ def _owned_coordinator(
         store=store,
         first_attempt_factory=factory or _Factory(),
         selection_evidence_provider=provider,
+        selection_evidence_publisher=provider,
         owner_token="holdout-acceptance-coordinator",
         lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(minutes=2),
@@ -2256,6 +2297,7 @@ def _coordinator_with_selection_ledger(
         store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=_Factory(),
         selection_evidence_provider=provider,
+        selection_evidence_publisher=provider,
         owner_token="holdout-ledger-binding-coordinator",
         lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(minutes=2),
@@ -2372,6 +2414,7 @@ def test_failed_candidate_isolation_preserves_remaining_holdout_claim_lifecycle(
         store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=_Factory(),
         selection_evidence_provider=provider,
+        selection_evidence_publisher=provider,
         owner_token="holdout-isolation-coordinator",
         lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(minutes=2),
@@ -2560,6 +2603,7 @@ def test_coordinator_dispatches_only_claimed_holdout_after_atomic_commit(
         store=store,
         first_attempt_factory=_Factory(),
         selection_evidence_provider=provider,
+        selection_evidence_publisher=provider,
         owner_token="holdout-coordinator",
         lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(minutes=2),
@@ -2594,6 +2638,7 @@ def test_dispatch_fails_closed_when_resolved_fingerprint_drifts_after_claim(
         store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=factory,
         selection_evidence_provider=provider,
+        selection_evidence_publisher=provider,
         owner_token="holdout-drift-coordinator",
         lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(minutes=2),

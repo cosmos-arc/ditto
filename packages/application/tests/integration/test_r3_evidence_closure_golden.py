@@ -38,17 +38,10 @@ from ditto_analysis.experiments import (
     FoldRole,
     FoldView,
     ResearchMetricId,
-    ResearchMetricValue,
 )
 from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_analysis.experiments.gates import GateLayer, GateOutcome
-from ditto_analysis.experiments.trial_ledger import (
-    MetricEvidenceLineage,
-    TrialLedger,
-    TrialOutcome,
-    TrialStatus,
-    build_trial_ledger,
-)
+from ditto_analysis.experiments.trial_ledger import TrialLedger
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.storage.sqlite.experiments import (
     ResearchExperimentDatabase,
@@ -64,6 +57,10 @@ from ditto_application.processes.experiments._evidence_inputs import (
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
     BacktestReportEvidence,
+)
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    DurableSelectionEvidenceService,
+    PublishedSelectionEvidence,
 )
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
@@ -320,7 +317,7 @@ def _publish_walk_forward_reports(
     launch: ExperimentLaunchSpec,
     lease: Any,
     resolver: Any,
-) -> WalkForwardEvidenceAssembler:
+) -> tuple[WalkForwardEvidenceAssembler, ResearchArtifactService]:
     service = ResearchArtifactService(
         artifact_root=tmp_path / "legacy",
         indexed_artifact_root=database.artifact_root,
@@ -359,9 +356,12 @@ def _publish_walk_forward_reports(
         detail={"completed_stage": "walk_forward"},
     )
     assert projection.revision == 4
-    return WalkForwardEvidenceAssembler(
-        report_reader=adapter,
-        semantics_resolver=resolver,
+    return (
+        WalkForwardEvidenceAssembler(
+            report_reader=adapter,
+            semantics_resolver=resolver,
+        ),
+        service,
     )
 
 
@@ -373,6 +373,7 @@ def _store(
     SQLiteExperimentWriter,
     ExperimentLaunchSpec,
     WalkForwardEvidenceAssembler,
+    ResearchArtifactService,
 ]:
     database = ResearchExperimentDatabase(tmp_path)
     database.initialize()
@@ -397,7 +398,7 @@ def _store(
         reader.list_folds(launch.experiment_id),
     )
     lease = _advance_to_candidate_selection(reader, writer, launch, resolver)
-    assembler = _publish_walk_forward_reports(
+    assembler, artifact_service = _publish_walk_forward_reports(
         tmp_path,
         database,
         reader,
@@ -406,55 +407,7 @@ def _store(
         lease,
         resolver,
     )
-    return database, reader, writer, launch, assembler
-
-
-def _selection_ledger(launch: ExperimentLaunchSpec) -> TrialLedger:
-    lineage = MetricEvidenceLineage(
-        ("comparison://holdout-integration",),
-        (ContentHash("6" * 64),),
-    )
-    outcomes = []
-    for candidate in launch.candidates:
-        trial = launch.promotion_objective.trial_family.current_members[
-            candidate.ordinal - 1
-        ]
-        outcomes.append(
-            TrialOutcome(
-                trial=trial,
-                status=TrialStatus.COMPLETED,
-                metrics={
-                    ResearchMetricId.NET_RETURN: ResearchMetricValue(
-                        ResearchMetricId.NET_RETURN,
-                        float(candidate.ordinal),
-                    ),
-                    ResearchMetricId.SHARPE_RATIO: ResearchMetricValue(
-                        ResearchMetricId.SHARPE_RATIO,
-                        float(candidate.ordinal),
-                    ),
-                    ResearchMetricId.MAX_DRAWDOWN: ResearchMetricValue(
-                        ResearchMetricId.MAX_DRAWDOWN,
-                        -float(candidate.ordinal),
-                    ),
-                },
-                holdout_metrics={},
-                source_projection_hash=ContentHash("7" * 64),
-                metric_evidence={
-                    ResearchMetricId.NET_RETURN: lineage,
-                    ResearchMetricId.SHARPE_RATIO: lineage,
-                    ResearchMetricId.MAX_DRAWDOWN: lineage,
-                },
-            )
-        )
-    return build_trial_ledger(launch.promotion_objective, tuple(outcomes))
-
-
-class _SelectionProvider:
-    def __init__(self, launch: ExperimentLaunchSpec) -> None:
-        self.ledger = _selection_ledger(launch)
-
-    def load_selection_evidence(self, _experiment_id: ExperimentId) -> TrialLedger:
-        return self.ledger
+    return database, reader, writer, launch, assembler, artifact_service
 
 
 class _Factory:
@@ -521,6 +474,9 @@ class _Factory:
 def _application_request(
     launch: ExperimentLaunchSpec,
     ledger: TrialLedger,
+    *,
+    expected_revision: int = 4,
+    occurred_at: datetime = NOW,
 ) -> ClaimHoldoutCandidateRequest:
     selected = next(
         candidate for candidate in launch.candidates if not candidate.is_baseline
@@ -528,14 +484,14 @@ def _application_request(
     return ClaimHoldoutCandidateRequest(
         experiment_id=str(launch.experiment_id),
         candidate_id=str(selected.candidate_id),
-        expected_revision=4,
+        expected_revision=expected_revision,
         expected_selection_evidence_hash=str(ledger.content_hash),
         operator_confirmation="operator reviewed immutable evidence",
         selection_reason=ApplicationSelectionReason(
             "objective_review",
             "Candidate won the registered objective review.",
         ),
-        occurred_at=NOW,
+        occurred_at=occurred_at,
     )
 
 
@@ -544,11 +500,12 @@ def _coordinator_with_collector(
     writer: SQLiteExperimentWriter,
     launch: ExperimentLaunchSpec,
     assembler: WalkForwardEvidenceAssembler,
+    artifact_service: ResearchArtifactService,
 ) -> tuple[
     ExperimentExecutionCoordinator,
     ExperimentSchedulerStore,
     ExperimentEvidenceCollector,
-    _SelectionProvider,
+    PublishedSelectionEvidence,
 ]:
     """Construct a coordinator that has a real evidence collector wired in.
 
@@ -557,39 +514,161 @@ def _coordinator_with_collector(
     EVIDENCE stage, so it must not affect earlier ticks.
     """
     store = ExperimentSchedulerStore(reader, writer)
-    provider = _SelectionProvider(launch)
+    selection_service = DurableSelectionEvidenceService(
+        scheduler_store=store,
+        reader=reader,
+        artifact_service=artifact_service,
+        walk_forward_assembler=assembler,
+    )
     collector = ExperimentEvidenceCollector(
         scheduler_store=store,
         reader=reader,
         writer=writer,
         walk_forward_assembler=assembler,
+        selection_evidence_reader=selection_service,
     )
     coordinator = ExperimentExecutionCoordinator(
         store=store,
         first_attempt_factory=_Factory(),
-        selection_evidence_provider=provider,
+        selection_evidence_provider=selection_service,
         owner_token="r3-evidence-closure-coordinator",
         lease_duration=timedelta(minutes=5),
         clock=lambda: NOW + timedelta(minutes=2),
         evidence_collector=collector,
+        selection_evidence_publisher=selection_service,
     )
     assert (
         coordinator.tick(occurred_at=NOW).state
         is SchedulerTickState.CANDIDATE_SELECTION
     )
-    return coordinator, store, collector, provider
+    selection_record = reader.get_artifact_by_relative_path(
+        f"experiments/{launch.experiment_id}/selection-evidence.json"
+    )
+    assert selection_record is not None
+    published = selection_service.read_selection_evidence(
+        launch.experiment_id,
+        selection_record.content_hash,
+    )
+    return coordinator, store, collector, published
+
+
+def _assert_durable_selection_replay(
+    *,
+    database: ResearchExperimentDatabase,
+    reader: SQLiteExperimentReader,
+    writer: SQLiteExperimentWriter,
+    launch: ExperimentLaunchSpec,
+    assembler: WalkForwardEvidenceAssembler,
+    artifact_service: ResearchArtifactService,
+    coordinator: ExperimentExecutionCoordinator,
+    selection: PublishedSelectionEvidence,
+) -> None:
+    assert (
+        database.get_connection()
+        .execute(
+            "SELECT COUNT(*) FROM research_artifact "
+            "WHERE artifact_kind='selection_evidence'"
+        )
+        .fetchone()[0]
+        == 1
+    )
+    selection_events = tuple(
+        event
+        for event in reader.list_status_events(launch.experiment_id)
+        if (
+            event.reason_code == "scheduler_stage_complete"
+            and event.stage is ExperimentStage.CANDIDATE_SELECTION
+            and event.detail == {"completed_stage": "walk_forward"}
+        )
+    )
+    assert len(selection_events) == 1
+    selection_event = selection_events[0]
+    assert selection.record.created_at == selection_event.occurred_at
+    selection_audit = selection.record.manifest["audit"]
+    assert isinstance(selection_audit, dict)
+    assert selection_audit["selection_stage_event_id"] == selection_event.event_id
+    assert (
+        selection_audit["selection_stage_subject_revision"]
+        == selection_event.subject_revision
+    )
+    assert (
+        selection_audit["declared_trial_count"] == selection.ledger.declared_trial_count
+    )
+    assert (
+        selection_audit["observed_trial_count"] == selection.ledger.observed_trial_count
+    )
+
+    selection_bytes = artifact_service.read_indexed_artifact_bytes(
+        selection.record.artifact_id
+    )
+    pause = coordinator.pause(
+        experiment_id=str(launch.experiment_id),
+        expected_revision=selection_event.subject_revision,
+        occurred_at=NOW + timedelta(seconds=10),
+    )
+    paused_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=11))
+    paused = reader.get_experiment_projection(launch.experiment_id)
+    assert paused is not None
+    assert pause.status == ExperimentStatus.PAUSE_REQUESTED.value
+    assert paused_tick.state is SchedulerTickState.WAITING
+    assert paused.record.status is ExperimentStatus.PAUSED
+    resume = coordinator.resume(
+        experiment_id=str(launch.experiment_id),
+        expected_revision=paused.revision,
+        occurred_at=NOW + timedelta(seconds=20),
+    )
+    assert resume.status == ExperimentStatus.QUEUED.value
+    assert (
+        coordinator.tick(occurred_at=NOW + timedelta(seconds=30)).state
+        is SchedulerTickState.CANDIDATE_SELECTION
+    )
+    restarted = DurableSelectionEvidenceService(
+        scheduler_store=ExperimentSchedulerStore(reader, writer),
+        reader=reader,
+        artifact_service=artifact_service,
+        walk_forward_assembler=assembler,
+    )
+    replayed = restarted.read_selection_evidence(
+        launch.experiment_id,
+        selection.record.content_hash,
+    )
+    assert replayed == selection
+    assert (
+        artifact_service.read_indexed_artifact_bytes(selection.record.artifact_id)
+        == selection_bytes
+    )
+    assert (
+        database.get_connection()
+        .execute(
+            "SELECT COUNT(*) FROM research_artifact "
+            "WHERE artifact_kind='selection_evidence'"
+        )
+        .fetchone()[0]
+        == 1
+    )
 
 
 def test_r3_evidence_closure_drives_review_packet_and_completed_status(
     tmp_path: Path,
 ) -> None:
     """Drive one experiment tick from EVIDENCE to a published packet + COMPLETED."""
-    database, reader, writer, launch, assembler = _store(tmp_path)
-    coordinator, store, _collector, provider = _coordinator_with_collector(
+    database, reader, writer, launch, assembler, artifact_service = _store(tmp_path)
+    coordinator, store, _collector, selection = _coordinator_with_collector(
         reader,
         writer,
         launch,
         assembler,
+        artifact_service,
+    )
+    _assert_durable_selection_replay(
+        database=database,
+        reader=reader,
+        writer=writer,
+        launch=launch,
+        assembler=assembler,
+        artifact_service=artifact_service,
+        coordinator=coordinator,
+        selection=selection,
     )
     events = tuple(
         event
@@ -643,19 +722,25 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
 
     # Holdout claim moves the experiment into HOLDOUT stage under the selected
     # candidate; the subsequent tick dispatches the one QUEUED holdout fold.
+    selection_projection = store.load_snapshot(launch.experiment_id).projection
     coordinator.claim_holdout_candidate(
-        _application_request(launch, provider.ledger),
+        _application_request(
+            launch,
+            selection.ledger,
+            expected_revision=selection_projection.revision,
+            occurred_at=NOW + timedelta(seconds=40),
+        ),
     )
-    dispatch = coordinator.tick(occurred_at=NOW + timedelta(seconds=1)).dispatches[0]
-    coordinator.start_attempt(dispatch, occurred_at=NOW + timedelta(seconds=2))
+    dispatch = coordinator.tick(occurred_at=NOW + timedelta(seconds=41)).dispatches[0]
+    coordinator.start_attempt(dispatch, occurred_at=NOW + timedelta(seconds=42))
     coordinator.complete_attempt(
         dispatch.attempt.spec.attempt_id,
-        occurred_at=NOW + timedelta(seconds=3),
+        occurred_at=NOW + timedelta(seconds=43),
     )
 
     # The next tick drives the HOLDOUT fold completion -> stage advance to
     # EVIDENCE -> collector.publish_review_packet -> transition to COMPLETED.
-    result = coordinator.tick(occurred_at=NOW + timedelta(seconds=4))
+    result = coordinator.tick(occurred_at=NOW + timedelta(seconds=44))
 
     # Reload the persisted snapshot for stage/status assertions.
     refreshed = store.load_snapshot(launch.experiment_id)
@@ -687,6 +772,9 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
         expected_comparison_hash=selected_evidence.content_hash,
         expected_fold_ids=expected_fold_ids,
         expected_attempt_ids=expected_attempt_ids,
+        expected_selection_artifact_id=selection.record.artifact_id,
+        expected_trial_count=selection.ledger.observed_trial_count,
+        expected_declared_trial_count=selection.ledger.declared_trial_count,
     )
 
     database.close_all()
@@ -699,6 +787,9 @@ def _assert_packet_shape(
     expected_comparison_hash: ContentHash,
     expected_fold_ids: tuple[str, ...],
     expected_attempt_ids: tuple[str, ...],
+    expected_selection_artifact_id: str,
+    expected_trial_count: int,
+    expected_declared_trial_count: int,
 ) -> None:
     """Assert real metric, artifact, and lineage evidence in the frozen packet."""
     gate_by_rule = {entry.rule_id: entry for entry in packet.gate_evaluations}
@@ -709,9 +800,8 @@ def _assert_packet_shape(
     }
     assert set(hard_gates) == set(_HARD_GATE_RULE_IDS)
     # Live R2 evidence is intentionally not inferred from this deterministic
-    # tmp_path fixture. ``cost_assumptions`` and ``trial_declaration`` retain
-    # their explicitly interim C2b projections; PASS here does not claim those
-    # later closure slices are complete.
+    # tmp_path fixture. ``cost_assumptions`` retains its explicitly interim
+    # projection; PASS here does not claim that later closure slice is complete.
     assert hard_gates["r2_live_gate"].outcome is GateOutcome.NOT_EVALUATED
     for rule_id, gate in hard_gates.items():
         if rule_id == "r2_live_gate":
@@ -721,6 +811,10 @@ def _assert_packet_shape(
     assert hard_gates["artifact_completeness"].outcome is GateOutcome.PASS
     assert hard_gates["cost_assumptions"].outcome is GateOutcome.PASS
     assert hard_gates["trial_declaration"].outcome is GateOutcome.PASS
+    assert hard_gates["trial_declaration"].observed == {
+        "trial_count": expected_trial_count,
+        "expected": expected_declared_trial_count,
+    }
 
     selected = next(
         candidate for candidate in launch.candidates if not candidate.is_baseline
@@ -743,6 +837,6 @@ def _assert_packet_shape(
 
     assert packet.comparison_payload_hash == expected_comparison_hash
     assert packet.r1_impact_payload_hash is None
-    assert packet.selection_evidence_artifact_id is None
+    assert packet.selection_evidence_artifact_id == expected_selection_artifact_id
     assert packet.candidate_rationale
     assert packet.candidate_rationale == packet.candidate_rationale.strip()
