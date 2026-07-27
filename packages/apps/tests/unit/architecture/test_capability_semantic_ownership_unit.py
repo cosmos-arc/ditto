@@ -329,6 +329,10 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_evidence_collection.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "comparison.py"
         ),
         (
@@ -451,6 +455,7 @@ def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
         "evidence_collector.py",
         "lease_authority.py",
         "_report_artifact_validation.py",
+        "_walk_forward_evidence_collection.py",
         "scheduler_store.py",
         "worker.py",
     ],
@@ -461,6 +466,20 @@ def test_experiment_runtime_wiring_allowances_are_exact_paths(filename: str) -> 
     )
     near_miss = rel_path.removesuffix(".py") + "_extra.py"
     source = "from ditto_analysis.experiments import ExperimentId"
+
+    assert check_production_no_analysis(source, rel_path) == []
+    assert check_production_no_analysis(source, near_miss) == [
+        f"{near_miss}: production imports ditto_analysis (check import-linter)"
+    ]
+
+
+def test_walk_forward_collection_allows_analysis_only_at_exact_path() -> None:
+    rel_path = (
+        "packages/application/src/ditto_application/processes/experiments/"
+        "_walk_forward_evidence_collection.py"
+    )
+    near_miss = rel_path.replace(".py", "_extra.py")
+    source = "from ditto_analysis.experiments.persistence import FoldView"
 
     assert check_production_no_analysis(source, rel_path) == []
     assert check_production_no_analysis(source, near_miss) == [

@@ -611,6 +611,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_evidence_collection.py"
+        ),
+        owner="application R3 walk-forward evidence collection boundary",
+        reason=(
+            "The typed read boundary selects exact terminal analysis-owned fold "
+            "and attempt projections, then verifies immutable report artifacts "
+            "through a narrow reader port; it performs no writes or execution."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "comparison.py"
         ),
         owner="application R3 candidate comparison process",
