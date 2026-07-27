@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from threading import Event, RLock, Thread, get_ident
@@ -39,6 +40,15 @@ class _LeaseStore:
     def __init__(self) -> None:
         self.renew_calls = 0
         self.release_calls = 0
+        self.renew_section_ids: list[int | None] = []
+        self._active_section_probe: Callable[[], int | None] = lambda: None
+
+    def observe_active_section(
+        self,
+        probe: Callable[[], int | None],
+    ) -> None:
+        """Record which authority section owns each durable renewal."""
+        self._active_section_probe = probe
 
     def try_claim_lease(
         self,
@@ -66,6 +76,7 @@ class _LeaseStore:
         new_lease_until_epoch_us: int,
     ) -> SchedulerLease:
         self.renew_calls += 1
+        self.renew_section_ids.append(self._active_section_probe())
         return replace(
             lease,
             lease_until_epoch_us=new_lease_until_epoch_us,
@@ -134,8 +145,11 @@ def _raise_base(error: BaseException) -> Never:
     raise error
 
 
-def _acquired_authority() -> tuple[LeaseAuthority, _LeaseStore]:
-    store = _LeaseStore()
+def _acquired_authority(
+    store: _LeaseStore | None = None,
+) -> tuple[LeaseAuthority, _LeaseStore]:
+    if store is None:
+        store = _LeaseStore()
     authority = LeaseAuthority(
         cast(ExperimentSchedulerStoreProtocol, store),
         owner_token="lease-authority-test",
@@ -294,6 +308,14 @@ def test_recoverable_publication_renews_and_runs_in_one_outer_authority_section(
     authority, store = _acquired_authority()
     lock = _ObservableRLock()
     authority._lock = lock
+    store.observe_active_section(lambda: lock.active_section_id)
+    current_now_section_ids: list[int | None] = []
+
+    def observed_clock() -> datetime:
+        current_now_section_ids.append(lock.active_section_id)
+        return NOW
+
+    authority._clock = observed_clock
     observed: list[tuple[LeaseFence, int, int, int | None]] = []
 
     result = authority.execute_recoverable_under_renewed_lease(
@@ -312,6 +334,10 @@ def test_recoverable_publication_renews_and_runs_in_one_outer_authority_section(
 
     assert result == "published"
     assert store.renew_calls == 1
+    assert len(store.renew_section_ids) == 1
+    outer_section_id = store.renew_section_ids[0]
+    assert outer_section_id is not None
+    assert current_now_section_ids == [outer_section_id, outer_section_id]
     assert observed == [
         (
             LeaseFence(
@@ -322,40 +348,65 @@ def test_recoverable_publication_renews_and_runs_in_one_outer_authority_section(
             ),
             NOW_EPOCH_US,
             1,
-            observed[0][3],
+            outer_section_id,
         )
     ]
-    assert observed[0][3] is not None
     assert lock.depth == 0
 
 
 def test_recoverable_publication_blocks_a_second_renew_until_callback_returns() -> None:
-    authority, store = _acquired_authority()
     lock = _ObservableRLock()
+    publication_renew_started = Event()
+
+    class _CoordinatedRenewStore(_LeaseStore):
+        def renew_lease(
+            self,
+            lease: SchedulerLease,
+            *,
+            now_epoch_us: int,
+            new_lease_until_epoch_us: int,
+        ) -> SchedulerLease:
+            publication_renew_started.set()
+            assert lock.competitor_attempted.wait(timeout=5)
+            return super().renew_lease(
+                lease,
+                now_epoch_us=now_epoch_us,
+                new_lease_until_epoch_us=new_lease_until_epoch_us,
+            )
+
+    authority, store = _acquired_authority(_CoordinatedRenewStore())
     authority._lock = lock
-    callback_started = Event()
+    store.observe_active_section(lambda: lock.active_section_id)
     competitor_finished = Event()
+    competitor_errors: list[BaseException] = []
+    callback_observed: list[tuple[int | None, bool]] = []
 
     def competitor() -> None:
-        assert callback_started.wait(timeout=5)
-        authority.renew()
-        competitor_finished.set()
+        try:
+            assert publication_renew_started.wait(timeout=5)
+            authority.renew()
+        except BaseException as error:
+            competitor_errors.append(error)
+        finally:
+            competitor_finished.set()
 
     thread = Thread(target=competitor)
     thread.start()
 
     def publish(_fence: LeaseFence, _now_epoch_us: int) -> None:
-        callback_started.set()
-        assert lock.competitor_attempted.wait(timeout=5)
-        assert store.renew_calls == 1
-        assert competitor_finished.is_set() is False
+        callback_observed.append((lock.active_section_id, competitor_finished.is_set()))
 
     authority.execute_recoverable_under_renewed_lease(publish)
     thread.join(timeout=5)
 
     assert thread.is_alive() is False
     assert competitor_finished.is_set() is True
+    assert competitor_errors == []
     assert store.renew_calls == 2
+    assert len(store.renew_section_ids) == 2
+    publication_section_id = store.renew_section_ids[0]
+    assert publication_section_id is not None
+    assert callback_observed == [(publication_section_id, False)]
 
 
 @pytest.mark.parametrize(
