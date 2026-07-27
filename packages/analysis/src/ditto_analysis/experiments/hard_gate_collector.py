@@ -12,7 +12,9 @@ manifest, artifact listing, and trial declaration before invoking the projection
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
+from ditto_analysis.errors import ExperimentIdentityError
 from ditto_analysis.experiments.gates import GateFact, HardGateEvidence
 from ditto_analysis.experiments.models import ContentHash
 
@@ -26,6 +28,9 @@ _REQUIRED_ELIGIBLE_MONTHS = 96
 
 #: Only point-in-time policy that satisfies the ``pit_known_at`` gate.
 _PIT_POLICY_SAMPLE_TIME = "sample_time"
+
+#: Legacy interim value is not evidence of a real execution-cost configuration.
+_LEGACY_COST_CONFIG_PLACEHOLDER = "0" * 64
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,13 +51,29 @@ class HardGateEvidenceView:
     pit_policy: str
     purge_embargo_configured: bool
     reproduction_fingerprints: tuple[ContentHash, ...]
-    cost_config_hash: ContentHash
+    cost_config_hashes: tuple[ContentHash, ...]
     baseline_candidate_id: str
     trial_count: int
     expected_trial_count: int
     holdout_claim_id: str | None
     artifact_complete: bool
     artifact_missing: tuple[str, ...]
+
+
+def _canonical_cost_config_hashes(value: object) -> tuple[str, ...]:
+    """Revalidate the exact typed hash sequence without trusting frozen fields."""
+    if type(value) is not tuple:
+        return ()
+    canonical: list[str] = []
+    for item in cast("tuple[object, ...]", value):
+        if type(item) is not ContentHash:
+            return ()
+        try:
+            rebuilt = ContentHash(item.value)
+        except ExperimentIdentityError:
+            return ()
+        canonical.append(str(rebuilt))
+    return tuple(canonical)
 
 
 def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
@@ -65,6 +86,13 @@ def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
     view field. The returned :class:`HardGateEvidence` is ready to be fed to
     :func:`evaluate_hard_gates` for outcome projection.
     """
+    cost_config_hashes = _canonical_cost_config_hashes(view.cost_config_hashes)
+    unique_cost_config_hashes = tuple(sorted(set(cost_config_hashes)))
+    cost_config_consistent = (
+        len(unique_cost_config_hashes) == 1
+        and unique_cost_config_hashes[0] != _LEGACY_COST_CONFIG_PLACEHOLDER
+    )
+
     return HardGateEvidence(
         certified_snapshot=GateFact(
             view.certified_snapshot,
@@ -90,10 +118,11 @@ def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
             None,
         ),
         cost_assumptions=GateFact(
-            # V1 (design section 6): a present cost-config hash satisfies the
-            # gate. V2 will compare two hashes for cross-candidate consistency.
-            True,
-            {"cost_config_hash": str(view.cost_config_hash)},
+            cost_config_consistent,
+            {
+                "cost_config_hashes": cost_config_hashes,
+                "unique_cost_config_hashes": unique_cost_config_hashes,
+            },
         ),
         baseline_declared=GateFact(
             bool(view.baseline_candidate_id),

@@ -30,7 +30,7 @@ def _all_satisfied_view() -> HardGateEvidenceView:
         pit_policy="sample_time",
         purge_embargo_configured=True,
         reproduction_fingerprints=(_hash("a"), _hash("b")),
-        cost_config_hash=_hash("c"),
+        cost_config_hashes=(_hash("c"), _hash("c"), _hash("c"), _hash("c")),
         baseline_candidate_id="candidate-baseline",
         trial_count=5,
         expected_trial_count=5,
@@ -45,6 +45,13 @@ def test_hard_gate_view_uses_eligible_month_count_contract() -> None:
 
     assert "eligible_month_count" in fields
     assert "oos_month_count" not in fields
+
+
+def test_hard_gate_view_uses_all_walk_forward_cost_hashes_contract() -> None:
+    fields = HardGateEvidenceView.__dataclass_fields__
+
+    assert "cost_config_hashes" in fields
+    assert "cost_config_hash" not in fields
 
 
 def test_collect_returns_hard_gate_evidence_instance() -> None:
@@ -182,16 +189,98 @@ def test_reproduction_passes_with_one_fingerprint() -> None:
     assert evidence.reproduction.satisfied is True
 
 
-def test_cost_assumptions_passes_when_hash_present() -> None:
-    """V1 semantics: a present cost config hash satisfies the gate."""
-
-    view = replace(_all_satisfied_view(), cost_config_hash=_hash("d"))
+def test_cost_assumptions_passes_when_all_fold_hashes_match() -> None:
+    view = replace(
+        _all_satisfied_view(),
+        cost_config_hashes=(_hash("d"), _hash("d"), _hash("d"), _hash("d")),
+    )
 
     evidence = collect_hard_gate_evidence(view)
 
     assert evidence.cost_assumptions.satisfied is True
     assert evidence.cost_assumptions.detail == {
-        "cost_config_hash": "d" * 64,
+        "cost_config_hashes": ("d" * 64,) * 4,
+        "unique_cost_config_hashes": ("d" * 64,),
+    }
+
+
+def test_cost_assumptions_fails_closed_when_fold_hashes_are_missing() -> None:
+    view = replace(_all_satisfied_view(), cost_config_hashes=())
+
+    evidence = collect_hard_gate_evidence(view)
+
+    assert evidence.cost_assumptions.satisfied is False
+    assert evidence.cost_assumptions.detail == {
+        "cost_config_hashes": (),
+        "unique_cost_config_hashes": (),
+    }
+
+
+def test_cost_assumptions_rejects_the_historical_all_zero_placeholder() -> None:
+    view = replace(
+        _all_satisfied_view(),
+        cost_config_hashes=(_hash("0"), _hash("0"), _hash("0"), _hash("0")),
+    )
+
+    evidence = collect_hard_gate_evidence(view)
+
+    assert evidence.cost_assumptions.satisfied is False
+    assert evidence.cost_assumptions.detail == {
+        "cost_config_hashes": ("0" * 64,) * 4,
+        "unique_cost_config_hashes": ("0" * 64,),
+    }
+
+
+def test_cost_assumptions_fails_when_any_fold_hash_drifts() -> None:
+    view = replace(
+        _all_satisfied_view(),
+        cost_config_hashes=(_hash("d"), _hash("e"), _hash("d")),
+    )
+
+    evidence = collect_hard_gate_evidence(view)
+
+    assert evidence.cost_assumptions.satisfied is False
+    assert evidence.cost_assumptions.detail == {
+        "cost_config_hashes": ("d" * 64, "e" * 64, "d" * 64),
+        "unique_cost_config_hashes": ("d" * 64, "e" * 64),
+    }
+
+
+@pytest.mark.parametrize(
+    "invalid_hashes",
+    [
+        "d" * 64,
+        ["d" * 64],
+        ("d" * 64,),
+    ],
+)
+def test_cost_assumptions_fails_closed_for_runtime_type_forgery(
+    invalid_hashes: object,
+) -> None:
+    view = _all_satisfied_view()
+    object.__setattr__(view, "cost_config_hashes", invalid_hashes)
+
+    evidence = collect_hard_gate_evidence(view)
+
+    assert evidence.cost_assumptions.satisfied is False
+    assert evidence.cost_assumptions.detail == {
+        "cost_config_hashes": (),
+        "unique_cost_config_hashes": (),
+    }
+
+
+def test_cost_assumptions_revalidates_content_hash_value() -> None:
+    view = _all_satisfied_view()
+    forged_hash = _hash("d")
+    object.__setattr__(forged_hash, "value", "d")
+    object.__setattr__(view, "cost_config_hashes", (forged_hash, forged_hash))
+
+    evidence = collect_hard_gate_evidence(view)
+
+    assert evidence.cost_assumptions.satisfied is False
+    assert evidence.cost_assumptions.detail == {
+        "cost_config_hashes": (),
+        "unique_cost_config_hashes": (),
     }
 
 

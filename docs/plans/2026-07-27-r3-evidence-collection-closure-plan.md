@@ -71,7 +71,7 @@ def _view(**overrides):
         eligible_month_count=96, pit_policy="sample_time",
         purge_embargo_configured=True,
         reproduction_fingerprints=(ContentHash("a" * 64),),
-        cost_config_hash=ContentHash("c" * 64),
+        cost_config_hashes=(ContentHash("c" * 64),),
         baseline_candidate_id="cand-baseline",
         trial_count=4, expected_trial_count=4,
         holdout_claim_id="claim-1",
@@ -137,7 +137,7 @@ class HardGateEvidenceView:
     pit_policy: str
     purge_embargo_configured: bool
     reproduction_fingerprints: tuple[ContentHash, ...]
-    cost_config_hash: ContentHash
+    cost_config_hashes: tuple[ContentHash, ...]
     baseline_candidate_id: str
     trial_count: int
     expected_trial_count: int
@@ -158,7 +158,17 @@ def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
         pit_known_at=GateFact(view.pit_policy == "sample_time", {"pit_policy": view.pit_policy}),
         split_purge_embargo=GateFact(view.purge_embargo_configured, None),
         reproduction=GateFact(len(view.reproduction_fingerprints) > 0, None),
-        cost_assumptions=GateFact(True, {"cost_config_hash": str(view.cost_config_hash)}),
+        cost_assumptions=GateFact(
+            bool(view.cost_config_hashes)
+            and len(set(view.cost_config_hashes)) == 1
+            and view.cost_config_hashes[0] != ContentHash("0" * 64),
+            {
+                "cost_config_hashes": tuple(map(str, view.cost_config_hashes)),
+                "unique_cost_config_hashes": tuple(
+                    sorted({str(item) for item in view.cost_config_hashes})
+                ),
+            },
+        ),
         baseline_declared=GateFact(bool(view.baseline_candidate_id), {"baseline_candidate_id": view.baseline_candidate_id}),
         trial_declaration=GateFact(view.trial_count == view.expected_trial_count, {"trial_count": view.trial_count, "expected": view.expected_trial_count}),
         holdout_claim=GateFact(None if view.holdout_claim_id is None else True, {"claim_id": view.holdout_claim_id}),
@@ -522,7 +532,7 @@ collector 接通 `assemble_candidate_fold_evidence` → `build_candidate_compari
 `reconstruct_preflight_report` 验证后的 `eligible_month_count`；artifact
 completeness 使用全 candidate family 的 fold 终态与 report 缺失引用，不再使用
 attempt-status 代理。selection artifact 与 trial-ledger count 已在 Task 5d
-闭合；真实 cost hash 仍按后续任务保留。
+闭合；真实 cost hash 已在 Task 5e 闭合。
 
 ### Task 5c: golden 升级验证真实 metric（已完成，2026-07-27）
 
@@ -530,7 +540,7 @@ attempt-status 代理。selection artifact 与 trial-ledger count 已在 Task 5d
 walk-forward fold 的 4 个 indexed backtest report，并断言 selected candidate 的
 NET_RETURN / SHARPE 非空、canonical `comparison_payload_hash`、两组
 fold/attempt paired lineage 以及 artifact completeness PASS。fixture 仍明确为
-deterministic；cost hash 保持 interim，`r2_live_gate` 保持
+deterministic；真实 cost hash 随后由 Task 5e 接入，`r2_live_gate` 保持
 `NOT_EVALUATED`。
 
 ### Task 5d: durable selection evidence 与真实 trial count（已完成，2026-07-27）
@@ -546,18 +556,29 @@ artifact 丢失、manifest/bytes 漂移、claim hash 漂移和 claim 时间倒�
 closed。该链路由真实 `tmp_path` SQLite golden 覆盖，未使用手造 selection
 ledger。
 
-### Task 5e: 其余后端闭环场景（后续）
+### Task 5e: 真实 execution-policy cost hash（已完成，2026-07-27）
+
+assembler 对全部 walk-forward fold 各解析一次
+`ResearchExecutionSemantics`，逐项绑定 launch/candidate/fold、snapshot/PIT、
+attempt fingerprint、exact strategy、node registry 与 execution binding；完整
+重建校验后深度脱钩语义对象，并在校验时复制 `policy.canonical_hash`，避免后续
+resolver 调用造成 read-after-check。assembler 按 canonical source-row 顺序输出
+这些 captured hashes。collector 将全体 hash 写入 hard-gate evidence：必须是
+exact `tuple[ContentHash, ...]`，且非空、唯一、非历史全零 placeholder 才 PASS；
+合法单 fold policy 漂移正常发布 ReviewPacket 且 gate 为 FAIL，结构或 lineage
+漂移则 fail closed。真实 `tmp_path` SQLite golden 同时覆盖四行一致、单行漂移
+与重启 replay，无 schema 或数据库迁移。
+
+### Task 5f: 其余后端闭环场景（后续）
 
 governance recovery 已由
 `packages/application/tests/integration/test_r3_governance_recovery_golden.py`
 覆盖 append-only review decision、active pointer CAS/reactivate 与 stale
 conflict，不再列为待实施项。剩余按依赖顺序推进：
 
-1. 以每个 fold 的 execution policy canonical hash 替换 interim cost hash，
-   一致才 PASS、漂移即 FAIL；
-2. stock/ETF 双 lane golden，并在 `r2_live_gate=NOT_EVALUATED` 下如实断言
+1. stock/ETF 双 lane golden，并在 `r2_live_gate=NOT_EVALUATED` 下如实断言
    promotion 被阻断且 active pointer 不变；
-3. `test_r3_scheduler_capacity`：128 预检、2/4 worker、单 slot、lease reclaim、
+2. `test_r3_scheduler_capacity`：128 预检、2/4 worker、单 slot、lease reclaim、
    无重复 claim 与 artifact lineage。
 
 **Step 1: Write golden e2e tests**

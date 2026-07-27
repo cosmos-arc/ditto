@@ -84,11 +84,13 @@ from ditto_application.processes.experiments.execution_bundle import (
     ResearchExecutionSemantics,
     ResearchFillMode,
     ResearchSnapshotBinding,
+    StrategyExecutionBinding,
     VersionedExecutionComponent,
     research_data_feed_manifest_hash,
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ExactResearchSnapshot,
+    ExactStrategyIdentity,
     ExactUniverseIdentity,
     default_stock_execution_policy,
 )
@@ -493,7 +495,7 @@ def _backtest_binding(
     )
 
 
-def _baseline_semantics(
+def _execution_semantics(
     fold: FoldView,
     plan: BaselineExecutionPlan,
 ) -> ResearchExecutionSemantics:
@@ -535,24 +537,57 @@ def _baseline_semantics(
     )
     registry = default_baseline_registry()
     launch = _launch_spec()
+    candidate = next(
+        item
+        for item in launch.candidates
+        if item.candidate_id == fold.spec.key.candidate_id
+    )
+    execution = next(
+        item
+        for item in launch.execution_bindings
+        if item.candidate_id == fold.spec.key.candidate_id
+    )
+    if candidate.is_baseline:
+        plan_hash = plan.canonical_hash
+        strategy: StrategyExecutionBinding | BaselineExecutorBinding = (
+            BaselineExecutorBinding(
+                baseline_ref=plan.baseline_ref.identity,
+                kind=plan.kind,
+                descriptor_hash=plan.descriptor_hash,
+                implementation_key=plan.implementation_key,
+                executor_contract_version=plan.executor_contract_version,
+                registry_manifest_hash=registry.manifest_hash,
+                factor_versions=(),
+            )
+        )
+        baseline_plan: BaselineExecutionPlan | None = plan
+    else:
+        plan_hash = str(execution.resolved_spec_hash)
+        strategy = StrategyExecutionBinding(
+            exact_strategy=ExactStrategyIdentity(
+                "strategy",
+                1,
+                str(launch.strategy_spec_hash),
+            ),
+            resolved_spec_hash=str(execution.resolved_spec_hash),
+            parameter_hash=str(execution.parameter_hash),
+            node_registry_manifest_hash=str(REGISTRY_HASH),
+            pipeline_execution_hash="6" * 64,
+            factor_registry_manifest_hash="5" * 64,
+            compiled_factor_set_hash="4" * 64,
+            factor_bindings=(),
+        )
+        baseline_plan = None
     return ResearchExecutionSemantics(
         experiment_id=str(EXPERIMENT_ID),
-        candidate_id=str(BASELINE_ID),
+        candidate_id=str(candidate.candidate_id),
         fold_id=str(fold.spec.key.fold_id),
         fold_role=FoldRole.WALK_FORWARD.value,
-        is_baseline=True,
-        plan_hash=plan.canonical_hash,
+        is_baseline=candidate.is_baseline,
+        plan_hash=plan_hash,
         launch_spec_hash=str(encode_launch_spec(launch).content_hash),
         fold_spec_hash=str(fold.spec.payload_hash),
-        strategy=BaselineExecutorBinding(
-            baseline_ref=plan.baseline_ref.identity,
-            kind=plan.kind,
-            descriptor_hash=plan.descriptor_hash,
-            implementation_key=plan.implementation_key,
-            executor_contract_version=plan.executor_contract_version,
-            registry_manifest_hash=registry.manifest_hash,
-            factor_versions=(),
-        ),
+        strategy=strategy,
         backtest=_backtest_binding(snapshot, fee_schedule, instrument_rules),
         snapshot=snapshot,
         membership_hash="b" * 64,
@@ -567,7 +602,7 @@ def _baseline_semantics(
         knowledge_lag_days=1,
         execution_delay_sessions=1,
         baseline_registry_manifest_hash=registry.manifest_hash,
-        baseline_plan=plan,
+        baseline_plan=baseline_plan,
         policy=default_stock_execution_policy(),
         environment=CodeEnvironmentLock(
             "git:walk-forward-evidence",
@@ -643,19 +678,11 @@ def build_case(
         for ordinal in (2, 3)
     )
     plan = _baseline_plan()
-    semantics = {
-        fold.spec.key: _baseline_semantics(fold, plan)
-        for fold in folds
-        if fold.spec.key.candidate_id == BASELINE_ID
-    }
+    semantics = {fold.spec.key: _execution_semantics(fold, plan) for fold in folds}
     attempts = tuple(
         _attempt(
             fold,
-            (
-                semantics[fold.spec.key].reproduction_fingerprint
-                if fold.spec.key.candidate_id == BASELINE_ID
-                else ContentHash("c" * 63 + str(fold.spec.ordinal))
-            ),
+            semantics[fold.spec.key].reproduction_fingerprint,
         )
         for fold in folds
     )

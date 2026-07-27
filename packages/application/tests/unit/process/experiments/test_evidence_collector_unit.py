@@ -415,6 +415,14 @@ def test_collect_publishes_real_selected_metrics_and_paired_lineage(
         "expected": 2,
     }
     assert _gate(packet, "ninety_six_month_protocol").outcome is GateOutcome.PASS
+    cost_hashes = tuple(str(item) for item in expected.fold_cost_config_hashes)
+    assert len(cost_hashes) == len(expected.source_rows) == 4
+    assert set(cost_hashes) != {"0" * 64}
+    assert _gate(packet, "cost_assumptions").outcome is GateOutcome.PASS
+    assert _gate(packet, "cost_assumptions").observed == {
+        "cost_config_hashes": cost_hashes,
+        "unique_cost_config_hashes": tuple(sorted(set(cost_hashes))),
+    }
     assert _gate(packet, "primary_objective_metric").outcome is GateOutcome.PASS
     assert _gate(packet, "primary_objective_metric").observed == pytest.approx(17.6)
     assert (
@@ -477,7 +485,7 @@ def test_split_purge_embargo_requires_isolation_on_every_fold(
             pit_policy="sample_time",
             purge_embargo_configured=configured,
             reproduction_fingerprints=(ContentHash("a" * 64),),
-            cost_config_hash=ContentHash("b" * 64),
+            cost_config_hashes=(ContentHash("b" * 64),),
             baseline_candidate_id="candidate-baseline",
             trial_count=2,
             expected_trial_count=2,

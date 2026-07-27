@@ -18,6 +18,8 @@ fresh ``tmp_path`` SQLite research database:
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -34,6 +36,7 @@ from ditto_analysis.experiments import (
     ExperimentLaunchSpec,
     ExperimentStage,
     ExperimentStatus,
+    FoldKey,
     FoldPersistenceSpec,
     FoldRole,
     FoldView,
@@ -63,6 +66,7 @@ from ditto_application.processes.experiments._selection_evidence_artifact import
     PublishedSelectionEvidence,
 )
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    CollectedWalkForwardEvidence,
     WalkForwardEvidenceAssembler,
 )
 from ditto_application.processes.experiments.coordinator import (
@@ -71,6 +75,12 @@ from ditto_application.processes.experiments.coordinator import (
 )
 from ditto_application.processes.experiments.evidence_collector import (
     ExperimentEvidenceCollector,
+)
+from ditto_application.processes.experiments.execution_bundle import (
+    ResearchExecutionSemantics,
+)
+from ditto_application.processes.experiments.execution_contracts import (
+    default_etf_execution_policy,
 )
 from ditto_application.processes.experiments.holdout import (
     ClaimHoldoutCandidateRequest,
@@ -120,6 +130,34 @@ _REPORT_NAVS = {
     (False, 2): (110.0, 105.0),
     (False, 3): (106.0, 112.0),
 }
+_SemanticsTransform = Callable[
+    [dict[FoldKey, ResearchExecutionSemantics]],
+    dict[FoldKey, ResearchExecutionSemantics],
+]
+
+
+def _drift_one_cost_semantics(
+    values: dict[FoldKey, ResearchExecutionSemantics],
+) -> dict[FoldKey, ResearchExecutionSemantics]:
+    target_key, original = next(
+        (key, semantics)
+        for key, semantics in values.items()
+        if not semantics.is_baseline
+    )
+    slippage = replace(
+        original.policy.slippage,
+        basis_points=original.policy.slippage.basis_points + 1,
+    )
+    policy = replace(original.policy, slippage=slippage)
+    backtest = replace(
+        original.backtest,
+        slippage_basis_points=slippage.basis_points,
+        policy_hash=policy.canonical_hash,
+    )
+    return {
+        **values,
+        target_key: replace(original, policy=policy, backtest=backtest),
+    }
 
 
 def _complete_fold(
@@ -295,16 +333,10 @@ def _advance_to_candidate_selection(
         detail={"completed_stage": "exploration"},
     )
     assert projection.revision == 3
-    candidates = {candidate.candidate_id: candidate for candidate in launch.candidates}
     for fold in folds:
         if fold.spec.fold_role is not FoldRole.WALK_FORWARD:
             continue
-        candidate = candidates[fold.spec.key.candidate_id]
-        fingerprint = (
-            str(resolver.resolve(fold).reproduction_fingerprint)
-            if candidate.is_baseline
-            else "8" * 64
-        )
+        fingerprint = str(resolver.resolve(fold).reproduction_fingerprint)
         _complete_fold(writer, fold, lease, fingerprint=fingerprint)
     return lease
 
@@ -367,6 +399,8 @@ def _publish_walk_forward_reports(
 
 def _store(
     tmp_path: Path,
+    *,
+    semantics_transform: _SemanticsTransform | None = None,
 ) -> tuple[
     ResearchExperimentDatabase,
     SQLiteExperimentReader,
@@ -393,10 +427,13 @@ def _store(
     process.launch(request, confirmed_plan_hash=report.plan_hash)
     launch = reader.get_launch_spec(ExperimentId(request.experiment_id))
     assert launch is not None
-    resolver = golden_support.build_baseline_semantics_resolver(
+    semantics = golden_support.build_execution_semantics(
         launch,
         reader.list_folds(launch.experiment_id),
     )
+    if semantics_transform is not None:
+        semantics = semantics_transform(semantics)
+    resolver = golden_support.ExecutionSemanticsResolver(semantics)
     lease = _advance_to_candidate_selection(reader, writer, launch, resolver)
     assembler, artifact_service = _publish_walk_forward_reports(
         tmp_path,
@@ -648,11 +685,57 @@ def _assert_durable_selection_replay(
     )
 
 
+def _assert_cost_collection_replay(
+    *,
+    cost_drift: bool,
+    collected: CollectedWalkForwardEvidence,
+    launch: ExperimentLaunchSpec,
+    reader: SQLiteExperimentReader,
+    store: ExperimentSchedulerStore,
+    artifact_service: ResearchArtifactService,
+    preflight_detail: Mapping[str, object],
+    semantics_transform: _SemanticsTransform | None,
+) -> None:
+    expected_cost_hash = ContentHash(default_etf_execution_policy().canonical_hash)
+    assert expected_cost_hash != ContentHash("0" * 64)
+    if cost_drift:
+        assert len(set(collected.fold_cost_config_hashes)) == 2
+        assert collected.fold_cost_config_hashes.count(expected_cost_hash) == 3
+    else:
+        assert collected.fold_cost_config_hashes == (expected_cost_hash,) * 4
+    replay_semantics = golden_support.build_execution_semantics(
+        launch,
+        reader.list_folds(launch.experiment_id),
+    )
+    if semantics_transform is not None:
+        replay_semantics = semantics_transform(replay_semantics)
+    restarted_assembler = WalkForwardEvidenceAssembler(
+        report_reader=IndexedBacktestReportArtifactAdapter(
+            artifact_service=artifact_service,
+            artifact_index_reader=reader,
+        ),
+        semantics_resolver=golden_support.ExecutionSemanticsResolver(replay_semantics),
+    )
+    assert (
+        restarted_assembler.assemble(
+            store.load_snapshot(launch.experiment_id),
+            project_snapshot_manifest(preflight_detail),
+        )
+        == collected
+    )
+
+
+@pytest.mark.parametrize("cost_drift", [False, True], ids=["cost-match", "cost-drift"])
 def test_r3_evidence_closure_drives_review_packet_and_completed_status(
     tmp_path: Path,
+    cost_drift: bool,
 ) -> None:
     """Drive one experiment tick from EVIDENCE to a published packet + COMPLETED."""
-    database, reader, writer, launch, assembler, artifact_service = _store(tmp_path)
+    semantics_transform = _drift_one_cost_semantics if cost_drift else None
+    database, reader, writer, launch, assembler, artifact_service = _store(
+        tmp_path,
+        semantics_transform=semantics_transform,
+    )
     coordinator, store, _collector, selection = _coordinator_with_collector(
         reader,
         writer,
@@ -684,6 +767,16 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
     )
     assert len(collected.source_rows) == 4
     assert collected.missing_artifact_refs == ()
+    _assert_cost_collection_replay(
+        cost_drift=cost_drift,
+        collected=collected,
+        launch=launch,
+        reader=reader,
+        store=store,
+        artifact_service=artifact_service,
+        preflight_detail=events[0].detail,
+        semantics_transform=semantics_transform,
+    )
     assert (
         database.get_connection()
         .execute(
@@ -775,6 +868,8 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
         expected_selection_artifact_id=selection.record.artifact_id,
         expected_trial_count=selection.ledger.observed_trial_count,
         expected_declared_trial_count=selection.ledger.declared_trial_count,
+        expected_cost_hashes=collected.fold_cost_config_hashes,
+        expected_cost_outcome=(GateOutcome.FAIL if cost_drift else GateOutcome.PASS),
     )
 
     database.close_all()
@@ -790,6 +885,8 @@ def _assert_packet_shape(
     expected_selection_artifact_id: str,
     expected_trial_count: int,
     expected_declared_trial_count: int,
+    expected_cost_hashes: tuple[ContentHash, ...],
+    expected_cost_outcome: GateOutcome,
 ) -> None:
     """Assert real metric, artifact, and lineage evidence in the frozen packet."""
     gate_by_rule = {entry.rule_id: entry for entry in packet.gate_evaluations}
@@ -800,16 +897,26 @@ def _assert_packet_shape(
     }
     assert set(hard_gates) == set(_HARD_GATE_RULE_IDS)
     # Live R2 evidence is intentionally not inferred from this deterministic
-    # tmp_path fixture. ``cost_assumptions`` retains its explicitly interim
-    # projection; PASS here does not claim that later closure slice is complete.
+    # tmp_path fixture. Cost assumptions are real execution-policy hashes, while
+    # G2 promotion readiness remains explicitly NOT_EVALUATED.
     assert hard_gates["r2_live_gate"].outcome is GateOutcome.NOT_EVALUATED
     for rule_id, gate in hard_gates.items():
         if rule_id == "r2_live_gate":
             assert gate.outcome is GateOutcome.NOT_EVALUATED
+        elif rule_id == "cost_assumptions":
+            assert gate.outcome is expected_cost_outcome
         else:
             assert gate.outcome is GateOutcome.PASS
     assert hard_gates["artifact_completeness"].outcome is GateOutcome.PASS
-    assert hard_gates["cost_assumptions"].outcome is GateOutcome.PASS
+    assert hard_gates["cost_assumptions"].outcome is expected_cost_outcome
+    cost_observed = hard_gates["cost_assumptions"].observed
+    assert isinstance(cost_observed, Mapping)
+    assert tuple(cost_observed["cost_config_hashes"]) == tuple(
+        str(item) for item in expected_cost_hashes
+    )
+    assert tuple(cost_observed["unique_cost_config_hashes"]) == tuple(
+        sorted({str(item) for item in expected_cost_hashes})
+    )
     assert hard_gates["trial_declaration"].outcome is GateOutcome.PASS
     assert hard_gates["trial_declaration"].observed == {
         "trial_count": expected_trial_count,

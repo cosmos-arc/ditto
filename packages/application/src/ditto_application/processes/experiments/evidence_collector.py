@@ -84,10 +84,6 @@ from ditto_application.processes.experiments.walk_forward import WalkForwardCand
 __all__ = ["ExperimentEvidenceCollector"]
 
 
-#: V1 placeholder for the cost-config content hash. The ``cost_assumptions`` gate
-#: is satisfied unconditionally by a present hash (design section 6); V2 will
-#: replace this with a real cross-candidate consistency hash.
-_PLACEHOLDER_COST_CONFIG_HASH = ContentHash("0" * 64)
 _REQUIRED_SELECTED_WALK_FORWARD_FOLDS = 2
 
 
@@ -246,7 +242,7 @@ def _build_hard_gate_view(
         reproduction_fingerprints=tuple(
             row.reproduction_fingerprint for row in selected_rows
         ),
-        cost_config_hash=_PLACEHOLDER_COST_CONFIG_HASH,
+        cost_config_hashes=collected.fold_cost_config_hashes,
         baseline_candidate_id=str(
             launch_spec.promotion_objective.baseline_candidate_id
         ),

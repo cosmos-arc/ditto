@@ -1,4 +1,4 @@
-"""Reusable real-preflight and baseline-semantics support for the R3 golden."""
+"""Reusable real-preflight and execution-semantics support for the R3 golden."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from ditto_analysis.experiments import (
     ExperimentFailurePolicy,
     ExperimentLaunchSpec,
+    FoldKey,
     FoldRole,
     FoldView,
     ResearchMetricDirection,
@@ -102,11 +103,12 @@ from ditto_application.research_validation_protocol import (
 from ditto_strategy.models import StrategySpecRecord
 
 __all__ = [
-    "BaselineSemanticsResolver",
+    "ExecutionSemanticsResolver",
     "PlanningAuthorityProbe",
     "PlanningCertificationProbe",
     "PlanningExecutorProbe",
-    "build_baseline_semantics_resolver",
+    "build_execution_semantics",
+    "build_execution_semantics_resolver",
     "build_planning_request",
 ]
 
@@ -460,7 +462,7 @@ def _backtest_binding(
     )
 
 
-def _baseline_semantics(
+def _execution_semantics(
     launch: ExperimentLaunchSpec,
     fold: FoldView,
 ) -> ResearchExecutionSemantics:
@@ -510,22 +512,50 @@ def _baseline_semantics(
             instrument_rules,
         ),
     )
+    candidate = next(
+        item
+        for item in launch.candidates
+        if item.candidate_id == fold.spec.key.candidate_id
+    )
+    execution = next(
+        item
+        for item in launch.execution_bindings
+        if item.candidate_id == fold.spec.key.candidate_id
+    )
+    if candidate.is_baseline:
+        exact_strategy = plan.exact_strategy
+        resolved_spec_hash = "b" * 64
+        parameter_hash = "c" * 64
+        pipeline_execution_hash = f"{258:064x}"
+        plan_hash = plan.canonical_hash
+        baseline_plan = plan
+    else:
+        exact_strategy = ExactStrategyIdentity(
+            "seed_etf_rotation",
+            3,
+            str(launch.strategy_spec_hash),
+        )
+        resolved_spec_hash = str(execution.resolved_spec_hash)
+        parameter_hash = str(execution.parameter_hash)
+        pipeline_execution_hash = f"{candidate.ordinal + 256:064x}"
+        plan_hash = str(execution.resolved_spec_hash)
+        baseline_plan = None
     train = fold.spec.train_window
     return ResearchExecutionSemantics(
         experiment_id=str(launch.experiment_id),
         candidate_id=str(fold.spec.key.candidate_id),
         fold_id=str(fold.spec.key.fold_id),
         fold_role=FoldRole.WALK_FORWARD.value,
-        is_baseline=True,
-        plan_hash=plan.canonical_hash,
+        is_baseline=candidate.is_baseline,
+        plan_hash=plan_hash,
         launch_spec_hash=str(encode_launch_spec(launch).content_hash),
         fold_spec_hash=str(fold.spec.payload_hash),
         strategy=StrategyExecutionBinding(
-            exact_strategy=plan.exact_strategy,
-            resolved_spec_hash="b" * 64,
-            parameter_hash="c" * 64,
+            exact_strategy=exact_strategy,
+            resolved_spec_hash=resolved_spec_hash,
+            parameter_hash=parameter_hash,
             node_registry_manifest_hash="e" * 64,
-            pipeline_execution_hash=f"{258:064x}",
+            pipeline_execution_hash=pipeline_execution_hash,
             factor_registry_manifest_hash="d" * 64,
             compiled_factor_set_hash=compiled_expressions_execution_hash(None),
             factor_bindings=(),
@@ -545,7 +575,7 @@ def _baseline_semantics(
         knowledge_lag_days=1,
         execution_delay_sessions=1,
         baseline_registry_manifest_hash=registry.manifest_hash,
-        baseline_plan=plan,
+        baseline_plan=baseline_plan,
         policy=default_etf_execution_policy(),
         environment=CodeEnvironmentLock(
             "git:r3-evidence-closure-golden",
@@ -554,12 +584,12 @@ def _baseline_semantics(
     )
 
 
-class BaselineSemanticsResolver:
-    """Resolve the two exact baseline fold semantics by persisted fold key."""
+class ExecutionSemanticsResolver:
+    """Resolve exact execution semantics for every persisted walk-forward fold."""
 
     def __init__(
         self,
-        values: dict[object, ResearchExecutionSemantics],
+        values: dict[FoldKey, ResearchExecutionSemantics],
     ) -> None:
         self._values = values
 
@@ -567,19 +597,23 @@ class BaselineSemanticsResolver:
         return self._values[fold.spec.key]
 
 
-def build_baseline_semantics_resolver(
+def build_execution_semantics(
     launch: ExperimentLaunchSpec,
     folds: tuple[FoldView, ...],
-) -> BaselineSemanticsResolver:
-    """Build semantics only for the launch's declared baseline WF folds."""
-    baseline_id = launch.promotion_objective.baseline_candidate_id
+) -> dict[FoldKey, ResearchExecutionSemantics]:
+    """Build exact semantics keyed by every launch-declared walk-forward fold."""
     values = {
-        fold.spec.key: _baseline_semantics(launch, fold)
+        fold.spec.key: _execution_semantics(launch, fold)
         for fold in folds
-        if (
-            fold.spec.fold_role is FoldRole.WALK_FORWARD
-            and fold.spec.key.candidate_id == baseline_id
-        )
+        if fold.spec.fold_role is FoldRole.WALK_FORWARD
     }
-    assert len(values) == 2
-    return BaselineSemanticsResolver(values)
+    assert len(values) == 4
+    return values
+
+
+def build_execution_semantics_resolver(
+    launch: ExperimentLaunchSpec,
+    folds: tuple[FoldView, ...],
+) -> ExecutionSemanticsResolver:
+    """Build the exact all-fold resolver used by the R3 golden."""
+    return ExecutionSemanticsResolver(build_execution_semantics(launch, folds))

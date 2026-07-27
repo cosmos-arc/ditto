@@ -41,6 +41,7 @@ from ditto_application.processes.experiments.comparison import (
 )
 from ditto_application.processes.experiments.execution_bundle import (
     ResearchExecutionSemantics,
+    StrategyExecutionBinding,
 )
 from ditto_application.processes.experiments.execution_contracts import (
     ExactUniverseIdentity,
@@ -116,7 +117,357 @@ def test_collects_real_indexed_reports_into_deterministic_walk_forward_metrics(
     assert candidate.metrics[ResearchMetricId.SHARPE_RATIO].value == pytest.approx(
         expected_sharpe
     )
+    assert collected.fold_cost_config_hashes == tuple(
+        ContentHash(
+            case.semantics[
+                row.execution_binding.fold_view.spec.key
+            ].policy.canonical_hash
+        )
+        for row in collected.source_rows
+    )
     assert collected.missing_artifact_refs == ()
+
+
+def test_resolves_execution_semantics_for_every_walk_forward_source_row(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path)
+
+    class RecordingResolver:
+        def __init__(self) -> None:
+            self.fold_keys: list[FoldKey] = []
+
+        def resolve(self, fold: FoldView) -> ResearchExecutionSemantics:
+            self.fold_keys.append(fold.spec.key)
+            return case.semantics[fold.spec.key]
+
+    resolver = RecordingResolver()
+
+    collected = case.assemble(resolver=resolver)
+
+    assert tuple(resolver.fold_keys) == tuple(
+        row.execution_binding.fold_view.spec.key for row in collected.source_rows
+    )
+    assert len(collected.fold_cost_config_hashes) == len(collected.source_rows) == 4
+
+
+def test_missing_nonbaseline_execution_semantics_fails_closed(tmp_path: Path) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    semantics = dict(case.semantics)
+    del semantics[case.folds[2].spec.key]
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(semantics=semantics)
+
+    assert (
+        captured.value.details["reason"] == "walk_forward_execution_semantics_missing"
+    )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "drifted_value"),
+    [
+        ("candidate_id", "candidate-other"),
+        ("fold_id", "fold-other"),
+        ("is_baseline", True),
+    ],
+)
+def test_nonbaseline_execution_semantics_identity_drift_fails_closed(
+    tmp_path: Path,
+    field_name: str,
+    drifted_value: object,
+) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[2].spec.key
+    drifted = replace(case.semantics[key])
+    object.__setattr__(drifted, field_name, drifted_value)
+    semantics = {**case.semantics, key: drifted}
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(semantics=semantics)
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+@pytest.mark.parametrize(
+    "drift",
+    ["snapshot_id", "manifest_hash", "known_at_policy"],
+)
+def test_nonbaseline_snapshot_lineage_drift_fails_closed(
+    tmp_path: Path,
+    drift: str,
+) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[2].spec.key
+    original = case.semantics[key]
+    if drift == "known_at_policy":
+        snapshot = replace(original.snapshot)
+        object.__setattr__(snapshot, "known_at_policy", "unsafe")
+    else:
+        exact = replace(
+            original.snapshot.exact_snapshot,
+            **{drift: ("snapshot-other" if drift == "snapshot_id" else "0" * 64)},
+        )
+        snapshot = replace(original.snapshot, exact_snapshot=exact)
+    semantics_value = replace(original)
+    object.__setattr__(semantics_value, "snapshot", snapshot)
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(semantics={**case.semantics, key: semantics_value})
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+@pytest.mark.parametrize("field_name", ["parameter_hash", "resolved_spec_hash"])
+def test_nonbaseline_launch_binding_drift_fails_closed(
+    tmp_path: Path,
+    field_name: str,
+) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[2].spec.key
+    original = case.semantics[key]
+    strategy = replace(original.strategy, **{field_name: "0" * 64})
+    semantics_value = replace(original)
+    object.__setattr__(semantics_value, "strategy", strategy)
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(semantics={**case.semantics, key: semantics_value})
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "drifted_value"),
+    [
+        ("strategy_id", "other-strategy"),
+        ("version", 9),
+        ("spec_hash", "f" * 64),
+    ],
+)
+def test_nonbaseline_exact_strategy_launch_drift_fails_closed(
+    tmp_path: Path,
+    field_name: str,
+    drifted_value: object,
+) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[3].spec.key
+    original = case.semantics[key]
+    assert type(original.strategy) is StrategyExecutionBinding
+    exact_strategy = replace(
+        original.strategy.exact_strategy,
+        **{field_name: drifted_value},
+    )
+    strategy = replace(original.strategy, exact_strategy=exact_strategy)
+    semantics_value = replace(original, strategy=strategy)
+    attempt = replace(
+        case.attempts[3],
+        spec=replace(
+            case.attempts[3].spec,
+            reproduction_fingerprint=semantics_value.reproduction_fingerprint,
+        ),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(
+            attempts=(*case.attempts[:3], attempt),
+            semantics={**case.semantics, key: semantics_value},
+        )
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+def test_nonbaseline_node_registry_manifest_drift_fails_closed(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[3].spec.key
+    original = case.semantics[key]
+    assert type(original.strategy) is StrategyExecutionBinding
+    strategy = replace(original.strategy, node_registry_manifest_hash="0" * 64)
+    semantics_value = replace(original, strategy=strategy)
+    attempt = replace(
+        case.attempts[3],
+        spec=replace(
+            case.attempts[3].spec,
+            reproduction_fingerprint=semantics_value.reproduction_fingerprint,
+        ),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(
+            attempts=(*case.attempts[:3], attempt),
+            semantics={**case.semantics, key: semantics_value},
+        )
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+def test_nonbaseline_attempt_fingerprint_drift_fails_closed(tmp_path: Path) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    drifted = replace(
+        case.attempts[2],
+        spec=replace(
+            case.attempts[2].spec,
+            reproduction_fingerprint=ContentHash("0" * 64),
+        ),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(attempts=(*case.attempts[:2], drifted, case.attempts[3]))
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+def test_observes_cross_fold_cost_hash_drift_without_rejecting_collection(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[3].spec.key
+    original = case.semantics[key]
+    slippage = replace(
+        original.policy.slippage,
+        basis_points=original.policy.slippage.basis_points + 1,
+    )
+    policy = replace(original.policy, slippage=slippage)
+    backtest = replace(
+        original.backtest,
+        slippage_basis_points=slippage.basis_points,
+        policy_hash=policy.canonical_hash,
+    )
+    drifted = replace(original, policy=policy, backtest=backtest)
+    semantics = {**case.semantics, key: drifted}
+    attempt = replace(
+        case.attempts[3],
+        spec=replace(
+            case.attempts[3].spec,
+            reproduction_fingerprint=drifted.reproduction_fingerprint,
+        ),
+    )
+
+    collected = case.assemble(
+        attempts=(*case.attempts[:3], attempt),
+        semantics=semantics,
+    )
+
+    assert collected.fold_cost_config_hashes[-1] == ContentHash(policy.canonical_hash)
+    assert len(set(collected.fold_cost_config_hashes)) == 2
+
+
+def test_mutated_policy_derived_hash_fails_closed(tmp_path: Path) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[3].spec.key
+    semantics_value = replace(case.semantics[key])
+    policy = replace(semantics_value.policy)
+    object.__setattr__(policy, "canonical_hash", "0" * 64)
+    object.__setattr__(semantics_value, "policy", policy)
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(semantics={**case.semantics, key: semantics_value})
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+def test_mutated_backtest_policy_hash_fails_closed(tmp_path: Path) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[3].spec.key
+    semantics_value = replace(case.semantics[key])
+    backtest = replace(semantics_value.backtest)
+    object.__setattr__(backtest, "policy_hash", "f" * 64)
+    object.__setattr__(semantics_value, "backtest", backtest)
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(semantics={**case.semantics, key: semantics_value})
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+def test_mutated_semantics_fingerprint_fails_closed(tmp_path: Path) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    key = case.folds[3].spec.key
+    semantics_value = replace(case.semantics[key])
+    forged_fingerprint = ContentHash("f" * 64)
+    object.__setattr__(
+        semantics_value,
+        "reproduction_fingerprint",
+        forged_fingerprint,
+    )
+    attempt = replace(
+        case.attempts[3],
+        spec=replace(
+            case.attempts[3].spec,
+            reproduction_fingerprint=forged_fingerprint,
+        ),
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        case.assemble(
+            attempts=(*case.attempts[:3], attempt),
+            semantics={**case.semantics, key: semantics_value},
+        )
+
+    assert captured.value.details["reason"] == "walk_forward_execution_semantics_drift"
+
+
+def test_later_resolver_call_cannot_mutate_validated_cost_hash(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path, publish_indices=())
+    expected_by_key = {
+        key: ContentHash(semantics.policy.canonical_hash)
+        for key, semantics in case.semantics.items()
+    }
+
+    class MutatingResolver:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.validated_candidate: ResearchExecutionSemantics | None = None
+
+        def resolve(self, fold: FoldView) -> ResearchExecutionSemantics:
+            self.calls += 1
+            if self.calls == 3:
+                target = self.validated_candidate
+                assert target is not None
+                slippage = replace(
+                    target.policy.slippage,
+                    basis_points=target.policy.slippage.basis_points + 1,
+                )
+                object.__setattr__(
+                    target,
+                    "policy",
+                    replace(target.policy, slippage=slippage),
+                )
+            semantics = case.semantics[fold.spec.key]
+            if self.calls == 2:
+                self.validated_candidate = semantics
+            return semantics
+
+    collected = case.assemble(resolver=MutatingResolver())
+
+    assert collected.fold_cost_config_hashes == tuple(
+        expected_by_key[row.execution_binding.fold_view.spec.key]
+        for row in collected.source_rows
+    )
+
+
+@pytest.mark.parametrize(
+    "cost_hashes",
+    [
+        (),
+        ["0" * 64],
+        ("0" * 64, "0" * 64, "0" * 64, "0" * 64),
+    ],
+)
+def test_collected_container_rejects_invalid_fold_cost_config_hashes(
+    tmp_path: Path,
+    cost_hashes: object,
+) -> None:
+    case = build_case(tmp_path)
+    collected = case.assemble()
+
+    with pytest.raises(AppProcessError) as captured:
+        replace(collected, fold_cost_config_hashes=cost_hashes)
+
+    assert captured.value.details["reason"] == "invalid_fold_cost_config_hashes"
 
 
 def test_candidate_missing_one_walk_forward_fold_fails_topology_gate(
@@ -635,6 +986,7 @@ def test_input_permutations_produce_identical_collection(tmp_path: Path) -> None
     )
 
     assert permuted == original
+    assert permuted.fold_cost_config_hashes == original.fold_cost_config_hashes
     assert permuted.comparison.content_hash == original.comparison.content_hash
     assert permuted.aggregation.content_hash == original.aggregation.content_hash
 

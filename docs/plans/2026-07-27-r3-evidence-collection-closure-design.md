@@ -113,17 +113,18 @@ coordinator.tick
 | `pit_known_at` | manifest pit_policy 一致且非 unsafe | pit_policy | snapshot manifest |
 | `split_purge_embargo` | 所有 walk-forward fold 都配置正数 purge 或 embargo | purge/embargo 配置 | `FoldPersistenceSpec.purge_sessions` / `embargo_sessions` |
 | `reproduction` | selected candidate 所有 attempt 有 reproduction_fingerprint | fingerprint | `AttemptPersistenceSpec.reproduction_fingerprint` |
-| `cost_assumptions` | backtest cost config hash 一致 | cost config hash | **C2b 暂为全零 placeholder，待 execution-semantics slice 关闭** |
+| `cost_assumptions` | 全部 walk-forward fold 的真实 execution policy hash 非空、非全零且唯一一致 | ordered hashes + unique hashes | `ResearchExecutionSemantics.policy.canonical_hash`（Task 5e 已闭合） |
 | `baseline_declared` | launch_spec 恰好一个 `is_baseline=True` 且与 `promotion_objective.baseline_candidate_id` 一致 | baseline_candidate_id | `launch_spec.candidates` / `promotion_objective.baseline_candidate_id` |
-| `trial_declaration` | trial ledger 记录完整 declared family | declared/observed trial count | **C2b 暂由 launch current family 同源计数，待 durable trial-ledger slice 关闭** |
+| `trial_declaration` | durable trial ledger 的 observed/declared family count 一致 | declared/observed trial count | immutable `selection_evidence` artifact（Task 5d 已闭合） |
 | `holdout_claim` | `snapshot.holdout_claim` 非空 | claim_id | `snapshot.holdout_claim` |
 | `artifact_completeness` | 所有应产 artifact 存在、content_hash/schema_hash/row_count 齐全 | artifact count + 缺失项 | `ArtifactRecord` index |
 | `r2_live_gate` | `None`（NOT_EVALUATED） | None | Beta 阶段，design §9.2 允许；G2 live acceptance 才关闭 |
 
-**C2b 是 interim closure**：snapshot、96 个月、PIT、隔离、reproduction、
-baseline、holdout 与 artifact completeness 已由持久证据客观判定；但
-`cost_assumptions` 仍是 placeholder，`trial_declaration` 仍是同源计数，
-`r2_live_gate` 仍为 `NOT_EVALUATED`。因此不得把本阶段表述为 10-gate 完整关闭。
+**状态更新（2026-07-27）**：C2b 最初的两个 interim 项已经由后续切片关闭：
+Task 5d 使用 durable selection ledger 提供真实 trial declaration，Task 5e 使用
+每个 fold 的 execution-policy canonical hash 提供真实 cost consistency。
+`r2_live_gate` 仍为 `NOT_EVALUATED`，因此 deterministic fixture 仍不得表述为
+R3 live release PASS。
 
 > 每个 gate 的精确判定（如 ninety_six_month 的月数计算、artifact_completeness 的「应产」清单来源）在 TDD 时按 `HardGateEvidenceView` 的 typed 字段精确化；design 在此给出判定方向与证据源。
 

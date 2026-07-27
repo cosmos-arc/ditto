@@ -333,6 +333,10 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_execution_semantics.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "_selection_evidence_artifact.py"
         ),
         (
@@ -460,6 +464,7 @@ def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
         "lease_authority.py",
         "_report_artifact_validation.py",
         "_walk_forward_evidence_collection.py",
+        "_walk_forward_execution_semantics.py",
         "scheduler_store.py",
         "worker.py",
     ],

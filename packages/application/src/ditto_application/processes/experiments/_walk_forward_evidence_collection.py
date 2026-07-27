@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Protocol, cast
+from typing import cast
 
 from ditto_analysis.experiments.models import (
     AttemptId,
@@ -25,12 +25,6 @@ from ditto_analysis.experiments.persistence import (
     FoldProjection,
     FoldRole,
     FoldView,
-    encode_launch_spec,
-)
-from ditto_analysis.experiments.specs import (
-    CandidateExecutionBinding,
-    CandidateSpec,
-    ExperimentLaunchSpec,
 )
 
 from ditto_application.processes.experiments._evidence_inputs import (
@@ -48,6 +42,13 @@ from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
     BacktestReportArtifactReader,
 )
+from ditto_application.processes.experiments._walk_forward_execution_semantics import (
+    ValidatedWalkForwardExecutionSemantics,
+    WalkForwardExecutionBindings,
+    WalkForwardExecutionSemanticsResolver,
+    build_walk_forward_execution_bindings,
+    resolve_walk_forward_execution_semantics,
+)
 from ditto_application.processes.experiments.baseline_registry import (
     BaselineExecutionPlan,
 )
@@ -57,9 +58,6 @@ from ditto_application.processes.experiments.comparison import (
     CandidateFoldEvidence,
     FoldOutcome,
     build_candidate_comparison,
-)
-from ditto_application.processes.experiments.execution_bundle import (
-    ResearchExecutionSemantics,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
@@ -88,14 +86,6 @@ _ROW_STATUSES = frozenset(
     }
 )
 _REQUIRED_BASELINE_FOLDS = 2
-
-
-class _ResearchExecutionSemanticsResolver(Protocol):
-    """Narrow read port needed to reconstruct baseline execution identity."""
-
-    def resolve(self, fold: FoldView) -> ResearchExecutionSemantics:
-        """Resolve exact persisted execution semantics for one fold."""
-        ...
 
 
 def _canonical_row_order(
@@ -134,6 +124,7 @@ class CollectedWalkForwardEvidence:
     comparison: CandidateComparisonProjection
     aggregation: WalkForwardAggregation
     source_rows: tuple[CandidateFoldEvidence, ...]
+    fold_cost_config_hashes: tuple[ContentHash, ...]
     missing_artifact_refs: tuple[str, ...]
 
     def __post_init__(self) -> None:
@@ -157,6 +148,16 @@ class CollectedWalkForwardEvidence:
             or tuple(fold.source for fold in self.comparison.folds) != rows
         ):
             comparison_error("noncanonical_collected_source_rows")
+        raw_cost_hashes: object = self.fold_cost_config_hashes
+        if (
+            type(raw_cost_hashes) is not tuple
+            or len(raw_cost_hashes) != len(rows)
+            or any(
+                type(item) is not ContentHash
+                for item in cast("tuple[object, ...]", raw_cost_hashes)
+            )
+        ):
+            comparison_error("invalid_fold_cost_config_hashes")
         raw_refs: object = self.missing_artifact_refs
         if type(raw_refs) is not tuple or any(
             type(ref) is not str or not ref or ref != ref.strip()
@@ -179,14 +180,6 @@ class CollectedWalkForwardEvidence:
         )
         if refs != expected_refs:
             comparison_error("missing_artifact_ref_parity_drift")
-
-
-@dataclass(frozen=True, slots=True)
-class _LaunchBindings:
-    baseline: CandidateSpec
-    candidates: dict[CandidateId, CandidateSpec]
-    execution: dict[CandidateId, CandidateExecutionBinding]
-    launch_hash: ContentHash
 
 
 def _revalidate_snapshot(
@@ -220,46 +213,6 @@ def _revalidate_snapshot(
         )
     except (AttributeError, TypeError):
         comparison_error("invalid_scheduler_snapshot")
-
-
-def _launch_bindings(snapshot: ExperimentSchedulerSnapshot) -> _LaunchBindings:
-    launch = snapshot.launch_spec
-    if type(launch) is not ExperimentLaunchSpec:
-        comparison_error("invalid_evidence_launch_spec")
-    candidates = tuple(launch.candidates)
-    bindings = tuple(launch.execution_bindings)
-    if (
-        any(type(item) is not CandidateSpec for item in candidates)
-        or any(type(item) is not CandidateExecutionBinding for item in bindings)
-        or len(candidates) != len(bindings)
-    ):
-        comparison_error("invalid_evidence_launch_spec")
-    candidate_by_id = {item.candidate_id: item for item in candidates}
-    execution_by_id = {item.candidate_id: item for item in bindings}
-    if len(candidate_by_id) != len(candidates) or len(execution_by_id) != len(bindings):
-        comparison_error("invalid_evidence_launch_spec")
-    baseline_id = launch.promotion_objective.baseline_candidate_id
-    baseline = candidate_by_id.get(baseline_id)
-    if (
-        baseline is None
-        or not baseline.is_baseline
-        or baseline.ordinal != 1
-        or tuple(item for item in candidates if item.is_baseline) != (baseline,)
-    ):
-        comparison_error("baseline_launch_identity_drift")
-    for candidate, binding in zip(candidates, bindings, strict=True):
-        if (
-            binding.candidate_id != candidate.candidate_id
-            or binding.ordinal != candidate.ordinal
-            or binding.parameter_hash != candidate.parameter_hash
-        ):
-            comparison_error("candidate_launch_binding_drift")
-    return _LaunchBindings(
-        baseline,
-        candidate_by_id,
-        execution_by_id,
-        encode_launch_spec(launch).content_hash,
-    )
 
 
 def _validate_fold(
@@ -310,7 +263,7 @@ def _walk_forward_topology_key(fold: FoldView) -> tuple[object, ...]:
 
 def _validate_shared_walk_forward_topology(
     folds: tuple[FoldView, ...],
-    bindings: _LaunchBindings,
+    bindings: WalkForwardExecutionBindings,
 ) -> None:
     baseline_folds = tuple(
         fold
@@ -354,7 +307,7 @@ def _validate_shared_walk_forward_topology(
 
 def _walk_forward_folds(
     snapshot: ExperimentSchedulerSnapshot,
-    bindings: _LaunchBindings,
+    bindings: WalkForwardExecutionBindings,
 ) -> tuple[FoldView, ...]:
     folds = tuple(
         _validate_fold(
@@ -556,32 +509,6 @@ def _selected_attempt(
     return latest
 
 
-def _validate_semantics_fold(
-    semantics: ResearchExecutionSemantics,
-    fold: FoldView,
-    *,
-    launch_hash: ContentHash,
-) -> None:
-    spec = fold.spec
-    train = spec.train_window
-    if (
-        semantics.experiment_id != str(spec.key.experiment_id)
-        or semantics.candidate_id != str(spec.key.candidate_id)
-        or semantics.fold_id != str(spec.key.fold_id)
-        or semantics.fold_role != spec.fold_role.value
-        or not semantics.is_baseline
-        or semantics.launch_spec_hash != str(launch_hash)
-        or semantics.fold_spec_hash != str(spec.payload_hash)
-        or semantics.train_start != (None if train is None else train.start)
-        or semantics.train_end != (None if train is None else train.end)
-        or semantics.test_start != spec.test_window.start
-        or semantics.test_end != spec.test_window.end
-        or semantics.purge_sessions != spec.purge_sessions
-        or semantics.embargo_sessions != spec.embargo_sessions
-    ):
-        comparison_error("baseline_execution_semantics_drift")
-
-
 class WalkForwardEvidenceAssembler:
     """Collect exact terminal WF attempts and verified reports into R3 evidence."""
 
@@ -589,7 +516,7 @@ class WalkForwardEvidenceAssembler:
         self,
         *,
         report_reader: BacktestReportArtifactReader,
-        semantics_resolver: _ResearchExecutionSemanticsResolver,
+        semantics_resolver: WalkForwardExecutionSemanticsResolver,
     ) -> None:
         self._report_reader = report_reader
         self._semantics_resolver = semantics_resolver
@@ -598,9 +525,10 @@ class WalkForwardEvidenceAssembler:
         self,
         snapshot: ExperimentSchedulerSnapshot,
         manifest: SnapshotManifestProjection,
-        bindings: _LaunchBindings,
+        bindings: WalkForwardExecutionBindings,
         folds: tuple[FoldView, ...],
         selected: dict[FoldKey, AttemptView | None],
+        semantics_by_fold: dict[FoldKey, ValidatedWalkForwardExecutionSemantics],
     ) -> BaselineComparisonIdentity:
         baseline_folds = tuple(
             fold
@@ -614,15 +542,7 @@ class WalkForwardEvidenceAssembler:
             attempt = selected[fold.spec.key]
             if attempt is None:
                 comparison_error("baseline_attempt_evidence_missing")
-            semantics_value = self._semantics_resolver.resolve(fold)
-            if type(semantics_value) is not ResearchExecutionSemantics:
-                comparison_error("invalid_baseline_execution_semantics")
-            semantics = semantics_value
-            _validate_semantics_fold(
-                semantics,
-                fold,
-                launch_hash=bindings.launch_hash,
-            )
+            semantics = semantics_by_fold[fold.spec.key].semantics
             plan = semantics.baseline_plan
             if type(plan) is not BaselineExecutionPlan:
                 comparison_error("baseline_plan_required")
@@ -656,7 +576,7 @@ class WalkForwardEvidenceAssembler:
         self,
         snapshot: ExperimentSchedulerSnapshot,
         manifest: SnapshotManifestProjection,
-        bindings: _LaunchBindings,
+        bindings: WalkForwardExecutionBindings,
         folds: tuple[FoldView, ...],
         selected: dict[FoldKey, AttemptView | None],
     ) -> tuple[tuple[CandidateFoldEvidence, ...], tuple[str, ...]]:
@@ -729,15 +649,24 @@ class WalkForwardEvidenceAssembler:
             manifest.pit_policy,
         )
         snapshot = _revalidate_snapshot(snapshot)
-        bindings = _launch_bindings(snapshot)
+        bindings = build_walk_forward_execution_bindings(snapshot)
         folds = _walk_forward_folds(snapshot, bindings)
         selected = {fold.spec.key: _selected_attempt(snapshot, fold) for fold in folds}
+        semantics_by_fold = resolve_walk_forward_execution_semantics(
+            self._semantics_resolver,
+            snapshot,
+            manifest,
+            bindings,
+            folds,
+            selected,
+        )
         baseline = self._baseline_identity(
             snapshot,
             manifest,
             bindings,
             folds,
             selected,
+            semantics_by_fold,
         )
         rows, missing = self._source_rows(
             snapshot,
@@ -746,11 +675,16 @@ class WalkForwardEvidenceAssembler:
             folds,
             selected,
         )
+        cost_hashes = tuple(
+            semantics_by_fold[row.execution_binding.fold_view.spec.key].cost_config_hash
+            for row in rows
+        )
         comparison = build_candidate_comparison(baseline, rows)
         aggregation = aggregate_walk_forward(comparison)
         return CollectedWalkForwardEvidence(
             comparison,
             aggregation,
             rows,
+            cost_hashes,
             missing,
         )
