@@ -327,6 +327,25 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/contexts/r3_recovery.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.storage.sqlite.experiments",
+                "ditto_analysis.storage.sqlite.experiments.schema",
+                "ditto_data.config.data_store",
+                "ditto_strategy.governance.service",
+                "ditto_strategy.storage.sqlite.strategy_governance_schema",
+                "ditto_strategy.storage.sqlite.strategy_governance_store",
+            }
+        ),
+        owner="apps R3 recovery composition boundary",
+        reason=(
+            "The offline recovery verifier owns exact schema inspection and "
+            "reopens canonical governance/research adapters after restore; "
+            "ordinary apps paths remain on application facades."
+        ),
+    ),
+    CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/registry/infra/protocol_adapters.py",
         allowed_modules=frozenset(
             {
