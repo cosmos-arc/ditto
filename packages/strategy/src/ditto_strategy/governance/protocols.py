@@ -60,6 +60,17 @@ class StrategyGovernanceStoreProtocol(Protocol):
         """Append one decision event and CAS-advance the state projection."""
         ...
 
+    def publish_reviewed_and_activate(
+        self,
+        publish_event: StrategyDecisionEvent,
+        activation_event: StrategyActivationEvent,
+        *,
+        expected_state_revision: int,
+        expected_pointer_revision: int,
+    ) -> StrategyActivePointer:
+        """Atomically publish one approved review and switch its active pointer."""
+        ...
+
     def activate(
         self,
         strategy_id: str,

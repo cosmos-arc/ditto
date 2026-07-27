@@ -29,14 +29,6 @@ class UpdateStrategyRequest(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-class PublishStrategyRequest(BaseModel):
-    """发布策略请求."""
-
-    version: int = Field(ge=1, description="版本号")
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
 class StrategyResponse(BaseModel):
     """策略响应."""
 
@@ -122,7 +114,6 @@ class StrategyActiveResponse(BaseModel):
 __all__ = [
     "CreateStrategyRequest",
     "GovernanceDecisionRequest",
-    "PublishStrategyRequest",
     "ReactivateStrategyRequest",
     "StrategyActivePointerResponse",
     "StrategyActiveResponse",

@@ -84,6 +84,33 @@ def _activation(
     )
 
 
+def _advance_to_approved(
+    store: SQLiteStrategyGovernanceStore,
+    *,
+    version: int,
+) -> None:
+    store.append_decision(
+        _decision(
+            event_id=f"strategy-1:{version}:submit",
+            decision=StrategyDecision.SUBMIT_REVIEW,
+            version=version,
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+    store.append_decision(
+        _decision(
+            event_id=f"strategy-1:{version}:approve",
+            decision=StrategyDecision.APPROVE,
+            version=version,
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.APPROVED,
+        expected_revision=1,
+    )
+
+
 def test_insert_version_persists_immutable_payload(tmp_path: Path) -> None:
     store = _store(tmp_path)
     store.insert_version(_version(spec_hash="b" * 64))
@@ -219,6 +246,101 @@ def test_first_activation_conflicts_when_pointer_already_exists(
             _activation(event_id="activation-2"),
             expected_pointer_revision=0,
         )
+
+
+def test_publish_reviewed_and_activate_commits_one_atomic_transition(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    _advance_to_approved(store, version=1)
+
+    pointer = store.publish_reviewed_and_activate(
+        _decision(
+            event_id="publish-1",
+            decision=StrategyDecision.PUBLISH,
+        ),
+        _activation(event_id="activation-1"),
+        expected_state_revision=2,
+        expected_pointer_revision=0,
+    )
+
+    state = store.get_state("strategy-1", 1)
+    assert state is not None
+    assert state.state is StrategyVersionState.PUBLISHED
+    assert state.review_outcome is ReviewOutcome.APPROVED
+    assert pointer.active_version == 1
+    assert pointer.activation_event_id == "activation-1"
+
+
+def test_publish_reviewed_and_activate_returns_pointer_from_its_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    _advance_to_approved(store, version=1)
+
+    def fail_post_commit_read(_strategy_id: str) -> None:
+        raise AssertionError("atomic promotion must not re-read after commit")
+
+    monkeypatch.setattr(store, "get_active_pointer", fail_post_commit_read)
+
+    pointer = store.publish_reviewed_and_activate(
+        _decision(
+            event_id="publish-1",
+            decision=StrategyDecision.PUBLISH,
+        ),
+        _activation(event_id="activation-1"),
+        expected_state_revision=2,
+        expected_pointer_revision=0,
+    )
+
+    assert pointer.active_version == 1
+    assert pointer.pointer_revision == 1
+    assert pointer.activation_event_id == "activation-1"
+
+
+def test_publish_reviewed_and_activate_rolls_back_every_write_on_pointer_conflict(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version(version=1))
+    store.activate("strategy-1", 1, _activation(), expected_pointer_revision=0)
+    store.insert_version(_version(version=2, spec_hash="b" * 64))
+    _advance_to_approved(store, version=2)
+    publish = _decision(
+        event_id="publish-2",
+        decision=StrategyDecision.PUBLISH,
+        version=2,
+    )
+    activation = _activation(event_id="activation-2", target_version=2)
+
+    with pytest.raises(StrategyGovernanceCasConflict):
+        store.publish_reviewed_and_activate(
+            publish,
+            activation,
+            expected_state_revision=2,
+            expected_pointer_revision=0,
+        )
+
+    state = store.get_state("strategy-1", 2)
+    pointer = store.get_active_pointer("strategy-1")
+    assert state is not None
+    assert state.state is StrategyVersionState.REVIEW
+    assert state.review_outcome is ReviewOutcome.APPROVED
+    assert state.state_revision == 2
+    assert pointer is not None
+    assert pointer.active_version == 1
+
+    # Reusing both event ids proves the failed transaction left no history row.
+    recovered = store.publish_reviewed_and_activate(
+        publish,
+        activation,
+        expected_state_revision=2,
+        expected_pointer_revision=pointer.pointer_revision,
+    )
+    assert recovered.active_version == 2
 
 
 def test_list_versions_returns_newest_first(tmp_path: Path) -> None:

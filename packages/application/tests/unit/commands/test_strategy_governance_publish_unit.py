@@ -25,6 +25,9 @@ from ditto_application.processes.strategy.promotion import (
     StrategyPromotionProcess,
 )
 from ditto_strategy.governance.models import StrategyActivePointer
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    StrategyGovernanceCasConflict,
+)
 
 _BUNDLE = "a" * 64
 
@@ -155,6 +158,23 @@ def test_publish_strategy_version_handler_maps_process_error() -> None:
 
     assert info.value.details["code"] == "STALE_EVIDENCE_BUNDLE"
     assert info.value.details["strategy_id"] == "s1"
+
+
+def test_publish_strategy_version_handler_maps_atomic_promotion_conflict() -> None:
+    """A concurrent atomic CAS miss must not escape the application boundary."""
+    reader = _reader(packet=_packet())
+    process = MagicMock(spec=StrategyPromotionProcess)
+    process.promote.side_effect = StrategyGovernanceCasConflict(
+        "active pointer revision changed"
+    )
+    handler = PublishStrategyVersionHandler(process=process, reader=reader)
+
+    with pytest.raises(AppCommandError) as info:
+        handler.handle(_command())
+
+    assert info.value.details["code"] == "STRATEGY_REVISION_CONFLICT"
+    assert info.value.details["strategy_id"] == "s1"
+    assert info.value.details["version"] == 1
 
 
 def test_publish_strategy_version_handler_rejects_cross_version_packet() -> None:

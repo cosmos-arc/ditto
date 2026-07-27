@@ -20,11 +20,7 @@ from ditto_analysis.experiments import (
     ReviewPacket,
     review_blocked_by_hard_gates,
 )
-from ditto_strategy.governance.models import (
-    StrategyActivationEvent,
-    StrategyActivePointer,
-    StrategyDecision,
-)
+from ditto_strategy.governance.models import StrategyActivePointer
 from ditto_strategy.governance.service import GovernanceService
 
 from ditto_application.exceptions import AppProcessError
@@ -127,28 +123,17 @@ class StrategyPromotionProcess:
         publish_event_id = (
             f"{request.strategy_id}:{request.version}:publish:{request.decided_at}"
         )
-        self._governance.publish(
-            request.strategy_id,
-            request.version,
-            event_id=publish_event_id,
-            actor=request.actor,
-            reason=request.reason,
-            decided_at=request.decided_at,
-        )
         activate_event_id = (
             f"{request.strategy_id}:{request.version}:activate:{request.decided_at}"
         )
-        activate_event = StrategyActivationEvent(
-            activate_event_id,
+        pointer = self._governance.publish_reviewed_and_activate(
             request.strategy_id,
             request.version,
-            StrategyDecision.PUBLISH,
-            request.actor,
-            request.reason,
-            request.decided_at,
-        )
-        pointer = self._governance.activate(
-            request.strategy_id, request.version, activate_event
+            publish_event_id=publish_event_id,
+            activate_event_id=activate_event_id,
+            actor=request.actor,
+            reason=request.reason,
+            decided_at=request.decided_at,
         )
         return PromotionResult(
             strategy_id=request.strategy_id,

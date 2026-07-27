@@ -97,7 +97,33 @@ def test_second_run_is_unchanged() -> None:
     publish_port.publish.assert_not_called()
 
 
-def test_matching_draft_is_published_without_being_created() -> None:
+def test_matching_inactive_v1_fails_closed_without_publish() -> None:
+    process, catalog, create_port, publish_port = _bootstrap()
+
+    def existing(strategy_id: str, version: int | None = None) -> StrategySpecRecord:
+        del version
+        spec = SEED_STRATEGY_SPECS[strategy_id]
+        return StrategySpecRecord(
+            strategy_id=strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=1,
+            tags=spec.tags,
+        )
+
+    catalog.get_spec.side_effect = existing
+
+    result = process.run()
+
+    assert {item.status for item in result} == {SeedBootstrapStatus.CONFLICT}
+    assert {item.differences for item in result} == {("lifecycle",)}
+    assert not any(item.created for item in result)
+    assert not any(item.published for item in result)
+    create_port.create.assert_not_called()
+    publish_port.publish.assert_not_called()
+
+
+def test_matching_inactive_v2_fails_closed_on_version_and_lifecycle() -> None:
     process, catalog, create_port, publish_port = _bootstrap()
 
     def existing(strategy_id: str, version: int | None = None) -> StrategySpecRecord:
@@ -115,11 +141,28 @@ def test_matching_draft_is_published_without_being_created() -> None:
 
     result = process.run()
 
-    assert {item.status for item in result} == {SeedBootstrapStatus.PUBLISHED}
+    assert {item.status for item in result} == {SeedBootstrapStatus.CONFLICT}
+    assert {item.differences for item in result} == {("version", "lifecycle")}
     assert not any(item.created for item in result)
-    assert all(item.published for item in result)
+    assert not any(item.published for item in result)
     create_port.create.assert_not_called()
-    assert publish_port.publish.call_count == 3
+    publish_port.publish.assert_not_called()
+
+
+def test_create_returning_noncanonical_version_fails_closed_without_publish() -> None:
+    process, catalog, create_port, publish_port = _bootstrap()
+    catalog.get_spec.return_value = None
+    create_port.create.return_value = 2
+
+    result = process.run()
+
+    assert {item.status for item in result} == {SeedBootstrapStatus.CONFLICT}
+    assert {item.version for item in result} == {2}
+    assert {item.differences for item in result} == {("version",)}
+    assert all(item.created for item in result)
+    assert not any(item.published for item in result)
+    assert create_port.create.call_count == 3
+    publish_port.publish.assert_not_called()
 
 
 def test_existing_different_seed_fails_closed_with_diff() -> None:

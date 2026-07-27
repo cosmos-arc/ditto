@@ -9,7 +9,6 @@ from unittest.mock import MagicMock
 import pytest
 from ditto_application.commands.strategy import (
     CreateStrategyHandler,
-    PublishStrategyHandler,
     UpdateStrategyHandler,
 )
 from ditto_application.commands.strategy_governance import (
@@ -34,16 +33,15 @@ from ditto_apps.api.routes.strategy import (
     deprecate_strategy_version,
     get_active_strategy,
     list_strategy_versions,
-    publish_strategy,
     reactivate_strategy_version,
     reject_strategy_review,
+    router,
     submit_strategy_review,
     update_strategy,
 )
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.strategy import (
     GovernanceDecisionRequest,
-    PublishStrategyRequest,
     ReactivateStrategyRequest,
     StrategyActivePointerResponse,
     StrategyActiveResponse,
@@ -55,8 +53,20 @@ from ditto_apps.models.strategy import (
 
 pytestmark = pytest.mark.asyncio
 
+
+async def test_router_registers_only_evidence_gated_publish() -> None:
+    """The public strategy API must not expose the seed/system publish fast-path."""
+    publish_paths = {
+        route.path
+        for route in router.routes
+        if "POST" in getattr(route, "methods", set())
+        and route.path.endswith("/publish")
+    }
+
+    assert publish_paths == {"/strategies/{strategy_id}/versions/{version}/publish"}
+
+
 _UpdateRoute = Callable[..., Awaitable[APIResponse[StrategyResponse]]]
-_PublishRoute = Callable[..., Awaitable[APIResponse[bool]]]
 _ListVersionsRoute = Callable[
     ..., Awaitable[APIResponse[list[StrategyVersionResponse]]]
 ]
@@ -68,11 +78,6 @@ _ReactivateRoute = Callable[..., Awaitable[APIResponse[StrategyActivePointerResp
 @pytest.fixture
 def mock_update_handler() -> MagicMock:
     return MagicMock(spec=UpdateStrategyHandler)
-
-
-@pytest.fixture
-def mock_publish_handler() -> MagicMock:
-    return MagicMock(spec=PublishStrategyHandler)
 
 
 @pytest.fixture
@@ -131,15 +136,6 @@ async def _call_update(
     handler: UpdateStrategyHandler,
 ) -> APIResponse[StrategyResponse]:
     route = cast(_UpdateRoute, _unwrap(update_strategy))
-    return await route(strategy_id=strategy_id, request=request, handler=handler)
-
-
-async def _call_publish(
-    strategy_id: str,
-    request: PublishStrategyRequest,
-    handler: PublishStrategyHandler,
-) -> APIResponse[bool]:
-    route = cast(_PublishRoute, _unwrap(publish_strategy))
     return await route(strategy_id=strategy_id, request=request, handler=handler)
 
 
@@ -275,27 +271,6 @@ class TestUpdateStrategyErrorMapping:
             )
         assert exc_info.value.status_code == 409
         assert "conflict" in exc_info.value.message.lower()
-
-
-class TestPublishStrategyErrorMapping:
-    """POST /strategies/{id}/publish — ValueError 错误映射."""
-
-    async def test_publish_not_found_returns_404(
-        self,
-        mock_publish_handler: MagicMock,
-    ) -> None:
-        """发布不存在的策略 → 404."""
-        mock_publish_handler.handle.side_effect = AppCommandError(
-            "Strategy not found: missing v1"
-        )
-        with pytest.raises(APIError) as exc_info:
-            await _call_publish(
-                "missing",
-                PublishStrategyRequest(version=1),
-                mock_publish_handler,
-            )
-        assert exc_info.value.status_code == 404
-        assert "not found" in exc_info.value.message.lower()
 
 
 class TestListStrategyVersions:

@@ -426,4 +426,10 @@ class PublishStrategyVersionHandler:
                 {"strategy_id": command.strategy_id, "version": command.version}
             )
             raise AppCommandError(str(exc), details=details) from exc
+        except _GOVERNANCE_FAILURES as exc:
+            raise _map_governance_error(
+                command.strategy_id,
+                command.version,
+                exc,
+            ) from exc
         return _to_pointer_info(result.active_pointer)

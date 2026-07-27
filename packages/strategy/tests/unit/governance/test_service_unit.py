@@ -75,6 +75,34 @@ def test_approve_then_publish(tmp_path: Path) -> None:
     assert published.state is StrategyVersionState.PUBLISHED
 
 
+def test_publish_reviewed_and_activate_switches_pointer_atomically(
+    tmp_path: Path,
+) -> None:
+    service = _service(tmp_path)
+    _seed_version(service)
+    service.submit_review(
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+    )
+    service.approve(
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+    )
+
+    pointer = service.publish_reviewed_and_activate(
+        "strategy-1",
+        1,
+        publish_event_id="e3",
+        activate_event_id="a1",
+        actor="publisher",
+        reason="evidence passed",
+        decided_at="t3",
+    )
+
+    state = service._store.get_state("strategy-1", 1)
+    assert state is not None
+    assert state.state is StrategyVersionState.PUBLISHED
+    assert pointer.active_version == 1
+
+
 def test_rejected_review_cannot_be_published(tmp_path: Path) -> None:
     service = _service(tmp_path)
     _seed_version(service)

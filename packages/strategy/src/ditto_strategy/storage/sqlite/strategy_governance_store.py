@@ -17,6 +17,7 @@ from ditto_strategy.governance.models import (
     ReviewOutcome,
     StrategyActivationEvent,
     StrategyActivePointer,
+    StrategyDecision,
     StrategyDecisionEvent,
     StrategyVersion,
     StrategyVersionState,
@@ -123,6 +124,12 @@ _CAS_STATE = """
 UPDATE strategy_version_state
 SET state = ?, review_outcome = ?, state_revision = state_revision + 1
 WHERE strategy_id = ? AND version = ? AND state_revision = ?
+"""
+_CAS_PUBLISH_REVIEWED_STATE = """
+UPDATE strategy_version_state
+SET state = ?, review_outcome = ?, state_revision = state_revision + 1
+WHERE strategy_id = ? AND version = ? AND state_revision = ?
+  AND state = ? AND review_outcome = ?
 """
 _INSERT_ACTIVATION_EVENT = """
 INSERT INTO strategy_activation_event (
@@ -342,6 +349,114 @@ class SQLiteStrategyGovernanceStore:
         if record is None:
             raise RuntimeError("governance state projection missing after CAS advance")
         return record
+
+    @traced("governance.publish_reviewed_and_activate")
+    def publish_reviewed_and_activate(
+        self,
+        publish_event: StrategyDecisionEvent,
+        activation_event: StrategyActivationEvent,
+        *,
+        expected_state_revision: int,
+        expected_pointer_revision: int,
+    ) -> StrategyActivePointer:
+        """Commit publish history, lifecycle, activation history and pointer once."""
+        if (
+            publish_event.decision is not StrategyDecision.PUBLISH
+            or activation_event.activation_kind is not StrategyDecision.PUBLISH
+            or publish_event.strategy_id != activation_event.strategy_id
+            or publish_event.version != activation_event.target_version
+        ):
+            raise ValueError("atomic promotion events must identify one publish target")
+        strategy_id = publish_event.strategy_id
+        target_version = publish_event.version
+        conn = self._pool.get_connection()
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            conn.execute(
+                _INSERT_DECISION_EVENT,
+                (
+                    publish_event.event_id,
+                    strategy_id,
+                    target_version,
+                    publish_event.decision.value,
+                    publish_event.actor,
+                    publish_event.reason,
+                    publish_event.decided_at,
+                ),
+            )
+            state_cursor = conn.execute(
+                _CAS_PUBLISH_REVIEWED_STATE,
+                (
+                    StrategyVersionState.PUBLISHED.value,
+                    ReviewOutcome.APPROVED.value,
+                    strategy_id,
+                    target_version,
+                    expected_state_revision,
+                    StrategyVersionState.REVIEW.value,
+                    ReviewOutcome.APPROVED.value,
+                ),
+            )
+            if state_cursor.rowcount == 0:
+                raise StrategyGovernanceCasConflict(
+                    "approved review CAS missed revision "
+                    + f"{expected_state_revision} for {strategy_id}/{target_version}"
+                )
+            conn.execute(
+                _INSERT_ACTIVATION_EVENT,
+                (
+                    activation_event.event_id,
+                    strategy_id,
+                    target_version,
+                    activation_event.activation_kind.value,
+                    activation_event.actor,
+                    activation_event.reason,
+                    activation_event.activated_at,
+                ),
+            )
+            if expected_pointer_revision == 0:
+                try:
+                    conn.execute(
+                        _INSERT_ACTIVE_POINTER,
+                        (
+                            strategy_id,
+                            target_version,
+                            1,
+                            activation_event.event_id,
+                        ),
+                    )
+                except sqlite3.IntegrityError:
+                    raise StrategyGovernanceCasConflict(
+                        f"active pointer already exists for {strategy_id}"
+                    ) from None
+            else:
+                pointer_cursor = conn.execute(
+                    _CAS_ACTIVE_POINTER,
+                    (
+                        target_version,
+                        activation_event.event_id,
+                        strategy_id,
+                        expected_pointer_revision,
+                    ),
+                )
+                if pointer_cursor.rowcount == 0:
+                    raise StrategyGovernanceCasConflict(
+                        "pointer CAS missed revision "
+                        + f"{expected_pointer_revision} for {strategy_id}"
+                    )
+            pointer_row = conn.execute(
+                _GET_ACTIVE_POINTER,
+                (strategy_id,),
+            ).fetchone()
+            if pointer_row is None:
+                raise RuntimeError(
+                    "governance active pointer missing during promotion transaction"
+                )
+            pointer = _row_to_pointer(pointer_row)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        return pointer
 
     @traced("governance.activate")
     def activate(

@@ -6,7 +6,6 @@
 - GET    /strategies                          列出策略
 - GET    /strategies/{id}                     获取策略详情
 - PUT    /strategies/{id}                     更新策略
-- POST   /strategies/{id}/publish             发布（seed/system fast-path）
 - GET    /strategies/{id}/versions            governance 版本历史
 - GET    /strategies/{id}/active              active pointer + payload
 - POST   /strategies/{id}/versions/{v}/submit-review   提交审查
@@ -14,23 +13,20 @@
 - POST   /strategies/{id}/versions/{v}/reject          驳回
 - POST   /strategies/{id}/versions/{v}/deprecate       弃用
 - POST   /strategies/{id}/versions/{v}/reactivate      重新激活（乐观 CAS）
-
-Evidence-gated publish 待 ReviewPacket 链路就绪后独立暴露。
+- POST   /strategies/{id}/versions/{v}/publish         证据门控发布
 """
 
 from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Annotated
+from typing import Annotated, Never
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.commands.strategy import (
     CreateStrategyCommand,
     CreateStrategyHandler,
-    PublishStrategyCommand,
-    PublishStrategyHandler,
     UpdateStrategyCommand,
     UpdateStrategyHandler,
 )
@@ -60,12 +56,16 @@ from ditto_application.queries.strategy import StrategyQueryFacade
 from fastapi import APIRouter, Depends
 
 from ditto_apps.api.deps import paginate, pagination_params
-from ditto_apps.api.errors import NotFoundError, raise_business_error
+from ditto_apps.api.errors import (
+    ConflictError,
+    NotFoundError,
+    UnprocessableEntityError,
+    raise_business_error,
+)
 from ditto_apps.models.common import APIResponse, PaginationRequest
 from ditto_apps.models.strategy import (
     CreateStrategyRequest,
     GovernanceDecisionRequest,
-    PublishStrategyRequest,
     PublishStrategyVersionRequest,
     ReactivateStrategyRequest,
     StrategyActivePointerResponse,
@@ -80,6 +80,17 @@ router = APIRouter(prefix="/strategies", tags=["strategies"])
 
 #: Governance decision error messages carrying these keywords map to 409.
 _CONFLICT_KEYWORDS = ("conflict",)
+
+
+def _raise_publish_error(exc: AppError) -> Never:
+    """Preserve typed evidence and atomic-CAS failures at the HTTP boundary."""
+    reason = exc.details.get("reason")
+    if isinstance(reason, str) and reason:
+        raise UnprocessableEntityError(str(exc), error_code=reason) from exc
+    code = exc.details.get("code")
+    if isinstance(code, str) and code == "STRATEGY_REVISION_CONFLICT":
+        raise ConflictError(str(exc), error_code=code) from exc
+    raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
 
 
 async def run_blocking[**P, R](
@@ -209,25 +220,6 @@ async def update_strategy(
     except (AppError, ValueError) as exc:
         raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=to_strategy_response(info))
-
-
-@router.post("/{strategy_id}/publish", response_model=APIResponse[bool])
-@inject
-async def publish_strategy(
-    strategy_id: str,
-    request: PublishStrategyRequest,
-    handler: Annotated[PublishStrategyHandler, FromComponent()],
-) -> APIResponse[bool]:
-    """发布策略（seed/system fast-path；evidence-gated publish 待独立暴露）."""
-    cmd = PublishStrategyCommand(
-        strategy_id=strategy_id,
-        version=request.version,
-    )
-    try:
-        result = await run_blocking(handler.handle, cmd)
-    except (AppError, ValueError) as exc:
-        raise_business_error(exc, conflict_keywords=("conflict",))
-    return APIResponse(data=result)
 
 
 @router.get(
@@ -408,5 +400,5 @@ async def publish_strategy_version(
     try:
         pointer = await run_blocking(handler.handle, cmd)
     except AppError as exc:
-        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+        _raise_publish_error(exc)
     return APIResponse(data=to_active_pointer_response(pointer))

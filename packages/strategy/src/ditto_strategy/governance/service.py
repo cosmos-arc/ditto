@@ -154,6 +154,56 @@ class GovernanceService:
             decided_at=decided_at,
         )
 
+    def publish_reviewed_and_activate(
+        self,
+        strategy_id: str,
+        version: int,
+        *,
+        publish_event_id: str,
+        activate_event_id: str,
+        actor: str,
+        reason: str,
+        decided_at: str,
+    ) -> StrategyActivePointer:
+        """Atomically publish one approved review and advance the active pointer."""
+        state = self._require_state(strategy_id, version)
+        next_state, next_review = next_lifecycle(
+            state.state,
+            state.review_outcome,
+            StrategyDecision.PUBLISH,
+        )
+        if (
+            next_state is not StrategyVersionState.PUBLISHED
+            or next_review is not ReviewOutcome.APPROVED
+        ):
+            raise ValueError("publish transition did not resolve to approved/published")
+        pointer = self._store.get_active_pointer(strategy_id)
+        expected_pointer_revision = 0 if pointer is None else pointer.pointer_revision
+        publish_event = StrategyDecisionEvent(
+            publish_event_id,
+            strategy_id,
+            version,
+            StrategyDecision.PUBLISH,
+            actor,
+            reason,
+            decided_at,
+        )
+        activation_event = StrategyActivationEvent(
+            activate_event_id,
+            strategy_id,
+            version,
+            StrategyDecision.PUBLISH,
+            actor,
+            reason,
+            decided_at,
+        )
+        return self._store.publish_reviewed_and_activate(
+            publish_event,
+            activation_event,
+            expected_state_revision=state.state_revision,
+            expected_pointer_revision=expected_pointer_revision,
+        )
+
     def deprecate(
         self,
         strategy_id: str,
