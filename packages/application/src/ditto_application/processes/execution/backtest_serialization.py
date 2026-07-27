@@ -10,17 +10,25 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Mapping
+from typing import NoReturn, cast
 
 import orjson
 import polars as pl
 from ditto_backtest.manifest import RunManifest
 from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_backtest.statistics import BacktestReport
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
+from ditto_strategy.alpha.selection_evidence import (
+    ExclusionEvidence,
+    FactorContributionEvidence,
+    InitialUniverseEvidence,
+    SelectionEvidence,
+    SelectionEvidenceLog,
+)
+from ditto_strategy.errors import StrategySpecError
 
 from ditto_application.exceptions import AppProcessError
 
-__all__ = ["serialize_report"]
+__all__ = ["serialize_report", "serialize_selection_evidence"]
 
 _INITIAL_UNIVERSE_SCHEMA = pl.Schema(
     {
@@ -200,10 +208,7 @@ def _append_selection_evidence_tables(
     evidence: SelectionEvidenceLog,
 ) -> None:
     """Append evidence tables while refusing any existing-table collision."""
-    evidence_tables = _serialize_selection_evidence(
-        run_id=run_id,
-        evidence=evidence,
-    )
+    evidence_tables = serialize_selection_evidence(run_id, evidence)
     for table_name, table in evidence_tables.items():
         if table_name in tables:
             raise AppProcessError(
@@ -213,14 +218,14 @@ def _append_selection_evidence_tables(
         tables[table_name] = table
 
 
-def _serialize_selection_evidence(
-    *,
+def serialize_selection_evidence(
     run_id: str,
-    evidence: SelectionEvidenceLog,
+    log: SelectionEvidenceLog,
 ) -> dict[str, pl.DataFrame]:
     """Map strategy DTOs to application-owned stable Polars schemas."""
+    trusted_log = _rebuild_selection_evidence_log(log)
     initial_rows: list[dict[str, object]] = []
-    for event in evidence.initial_universe:
+    for event in trusted_log.initial_universe:
         instrument_id, instrument_id_kind = _serialize_instrument_id(
             event.instrument_id,
         )
@@ -235,7 +240,7 @@ def _serialize_selection_evidence(
         )
 
     exclusion_rows: list[dict[str, object]] = []
-    for event in evidence.exclusions:
+    for event in trusted_log.exclusions:
         instrument_id, instrument_id_kind = _serialize_instrument_id(
             event.instrument_id,
         )
@@ -252,7 +257,7 @@ def _serialize_selection_evidence(
         )
 
     selection_rows: list[dict[str, object]] = []
-    for event in evidence.selections:
+    for event in trusted_log.selections:
         instrument_id, instrument_id_kind = _serialize_instrument_id(
             event.instrument_id,
         )
@@ -269,7 +274,7 @@ def _serialize_selection_evidence(
         )
 
     contribution_rows: list[dict[str, object]] = []
-    for event in evidence.factor_contributions:
+    for event in trusted_log.factor_contributions:
         instrument_id, instrument_id_kind = _serialize_instrument_id(
             event.instrument_id,
         )
@@ -309,6 +314,104 @@ def _serialize_selection_evidence(
             _FACTOR_CONTRIBUTION_SCHEMA,
         ),
     }
+
+
+def _invalid_selection_evidence_log(error: Exception | None = None) -> NoReturn:
+    app_error = AppProcessError(
+        "selection evidence log is invalid at the serialization boundary",
+        details={
+            "code": "SPEC_INVALID",
+            "reason": "invalid_selection_evidence_log",
+        },
+    )
+    if error is None:
+        raise app_error
+    raise app_error from error
+
+
+def _require_exact_events[EventT](
+    value: object,
+    event_type: type[EventT],
+) -> tuple[EventT, ...]:
+    if type(value) is not tuple:
+        raise TypeError("selection evidence events must be an exact tuple")
+    events = cast("tuple[object, ...]", value)
+    if any(type(event) is not event_type for event in events):
+        raise TypeError("selection evidence contains an invalid event type")
+    return cast("tuple[EventT, ...]", events)
+
+
+def _rebuild_selection_evidence_log(
+    value: object,
+) -> SelectionEvidenceLog:
+    """Reconstruct every event so frozen-instance poisoning cannot cross I/O."""
+    if type(value) is not SelectionEvidenceLog:
+        _invalid_selection_evidence_log()
+    try:
+        initial_universe = tuple(
+            InitialUniverseEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                ordinal=event.ordinal,
+            )
+            for event in _require_exact_events(
+                value.initial_universe,
+                InitialUniverseEvidence,
+            )
+        )
+        exclusions = tuple(
+            ExclusionEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                stage=event.stage,
+                reason_code=event.reason_code,
+                message=event.message,
+            )
+            for event in _require_exact_events(
+                value.exclusions,
+                ExclusionEvidence,
+            )
+        )
+        selections = tuple(
+            SelectionEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                score=event.score,
+                rank=event.rank,
+                selected=event.selected,
+            )
+            for event in _require_exact_events(
+                value.selections,
+                SelectionEvidence,
+            )
+        )
+        factor_contributions = tuple(
+            FactorContributionEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                factor_name=event.factor_name,
+                raw_value=event.raw_value,
+                processed_value=event.processed_value,
+                normalized_value=event.normalized_value,
+                weight=event.weight,
+                contribution=event.contribution,
+                factor_signal_score=event.factor_signal_score,
+                rank=event.rank,
+                selected=event.selected,
+            )
+            for event in _require_exact_events(
+                value.factor_contributions,
+                FactorContributionEvidence,
+            )
+        )
+        return SelectionEvidenceLog(
+            initial_universe=initial_universe,
+            exclusions=exclusions,
+            selections=selections,
+            factor_contributions=factor_contributions,
+        )
+    except (AttributeError, StrategySpecError, TypeError, ValueError) as error:
+        _invalid_selection_evidence_log(error)
 
 
 def _frame_with_schema(

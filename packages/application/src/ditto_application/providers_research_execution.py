@@ -32,6 +32,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 
 from ditto_application.builders import (
     IndexedBacktestReportArtifactAdapter,
+    IndexedFoldSelectionTraceArtifactAdapter,
     IndexedResearchArtifactLoader,
     IndexedResearchInputsResolver,
     PublishedBaselineRuntimeBuilder,
@@ -48,6 +49,9 @@ from ditto_application.builders.research_execution_resolver import (
 )
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     FrozenResearchInputsResolver,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FoldSelectionTraceArtifactPublisher,
 )
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactPublisher,
@@ -122,6 +126,26 @@ class AppResearchExecutionProvider(Provider):
         adapter: IndexedBacktestReportArtifactAdapter,
     ) -> BacktestReportArtifactReader:
         """Expose the same APP-scoped adapter through the evidence read port."""
+        return adapter
+
+    @provide
+    def indexed_fold_selection_trace_artifact_adapter(
+        self,
+        artifact_service: ResearchArtifactService,
+        experiment_reader: ExperimentReaderProtocol,
+    ) -> IndexedFoldSelectionTraceArtifactAdapter:
+        """Build the APP-scoped four-table fold trace publisher."""
+        return IndexedFoldSelectionTraceArtifactAdapter(
+            artifact_service=artifact_service,
+            artifact_index_reader=experiment_reader,
+        )
+
+    @provide
+    def fold_selection_trace_artifact_publisher(
+        self,
+        adapter: IndexedFoldSelectionTraceArtifactAdapter,
+    ) -> FoldSelectionTraceArtifactPublisher:
+        """Expose the indexed fold trace adapter through its worker port."""
         return adapter
 
     @provide
@@ -238,6 +262,7 @@ class AppResearchExecutionProvider(Provider):
         semantics_resolver: ResearchExecutionSemanticsResolver,
         runner: ResearchFoldRunner,
         report_publisher: BacktestReportArtifactPublisher,
+        trace_publisher: FoldSelectionTraceArtifactPublisher,
     ) -> ResearchExperimentWorker:
         """执行 claimed fold 并持久化一个 typed terminal outcome。"""
         return ResearchExperimentWorker(
@@ -245,4 +270,5 @@ class AppResearchExecutionProvider(Provider):
             semantics_resolver=semantics_resolver,
             runner=runner,
             report_publisher=report_publisher,
+            fold_selection_trace_publisher=trace_publisher,
         )

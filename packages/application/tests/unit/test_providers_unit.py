@@ -1014,6 +1014,9 @@ class TestAppProviderIntegration:
         Providers 注册的是消费侧 ``__init__`` 注解用的 Protocol 类型；返回的实例
         必须是 C1/C2 的具体实现类。
         """
+        from ditto_application.builders.fold_selection_trace_artifact_adapter import (
+            IndexedFoldSelectionTraceArtifactAdapter,
+        )
         from ditto_application.builders.research_artifact_loader import (
             IndexedBacktestReportArtifactAdapter,
             IndexedResearchArtifactLoader,
@@ -1031,6 +1034,9 @@ class TestAppProviderIntegration:
         )
         from ditto_application.processes.experiments._execution_resolution_evidence import (  # noqa: E501
             FrozenResearchInputsResolver,
+        )
+        from ditto_application.processes.experiments._fold_selection_trace_artifacts import (  # noqa: E501
+            FoldSelectionTraceArtifactPublisher,
         )
         from ditto_application.processes.experiments._report_evidence import (
             BacktestReportArtifactPublisher,
@@ -1090,6 +1096,12 @@ class TestAppProviderIntegration:
         assert isinstance(report_adapter, IndexedBacktestReportArtifactAdapter)
         assert app_container.get(BacktestReportArtifactPublisher) is report_adapter
         assert app_container.get(BacktestReportArtifactReader) is report_adapter
+        trace_adapter = app_container.get(IndexedFoldSelectionTraceArtifactAdapter)
+        assert isinstance(
+            trace_adapter,
+            IndexedFoldSelectionTraceArtifactAdapter,
+        )
+        assert app_container.get(FoldSelectionTraceArtifactPublisher) is trace_adapter
         assembler = app_container.get(WalkForwardEvidenceAssembler)
         assert isinstance(assembler, WalkForwardEvidenceAssembler)
         selection_service = app_container.get(DurableSelectionEvidenceService)
@@ -1109,10 +1121,8 @@ class TestAppProviderIntegration:
             app_container.get(FirstAttemptFactory),
             ExecutionBundleFirstAttemptFactory,
         )
-        assert isinstance(
-            app_container.get(ResearchExperimentWorker),
-            ResearchExperimentWorker,
-        )
+        worker = app_container.get(ResearchExperimentWorker)
+        assert isinstance(worker, ResearchExperimentWorker)
 
     def test_coordinator_uses_execution_bundle_factory(self, app_container) -> None:
         """FirstAttemptFactory resolves to the real execution bundle factory."""

@@ -14,6 +14,8 @@ from typing import ClassVar
 
 import orjson
 import polars as pl
+import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_backtest.manifest import RunManifest, RunMode
 from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
@@ -472,6 +474,259 @@ class TestSelectionEvidenceTables:
             },
         ),
     }
+
+    def test_public_serializer_emits_exactly_four_empty_existing_tables(
+        self,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        tables = serialize_selection_evidence(
+            "test-run-001",
+            SelectionEvidenceLog(),
+        )
+
+        assert set(tables) == set(self._EXPECTED_SCHEMAS)
+        for table_name, expected_schema in self._EXPECTED_SCHEMAS.items():
+            assert tables[table_name].is_empty()
+            assert tables[table_name].schema == expected_schema
+
+    @staticmethod
+    def _single_event_log(
+        event: (
+            InitialUniverseEvidence
+            | ExclusionEvidence
+            | SelectionEvidence
+            | FactorContributionEvidence
+        ),
+    ) -> SelectionEvidenceLog:
+        if type(event) is InitialUniverseEvidence:
+            return SelectionEvidenceLog(initial_universe=(event,))
+        if type(event) is ExclusionEvidence:
+            return SelectionEvidenceLog(exclusions=(event,))
+        if type(event) is SelectionEvidence:
+            return SelectionEvidenceLog(selections=(event,))
+        return SelectionEvidenceLog(factor_contributions=(event,))
+
+    @pytest.mark.parametrize(
+        ("event", "field_name", "poisoned_value"),
+        [
+            (
+                InitialUniverseEvidence("2026-03-22", 1, 1),
+                "trade_date",
+                "20260322",
+            ),
+            (
+                InitialUniverseEvidence("2026-03-22", 1, 1),
+                "instrument_id",
+                True,
+            ),
+            (
+                InitialUniverseEvidence("2026-03-22", 1, 1),
+                "ordinal",
+                0,
+            ),
+            (
+                ExclusionEvidence(
+                    "2026-03-22",
+                    1,
+                    "selection",
+                    ExclusionReason.BELOW_TOP_K,
+                ),
+                "stage",
+                " ",
+            ),
+            (
+                ExclusionEvidence(
+                    "2026-03-22",
+                    1,
+                    "selection",
+                    ExclusionReason.BELOW_TOP_K,
+                ),
+                "reason_code",
+                "below_top_k",
+            ),
+            (
+                ExclusionEvidence(
+                    "2026-03-22",
+                    1,
+                    "selection",
+                    ExclusionReason.BELOW_TOP_K,
+                ),
+                "message",
+                7,
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "instrument_id",
+                "",
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "score",
+                float("inf"),
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "rank",
+                0,
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "selected",
+                1,
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "factor_name",
+                "",
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "weight",
+                float("nan"),
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "rank",
+                0,
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "selected",
+                1,
+            ),
+        ],
+        ids=(
+            "compact-trade-date",
+            "boolean-instrument-id",
+            "non-positive-ordinal",
+            "blank-stage",
+            "untyped-reason",
+            "non-text-message",
+            "empty-instrument-id",
+            "non-finite-score",
+            "non-positive-rank",
+            "non-boolean-selected",
+            "blank-factor-name",
+            "non-finite-weight",
+            "non-positive-factor-rank",
+            "non-boolean-factor-selected",
+        ),
+    )
+    def test_public_serializer_rebuilds_and_rejects_poisoned_events(
+        self,
+        event: (
+            InitialUniverseEvidence
+            | ExclusionEvidence
+            | SelectionEvidence
+            | FactorContributionEvidence
+        ),
+        field_name: str,
+        poisoned_value: object,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        log = self._single_event_log(event)
+        object.__setattr__(event, field_name, poisoned_value)
+
+        with pytest.raises(AppProcessError) as exc_info:
+            serialize_selection_evidence("test-run-001", log)
+
+        assert exc_info.value.details["reason"] == "invalid_selection_evidence_log"
+
+    def test_public_serializer_rejects_poisoned_log_collections(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        log = SelectionEvidenceLog()
+        object.__setattr__(log, "selections", (object(),))
+
+        with pytest.raises(AppProcessError) as exc_info:
+            serialize_selection_evidence("test-run-001", log)
+
+        assert exc_info.value.details["reason"] == "invalid_selection_evidence_log"
+
+    def test_public_serializer_rebuilds_log_level_invariants(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        exclusion = ExclusionEvidence(
+            "2026-03-22",
+            1,
+            "selection",
+            ExclusionReason.BELOW_TOP_K,
+        )
+        selection = SelectionEvidence(
+            "2026-03-22",
+            1,
+            0.5,
+            1,
+            False,
+        )
+        log = SelectionEvidenceLog(
+            exclusions=(exclusion,),
+            selections=(selection,),
+        )
+        object.__setattr__(selection, "selected", True)
+
+        with pytest.raises(AppProcessError) as exc_info:
+            serialize_selection_evidence("test-run-001", log)
+
+        assert exc_info.value.details["reason"] == "invalid_selection_evidence_log"
 
     def test_empty_evidence_log_emits_all_stable_empty_schemas(self) -> None:
         from ditto_application.processes.execution.backtest_serialization import (

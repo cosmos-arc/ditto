@@ -6,6 +6,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from io import BytesIO
 from pathlib import Path
 from threading import Event, Lock
 from typing import cast
@@ -40,15 +41,29 @@ from ditto_analysis.experiments.artifact_manifest import (
     ArtifactManifest,
     ArtifactPublicationSpec,
 )
-from ditto_analysis.research.artifact_measurement import measure_json_bytes
+from ditto_analysis.research.artifact_measurement import (
+    measure_json_bytes,
+    measure_parquet_bytes,
+)
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import BacktestService
+from ditto_application.processes.execution.backtest_serialization import (
+    serialize_selection_evidence,
+)
 from ditto_application.processes.experiments import worker as worker_module
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     research_execution_error,
 )
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
+    FoldSelectionTraceArtifactIdentity,
+    FoldSelectionTraceArtifactPublisher,
+    FoldSelectionTraceArtifactReceipt,
+    fold_selection_trace_table_name,
+)
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
+    BacktestReportArtifactPublisher,
     BacktestReportEvidence,
 )
 from ditto_application.processes.experiments.backtest_service_wiring import (
@@ -91,9 +106,12 @@ from ditto_application.processes.experiments.worker import (
     ResearchBacktestBuildAttestation,
     ResearchBacktestBuildSource,
     ResearchCandidateExecutionError,
+    ResearchExecutionSemanticsResolver,
     ResearchExperimentWorker,
+    ResearchFoldRunner,
     ResearchFoldRunResult,
     ResearchFoldRunState,
+    ResearchWorkerCoordinator,
     ResearchWorkerState,
     VerifiedResearchBacktestBuild,
 )
@@ -425,6 +443,97 @@ def _artifact_receipt(
         row_count=measurement.row_count,
         byte_size=measurement.byte_size,
     ).to_record()
+
+
+def _fold_selection_trace_receipt(
+    identity: FoldSelectionTraceArtifactIdentity,
+    evidence: SelectionEvidenceLog,
+) -> FoldSelectionTraceArtifactReceipt:
+    tables = serialize_selection_evidence(str(identity.run_id), evidence)
+    records: list[ArtifactRecord] = []
+    for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS:
+        buffer = BytesIO()
+        tables[fold_selection_trace_table_name(kind)].write_parquet(buffer)
+        measurement = measure_parquet_bytes(buffer.getvalue())
+        records.append(
+            ArtifactManifest.create(
+                spec=ArtifactPublicationSpec(
+                    artifact_id=identity.artifact_id(kind),
+                    experiment_id=identity.experiment_id,
+                    candidate_id=identity.candidate_id,
+                    fold_id=identity.fold_id,
+                    attempt_id=identity.attempt_id,
+                    artifact_kind=kind.value,
+                    relative_path=identity.relative_path(kind),
+                    reproduction_fingerprint=identity.reproduction_fingerprint,
+                    audit=identity.audit(kind),
+                    created_at=identity.attempt_created_at,
+                ),
+                artifact_format=ArtifactFormat.PARQUET,
+                content_hash=measurement.content_hash,
+                schema_hash=measurement.schema_hash,
+                row_count=measurement.row_count,
+                byte_size=measurement.byte_size,
+            ).to_record()
+        )
+    return FoldSelectionTraceArtifactReceipt(*records)
+
+
+class _FoldSelectionTracePublisher:
+    def __init__(self) -> None:
+        self.calls: list[
+            tuple[
+                FoldSelectionTraceArtifactIdentity,
+                SelectionEvidenceLog,
+                LeaseFence,
+                int,
+            ]
+        ] = []
+
+    def publish(
+        self,
+        identity: FoldSelectionTraceArtifactIdentity,
+        evidence: SelectionEvidenceLog,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> FoldSelectionTraceArtifactReceipt:
+        self.calls.append((identity, evidence, lease_fence, now_epoch_us))
+        return _fold_selection_trace_receipt(identity, evidence)
+
+
+_DEFAULT_TRACE_PUBLISHER = object()
+
+
+def _make_worker(
+    *,
+    coordinator: ResearchWorkerCoordinator,
+    semantics_resolver: ResearchExecutionSemanticsResolver,
+    runner: ResearchFoldRunner,
+    report_publisher: BacktestReportArtifactPublisher,
+    fold_selection_trace_publisher: (
+        FoldSelectionTraceArtifactPublisher | None | object
+    ) = _DEFAULT_TRACE_PUBLISHER,
+    checkpoint_available: Callable[[str], bool] | None = None,
+    clock: Callable[[], datetime] | None = None,
+) -> ResearchExperimentWorker:
+    trace_publisher = (
+        _FoldSelectionTracePublisher()
+        if fold_selection_trace_publisher is _DEFAULT_TRACE_PUBLISHER
+        else cast(
+            "FoldSelectionTraceArtifactPublisher | None",
+            fold_selection_trace_publisher,
+        )
+    )
+    return ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=semantics_resolver,
+        runner=runner,
+        report_publisher=report_publisher,
+        fold_selection_trace_publisher=trace_publisher,
+        checkpoint_available=checkpoint_available,
+        clock=clock,
+    )
 
 
 @pytest.mark.parametrize(
@@ -1040,6 +1149,9 @@ class _Coordinator:
         return cast("object", object())
 
 
+_DEFAULT_RUNNER_SELECTION_EVIDENCE = object()
+
+
 class _Runner:
     def __init__(
         self,
@@ -1047,12 +1159,18 @@ class _Runner:
         *,
         state: ResearchFoldRunState = ResearchFoldRunState.COMPLETED,
         poll_control: bool = False,
-        selection_evidence: SelectionEvidenceLog | None = None,
+        selection_evidence: (
+            SelectionEvidenceLog | None | object
+        ) = _DEFAULT_RUNNER_SELECTION_EVIDENCE,
     ) -> None:
         self.error = error
         self.state = state
         self.poll_control = poll_control
-        self.selection_evidence = selection_evidence
+        self.selection_evidence = (
+            SelectionEvidenceLog()
+            if selection_evidence is _DEFAULT_RUNNER_SELECTION_EVIDENCE
+            else cast("SelectionEvidenceLog | None", selection_evidence)
+        )
         self.audits: list[ResearchExecutionAudit] = []
 
     def run(
@@ -1119,6 +1237,7 @@ class _MemoryArtifactIndex:
     def __init__(self, artifact_root: Path) -> None:
         self.artifact_root = artifact_root.resolve()
         self.records: dict[str, ArtifactRecord] = {}
+        self.add_calls: list[tuple[LeaseFence, int]] = []
 
     def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
         return self.records.get(artifact_id)
@@ -1144,8 +1263,8 @@ class _MemoryArtifactIndex:
         now_epoch_us: int,
         commit_guard: Callable[[], None],
     ) -> None:
-        _ = (lease_fence, now_epoch_us)
         commit_guard()
+        self.add_calls.append((lease_fence, now_epoch_us))
         assert self.get_artifact(record.artifact_id) is None
         assert self.get_artifact_by_relative_path(record.relative_path) is None
         self.records[record.artifact_id] = record
@@ -1171,6 +1290,26 @@ def _dispatch() -> ExperimentDispatch:
     attempt = AttemptView(first.spec, first.projection)
     fold = _fold()
     return ExperimentDispatch(ExperimentStage.WALK_FORWARD, fold, attempt)
+
+
+def _resumed_dispatch() -> ExperimentDispatch:
+    dispatch = _dispatch()
+    attempt_id = AttemptId("attempt-resumed-2")
+    attempt = replace(
+        dispatch.attempt,
+        spec=replace(
+            dispatch.attempt.spec,
+            attempt_id=attempt_id,
+            ordinal=2,
+            parent_attempt_id=dispatch.attempt.spec.attempt_id,
+            resume_from_run_id=BacktestRunId("research-run-checkpoint"),
+        ),
+        projection=replace(
+            dispatch.attempt.projection,
+            attempt_id=attempt_id,
+        ),
+    )
+    return replace(dispatch, attempt=attempt)
 
 
 def _replace_persisted_attempt_id(
@@ -1209,15 +1348,32 @@ def _replace_persisted_fold_key(
     )
 
 
-def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence() -> None:
+def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
+    tmp_path: Path,
+) -> None:
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+    from ditto_application.builders.fold_selection_trace_artifact_adapter import (
+        IndexedFoldSelectionTraceArtifactAdapter,
+    )
+
     coordinator = _Coordinator()
     runner = _Runner(selection_evidence=SelectionEvidenceLog())
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    trace_index = _MemoryArtifactIndex(tmp_path)
+    trace_publisher = IndexedFoldSelectionTraceArtifactAdapter(
+        artifact_service=ResearchArtifactService(
+            artifact_root=tmp_path,
+            artifact_reader=trace_index,
+            artifact_writer=trace_index,
+        ),
+        artifact_index_reader=trace_index,
+    )
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
         report_publisher=publisher,
+        fold_selection_trace_publisher=trace_publisher,
         clock=lambda: _NOW,
     )
 
@@ -1253,12 +1409,149 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence() ->
     assert evidence == _report_evidence()
     assert fence.revision == 17
     assert now_epoch_us == int(_NOW.timestamp() * 1_000_000)
+    assert len(trace_index.records) == 4
+    assert trace_index.add_calls == [
+        (fence, now_epoch_us),
+        (fence, now_epoch_us),
+        (fence, now_epoch_us),
+        (fence, now_epoch_us),
+    ]
     assert len(runner.audits) == 1
     assert runner.audits[0].attempt_id == str(_dispatch().attempt.spec.attempt_id)
     assert runner.audits[0].reproduction_fingerprint == (
         _dispatch().attempt.spec.reproduction_fingerprint
     )
     assert runner.audits[0].backtest_run_id == "research-run-persisted"
+
+
+def test_worker_fails_closed_when_selection_log_has_no_trace_publisher() -> None:
+    coordinator = _Coordinator()
+    report_publisher = _Publisher()
+    worker = _make_worker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(selection_evidence=SelectionEvidenceLog()),
+        report_publisher=report_publisher,
+        fold_selection_trace_publisher=None,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.SYSTEM_FAILED
+    assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert result.error_type == "AppProcessError"
+    assert report_publisher.calls == []
+    assert all(name != "publish" for name, _ in coordinator.calls)
+    assert [name for name, _ in coordinator.calls][-2:] == ["renew", "fail"]
+    assert all(name != "complete" for name, _ in coordinator.calls)
+
+
+def test_worker_does_not_publish_fake_trace_for_resume_none() -> None:
+    class _UnexpectedTracePublisher:
+        calls = 0
+
+        def publish(self, *args, **kwargs):
+            _ = (args, kwargs)
+            self.calls += 1
+            raise AssertionError("None trace must remain objectively absent")
+
+    trace_publisher = _UnexpectedTracePublisher()
+    coordinator = _Coordinator()
+    runner = _Runner(selection_evidence=None)
+    worker = _make_worker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=runner,
+        report_publisher=_Publisher(),
+        fold_selection_trace_publisher=trace_publisher,
+        clock=lambda: _NOW,
+    )
+    dispatch = _resumed_dispatch()
+    assert dispatch.attempt.spec.resume_from_run_id == BacktestRunId(
+        "research-run-checkpoint"
+    )
+
+    result = worker.execute(dispatch, occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.COMPLETED
+    assert trace_publisher.calls == 0
+    assert runner.audits[0].resume_from_run_id == "research-run-checkpoint"
+
+
+def test_worker_rejects_fresh_none_trace_before_any_artifact_write() -> None:
+    coordinator = _Coordinator()
+    report_publisher = _Publisher()
+    trace_publisher = _FoldSelectionTracePublisher()
+    worker = _make_worker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(selection_evidence=None),
+        report_publisher=report_publisher,
+        fold_selection_trace_publisher=trace_publisher,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.SYSTEM_FAILED
+    assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert report_publisher.calls == []
+    assert trace_publisher.calls == []
+    assert all(name != "publish" for name, _ in coordinator.calls)
+    assert all(name != "complete" for name, _ in coordinator.calls)
+
+
+def test_worker_rejects_resumed_suffix_trace_without_checkpoint_continuity() -> None:
+    coordinator = _Coordinator()
+    report_publisher = _Publisher()
+    trace_publisher = _FoldSelectionTracePublisher()
+    worker = _make_worker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(selection_evidence=SelectionEvidenceLog()),
+        report_publisher=report_publisher,
+        fold_selection_trace_publisher=trace_publisher,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_resumed_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.SYSTEM_FAILED
+    assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert report_publisher.calls == []
+    assert trace_publisher.calls == []
+    assert all(name != "publish" for name, _ in coordinator.calls)
+    assert all(name != "complete" for name, _ in coordinator.calls)
+
+
+def test_worker_rejects_wrong_fold_selection_trace_receipt() -> None:
+    class _WrongReceiptTracePublisher:
+        calls = 0
+
+        def publish(self, *args, **kwargs):
+            _ = (args, kwargs)
+            self.calls += 1
+            return object()
+
+    trace_publisher = _WrongReceiptTracePublisher()
+    coordinator = _Coordinator()
+    worker = _make_worker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(selection_evidence=SelectionEvidenceLog()),
+        report_publisher=_Publisher(),
+        fold_selection_trace_publisher=trace_publisher,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.SYSTEM_FAILED
+    assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert result.error_type == "ExperimentIntegrityError"
+    assert trace_publisher.calls == 1
+    assert all(name != "complete" for name, _ in coordinator.calls)
 
 
 def test_worker_publishes_real_indexed_artifact_before_completion(
@@ -1291,7 +1584,7 @@ def test_worker_publishes_real_indexed_artifact_before_completion(
             return super().complete_attempt(attempt_id, occurred_at=occurred_at)
 
     coordinator = _ArtifactAwareCoordinator()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(),
@@ -1311,7 +1604,7 @@ def test_worker_publishes_real_indexed_artifact_before_completion(
 def test_worker_turns_recoverable_publication_error_into_system_failure() -> None:
     coordinator = _Coordinator()
     publisher = _Publisher(RuntimeError("artifact fsync failed"))
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(),
@@ -1397,7 +1690,7 @@ def test_worker_rejects_invalid_artifact_publication_receipt(
             _artifact_receipt(identity, evidence)
         )
     )
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(),
@@ -1439,7 +1732,7 @@ def test_worker_rethrows_terminal_publication_error_without_terminal_write(
 
     coordinator = _TerminalPublicationCoordinator()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(),
@@ -1466,7 +1759,7 @@ def test_worker_does_not_turn_complete_error_into_reverse_failure() -> None:
 
     coordinator = _CompleteFailureCoordinator()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(),
@@ -1496,7 +1789,7 @@ def test_worker_rejects_non_exact_runner_result_before_publication() -> None:
 
     coordinator = _Coordinator()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_InvalidRunner(),
@@ -1545,7 +1838,7 @@ def test_worker_treats_control_winning_start_race_as_normal_stop(
     coordinator = _ControlRaceCoordinator()
     runner = _Runner()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
@@ -1584,7 +1877,7 @@ def test_worker_rejects_control_change_with_run_intent() -> None:
 
     coordinator = _FalseControlRaceCoordinator()
     runner = _Runner()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
@@ -1655,7 +1948,7 @@ def test_worker_rejects_persisted_dispatch_identity_drift_before_numerics(
 ) -> None:
     coordinator = _Coordinator(start_transform=start_transform)
     runner = _Runner()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
@@ -1676,7 +1969,7 @@ def test_worker_rejects_already_running_duplicate_without_numerical_execution() 
     coordinator = _Coordinator(started_now=False)
     runner = _Runner()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
@@ -1754,7 +2047,7 @@ def test_worker_returns_terminal_replay_without_numerics_or_second_write(
     resolver = _Resolver(_semantics())
     runner = _Runner()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=resolver,
         runner=runner,
@@ -1805,11 +2098,12 @@ def test_concurrent_duplicate_delivery_runs_numerics_exactly_once() -> None:
             return ResearchFoldRunResult(
                 ResearchFoldRunState.COMPLETED,
                 _report_evidence(run_id=audit.backtest_run_id),
+                SelectionEvidenceLog(),
             )
 
     coordinator = _DuplicateCoordinator()
     runner = _BlockingRunner()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
@@ -1891,7 +2185,7 @@ def test_worker_persists_typed_failure_classification(
 ) -> None:
     coordinator = _Coordinator()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(error),
@@ -1919,7 +2213,7 @@ def test_worker_marks_post_claim_semantic_drift_as_input_failure() -> None:
     resolver = _Resolver(replace(_semantics(), seed=18))
     runner = _Runner()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=resolver,
         runner=runner,
@@ -1950,7 +2244,7 @@ def test_worker_renews_authority_before_resolving_persisted_semantics() -> None:
     )
     resolver = _Resolver(_semantics())
     runner = _Runner()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=resolver,
         runner=runner,
@@ -1975,7 +2269,7 @@ def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
         renew_error_on_call=2,
         renew_error_code=error_code,
     )
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(poll_control=True),
@@ -1993,7 +2287,7 @@ def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
 def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
     coordinator = _Coordinator()
     publisher = _Publisher()
-    worker = ResearchExperimentWorker(
+    worker = _make_worker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(state=ResearchFoldRunState.STOPPED),

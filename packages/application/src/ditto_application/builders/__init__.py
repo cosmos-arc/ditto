@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from ditto_application.builders.code_environment import build_code_environment_lock
+from ditto_application.builders.fold_selection_trace_artifact_adapter import (
+    IndexedFoldSelectionTraceArtifactAdapter,
+)
 from ditto_application.builders.published_baseline_runtime_builder import (
     PublishedBaselineRuntimeBuilder,
 )
@@ -32,6 +35,7 @@ from ditto_application.builders.slice_builder import StrategySliceBuilder
 __all__ = [
     "BacktestRuntimeBuilder",
     "IndexedBacktestReportArtifactAdapter",
+    "IndexedFoldSelectionTraceArtifactAdapter",
     "IndexedResearchArtifactLoader",
     "IndexedResearchInputsResolver",
     "PublishedBacktestRuntime",

@@ -9,6 +9,7 @@ from enum import StrEnum
 from typing import Protocol, cast
 
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -21,6 +22,7 @@ from ditto_analysis.experiments import (
     ExperimentStatus,
     FoldRole,
     FoldView,
+    LeaseFence,
     canonical_payload,
 )
 from ditto_strategy.errors import StrategyError
@@ -31,6 +33,13 @@ from ditto_application.processes.experiments._execution_resolution_evidence impo
     ResearchExecutionInputError,
     build_successor_queued_attempt,
     rebuild_execution_audit_anchor,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifact_validation import (  # noqa: E501
+    publish_verified_fold_selection_trace_artifacts,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FoldSelectionTraceArtifactIdentity,
+    FoldSelectionTraceArtifactPublisher,
 )
 from ditto_application.processes.experiments._report_artifact_validation import (
     publish_verified_backtest_report_artifact,
@@ -565,6 +574,30 @@ def _controlled_worker_state(
     raise _worker_error("cooperative_stop_without_durable_control")
 
 
+def _require_fold_selection_trace_contract(
+    attempt: AttemptPersistenceSpec,
+    run_result: ResearchFoldRunResult,
+    publisher: FoldSelectionTraceArtifactPublisher | None,
+) -> None:
+    """Keep fresh/resumed trace truth explicit before any artifact write."""
+    selection_evidence = run_result.selection_evidence
+    if selection_evidence is None and attempt.resume_from_run_id is None:
+        raise _worker_error("fresh_fold_selection_trace_missing")
+    if selection_evidence is not None and attempt.resume_from_run_id is not None:
+        raise _worker_error("resumed_fold_selection_trace_continuity_unproven")
+    if selection_evidence is not None and publisher is None:
+        raise _worker_error("fold_selection_trace_publisher_missing")
+
+
+def _require_completed_report_evidence(
+    run_result: ResearchFoldRunResult,
+) -> BacktestReportEvidence:
+    evidence = run_result.report_evidence
+    if type(evidence) is not BacktestReportEvidence:
+        raise _worker_error("invalid_research_fold_run_result")
+    return evidence
+
+
 class ResearchExperimentWorker:
     """Execute a claimed fold and persist one typed terminal outcome."""
 
@@ -575,6 +608,9 @@ class ResearchExperimentWorker:
         semantics_resolver: ResearchExecutionSemanticsResolver,
         runner: ResearchFoldRunner,
         report_publisher: BacktestReportArtifactPublisher,
+        fold_selection_trace_publisher: (
+            FoldSelectionTraceArtifactPublisher | None
+        ) = None,
         checkpoint_available: Callable[[str], bool] | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
@@ -582,6 +618,7 @@ class ResearchExperimentWorker:
         self._resolver = semantics_resolver
         self._runner = runner
         self._report_publisher = report_publisher
+        self._fold_selection_trace_publisher = fold_selection_trace_publisher
         self._checkpoint_available: Callable[[str], bool] = checkpoint_available or (
             lambda _run_id: False
         )
@@ -647,32 +684,24 @@ class ResearchExperimentWorker:
             clock=self._clock,
         )
         try:
-            report_evidence = self._run_fold(
+            run_result = self._run_fold(
                 persisted,
                 attempt,
                 run_id,
                 execution_control,
             )
-            identity = BacktestReportArtifactIdentity(
-                experiment_id=persisted.fold.spec.key.experiment_id,
-                candidate_id=persisted.fold.spec.key.candidate_id,
-                fold_id=persisted.fold.spec.key.fold_id,
-                attempt_id=attempt.attempt_id,
-                attempt_created_at=attempt.created_at,
-                run_id=run_id,
-                test_window=persisted.fold.spec.test_window,
-                reproduction_fingerprint=attempt.reproduction_fingerprint,
+            report_evidence = _require_completed_report_evidence(run_result)
+            _require_fold_selection_trace_contract(
+                attempt,
+                run_result,
+                self._fold_selection_trace_publisher,
             )
-            self._coordinator.publish_attempt_artifact(
-                lambda lease_fence, now_epoch_us: (
-                    publish_verified_backtest_report_artifact(
-                        self._report_publisher,
-                        identity,
-                        report_evidence,
-                        lease_fence=lease_fence,
-                        now_epoch_us=now_epoch_us,
-                    )
-                )
+            self._publish_completed_evidence(
+                persisted,
+                attempt,
+                run_id,
+                report_evidence,
+                run_result,
             )
         except Exception as error:
             effective_error = execution_control.failure or error
@@ -717,13 +746,68 @@ class ResearchExperimentWorker:
             error_type=None,
         )
 
+    def _publish_completed_evidence(
+        self,
+        persisted: PersistedAttemptStart,
+        attempt: AttemptPersistenceSpec,
+        run_id: BacktestRunId,
+        report_evidence: BacktestReportEvidence,
+        run_result: ResearchFoldRunResult,
+    ) -> None:
+        key = persisted.fold.spec.key
+        test_window = persisted.fold.spec.test_window
+        report_identity = BacktestReportArtifactIdentity(
+            experiment_id=key.experiment_id,
+            candidate_id=key.candidate_id,
+            fold_id=key.fold_id,
+            attempt_id=attempt.attempt_id,
+            attempt_created_at=attempt.created_at,
+            run_id=run_id,
+            test_window=test_window,
+            reproduction_fingerprint=attempt.reproduction_fingerprint,
+        )
+        trace_identity = FoldSelectionTraceArtifactIdentity(
+            experiment_id=key.experiment_id,
+            candidate_id=key.candidate_id,
+            fold_id=key.fold_id,
+            attempt_id=attempt.attempt_id,
+            attempt_created_at=attempt.created_at,
+            run_id=run_id,
+            test_window=test_window,
+            reproduction_fingerprint=attempt.reproduction_fingerprint,
+        )
+
+        def _publish_attempt_evidence(
+            lease_fence: LeaseFence,
+            now_epoch_us: int,
+        ) -> ArtifactRecord:
+            report_record = publish_verified_backtest_report_artifact(
+                self._report_publisher,
+                report_identity,
+                report_evidence,
+                lease_fence=lease_fence,
+                now_epoch_us=now_epoch_us,
+            )
+            selection_evidence = run_result.selection_evidence
+            if selection_evidence is not None:
+                publish_verified_fold_selection_trace_artifacts(
+                    self._fold_selection_trace_publisher,
+                    trace_identity,
+                    selection_evidence,
+                    lease_fence=lease_fence,
+                    now_epoch_us=now_epoch_us,
+                )
+            return report_record
+
+        self._coordinator.publish_attempt_artifact(_publish_attempt_evidence)
+
     def _run_fold(
         self,
         persisted: PersistedAttemptStart,
         attempt: AttemptPersistenceSpec,
         run_id: BacktestRunId,
         execution_control: ResearchExecutionControl,
-    ) -> BacktestReportEvidence:
+    ) -> ResearchFoldRunResult:
         _require_execution_authority(execution_control)
         semantics = self._resolver.resolve(persisted.fold)
         _require_execution_authority(execution_control)
@@ -761,13 +845,12 @@ class ResearchExperimentWorker:
             raise _ResearchCooperativeStopError(
                 "research backtest stopped cooperatively"
             )
-        evidence = run_result.report_evidence
         if (
             run_result.state is not ResearchFoldRunState.COMPLETED
-            or type(evidence) is not BacktestReportEvidence
+            or type(run_result.report_evidence) is not BacktestReportEvidence
         ):
             raise _worker_error("invalid_research_fold_run_result")
-        return evidence
+        return run_result
 
     def _finish_controlled_attempt(
         self,
