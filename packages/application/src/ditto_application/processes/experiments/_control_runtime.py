@@ -167,9 +167,12 @@ def retry_fold_under_transient_lease(
     scheduler lease, executes the fenced retry, and releases. The durable store
     CAS (``stale_fold_revision`` + lease fence) is the correctness boundary;
     in R3 single-machine wiring there is no concurrent tick. If the slot is
-    currently leased the request fails closed with ``LEASE_LOST``.
+    currently leased by another authority the request fails closed with
+    ``LEASE_LOST``. A lease already held by this coordinator remains owned by
+    its scheduler lifecycle and is never released by this control operation.
     """
     slot = store.get_scheduler_slot()
+    acquired_transient_lease = not authority.has_lease
     acquired = authority.acquire(
         ExperimentId(request.experiment_id),
         expected_revision=slot.revision,
@@ -180,7 +183,7 @@ def retry_fold_under_transient_lease(
             details={"code": "LEASE_LOST", "reason": "scheduler_slot_busy"},
         )
     try:
-        return authority.execute_operator(
+        receipt = authority.execute_operator(
             lambda lease, now_epoch_us: recovery.retry_fold(
                 experiment_id=request.experiment_id,
                 candidate_id=request.candidate_id,
@@ -191,5 +194,16 @@ def retry_fold_under_transient_lease(
                 now_epoch_us=now_epoch_us(),
             )
         )
-    finally:
+    except BaseException as error:
+        if acquired_transient_lease and authority.has_lease:
+            try:
+                authority.release()
+            except BaseException as release_error:
+                error.add_note(
+                    "transient scheduler lease release also failed: "
+                    + f"{type(release_error).__name__}: {release_error}",
+                )
+        raise
+    if acquired_transient_lease:
         authority.release()
+    return receipt
