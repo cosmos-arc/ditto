@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import NoReturn, Protocol, cast
 
 from ditto_analysis.experiments import (
@@ -96,6 +96,15 @@ def _canonical_text(value: object, *, field_name: str) -> str:
     return value
 
 
+def _is_exact_aware_utc_datetime(value: object) -> bool:
+    if type(value) is not datetime or value.tzinfo is None:
+        return False
+    try:
+        return value.utcoffset() == timedelta(0)
+    except (OverflowError, TypeError, ValueError):
+        return False
+
+
 def _canonical_date(value: object, *, field_name: str) -> date:
     if type(value) is not str:
         _invalid(field=field_name)
@@ -115,7 +124,7 @@ def _canonical_datetime(value: object, *, field_name: str) -> datetime:
         parsed = datetime.fromisoformat(value)
     except ValueError:
         _invalid(field=field_name)
-    if parsed.isoformat() != value:
+    if parsed.isoformat() != value or not _is_exact_aware_utc_datetime(parsed):
         _invalid(field=field_name)
     return parsed
 
@@ -238,7 +247,7 @@ class BacktestFillEvidence:
         )
         if type(self.direction) is not OrderSide:
             _invalid(field="fill_log.direction")
-        if type(self.event_time) is not datetime:
+        if not _is_exact_aware_utc_datetime(self.event_time):
             _invalid(field="fill_log.event_time")
         _finite_float(self.fee, field_name="fill_log.fee", minimum=0.0)
         _canonical_text(self.fill_id, field_name="fill_log.fill_id")
@@ -533,6 +542,7 @@ class BacktestReportArtifactIdentity:
     candidate_id: CandidateId
     fold_id: FoldId
     attempt_id: AttemptId
+    attempt_created_at: datetime
     run_id: BacktestRunId
     test_window: DateWindow
     reproduction_fingerprint: ContentHash
@@ -548,7 +558,9 @@ class BacktestReportArtifactIdentity:
             (self.test_window, DateWindow),
             (self.reproduction_fingerprint, ContentHash),
         )
-        if any(type(value) is not expected for value, expected in typed):
+        if any(
+            type(value) is not expected for value, expected in typed
+        ) or not _is_exact_aware_utc_datetime(self.attempt_created_at):
             _identity_error("invalid_backtest_report_artifact_identity")
         validate_artifact_relative_path(self.relative_path)
 
@@ -563,6 +575,7 @@ class BacktestReportArtifactIdentity:
         identity_hash = canonical_payload(
             {
                 "artifact_kind": BACKTEST_REPORT_ARTIFACT_KIND,
+                "attempt_created_at": self.attempt_created_at.isoformat(),
                 "attempt_id": str(self.attempt_id),
                 "candidate_id": str(self.candidate_id),
                 "experiment_id": str(self.experiment_id),
@@ -613,7 +626,6 @@ class BacktestReportArtifactPublisher(Protocol):
         *,
         lease_fence: LeaseFence,
         now_epoch_us: int,
-        created_at: datetime,
     ) -> ArtifactRecord:
         """Publish one exact report projection under the worker fence."""
         ...

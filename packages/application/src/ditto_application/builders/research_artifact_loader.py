@@ -137,12 +137,15 @@ def _require_record_identity(
 ) -> ArtifactManifest:
     if type(record) is not ArtifactRecord:
         _integrity(identity, "invalid_artifact_record")
+    if type(record.created_at) is not datetime:
+        _integrity(identity, "artifact_record_identity_drift")
     expected = (
         identity.artifact_id,
         identity.experiment_id,
         identity.candidate_id,
         identity.fold_id,
         identity.attempt_id,
+        identity.attempt_created_at,
         BACKTEST_REPORT_ARTIFACT_KIND,
         identity.relative_path,
         identity.reproduction_fingerprint,
@@ -153,6 +156,7 @@ def _require_record_identity(
         record.candidate_id,
         record.fold_id,
         record.attempt_id,
+        record.created_at,
         record.artifact_kind,
         record.relative_path,
         record.reproduction_fingerprint,
@@ -172,8 +176,10 @@ def _require_record_identity(
     if manifest.artifact_format is not ArtifactFormat.JSON:
         _integrity(identity, "artifact_format_drift")
     audit = manifest.audit
-    if audit.get("run_id") != str(identity.run_id) or audit.get("attempt_id") != str(
-        identity.attempt_id
+    if (
+        audit.get("created_at") != identity.attempt_created_at.isoformat()
+        or audit.get("run_id") != str(identity.run_id)
+        or audit.get("attempt_id") != str(identity.attempt_id)
     ):
         _integrity(identity, "artifact_audit_drift")
     return manifest
@@ -212,7 +218,6 @@ class IndexedBacktestReportArtifactAdapter:
         *,
         lease_fence: LeaseFence,
         now_epoch_us: int,
-        created_at: datetime,
     ) -> ArtifactRecord:
         """Publish an immutable attempt report with explicit run/time audit."""
         typed_identity = _require_identity(identity)
@@ -228,10 +233,10 @@ class IndexedBacktestReportArtifactAdapter:
             reproduction_fingerprint=typed_identity.reproduction_fingerprint,
             audit={
                 "attempt_id": str(typed_identity.attempt_id),
-                "created_at": created_at.isoformat(),
+                "created_at": typed_identity.attempt_created_at.isoformat(),
                 "run_id": str(typed_identity.run_id),
             },
-            created_at=created_at,
+            created_at=typed_identity.attempt_created_at,
         )
         record = self._artifacts.publish_indexed_json(
             spec,

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import cast
 
 import pytest
 from ditto_analysis.errors import ExperimentConflictError, ExperimentIntegrityError
@@ -52,12 +53,22 @@ FENCE = LeaseFence(
 )
 
 
+class _InjectedIndexFailure(RuntimeError):
+    """Simulate one crash after immutable files land but before index commit."""
+
+
+class _DateTime(datetime):
+    """Prove persisted durable timestamps also require exact datetimes."""
+
+
 class _MemoryArtifactIndex:
     """Minimal immutable index used only with a tmp_path artifact root."""
 
     def __init__(self, artifact_root: Path) -> None:
         self.artifact_root = artifact_root.resolve()
         self.records: dict[str, ArtifactRecord] = {}
+        self.add_attempts = 0
+        self.fail_next_add = False
 
     def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
         return self.records.get(artifact_id)
@@ -85,6 +96,10 @@ class _MemoryArtifactIndex:
     ) -> None:
         _ = (lease_fence, now_epoch_us)
         commit_guard()
+        self.add_attempts += 1
+        if self.fail_next_add:
+            self.fail_next_add = False
+            raise _InjectedIndexFailure("injected failure before index add")
         matches = tuple(
             item
             for item in self.records.values()
@@ -119,6 +134,7 @@ def _identity() -> BacktestReportArtifactIdentity:
         candidate_id=CANDIDATE_ID,
         fold_id=FOLD_ID,
         attempt_id=ATTEMPT_ID,
+        attempt_created_at=NOW,
         run_id=RUN_ID,
         test_window=WINDOW,
         reproduction_fingerprint=FINGERPRINT,
@@ -198,7 +214,6 @@ def test_publish_and_read_round_trip_through_verified_schema_v1(
         evidence,
         lease_fence=FENCE,
         now_epoch_us=NOW_US,
-        created_at=NOW,
     )
     loaded = adapter.read(identity)
 
@@ -208,6 +223,9 @@ def test_publish_and_read_round_trip_through_verified_schema_v1(
     assert record.content_hash == evidence.content_hash
     assert record.row_count == 1
     assert record.manifest["format"] == "json"
+    assert record.created_at == identity.attempt_created_at
+    audit = cast("Mapping[str, object]", record.manifest["audit"])
+    assert audit["created_at"] == identity.attempt_created_at.isoformat()
     assert loaded is not None
     assert loaded.record == record
     assert loaded.evidence == evidence
@@ -241,7 +259,6 @@ def test_verified_read_maps_non_object_json_to_report_integrity(
         BacktestReportEvidence.from_report(_report()),
         lease_fence=FENCE,
         now_epoch_us=NOW_US,
-        created_at=NOW,
     )
     (tmp_path / identity.relative_path).write_bytes(b"[]")
 
@@ -271,25 +288,64 @@ def test_identical_replay_is_allowed_but_different_content_conflicts(
         evidence,
         lease_fence=FENCE,
         now_epoch_us=NOW_US,
-        created_at=NOW,
     )
     replayed = adapter_value.publish(
         identity,
         evidence,
         lease_fence=FENCE,
         now_epoch_us=NOW_US + 1,
-        created_at=NOW,
     )
 
     assert replayed == first
+    assert replayed.created_at == identity.attempt_created_at
+    audit = cast("Mapping[str, object]", replayed.manifest["audit"])
+    assert audit["created_at"] == identity.attempt_created_at.isoformat()
     with pytest.raises(ExperimentConflictError):
         adapter_value.publish(
             identity,
             BacktestReportEvidence.from_report(_report(final_nav=102_000.0)),
             lease_fence=FENCE,
             now_epoch_us=NOW_US + 2,
-            created_at=NOW,
         )
+
+
+def test_orphaned_file_and_sidecar_recover_into_index_on_retry(
+    tmp_path: Path,
+) -> None:
+    from ditto_application.builders.research_artifact_loader import (
+        IndexedBacktestReportArtifactAdapter,
+    )
+
+    adapter_value, index = _adapter(tmp_path)
+    assert isinstance(adapter_value, IndexedBacktestReportArtifactAdapter)
+    identity = _identity()
+    evidence = BacktestReportEvidence.from_report(_report())
+    index.fail_next_add = True
+
+    with pytest.raises(_InjectedIndexFailure):
+        adapter_value.publish(
+            identity,
+            evidence,
+            lease_fence=FENCE,
+            now_epoch_us=NOW_US,
+        )
+
+    target = tmp_path / identity.relative_path
+    sidecar = target.with_name(f".{target.name}.ditto-manifest.json")
+    assert target.is_file()
+    assert sidecar.is_file()
+    assert index.get_artifact(identity.artifact_id) is None
+
+    recovered = adapter_value.publish(
+        identity,
+        evidence,
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US + 1,
+    )
+
+    assert index.add_attempts == 2
+    assert index.get_artifact(identity.artifact_id) == recovered
+    assert recovered.created_at == identity.attempt_created_at
 
 
 @pytest.mark.parametrize(
@@ -302,6 +358,10 @@ def test_identical_replay_is_allowed_but_different_content_conflicts(
         ("attempt_id", AttemptId("other-attempt")),
         ("relative_path", "experiments/other/report.json"),
         ("reproduction_fingerprint", ContentHash("b" * 64)),
+        (
+            "created_at",
+            _DateTime(2026, 1, 3, 4, 5, 6, 789012, tzinfo=UTC),
+        ),
         ("row_count", 2),
     ],
 )
@@ -323,7 +383,6 @@ def test_existing_record_lineage_kind_and_measurement_drift_fail_closed(
         evidence,
         lease_fence=FENCE,
         now_epoch_us=NOW_US,
-        created_at=NOW,
     )
     index.records[identity.artifact_id] = replace(record, **{field_name: drifted})
 
@@ -356,7 +415,6 @@ def test_existing_record_content_schema_and_hash_measurement_drift_fail_closed(
         BacktestReportEvidence.from_report(_report()),
         lease_fence=FENCE,
         now_epoch_us=NOW_US,
-        created_at=NOW,
     )
     index.records[identity.artifact_id] = replace(record, **{field_name: drifted})
 
@@ -388,13 +446,43 @@ def test_existing_record_audit_run_or_attempt_drift_fails_closed(
         BacktestReportEvidence.from_report(_report()),
         lease_fence=FENCE,
         now_epoch_us=NOW_US,
-        created_at=NOW,
     )
     manifest = dict(record.manifest)
     audit = dict(manifest["audit"])
     audit[field_name] = drifted
     manifest["audit"] = audit
     index.records[identity.artifact_id] = replace(record, manifest=manifest)
+
+    with pytest.raises(ExperimentIntegrityError):
+        adapter_value.read(identity)
+
+
+def test_existing_record_cannot_replace_durable_attempt_creation_time(
+    tmp_path: Path,
+) -> None:
+    from ditto_application.builders.research_artifact_loader import (
+        IndexedBacktestReportArtifactAdapter,
+    )
+
+    adapter_value, index = _adapter(tmp_path)
+    assert isinstance(adapter_value, IndexedBacktestReportArtifactAdapter)
+    identity = _identity()
+    record = adapter_value.publish(
+        identity,
+        BacktestReportEvidence.from_report(_report()),
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+    )
+    drifted_at = identity.attempt_created_at + timedelta(microseconds=1)
+    manifest = dict(record.manifest)
+    audit = dict(cast("Mapping[str, object]", manifest["audit"]))
+    audit["created_at"] = drifted_at.isoformat()
+    manifest["audit"] = audit
+    index.records[identity.artifact_id] = replace(
+        record,
+        created_at=drifted_at,
+        manifest=manifest,
+    )
 
     with pytest.raises(ExperimentIntegrityError):
         adapter_value.read(identity)

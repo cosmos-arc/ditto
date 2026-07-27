@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import cast
 
 import pytest
@@ -29,7 +29,7 @@ from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import FillEvent
 
 
-def _report() -> BacktestReport:
+def _report(*, event_time: datetime | None = None) -> BacktestReport:
     return BacktestReport(
         run_id="run-report-1",
         period=("2026-01-01", "2026-01-02"),
@@ -54,7 +54,9 @@ def _report() -> BacktestReport:
                 fill_price=10.0,
                 fee=5.0,
                 slippage=0.01,
-                event_time=datetime(2026, 1, 2, 9, 31, tzinfo=UTC),
+                event_time=event_time
+                if event_time is not None
+                else datetime(2026, 1, 2, 9, 31, tzinfo=UTC),
                 cumulative_quantity=100,
                 leaves_quantity=0,
                 correlation_id="correlation-1",
@@ -181,6 +183,18 @@ def _make_fill_time_noncanonical(payload: dict[str, object]) -> None:
     )
 
 
+def _make_fill_time_naive(payload: dict[str, object]) -> None:
+    cast("list[dict[str, object]]", payload["fill_log"])[0]["event_time"] = (
+        "2026-01-02T09:31:00"
+    )
+
+
+def _make_fill_time_non_utc(payload: dict[str, object]) -> None:
+    cast("list[dict[str, object]]", payload["fill_log"])[0]["event_time"] = (
+        "2026-01-02T17:31:00+08:00"
+    )
+
+
 def _move_fill_outside_period(payload: dict[str, object]) -> None:
     cast("list[dict[str, object]]", payload["fill_log"])[0]["event_time"] = (
         "2025-12-31T09:31:00+00:00"
@@ -214,6 +228,8 @@ def _duplicate_fill(payload: dict[str, object]) -> None:
         _make_fill_fee_negative,
         _make_fill_slippage_non_finite,
         _make_fill_time_noncanonical,
+        _make_fill_time_naive,
+        _make_fill_time_non_utc,
         _move_fill_outside_period,
         _duplicate_fill,
     ],
@@ -257,7 +273,38 @@ def test_projection_rejects_invalid_real_report_instead_of_normalizing_it() -> N
     assert exc_info.value.details["reason"] == "invalid_backtest_report_evidence"
 
 
-def _artifact_identity(*, attempt: str = "attempt-1", run: str = "run-1") -> object:
+class _DateTime(datetime):
+    """Prove durable timestamps and fills require exact datetimes."""
+
+
+@pytest.mark.parametrize(
+    "event_time",
+    [
+        datetime(2026, 1, 2, 9, 31),
+        datetime(2026, 1, 2, 17, 31, tzinfo=timezone(timedelta(hours=8))),
+        _DateTime(2026, 1, 2, 9, 31, tzinfo=UTC),
+    ],
+)
+def test_projection_rejects_non_exact_or_non_utc_fill_time(
+    event_time: datetime,
+) -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        report_evidence.BacktestReportEvidence.from_report(
+            _report(event_time=event_time)
+        )
+
+    assert exc_info.value.details["reason"] == "invalid_backtest_report_evidence"
+
+
+ATTEMPT_CREATED_AT = datetime(2026, 1, 3, 4, 5, 6, 789012, tzinfo=UTC)
+
+
+def _artifact_identity(
+    *,
+    attempt: str = "attempt-1",
+    run: str = "run-1",
+    attempt_created_at: datetime = ATTEMPT_CREATED_AT,
+) -> object:
     from ditto_application.processes.experiments._report_evidence import (
         BacktestReportArtifactIdentity,
     )
@@ -267,6 +314,7 @@ def _artifact_identity(*, attempt: str = "attempt-1", run: str = "run-1") -> obj
         candidate_id=CandidateId("candidate-1"),
         fold_id=FoldId("fold-1"),
         attempt_id=AttemptId(attempt),
+        attempt_created_at=attempt_created_at,
         run_id=BacktestRunId(run),
         test_window=DateWindow(date(2026, 1, 1), date(2026, 1, 2)),
         reproduction_fingerprint=ContentHash("a" * 64),
@@ -288,6 +336,47 @@ def test_report_artifact_identity_uses_exact_attempt_scoped_path_and_kind() -> N
         "attempts/attempt-1/backtest-report-evidence.json"
     )
     assert identity.artifact_id.startswith("backtest-report-evidence-")
+
+
+def test_attempt_creation_time_is_part_of_artifact_identity_not_path() -> None:
+    from ditto_application.processes.experiments._report_evidence import (
+        BacktestReportArtifactIdentity,
+    )
+
+    first = cast("BacktestReportArtifactIdentity", _artifact_identity())
+    later = cast(
+        "BacktestReportArtifactIdentity",
+        _artifact_identity(
+            attempt_created_at=ATTEMPT_CREATED_AT + timedelta(microseconds=1)
+        ),
+    )
+
+    assert later.artifact_id != first.artifact_id
+    assert later.relative_path == first.relative_path
+
+
+@pytest.mark.parametrize(
+    "attempt_created_at",
+    [
+        datetime(2026, 1, 3, 4, 5, 6, 789012),
+        datetime(
+            2026,
+            1,
+            3,
+            12,
+            5,
+            6,
+            789012,
+            tzinfo=timezone(timedelta(hours=8)),
+        ),
+        _DateTime(2026, 1, 3, 4, 5, 6, 789012, tzinfo=UTC),
+    ],
+)
+def test_report_artifact_identity_requires_exact_aware_utc_attempt_time(
+    attempt_created_at: datetime,
+) -> None:
+    with pytest.raises(AppProcessError):
+        _artifact_identity(attempt_created_at=attempt_created_at)
 
 
 def test_retry_attempt_has_a_different_artifact_id_and_path() -> None:
