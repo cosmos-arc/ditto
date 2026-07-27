@@ -98,6 +98,9 @@ from ditto_application.processes.experiments._control_runtime import (
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
 )
+from ditto_application.processes.experiments.evidence_collector import (
+    ExperimentEvidenceCollector,
+)
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
@@ -335,6 +338,20 @@ class AppProcessProvider(Provider):
             first_attempt_factory=first_attempt_factory,
             owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
             lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
+        )
+
+    @provide
+    def experiment_evidence_collector(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        reader: ExperimentReaderProtocol,
+        writer: ExperimentWriterProtocol,
+    ) -> ExperimentEvidenceCollector:
+        """Wire the R3 review-packet collector behind the durable experiment ports."""
+        return ExperimentEvidenceCollector(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            writer=writer,
         )
 
     @provide

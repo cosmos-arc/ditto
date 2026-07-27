@@ -843,6 +843,20 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "CandidateFoldEvidence rows; it performs no storage or execution I/O."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "evidence_collector.py"
+        ),
+        owner="application R3 review-packet collector",
+        reason=(
+            "The collector loads one durable experiment snapshot, projects the "
+            "persisted preflight detail onto the analysis-owned HardGateEvidenceView, "
+            "and freezes the evaluated gates into an immutable ReviewPacket via the "
+            "analysis-owned assembler; storage I/O is delegated to the injected "
+            "ExperimentReaderProtocol and ExperimentWriterProtocol."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
