@@ -497,12 +497,34 @@ git commit -m "feat(research): drive evidence collection at EVIDENCE stage"
 
 ## Task 5: Task 22 后端 e2e(deterministic fixture)
 
+> **范围校准（2026-07-27，基于实施审计 + 用户决策）**
+>
+> **实施审计发现**：Task 1-4 已完成(commit `734fbbe6`→`5db77b73`)，但 Task 3 的 `evidence_collector` 做了 **V1 简化**——`metric_values={}`、`comparison_payload_hash=None`、`selection_evidence_artifact_id=None`、aggregation 链(`build_candidate_comparison`/`aggregate_walk_forward`)**完全未接通**、Task 2 产的 `assemble_candidate_fold_evidence` 是**孤儿函数**(仅测试 caller)。collector docstring 自承"deferred to Task 3b"。这与 design §7(要求真实 NET_RETURN/SHARPE 等 8 metric)和原 Task 5 验收标准(metric_values 非空)冲突。
+>
+> **覆盖度审计结论**(application/integration 全量审计):Task 5 的 4 个场景均为真实缺口——stock_selection 完整闭环/evidence collection→promote/reactivate 语义/governance recovery append+stale 409/scheduler 容量组装场景,在 integration 层**零覆盖**(Task 1-4 公共接口仅 unit 测试)。`_owned_coordinator` 未注入 `evidence_collector`,故现有 integration 的 EVIDENCE 分支都 `WAITING` 降级。
+>
+> **用户决策**(2026-07-27):
+> 1. **V1-first 渐进策略**——先验证闭环(5a),再补真实 metric(5b),最后升级 golden(5c)。TDD 友好、风险最低。
+> 2. **归属层调整**:`apps/tests/e2e/` → `application/tests/integration/`(5 个同类 experiment 测试 + fixture 高度可复用 + experiment 闭环是 application 内部流程 + `integration` marker 语义准确)。
+
+### Task 5a: V1 golden 闭环(本次实施)
+
+验证真实 experiment tick 从 EVIDENCE 产出**非空 ReviewPacket**(V1:`metric_values={}` 可接受 → evidence gate NOT_EVALUATED)→ governance promote 闭环 → `status=COMPLETED`。注入 `evidence_collector` 的 coordinator + 真实 SQLite fixture(复用 `test_holdout_claim_integration.py` 的 `_persist_candidate_selection`/`_complete_fold`/`_owned_coordinator` 模式)。
+
 **Files:**
-- Create: `packages/apps/tests/e2e/test_r3_stock_selection_golden.py`
-- Create: `packages/apps/tests/e2e/test_r3_etf_research_golden.py`
-- Create: `packages/apps/tests/e2e/test_r3_governance_recovery.py`
-- Create: `packages/apps/tests/e2e/test_r3_scheduler_capacity.py`
-- Create: `docs/evidence/r3/README.md` + `docs/evidence/r3/manifest.json`(evidence 占位)
+- Create: `packages/application/tests/integration/test_r3_evidence_closure_golden.py`
+
+### Task 5b: Task 3b aggregation 真实化(后续)
+
+collector 接通 `assemble_candidate_fold_evidence` → `build_candidate_comparison` → `aggregate_walk_forward`;实现 backtest report reader(从 artifact 构造 `BacktestReport`,满足 `_validate_report` 的 run_id/result_hash 一致性);`metric_values` 真实化 + `comparison_payload_hash`。
+
+### Task 5c: golden 升级验证真实 metric(后续)
+
+5a golden 升级断言 `metric_values` 含 NET_RETURN/SHARPE 非空,`comparison_payload_hash` 非 None。
+
+### Task 5d: 其余 3 个场景(后续)
+
+`test_r3_governance_recovery`(append review decision + reactivate CAS + stale 409)、`test_r3_scheduler_capacity`(128 预检 + 2/4 worker + lease reclaim 组装)、ETF lane golden。按 5a/5b/5c 闭合后按缺口优先级推进。
 
 **Step 1: Write golden e2e tests**
 
