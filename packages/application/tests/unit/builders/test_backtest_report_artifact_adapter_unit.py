@@ -128,13 +128,16 @@ class _MemoryArtifactIndex:
         raise AssertionError("pin is outside this adapter boundary")
 
 
-def _identity() -> BacktestReportArtifactIdentity:
+def _identity(
+    *,
+    attempt_created_at: datetime = NOW,
+) -> BacktestReportArtifactIdentity:
     return BacktestReportArtifactIdentity(
         experiment_id=EXPERIMENT_ID,
         candidate_id=CANDIDATE_ID,
         fold_id=FOLD_ID,
         attempt_id=ATTEMPT_ID,
-        attempt_created_at=NOW,
+        attempt_created_at=attempt_created_at,
         run_id=RUN_ID,
         test_window=WINDOW,
         reproduction_fingerprint=FINGERPRINT,
@@ -242,6 +245,68 @@ def test_missing_index_fact_returns_none_without_fabricating_evidence(
     assert isinstance(adapter_value, IndexedBacktestReportArtifactAdapter)
 
     assert adapter_value.read(_identity()) is None
+
+
+def test_same_path_with_drifted_durable_identity_fails_closed(
+    tmp_path: Path,
+) -> None:
+    from ditto_application.builders.research_artifact_loader import (
+        IndexedBacktestReportArtifactAdapter,
+    )
+
+    adapter_value, _index = _adapter(tmp_path)
+    assert isinstance(adapter_value, IndexedBacktestReportArtifactAdapter)
+    original = _identity()
+    adapter_value.publish(
+        original,
+        BacktestReportEvidence.from_report(_report()),
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+    )
+    drifted = _identity(
+        attempt_created_at=original.attempt_created_at + timedelta(microseconds=1)
+    )
+
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        adapter_value.read(drifted)
+
+    assert exc_info.value.details["reason"] == "artifact_identity_path_cross_conflict"
+
+
+@pytest.mark.parametrize("index_drift", ["id_only", "different_records"])
+def test_id_and_path_index_facts_must_both_exist_and_match(
+    tmp_path: Path,
+    index_drift: str,
+) -> None:
+    from ditto_application.builders.research_artifact_loader import (
+        IndexedBacktestReportArtifactAdapter,
+    )
+
+    adapter_value, index = _adapter(tmp_path)
+    assert isinstance(adapter_value, IndexedBacktestReportArtifactAdapter)
+    identity = _identity()
+    record = adapter_value.publish(
+        identity,
+        BacktestReportEvidence.from_report(_report()),
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+    )
+    if index_drift == "id_only":
+        index.records[identity.artifact_id] = replace(
+            record,
+            relative_path="experiments/other/report.json",
+        )
+    else:
+        path_record = replace(record, artifact_id="other-artifact")
+        index.records = {
+            path_record.artifact_id: path_record,
+            identity.artifact_id: record,
+        }
+
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        adapter_value.read(identity)
+
+    assert exc_info.value.details["reason"] == "artifact_identity_path_cross_conflict"
 
 
 def test_verified_read_maps_non_object_json_to_report_integrity(

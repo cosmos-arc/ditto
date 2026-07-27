@@ -254,9 +254,19 @@ class IndexedBacktestReportArtifactAdapter:
     ) -> LoadedBacktestReportArtifact | None:
         """Read one existing report through full index/file/schema verification."""
         typed_identity = _require_identity(identity)
-        record = self._index.get_artifact(typed_identity.artifact_id)
-        if record is None:
+        record_by_id = self._index.get_artifact(typed_identity.artifact_id)
+        record_by_path = self._index.get_artifact_by_relative_path(
+            typed_identity.relative_path
+        )
+        if record_by_id is None and record_by_path is None:
             return None
+        if (
+            record_by_id is None
+            or record_by_path is None
+            or record_by_id != record_by_path
+        ):
+            _integrity(typed_identity, "artifact_identity_path_cross_conflict")
+        record = record_by_id
         _require_record_identity(typed_identity, record)
         try:
             payload = self._artifacts.read_indexed_json(typed_identity.artifact_id)

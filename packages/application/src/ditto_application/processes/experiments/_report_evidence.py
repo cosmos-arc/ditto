@@ -638,6 +638,13 @@ class BacktestReportArtifactIndexReader(Protocol):
         """Return one immutable indexed fact by deterministic identity."""
         ...
 
+    def get_artifact_by_relative_path(
+        self,
+        relative_path: str,
+    ) -> ArtifactRecord | None:
+        """Return one immutable indexed fact by attempt-scoped path."""
+        ...
+
 
 class BacktestReportArtifactReader(Protocol):
     """Evidence-stage port for verified report-evidence reads."""
