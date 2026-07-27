@@ -53,6 +53,19 @@ def _scheduler_error(code: str, reason: str, **details: object) -> AppProcessErr
     )
 
 
+def _transient_release_failure_note(error: BaseException) -> str:
+    note = (
+        "transient scheduler lease release also failed: "
+        + f"{type(error).__name__}: {error}"
+    )
+    if isinstance(error, AppProcessError):
+        return (
+            f"{note}; code={error.details.get('code')}; "
+            + f"reason={error.details.get('reason')}"
+        )
+    return note
+
+
 def _epoch_us(value: datetime) -> int:
     raw = cast("object", value)
     if (
@@ -318,15 +331,12 @@ class LeaseAuthority:
                     and self._lost_reason is None
                 ):
                     try:
-                        self.release()
+                        self._release_transient_fail_closed()
                     except BaseException as release_error:
-                        error.add_note(
-                            "transient scheduler lease release also failed: "
-                            + f"{type(release_error).__name__}: {release_error}",
-                        )
+                        error.add_note(_transient_release_failure_note(release_error))
                 raise
             if acquired_transient_lease:
-                self.release()
+                self._release_transient_fail_closed()
             return result
 
     def renew(self) -> SchedulerLease:
@@ -379,6 +389,14 @@ class LeaseAuthority:
         now_epoch_us = _epoch_us(self._clock())
         self._require_live_lease(now_epoch_us)
         return now_epoch_us
+
+    def _release_transient_fail_closed(self) -> SchedulerSlot:
+        try:
+            return self.release()
+        except BaseException as error:
+            if self._lost_reason is None:
+                self._invalidate(type(error).__name__)
+            raise
 
     def _require_live_lease(self, now_epoch_us: int) -> SchedulerLease:
         self._raise_if_lost()

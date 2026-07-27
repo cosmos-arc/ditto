@@ -9,9 +9,9 @@ so the placeholder factory fails loudly if ever invoked.
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from threading import Event, Lock
+from threading import Lock, RLock
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -57,10 +57,16 @@ _RECEIPT = ExperimentControlReceipt(
 class _ControlStore:
     """Thread-safe lease store exposing ownership and cleanup outcomes."""
 
-    def __init__(self, *, release_error: BaseException | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        release_error: BaseException | None = None,
+        probe: Callable[[str], None] | None = None,
+    ) -> None:
         self.slot = SchedulerSlot("global", None, None, None, None, None, 0)
         self.release_calls = 0
         self.release_error = release_error
+        self.probe = probe
         self._lock = Lock()
 
     def get_scheduler_slot(self) -> SchedulerSlot:
@@ -82,6 +88,8 @@ class _ControlStore:
                 or self.slot.owner_token is not None
             ):
                 return None
+            if self.probe is not None:
+                self.probe("acquire")
             lease = SchedulerLease(
                 experiment_id=experiment_id,
                 owner_token=owner_token,
@@ -109,6 +117,8 @@ class _ControlStore:
     ) -> SchedulerSlot:
         with self._lock:
             self.release_calls += 1
+            if self.probe is not None:
+                self.probe("release")
             if self.release_error is not None:
                 raise self.release_error
             self.slot = SchedulerSlot(
@@ -123,44 +133,32 @@ class _ControlStore:
             return self.slot
 
 
-class _PausingAcquireLeaseAuthority(LeaseAuthority):
-    """Pause the first acquire so a competing owner can attempt to interleave."""
+class _SpyRLock:
+    """Expose nested authority sections while preserving reentrant locking."""
 
-    def __init__(
+    def __init__(self) -> None:
+        self._lock = RLock()
+        self.depth = 0
+        self.section_id = 0
+        self.active_section_id: int | None = None
+
+    def __enter__(self) -> None:
+        self._lock.acquire()
+        if self.depth == 0:
+            self.section_id += 1
+            self.active_section_id = self.section_id
+        self.depth += 1
+
+    def __exit__(
         self,
-        store: ExperimentSchedulerStoreProtocol,
-        *,
-        before_acquire: Event,
-        resume_acquire: Event,
+        _exc_type: object,
+        _exc_value: object,
+        _traceback: object,
     ) -> None:
-        super().__init__(
-            store,
-            owner_token="interleaving-control",
-            lease_duration=timedelta(minutes=5),
-            clock=lambda: _NOW,
-        )
-        self._before_acquire = before_acquire
-        self._resume_acquire = resume_acquire
-        self._pause_lock = Lock()
-        self._pause_once = True
-
-    def acquire(
-        self,
-        experiment_id: ExperimentId,
-        *,
-        expected_revision: int,
-    ) -> bool:
-        with self._pause_lock:
-            pause = self._pause_once
-            self._pause_once = False
-        if pause:
-            self._before_acquire.set()
-            if not self._resume_acquire.wait(timeout=5):
-                raise AssertionError("control acquire was not resumed")
-        return super().acquire(
-            experiment_id,
-            expected_revision=expected_revision,
-        )
+        self.depth -= 1
+        if self.depth == 0:
+            self.active_section_id = None
+        self._lock.release()
 
 
 class _RetryRecovery:
@@ -171,14 +169,18 @@ class _RetryRecovery:
         *,
         result: ExperimentControlReceipt | None = None,
         error: BaseException | None = None,
+        probe: Callable[[str], None] | None = None,
     ) -> None:
         self.result = result
         self.error = error
+        self.probe = probe
 
     def retry_fold(
         self,
         **_kwargs: object,
     ) -> ExperimentControlReceipt:
+        if self.probe is not None:
+            self.probe("operator")
         if self.error is not None:
             raise self.error
         assert self.result is not None
@@ -263,50 +265,37 @@ class TestLoggingExperimentControlNotifier:
 class TestRetryFoldUnderTransientLease:
     """Release only helper-owned leases without hiding operator failures."""
 
-    def test_serializes_ownership_against_concurrent_same_experiment_acquire(
+    def test_holds_one_outer_authority_section_across_transient_lifecycle(
         self,
     ) -> None:
-        store = _ControlStore()
+        lock = _SpyRLock()
+        events: list[tuple[str, int, int | None]] = []
+
+        def probe(event: str) -> None:
+            events.append((event, lock.depth, lock.active_section_id))
+
+        store = _ControlStore(probe=probe)
         store_port = cast(ExperimentSchedulerStoreProtocol, store)
-        before_control_acquire = Event()
-        resume_control_acquire = Event()
-        lifecycle_attempting = Event()
-        lifecycle_acquired = Event()
-        authority = _PausingAcquireLeaseAuthority(
-            store_port,
-            before_acquire=before_control_acquire,
-            resume_acquire=resume_control_acquire,
+        authority = _authority(store_port)
+        authority._lock = lock
+
+        receipt = _retry(
+            authority,
+            _RetryRecovery(result=_RECEIPT, probe=probe),
+            store=store_port,
         )
 
-        def acquire_lifecycle_lease() -> None:
-            lifecycle_attempting.set()
-            for _attempt in range(3):
-                slot = store.get_scheduler_slot()
-                if authority.acquire(
-                    _EXPERIMENT_ID,
-                    expected_revision=slot.revision,
-                ):
-                    lifecycle_acquired.set()
-                    return
-            raise AssertionError("lifecycle lease could not be acquired")
-
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            control_future = executor.submit(
-                _retry,
-                authority,
-                _RetryRecovery(result=_RECEIPT),
-                store=store_port,
-            )
-            assert before_control_acquire.wait(timeout=5)
-            lifecycle_future = executor.submit(acquire_lifecycle_lease)
-            assert lifecycle_attempting.wait(timeout=5)
-            interleaved = lifecycle_acquired.wait(timeout=0.25)
-            resume_control_acquire.set()
-            assert control_future.result(timeout=5) is _RECEIPT
-            lifecycle_future.result(timeout=5)
-
-        assert interleaved is False
-        assert authority.has_lease is True
+        assert receipt is _RECEIPT
+        assert [event for event, _depth, _section_id in events] == [
+            "acquire",
+            "operator",
+            "release",
+        ]
+        assert all(depth >= 2 for _event, depth, _section_id in events)
+        assert len({section_id for _event, _depth, section_id in events}) == 1
+        assert events[0][2] is not None
+        assert lock.depth == 0
+        assert authority.has_lease is False
         assert store.release_calls == 1
 
     def test_preserves_preexisting_scheduler_lease(self) -> None:
@@ -347,9 +336,13 @@ class TestRetryFoldUnderTransientLease:
 
         assert exc_info.value is operator_error
         assert store.release_calls == 1
+        notes = getattr(operator_error, "__notes__", ())
         assert any(
-            "transient scheduler lease release also failed" in note
-            for note in getattr(operator_error, "__notes__", ())
+            "transient scheduler lease release also failed" in note for note in notes
+        )
+        assert any(
+            "code=SPEC_INVALID" in note and "reason=release_rejected" in note
+            for note in notes
         )
 
     def test_surfaces_transient_release_error_after_success(self) -> None:
@@ -370,3 +363,47 @@ class TestRetryFoldUnderTransientLease:
 
         assert exc_info.value is release_error
         assert store.release_calls == 1
+
+    def test_invalidates_authority_when_base_cleanup_follows_operator_error(
+        self,
+    ) -> None:
+        operator_error = AppProcessError(
+            "operator request rejected",
+            details={"code": "SPEC_INVALID", "reason": "stale_fold_revision"},
+        )
+        release_error = KeyboardInterrupt("release interrupted")
+        store = _ControlStore(release_error=release_error)
+        store_port = cast(ExperimentSchedulerStoreProtocol, store)
+        authority = _authority(store_port)
+
+        with pytest.raises(AppProcessError) as exc_info:
+            _retry(
+                authority,
+                _RetryRecovery(error=operator_error),
+                store=store_port,
+            )
+
+        assert exc_info.value is operator_error
+        assert authority.has_lease is False
+        assert authority.is_lost is True
+        assert any(
+            "KeyboardInterrupt: release interrupted" in note
+            for note in getattr(operator_error, "__notes__", ())
+        )
+
+    def test_invalidates_authority_when_base_cleanup_follows_success(self) -> None:
+        release_error = SystemExit(23)
+        store = _ControlStore(release_error=release_error)
+        store_port = cast(ExperimentSchedulerStoreProtocol, store)
+        authority = _authority(store_port)
+
+        with pytest.raises(SystemExit) as exc_info:
+            _retry(
+                authority,
+                _RetryRecovery(result=_RECEIPT),
+                store=store_port,
+            )
+
+        assert exc_info.value is release_error
+        assert authority.has_lease is False
+        assert authority.is_lost is True
