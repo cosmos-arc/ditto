@@ -10,7 +10,7 @@
 
 ---
 
-> **设计事实源**:[evidence collection 闭环 design](2026-07-27-r3-evidence-collection-closure-design.md)(数据流/17 字段装配表/11 gate 判定/失败语义) · [R3 主计划](2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md) Task 14
+> **设计事实源**:[evidence collection 闭环 design](2026-07-27-r3-evidence-collection-closure-design.md)(数据流/18 字段装配表/11 gate 判定/失败语义) · [R3 主计划](2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md) Task 14
 >
 > **计划状态**:READY FOR EXECUTION
 >
@@ -68,7 +68,7 @@ from ditto_analysis.experiments import (
 def _view(**overrides):
     base = dict(
         certified_snapshot=True, snapshot_id="snap-1",
-        oos_month_count=96, pit_policy="sample_time",
+        eligible_month_count=96, pit_policy="sample_time",
         purge_embargo_configured=True,
         reproduction_fingerprints=(ContentHash("a" * 64),),
         cost_config_hash=ContentHash("c" * 64),
@@ -89,7 +89,7 @@ def test_all_pass_when_evidence_satisfied():
     assert evidence.r2_live_gate.satisfied is None  # NOT_EVALUATED
 
 def test_ninety_six_month_fails_below_threshold():
-    evidence = collect_hard_gate_evidence(_view(oos_month_count=80))
+    evidence = collect_hard_gate_evidence(_view(eligible_month_count=80))
     assert evidence.ninety_six_month.satisfied is False
 
 def test_artifact_completeness_fails_with_missing():
@@ -107,8 +107,8 @@ def test_holdout_claim_not_evaluated_when_missing():
     assert evidence.holdout_claim.satisfied is None
 
 def test_detail_carries_observed_fact():
-    evidence = collect_hard_gate_evidence(_view(oos_month_count=96))
-    assert evidence.ninety_six_month.detail == {"oos_months": 96, "required": 96}
+    evidence = collect_hard_gate_evidence(_view(eligible_month_count=96))
+    assert evidence.ninety_six_month.detail == {"eligible_months": 96, "required": 96}
 ```
 
 > `_facts(evidence)` 是测试 helper,把 `HardGateEvidence` 11 字段名→fact 配对(可用 `dataclasses.asdict` 或显式列举)。
@@ -133,7 +133,7 @@ class HardGateEvidenceView:
     """Typed observed facts for every hard-correctness gate (零 I/O)."""
     certified_snapshot: bool
     snapshot_id: str
-    oos_month_count: int
+    eligible_month_count: int
     pit_policy: str
     purge_embargo_configured: bool
     reproduction_fingerprints: tuple[ContentHash, ...]
@@ -152,8 +152,8 @@ def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
     return HardGateEvidence(
         certified_snapshot=GateFact(view.certified_snapshot, {"snapshot_id": view.snapshot_id}),
         ninety_six_month=GateFact(
-            view.oos_month_count >= _NINETY_SIX,
-            {"oos_months": view.oos_month_count, "required": _NINETY_SIX},
+            view.eligible_month_count >= _NINETY_SIX,
+            {"eligible_months": view.eligible_month_count, "required": _NINETY_SIX},
         ),
         pit_known_at=GateFact(view.pit_policy == "sample_time", {"pit_policy": view.pit_policy}),
         split_purge_embargo=GateFact(view.purge_embargo_configured, None),
@@ -395,7 +395,7 @@ class ExperimentEvidenceCollector:
         )
 ```
 
-> 17 字段装配按 design doc §5 表 + 已确认接口精确化。`_hard_gate_view` 从 snapshot+manifest+artifact 装配 `HardGateEvidenceView`(Task 1)。`_rationale` 从 parameter delta vs baseline 生成模板文本。
+> 18 字段装配按 design doc §5 表 + 已确认接口精确化。`_hard_gate_view` 从 snapshot+manifest+artifact 装配 `HardGateEvidenceView`(Task 1)。`_rationale` 从 parameter delta vs baseline 生成模板文本。
 
 **Step 4: Register DI provider**
 
@@ -514,13 +514,24 @@ git commit -m "feat(research): drive evidence collection at EVIDENCE stage"
 **Files:**
 - Create: `packages/application/tests/integration/test_r3_evidence_closure_golden.py`
 
-### Task 5b: Task 3b aggregation 真实化(后续)
+### Task 5b: Task 3b aggregation 真实化（已完成，2026-07-27）
 
 collector 接通 `assemble_candidate_fold_evidence` → `build_candidate_comparison` → `aggregate_walk_forward`;实现 backtest report reader(从 artifact 构造 `BacktestReport`,满足 `_validate_report` 的 run_id/result_hash 一致性);`metric_values` 真实化 + `comparison_payload_hash`。
 
-### Task 5c: golden 升级验证真实 metric(后续)
+实现还将 96 个月门禁纠正为唯一 preflight 事件经
+`reconstruct_preflight_report` 验证后的 `eligible_month_count`；artifact
+completeness 使用全 candidate family 的 fold 终态与 report 缺失引用，不再使用
+attempt-status 代理。selection artifact、真实 cost hash 与 trial-ledger count
+仍按后续任务保留。
 
-5a golden 升级断言 `metric_values` 含 NET_RETURN/SHARPE 非空,`comparison_payload_hash` 非 None。
+### Task 5c: golden 升级验证真实 metric（已完成，2026-07-27）
+
+5a golden 已升级为真实 preflight 重构、两组 candidate family × 两个共享
+walk-forward fold 的 4 个 indexed backtest report，并断言 selected candidate 的
+NET_RETURN / SHARPE 非空、canonical `comparison_payload_hash`、两组
+fold/attempt paired lineage 以及 artifact completeness PASS。fixture 仍明确为
+deterministic；cost hash 与 trial-ledger count 保持 interim，`r2_live_gate`
+保持 `NOT_EVALUATED`。
 
 ### Task 5d: 其余 3 个场景(后续)
 
@@ -571,7 +582,7 @@ git commit -m "test(research): certify r3 evidence collection closure"
 |------|---------|
 | Task 1 | `collect_hard_gate_evidence` 纯函数,11 gate 投影(satisfied True/False/None),analysis 零生产依赖 |
 | Task 2 | `CandidateFoldEvidence` 装配 + `SnapshotManifestProjection`,aggregation 孤儿链首次接通,两个风险点(backtest report/registry_hash)已解决 |
-| Task 3 | collector 装配 17 字段 ReviewPacketInput,metric_values 真实(非 None),publish 经 writer,objective_payload_hash 真实 |
+| Task 3 | collector 装配 18 字段 ReviewPacketInput,metric_values 真实(非 None),publish 经 writer,objective_payload_hash 真实 |
 | Task 4 | coordinator EVIDENCE → collect → transition COMPLETED,失败 fail-fast,DI 注入 |
 | Task 5 | stock/ETF 双黄金 + governance recovery + scheduler capacity 全绿(deterministic),review packet 非空 + governance promote 闭环 |
 

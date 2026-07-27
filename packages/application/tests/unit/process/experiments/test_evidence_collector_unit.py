@@ -1,412 +1,164 @@
-"""Unit tests for the R3 ExperimentEvidenceCollector hard-gate closure."""
+# pyright: reportPrivateUsage=false
+"""Unit tests for real R3 evidence collection and review-packet publication."""
 
 from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from ditto_analysis.errors import ExperimentIntegrityError
 from ditto_analysis.experiments import (
+    R3_COMPARISON_METRIC_IDS,
     ArtifactRecord,
-    AttemptId,
-    AttemptPersistenceSpec,
-    AttemptProjection,
-    AttemptView,
-    BacktestRunId,
-    CandidateExecutionBinding,
-    CandidateId,
-    CandidateSpec,
-    ConstraintOperator,
     ContentHash,
     DateWindow,
-    ExperimentBudget,
     ExperimentDesiredState,
-    ExperimentFailurePolicy,
+    ExperimentFailureCode,
     ExperimentId,
-    ExperimentLaunchSpec,
-    ExperimentProjection,
-    ExperimentRecord,
     ExperimentStage,
     ExperimentStatus,
     FoldId,
     FoldKey,
     FoldPersistenceSpec,
     FoldProjection,
-    FoldProtocolSpec,
     FoldRole,
     FoldView,
     GateLayer,
     GateOutcome,
+    HardGateEvidenceView,
     LeaseFence,
-    MetricConstraint,
-    ObjectiveMetric,
-    PromotionObjective,
-    ResearchMetricDirection,
     ResearchMetricId,
     ResearchMetricValue,
-    SnapshotId,
     StatusEventRecord,
     StatusSubjectType,
-    StrategyVersion,
     canonical_payload,
-)
-from ditto_analysis.experiments.trial_family import (
-    LogicalTrialIdentity,
-    TrialFamilyDeclaration,
-    TrialKind,
-)
-from ditto_analysis.experiments.trial_ledger import (
-    promotion_objective_content_hash,
+    collect_hard_gate_evidence,
+    evaluate_hard_gates,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments import (
+    evidence_collector as collector_module,
+)
 from ditto_application.processes.experiments._holdout_contract import (
     PersistedHoldoutClaim,
 )
+from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    WalkForwardEvidenceAssembler,
+)
 from ditto_application.processes.experiments.evidence_collector import (
     ExperimentEvidenceCollector,
-    _months_in_window,
-    _reproduction_fingerprints,
+    _artifact_complete,
+    _metric_values,
+    _purge_embargo_configured,
+    _validate_holdout_claim_lineage,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
 )
 
-EXPERIMENT_ID = ExperimentId("experiment-r3")
-BASELINE_ID = CandidateId("candidate-baseline")
-SELECTED_ID = CandidateId("candidate-selected")
-FOLD_ID_A = FoldId("wf-a")
-FOLD_ID_B = FoldId("wf-b")
-ATTEMPT_ID_A = AttemptId("attempt-wf-a")
-ATTEMPT_ID_B = AttemptId("attempt-wf-b")
-SNAPSHOT_ID = SnapshotId("snapshot-r3")
-SNAPSHOT_HASH = ContentHash("a" * 64)
-REGISTRY_HASH = ContentHash("f" * 64)
-BASELINE_PARAMETER_HASH = ContentHash("b" * 64)
-SELECTED_PARAMETER_HASH = ContentHash("c" * 64)
-BASELINE_RESOLVED_HASH = ContentHash("1" * 64)
-SELECTED_RESOLVED_HASH = ContentHash("2" * 64)
-REPRO_FINGERPRINT_A = ContentHash("d" * 64)
-REPRO_FINGERPRINT_B = ContentHash("e" * 64)
-ARTIFACT_HASH = ContentHash("9" * 64)
-SCHEMA_HASH = ContentHash("0" * 64)
-NOW = datetime(2024, 3, 1, tzinfo=UTC)
-CREATED_AT = datetime(2024, 3, 2, tzinfo=UTC)
-NOW_EPOCH_US = 1_709_337_600_000_000
+from .walk_forward_evidence_collection_fixtures import (
+    CANDIDATE_ID,
+    EXPERIMENT_ID,
+    NOW,
+    NOW_US,
+    EvidenceCase,
+    Resolver,
+    artifact_identity,
+    build_case,
+)
+
+CREATED_AT = datetime(2026, 7, 27, 10, tzinfo=UTC)
 LEASE_FENCE = LeaseFence(
-    experiment_id=EXPERIMENT_ID,
-    owner_token="coordinator-owner",
-    revision=7,
-    lease_until_epoch_us=NOW_EPOCH_US + 60_000_000,
+    EXPERIMENT_ID,
+    "evidence-owner",
+    7,
+    NOW_US + 60_000_000,
 )
 
 
-def _objective(*, selected_parameter_hash: ContentHash) -> PromotionObjective:
-    family = TrialFamilyDeclaration(
-        "evidence-collector-family",
-        (
-            LogicalTrialIdentity(
-                EXPERIMENT_ID,
-                BASELINE_ID,
-                1,
-                _baseline_parameter_hash(),
-                TrialKind.CURRENT,
-            ),
-            LogicalTrialIdentity(
-                EXPERIMENT_ID,
-                SELECTED_ID,
-                2,
-                selected_parameter_hash,
-                TrialKind.CURRENT,
-            ),
-        ),
+def _claim(snapshot: ExperimentSchedulerSnapshot) -> PersistedHoldoutClaim:
+    selected = next(
+        item
+        for item in snapshot.launch_spec.candidates
+        if item.candidate_id == CANDIDATE_ID
     )
-    return PromotionObjective(
-        primary=ObjectiveMetric(
-            ResearchMetricId.NET_RETURN,
-            ResearchMetricDirection.MAXIMIZE,
-        ),
-        hard_constraints=(
-            MetricConstraint(
-                ResearchMetricValue(ResearchMetricId.MAX_DRAWDOWN, -20.0),
-                ConstraintOperator.GREATER_THAN_OR_EQUAL,
-            ),
-        ),
-        tie_break_order=(),
-        baseline_candidate_id=BASELINE_ID,
-        economic_rationale="Capture durable returns after costs.",
-        trial_family=family,
+    binding = next(
+        item
+        for item in snapshot.launch_spec.execution_bindings
+        if item.candidate_id == CANDIDATE_ID
     )
-
-
-def _baseline_parameter_hash() -> ContentHash:
-    baseline = CandidateSpec(
-        candidate_id=BASELINE_ID,
-        ordinal=1,
-        is_baseline=True,
-        parameters={"lookback": 0},
-    )
-    return baseline.parameter_hash
-
-
-def _launch_spec(
-    *,
-    selected_parameters: dict[str, int] | None = None,
-) -> ExperimentLaunchSpec:
-    baseline = CandidateSpec(
-        candidate_id=BASELINE_ID,
-        ordinal=1,
-        is_baseline=True,
-        parameters={"lookback": 0},
-    )
-    selected = CandidateSpec(
-        candidate_id=SELECTED_ID,
-        ordinal=2,
-        is_baseline=False,
-        parameters=selected_parameters or {"lookback": 20},
-    )
-    candidates = (baseline, selected)
-    return ExperimentLaunchSpec(
-        experiment_id=EXPERIMENT_ID,
-        strategy_version=StrategyVersion("strategy@1"),
-        strategy_spec_hash=ContentHash("3" * 64),
-        snapshot_id=SNAPSHOT_ID,
-        candidates=candidates,
-        execution_bindings=(
-            CandidateExecutionBinding(
-                BASELINE_ID,
-                1,
-                baseline.parameter_hash,
-                BASELINE_RESOLVED_HASH,
-            ),
-            CandidateExecutionBinding(
-                SELECTED_ID,
-                2,
-                selected.parameter_hash,
-                SELECTED_RESOLVED_HASH,
-            ),
-        ),
-        promotion_objective=_objective(selected_parameter_hash=selected.parameter_hash),
-        fold_protocol=FoldProtocolSpec(
-            "evidence-collector-fold-protocol",
-            1,
-            ContentHash("4" * 64),
-        ),
-        seed=17,
-        worker_count=2,
-        failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
-        budget=ExperimentBudget(128, 512),
-        desired_state=ExperimentDesiredState.RUN,
-        created_at=NOW,
-    )
-
-
-def _fold_view(
-    fold_id: FoldId,
-    candidate_id: CandidateId,
-    *,
-    test_window: DateWindow,
-    purge_sessions: int,
-    embargo_sessions: int,
-) -> FoldView:
-    key = FoldKey(EXPERIMENT_ID, candidate_id, fold_id)
-    spec = FoldPersistenceSpec.create(
-        key,
-        1,
-        FoldRole.WALK_FORWARD,
-        None,
-        test_window,
-        purge_sessions,
-        embargo_sessions,
-    )
-    return FoldView(
-        spec,
-        FoldProjection(
-            key=key,
-            status=ExperimentStatus.COMPLETED,
-            claim_owner_token=None,
-            created_at=NOW,
-            updated_at=NOW,
-            revision=1,
-        ),
-    )
-
-
-def _attempt_view(
-    attempt_id: AttemptId,
-    fold_id: FoldId,
-    candidate_id: CandidateId,
-    *,
-    fingerprint: ContentHash,
-) -> AttemptView:
-    fold_key = FoldKey(EXPERIMENT_ID, candidate_id, fold_id)
-    return AttemptView(
-        AttemptPersistenceSpec(
-            attempt_id=attempt_id,
-            fold_key=fold_key,
-            ordinal=1,
-            parent_attempt_id=None,
-            resume_from_run_id=None,
-            reproduction_fingerprint=fingerprint,
-            created_at=NOW,
-        ),
-        AttemptProjection(
-            attempt_id=attempt_id,
-            status=ExperimentStatus.COMPLETED,
-            backtest_run_id=BacktestRunId(f"run-{attempt_id.value}"),
-            checkpoint_ref=None,
-            failure_code=None,
-            created_at=NOW,
-            updated_at=NOW,
-            revision=1,
-        ),
-    )
-
-
-def _holdout_claim() -> PersistedHoldoutClaim:
     return PersistedHoldoutClaim(
         claim_id="holdout-claim-1",
         experiment_id=str(EXPERIMENT_ID),
-        candidate_id=str(SELECTED_ID),
+        candidate_id=str(CANDIDATE_ID),
         fold_id="holdout-fold",
         logical_run_id="holdout-logical-run",
-        reproduction_fingerprint=str(REPRO_FINGERPRINT_A),
-        claim_payload_hash=str(ContentHash("5" * 64)),
-        selection_evidence_hash=str(ContentHash("6" * 64)),
-        resolved_spec_hash=str(SELECTED_RESOLVED_HASH),
-        parameters_hash=str(SELECTED_PARAMETER_HASH),
-        snapshot_id=str(SNAPSHOT_ID),
-        window_start="2024-01-01",
-        window_end="2024-01-31",
+        reproduction_fingerprint="5" * 64,
+        claim_payload_hash="6" * 64,
+        selection_evidence_hash="7" * 64,
+        resolved_spec_hash=str(binding.resolved_spec_hash),
+        parameters_hash=str(selected.parameter_hash),
+        snapshot_id=str(snapshot.launch_spec.snapshot_id),
+        window_start="2026-01-01",
+        window_end="2026-12-31",
         experiment_revision=6,
         event_id="status:holdout-claim",
         claimed_at=NOW,
     )
 
 
-def _fold_a() -> FoldView:
-    return _fold_view(
-        FOLD_ID_A,
-        SELECTED_ID,
-        test_window=DateWindow(
-            start=date(2016, 1, 1),
-            end=date(2017, 1, 1),
-        ),
-        purge_sessions=1,
-        embargo_sessions=1,
+def _snapshot(case: EvidenceCase) -> ExperimentSchedulerSnapshot:
+    snapshot = case.snapshot()
+    key = FoldKey(
+        EXPERIMENT_ID,
+        CANDIDATE_ID,
+        FoldId("holdout-fold"),
     )
-
-
-def _fold_b() -> FoldView:
-    return _fold_view(
-        FOLD_ID_B,
-        SELECTED_ID,
-        test_window=DateWindow(
-            start=date(2017, 1, 2),
-            end=date(2024, 1, 1),
+    holdout = FoldView(
+        FoldPersistenceSpec.create(
+            key,
+            4,
+            FoldRole.HOLDOUT,
+            None,
+            DateWindow(date(2026, 1, 1), date(2026, 12, 31)),
+            1,
+            1,
         ),
-        purge_sessions=1,
-        embargo_sessions=0,
+        FoldProjection(
+            key,
+            ExperimentStatus.QUEUED,
+            None,
+            NOW,
+            NOW,
+            1,
+        ),
     )
-
-
-def _baseline_fold() -> FoldView:
-    """A walk-forward fold for the baseline candidate to exercise the
-    artifact-complete proxy across all candidates."""
-    return _fold_view(
-        FoldId("wf-baseline"),
-        BASELINE_ID,
-        test_window=DateWindow(
-            start=date(2016, 1, 1),
-            end=date(2017, 1, 1),
-        ),
-        purge_sessions=1,
-        embargo_sessions=0,
-    )
-
-
-def _baseline_attempt() -> AttemptView:
-    return _attempt_view(
-        AttemptId("attempt-baseline-wf"),
-        FoldId("wf-baseline"),
-        BASELINE_ID,
-        fingerprint=ContentHash("bb" * 32),
-    )
-
-
-def _snapshot(
-    *, holdout_claim: PersistedHoldoutClaim | None
-) -> ExperimentSchedulerSnapshot:
-
-    launch_spec = _launch_spec()
-    return ExperimentSchedulerSnapshot(
-        projection=ExperimentProjection(
-            record=ExperimentRecord(
-                experiment_id=EXPERIMENT_ID,
-                status=ExperimentStatus.RUNNING,
-                desired_state=ExperimentDesiredState.RUN,
-                stage=ExperimentStage.EVIDENCE,
-                created_at=NOW,
-            ),
-            queue_ordinal=1,
-            revision=7,
-            updated_at=NOW,
-        ),
-        launch_spec=launch_spec,
-        folds=(
-            _fold_a(),
-            _fold_b(),
-            _baseline_fold(),
-        ),
-        attempts=(
-            _attempt_view(
-                ATTEMPT_ID_A,
-                FOLD_ID_A,
-                SELECTED_ID,
-                fingerprint=REPRO_FINGERPRINT_A,
-            ),
-            _attempt_view(
-                ATTEMPT_ID_B,
-                FOLD_ID_B,
-                SELECTED_ID,
-                fingerprint=REPRO_FINGERPRINT_B,
-            ),
-            _baseline_attempt(),
-        ),
-        holdout_claim=holdout_claim,
+    return replace(
+        snapshot,
+        folds=(*snapshot.folds, holdout),
+        holdout_claim=_claim(snapshot),
     )
 
 
 def _preflight_detail() -> dict[str, object]:
     return {
         "preflight": {
-            "executor": {
-                "node_registry_manifest_hash": str(REGISTRY_HASH),
-            },
+            "executor": {"node_registry_manifest_hash": "f" * 64},
             "authority": {
                 "snapshot_identity": {
-                    "snapshot_id": str(SNAPSHOT_ID),
-                    "manifest_hash": str(SNAPSHOT_HASH),
+                    "snapshot_id": "snapshot-r3",
+                    "manifest_hash": "a" * 64,
                 },
             },
             "identities": {
                 "certification": {
                     "ready": True,
-                    "profile": "r3-research-certification",
-                    "required_from": "2016-01-01",
-                    "required_to": "2024-01-01",
-                    "dataset_ids": ["dataset-1"],
-                    "report_ids": ["report-1"],
-                    "reason_codes": [],
                     "snapshot_evidence": {
-                        "snapshot_id": str(SNAPSHOT_ID),
-                        "dataset_id": "dataset-1",
-                        "manifest_hash": str(SNAPSHOT_HASH),
-                        "source_snapshot_ids": [],
-                        "snapshot_start": "2016-01-01",
-                        "snapshot_end": "2024-01-01",
                         "known_at_policy": "sample_time",
-                        "builder_version": "v1",
                     },
                 },
             },
@@ -414,10 +166,10 @@ def _preflight_detail() -> dict[str, object]:
     }
 
 
-def _preflight_event() -> StatusEventRecord:
+def _preflight_event(*, event_id: str = "status:preflight-1") -> StatusEventRecord:
     detail = _preflight_detail()
     return StatusEventRecord(
-        event_id="status:preflight-1",
+        event_id=event_id,
         experiment_id=EXPERIMENT_ID,
         candidate_id=None,
         fold_id=None,
@@ -436,20 +188,20 @@ def _preflight_event() -> StatusEventRecord:
     )
 
 
-def _artifact_record() -> ArtifactRecord:
+def _review_artifact() -> ArtifactRecord:
     return ArtifactRecord(
         artifact_id="review-packet-1",
         experiment_id=EXPERIMENT_ID,
-        candidate_id=SELECTED_ID,
+        candidate_id=CANDIDATE_ID,
         fold_id=None,
         attempt_id=None,
         artifact_kind="review_packet",
         relative_path="artifacts/review/packet.json",
-        content_hash=ContentHash("7" * 64),
-        schema_hash=SCHEMA_HASH,
+        content_hash=ContentHash("8" * 64),
+        schema_hash=ContentHash("9" * 64),
         row_count=0,
         byte_size=0,
-        reproduction_fingerprint=ContentHash("8" * 64),
+        reproduction_fingerprint=ContentHash("0" * 64),
         manifest={},
         is_pinned=False,
         pinned_at=None,
@@ -458,31 +210,31 @@ def _artifact_record() -> ArtifactRecord:
     )
 
 
-class _StubSchedulerStore:
+class _Store:
     def __init__(self, snapshot: ExperimentSchedulerSnapshot) -> None:
-        self._snapshot = snapshot
+        self.snapshot = snapshot
         self.calls: list[ExperimentId] = []
 
     def load_snapshot(self, experiment_id: ExperimentId) -> ExperimentSchedulerSnapshot:
         self.calls.append(experiment_id)
-        return self._snapshot
+        return self.snapshot
 
 
-class _StubReader:
+class _Reader:
     def __init__(self, events: tuple[StatusEventRecord, ...]) -> None:
-        self._events = events
+        self.events = events
         self.calls: list[ExperimentId] = []
 
     def list_status_events(
-        self, experiment_id: ExperimentId
+        self,
+        experiment_id: ExperimentId,
     ) -> tuple[StatusEventRecord, ...]:
         self.calls.append(experiment_id)
-        return self._events
+        return self.events
 
 
-class _StubWriter:
-    def __init__(self, artifact: ArtifactRecord) -> None:
-        self._artifact = artifact
+class _Writer:
+    def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
 
     def publish_review_packet(
@@ -501,299 +253,432 @@ class _StubWriter:
                 "created_at": created_at,
             }
         )
-        return self._artifact
+        return _review_artifact()
 
 
 def _collector(
+    monkeypatch: pytest.MonkeyPatch,
+    case: EvidenceCase,
     *,
+    eligible_month_count: int = 96,
     snapshot: ExperimentSchedulerSnapshot | None = None,
     events: tuple[StatusEventRecord, ...] | None = None,
-    artifact: ArtifactRecord | None = None,
-) -> tuple[
-    ExperimentEvidenceCollector,
-    _StubSchedulerStore,
-    _StubReader,
-    _StubWriter,
-]:
-    store = _StubSchedulerStore(snapshot or _snapshot(holdout_claim=_holdout_claim()))
-    reader = _StubReader(events or (_preflight_event(),))
-    writer = _StubWriter(artifact or _artifact_record())
+) -> tuple[ExperimentEvidenceCollector, _Writer, list[object]]:
+    reconstructed: list[object] = []
+
+    def _reconstruct(detail: object) -> object:
+        reconstructed.append(detail)
+        return SimpleNamespace(eligible_month_count=eligible_month_count)
+
+    monkeypatch.setattr(
+        collector_module,
+        "reconstruct_preflight_report",
+        _reconstruct,
+    )
+    writer = _Writer()
     collector = ExperimentEvidenceCollector(
-        scheduler_store=store,
-        reader=reader,
+        scheduler_store=_Store(_snapshot(case) if snapshot is None else snapshot),
+        reader=_Reader((_preflight_event(),) if events is None else events),
         writer=writer,
-    )
-    return collector, store, reader, writer
-
-
-def _hard_gate_evaluations(packet: Any) -> tuple[Any, ...]:
-    return tuple(
-        evaluation
-        for evaluation in packet.gate_evaluations
-        if evaluation.layer is GateLayer.HARD
-    )
-
-
-def test_collect_assembles_review_packet_hard_gate_only() -> None:
-    collector, _, _, _ = _collector()
-
-    packet = collector.collect(
-        EXPERIMENT_ID,
-        lease_fence=LEASE_FENCE,
-        now_epoch_us=NOW_EPOCH_US,
-        created_at=CREATED_AT,
-    )
-
-    assert packet.lineage.experiment_id == str(EXPERIMENT_ID)
-    assert packet.lineage.candidate_id == str(SELECTED_ID)
-    assert packet.lineage.fold_ids == (str(FOLD_ID_A), str(FOLD_ID_B))
-    assert packet.holdout_claim_id == "holdout-claim-1"
-    assert packet.comparison_payload_hash is None
-    assert packet.r1_impact_payload_hash is None
-    assert packet.selection_evidence_artifact_id is None
-
-    hard_evaluations = _hard_gate_evaluations(packet)
-    assert len(hard_evaluations) == 11
-    r2_live = next(
-        evaluation
-        for evaluation in hard_evaluations
-        if evaluation.rule_id == "r2_live_gate"
-    )
-    assert r2_live.outcome is GateOutcome.NOT_EVALUATED
-    satisfied = [
-        evaluation
-        for evaluation in hard_evaluations
-        if evaluation.outcome is GateOutcome.PASS
-    ]
-    assert len(satisfied) == 10
-    assert {evaluation.rule_id for evaluation in satisfied} == {
-        "certified_snapshot",
-        "ninety_six_month_protocol",
-        "pit_known_at",
-        "split_purge_embargo",
-        "reproduction_fingerprint",
-        "cost_assumptions",
-        "baseline_declared",
-        "trial_declaration",
-        "holdout_claim",
-        "artifact_completeness",
-    }
-    evidence_evaluations = tuple(
-        evaluation
-        for evaluation in packet.gate_evaluations
-        if evaluation.layer is GateLayer.EVIDENCE
-    )
-    assert all(
-        evaluation.outcome is GateOutcome.NOT_EVALUATED
-        for evaluation in evidence_evaluations
-    )
-
-
-def test_collect_publishes_via_writer() -> None:
-    collector, _, _, writer = _collector()
-
-    collector.collect(
-        EXPERIMENT_ID,
-        lease_fence=LEASE_FENCE,
-        now_epoch_us=NOW_EPOCH_US,
-        created_at=CREATED_AT,
-    )
-
-    assert len(writer.calls) == 1
-    call = writer.calls[0]
-    assert call["lease_fence"] is LEASE_FENCE
-    assert call["now_epoch_us"] == NOW_EPOCH_US
-    assert call["created_at"] is CREATED_AT
-
-
-def test_collect_objective_payload_hash() -> None:
-    collector, _, _, _ = _collector()
-
-    packet = collector.collect(
-        EXPERIMENT_ID,
-        lease_fence=LEASE_FENCE,
-        now_epoch_us=NOW_EPOCH_US,
-        created_at=CREATED_AT,
-    )
-
-    expected = promotion_objective_content_hash(_launch_spec().promotion_objective)
-    assert packet.objective_payload_hash == expected
-
-
-def test_collect_candidate_rationale_from_parameter_delta() -> None:
-    collector, _, _, _ = _collector(
-        snapshot=replace(
-            _snapshot(holdout_claim=_holdout_claim()),
-            launch_spec=_launch_spec(selected_parameters={"lookback": 20, "depth": 4}),
+        walk_forward_assembler=WalkForwardEvidenceAssembler(
+            report_reader=case.adapter,
+            semantics_resolver=Resolver(case.semantics),
         ),
     )
+    return collector, writer, reconstructed
 
-    packet = collector.collect(
+
+def _collect(collector: ExperimentEvidenceCollector) -> Any:
+    return collector.collect(
         EXPERIMENT_ID,
         lease_fence=LEASE_FENCE,
-        now_epoch_us=NOW_EPOCH_US,
+        now_epoch_us=NOW_US,
         created_at=CREATED_AT,
     )
 
-    rationale = packet.candidate_rationale
-    assert str(SELECTED_ID) in rationale
-    assert str(BASELINE_ID) in rationale
-    assert "depth" in rationale
-    assert "lookback" in rationale
+
+def _gate(packet: Any, rule_id: str) -> Any:
+    return next(item for item in packet.gate_evaluations if item.rule_id == rule_id)
 
 
-def test_collect_skips_when_no_holdout_claim() -> None:
-    collector, _, _, _ = _collector(
-        snapshot=_snapshot(holdout_claim=None),
+def test_collect_publishes_real_selected_metrics_and_paired_lineage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    expected = case.assemble()
+    selected = next(
+        item
+        for item in expected.aggregation.candidates
+        if item.candidate_id == CANDIDATE_ID
+    )
+    selected_rows = tuple(
+        row for row in expected.source_rows if row.candidate_id == CANDIDATE_ID
+    )
+    collector, writer, reconstructed = _collector(monkeypatch, case)
+
+    packet = _collect(collector)
+
+    assert reconstructed == [_preflight_detail()]
+    assert len(writer.calls) == 1
+    assert packet.comparison_payload_hash == selected.content_hash
+    assert packet.lineage.fold_ids == tuple(str(row.fold_id) for row in selected_rows)
+    assert packet.lineage.attempt_ids == tuple(
+        str(row.attempt_id) for row in selected_rows
+    )
+    assert packet.r1_impact_payload_hash is None
+    assert packet.selection_evidence_artifact_id is None
+    assert _gate(packet, "ninety_six_month_protocol").outcome is GateOutcome.PASS
+    assert _gate(packet, "primary_objective_metric").outcome is GateOutcome.PASS
+    assert _gate(packet, "primary_objective_metric").observed == pytest.approx(17.6)
+    assert (
+        _gate(packet, "objective_constraint:max_drawdown").layer is GateLayer.EVIDENCE
+    )
+
+    values = _metric_values(selected)
+    assert tuple(values) == tuple(
+        metric_id
+        for metric_id in R3_COMPARISON_METRIC_IDS
+        if selected.metrics[metric_id].metric_value is not None
+    )
+    assert all(type(value) is ResearchMetricValue for value in values.values())
+    assert values[ResearchMetricId.NET_RETURN].value == pytest.approx(17.6)
+
+
+def test_verified_eligible_month_count_drives_ninety_six_month_gate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    collector, writer, reconstructed = _collector(
+        monkeypatch,
+        case,
+        eligible_month_count=95,
+    )
+
+    packet = _collect(collector)
+
+    evaluation = _gate(packet, "ninety_six_month_protocol")
+    assert evaluation.outcome is GateOutcome.FAIL
+    assert evaluation.observed == {"eligible_months": 95, "required": 96}
+    assert len(reconstructed) == 1
+    assert len(writer.calls) == 1
+
+
+def test_split_purge_embargo_requires_isolation_on_every_fold(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path)
+    fold = case.folds[0]
+    no_isolation = replace(
+        fold,
+        spec=FoldPersistenceSpec.create(
+            fold.spec.key,
+            fold.spec.ordinal,
+            fold.spec.fold_role,
+            fold.spec.train_window,
+            fold.spec.test_window,
+            0,
+            0,
+        ),
+    )
+    configured = _purge_embargo_configured((no_isolation, *case.folds[1:]))
+    evidence = collect_hard_gate_evidence(
+        HardGateEvidenceView(
+            certified_snapshot=True,
+            snapshot_id="snapshot-r3",
+            eligible_month_count=96,
+            pit_policy="sample_time",
+            purge_embargo_configured=configured,
+            reproduction_fingerprints=(ContentHash("a" * 64),),
+            cost_config_hash=ContentHash("b" * 64),
+            baseline_candidate_id="candidate-baseline",
+            trial_count=2,
+            expected_trial_count=2,
+            holdout_claim_id="claim-1",
+            artifact_complete=True,
+            artifact_missing=(),
+        )
+    )
+
+    evaluation = next(
+        item
+        for item in evaluate_hard_gates(evidence)
+        if item.rule_id == "split_purge_embargo"
+    )
+    assert configured is False
+    assert evaluation.outcome is GateOutcome.FAIL
+
+
+def test_preflight_passed_event_must_be_unique(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    collector, writer, reconstructed = _collector(
+        monkeypatch,
+        case,
+        events=(
+            _preflight_event(event_id="status:preflight-1"),
+            _preflight_event(event_id="status:preflight-2"),
+        ),
     )
 
     with pytest.raises(AppProcessError) as exc_info:
-        collector.collect(
-            EXPERIMENT_ID,
-            lease_fence=LEASE_FENCE,
-            now_epoch_us=NOW_EPOCH_US,
-            created_at=CREATED_AT,
-        )
+        _collect(collector)
+
+    assert exc_info.value.details["reason"] == "preflight_passed_event_not_unique"
+    assert reconstructed == []
+    assert writer.calls == []
+
+
+def test_preflight_passed_event_must_exist(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    collector, writer, reconstructed = _collector(
+        monkeypatch,
+        case,
+        events=(),
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _collect(collector)
+
+    assert exc_info.value.details["reason"] == "preflight_passed_event_not_found"
+    assert reconstructed == []
+    assert writer.calls == []
+
+
+@pytest.mark.parametrize(
+    ("status", "failure_code"),
+    [
+        (ExperimentStatus.FAILED, ExperimentFailureCode.SYSTEM_ERROR),
+        (ExperimentStatus.CANCELLED, None),
+    ],
+)
+def test_selected_candidate_noncompleted_fold_fails_before_publish(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    status: ExperimentStatus,
+    failure_code: ExperimentFailureCode | None,
+) -> None:
+    case = build_case(tmp_path)
+    selected_index = next(
+        index
+        for index, fold in enumerate(case.folds)
+        if fold.spec.key.candidate_id == CANDIDATE_ID
+    )
+    fold = case.folds[selected_index]
+    attempt = case.attempts[selected_index]
+    folds = list(case.folds)
+    attempts = list(case.attempts)
+    folds[selected_index] = replace(
+        fold,
+        projection=replace(fold.projection, status=status),
+    )
+    attempts[selected_index] = replace(
+        attempt,
+        projection=replace(
+            attempt.projection,
+            status=status,
+            failure_code=failure_code,
+        ),
+    )
+    base = _snapshot(case)
+    snapshot = replace(
+        base,
+        folds=(*folds, base.folds[-1]),
+        attempts=tuple(attempts),
+    )
+    collector, writer, _ = _collector(
+        monkeypatch,
+        case,
+        snapshot=snapshot,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _collect(collector)
+
+    assert exc_info.value.details["reason"] == "selected_walk_forward_incomplete"
+    assert writer.calls == []
+
+
+def test_missing_report_publishes_not_evaluated_metrics_and_all_family_ref(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path, publish_indices=(0, 1, 2))
+    missing_fold = case.folds[3]
+    missing_attempt = case.attempts[3]
+    collector, writer, _ = _collector(monkeypatch, case)
+
+    packet = _collect(collector)
+
+    artifact_gate = _gate(packet, "artifact_completeness")
+    assert artifact_gate.outcome is GateOutcome.FAIL
+    assert artifact_gate.observed == {
+        "missing": (artifact_identity(missing_fold, missing_attempt).relative_path,),
+    }
+    assert (
+        _gate(packet, "primary_objective_metric").outcome is GateOutcome.NOT_EVALUATED
+    )
+    assert packet.comparison_payload_hash is not None
+    assert len(writer.calls) == 1
+
+
+def test_missing_baseline_report_is_included_in_all_family_missing_refs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path, publish_indices=(1, 2, 3))
+    collector, writer, _ = _collector(monkeypatch, case)
+
+    packet = _collect(collector)
+
+    artifact_gate = _gate(packet, "artifact_completeness")
+    assert artifact_gate.outcome is GateOutcome.FAIL
+    assert len(artifact_gate.observed["missing"]) == 1
+    assert "candidate-baseline" in artifact_gate.observed["missing"][0]
+    assert (
+        _gate(packet, "primary_objective_metric").outcome is GateOutcome.NOT_EVALUATED
+    )
+    assert len(writer.calls) == 1
+
+
+def test_artifact_completeness_requires_every_family_fold_completed(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path)
+    failed_baseline = replace(
+        case.folds[0],
+        projection=replace(
+            case.folds[0].projection,
+            status=ExperimentStatus.FAILED,
+        ),
+    )
+
+    assert _artifact_complete(case.folds, ())
+    assert not _artifact_complete((failed_baseline, *case.folds[1:]), ())
+
+
+def test_corrupt_report_fails_closed_without_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    record = next(iter(case.index.records.values()))
+    (tmp_path / record.relative_path).write_bytes(b"corrupt-report")
+    collector, writer, _ = _collector(monkeypatch, case)
+
+    with pytest.raises(ExperimentIntegrityError):
+        _collect(collector)
+
+    assert writer.calls == []
+
+
+def test_collect_requires_holdout_claim(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    collector, writer, reconstructed = _collector(
+        monkeypatch,
+        case,
+        snapshot=case.snapshot(),
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _collect(collector)
 
     assert exc_info.value.details["reason"] == "evidence_requires_holdout_claim"
+    assert reconstructed == []
+    assert writer.calls == []
 
 
-def _non_terminal_attempt(
-    attempt_id: AttemptId,
-    fold_id: FoldId,
-    candidate_id: CandidateId,
-    *,
-    fingerprint: ContentHash,
-    status: ExperimentStatus,
-) -> AttemptView:
-    """Build an attempt whose projection uses a caller-supplied status."""
-    base = _attempt_view(attempt_id, fold_id, candidate_id, fingerprint=fingerprint)
-    return replace(
-        base,
-        projection=AttemptProjection(
-            attempt_id=attempt_id,
-            status=status,
-            backtest_run_id=BacktestRunId(f"run-{attempt_id.value}"),
-            checkpoint_ref=None,
-            failure_code=None,
-            created_at=NOW,
-            updated_at=NOW,
-            revision=1,
-        ),
+@pytest.mark.parametrize(
+    "drift",
+    [
+        {"candidate_id": "candidate-unknown"},
+        {"parameters_hash": "b" * 64},
+        {"resolved_spec_hash": "a" * 64},
+        {"snapshot_id": "another-snapshot"},
+        {"fold_id": "another-holdout-fold"},
+        {"window_start": "2025-12-31"},
+        {"window_end": "2027-01-01"},
+    ],
+)
+def test_holdout_claim_must_match_selected_launch_and_unique_holdout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    drift: dict[str, str],
+) -> None:
+    case = build_case(tmp_path)
+    snapshot = _snapshot(case)
+    claim = snapshot.holdout_claim
+    assert claim is not None
+    drifted = replace(
+        snapshot,
+        holdout_claim=replace(claim, **drift),
+    )
+    collector, writer, reconstructed = _collector(
+        monkeypatch,
+        case,
+        snapshot=drifted,
     )
 
+    with pytest.raises(AppProcessError) as exc_info:
+        _collect(collector)
 
-def _hard_evaluation(packet: Any, rule_id: str) -> Any:
-    return next(
-        evaluation
-        for evaluation in packet.gate_evaluations
-        if evaluation.layer is GateLayer.HARD and evaluation.rule_id == rule_id
-    )
-
-
-def test_reproduction_fingerprints_returns_empty_when_no_attempts_match() -> None:
-    """Design §9: missing fingerprints return ``()`` instead of raising.
-
-    The integration path through ``collect`` always pairs this helper with
-    ``_attempt_ids``, which uses the same fold-key filter; once Task 3b's
-    trial-ledger work or a schema relaxation lets the two diverge, an empty
-    fingerprint tuple must let the ``reproduction`` gate evaluate to FAIL
-    rather than aborting the tick. The unit-level contract is the only way
-    to exercise the empty branch while ``ReviewPacketLineage`` still rejects
-    empty ``attempt_ids`` tuples.
-    """
-    selected_folds = (_fold_a(),)
-    result = _reproduction_fingerprints(selected_folds, attempts=())
-    assert result == ()
+    assert exc_info.value.details["reason"] == "holdout_claim_evidence_lineage_drift"
+    assert reconstructed == []
+    assert writer.calls == []
 
 
-def test_attempt_ids_exclude_non_terminal_attempts() -> None:
-    """Design §8.4: only COMPLETED attempts bind to the packet lineage."""
-    running_id = AttemptId("attempt-running-wf-a")
-    running = _non_terminal_attempt(
-        running_id,
-        FOLD_ID_A,
-        SELECTED_ID,
-        fingerprint=ContentHash("ab" * 32),
-        status=ExperimentStatus.RUNNING,
-    )
-    snapshot = replace(
-        _snapshot(holdout_claim=_holdout_claim()),
-        attempts=(
-            _attempt_view(
-                ATTEMPT_ID_A,
-                FOLD_ID_A,
-                SELECTED_ID,
-                fingerprint=REPRO_FINGERPRINT_A,
-            ),
-            running,
-            _attempt_view(
-                ATTEMPT_ID_B,
-                FOLD_ID_B,
-                SELECTED_ID,
-                fingerprint=REPRO_FINGERPRINT_B,
-            ),
-            _baseline_attempt(),
-        ),
-    )
-    collector, _, _, _ = _collector(snapshot=snapshot)
-
-    packet = collector.collect(
+def test_holdout_claim_requires_one_selected_holdout_fold(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    snapshot = _snapshot(case)
+    original = snapshot.folds[-1]
+    duplicate_key = FoldKey(
         EXPERIMENT_ID,
-        lease_fence=LEASE_FENCE,
-        now_epoch_us=NOW_EPOCH_US,
-        created_at=CREATED_AT,
+        CANDIDATE_ID,
+        FoldId("second-holdout-fold"),
+    )
+    duplicate = FoldView(
+        replace(original.spec, key=duplicate_key),
+        replace(original.projection, key=duplicate_key),
+    )
+    ambiguous = replace(snapshot, folds=(*snapshot.folds, duplicate))
+    collector, writer, reconstructed = _collector(
+        monkeypatch,
+        case,
+        snapshot=ambiguous,
     )
 
-    lineage_ids = packet.lineage.attempt_ids
-    assert str(running_id) not in lineage_ids
-    assert str(ATTEMPT_ID_A) in lineage_ids
-    assert str(ATTEMPT_ID_B) in lineage_ids
+    with pytest.raises(AppProcessError) as exc_info:
+        _collect(collector)
+
+    assert exc_info.value.details["reason"] == "holdout_claim_evidence_lineage_drift"
+    assert reconstructed == []
+    assert writer.calls == []
 
 
-def test_collect_trial_declaration_reads_both_typed_sources() -> None:
-    """Design §6: trial_count from candidates, expected from trial_family.
+def test_holdout_claim_experiment_identity_is_revalidated(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path)
+    snapshot = _snapshot(case)
+    claim = snapshot.holdout_claim
+    assert claim is not None
 
-    LaunchSpec invariant (specs.py) keeps ``current_members`` equal to the
-    candidate tuple at construction time, so the V1 gate is structurally
-    tautological; the test still proves the wiring reads from both typed
-    sources so Task 3b's trial-ledger closure can diverge them.
-    """
-    collector, _, _, _ = _collector()
-    launch_spec = _launch_spec()
+    with pytest.raises(AppProcessError) as exc_info:
+        _validate_holdout_claim_lineage(
+            snapshot,
+            replace(claim, experiment_id="another-experiment"),
+        )
 
-    packet = collector.collect(
-        EXPERIMENT_ID,
-        lease_fence=LEASE_FENCE,
-        now_epoch_us=NOW_EPOCH_US,
-        created_at=CREATED_AT,
-    )
-
-    trial_declaration = _hard_evaluation(packet, "trial_declaration")
-    observed = trial_declaration.observed
-    assert isinstance(observed, dict)
-    assert observed["trial_count"] == len(launch_spec.candidates)
-    assert observed["expected"] == len(
-        launch_spec.promotion_objective.trial_family.current_members
-    )
-    assert trial_declaration.outcome is GateOutcome.PASS
-
-
-def test_months_in_window_single_month_window() -> None:
-    """Same year/month endpoints span exactly one inclusive month."""
-    assert _months_in_window(2016, 1, 2016, 1) == 1
-
-
-def test_months_in_window_within_year_window() -> None:
-    """Inclusive span within one calendar year counts both endpoints."""
-    assert _months_in_window(2016, 1, 2016, 6) == 6
-
-
-def test_months_in_window_cross_year_window() -> None:
-    """Cross-year span includes the wrap-around months inclusively."""
-    assert _months_in_window(2016, 1, 2017, 1) == 13
-
-
-def test_months_in_window_cross_multiple_years() -> None:
-    """Eight-year span mirrors the ninety-six-month gate threshold."""
-    assert _months_in_window(2016, 1, 2024, 1) == 97
+    assert exc_info.value.details["reason"] == "holdout_claim_evidence_lineage_drift"

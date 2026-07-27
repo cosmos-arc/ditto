@@ -21,8 +21,8 @@ __all__ = [
     "collect_hard_gate_evidence",
 ]
 
-#: Minimum walk-forward out-of-sample span (design section 9.1).
-_REQUIRED_OOS_MONTHS = 96
+#: Minimum eligible history required by the ninety-six-month gate.
+_REQUIRED_ELIGIBLE_MONTHS = 96
 
 #: Only point-in-time policy that satisfies the ``pit_known_at`` gate.
 _PIT_POLICY_SAMPLE_TIME = "sample_time"
@@ -42,7 +42,7 @@ class HardGateEvidenceView:
 
     certified_snapshot: bool
     snapshot_id: str
-    oos_month_count: int
+    eligible_month_count: int
     pit_policy: str
     purge_embargo_configured: bool
     reproduction_fingerprints: tuple[ContentHash, ...]
@@ -71,10 +71,10 @@ def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
             {"snapshot_id": view.snapshot_id},
         ),
         ninety_six_month=GateFact(
-            view.oos_month_count >= _REQUIRED_OOS_MONTHS,
+            view.eligible_month_count >= _REQUIRED_ELIGIBLE_MONTHS,
             {
-                "oos_months": view.oos_month_count,
-                "required": _REQUIRED_OOS_MONTHS,
+                "eligible_months": view.eligible_month_count,
+                "required": _REQUIRED_ELIGIBLE_MONTHS,
             },
         ),
         pit_known_at=GateFact(

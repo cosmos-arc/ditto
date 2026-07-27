@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import cast
+from typing import Protocol, cast
 
 from ditto_analysis.experiments.models import (
     AttemptId,
@@ -68,9 +68,6 @@ from ditto_application.processes.experiments.walk_forward import (
     WalkForwardAggregation,
     aggregate_walk_forward,
 )
-from ditto_application.processes.experiments.worker import (
-    ResearchExecutionSemanticsResolver,
-)
 
 __all__ = [
     "CollectedWalkForwardEvidence",
@@ -91,6 +88,14 @@ _ROW_STATUSES = frozenset(
     }
 )
 _REQUIRED_BASELINE_FOLDS = 2
+
+
+class _ResearchExecutionSemanticsResolver(Protocol):
+    """Narrow read port needed to reconstruct baseline execution identity."""
+
+    def resolve(self, fold: FoldView) -> ResearchExecutionSemantics:
+        """Resolve exact persisted execution semantics for one fold."""
+        ...
 
 
 def _canonical_row_order(
@@ -584,7 +589,7 @@ class WalkForwardEvidenceAssembler:
         self,
         *,
         report_reader: BacktestReportArtifactReader,
-        semantics_resolver: ResearchExecutionSemanticsResolver,
+        semantics_resolver: _ResearchExecutionSemanticsResolver,
     ) -> None:
         self._report_reader = report_reader
         self._semantics_resolver = semantics_resolver

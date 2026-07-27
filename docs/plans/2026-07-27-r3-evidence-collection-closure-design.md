@@ -24,7 +24,7 @@ R3 计划 22 task 名义完成 ~19 个，但**核心价值链断开**：experime
 | coordinator EVIDENCE 分支 | ❌ 死端：`return WAITING` | `coordinator.py:651-652` |
 | `_NEXT_STAGE[EVIDENCE]` | ❌ 无条目（EVIDENCE 无后继 stage） | `coordinator.py:107-111` |
 
-**断点性质**：契约层零改动；缺口是「谁装配 17 字段输入 + 谁在 EVIDENCE 触发」。
+**断点性质**：契约层零改动；缺口是「谁装配 18 字段输入 + 谁在 EVIDENCE 触发」。
 
 ## 3. 核心架构决策
 
@@ -42,7 +42,7 @@ collect → assemble → publish_review_packet → transition_experiment(target_
 
 把 `coordinator._advance_completed_stages` 的 EVIDENCE 分支从 `return WAITING` 改为：
 
-1. 前置校验：所有 walk-forward fold 终态、holdout_claim 存在、artifact 齐全（artifact_completeness 的前置）。
+1. 前置校验：walk-forward 结构可重建、holdout_claim 存在；artifact 缺失由 packet 内的 `artifact_completeness` gate 如实记录。
 2. 调 `ExperimentEvidenceCollector.collect(experiment_id)` → 产出并 publish review packet。
 3. `transition_experiment(target_status=COMPLETED, target_stage=EVIDENCE)`。
 4. 返回 `SchedulerTickState.COMPLETED`（或等价终态信号）。
@@ -70,7 +70,7 @@ coordinator.tick
                  ├─ 读 artifact index（ArtifactRecord by candidate_id+fold_id+attempt_id）
                  ├─ 读 walk-forward aggregation → metric_values（per selected candidate）
                  ├─ 装配 HardGateEvidenceView → collect_hard_gate_evidence() → HardGateEvidence
-                 ├─ 装配 ReviewPacketInput（17 字段，§5）
+                 ├─ 装配 ReviewPacketInput（18 字段，§5）
                  ├─ assemble_review_packet(input) → ReviewPacket
                  └─ writer.publish_review_packet(packet, lease_fence=...) → ArtifactRecord
             └─ store.transition_experiment(target_status=COMPLETED, target_stage=EVIDENCE)
@@ -79,26 +79,26 @@ coordinator.tick
 
 **candidate 粒度**：review packet 是 per-candidate。EVIDENCE 产 packet 的 candidate = `holdout_claim.candidate_id`（= CANDIDATE_SELECTION 选中、HOLDOUT claimed 的 candidate）。进 EVIDENCE 前 holdout_claim 必存在（HOLDOUT done 的前提）。
 
-## 5. ReviewPacketInput 17 字段装配表
+## 5. ReviewPacketInput 18 字段装配表
 
 | 字段 | 来源 | 备注 |
 |------|------|------|
 | `experiment_id` | `snapshot.projection.record.experiment_id` | |
 | `candidate_id` | `snapshot.holdout_claim.candidate_id` | selected candidate |
-| `fold_ids` | `snapshot.folds` 按 `fold_role==WALK_FORWARD` 过滤的 `fold_id` | **装配**（holdout_claim 只绑单 fold，§8.3） |
-| `attempt_ids` | `snapshot.attempts` 按 walk-forward fold lineage 过滤 | **装配**（§8.4） |
+| `fold_ids` | selected candidate 的两个 canonical assembler source row | 与 `attempt_ids` 成对（§8.3） |
+| `attempt_ids` | selected candidate source row 绑定的精确终态 attempt | 与 `fold_ids` 成对（§8.4） |
 | `spec_hash` | `encode_launch_spec(launch_spec).content_hash` | 参考 `trial_evidence_bridge.py:443-447` |
 | `resolved_spec_hash` | `launch_spec.execution_bindings[selected].resolved_spec_hash` | |
 | `parameter_hash` | `CandidateSpec.parameter_hash`（selected candidate） | `specs.py:218` |
-| `snapshot_hash` | snapshot manifest | **缺口**（§8.1） |
-| `registry_hash` | snapshot manifest | **缺口**（§8.1） |
+| `snapshot_hash` | 唯一 `preflight_passed` 事件中的 snapshot manifest projection | §8.1 |
+| `registry_hash` | 唯一 `preflight_passed` 事件中的 registry manifest hash | §8.1 |
 | `objective` | `launch_spec.promotion_objective` | |
 | `objective_payload_hash` | `promotion_objective.canonical_payload()` hash | **collector 定义**（§8.5） |
 | `hard_evidence` | `collect_hard_gate_evidence(view)` | analysis 纯函数 |
 | `metric_values` | walk-forward aggregation（selected candidate），提取 `.metric_value`，跳过 None | **类型转换**（§8.2） |
 | `comparison_payload_hash` | selected candidate 的 walk-forward comparison canonical hash | **collector 定义** |
 | `r1_impact_payload_hash` | `None`（第一版 NOT_EVALUATED） | 用户已确认 |
-| `selection_evidence_artifact_id` | artifact index 查 `artifact_kind==selection_evidence` | |
+| `selection_evidence_artifact_id` | durable selection-ledger artifact | C2b 仍为 `None`，后续 selection-evidence slice 接通 |
 | `holdout_claim_id` | `snapshot.holdout_claim.claim_id` | |
 | `candidate_rationale` | parameter delta vs baseline 模板 | **collector 定义**（§8.5） |
 
@@ -109,18 +109,21 @@ coordinator.tick
 | gate | satisfied 逻辑 | detail | 证据源 |
 |------|------|------|------|
 | `certified_snapshot` | snapshot manifest 标记 certified | snapshot_id + cert 状态 | snapshot manifest |
-| `ninety_six_month` | walk-forward OOS test_window 总跨度 ≥ 96 月 | 总月数 | `FoldPersistenceSpec.test_window` 聚合 |
+| `ninety_six_month` | 已验证 preflight 可用连续月份 ≥ 96 月 | eligible 月数 | `reconstruct_preflight_report(...).eligible_month_count` |
 | `pit_known_at` | manifest pit_policy 一致且非 unsafe | pit_policy | snapshot manifest |
-| `split_purge_embargo` | 所有 fold 的 purge/embargo sessions 非空且一致 | purge/embargo 配置 | `FoldPersistenceSpec.purge_sessions` / `embargo_sessions` |
+| `split_purge_embargo` | 所有 walk-forward fold 都配置正数 purge 或 embargo | purge/embargo 配置 | `FoldPersistenceSpec.purge_sessions` / `embargo_sessions` |
 | `reproduction` | selected candidate 所有 attempt 有 reproduction_fingerprint | fingerprint | `AttemptPersistenceSpec.reproduction_fingerprint` |
-| `cost_assumptions` | backtest cost config hash 一致 | cost config hash | backtest execution bundle / manifest |
+| `cost_assumptions` | backtest cost config hash 一致 | cost config hash | **C2b 暂为全零 placeholder，待 execution-semantics slice 关闭** |
 | `baseline_declared` | launch_spec 恰好一个 `is_baseline=True` 且与 `promotion_objective.baseline_candidate_id` 一致 | baseline_candidate_id | `launch_spec.candidates` / `promotion_objective.baseline_candidate_id` |
-| `trial_declaration` | trial ledger 记录所有 candidate 的 trial | trial count | trial ledger |
+| `trial_declaration` | trial ledger 记录完整 declared family | declared/observed trial count | **C2b 暂由 launch current family 同源计数，待 durable trial-ledger slice 关闭** |
 | `holdout_claim` | `snapshot.holdout_claim` 非空 | claim_id | `snapshot.holdout_claim` |
 | `artifact_completeness` | 所有应产 artifact 存在、content_hash/schema_hash/row_count 齐全 | artifact count + 缺失项 | `ArtifactRecord` index |
 | `r2_live_gate` | `None`（NOT_EVALUATED） | None | Beta 阶段，design §9.2 允许；G2 live acceptance 才关闭 |
 
-**10 个 gate 第一版客观判定**，仅 `r2_live_gate` 合理 NOT_EVALUATED。这意味着 evidence 闭环第一版 hard gate 基本完备，不是糊弄。
+**C2b 是 interim closure**：snapshot、96 个月、PIT、隔离、reproduction、
+baseline、holdout 与 artifact completeness 已由持久证据客观判定；但
+`cost_assumptions` 仍是 placeholder，`trial_declaration` 仍是同源计数，
+`r2_live_gate` 仍为 `NOT_EVALUATED`。因此不得把本阶段表述为 10-gate 完整关闭。
 
 > 每个 gate 的精确判定（如 ninety_six_month 的月数计算、artifact_completeness 的「应产」清单来源）在 TDD 时按 `HardGateEvidenceView` 的 typed 字段精确化；design 在此给出判定方向与证据源。
 
@@ -134,9 +137,11 @@ coordinator.tick
 
 ### 8.1 snapshot_hash / registry_hash（不在 scheduler snapshot）
 
-`ExperimentSchedulerSnapshot` 不含这两个 hash。collector 需注入 `SnapshotManifestReader`（Protocol）按 `launch_spec.snapshot_id` 读 snapshot manifest（`research_snapshot_manifest.py` / `PreflightPlanAuthority.snapshot_manifest_hash` `preflight_authority.py:300`），取 `snapshot_hash` + `registry_hash` + `pit_policy`。
-
-> **TDD 待确认**：snapshot manifest 的持久化位置与既有 reader。若 manifest 经 artifact index 持久化，复用 `reader.get_artifact(...)`；若在 preflight authority，注入对应 reader。
+`ExperimentSchedulerSnapshot` 不含这两个 hash。collector 从唯一
+`preflight_passed` 事件投影 `snapshot_hash` + `registry_hash` + `pit_policy`，
+并先调用 `reconstruct_preflight_report` 重验完整 preflight payload；96 个月门禁
+使用重构报告的 `eligible_month_count`，不再把两个 walk-forward test window
+误当成完整 96 个月研究协议。
 
 ### 8.2 metric_values 类型转换
 
@@ -144,11 +149,15 @@ coordinator.tick
 
 ### 8.3 fold_ids 装配
 
-`holdout_claim.fold_id` 是单个 str。`ReviewPacketInput.lineage.fold_ids` 要 walk-forward 全部 OOS fold_ids。collector 从 `snapshot.folds` 按 `fold_role==WALK_FORWARD` 过滤装配（参考 `coordinator.py:145-158` 的 `_STAGE_ROLE` + `prior_fold_roles`）。
+`holdout_claim.fold_id` 是单个 holdout fold。`ReviewPacketInput.lineage.fold_ids`
+来自 selected candidate 的两个 canonical walk-forward source rows；collector
+要求它们与 selected aggregation folds 精确相等、互不重复且均为
+`COMPLETED`。
 
 ### 8.4 attempt_ids 装配
 
-从 `snapshot.attempts` 按 walk-forward fold lineage 过滤（每个 fold 取其终态 attempt）。
+直接使用上述两个 source rows 各自绑定的精确终态 `attempt_id`，保持与
+`fold_ids` 同序成对；retry 的旧 attempt 不进入 packet lineage。
 
 ### 8.5 objective_payload_hash / candidate_rationale（无生产源）
 
@@ -159,7 +168,7 @@ coordinator.tick
 
 | 失败场景 | 处理 |
 |---------|------|
-| artifact 缺失（artifact_completeness 前置） | collector 正常产出 packet，`artifact_completeness` gate 标 `satisfied=False`（FAIL）→ packet 仍 publish，governance promote 时 hard gate 阻断 |
+| artifact 缺失 | collector 正常产出 packet，`artifact_completeness` gate 标 `satisfied=False`（FAIL）→ packet 仍 publish，governance promote 时 hard gate 阻断 |
 | metric 缺失（None） | 跳过，gate 标 `NOT_EVALUATED`（不失败） |
 | snapshot manifest 读取失败 | collector 抛 typed `AppProcessError` → tick fail-fast → experiment 卡 EVIDENCE，记 `failure_code` |
 | `publish_review_packet` 失败（lease/IO） | collector 抛 typed error → tick fail-fast → 不推进 COMPLETED，下个 tick 重试 |
@@ -174,7 +183,7 @@ coordinator.tick
   - 新增 `collect_hard_gate_evidence(view) -> HardGateEvidence`（纯函数，零 I/O）。
   - 导出经 `experiments/__init__.py`。
 - **application**（`application/processes/experiments/evidence_collector.py`）：
-  - 新增 `ExperimentEvidenceCollector`，注入：`ExperimentSchedulerStore`（读 snapshot）、`ExperimentReaderProtocol`（读 artifact index）、`SnapshotManifestReader`（Protocol，读 snapshot_hash/registry_hash/pit_policy）、`ExperimentWriterProtocol`（publish）、walk-forward aggregation reader。
+  - 新增 `ExperimentEvidenceCollector`，注入：`ExperimentSchedulerStore`（读 snapshot）、`ExperimentReaderProtocol`（读唯一 preflight event）、`ExperimentWriterProtocol`（publish）和 `WalkForwardEvidenceAssembler`（verified indexed reports + persisted execution semantics）。
   - `collect(experiment_id, *, lease) -> ReviewPacket`。
 - **coordinator**（`coordinator.py`）：
   - EVIDENCE 分支注入 `ExperimentEvidenceCollector`，调 `collect` → `transition_experiment(COMPLETED)`。
@@ -185,7 +194,7 @@ coordinator.tick
 参考既有 commit 节奏（每个 commit 独立 GREEN + pixi check 全绿）：
 
 1. **commit 1（analysis）**：`HardGateEvidenceView` + `collect_hard_gate_evidence` 纯函数 + 单测（11 gate 各 satisfied True/False/None）。
-2. **commit 2（application collector）**：`ExperimentEvidenceCollector` + `ReviewPacketInput` 装配 + `publish_review_packet` 接线 + 单测（mock reader/writer，验证 17 字段装配 + metric 类型转换 + fold_ids 装配）。
+2. **commit 2（application collector）**：`ExperimentEvidenceCollector` + `ReviewPacketInput` 装配 + `publish_review_packet` 接线 + 单测（mock reader/writer，验证 18 字段装配 + metric 类型转换 + fold_ids 装配）。
 3. **commit 3（coordinator 接通）**：EVIDENCE 分支接入 collector + `transition_experiment(COMPLETED)` + 单测（验证 tick 推进、失败 fail-fast、CAS 重试）。
 4. **commit 4（Task 22 后端 e2e）**：`test_r3_stock_selection_golden` + `test_r3_etf_research_golden` + `test_r3_governance_recovery` + `test_r3_scheduler_capacity`（deterministic fixture，验证真实 experiment → packet → governance publish 闭环）。
 

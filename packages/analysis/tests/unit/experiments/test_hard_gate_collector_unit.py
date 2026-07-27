@@ -26,7 +26,7 @@ def _all_satisfied_view() -> HardGateEvidenceView:
     return HardGateEvidenceView(
         certified_snapshot=True,
         snapshot_id="snap-001",
-        oos_month_count=96,
+        eligible_month_count=96,
         pit_policy="sample_time",
         purge_embargo_configured=True,
         reproduction_fingerprints=(_hash("a"), _hash("b")),
@@ -38,6 +38,13 @@ def _all_satisfied_view() -> HardGateEvidenceView:
         artifact_complete=True,
         artifact_missing=(),
     )
+
+
+def test_hard_gate_view_uses_eligible_month_count_contract() -> None:
+    fields = HardGateEvidenceView.__dataclass_fields__
+
+    assert "eligible_month_count" in fields
+    assert "oos_month_count" not in fields
 
 
 def test_collect_returns_hard_gate_evidence_instance() -> None:
@@ -88,31 +95,40 @@ def test_certified_snapshot_fails_when_flag_false() -> None:
     assert evidence.certified_snapshot.detail == {"snapshot_id": "snap-001"}
 
 
-def test_ninety_six_month_passes_at_threshold() -> None:
-    view = replace(_all_satisfied_view(), oos_month_count=96)
+def test_ninety_six_month_passes_at_eligible_month_threshold() -> None:
+    view = replace(_all_satisfied_view(), eligible_month_count=96)
 
     evidence = collect_hard_gate_evidence(view)
 
     assert evidence.ninety_six_month.satisfied is True
-    assert evidence.ninety_six_month.detail == {"oos_months": 96, "required": 96}
+    assert evidence.ninety_six_month.detail == {
+        "eligible_months": 96,
+        "required": 96,
+    }
 
 
-def test_ninety_six_month_passes_above_threshold() -> None:
-    view = replace(_all_satisfied_view(), oos_month_count=120)
+def test_ninety_six_month_passes_above_eligible_month_threshold() -> None:
+    view = replace(_all_satisfied_view(), eligible_month_count=120)
 
     evidence = collect_hard_gate_evidence(view)
 
     assert evidence.ninety_six_month.satisfied is True
-    assert evidence.ninety_six_month.detail == {"oos_months": 120, "required": 96}
+    assert evidence.ninety_six_month.detail == {
+        "eligible_months": 120,
+        "required": 96,
+    }
 
 
-def test_ninety_six_month_fails_below_threshold() -> None:
-    view = replace(_all_satisfied_view(), oos_month_count=95)
+def test_ninety_six_month_fails_below_eligible_month_threshold() -> None:
+    view = replace(_all_satisfied_view(), eligible_month_count=95)
 
     evidence = collect_hard_gate_evidence(view)
 
     assert evidence.ninety_six_month.satisfied is False
-    assert evidence.ninety_six_month.detail == {"oos_months": 95, "required": 96}
+    assert evidence.ninety_six_month.detail == {
+        "eligible_months": 95,
+        "required": 96,
+    }
 
 
 def test_pit_known_at_passes_with_sample_time_policy() -> None:

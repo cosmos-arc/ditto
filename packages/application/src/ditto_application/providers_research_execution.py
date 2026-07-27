@@ -53,6 +53,9 @@ from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactPublisher,
     BacktestReportArtifactReader,
 )
+from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    WalkForwardEvidenceAssembler,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
 )
@@ -120,6 +123,18 @@ class AppResearchExecutionProvider(Provider):
     ) -> BacktestReportArtifactReader:
         """Expose the same APP-scoped adapter through the evidence read port."""
         return adapter
+
+    @provide
+    def walk_forward_evidence_assembler(
+        self,
+        report_reader: BacktestReportArtifactReader,
+        semantics_resolver: ResearchExecutionSemanticsResolver,
+    ) -> WalkForwardEvidenceAssembler:
+        """Build exact persisted walk-forward evidence for review publication."""
+        return WalkForwardEvidenceAssembler(
+            report_reader=report_reader,
+            semantics_resolver=semantics_resolver,
+        )
 
     @provide
     def code_environment_lock(

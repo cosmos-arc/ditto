@@ -255,6 +255,11 @@ class WalkForwardCandidate:
             ),
         }
 
+    @property
+    def content_hash(self) -> _ContentHash:
+        """Return the authoritative candidate evidence content hash."""
+        return _canonical_payload(self.canonical_payload()).content_hash
+
 
 @dataclass(frozen=True, slots=True)
 class WalkForwardAggregation:

@@ -95,6 +95,9 @@ from ditto_application.processes.experiments._control_runtime import (
     CONTROL_COORDINATOR_OWNER_TOKEN,
     LoggingExperimentControlNotifier,
 )
+from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    WalkForwardEvidenceAssembler,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
 )
@@ -351,12 +354,14 @@ class AppProcessProvider(Provider):
         scheduler_store: ExperimentSchedulerStore,
         reader: ExperimentReaderProtocol,
         writer: ExperimentWriterProtocol,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
     ) -> ExperimentEvidenceCollector:
         """Wire the R3 review-packet collector behind the durable experiment ports."""
         return ExperimentEvidenceCollector(
             scheduler_store=scheduler_store,
             reader=reader,
             writer=writer,
+            walk_forward_assembler=walk_forward_assembler,
         )
 
     @provide

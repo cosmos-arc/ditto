@@ -9,82 +9,64 @@ fresh ``tmp_path`` SQLite research database:
   EVIDENCE branch).
 * The fixture drives one experiment tick through PREFLIGHT, EXPLORATION,
   WALK_FORWARD, CANDIDATE_SELECTION, HOLDOUT, and finally EVIDENCE.
-* At EVIDENCE the coordinator must invoke the collector, which assembles the
-  eleven-field hard-gate view, evaluates the eleven hard gates, freezes the
-  immutable :class:`ReviewPacket`, publishes it through the durable writer
-  protocol, and finally transitions the experiment to ``COMPLETED``.
-
-V1 simplifications (accepted by the user) hold: ``metric_values={}`` leaves the
-evidence gates ``NOT_EVALUATED``, ``comparison_payload_hash`` is ``None``, and
-``r2_live_gate`` is pinned to ``NOT_EVALUATED``. The assertions therefore
-verify closure and objective gate projection rather than full statistical
-evidence.
+* At EVIDENCE the coordinator must invoke the collector, which reconstructs the
+  persisted preflight, reads four indexed walk-forward reports, assembles real
+  comparison metrics, evaluates the eleven hard gates, freezes the immutable
+  :class:`ReviewPacket`, publishes it through the durable writer protocol, and
+  finally transitions the experiment to ``COMPLETED``.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import pytest
 from ditto_analysis.experiments import (
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
     AttemptView,
     BacktestRunId,
-    CandidateExecutionBinding,
-    CandidateId,
-    CandidateSpec,
     ContentHash,
-    DateWindow,
-    ExperimentBudget,
-    ExperimentDesiredState,
-    ExperimentFailurePolicy,
     ExperimentId,
     ExperimentLaunchSpec,
-    ExperimentRecord,
     ExperimentStage,
     ExperimentStatus,
-    FoldId,
-    FoldKey,
     FoldPersistenceSpec,
-    FoldProjection,
-    FoldProtocolSpec,
     FoldRole,
     FoldView,
-    GateEvaluationRecord,
-    LogicalTrialIdentity,
-    ResearchCycleIdentity,
-    ResearchMetricDirection,
     ResearchMetricId,
     ResearchMetricValue,
-    SnapshotId,
-    StrategyVersion,
-    TrialFamilyDeclaration,
-    TrialKind,
-    canonical_payload,
-    encode_launch_spec,
 )
-from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_analysis.experiments.gates import GateLayer, GateOutcome
-from ditto_analysis.experiments.preflight_authority import (
-    canonical_research_cycle_hash,
-)
 from ditto_analysis.experiments.trial_ledger import (
     MetricEvidenceLineage,
-    ObjectiveMetric,
-    PromotionObjective,
     TrialLedger,
     TrialOutcome,
     TrialStatus,
     build_trial_ledger,
 )
+from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.storage.sqlite.experiments import (
     ResearchExperimentDatabase,
     SQLiteExperimentReader,
     SQLiteExperimentWriter,
+)
+from ditto_application.builders.research_artifact_loader import (
+    IndexedBacktestReportArtifactAdapter,
+)
+from ditto_application.processes.experiments._evidence_inputs import (
+    project_snapshot_manifest,
+)
+from ditto_application.processes.experiments._report_evidence import (
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
+)
+from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    WalkForwardEvidenceAssembler,
 )
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
@@ -99,10 +81,22 @@ from ditto_application.processes.experiments.holdout import (
 from ditto_application.processes.experiments.holdout import (
     HoldoutSelectionReason as ApplicationSelectionReason,
 )
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
+    reconstruct_preflight_report,
+)
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
     FirstAttempt,
     QueuedAttempt,
+)
+from ditto_backtest.statistics import (
+    BacktestReport,
+    empty_aggregated_trade_statistics,
+    empty_alpha_statistics,
+)
+from packages.application.tests.integration import (
+    r3_evidence_closure_support as golden_support,
 )
 
 NOW = datetime(2026, 7, 22, 4, 0, tzinfo=UTC)
@@ -123,385 +117,12 @@ _HARD_GATE_RULE_IDS = (
     "artifact_completeness",
     "r2_live_gate",
 )
-
-
-def _candidate(ordinal: int) -> CandidateSpec:
-    return CandidateSpec(
-        CandidateId(f"candidate-{ordinal}"),
-        ordinal,
-        ordinal == 1,
-        {"lookback": ordinal * 20},
-    )
-
-
-def _validation_plan(
-    holdout_window: DateWindow,
-    *,
-    eligibility: str = "promotion_eligible",
-) -> dict[str, object]:
-    return {
-        "eligibility": eligibility,
-        "reason_codes": [],
-        "coverage_policy": {
-            "policy_id": "holdout-integration",
-            "version": 1,
-            "min_eligible_instrument_count": 1,
-            "min_coverage_ratio_bps": 10_000,
-            "evaluator_hash": "6" * 64,
-        },
-        "calendar_complete_month_count": 96,
-        "eligible_months": [],
-        "isolation_width_sessions": 3,
-        "folds": [
-            {
-                "ordinal": 1,
-                "role": "exploration",
-                "train_window": None,
-                "test_window": {"start": "2026-01-01", "end": "2026-01-28"},
-                "purge_sessions": 2,
-                "embargo_sessions": 1,
-            },
-            {
-                "ordinal": 2,
-                "role": "walk_forward",
-                "train_window": {"start": "2020-01-01", "end": "2025-12-31"},
-                "test_window": {"start": "2026-02-01", "end": "2026-02-28"},
-                "purge_sessions": 2,
-                "embargo_sessions": 1,
-            },
-        ],
-        "reserved_holdout": {
-            "train_window": {"start": "2020-01-01", "end": "2025-12-31"},
-            "test_window": {
-                "start": holdout_window.start.isoformat(),
-                "end": holdout_window.end.isoformat(),
-            },
-            "purge_sessions": 2,
-            "embargo_sessions": 1,
-        },
-    }
-
-
-def _launch(
-    experiment_id: str,
-    *,
-    snapshot_id: str = "snapshot-holdout-integration",
-    holdout_window: DateWindow | None = None,
-    eligibility: str = "promotion_eligible",
-) -> ExperimentLaunchSpec:
-    actual_holdout = holdout_window or DateWindow(date(2026, 3, 1), date(2026, 3, 28))
-    candidates = (_candidate(1), _candidate(2))
-    return ExperimentLaunchSpec(
-        experiment_id=ExperimentId(experiment_id),
-        strategy_version=StrategyVersion("strategy@1"),
-        strategy_spec_hash=ContentHash("1" * 64),
-        snapshot_id=SnapshotId(snapshot_id),
-        candidates=candidates,
-        execution_bindings=tuple(
-            CandidateExecutionBinding(
-                candidate.candidate_id,
-                candidate.ordinal,
-                candidate.parameter_hash,
-                ContentHash(f"{candidate.ordinal + 32:064x}"),
-            )
-            for candidate in candidates
-        ),
-        promotion_objective=PromotionObjective(
-            ObjectiveMetric(
-                ResearchMetricId.NET_RETURN,
-                ResearchMetricDirection.MAXIMIZE,
-            ),
-            (),
-            (),
-            CandidateId("candidate-1"),
-            "Choose a candidate only after registered evidence review.",
-            TrialFamilyDeclaration(
-                "holdout-integration-family",
-                tuple(
-                    LogicalTrialIdentity(
-                        ExperimentId(experiment_id),
-                        candidate.candidate_id,
-                        candidate.ordinal,
-                        candidate.parameter_hash,
-                        TrialKind.CURRENT,
-                    )
-                    for candidate in candidates
-                ),
-            ),
-        ),
-        fold_protocol=FoldProtocolSpec(
-            "holdout-v1",
-            1,
-            canonical_payload(
-                _validation_plan(actual_holdout, eligibility=eligibility)
-            ).content_hash,
-        ),
-        seed=42,
-        worker_count=2,
-        failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
-        budget=ExperimentBudget(128, 512),
-        desired_state=ExperimentDesiredState.RUN,
-        created_at=NOW,
-    )
-
-
-def _folds(
-    launch: ExperimentLaunchSpec,
-    *,
-    holdout_window: DateWindow | None = None,
-) -> tuple[FoldPersistenceSpec, ...]:
-    actual_holdout = holdout_window or DateWindow(date(2026, 3, 1), date(2026, 3, 28))
-
-    def fold_spec(
-        candidate: CandidateSpec,
-        ordinal: int,
-        role: FoldRole,
-    ) -> FoldPersistenceSpec:
-        key = FoldKey(
-            launch.experiment_id,
-            candidate.candidate_id,
-            FoldId(f"fold-{candidate.ordinal}-{ordinal}"),
-        )
-        return FoldPersistenceSpec.create(
-            key,
-            ordinal,
-            role,
-            None
-            if role is FoldRole.EXPLORATION
-            else DateWindow(date(2020, 1, 1), date(2025, 12, 31)),
-            (
-                actual_holdout
-                if role is FoldRole.HOLDOUT
-                else DateWindow(date(2026, ordinal, 1), date(2026, ordinal, 28))
-            ),
-            2,
-            1,
-        )
-
-    return tuple(
-        fold_spec(candidate, ordinal, role)
-        for candidate in launch.candidates
-        for ordinal, role in (
-            (1, FoldRole.EXPLORATION),
-            (2, FoldRole.WALK_FORWARD),
-        )
-    ) + tuple(
-        fold_spec(candidate, 3, FoldRole.HOLDOUT) for candidate in launch.candidates
-    )
-
-
-def _snapshot_evidence(
-    launch: ExperimentLaunchSpec,
-    manifest_hash: str,
-    certified_cutoff: date,
-) -> dict[str, object]:
-    return {
-        "snapshot_id": str(launch.snapshot_id),
-        "dataset_id": "holdout-integration-dataset",
-        "manifest_hash": manifest_hash,
-        "source_snapshot_ids": ["provider-snapshot-holdout-integration"],
-        "snapshot_start": "2020-01-01",
-        "snapshot_end": certified_cutoff.isoformat(),
-        "known_at_policy": "sample_time",
-        "builder_version": "holdout-integration-builder-v1",
-    }
-
-
-def _gates(
-    launch: ExperimentLaunchSpec,
-    *,
-    snapshot_manifest_hash: str,
-    certified_cutoff: date,
-    holdout_window: DateWindow,
-) -> tuple[GateEvaluationRecord, ...]:
-    snapshot = _snapshot_evidence(launch, snapshot_manifest_hash, certified_cutoff)
-    certification_observed = {
-        "ready": True,
-        "profile": "r3-a-share-certified-research-v1",
-        "dataset_ids": ["holdout-integration-dataset"],
-        "report_ids": ["holdout-integration-certification"],
-        "reason_codes": [],
-        "snapshot_evidence": snapshot,
-        "snapshot_evidence_valid": True,
-    }
-    certification_policy = {
-        "profile": "r3-a-share-certified-research-v1",
-        "required_from": "2020-01-01",
-        "required_to": holdout_window.end.isoformat(),
-        "requirements": [],
-        "snapshot_identity": {
-            "snapshot_id": str(launch.snapshot_id),
-            "manifest_hash": snapshot_manifest_hash,
-        },
-    }
-    return tuple(
-        GateEvaluationRecord(
-            evaluation_id=f"{launch.experiment_id}:preflight:{index}:{rule_id}",
-            experiment_id=launch.experiment_id,
-            candidate_id=None,
-            fold_id=None,
-            attempt_id=None,
-            rule_id=rule_id,
-            policy_version=_PREFLIGHT_POLICY_VERSION,
-            layer="hard",
-            outcome="pass",
-            observed=certification_observed if rule_id == "certification" else {},
-            policy=certification_policy if rule_id == "certification" else {},
-            artifact_id=None,
-            evaluated_at=NOW,
-        )
-        for index, rule_id in enumerate(_GATE_RULES, start=1)
-    )
-
-
-def _preflight_detail(
-    *,
-    launch: ExperimentLaunchSpec,
-    cycle: ResearchCycleIdentity,
-    folds: tuple[FoldPersistenceSpec, ...],
-    gates: tuple[GateEvaluationRecord, ...],
-    snapshot_manifest_hash: str,
-    certified_cutoff: date,
-    holdout_window: DateWindow,
-    status: str,
-    eligibility: str,
-) -> dict[str, object]:
-    snapshot = _snapshot_evidence(launch, snapshot_manifest_hash, certified_cutoff)
-    validation_plan = _validation_plan(holdout_window, eligibility=eligibility)
-    checks = [
-        {
-            "rule_id": gate.rule_id,
-            "outcome": gate.outcome,
-            "code": None,
-            "reason": None,
-            "remediation": None,
-            "observed": gate.observed,
-            "policy": gate.policy,
-        }
-        for gate in gates
-    ]
-    executor = {
-        "node_registry_manifest_hash": "7" * 64,
-        "factor_registry_manifest_hash": "8" * 64,
-        "factor_binding_hashes": [],
-        "baseline_ref": "baseline://holdout-integration",
-        "baseline_descriptor_hash": "9" * 64,
-        "baseline_registry_manifest_hash": "a" * 64,
-        "baseline_exact_strategy_hash": None,
-        "baseline_runtime": None,
-        "candidates": [],
-    }
-    authority = {
-        "payload_hash": "b" * 64,
-        "runtime_evidence_hash": "c" * 64,
-        "universe_membership_hash": "d" * 64,
-        "membership_projection_hash": "e" * 64,
-        "requires_pit_universe": True,
-        "dataset_bindings": [],
-        "snapshot_identity": {
-            "snapshot_id": str(launch.snapshot_id),
-            "manifest_hash": snapshot_manifest_hash,
-        },
-    }
-    certification = {
-        "ready": status in {"ready", "research_only"},
-        "profile": "r3-a-share-certified-research-v1",
-        "required_from": "2020-01-01",
-        "required_to": holdout_window.end.isoformat(),
-        "dataset_ids": ["holdout-integration-dataset"],
-        "report_ids": ["holdout-integration-certification"],
-        "reason_codes": [],
-        "snapshot_evidence": snapshot,
-    }
-    preflight = {
-        "schema_version": 1,
-        "policy_version": _PREFLIGHT_POLICY_VERSION,
-        "status": status,
-        "checks": checks,
-        "counts": {
-            "candidate_count": len(launch.candidates),
-            "planned_fold_count": len(folds),
-            "budget_run_count": len(folds),
-            "estimated_trading_sessions": 1,
-            "estimated_disk_bytes": 1,
-            "eligible_month_count": 96,
-            "isolation_width_sessions": 3,
-        },
-        "validation": {
-            "protocol": {},
-            "plan": validation_plan,
-            "fold_protocol": {
-                "protocol_id": launch.fold_protocol.protocol_id,
-                "protocol_version": launch.fold_protocol.protocol_version,
-                "protocol_hash": str(launch.fold_protocol.protocol_hash),
-            },
-        },
-        "work": {"plan_hash": "f" * 64},
-        "executor": executor,
-        "authority": authority,
-        "identities": {
-            "request_hash": "1" * 64,
-            "research_cycle_id": cycle.cycle_id,
-            "research_cycle_hash": str(cycle.cycle_hash),
-            "strategy_id": "strategy",
-            "strategy_version": 1,
-            "snapshot_identity": authority["snapshot_identity"],
-            "dataset_requirements": [],
-            "certification": certification,
-        },
-    }
-    preflight_hash = canonical_payload(preflight).content_hash
-    plan_preimage = {
-        "schema_version": 1,
-        "launch_spec_hash": str(encode_launch_spec(launch).content_hash),
-        "gate_payload_hashes": [str(gate.payload_hash) for gate in gates],
-        "fold_payload_hashes": [str(fold.payload_hash) for fold in folds],
-        "research_cycle_id": cycle.cycle_id,
-        "research_cycle_hash": str(cycle.cycle_hash),
-        "request_hash": "1" * 64,
-        "snapshot_evidence": snapshot,
-        "dataset_requirements": [],
-        "validation": validation_plan,
-        "validation_authority": {
-            key: authority[key]
-            for key in (
-                "payload_hash",
-                "runtime_evidence_hash",
-                "universe_membership_hash",
-                "membership_projection_hash",
-                "requires_pit_universe",
-                "dataset_bindings",
-            )
-        },
-        "work_plan_hash": "f" * 64,
-        "node_registry_manifest_hash": executor["node_registry_manifest_hash"],
-        "factor_registry_manifest_hash": executor["factor_registry_manifest_hash"],
-        "factor_binding_hashes": executor["factor_binding_hashes"],
-        "baseline_ref": executor["baseline_ref"],
-        "baseline_descriptor_hash": executor["baseline_descriptor_hash"],
-        "baseline_registry_manifest_hash": executor["baseline_registry_manifest_hash"],
-        "baseline_exact_strategy_hash": executor["baseline_exact_strategy_hash"],
-        "baseline_runtime": executor["baseline_runtime"],
-        "executor_candidates": executor["candidates"],
-        "certification": {
-            key: certification[key]
-            for key in (
-                "profile",
-                "required_from",
-                "required_to",
-                "report_ids",
-                "reason_codes",
-            )
-        },
-        "preflight_hash": str(preflight_hash),
-    }
-    plan_hash = canonical_payload(plan_preimage).content_hash
-    return {
-        "plan_hash": str(plan_hash),
-        "plan_preimage": plan_preimage,
-        "preflight": preflight,
-        "preflight_hash": str(preflight_hash),
-    }
+_REPORT_NAVS = {
+    (True, 2): (102.0, 101.0),
+    (True, 3): (101.0, 104.0),
+    (False, 2): (110.0, 105.0),
+    (False, 3): (106.0, 112.0),
+}
 
 
 def _complete_fold(
@@ -514,7 +135,10 @@ def _complete_fold(
     view = fold if isinstance(fold, FoldView) else writer._reader.get_fold(fold.key)
     assert view is not None
     attempt_id = AttemptId(
-        f"attempt-complete-{view.spec.key.experiment_id}-{view.spec.key.fold_id}"
+        "attempt-complete-"
+        f"{view.spec.key.experiment_id}-"
+        f"{view.spec.key.candidate_id}-"
+        f"{view.spec.key.fold_id}"
     )
     attempt_spec = AttemptPersistenceSpec(
         attempt_id,
@@ -584,94 +208,62 @@ def _complete_fold(
     )
 
 
-def _persist_candidate_selection(
+def _backtest_report(
+    attempt: AttemptView,
+    fold: FoldView,
+    navs: tuple[float, float],
+) -> BacktestReport:
+    run_id = attempt.projection.backtest_run_id
+    assert run_id is not None
+    return BacktestReport(
+        run_id=str(run_id),
+        period=(
+            fold.spec.test_window.start.isoformat(),
+            fold.spec.test_window.end.isoformat(),
+        ),
+        initial_cash=100.0,
+        final_nav=navs[-1],
+        trade_stats=(),
+        portfolio_stats=(),
+        aggregated_trade_stats=empty_aggregated_trade_statistics(),
+        alpha_stats=empty_alpha_statistics(),
+        nav_series=(
+            (fold.spec.test_window.start.isoformat(), navs[0]),
+            (fold.spec.test_window.end.isoformat(), navs[1]),
+        ),
+        trade_log=(),
+        fill_log=(),
+    )
+
+
+def _report_identity(
+    fold: FoldView,
+    attempt: AttemptView,
+) -> BacktestReportArtifactIdentity:
+    run_id = attempt.projection.backtest_run_id
+    assert run_id is not None
+    return BacktestReportArtifactIdentity(
+        experiment_id=fold.spec.key.experiment_id,
+        candidate_id=fold.spec.key.candidate_id,
+        fold_id=fold.spec.key.fold_id,
+        attempt_id=attempt.spec.attempt_id,
+        attempt_created_at=attempt.spec.created_at,
+        run_id=run_id,
+        test_window=fold.spec.test_window,
+        reproduction_fingerprint=attempt.spec.reproduction_fingerprint,
+    )
+
+
+def _advance_to_candidate_selection(
+    reader: SQLiteExperimentReader,
     writer: SQLiteExperimentWriter,
-    database: ResearchExperimentDatabase,
-    *,
-    experiment_id: str = "experiment-1",
-    cycle_id: str = "cycle-shared",
-    snapshot_id: str = "snapshot-holdout-integration",
-    snapshot_manifest_hash: str = "5" * 64,
-    certified_cutoff: date | None = None,
-    holdout_window: DateWindow | None = None,
-    preflight_status: str | None = "ready",
-    preflight_eligibility: str | None = None,
-) -> tuple[ExperimentLaunchSpec, Any]:
-    actual_holdout = holdout_window or DateWindow(date(2026, 3, 1), date(2026, 3, 28))
-    actual_cutoff = certified_cutoff or actual_holdout.end
-    actual_eligibility = preflight_eligibility or (
-        "research_only" if preflight_status == "research_only" else "promotion_eligible"
-    )
-    launch = _launch(
-        experiment_id,
-        snapshot_id=snapshot_id,
-        holdout_window=actual_holdout,
-        eligibility=actual_eligibility,
-    )
-    derived_cycle_hash = canonical_research_cycle_hash(
-        strategy_family_id="strategy",
-        certified_data_cutoff=actual_cutoff,
-        oos_window=actual_holdout,
-    )
-    cycle = ResearchCycleIdentity(cycle_id, derived_cycle_hash)
-    writer.create_experiment(
-        cycle,
-        launch,
-        ExperimentRecord(
-            launch.experiment_id,
-            ExperimentStatus.DRAFT,
-            ExperimentDesiredState.RUN,
-            ExperimentStage.PREFLIGHT,
-            NOW,
-        ),
-    )
-    folds = _folds(launch, holdout_window=actual_holdout)
-    gates = _gates(
-        launch,
-        snapshot_manifest_hash=snapshot_manifest_hash,
-        certified_cutoff=actual_cutoff,
-        holdout_window=actual_holdout,
-    )
-    for gate in gates:
-        writer.add_gate_evaluation(gate)
-    for fold in folds:
-        writer.add_fold(
-            fold,
-            FoldProjection(
-                fold.key,
-                ExperimentStatus.QUEUED,
-                None,
-                NOW,
-                NOW,
-                0,
-            ),
-        )
-    writer.enqueue_experiment(
-        launch.experiment_id,
-        expected_revision=0,
-        occurred_at=NOW,
-        reason_code="preflight_passed",
-        detail=(
-            {}
-            if preflight_status is None
-            else _preflight_detail(
-                launch=launch,
-                cycle=cycle,
-                folds=folds,
-                gates=gates,
-                snapshot_manifest_hash=snapshot_manifest_hash,
-                certified_cutoff=actual_cutoff,
-                holdout_window=actual_holdout,
-                status=preflight_status,
-                eligibility=actual_eligibility,
-            )
-        ),
-        launch_fence=ExperimentEnqueueFence.create(gates=gates, folds=folds),
-    )
-    slot = writer._reader.get_scheduler_slot()
+    launch: ExperimentLaunchSpec,
+    resolver: Any,
+) -> Any:
+    slot = reader.get_scheduler_slot()
     lease = writer.try_claim_lease(
         launch.experiment_id,
-        f"owner-{experiment_id}",
+        "r3-evidence-golden-owner",
         expected_revision=slot.revision,
         now_epoch_us=NOW_US,
         lease_until_epoch_us=NOW_US + 60_000_000,
@@ -691,8 +283,9 @@ def _persist_candidate_selection(
         reason_code="scheduler_dispatch",
         detail={},
     )
+    folds = reader.list_folds(launch.experiment_id)
     for fold in folds:
-        if fold.fold_role is FoldRole.EXPLORATION:
+        if fold.spec.fold_role is FoldRole.EXPLORATION:
             _complete_fold(writer, fold, lease)
     projection = writer.advance_experiment_stage(
         launch.experiment_id,
@@ -705,21 +298,71 @@ def _persist_candidate_selection(
         detail={"completed_stage": "exploration"},
     )
     assert projection.revision == 3
+    candidates = {candidate.candidate_id: candidate for candidate in launch.candidates}
     for fold in folds:
-        if fold.fold_role is FoldRole.WALK_FORWARD:
-            _complete_fold(writer, fold, lease)
+        if fold.spec.fold_role is not FoldRole.WALK_FORWARD:
+            continue
+        candidate = candidates[fold.spec.key.candidate_id]
+        fingerprint = (
+            str(resolver.resolve(fold).reproduction_fingerprint)
+            if candidate.is_baseline
+            else "8" * 64
+        )
+        _complete_fold(writer, fold, lease, fingerprint=fingerprint)
+    return lease
+
+
+def _publish_walk_forward_reports(
+    tmp_path: Path,
+    database: ResearchExperimentDatabase,
+    reader: SQLiteExperimentReader,
+    writer: SQLiteExperimentWriter,
+    launch: ExperimentLaunchSpec,
+    lease: Any,
+    resolver: Any,
+) -> WalkForwardEvidenceAssembler:
+    service = ResearchArtifactService(
+        artifact_root=tmp_path / "legacy",
+        indexed_artifact_root=database.artifact_root,
+        artifact_reader=reader,
+        artifact_writer=writer,
+    )
+    adapter = IndexedBacktestReportArtifactAdapter(
+        artifact_service=service,
+        artifact_index_reader=reader,
+    )
+    candidates = {candidate.candidate_id: candidate for candidate in launch.candidates}
+    for fold in reader.list_folds(launch.experiment_id):
+        if fold.spec.fold_role is not FoldRole.WALK_FORWARD:
+            continue
+        attempts = reader.list_attempts(fold.spec.key)
+        assert len(attempts) == 1
+        attempt = attempts[0]
+        candidate = candidates[fold.spec.key.candidate_id]
+        navs = _REPORT_NAVS[(candidate.is_baseline, fold.spec.ordinal)]
+        adapter.publish(
+            _report_identity(fold, attempt),
+            BacktestReportEvidence.from_report(
+                _backtest_report(attempt, fold, navs),
+            ),
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 8,
+        )
     projection = writer.advance_experiment_stage(
         launch.experiment_id,
         target_stage=ExperimentStage.CANDIDATE_SELECTION,
         expected_revision=3,
         lease_fence=lease.fence,
-        now_epoch_us=NOW_US + 3,
+        now_epoch_us=NOW_US + 9,
         occurred_at=NOW,
         reason_code="scheduler_stage_complete",
         detail={"completed_stage": "walk_forward"},
     )
     assert projection.revision == 4
-    return launch, lease
+    return WalkForwardEvidenceAssembler(
+        report_reader=adapter,
+        semantics_resolver=resolver,
+    )
 
 
 def _store(
@@ -729,15 +372,41 @@ def _store(
     SQLiteExperimentReader,
     SQLiteExperimentWriter,
     ExperimentLaunchSpec,
-    Any,
+    WalkForwardEvidenceAssembler,
 ]:
     database = ResearchExperimentDatabase(tmp_path)
     database.initialize()
     reader = SQLiteExperimentReader(database)
     writer = SQLiteExperimentWriter(database)
-    launch, lease = _persist_candidate_selection(writer, database)
-    assert lease is not None
-    return database, reader, writer, launch, lease
+    process = ExperimentPlanningProcess(
+        reader=reader,
+        writer=writer,
+        certification_probe=golden_support.PlanningCertificationProbe(),
+        executor_probe=golden_support.PlanningExecutorProbe(),
+        authority_probe=golden_support.PlanningAuthorityProbe(),
+    )
+    request = golden_support.build_planning_request()
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    assert report.eligible_month_count == 96
+    process.launch(request, confirmed_plan_hash=report.plan_hash)
+    launch = reader.get_launch_spec(ExperimentId(request.experiment_id))
+    assert launch is not None
+    resolver = golden_support.build_baseline_semantics_resolver(
+        launch,
+        reader.list_folds(launch.experiment_id),
+    )
+    lease = _advance_to_candidate_selection(reader, writer, launch, resolver)
+    assembler = _publish_walk_forward_reports(
+        tmp_path,
+        database,
+        reader,
+        writer,
+        launch,
+        lease,
+        resolver,
+    )
+    return database, reader, writer, launch, assembler
 
 
 def _selection_ledger(launch: ExperimentLaunchSpec) -> TrialLedger:
@@ -758,11 +427,23 @@ def _selection_ledger(launch: ExperimentLaunchSpec) -> TrialLedger:
                     ResearchMetricId.NET_RETURN: ResearchMetricValue(
                         ResearchMetricId.NET_RETURN,
                         float(candidate.ordinal),
-                    )
+                    ),
+                    ResearchMetricId.SHARPE_RATIO: ResearchMetricValue(
+                        ResearchMetricId.SHARPE_RATIO,
+                        float(candidate.ordinal),
+                    ),
+                    ResearchMetricId.MAX_DRAWDOWN: ResearchMetricValue(
+                        ResearchMetricId.MAX_DRAWDOWN,
+                        -float(candidate.ordinal),
+                    ),
                 },
                 holdout_metrics={},
                 source_projection_hash=ContentHash("7" * 64),
-                metric_evidence={ResearchMetricId.NET_RETURN: lineage},
+                metric_evidence={
+                    ResearchMetricId.NET_RETURN: lineage,
+                    ResearchMetricId.SHARPE_RATIO: lineage,
+                    ResearchMetricId.MAX_DRAWDOWN: lineage,
+                },
             )
         )
     return build_trial_ledger(launch.promotion_objective, tuple(outcomes))
@@ -837,10 +518,16 @@ class _Factory:
         )
 
 
-def _application_request(ledger: TrialLedger) -> ClaimHoldoutCandidateRequest:
+def _application_request(
+    launch: ExperimentLaunchSpec,
+    ledger: TrialLedger,
+) -> ClaimHoldoutCandidateRequest:
+    selected = next(
+        candidate for candidate in launch.candidates if not candidate.is_baseline
+    )
     return ClaimHoldoutCandidateRequest(
-        experiment_id="experiment-1",
-        candidate_id="candidate-2",
+        experiment_id=str(launch.experiment_id),
+        candidate_id=str(selected.candidate_id),
         expected_revision=4,
         expected_selection_evidence_hash=str(ledger.content_hash),
         operator_confirmation="operator reviewed immutable evidence",
@@ -856,6 +543,7 @@ def _coordinator_with_collector(
     reader: SQLiteExperimentReader,
     writer: SQLiteExperimentWriter,
     launch: ExperimentLaunchSpec,
+    assembler: WalkForwardEvidenceAssembler,
 ) -> tuple[
     ExperimentExecutionCoordinator,
     ExperimentSchedulerStore,
@@ -874,6 +562,7 @@ def _coordinator_with_collector(
         scheduler_store=store,
         reader=reader,
         writer=writer,
+        walk_forward_assembler=assembler,
     )
     coordinator = ExperimentExecutionCoordinator(
         store=store,
@@ -895,14 +584,68 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
     tmp_path: Path,
 ) -> None:
     """Drive one experiment tick from EVIDENCE to a published packet + COMPLETED."""
-    database, reader, writer, launch, _lease = _store(tmp_path)
+    database, reader, writer, launch, assembler = _store(tmp_path)
     coordinator, store, _collector, provider = _coordinator_with_collector(
-        reader, writer, launch
+        reader,
+        writer,
+        launch,
+        assembler,
     )
+    events = tuple(
+        event
+        for event in reader.list_status_events(launch.experiment_id)
+        if event.reason_code == "preflight_passed"
+    )
+    assert len(events) == 1
+    preflight = reconstruct_preflight_report(events[0].detail)
+    assert preflight.eligible_month_count == 96
+    collected = assembler.assemble(
+        store.load_snapshot(launch.experiment_id),
+        project_snapshot_manifest(events[0].detail),
+    )
+    assert len(collected.source_rows) == 4
+    assert collected.missing_artifact_refs == ()
+    assert (
+        database.get_connection()
+        .execute(
+            "SELECT COUNT(*) FROM research_artifact "
+            "WHERE artifact_kind='backtest_report_evidence'"
+        )
+        .fetchone()[0]
+        == 4
+    )
+    topology_by_candidate = {
+        candidate.candidate_id: tuple(
+            (row.fold_ordinal, row.fold_id)
+            for row in collected.source_rows
+            if row.candidate_id == candidate.candidate_id
+        )
+        for candidate in launch.candidates
+    }
+    assert all(len(topology) == 2 for topology in topology_by_candidate.values())
+    assert len(set(topology_by_candidate.values())) == 1
+    selected = next(
+        candidate for candidate in launch.candidates if not candidate.is_baseline
+    )
+    selected_evidence = next(
+        candidate
+        for candidate in collected.aggregation.candidates
+        if candidate.candidate_id == selected.candidate_id
+    )
+    selected_rows = tuple(
+        row
+        for row in collected.source_rows
+        if row.candidate_id == selected.candidate_id
+    )
+    assert len(selected_rows) == 2
+    expected_fold_ids = tuple(str(row.fold_id) for row in selected_rows)
+    expected_attempt_ids = tuple(str(row.attempt_id) for row in selected_rows)
 
     # Holdout claim moves the experiment into HOLDOUT stage under the selected
     # candidate; the subsequent tick dispatches the one QUEUED holdout fold.
-    coordinator.claim_holdout_candidate(_application_request(provider.ledger))
+    coordinator.claim_holdout_candidate(
+        _application_request(launch, provider.ledger),
+    )
     dispatch = coordinator.tick(occurred_at=NOW + timedelta(seconds=1)).dispatches[0]
     coordinator.start_attempt(dispatch, occurred_at=NOW + timedelta(seconds=2))
     coordinator.complete_attempt(
@@ -938,42 +681,67 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
 
     assert persisted_packet is not None
     assert str(persisted_packet.bundle_hash) == bundle_hash
-    _assert_packet_shape(persisted_packet, launch)
+    _assert_packet_shape(
+        persisted_packet,
+        launch,
+        expected_comparison_hash=selected_evidence.content_hash,
+        expected_fold_ids=expected_fold_ids,
+        expected_attempt_ids=expected_attempt_ids,
+    )
 
     database.close_all()
 
 
-def _assert_packet_shape(packet: ReviewPacket, launch: ExperimentLaunchSpec) -> None:
-    """Assert the V1 hard-gate and lineage shape projected from the fixture."""
+def _assert_packet_shape(
+    packet: ReviewPacket,
+    launch: ExperimentLaunchSpec,
+    *,
+    expected_comparison_hash: ContentHash,
+    expected_fold_ids: tuple[str, ...],
+    expected_attempt_ids: tuple[str, ...],
+) -> None:
+    """Assert real metric, artifact, and lineage evidence in the frozen packet."""
     gate_by_rule = {entry.rule_id: entry for entry in packet.gate_evaluations}
-    # Eleven hard gates (objective evidence gates are NOT_EVALUATED in V1
-    # because metric_values is empty; they ride on the same tuple but are
-    # layered under GateLayer.EVIDENCE rather than GateLayer.HARD).
     hard_gates = {
         rule_id: gate
         for rule_id, gate in gate_by_rule.items()
         if gate.layer is GateLayer.HARD
     }
     assert set(hard_gates) == set(_HARD_GATE_RULE_IDS)
-    # r2_live_gate is pinned to NOT_EVALUATED (V1: no live evidence wiring).
+    # Live R2 evidence is intentionally not inferred from this deterministic
+    # tmp_path fixture. ``cost_assumptions`` and ``trial_declaration`` retain
+    # their explicitly interim C2b projections; PASS here does not claim those
+    # later closure slices are complete.
     assert hard_gates["r2_live_gate"].outcome is GateOutcome.NOT_EVALUATED
-    # Every hard gate must carry an explicit satisfied translation: PASS or
-    # FAIL for the ten objective gates, NOT_EVALUATED only for r2_live_gate.
     for rule_id, gate in hard_gates.items():
         if rule_id == "r2_live_gate":
             assert gate.outcome is GateOutcome.NOT_EVALUATED
         else:
-            assert gate.outcome in {GateOutcome.PASS, GateOutcome.FAIL}
+            assert gate.outcome is GateOutcome.PASS
+    assert hard_gates["artifact_completeness"].outcome is GateOutcome.PASS
+    assert hard_gates["cost_assumptions"].outcome is GateOutcome.PASS
+    assert hard_gates["trial_declaration"].outcome is GateOutcome.PASS
 
-    # Lineage must carry the experiment, the selected candidate, and non-empty
-    # fold/attempt identity tuples.
+    selected = next(
+        candidate for candidate in launch.candidates if not candidate.is_baseline
+    )
     assert packet.lineage.experiment_id == str(launch.experiment_id)
-    assert packet.lineage.candidate_id == "candidate-2"
-    assert packet.lineage.fold_ids
-    assert packet.lineage.attempt_ids
+    assert packet.lineage.candidate_id == str(selected.candidate_id)
+    assert packet.lineage.fold_ids == expected_fold_ids
+    assert packet.lineage.attempt_ids == expected_attempt_ids
+    assert len(set(packet.lineage.fold_ids)) == 2
+    assert len(set(packet.lineage.attempt_ids)) == 2
 
-    # V1 placeholders hold as designed (Task 3b will replace them).
-    assert packet.comparison_payload_hash is None
+    primary = gate_by_rule["primary_objective_metric"]
+    sharpe = gate_by_rule[f"objective_constraint:{ResearchMetricId.SHARPE_RATIO.value}"]
+    assert primary.layer is GateLayer.EVIDENCE
+    assert primary.outcome is GateOutcome.PASS
+    assert primary.observed == pytest.approx(17.6)
+    assert sharpe.layer is GateLayer.EVIDENCE
+    assert sharpe.outcome is not GateOutcome.NOT_EVALUATED
+    assert sharpe.observed is not None
+
+    assert packet.comparison_payload_hash == expected_comparison_hash
     assert packet.r1_impact_payload_hash is None
     assert packet.selection_evidence_artifact_id is None
     assert packet.candidate_rationale

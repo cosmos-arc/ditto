@@ -668,6 +668,51 @@ def test_every_input_permutation_produces_the_same_frozen_projection() -> None:
     )
 
 
+def test_walk_forward_candidate_content_hash_matches_canonical_payload() -> None:
+    candidate = aggregate_walk_forward(
+        build_candidate_comparison(_baseline_identity(), _rows())
+    ).candidates[1]
+
+    assert type(candidate.content_hash) is ContentHash
+    assert (
+        candidate.content_hash
+        == canonical_payload(candidate.canonical_payload()).content_hash
+    )
+
+
+def test_walk_forward_candidate_content_hash_is_deterministic() -> None:
+    rows = _rows()
+    first = aggregate_walk_forward(
+        build_candidate_comparison(_baseline_identity(), rows)
+    ).candidates[1]
+    permuted = aggregate_walk_forward(
+        build_candidate_comparison(_baseline_identity(), reversed(rows))
+    ).candidates[1]
+
+    assert first.content_hash == permuted.content_hash
+
+
+def test_walk_forward_candidate_content_hash_detects_evidence_drift() -> None:
+    rows = _rows()
+    original = aggregate_walk_forward(
+        build_candidate_comparison(_baseline_identity(), rows)
+    ).candidates[1]
+    missing = replace(
+        rows[2],
+        report_artifact=None,
+        factor_diagnostics=None,
+        capacity=None,
+    )
+    changed = aggregate_walk_forward(
+        build_candidate_comparison(
+            _baseline_identity(),
+            (*rows[:2], missing, rows[3]),
+        )
+    ).candidates[1]
+
+    assert original.content_hash != changed.content_hash
+
+
 def test_walk_forward_has_versioned_authoritative_content_identity() -> None:
     rows = _rows()
     first = aggregate_walk_forward(

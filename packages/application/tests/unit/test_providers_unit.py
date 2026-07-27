@@ -73,6 +73,7 @@ from ditto_application.providers import (
     AppBuilderFactory,
     AppCommandProvider,
     AppProcessProvider,
+    AppResearchExecutionProvider,
     get_app_providers,
 )
 from ditto_application.providers_market import AppMarketQueryProvider
@@ -468,6 +469,34 @@ class TestAppProviderStructure:
         assert process._certification_probe is certification_probe
         assert process._executor_probe is executor_probe
         assert process._authority_probe is authority_probe
+
+    def test_evidence_providers_wire_walk_forward_assembler(self) -> None:
+        """Construct the assembler and inject the same instance into collector."""
+        from ditto_application.processes.experiments._walk_forward_evidence_collection import (  # noqa: E501
+            WalkForwardEvidenceAssembler,
+        )
+        from ditto_application.processes.experiments.evidence_collector import (
+            ExperimentEvidenceCollector,
+        )
+
+        report_reader = MagicMock()
+        semantics_resolver = MagicMock()
+        assembler = AppResearchExecutionProvider().walk_forward_evidence_assembler(
+            report_reader=report_reader,
+            semantics_resolver=semantics_resolver,
+        )
+        collector = AppProcessProvider().experiment_evidence_collector(
+            scheduler_store=MagicMock(),
+            reader=MagicMock(),
+            writer=MagicMock(),
+            walk_forward_assembler=assembler,
+        )
+
+        assert isinstance(assembler, WalkForwardEvidenceAssembler)
+        assert assembler._report_reader is report_reader
+        assert assembler._semantics_resolver is semantics_resolver
+        assert isinstance(collector, ExperimentEvidenceCollector)
+        assert collector.walk_forward_assembler is assembler
 
     def test_replay_provider_wires_verified_schema_v1_reader(self) -> None:
         provider = AppProcessProvider()
@@ -989,6 +1018,12 @@ class TestAppProviderIntegration:
             BacktestReportArtifactPublisher,
             BacktestReportArtifactReader,
         )
+        from ditto_application.processes.experiments._walk_forward_evidence_collection import (  # noqa: E501
+            WalkForwardEvidenceAssembler,
+        )
+        from ditto_application.processes.experiments.evidence_collector import (
+            ExperimentEvidenceCollector,
+        )
         from ditto_application.processes.experiments.execution_bundle import (
             CodeEnvironmentLock,
         )
@@ -1031,6 +1066,11 @@ class TestAppProviderIntegration:
         assert isinstance(report_adapter, IndexedBacktestReportArtifactAdapter)
         assert app_container.get(BacktestReportArtifactPublisher) is report_adapter
         assert app_container.get(BacktestReportArtifactReader) is report_adapter
+        assembler = app_container.get(WalkForwardEvidenceAssembler)
+        assert isinstance(assembler, WalkForwardEvidenceAssembler)
+        collector = app_container.get(ExperimentEvidenceCollector)
+        assert isinstance(collector, ExperimentEvidenceCollector)
+        assert collector.walk_forward_assembler is assembler
         assert isinstance(
             app_container.get(FirstAttemptFactory),
             ExecutionBundleFirstAttemptFactory,
