@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from inspect import signature
 from itertools import permutations
 from typing import cast
 
@@ -12,6 +13,7 @@ from ditto_analysis.experiments import (
     R3_COMPARISON_METRIC_IDS,
     R3_DIAGNOSTIC_METRIC_IDS,
     R3_RESEARCH_METRIC_SCHEMA,
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -34,6 +36,12 @@ from ditto_analysis.experiments import (
     SnapshotId,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._report_evidence import (
+    BACKTEST_REPORT_ARTIFACT_KIND,
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
+    LoadedBacktestReportArtifact,
+)
 from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanRequest,
     BaselineRef,
@@ -52,7 +60,6 @@ from ditto_application.processes.experiments.comparison import (
     FoldReturnEvidence,
     OOSFoldRegistration,
     ScalarEvidence,
-    backtest_report_content_hash,
     build_candidate_comparison,
     load_persisted_fold_execution,
 )
@@ -90,7 +97,9 @@ OOS_FOLDS = (
 )
 
 
-def _baseline_identity() -> BaselineComparisonIdentity:
+def _baseline_identity(
+    folds: tuple[OOSFoldRegistration, ...] = OOS_FOLDS,
+) -> BaselineComparisonIdentity:
     plan = default_baseline_registry().plan(
         BaselinePlanRequest(
             baseline_ref=BaselineRef("stock_universe_equal_weight", 1),
@@ -106,7 +115,7 @@ def _baseline_identity() -> BaselineComparisonIdentity:
         experiment_id=EXPERIMENT_ID,
         candidate_id=CandidateId("candidate-baseline"),
         plan=plan,
-        oos_folds=OOS_FOLDS,
+        oos_folds=folds,
     )
 
 
@@ -322,23 +331,53 @@ def _evidence(
     report: BacktestReport | None = None,
     diagnostics: FactorDiagnosticsArtifactEvidence | None = None,
     capacity: bool = True,
+    fold_override: OOSFoldRegistration | None = None,
 ) -> CandidateFoldEvidence:
     candidate_id = CandidateId(candidate)
-    fold = OOS_FOLDS[fold_ordinal - 1]
-    artifact_ref = f"artifact://{candidate_id}/{fold.fold_id}"
+    fold = OOS_FOLDS[fold_ordinal - 1] if fold_override is None else fold_override
     resolved_report = _report(candidate_id, fold, navs) if report is None else report
+    execution_binding = _execution_binding(candidate_id, fold)
+    report_evidence = BacktestReportEvidence.from_report(resolved_report)
+    identity = BacktestReportArtifactIdentity(
+        experiment_id=execution_binding.experiment_id,
+        candidate_id=execution_binding.candidate_id,
+        fold_id=execution_binding.fold_id,
+        attempt_id=execution_binding.attempt_id,
+        attempt_created_at=execution_binding.attempt_view.spec.created_at,
+        run_id=execution_binding.run_id,
+        test_window=execution_binding.test_window,
+        reproduction_fingerprint=execution_binding.reproduction_fingerprint,
+    )
+    report_artifact = LoadedBacktestReportArtifact(
+        record=ArtifactRecord(
+            artifact_id=identity.artifact_id,
+            experiment_id=identity.experiment_id,
+            candidate_id=identity.candidate_id,
+            fold_id=identity.fold_id,
+            attempt_id=identity.attempt_id,
+            artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
+            relative_path=identity.relative_path,
+            content_hash=report_evidence.content_hash,
+            schema_hash=ContentHash("0" * 64),
+            row_count=1,
+            byte_size=1,
+            reproduction_fingerprint=identity.reproduction_fingerprint,
+            manifest={},
+            is_pinned=False,
+            pinned_at=None,
+            created_at=identity.attempt_created_at,
+            revision=0,
+        ),
+        evidence=report_evidence,
+    )
     return CandidateFoldEvidence(
-        execution_binding=_execution_binding(candidate_id, fold),
+        execution_binding=execution_binding,
         candidate_ordinal=candidate_ordinal,
         snapshot_id=SNAPSHOT_ID,
         snapshot_hash=SNAPSHOT_HASH,
         parameter_hash=ContentHash("1" * 64),
         resolved_spec_hash=ContentHash("2" * 64),
-        result_ref=f"result://{candidate_id}/{fold.fold_id}",
-        result_hash=backtest_report_content_hash(resolved_report),
-        artifact_ref=artifact_ref,
-        artifact_hash=ContentHash("f" * 64),
-        backtest_report=resolved_report,
+        report_artifact=report_artifact,
         factor_diagnostics=(
             _diagnostics(candidate_id, fold) if diagnostics is None else diagnostics
         ),
@@ -381,10 +420,8 @@ def test_comparison_binds_full_identity_and_analysis_owned_schema() -> None:
     row = comparison.folds[1]
     assert row.source.attempt_id == candidate.attempt_id
     assert row.source.backtest_report is not None
-    assert row.source.result_hash == backtest_report_content_hash(
-        row.source.backtest_report
-    )
-    assert row.source.artifact_hash == ContentHash("f" * 64)
+    assert row.source.result_hash == row.source.backtest_report.content_hash
+    assert row.source.artifact_hash == row.source.result_hash
     assert row.metrics[ResearchMetricId.NET_RETURN].value == pytest.approx(-8.0)
     assert row.metrics[ResearchMetricId.NET_RETURN].unit.value == "percent"
     assert row.metrics[ResearchMetricId.TURNOVER].value == pytest.approx(20.0 / 94.0)
@@ -443,7 +480,7 @@ def test_comparison_rejects_snapshot_drift() -> None:
     evidence = replace(
         source,
         snapshot_id=SnapshotId("wrong-snapshot"),
-        backtest_report=None,
+        report_artifact=None,
         factor_diagnostics=None,
         capacity=None,
     )
@@ -466,7 +503,7 @@ def test_comparison_rejects_persisted_fold_window_drift() -> None:
     evidence = replace(
         source,
         execution_binding=_execution_binding(source.candidate_id, changed_fold),
-        backtest_report=None,
+        report_artifact=None,
         factor_diagnostics=None,
         capacity=None,
     )
@@ -492,10 +529,20 @@ def test_persisted_binding_rejects_holdout_as_walk_forward_evidence() -> None:
 
 def test_candidate_evidence_rejects_report_period_drift() -> None:
     evidence = _evidence("candidate-alpha", 2, 1, (100.0, 101.0))
-    report = replace(evidence.backtest_report, period=("2024-01-02", "2024-01-03"))
+    artifact = evidence.report_artifact
+    assert artifact is not None
+    report = replace(
+        artifact.evidence,
+        period=("2023-12-31", "2024-01-03"),
+    )
+    drifted = replace(
+        artifact,
+        evidence=report,
+        record=replace(artifact.record, content_hash=report.content_hash),
+    )
 
     with pytest.raises(AppProcessError) as exc_info:
-        replace(evidence, backtest_report=report)
+        replace(evidence, report_artifact=drifted)
 
     assert exc_info.value.details["reason"] == "report_period_drift"
 
@@ -538,7 +585,7 @@ def test_missing_report_capacity_and_diagnostics_are_typed_not_evaluated() -> No
     source = _evidence("candidate-missing", 2, 1, (100.0, 101.0))
     missing = replace(
         source,
-        backtest_report=None,
+        report_artifact=None,
         factor_diagnostics=None,
         capacity=None,
     )
@@ -562,11 +609,16 @@ def test_missing_report_capacity_and_diagnostics_are_typed_not_evaluated() -> No
 
 def test_insufficient_nav_or_capital_never_falls_back_to_report_aggregates() -> None:
     source = _evidence("candidate-alpha", 2, 1, (100.0, 101.0))
-    report = replace(source.backtest_report, initial_cash=0.0)
+    artifact = source.report_artifact
+    assert artifact is not None
+    report = replace(artifact.evidence, initial_cash=0.0)
     evidence = replace(
         source,
-        backtest_report=report,
-        result_hash=backtest_report_content_hash(report),
+        report_artifact=replace(
+            artifact,
+            evidence=report,
+            record=replace(artifact.record, content_hash=report.content_hash),
+        ),
     )
     comparison = build_candidate_comparison(
         _baseline_identity(),
@@ -653,14 +705,19 @@ def test_evaluated_evidence_requires_nonempty_reference_and_content_hash() -> No
 
 def test_candidate_evidence_rejects_report_content_substitution() -> None:
     evidence = _evidence("candidate-alpha", 2, 1, (100.0, 101.0))
-    assert evidence.backtest_report is not None
+    artifact = evidence.report_artifact
+    assert artifact is not None
     substituted = replace(
-        evidence.backtest_report,
+        artifact.evidence,
+        final_nav=109.0,
         nav_series=(("2024-01-01", 100.0), ("2024-01-03", 109.0)),
     )
 
     with pytest.raises(AppProcessError) as exc_info:
-        replace(evidence, backtest_report=substituted)
+        replace(
+            evidence,
+            report_artifact=replace(artifact, evidence=substituted),
+        )
 
     assert exc_info.value.details["reason"] == "report_content_hash_drift"
 
@@ -716,6 +773,37 @@ def test_exactly_two_ordered_nonoverlapping_oos_windows_are_required() -> None:
     assert exc_info.value.details["reason"] == "invalid_oos_fold_windows"
 
 
+def test_two_persisted_walk_forward_ordinals_after_exploration_are_valid() -> None:
+    persisted_folds = (
+        replace(OOS_FOLDS[0], fold_ordinal=2),
+        replace(OOS_FOLDS[1], fold_ordinal=3),
+    )
+    baseline = _baseline_identity(persisted_folds)
+    rows = (
+        _evidence(
+            "candidate-baseline",
+            1,
+            1,
+            (101.0, 102.0),
+            fold_override=persisted_folds[0],
+        ),
+        _evidence(
+            "candidate-baseline",
+            1,
+            2,
+            (100.0, 101.0),
+            fold_override=persisted_folds[1],
+        ),
+    )
+
+    comparison = build_candidate_comparison(
+        baseline,
+        rows,
+    )
+
+    assert tuple(row.fold_ordinal for row in comparison.folds) == (2, 3)
+
+
 def test_comparison_is_canonical_for_every_input_permutation() -> None:
     rows = (
         *_baseline_rows(),
@@ -744,7 +832,7 @@ def test_comparison_has_versioned_authoritative_content_identity() -> None:
     permuted = build_candidate_comparison(_baseline_identity(), reversed(rows))
     missing = replace(
         rows[2],
-        backtest_report=None,
+        report_artifact=None,
         factor_diagnostics=None,
         capacity=None,
     )
@@ -762,7 +850,92 @@ def test_comparison_has_versioned_authoritative_content_identity() -> None:
     assert type(first.content_hash) is ContentHash
     assert first.content_hash == permuted.content_hash
     assert first.content_hash != changed.content_hash
+    missing_source = changed.folds[1].source.canonical_payload()
+    assert missing_source["artifact_hash"] is None
+    assert missing_source["artifact_ref"] is None
+    assert missing_source["backtest_report_identity"] is None
+    assert missing_source["result_hash"] is None
+    assert missing_source["result_ref"] is None
+    assert (
+        changed.content_hash
+        == build_candidate_comparison(
+            _baseline_identity(),
+            (*rows[:2], missing, rows[3]),
+        ).content_hash
+    )
 
     with pytest.raises(AppProcessError) as exc_info:
         CandidateComparisonProjection(first.baseline, first.metric_schema, first.folds)
     assert exc_info.value.details["reason"] == "comparison_factory_required"
+
+
+def test_candidate_fold_api_accepts_only_one_typed_report_artifact() -> None:
+    parameters = signature(CandidateFoldEvidence).parameters
+
+    assert "report_artifact" in parameters
+    assert "backtest_report" not in parameters
+    assert "result_ref" not in parameters
+    assert "result_hash" not in parameters
+    assert "artifact_ref" not in parameters
+    assert "artifact_hash" not in parameters
+
+
+@pytest.mark.parametrize(
+    ("record_field", "replacement_value"),
+    [
+        ("experiment_id", ExperimentId("experiment-other")),
+        ("candidate_id", CandidateId("candidate-other")),
+        ("fold_id", FoldId("fold-other")),
+        ("attempt_id", AttemptId("attempt-other")),
+        ("reproduction_fingerprint", ContentHash("9" * 64)),
+        ("artifact_kind", "other"),
+        ("artifact_id", "forged-artifact"),
+        ("relative_path", "forged/report.json"),
+    ],
+)
+def test_candidate_evidence_rejects_forged_loaded_record_identity(
+    record_field: str,
+    replacement_value: object,
+) -> None:
+    source = _evidence("candidate-alpha", 2, 1, (100.0, 101.0))
+    artifact = source.report_artifact
+    assert artifact is not None
+
+    with pytest.raises(AppProcessError) as exc_info:
+        replace(
+            source,
+            report_artifact=replace(
+                artifact,
+                record=replace(
+                    artifact.record,
+                    **{record_field: replacement_value},
+                ),
+            ),
+        )
+
+    assert exc_info.value.details["reason"] == "report_artifact_identity_drift"
+
+
+def test_comparison_allows_multiple_missing_artifacts_without_zero_hashes() -> None:
+    missing_rows = tuple(
+        replace(row, report_artifact=None, factor_diagnostics=None, capacity=None)
+        for row in _baseline_rows()
+    )
+    candidate = replace(
+        _evidence("candidate-alpha", 2, 1, (100.0, 101.0)),
+        report_artifact=None,
+        factor_diagnostics=None,
+        capacity=None,
+    )
+
+    comparison = build_candidate_comparison(
+        _baseline_identity(),
+        (*missing_rows, candidate),
+    )
+
+    assert all(
+        row.source.result_hash is None
+        and row.source.artifact_hash is None
+        and row.metrics[ResearchMetricId.NET_RETURN].reason == "backtest_report_missing"
+        for row in comparison.folds
+    )

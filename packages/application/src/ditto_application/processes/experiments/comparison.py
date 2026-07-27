@@ -50,7 +50,6 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments import (
     canonical_payload as _canonical_payload,
 )
-from ditto_backtest.statistics import BacktestReport as _BacktestReport
 from ditto_features.evaluation.report import (
     R3_FACTOR_DIAGNOSTIC_METRIC_IDS as _FEATURE_DIAGNOSTIC_IDS,
 )
@@ -89,7 +88,11 @@ from ditto_application.processes.experiments._persisted_execution_evidence impor
     load_persisted_fold_execution,
 )
 from ditto_application.processes.experiments._report_evidence import (
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
+    LoadedBacktestReportArtifact,
     backtest_report_content_hash,
+    validate_loaded_backtest_report_artifact,
 )
 from ditto_application.processes.experiments.baseline_registry import (
     BaselineExecutionPlan,
@@ -165,10 +168,14 @@ class BaselineComparisonIdentity:
         if expected.canonical_hash != self.plan.canonical_hash:
             _comparison_error("baseline_plan_identity_drift")
         folds = tuple(self.oos_folds)
+        if len(folds) != _REQUIRED_OOS_FOLDS or any(
+            type(item) is not OOSFoldRegistration for item in folds
+        ):
+            _comparison_error("invalid_oos_fold_windows")
+        ordinals = tuple(item.fold_ordinal for item in folds)
         if (
-            len(folds) != _REQUIRED_OOS_FOLDS
-            or any(type(item) is not OOSFoldRegistration for item in folds)
-            or tuple(item.fold_ordinal for item in folds) != (1, 2)
+            any(ordinal <= 0 for ordinal in ordinals)
+            or ordinals != tuple(sorted(set(ordinals)))
             or len({item.fold_id for item in folds}) != _REQUIRED_OOS_FOLDS
             or folds[0].test_window.end >= folds[1].test_window.start
         ):
@@ -196,11 +203,7 @@ class CandidateFoldEvidence:
     snapshot_hash: _ContentHash
     parameter_hash: _ContentHash
     resolved_spec_hash: _ContentHash
-    result_ref: str
-    result_hash: _ContentHash
-    artifact_ref: str
-    artifact_hash: _ContentHash
-    backtest_report: _BacktestReport | None = None
+    report_artifact: LoadedBacktestReportArtifact | None = None
     factor_diagnostics: FactorDiagnosticsArtifactEvidence | None = None
     capacity: CapacityEvidence | None = None
     failure_reason: str | None = None
@@ -213,16 +216,12 @@ class CandidateFoldEvidence:
             (self.snapshot_hash, _ContentHash),
             (self.parameter_hash, _ContentHash),
             (self.resolved_spec_hash, _ContentHash),
-            (self.result_hash, _ContentHash),
-            (self.artifact_hash, _ContentHash),
         )
         if any(type(value) is not expected for value, expected in typed):
             _comparison_error("invalid_fold_evidence_identity")
         _positive_ordinal(self.candidate_ordinal, "candidate_ordinal")
-        _canonical_text(self.result_ref, "result_ref")
-        _canonical_text(self.artifact_ref, "artifact_ref")
         self._validate_outcome()
-        self._validate_report()
+        self._validate_report_artifact()
         self._validate_diagnostics()
         _validate_capacity_evidence(self)
 
@@ -267,6 +266,40 @@ class CandidateFoldEvidence:
         return self.execution_binding.reproduction_fingerprint
 
     @property
+    def backtest_report(self) -> BacktestReportEvidence | None:
+        """Return only the verified report projection."""
+        artifact = self.report_artifact
+        return None if artifact is None else artifact.evidence
+
+    @property
+    def report_artifact_id(self) -> str | None:
+        """Return the verified immutable index identity when present."""
+        artifact = self.report_artifact
+        return None if artifact is None else artifact.record.artifact_id
+
+    @property
+    def result_ref(self) -> str | None:
+        """Derive result lineage from the verified immutable index fact."""
+        artifact = self.report_artifact
+        return None if artifact is None else artifact.record.relative_path
+
+    @property
+    def result_hash(self) -> _ContentHash | None:
+        """Derive result content identity from the verified index fact."""
+        artifact = self.report_artifact
+        return None if artifact is None else artifact.record.content_hash
+
+    @property
+    def artifact_ref(self) -> str | None:
+        """Return the same verified report path for Schema-v1 compatibility."""
+        return self.result_ref
+
+    @property
+    def artifact_hash(self) -> _ContentHash | None:
+        """Return the same verified report hash for Schema-v1 compatibility."""
+        return self.result_hash
+
+    @property
     def outcome(self) -> FoldOutcome:
         """Return the persisted terminal fold outcome."""
         return self.execution_binding.outcome
@@ -279,22 +312,21 @@ class CandidateFoldEvidence:
         elif self.failure_reason is not None:
             _comparison_error("completed_fold_cannot_have_failure_reason")
 
-    def _validate_report(self) -> None:
-        report = self.backtest_report
-        if report is None:
+    def _validate_report_artifact(self) -> None:
+        artifact = self.report_artifact
+        if artifact is None:
             return
-        if type(report) is not _BacktestReport:
-            _comparison_error("invalid_backtest_report")
-        if report.run_id != str(self.run_id):
-            _comparison_error("report_run_identity_drift")
-        expected_period = (
-            self.test_window.start.isoformat(),
-            self.test_window.end.isoformat(),
+        identity = BacktestReportArtifactIdentity(
+            experiment_id=self.experiment_id,
+            candidate_id=self.candidate_id,
+            fold_id=self.fold_id,
+            attempt_id=self.attempt_id,
+            attempt_created_at=self.execution_binding.attempt_view.spec.created_at,
+            run_id=self.run_id,
+            test_window=self.test_window,
+            reproduction_fingerprint=self.reproduction_fingerprint,
         )
-        if report.period != expected_period:
-            _comparison_error("report_period_drift")
-        if self.result_hash != backtest_report_content_hash(report):
-            _comparison_error("report_content_hash_drift")
+        validate_loaded_backtest_report_artifact(artifact, identity)
 
     def _validate_diagnostics(self) -> None:
         projection = self.factor_diagnostics
@@ -331,8 +363,10 @@ class CandidateFoldEvidence:
                 "envelope": diagnostics.canonical_payload(),
             }
         report = self.backtest_report
+        artifact_hash = self.artifact_hash
+        result_hash = self.result_hash
         return {
-            "artifact_hash": str(self.artifact_hash),
+            "artifact_hash": (None if artifact_hash is None else str(artifact_hash)),
             "artifact_ref": self.artifact_ref,
             "attempt_id": str(self.attempt_id),
             "backtest_report_identity": (
@@ -362,7 +396,7 @@ class CandidateFoldEvidence:
                 "envelope": self.execution_binding.canonical_payload(),
             },
             "reproduction_fingerprint": str(self.reproduction_fingerprint),
-            "result_hash": str(self.result_hash),
+            "result_hash": None if result_hash is None else str(result_hash),
             "result_ref": self.result_ref,
             "resolved_spec_hash": str(self.resolved_spec_hash),
             "run_id": str(self.run_id),
@@ -654,10 +688,11 @@ def _validate_evidence(  # noqa: C901, PLR0912, PLR0915 - fail-closed identity f
     ordinal_candidates: dict[int, _CandidateId] = {}
     attempts: set[_AttemptId] = set()
     runs: set[_BacktestRunId] = set()
-    result_refs: set[str] = set()
+    artifact_ids: set[str] = set()
     artifact_refs: set[str] = set()
     diagnostic_identity: tuple[object, ...] | None = None
     for value in values:
+        value._validate_report_artifact()
         if value.experiment_id != baseline.experiment_id:
             _comparison_error("experiment_identity_drift")
         if (value.snapshot_id, value.snapshot_hash) != expected_snapshot:
@@ -688,12 +723,15 @@ def _validate_evidence(  # noqa: C901, PLR0912, PLR0915 - fail-closed identity f
         if value.run_id in runs:
             _comparison_error("duplicate_run_evidence")
         runs.add(value.run_id)
-        if value.result_ref in result_refs:
-            _comparison_error("duplicate_result_ref")
-        result_refs.add(value.result_ref)
-        if value.artifact_ref in artifact_refs:
-            _comparison_error("duplicate_artifact_ref")
-        artifact_refs.add(value.artifact_ref)
+        artifact_id = value.report_artifact_id
+        artifact_ref = value.artifact_ref
+        if artifact_id is not None and artifact_ref is not None:
+            if artifact_id in artifact_ids:
+                _comparison_error("duplicate_artifact_id")
+            artifact_ids.add(artifact_id)
+            if artifact_ref in artifact_refs:
+                _comparison_error("duplicate_artifact_ref")
+            artifact_refs.add(artifact_ref)
         current_diagnostic = _diagnostic_core_identity(value)
         if current_diagnostic is not None:
             if diagnostic_identity is None:

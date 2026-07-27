@@ -616,6 +616,73 @@ class LoadedBacktestReportArtifact:
             _identity_error("invalid_loaded_backtest_report_artifact")
 
 
+def validate_loaded_backtest_report_artifact(
+    value: object,
+    identity: BacktestReportArtifactIdentity,
+) -> LoadedBacktestReportArtifact:
+    """Rebind one loaded artifact to persisted execution without file I/O."""
+    if type(value) is not LoadedBacktestReportArtifact:
+        comparison_error("invalid_backtest_report_artifact")
+    loaded = value
+    record, evidence = loaded.record, loaded.evidence
+    if (
+        type(record) is not ArtifactRecord
+        or type(evidence) is not BacktestReportEvidence
+    ):
+        comparison_error("invalid_backtest_report_artifact")
+    evidence.__post_init__()
+    typed_record = (
+        (record.artifact_id, str),
+        (record.experiment_id, ExperimentId),
+        (record.candidate_id, CandidateId),
+        (record.fold_id, FoldId),
+        (record.attempt_id, AttemptId),
+        (record.artifact_kind, str),
+        (record.relative_path, str),
+        (record.content_hash, ContentHash),
+        (record.reproduction_fingerprint, ContentHash),
+        (record.created_at, datetime),
+    )
+    if any(type(item) is not expected for item, expected in typed_record):
+        comparison_error("report_artifact_identity_drift")
+    direct_expected = (
+        identity.experiment_id,
+        identity.candidate_id,
+        identity.fold_id,
+        identity.attempt_id,
+        identity.reproduction_fingerprint,
+        identity.attempt_created_at,
+        BACKTEST_REPORT_ARTIFACT_KIND,
+    )
+    direct_actual = (
+        record.experiment_id,
+        record.candidate_id,
+        record.fold_id,
+        record.attempt_id,
+        record.reproduction_fingerprint,
+        record.created_at,
+        record.artifact_kind,
+    )
+    if direct_actual != direct_expected:
+        comparison_error("report_artifact_identity_drift")
+    if evidence.run_id != str(identity.run_id):
+        comparison_error("report_run_identity_drift")
+    expected_period = (
+        identity.test_window.start.isoformat(),
+        identity.test_window.end.isoformat(),
+    )
+    if evidence.period != expected_period:
+        comparison_error("report_period_drift")
+    if record.content_hash != evidence.content_hash:
+        comparison_error("report_content_hash_drift")
+    if (
+        record.artifact_id != identity.artifact_id
+        or record.relative_path != identity.relative_path
+    ):
+        comparison_error("report_artifact_identity_drift")
+    return loaded
+
+
 class BacktestReportArtifactPublisher(Protocol):
     """Attempt worker port for immutable report-evidence publication."""
 

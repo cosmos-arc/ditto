@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from typing import cast
 
 import pytest
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -59,6 +59,15 @@ from ditto_analysis.experiments.trial_ledger import (
     trial_outcome_content_hash,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._persisted_execution_evidence import (
+    PersistedFoldExecutionEvidence,
+)
+from ditto_application.processes.experiments._report_evidence import (
+    BACKTEST_REPORT_ARTIFACT_KIND,
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
+    LoadedBacktestReportArtifact,
+)
 from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanRequest,
     BaselineRef,
@@ -68,7 +77,6 @@ from ditto_application.processes.experiments.comparison import (
     BaselineComparisonIdentity,
     CandidateFoldEvidence,
     OOSFoldRegistration,
-    backtest_report_content_hash,
     build_candidate_comparison,
     load_persisted_fold_execution,
 )
@@ -250,6 +258,45 @@ def _execution_binding(
     )
 
 
+def _loaded_report(
+    binding: PersistedFoldExecutionEvidence,
+    report: BacktestReport,
+) -> LoadedBacktestReportArtifact:
+    evidence = BacktestReportEvidence.from_report(report)
+    identity = BacktestReportArtifactIdentity(
+        experiment_id=binding.experiment_id,
+        candidate_id=binding.candidate_id,
+        fold_id=binding.fold_id,
+        attempt_id=binding.attempt_id,
+        attempt_created_at=binding.attempt_view.spec.created_at,
+        run_id=binding.run_id,
+        test_window=binding.test_window,
+        reproduction_fingerprint=binding.reproduction_fingerprint,
+    )
+    return LoadedBacktestReportArtifact(
+        record=ArtifactRecord(
+            artifact_id=identity.artifact_id,
+            experiment_id=identity.experiment_id,
+            candidate_id=identity.candidate_id,
+            fold_id=identity.fold_id,
+            attempt_id=identity.attempt_id,
+            artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
+            relative_path=identity.relative_path,
+            content_hash=evidence.content_hash,
+            schema_hash=ContentHash("0" * 64),
+            row_count=1,
+            byte_size=1,
+            reproduction_fingerprint=identity.reproduction_fingerprint,
+            manifest={},
+            is_pinned=False,
+            pinned_at=None,
+            created_at=identity.attempt_created_at,
+            revision=0,
+        ),
+        evidence=evidence,
+    )
+
+
 def _fold(
     candidate: str,
     ordinal: int,
@@ -260,9 +307,9 @@ def _fold(
     candidate_id = CandidateId(candidate)
     fold = FOLDS[fold_ordinal - 1]
     report = _report(candidate_id, fold, navs)
-    artifact_ref = f"artifact://{candidate}/{fold.fold_id}"
+    execution_binding = _execution_binding(candidate_id, fold)
     return CandidateFoldEvidence(
-        execution_binding=_execution_binding(candidate_id, fold),
+        execution_binding=execution_binding,
         candidate_ordinal=ordinal,
         snapshot_id=SNAPSHOT_ID,
         snapshot_hash=ContentHash("a" * 64),
@@ -277,11 +324,7 @@ def _fold(
             else parameter_hash_override
         ),
         resolved_spec_hash=ContentHash(f"{ordinal + 256:064x}"),
-        result_ref=f"result://{candidate}/{fold.fold_id}",
-        result_hash=backtest_report_content_hash(report),
-        artifact_ref=artifact_ref,
-        artifact_hash=ContentHash(hashlib.sha256(artifact_ref.encode()).hexdigest()),
-        backtest_report=report,
+        report_artifact=_loaded_report(execution_binding, report),
     )
 
 
@@ -432,9 +475,8 @@ def test_bridge_preserves_typed_metrics_lineage_and_derives_sharpe_sampling() ->
     assert ResearchMetricId.SHARPE_RATIO in alpha.metrics
     assert ResearchMetricId.CAPACITY not in alpha.metrics
     lineage = alpha.metric_evidence[ResearchMetricId.SHARPE_RATIO]
-    assert lineage.evidence_refs == (
-        "result://candidate-alpha/wf-1",
-        "result://candidate-alpha/wf-2",
+    assert lineage.evidence_refs == tuple(
+        cast("str", fold.source.result_ref) for fold in aggregation.candidates[1].folds
     )
     expected_hashes = tuple(
         fold.source.result_hash for fold in aggregation.candidates[1].folds

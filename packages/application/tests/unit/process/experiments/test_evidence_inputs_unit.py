@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from inspect import signature
 
 import pytest
 from ditto_analysis.experiments import (
@@ -33,6 +34,10 @@ from ditto_application.processes.experiments._evidence_inputs import (
     project_snapshot_manifest,
 )
 from ditto_application.processes.experiments._report_evidence import (
+    BACKTEST_REPORT_ARTIFACT_KIND,
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
+    LoadedBacktestReportArtifact,
     backtest_report_content_hash,
 )
 from ditto_application.processes.experiments.comparison import CandidateFoldEvidence
@@ -54,7 +59,6 @@ SNAPSHOT_ID = SnapshotId("snapshot-r3")
 SNAPSHOT_HASH = ContentHash("a" * 64)
 PARAMETER_HASH = ContentHash("b" * 64)
 RESOLVED_SPEC_HASH = ContentHash("c" * 64)
-ARTIFACT_HASH = ContentHash("d" * 64)
 REPRO_FINGERPRINT = ContentHash("e" * 64)
 SCHEMA_HASH = ContentHash("0" * 64)
 REGISTRY_HASH = ContentHash("f" * 64)
@@ -111,25 +115,39 @@ def _attempt_view() -> AttemptView:
     )
 
 
-def _artifact() -> ArtifactRecord:
-    return ArtifactRecord(
-        artifact_id="artifact-1",
+def _report_artifact(report: BacktestReport) -> LoadedBacktestReportArtifact:
+    evidence = BacktestReportEvidence.from_report(report)
+    identity = BacktestReportArtifactIdentity(
         experiment_id=EXPERIMENT_ID,
         candidate_id=CANDIDATE_ID,
         fold_id=FOLD_ID,
         attempt_id=ATTEMPT_ID,
-        artifact_kind="backtest_result",
-        relative_path="artifacts/backtest/run-1.report.json",
-        content_hash=ARTIFACT_HASH,
-        schema_hash=SCHEMA_HASH,
-        row_count=0,
-        byte_size=0,
+        attempt_created_at=OCCURRED_AT,
+        run_id=BACKTEST_RUN_ID,
+        test_window=FOLD_TEST_WINDOW,
         reproduction_fingerprint=REPRO_FINGERPRINT,
-        manifest={},
-        is_pinned=False,
-        pinned_at=None,
-        created_at=OCCURRED_AT,
-        revision=1,
+    )
+    return LoadedBacktestReportArtifact(
+        record=ArtifactRecord(
+            artifact_id=identity.artifact_id,
+            experiment_id=EXPERIMENT_ID,
+            candidate_id=CANDIDATE_ID,
+            fold_id=FOLD_ID,
+            attempt_id=ATTEMPT_ID,
+            artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
+            relative_path=identity.relative_path,
+            content_hash=evidence.content_hash,
+            schema_hash=SCHEMA_HASH,
+            row_count=1,
+            byte_size=1,
+            reproduction_fingerprint=REPRO_FINGERPRINT,
+            manifest={},
+            is_pinned=False,
+            pinned_at=None,
+            created_at=OCCURRED_AT,
+            revision=1,
+        ),
+        evidence=evidence,
     )
 
 
@@ -215,13 +233,12 @@ def _fold_input(*, report: BacktestReport | None) -> FoldEvidenceInput:
     return FoldEvidenceInput(
         fold_view=_fold_view(),
         attempt_view=_attempt_view(),
-        artifact=_artifact(),
         candidate_ordinal=1,
         snapshot_id=SNAPSHOT_ID,
         snapshot_hash=SNAPSHOT_HASH,
         parameter_hash=PARAMETER_HASH,
         resolved_spec_hash=RESOLVED_SPEC_HASH,
-        backtest_report=report,
+        report_artifact=None if report is None else _report_artifact(report),
         failure_reason=None,
     )
 
@@ -237,10 +254,11 @@ def test_assemble_candidate_fold_evidence_from_views() -> None:
     assert evidence.snapshot_hash == SNAPSHOT_HASH
     assert evidence.parameter_hash == PARAMETER_HASH
     assert evidence.resolved_spec_hash == RESOLVED_SPEC_HASH
-    assert evidence.backtest_report is report
+    assert evidence.backtest_report == BacktestReportEvidence.from_report(report)
     assert evidence.result_hash == backtest_report_content_hash(report)
-    assert evidence.artifact_hash == ARTIFACT_HASH
-    assert evidence.artifact_ref == "artifacts/backtest/run-1.report.json"
+    assert evidence.artifact_hash == backtest_report_content_hash(report)
+    assert evidence.artifact_ref is not None
+    assert evidence.artifact_ref.endswith("backtest-report-evidence.json")
     assert evidence.execution_binding.fold_id == FOLD_ID
     assert evidence.execution_binding.attempt_id == ATTEMPT_ID
     assert evidence.execution_binding.run_id == BACKTEST_RUN_ID
@@ -252,8 +270,17 @@ def test_assemble_candidate_fold_evidence_without_report() -> None:
 
     assert isinstance(evidence, CandidateFoldEvidence)
     assert evidence.backtest_report is None
-    assert evidence.artifact_hash == ARTIFACT_HASH
+    assert evidence.artifact_hash is None
+    assert evidence.artifact_ref is None
     assert evidence.failure_reason is None
+
+
+def test_fold_input_accepts_only_the_verified_report_artifact() -> None:
+    parameters = signature(FoldEvidenceInput).parameters
+
+    assert "report_artifact" in parameters
+    assert "artifact" not in parameters
+    assert "backtest_report" not in parameters
 
 
 def test_snapshot_manifest_projection_from_preflight_event() -> None:

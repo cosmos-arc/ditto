@@ -44,8 +44,6 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments import (
     canonical_payload as _canonical_payload,
 )
-from ditto_backtest.statistics import BacktestReport as _BacktestReport
-from ditto_portfolio.accounting import FillEvent as _FillEvent
 
 from ditto_application.processes.experiments._evidence_values import (
     _canonical_text,
@@ -53,6 +51,10 @@ from ditto_application.processes.experiments._evidence_values import (
     _comparison_error,
     _deep_freeze,
     _finite,
+)
+from ditto_application.processes.experiments._report_evidence import (
+    BacktestFillEvidence,
+    LoadedBacktestReportArtifact,
 )
 
 _TRADING_DAYS_PER_YEAR = 252
@@ -482,16 +484,10 @@ class _FoldMetricSource(Protocol):
     def outcome(self) -> FoldOutcome: ...
 
     @property
-    def backtest_report(self) -> _BacktestReport | None: ...
+    def report_artifact(self) -> LoadedBacktestReportArtifact | None: ...
 
     @property
     def test_window(self) -> _DateWindow: ...
-
-    @property
-    def result_ref(self) -> str: ...
-
-    @property
-    def result_hash(self) -> _ContentHash: ...
 
     @property
     def capacity(self) -> CapacityEvidence | None: ...
@@ -550,19 +546,26 @@ def _evaluated(
 
 
 def _source_refs(value: _FoldMetricSource) -> tuple[str, ...]:
-    return (value.result_ref,)
+    artifact = value.report_artifact
+    if artifact is None:
+        _comparison_error("backtest_report_missing")
+    return (artifact.record.relative_path,)
 
 
 def _source_hashes(value: _FoldMetricSource) -> tuple[_ContentHash, ...]:
-    return (value.result_hash,)
+    artifact = value.report_artifact
+    if artifact is None:
+        _comparison_error("backtest_report_missing")
+    return (artifact.record.content_hash,)
 
 
 def _return_evidence(  # noqa: C901, PLR0911 - fail-closed report parser
     value: _FoldMetricSource,
 ) -> FoldReturnEvidence | None:
-    report = value.backtest_report
-    if report is None:
+    artifact = value.report_artifact
+    if artifact is None:
         return None
+    report = artifact.evidence
     initial, final = _finite(report.initial_cash), _finite(report.final_nav)
     raw_nav = tuple(report.nav_series)
     if initial is None or initial <= 0.0 or final is None or not raw_nav:
@@ -644,7 +647,7 @@ def _return_metrics(
 ) -> dict[_ResearchMetricId, ScalarEvidence]:
     reason = (
         "backtest_report_missing"
-        if value.backtest_report is None
+        if value.report_artifact is None
         else "insufficient_nav_evidence"
     )
     ids = (
@@ -704,11 +707,12 @@ def _execution_evidence(
     value: _FoldMetricSource,
     returns: FoldReturnEvidence | None,
 ) -> FoldExecutionEvidence | None:
-    report = value.backtest_report
-    if report is None or returns is None:
+    artifact = value.report_artifact
+    if artifact is None or returns is None:
         return None
+    report = artifact.evidence
     if not all(
-        type(fill) is _FillEvent
+        type(fill) is BacktestFillEvidence
         and _finite(fill.fill_price) is not None
         and fill.fill_price >= 0.0
         and type(fill.filled_quantity) is int
@@ -737,7 +741,7 @@ def _execution_metrics(
     evidence: FoldExecutionEvidence | None,
 ) -> dict[_ResearchMetricId, ScalarEvidence]:
     ids = (_ResearchMetricId.TURNOVER, _ResearchMetricId.COST_DRAG)
-    if value.backtest_report is None:
+    if value.report_artifact is None:
         return {item: _not_evaluated("backtest_report_missing") for item in ids}
     if evidence is None:
         return {

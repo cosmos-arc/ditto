@@ -11,6 +11,7 @@ from typing import cast
 
 import pytest
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -32,6 +33,15 @@ from ditto_analysis.experiments import (
     SnapshotId,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._persisted_execution_evidence import (
+    PersistedFoldExecutionEvidence,
+)
+from ditto_application.processes.experiments._report_evidence import (
+    BACKTEST_REPORT_ARTIFACT_KIND,
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
+    LoadedBacktestReportArtifact,
+)
 from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanRequest,
     BaselineRef,
@@ -44,7 +54,6 @@ from ditto_application.processes.experiments.comparison import (
     EvidenceStatus,
     FactorDiagnosticsArtifactEvidence,
     OOSFoldRegistration,
-    backtest_report_content_hash,
     build_candidate_comparison,
     load_persisted_fold_execution,
 )
@@ -282,6 +291,61 @@ def _execution_binding(
     )
 
 
+def _loaded_report(
+    binding: PersistedFoldExecutionEvidence,
+    report: BacktestReport,
+) -> LoadedBacktestReportArtifact:
+    evidence = BacktestReportEvidence.from_report(report)
+    identity = BacktestReportArtifactIdentity(
+        experiment_id=binding.experiment_id,
+        candidate_id=binding.candidate_id,
+        fold_id=binding.fold_id,
+        attempt_id=binding.attempt_id,
+        attempt_created_at=binding.attempt_view.spec.created_at,
+        run_id=binding.run_id,
+        test_window=binding.test_window,
+        reproduction_fingerprint=binding.reproduction_fingerprint,
+    )
+    return LoadedBacktestReportArtifact(
+        record=ArtifactRecord(
+            artifact_id=identity.artifact_id,
+            experiment_id=identity.experiment_id,
+            candidate_id=identity.candidate_id,
+            fold_id=identity.fold_id,
+            attempt_id=identity.attempt_id,
+            artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
+            relative_path=identity.relative_path,
+            content_hash=evidence.content_hash,
+            schema_hash=ContentHash("0" * 64),
+            row_count=1,
+            byte_size=1,
+            reproduction_fingerprint=identity.reproduction_fingerprint,
+            manifest={},
+            is_pinned=False,
+            pinned_at=None,
+            created_at=identity.attempt_created_at,
+            revision=0,
+        ),
+        evidence=evidence,
+    )
+
+
+def _with_report(
+    source: CandidateFoldEvidence,
+    report: BacktestReportEvidence,
+) -> CandidateFoldEvidence:
+    artifact = source.report_artifact
+    assert artifact is not None
+    return replace(
+        source,
+        report_artifact=replace(
+            artifact,
+            evidence=report,
+            record=replace(artifact.record, content_hash=report.content_hash),
+        ),
+    )
+
+
 def _evidence(
     candidate: str,
     candidate_ordinal: int,
@@ -293,18 +357,15 @@ def _evidence(
     candidate_id = CandidateId(candidate)
     fold = FOLDS[fold_ordinal - 1]
     report = _report(candidate_id, fold, navs)
+    execution_binding = _execution_binding(candidate_id, fold)
     return CandidateFoldEvidence(
-        execution_binding=_execution_binding(candidate_id, fold),
+        execution_binding=execution_binding,
         candidate_ordinal=candidate_ordinal,
         snapshot_id=SNAPSHOT_ID,
         snapshot_hash=SNAPSHOT_HASH,
         parameter_hash=ContentHash("1" * 64),
         resolved_spec_hash=ContentHash("2" * 64),
-        result_ref=f"result://{candidate_id}/{fold.fold_id}",
-        result_hash=backtest_report_content_hash(report),
-        artifact_ref=f"artifact://{candidate_id}/{fold.fold_id}",
-        artifact_hash=ContentHash("f" * 64),
-        backtest_report=report,
+        report_artifact=_loaded_report(execution_binding, report),
         factor_diagnostics=_diagnostics(candidate_id, fold),
         capacity=(
             None
@@ -395,11 +456,7 @@ def test_execution_metrics_reweight_unequal_fold_capital_on_stitched_equity() ->
             (FOLDS[1].test_window.end.isoformat(), 1_200.0),
         ),
     )
-    second = replace(
-        second_source,
-        backtest_report=second_report,
-        result_hash=backtest_report_content_hash(second_report),
-    )
+    second = _with_report(second_source, second_report)
     rows = (*_rows()[:2], first, second)
     candidate = aggregate_walk_forward(
         build_candidate_comparison(_baseline_identity(), rows)
@@ -484,7 +541,7 @@ def test_missing_capacity_and_diagnostic_are_honestly_not_evaluated() -> None:
 
 def test_completed_fold_without_primary_return_evidence_is_not_evaluated() -> None:
     rows = list(_rows())
-    rows[3] = replace(rows[3], backtest_report=None)
+    rows[3] = replace(rows[3], report_artifact=None)
 
     candidate = aggregate_walk_forward(
         build_candidate_comparison(_baseline_identity(), rows)
@@ -499,7 +556,7 @@ def test_completed_fold_without_primary_return_evidence_is_not_evaluated() -> No
 
 def test_missing_baseline_primary_evidence_blocks_every_candidate() -> None:
     rows = list(_rows())
-    rows[1] = replace(rows[1], backtest_report=None)
+    rows[1] = replace(rows[1], report_artifact=None)
 
     result = aggregate_walk_forward(
         build_candidate_comparison(_baseline_identity(), rows)
@@ -528,11 +585,7 @@ def test_candidate_return_grid_must_exactly_match_baseline() -> None:
             (FOLDS[0].test_window.end.isoformat(), 102.0),
         ),
     )
-    rows[0] = replace(
-        baseline,
-        backtest_report=report,
-        result_hash=backtest_report_content_hash(report),
-    )
+    rows[0] = _with_report(baseline, report)
 
     with pytest.raises(AppProcessError) as exc_info:
         aggregate_walk_forward(build_candidate_comparison(_baseline_identity(), rows))
@@ -550,7 +603,7 @@ def test_failed_and_incomplete_candidates_remain_visible() -> None:
             status=ExperimentStatus.FAILED,
         ),
         failure_reason="candidate_numeric_failure",
-        backtest_report=None,
+        report_artifact=None,
         factor_diagnostics=None,
         capacity=None,
     )
@@ -595,7 +648,7 @@ def test_walk_forward_has_versioned_authoritative_content_identity() -> None:
     )
     missing = replace(
         rows[2],
-        backtest_report=None,
+        report_artifact=None,
         factor_diagnostics=None,
         capacity=None,
     )

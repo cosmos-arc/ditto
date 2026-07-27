@@ -6,8 +6,8 @@ These helpers are pure orchestration seams used by the R3 review-packet collecto
 (Task 3). :func:`project_snapshot_manifest` reads the three persisted identity
 fields (snapshot hash, node-registry hash, PIT policy) from one ``preflight_passed``
 status-event detail mapping. :func:`assemble_candidate_fold_evidence` binds a
-``FoldView``/``AttemptView`` pair with its ``ArtifactRecord`` and optional
-``BacktestReport`` into one :class:`CandidateFoldEvidence` ready to feed
+``FoldView``/``AttemptView`` pair with its optional verified report artifact
+into one :class:`CandidateFoldEvidence` ready to feed
 :func:`build_candidate_comparison`.
 
 No helper here performs storage or execution I/O; callers are responsible for
@@ -21,20 +21,18 @@ from dataclasses import dataclass
 from typing import cast
 
 from ditto_analysis.experiments import (
-    ArtifactRecord,
     AttemptView,
     ContentHash,
     FoldView,
     SnapshotId,
 )
-from ditto_backtest.statistics import BacktestReport
 
 from ditto_application.processes.experiments._evidence_values import comparison_error
 from ditto_application.processes.experiments._persisted_execution_evidence import (
     _bind_persisted_fold_execution,
 )
 from ditto_application.processes.experiments._report_evidence import (
-    backtest_report_content_hash,
+    LoadedBacktestReportArtifact,
 )
 from ditto_application.processes.experiments.comparison import CandidateFoldEvidence
 from ditto_application.research_certification_contracts import (
@@ -129,13 +127,12 @@ class FoldEvidenceInput:
 
     fold_view: FoldView
     attempt_view: AttemptView
-    artifact: ArtifactRecord
     candidate_ordinal: int
     snapshot_id: SnapshotId
     snapshot_hash: ContentHash
     parameter_hash: ContentHash
     resolved_spec_hash: ContentHash
-    backtest_report: BacktestReport | None = None
+    report_artifact: LoadedBacktestReportArtifact | None = None
     failure_reason: str | None = None
 
 
@@ -143,15 +140,6 @@ def assemble_candidate_fold_evidence(
     fold_input: FoldEvidenceInput,
 ) -> CandidateFoldEvidence:
     """Assemble one CandidateFoldEvidence from persisted fold and attempt views."""
-    artifact = fold_input.artifact
-    if type(artifact) is not ArtifactRecord:
-        comparison_error("invalid_fold_evidence_artifact")
-    report = fold_input.backtest_report
-    result_hash = (
-        backtest_report_content_hash(report)
-        if report is not None
-        else artifact.content_hash
-    )
     execution_binding = _bind_persisted_fold_execution(
         fold_input.fold_view,
         fold_input.attempt_view,
@@ -163,10 +151,6 @@ def assemble_candidate_fold_evidence(
         snapshot_hash=fold_input.snapshot_hash,
         parameter_hash=fold_input.parameter_hash,
         resolved_spec_hash=fold_input.resolved_spec_hash,
-        result_ref=artifact.relative_path,
-        result_hash=result_hash,
-        artifact_ref=artifact.relative_path,
-        artifact_hash=artifact.content_hash,
-        backtest_report=report,
+        report_artifact=fold_input.report_artifact,
         failure_reason=fold_input.failure_reason,
     )

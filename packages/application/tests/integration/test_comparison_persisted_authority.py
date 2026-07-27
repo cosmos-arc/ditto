@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -51,9 +52,14 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentWriter,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._report_evidence import (
+    BACKTEST_REPORT_ARTIFACT_KIND,
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
+    LoadedBacktestReportArtifact,
+)
 from ditto_application.processes.experiments.comparison import (
     CandidateFoldEvidence,
-    backtest_report_content_hash,
     load_persisted_fold_execution,
 )
 from ditto_backtest.statistics import (
@@ -400,6 +406,39 @@ def test_sqlite_bound_run_identity_rejects_stale_backtest_report(
     attempt_id, _run_id = _persist_completed_attempt(writer, fence, folds[0])
     binding = load_persisted_fold_execution(reader, folds[0].key, attempt_id)
     report = _report("run-stale", folds[0])
+    evidence = BacktestReportEvidence.from_report(report)
+    identity = BacktestReportArtifactIdentity(
+        experiment_id=binding.experiment_id,
+        candidate_id=binding.candidate_id,
+        fold_id=binding.fold_id,
+        attempt_id=binding.attempt_id,
+        attempt_created_at=binding.attempt_view.spec.created_at,
+        run_id=binding.run_id,
+        test_window=binding.test_window,
+        reproduction_fingerprint=binding.reproduction_fingerprint,
+    )
+    report_artifact = LoadedBacktestReportArtifact(
+        record=ArtifactRecord(
+            artifact_id=identity.artifact_id,
+            experiment_id=identity.experiment_id,
+            candidate_id=identity.candidate_id,
+            fold_id=identity.fold_id,
+            attempt_id=identity.attempt_id,
+            artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
+            relative_path=identity.relative_path,
+            content_hash=evidence.content_hash,
+            schema_hash=ContentHash("0" * 64),
+            row_count=1,
+            byte_size=1,
+            reproduction_fingerprint=identity.reproduction_fingerprint,
+            manifest={},
+            is_pinned=False,
+            pinned_at=None,
+            created_at=identity.attempt_created_at,
+            revision=0,
+        ),
+        evidence=evidence,
+    )
 
     with pytest.raises(AppProcessError) as exc_info:
         CandidateFoldEvidence(
@@ -409,11 +448,7 @@ def test_sqlite_bound_run_identity_rejects_stale_backtest_report(
             snapshot_hash=ContentHash("e" * 64),
             parameter_hash=_launch().candidates[0].parameter_hash,
             resolved_spec_hash=ContentHash("b" * 64),
-            result_ref="result://comparison-authority/wf-1",
-            result_hash=backtest_report_content_hash(report),
-            artifact_ref="artifact://comparison-authority/wf-1",
-            artifact_hash=ContentHash("1" * 64),
-            backtest_report=report,
+            report_artifact=report_artifact,
         )
 
     assert exc_info.value.details["reason"] == "report_run_identity_drift"
