@@ -93,6 +93,24 @@ def _raise_publish_error(exc: AppError) -> Never:
     raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
 
 
+def _raise_reactivate_error(exc: AppError) -> Never:
+    """Map the typed guarded-reactivation failures to stable HTTP semantics."""
+    code = exc.details.get("code")
+    if not isinstance(code, str):
+        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+    if code == "STRATEGY_REVISION_CONFLICT":
+        raise ConflictError(str(exc), error_code=code) from exc
+    if code == "STRATEGY_VERSION_NOT_FOUND":
+        raise NotFoundError(str(exc)) from exc
+    if code in {
+        "STRATEGY_REACTIVATION_CONFIRMATION_MISMATCH",
+        "STRATEGY_REACTIVATION_INPUT_INVALID",
+        "STRATEGY_INVALID_TRANSITION",
+    }:
+        raise UnprocessableEntityError(str(exc), error_code=code) from exc
+    raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+
+
 async def run_blocking[**P, R](
     func: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs
 ) -> R:
@@ -369,12 +387,14 @@ async def reactivate_strategy_version(
         version=version,
         actor=request.actor,
         reason=request.reason,
+        confirmation=request.confirmation,
+        impact_summary=request.impact_summary,
         expected_pointer_revision=request.expected_pointer_revision,
     )
     try:
         pointer = await run_blocking(handler.handle, cmd)
     except AppError as exc:
-        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+        _raise_reactivate_error(exc)
     return APIResponse(data=to_active_pointer_response(pointer))
 
 

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+type NonBlankStr = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
 
 
 class CreateStrategyRequest(BaseModel):
@@ -60,6 +65,12 @@ class GovernanceDecisionRequest(BaseModel):
 class ReactivateStrategyRequest(GovernanceDecisionRequest):
     """Reactivate one published version with an optimistic pointer CAS guard."""
 
+    reason: NonBlankStr = Field(description="重新激活原因")
+    confirmation: str = Field(
+        min_length=1,
+        description="与目标版本及 pointer revision 精确绑定的确认语句",
+    )
+    impact_summary: NonBlankStr = Field(description="当前版本切换到目标版本的影响摘要")
     expected_pointer_revision: int = Field(
         ge=0, description="最后读到的 active pointer revision (optimistic CAS)"
     )

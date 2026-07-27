@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
 
+import orjson
 from ditto_analysis.experiments import (
     ExperimentId,
     ExperimentLaunchSpec,
@@ -66,6 +67,7 @@ __all__ = [
     "ReviewPacketReader",
     "SubmitReviewCommand",
     "SubmitReviewHandler",
+    "reactivate_confirmation_phrase",
 ]
 
 _UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
@@ -85,6 +87,51 @@ def _utc_now_iso() -> str:
 def _event_id(strategy_id: str, version: int, decision: str, decided_at: str) -> str:
     """Deterministic event id provenance for one governance decision."""
     return f"{strategy_id}:{version}:{decision}:{decided_at}"
+
+
+def reactivate_confirmation_phrase(
+    strategy_id: str,
+    version: int,
+    expected_pointer_revision: int,
+) -> str:
+    """Return the exact operator phrase bound to one target and pointer read."""
+    return (
+        f"strategy:reactivate:{strategy_id}@{version}:"
+        f"pointer-revision:{expected_pointer_revision}:confirm"
+    )
+
+
+def _required_reactivation_text(
+    value: str,
+    *,
+    field_name: str,
+    strategy_id: str,
+    version: int,
+) -> str:
+    """Normalize one required human-authored field before any governance write."""
+    normalized = value.strip()
+    if normalized:
+        return normalized
+    raise AppCommandError(
+        f"Strategy reactivation {field_name} must not be blank",
+        details={
+            "code": "STRATEGY_REACTIVATION_INPUT_INVALID",
+            "reason": f"{field_name}_blank",
+            "strategy_id": strategy_id,
+            "version": version,
+        },
+    )
+
+
+def _reactivation_audit_reason(reason: str, impact_summary: str) -> str:
+    """Encode the complete human rationale using the canonical JSON convention."""
+    return orjson.dumps(
+        {
+            "reason": reason,
+            "impact_summary": impact_summary,
+        },
+        option=orjson.OPT_SORT_KEYS,
+    ).decode("utf-8")
 
 
 def _map_governance_error(
@@ -180,6 +227,8 @@ class ReactivateStrategyCommand:
     version: int
     actor: str
     reason: str
+    confirmation: str
+    impact_summary: str
     expected_pointer_revision: int
 
 
@@ -299,6 +348,34 @@ class ReactivateStrategyHandler:
 
     def handle(self, command: ReactivateStrategyCommand) -> StrategyActivePointerInfo:
         """Forward the optimistic-pointer CAS decision with typed error mapping."""
+        reason = _required_reactivation_text(
+            command.reason,
+            field_name="reason",
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        impact_summary = _required_reactivation_text(
+            command.impact_summary,
+            field_name="impact_summary",
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        expected_confirmation = reactivate_confirmation_phrase(
+            command.strategy_id,
+            command.version,
+            command.expected_pointer_revision,
+        )
+        if command.confirmation != expected_confirmation:
+            raise AppCommandError(
+                "Strategy reactivation confirmation does not match target",
+                details={
+                    "code": "STRATEGY_REACTIVATION_CONFIRMATION_MISMATCH",
+                    "reason": "confirmation_mismatch",
+                    "strategy_id": command.strategy_id,
+                    "version": command.version,
+                    "expected_confirmation": expected_confirmation,
+                },
+            )
         decided_at = _utc_now_iso()
         event = StrategyActivationEvent(
             _event_id(command.strategy_id, command.version, "reactivate", decided_at),
@@ -306,7 +383,7 @@ class ReactivateStrategyHandler:
             command.version,
             StrategyDecision.REACTIVATE,
             command.actor,
-            command.reason,
+            _reactivation_audit_reason(reason, impact_summary),
             decided_at,
         )
         try:

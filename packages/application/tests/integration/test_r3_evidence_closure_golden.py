@@ -59,6 +59,9 @@ from ditto_application.builders.research_artifact_loader import (
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionCommand,
     PublishStrategyVersionHandler,
+    ReactivateStrategyCommand,
+    ReactivateStrategyHandler,
+    reactivate_confirmation_phrase,
 )
 from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.experiments._evidence_inputs import (
@@ -886,6 +889,23 @@ def _assert_deterministic_promotion_is_blocked(
             )
 
         assert captured.value.details["reason"] == "hard_gate_blocked"
+        with pytest.raises(AppCommandError) as reactivation:
+            ReactivateStrategyHandler(governance).handle(
+                ReactivateStrategyCommand(
+                    strategy_id=lane.strategy_id,
+                    version=lane.strategy_version,
+                    actor="golden-operator",
+                    reason="attempt to bypass the live gate",
+                    confirmation=reactivate_confirmation_phrase(
+                        lane.strategy_id,
+                        lane.strategy_version,
+                        pointer_before.pointer_revision,
+                    ),
+                    impact_summary="replace the active R1 strategy with the candidate",
+                    expected_pointer_revision=pointer_before.pointer_revision,
+                )
+            )
+        assert reactivation.value.details["code"] == "STRATEGY_INVALID_TRANSITION"
         assert governance_store.get_active_pointer(lane.strategy_id) == pointer_before
         assert (
             governance_store.get_state(lane.strategy_id, lane.strategy_version)

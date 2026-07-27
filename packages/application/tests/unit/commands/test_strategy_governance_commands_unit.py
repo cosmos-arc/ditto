@@ -25,6 +25,7 @@ from ditto_application.commands.strategy_governance import (
     RejectReviewHandler,
     SubmitReviewCommand,
     SubmitReviewHandler,
+    reactivate_confirmation_phrase,
 )
 from ditto_application.contracts import (
     StrategyActivePointerInfo,
@@ -202,6 +203,12 @@ class TestDeprecateStrategyHandler:
 class TestReactivateStrategyHandler:
     """reactivate forwards expected_pointer_revision for optimistic-pointer CAS."""
 
+    def test_confirmation_phrase_binds_target_and_pointer_revision(self) -> None:
+        assert (
+            reactivate_confirmation_phrase("s1", 2, 3)
+            == "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+        )
+
     def test_success_returns_application_pointer_info(self) -> None:
         governance = MagicMock(spec=GovernanceService)
         governance.activate.return_value = _pointer()
@@ -212,7 +219,9 @@ class TestReactivateStrategyHandler:
                 strategy_id="s1",
                 version=2,
                 actor="carol",
-                reason="rollback",
+                reason="  rollback  ",
+                confirmation="strategy:reactivate:s1@2:pointer-revision:3:confirm",
+                impact_summary="  restore the prior production behavior  ",
                 expected_pointer_revision=3,
             )
         )
@@ -226,6 +235,73 @@ class TestReactivateStrategyHandler:
         assert event.event_id.startswith("s1:2:reactivate:")
         assert event.actor == "carol"
         assert event.activation_kind is StrategyDecision.REACTIVATE
+        assert event.reason == (
+            '{"impact_summary":"restore the prior production behavior",'
+            '"reason":"rollback"}'
+        )
+
+    @pytest.mark.parametrize(
+        ("reason", "impact_summary", "failure_reason"),
+        [
+            ("  ", "restore prior behavior", "reason_blank"),
+            ("rollback", "\t", "impact_summary_blank"),
+        ],
+    )
+    def test_blank_reason_or_impact_fails_before_governance_write(
+        self,
+        reason: str,
+        impact_summary: str,
+        failure_reason: str,
+    ) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        handler = ReactivateStrategyHandler(governance)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(
+                ReactivateStrategyCommand(
+                    strategy_id="s1",
+                    version=2,
+                    actor="carol",
+                    reason=reason,
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+                    ),
+                    impact_summary=impact_summary,
+                    expected_pointer_revision=3,
+                )
+            )
+
+        assert info.value.details["code"] == "STRATEGY_REACTIVATION_INPUT_INVALID"
+        assert info.value.details["reason"] == failure_reason
+        governance.activate.assert_not_called()
+
+    def test_confirmation_mismatch_fails_before_governance_write(self) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        handler = ReactivateStrategyHandler(governance)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(
+                ReactivateStrategyCommand(
+                    strategy_id="s1",
+                    version=2,
+                    actor="carol",
+                    reason="rollback",
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm "
+                    ),
+                    impact_summary="restore the prior production behavior",
+                    expected_pointer_revision=3,
+                )
+            )
+
+        assert (
+            info.value.details["code"] == "STRATEGY_REACTIVATION_CONFIRMATION_MISMATCH"
+        )
+        assert info.value.details["reason"] == "confirmation_mismatch"
+        assert info.value.details["expected_confirmation"] == (
+            "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+        )
+        governance.activate.assert_not_called()
 
     def test_stale_pointer_conflict_is_mapped(self) -> None:
         governance = MagicMock(spec=GovernanceService)
@@ -239,6 +315,10 @@ class TestReactivateStrategyHandler:
                     version=2,
                     actor="carol",
                     reason="rollback",
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+                    ),
+                    impact_summary="restore the prior production behavior",
                     expected_pointer_revision=3,
                 )
             )

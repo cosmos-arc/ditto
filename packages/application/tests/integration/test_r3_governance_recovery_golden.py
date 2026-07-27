@@ -38,6 +38,7 @@ import pytest
 from ditto_application.commands.strategy_governance import (
     ReactivateStrategyCommand,
     ReactivateStrategyHandler,
+    reactivate_confirmation_phrase,
 )
 from ditto_application.contracts import StrategyActivePointerInfo
 from ditto_application.exceptions import AppCommandError
@@ -303,6 +304,10 @@ def test_reactivate_switches_pointer_back_with_correct_cas(
     pointer_before = store.get_active_pointer(strategy_id)
     assert pointer_before is not None
     assert pointer_before.pointer_revision == 2
+    v1_before = governance._store.get_state(strategy_id, 1)
+    v2_before = governance._store.get_state(strategy_id, 2)
+    v1_spec_before = governance.get_version(strategy_id, 1)
+    v2_spec_before = governance.get_version(strategy_id, 2)
 
     handler = ReactivateStrategyHandler(governance)
     result = handler.handle(
@@ -310,7 +315,9 @@ def test_reactivate_switches_pointer_back_with_correct_cas(
             strategy_id=strategy_id,
             version=1,
             actor="ops",
-            reason="rollback",
+            reason="  rollback  ",
+            confirmation=reactivate_confirmation_phrase(strategy_id, 1, 2),
+            impact_summary="  restore the prior production behavior  ",
             expected_pointer_revision=2,
         )
     )
@@ -329,7 +336,9 @@ def test_reactivate_switches_pointer_back_with_correct_cas(
     ]
     assert activations[-1]["target_version"] == 1
     assert activations[-1]["actor"] == "ops"
-    assert activations[-1]["reason"] == "rollback"
+    assert activations[-1]["reason"] == (
+        '{"impact_summary":"restore the prior production behavior","reason":"rollback"}'
+    )
 
     # Pointer now resolves to v1; v1 state stays PUBLISHED (no lifecycle
     # transition — reactivate is a pointer-only operation).
@@ -339,6 +348,10 @@ def test_reactivate_switches_pointer_back_with_correct_cas(
     v1_state = governance._store.get_state(strategy_id, 1)
     assert v1_state is not None
     assert v1_state.state.value == "published"
+    assert v1_state == v1_before
+    assert governance._store.get_state(strategy_id, 2) == v2_before
+    assert governance.get_version(strategy_id, 1) == v1_spec_before
+    assert governance.get_version(strategy_id, 2) == v2_spec_before
 
 
 # ---------------------------------------------------------------------------
@@ -372,10 +385,12 @@ def test_stale_pointer_revision_is_mapped_to_typed_command_error(
     tmp_path: Path,
 ) -> None:
     """Handler maps StrategyGovernanceCasConflict → AppCommandError(code=...)."""
-    governance, _catalog, _store, _pool = _build_services(tmp_path)
+    governance, _catalog, store, pool = _build_services(tmp_path)
     strategy_id, seed = next(iter(SEED_STRATEGY_SPECS.items()))
     _seed_v1_active(governance, strategy_id, seed)
     _seed_v2_active(governance, strategy_id, seed)
+    pointer_before = store.get_active_pointer(strategy_id)
+    activations_before = _list_activation_events(pool, strategy_id)
 
     handler = ReactivateStrategyHandler(governance)
     with pytest.raises(AppCommandError) as info:
@@ -385,6 +400,8 @@ def test_stale_pointer_revision_is_mapped_to_typed_command_error(
                 version=1,
                 actor="ops",
                 reason="rollback",
+                confirmation=reactivate_confirmation_phrase(strategy_id, 1, 1),
+                impact_summary="restore the prior production behavior",
                 expected_pointer_revision=1,
             )
         )
@@ -393,13 +410,15 @@ def test_stale_pointer_revision_is_mapped_to_typed_command_error(
     assert info.value.details["code"] == "STRATEGY_REVISION_CONFLICT"
     assert info.value.details["strategy_id"] == strategy_id
     assert info.value.details["version"] == 1
+    assert store.get_active_pointer(strategy_id) == pointer_before
+    assert _list_activation_events(pool, strategy_id) == activations_before
 
 
 def test_reactivate_deprecated_target_is_invalid_transition(
     tmp_path: Path,
 ) -> None:
     """Reactivate rejects a deprecated version (lifecycle guard, not CAS)."""
-    governance, _catalog, store, _pool = _build_services(tmp_path)
+    governance, _catalog, store, pool = _build_services(tmp_path)
     strategy_id, seed = next(iter(SEED_STRATEGY_SPECS.items()))
     _seed_v1_active(governance, strategy_id, seed)
     _seed_v2_active(governance, strategy_id, seed)
@@ -415,6 +434,8 @@ def test_reactivate_deprecated_target_is_invalid_transition(
     current = store.get_active_pointer(strategy_id)
     assert current is not None
     assert current.pointer_revision == 2
+    state_before = governance._store.get_state(strategy_id, 1)
+    activations_before = _list_activation_events(pool, strategy_id)
 
     handler = ReactivateStrategyHandler(governance)
     with pytest.raises(AppCommandError) as info:
@@ -424,9 +445,14 @@ def test_reactivate_deprecated_target_is_invalid_transition(
                 version=1,
                 actor="ops",
                 reason="rollback",
+                confirmation=reactivate_confirmation_phrase(strategy_id, 1, 2),
+                impact_summary="restore the prior production behavior",
                 expected_pointer_revision=2,
             )
         )
 
     assert info.value.details["code"] == "STRATEGY_INVALID_TRANSITION"
     assert info.value.details["strategy_id"] == strategy_id
+    assert store.get_active_pointer(strategy_id) == current
+    assert governance._store.get_state(strategy_id, 1) == state_before
+    assert _list_activation_events(pool, strategy_id) == activations_before

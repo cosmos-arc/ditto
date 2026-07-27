@@ -50,6 +50,7 @@ from ditto_apps.models.strategy import (
     StrategyVersionStateResponse,
     UpdateStrategyRequest,
 )
+from pydantic import ValidationError
 
 pytestmark = pytest.mark.asyncio
 
@@ -458,6 +459,37 @@ class TestOtherGovernanceDecisions:
 class TestReactivateStrategyVersion:
     """POST /strategies/{id}/versions/{v}/reactivate — expected pointer CAS."""
 
+    async def test_request_strips_reason_and_impact_but_not_confirmation(self) -> None:
+        request = ReactivateStrategyRequest(
+            actor="carol",
+            reason="  rollback  ",
+            confirmation=" exact confirmation ",
+            impact_summary="  restore prior production behavior  ",
+            expected_pointer_revision=3,
+        )
+
+        assert request.reason == "rollback"
+        assert request.impact_summary == "restore prior production behavior"
+        assert request.confirmation == " exact confirmation "
+
+    @pytest.mark.parametrize(
+        ("reason", "impact_summary"),
+        [(" ", "restore prior behavior"), ("rollback", "\t")],
+    )
+    async def test_request_rejects_blank_reason_or_impact(
+        self,
+        reason: str,
+        impact_summary: str,
+    ) -> None:
+        with pytest.raises(ValidationError):
+            ReactivateStrategyRequest(
+                actor="carol",
+                reason=reason,
+                confirmation="strategy:reactivate:s1@2:pointer-revision:3:confirm",
+                impact_summary=impact_summary,
+                expected_pointer_revision=3,
+            )
+
     async def test_passes_expected_pointer_revision(
         self, mock_reactivate_handler: MagicMock
     ) -> None:
@@ -471,7 +503,11 @@ class TestReactivateStrategyVersion:
             "s1",
             2,
             ReactivateStrategyRequest(
-                actor="carol", reason="rollback", expected_pointer_revision=3
+                actor="carol",
+                reason="rollback",
+                confirmation="strategy:reactivate:s1@2:pointer-revision:3:confirm",
+                impact_summary="restore prior production behavior",
+                expected_pointer_revision=3,
             ),
             mock_reactivate_handler,
         )
@@ -482,20 +518,72 @@ class TestReactivateStrategyVersion:
         cmd = mock_reactivate_handler.handle.call_args.args[0]
         assert cmd.expected_pointer_revision == 3
         assert cmd.actor == "carol"
+        assert cmd.confirmation == (
+            "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+        )
+        assert cmd.impact_summary == "restore prior production behavior"
 
     async def test_stale_pointer_conflict_returns_409(
         self, mock_reactivate_handler: MagicMock
     ) -> None:
         mock_reactivate_handler.handle.side_effect = AppCommandError(
-            "Strategy revision conflict for s1 v2: pointer CAS missed"
+            "Strategy revision conflict for s1 v2: pointer CAS missed",
+            details={"code": "STRATEGY_REVISION_CONFLICT"},
         )
         with pytest.raises(APIError) as exc_info:
             await _call_reactivate(
                 "s1",
                 2,
                 ReactivateStrategyRequest(
-                    actor="carol", reason="rollback", expected_pointer_revision=3
+                    actor="carol",
+                    reason="rollback",
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+                    ),
+                    impact_summary="restore prior production behavior",
+                    expected_pointer_revision=3,
                 ),
                 mock_reactivate_handler,
             )
         assert exc_info.value.status_code == 409
+        assert exc_info.value.error_code == "STRATEGY_REVISION_CONFLICT"
+
+    @pytest.mark.parametrize(
+        ("code", "expected_status"),
+        [
+            ("STRATEGY_REACTIVATION_CONFIRMATION_MISMATCH", 422),
+            ("STRATEGY_REACTIVATION_INPUT_INVALID", 422),
+            ("STRATEGY_INVALID_TRANSITION", 422),
+            ("STRATEGY_VERSION_NOT_FOUND", 404),
+        ],
+    )
+    async def test_maps_typed_reactivation_failures(
+        self,
+        mock_reactivate_handler: MagicMock,
+        code: str,
+        expected_status: int,
+    ) -> None:
+        mock_reactivate_handler.handle.side_effect = AppCommandError(
+            f"reactivation failed: {code}",
+            details={"code": code},
+        )
+
+        with pytest.raises(APIError) as exc_info:
+            await _call_reactivate(
+                "s1",
+                2,
+                ReactivateStrategyRequest(
+                    actor="carol",
+                    reason="rollback",
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+                    ),
+                    impact_summary="restore prior production behavior",
+                    expected_pointer_revision=3,
+                ),
+                mock_reactivate_handler,
+            )
+
+        assert exc_info.value.status_code == expected_status
+        if expected_status == 422:
+            assert exc_info.value.error_code == code
