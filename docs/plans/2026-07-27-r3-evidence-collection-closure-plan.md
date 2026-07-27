@@ -581,17 +581,27 @@ exact `tuple[ContentHash, ...]`，且非空、唯一、非历史全零 placehold
 漂移则 fail closed。真实 `tmp_path` SQLite golden 同时覆盖四行一致、单行漂移
 与重启 replay，无 schema 或数据库迁移。
 
-### Task 5f: 其余后端闭环场景（后续）
+### Task 5f: 其余后端闭环场景（已完成，2026-07-28 源码核实）
 
-governance recovery 已由
-`packages/application/tests/integration/test_r3_governance_recovery_golden.py`
-覆盖 append-only review decision、active pointer CAS/reactivate 与 stale
-conflict，不再列为待实施项。剩余按依赖顺序推进：
+> **状态更新（2026-07-28）**：原标注「后续」的三项均已落地并测试通过，本 Task
+> 不再列为待实施项。核实证据见 `memory/r3-research-governance-progress.md`
+> 2026-07-28 段。
 
-1. stock/ETF 双 lane golden，并在 `r2_live_gate=NOT_EVALUATED` 下如实断言
-   promotion 被阻断且 active pointer 不变；
-2. `test_r3_scheduler_capacity`：128 预检、2/4 worker、单 slot、lease reclaim、
-   无重复 claim 与 artifact lineage。
+三项全部完成：
+
+1. **governance recovery**（commit `17b15298`）——
+   `packages/application/tests/integration/test_r3_governance_recovery_golden.py`
+   6 个测试：append-only review decision、active pointer CAS/reactivate、
+   stale conflict 409、reactivate deprecated invalid transition。
+2. **stock/ETF 双 lane golden**（commit `95a099ab`）——折叠为
+   `test_r3_evidence_closure_golden.py` 的参数化场景
+   `[cost-match-stock, cost-match-etf, cost-drift-stock, cost-drift-etf]`，
+   在 `r2_live_gate=NOT_EVALUATED` 下如实断言 promotion 被 `hard_gate_blocked`
+   阻断且 active pointer 不变。
+3. **scheduler capacity**（commit `9b3142c7`）——
+   `test_r3_scheduler_capacity.py` 5 个测试：128 candidate preflight ceiling、
+   capacity dispatch、singleton queue order、lease reclaim lineage、
+   pause-resume no-dup。
 
 **Step 1: Write golden e2e tests**
 

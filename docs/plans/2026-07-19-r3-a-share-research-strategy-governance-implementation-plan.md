@@ -12,6 +12,7 @@
 
 > **设计事实源**：[2026-07-19 R3 design](2026-07-19-r3-a-share-research-strategy-governance-design.md)<br>
 > **计划状态**：READY FOR EXECUTION；数据库 schema、新依赖、架构边界和环境配置仍须在对应 task 前单独批准<br>
+> **实施核实状态（2026-07-28 全量源码核实 + arch 修复）**：后端 17/17 Task 完整完成（Task 15 Step 4 legacy migration 标记 N/A——未上线无历史数据，用户决策不实现），evidence collection closure Task 1-4 + 5a-5f 全部 ✅，核心价值链闭合（EVIDENCE→collector→review packet 11 hard gate→publish→COMPLETED→governance promote 三层 identity binding）。架构门禁已修复（`_worker_attestation.py` 拆分 worker.py 882→770 行 + 3 个 fold-selection-trace 文件加入 `PRODUCTION_ANALYSIS_WIRING_ALLOWANCES` + `research_backtest_factory` leaf-direct；`pixi run -e dev arch-check` 0 issues、37 contracts kept、type/ruff 全过、1160 相关测试 GREEN）。**剩余阻断项**：🔴 **前端 W5（Task 18-22 ditto-app）完全未开始**（main 分支零 R3 接线，plan 估 3-5 人周）⚫ **R2 live gate 未关闭**（release blocker，独立于 R3 工程）。详见 `memory/r3-research-governance-progress.md` 2026-07-28 段。<br>
 > **跨仓库规则**：后端路径相对 `/home/chevy/projects/ditto`；标记为 `ditto-app` 的路径相对 `/home/chevy/projects/ditto-app`；两个仓库分别建分支、分别提交和验证。
 
 ## 实施规则
@@ -712,6 +713,8 @@ Expected: FAIL，当前只有 draft/published 和 `INSERT OR REPLACE`/任意 sta
 **Step 4: Implement legacy dry-run migration**
 
 读取旧 records，生成 StrategySpec v2/hash、`legacy_import` event 和每个 strategy 的 active mapping；dry-run 无写入，apply 前验证 backup，重复 apply no-op。
+
+> ✅ **范围决定（2026-07-28，用户决策）**：本 Step **标记为 N/A，不实现**——项目未上线、无历史 production 数据与 schema 需要兼容，legacy dry-run migration 无实现必要。`strategy_governance_migration.py` 文件不存在（`git log --all` 也无历史记录），代码中无 `legacy_import`/`legacy_dry_run`/`migrate_legacy` 引用。Task 15 其余部分（governance models/service/protocols/store + 5 表 append-only CAS + Step 1-3/5）均已 ✅ 完成（41 测试）。若将来上线后需从旧 `strategy_spec` 迁移到 governance 表，再单独立项实现此 Step（approval checkpoint 仍适用）。
 
 **Step 5: Run tests and commit**
 
