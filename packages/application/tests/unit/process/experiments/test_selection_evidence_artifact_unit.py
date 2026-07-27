@@ -196,6 +196,7 @@ def _service(
         ),
         walk_forward_assembler=WalkForwardEvidenceAssembler(
             report_reader=case.adapter,
+            fold_selection_trace_reader=case.trace_adapter,
             semantics_resolver=Resolver(case.semantics),
         ),
     )

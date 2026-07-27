@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from ditto_analysis.experiments import (
     HARD_GATE_RULE_IDS,
     REVIEW_PACKET_SCHEMA_VERSION,
+    REVIEW_PACKET_SCHEMA_VERSION_V1,
     ContentHash,
     GateEvaluation,
     GateLayer,
@@ -144,6 +146,22 @@ def test_promote_rejects_stale_evidence_bundle(tmp_path: Path) -> None:
         process.promote(_request(_packet(), expected_bundle_hash="stale-hash"))
 
     assert exc.value.details["reason"] == "stale_evidence_bundle"
+
+
+def test_promote_rejects_legacy_v1_before_any_governance_io() -> None:
+    governance = MagicMock(spec=GovernanceService)
+    process = StrategyPromotionProcess(governance)
+    packet = replace(
+        _packet(),
+        schema_version=REVIEW_PACKET_SCHEMA_VERSION_V1,
+    )
+
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(packet))
+
+    assert exc.value.details["reason"] == "review_packet_schema_unsupported"
+    governance.assert_not_called()
+    assert governance.mock_calls == []
 
 
 def test_promote_rejects_packet_for_different_strategy_spec_before_write(

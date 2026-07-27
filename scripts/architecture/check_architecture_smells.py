@@ -937,6 +937,49 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "ExperimentReaderProtocol and ExperimentWriterProtocol."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_fold_selection_trace_artifacts.py"
+        ),
+        owner="application R3 fold-selection-trace artifact contract boundary",
+        reason=(
+            "The pure typed contract module freezes the analysis-owned attempt, "
+            "fold, content-hash, date-window, lease-fence, canonical-payload, and "
+            "relative-path value contracts into deterministic artifact identities, "
+            "fixed four-record receipts, and narrow publisher/reader/index protocols; "
+            "it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_fold_selection_trace_artifact_validation.py"
+        ),
+        owner="application R3 fold-selection-trace artifact validation boundary",
+        reason=(
+            "The pure no-I/O validator verifies the four analysis-owned immutable "
+            "ArtifactRecord, ContentHash, LeaseFence, ArtifactManifest, and canonical "
+            "parquet byte-measurement contracts against canonical selection-evidence "
+            "trace frames and the attempt test window; it performs no storage or "
+            "execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/builders/"
+            "fold_selection_trace_artifact_adapter.py"
+        ),
+        owner="application R3 fold-selection-trace indexed artifact adapter",
+        reason=(
+            "The indexed builder publishes and reads the four attempt-scoped fold "
+            "selection trace Parquet facts through the analysis-owned "
+            "ResearchArtifactService and a narrow index-reader port, reusing the "
+            "immutable ArtifactRecord, LeaseFence, and ArtifactPublicationSpec value "
+            "contracts; storage access remains behind the injected indexed service "
+            "and reader ports and the adapter performs no direct storage I/O."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (

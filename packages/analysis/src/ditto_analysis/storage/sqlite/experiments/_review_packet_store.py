@@ -5,8 +5,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import cast
 
+from ditto_analysis.errors import ExperimentSpecError
 from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
-from ditto_analysis.experiments.evidence import ReviewPacket
+from ditto_analysis.experiments.evidence import (
+    REVIEW_PACKET_SCHEMA_VERSION,
+    ReviewPacket,
+)
 from ditto_analysis.experiments.models import ExperimentId
 from ditto_analysis.experiments.persistence import ArtifactRecord, LeaseFence
 from ditto_analysis.research._indexed_artifacts import (
@@ -36,6 +40,11 @@ class SQLiteExperimentReviewPacketMixin:
         created_at: datetime,
     ) -> ArtifactRecord:
         """Persist one immutable review packet under its content-addressed identity."""
+        if packet.schema_version != REVIEW_PACKET_SCHEMA_VERSION:
+            raise ExperimentSpecError(
+                "legacy review packet schemas are read-only",
+                details={"reason_code": "review_packet_schema_read_only"},
+            )
         bundle_hash = packet.bundle_hash
         spec = ArtifactPublicationSpec(
             artifact_id=f"review-packet-{bundle_hash}",

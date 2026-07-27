@@ -31,7 +31,9 @@ __all__ = [
     "FoldSelectionTraceArtifactIndexReader",
     "FoldSelectionTraceArtifactKind",
     "FoldSelectionTraceArtifactPublisher",
+    "FoldSelectionTraceArtifactReader",
     "FoldSelectionTraceArtifactReceipt",
+    "LoadedFoldSelectionTraceArtifacts",
     "fold_selection_trace_table_name",
 ]
 
@@ -219,6 +221,27 @@ class FoldSelectionTraceArtifactReceipt:
         )[typed_kind]
 
 
+@dataclass(frozen=True, slots=True)
+class LoadedFoldSelectionTraceArtifacts:
+    """One all-four verified read with its exact attempt identity and evidence."""
+
+    identity: FoldSelectionTraceArtifactIdentity
+    receipt: FoldSelectionTraceArtifactReceipt
+    evidence: SelectionEvidenceLog
+
+    def __post_init__(self) -> None:
+        """Reject erased values at the verified-reader boundary."""
+        if (
+            type(self.identity) is not FoldSelectionTraceArtifactIdentity
+            or type(self.receipt) is not FoldSelectionTraceArtifactReceipt
+            or type(self.evidence) is not SelectionEvidenceLog
+        ):
+            raise _contract_error("invalid_loaded_fold_selection_trace_artifacts")
+        self.identity.__post_init__()
+        self.receipt.__post_init__()
+        self.evidence.__post_init__()
+
+
 class FoldSelectionTraceArtifactPublisher(Protocol):
     """Worker port for one all-four fold trace publication."""
 
@@ -231,6 +254,17 @@ class FoldSelectionTraceArtifactPublisher(Protocol):
         now_epoch_us: int,
     ) -> FoldSelectionTraceArtifactReceipt:
         """Publish all four trace tables using the same renewed lease fence."""
+        ...
+
+
+class FoldSelectionTraceArtifactReader(Protocol):
+    """Evidence-collection port for an all-or-none verified fold trace."""
+
+    def read(
+        self,
+        identity: FoldSelectionTraceArtifactIdentity,
+    ) -> LoadedFoldSelectionTraceArtifacts | None:
+        """Return four verified files, or ``None`` only when all four are absent."""
         ...
 
 

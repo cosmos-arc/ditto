@@ -6,6 +6,7 @@ from dataclasses import replace
 
 from ditto_analysis.experiments import (
     REVIEW_PACKET_SCHEMA_VERSION,
+    REVIEW_PACKET_SELECTION_TRACE_KINDS,
     CandidateId,
     ConstraintOperator,
     ContentHash,
@@ -19,6 +20,7 @@ from ditto_analysis.experiments import (
     ResearchMetricId,
     ResearchMetricValue,
     ReviewPacket,
+    SelectionTraceArtifactRef,
 )
 from ditto_analysis.experiments.trial_family import (
     LogicalTrialIdentity,
@@ -83,6 +85,20 @@ def _hard_evidence() -> HardGateEvidence:
     )
 
 
+def _selection_trace_refs() -> tuple[SelectionTraceArtifactRef, ...]:
+    return tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=kind,
+            artifact_id=f"trace-{index}",
+            content_hash=ContentHash(f"{index}" * 64),
+        )
+        for index, kind in enumerate(
+            REVIEW_PACKET_SELECTION_TRACE_KINDS,
+            start=1,
+        )
+    )
+
+
 def _input(**overrides: object) -> ReviewPacketInput:
     base = ReviewPacketInput(
         experiment_id="experiment-1",
@@ -110,6 +126,7 @@ def _input(**overrides: object) -> ReviewPacketInput:
         selection_evidence_artifact_id="artifact-1",
         holdout_claim_id="claim-1",
         candidate_rationale="Captures durable net return after costs.",
+        selection_trace_artifact_refs=_selection_trace_refs(),
     )
     return replace(base, **overrides) if overrides else base
 
@@ -139,6 +156,7 @@ def test_assemble_maps_lineage_and_hashes() -> None:
     assert packet.spec_hash == ContentHash("a" * 64)
     assert packet.comparison_payload_hash == ContentHash("9" * 64)
     assert packet.holdout_claim_id == "claim-1"
+    assert packet.selection_trace_artifact_refs == _selection_trace_refs()
 
 
 def test_assemble_bundle_hash_is_stable() -> None:

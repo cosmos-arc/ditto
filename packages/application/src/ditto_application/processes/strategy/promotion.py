@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from ditto_analysis.experiments import (
     HARD_GATE_RULE_IDS,
+    REVIEW_PACKET_SCHEMA_VERSION,
     GateEvaluation,
     GateLayer,
     ReviewPacket,
@@ -81,6 +82,12 @@ class StrategyPromotionProcess:
 
     def promote(self, request: PromotionRequest) -> PromotionResult:
         """Validate the evidence bundle, publish, and switch the active pointer."""
+        if request.packet.schema_version != REVIEW_PACKET_SCHEMA_VERSION:
+            raise AppProcessError(
+                "review packet schema is read-only and cannot be promoted",
+                reason="review_packet_schema_unsupported",
+                schema_version=request.packet.schema_version,
+            )
         bundle_hash = str(request.packet.bundle_hash)
         if bundle_hash != request.expected_bundle_hash:
             raise AppProcessError(

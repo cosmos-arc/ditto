@@ -2806,3 +2806,92 @@ def test_publish_review_packet_does_not_require_active_lease(tmp_path: Path) -> 
 
     assert record.artifact_kind == "review_packet"
     assert reader.get_review_packet(str(packet.bundle_hash)) == packet
+
+
+def test_publish_review_packet_rejects_legacy_v1_before_file_or_index_write(
+    tmp_path: Path,
+) -> None:
+    """Schema v1 remains readable history and cannot be newly published."""
+    from ditto_analysis.experiments.evidence import REVIEW_PACKET_SCHEMA_VERSION_V1
+    from ditto_analysis.experiments.persistence import LeaseFence
+
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    packet = replace(
+        _review_packet(),
+        schema_version=REVIEW_PACKET_SCHEMA_VERSION_V1,
+    )
+    fence = LeaseFence(
+        experiment_id=ExperimentId("experiment-1"),
+        owner_token="promotion-owner",
+        revision=0,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        writer.publish_review_packet(
+            packet,
+            lease_fence=fence,
+            now_epoch_us=NOW_US + 1,
+            created_at=NOW,
+        )
+
+    assert exc_info.value.details["reason_code"] == "review_packet_schema_read_only"
+    assert reader.get_review_packet(str(packet.bundle_hash)) is None
+    assert not (
+        database.artifact_root
+        / f"experiments/{packet.lineage.experiment_id}/review-packet.json"
+    ).exists()
+
+
+def test_reader_reopens_low_level_seeded_legacy_v1_packet(tmp_path: Path) -> None:
+    """Simulate an existing v1 artifact without using the now-v2-only writer."""
+    from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
+    from ditto_analysis.experiments.evidence import REVIEW_PACKET_SCHEMA_VERSION_V1
+    from ditto_analysis.experiments.persistence import LeaseFence
+    from ditto_analysis.research._indexed_artifacts import IndexedArtifactIO
+
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    packet = replace(
+        _review_packet(),
+        schema_version=REVIEW_PACKET_SCHEMA_VERSION_V1,
+    )
+    bundle_hash = packet.bundle_hash
+    spec = ArtifactPublicationSpec(
+        artifact_id=f"review-packet-{bundle_hash}",
+        experiment_id=ExperimentId(packet.lineage.experiment_id),
+        candidate_id=None,
+        fold_id=None,
+        attempt_id=None,
+        artifact_kind="review_packet",
+        relative_path=(
+            f"experiments/{packet.lineage.experiment_id}/review-packet.json"
+        ),
+        reproduction_fingerprint=bundle_hash,
+        audit={"created_at": NOW.isoformat()},
+        created_at=NOW,
+    )
+    fence = LeaseFence(
+        experiment_id=ExperimentId("experiment-1"),
+        owner_token="legacy-seed",
+        revision=0,
+        lease_until_epoch_us=NOW_US - 1,
+    )
+    indexed = IndexedArtifactIO(
+        artifact_root=database.artifact_root,
+        reader=reader,
+        writer=writer,
+    )
+
+    indexed.publish_json(
+        spec,
+        packet.canonical_payload(),
+        lease_fence=fence,
+        now_epoch_us=NOW_US,
+    )
+
+    restored = reader.get_review_packet(str(bundle_hash))
+    assert restored == packet
+    assert restored is not None
+    assert restored.canonical_payload() == packet.canonical_payload()

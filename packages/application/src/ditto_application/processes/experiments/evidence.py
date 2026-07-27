@@ -23,6 +23,7 @@ from ditto_analysis.experiments import (
     ResearchMetricValue,
     ReviewPacket,
     ReviewPacketLineage,
+    SelectionTraceArtifactRef,
     evaluate_evidence_gates,
     evaluate_hard_gates,
 )
@@ -52,6 +53,7 @@ class ReviewPacketInput:
     selection_evidence_artifact_id: str | None
     holdout_claim_id: str | None
     candidate_rationale: str
+    selection_trace_artifact_refs: tuple[SelectionTraceArtifactRef, ...]
 
 
 def assemble_review_packet(packet_input: ReviewPacketInput) -> ReviewPacket:
@@ -83,4 +85,5 @@ def assemble_review_packet(packet_input: ReviewPacketInput) -> ReviewPacket:
         selection_evidence_artifact_id=packet_input.selection_evidence_artifact_id,
         holdout_claim_id=packet_input.holdout_claim_id,
         candidate_rationale=packet_input.candidate_rationale,
+        selection_trace_artifact_refs=packet_input.selection_trace_artifact_refs,
     )

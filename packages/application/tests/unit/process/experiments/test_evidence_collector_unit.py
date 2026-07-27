@@ -33,6 +33,7 @@ from ditto_analysis.experiments import (
     LeaseFence,
     ResearchMetricId,
     ResearchMetricValue,
+    SelectionTraceArtifactRef,
     StatusEventRecord,
     StatusSubjectType,
     canonical_payload,
@@ -43,6 +44,9 @@ from ditto_analysis.experiments.trial_ledger import build_trial_ledger
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import (
     evidence_collector as collector_module,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
 )
 from ditto_application.processes.experiments._holdout_contract import (
     PersistedHoldoutClaim,
@@ -76,6 +80,7 @@ from .walk_forward_evidence_collection_fixtures import (
     Resolver,
     artifact_identity,
     build_case,
+    trace_identity,
 )
 
 CREATED_AT = datetime(2026, 7, 27, 10, tzinfo=UTC)
@@ -356,6 +361,7 @@ def _collector(
         writer=writer,
         walk_forward_assembler=WalkForwardEvidenceAssembler(
             report_reader=case.adapter,
+            fold_selection_trace_reader=case.trace_adapter,
             semantics_resolver=Resolver(case.semantics),
         ),
         selection_evidence_reader=(
@@ -408,6 +414,15 @@ def test_collect_publishes_real_selected_metrics_and_paired_lineage(
     assert packet.r1_impact_payload_hash is None
     assert packet.selection_evidence_artifact_id == (
         f"selection-evidence-{_selection_evidence(case).ledger.content_hash}"
+    )
+    assert packet.selection_trace_artifact_refs == tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=record.artifact_kind,
+            artifact_id=record.artifact_id,
+            content_hash=record.content_hash,
+        )
+        for bundle in expected.selection_traces
+        for record in bundle.receipt.records
     )
     assert _gate(packet, "trial_declaration").outcome is GateOutcome.PASS
     assert _gate(packet, "trial_declaration").observed == {
@@ -603,7 +618,11 @@ def test_missing_report_publishes_not_evaluated_metrics_and_all_family_ref(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    case = build_case(tmp_path, publish_indices=(0, 1, 2))
+    case = build_case(
+        tmp_path,
+        publish_indices=(0, 1, 2),
+        trace_publish_indices=(0, 1, 2, 3),
+    )
     missing_fold = case.folds[3]
     missing_attempt = case.attempts[3]
     collector, writer, _ = _collector(monkeypatch, case)
@@ -626,7 +645,11 @@ def test_missing_baseline_report_is_included_in_all_family_missing_refs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    case = build_case(tmp_path, publish_indices=(1, 2, 3))
+    case = build_case(
+        tmp_path,
+        publish_indices=(1, 2, 3),
+        trace_publish_indices=(0, 1, 2, 3),
+    )
     collector, writer, _ = _collector(monkeypatch, case)
 
     packet = _collect(collector)
@@ -638,6 +661,58 @@ def test_missing_baseline_report_is_included_in_all_family_missing_refs(
     assert (
         _gate(packet, "primary_objective_metric").outcome is GateOutcome.NOT_EVALUATED
     )
+    assert len(writer.calls) == 1
+
+
+def test_missing_four_selection_trace_files_fail_completeness_but_keep_metrics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path, trace_publish_indices=(0, 1, 2))
+    missing_identity = trace_identity(case.folds[3], case.attempts[3])
+    collector, writer, _ = _collector(monkeypatch, case)
+
+    packet = _collect(collector)
+
+    artifact_gate = _gate(packet, "artifact_completeness")
+    assert artifact_gate.outcome is GateOutcome.FAIL
+    assert artifact_gate.observed == {
+        "missing": tuple(
+            sorted(
+                (
+                    missing_identity.relative_path(kind)
+                    for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+                ),
+                key=str.encode,
+            )
+        )
+    }
+    objective_gate = _gate(packet, "primary_objective_metric")
+    assert objective_gate.outcome is GateOutcome.PASS
+    assert objective_gate.observed == pytest.approx(17.6)
+    assert packet.comparison_payload_hash is not None
+    missing_ids = {
+        missing_identity.artifact_id(kind)
+        for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+    }
+    assert len(packet.selection_trace_artifact_refs) == 12
+    assert missing_ids.isdisjoint(
+        ref.artifact_id for ref in packet.selection_trace_artifact_refs
+    )
+    assert len(writer.calls) == 1
+
+
+def test_all_missing_selection_traces_emit_no_positive_packet_refs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path, trace_publish_indices=())
+    collector, writer, _ = _collector(monkeypatch, case)
+
+    packet = _collect(collector)
+
+    assert packet.selection_trace_artifact_refs == ()
+    assert _gate(packet, "artifact_completeness").outcome is GateOutcome.FAIL
     assert len(writer.calls) == 1
 
 

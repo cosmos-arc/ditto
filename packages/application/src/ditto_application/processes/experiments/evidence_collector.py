@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, cast
 
+from ditto_analysis.errors import ExperimentIntegrityError
 from ditto_analysis.experiments import (
     R3_COMPARISON_METRIC_IDS,
     CandidateExecutionBinding,
@@ -38,6 +39,7 @@ from ditto_analysis.experiments import (
     ResearchMetricId,
     ResearchMetricValue,
     ReviewPacket,
+    SelectionTraceArtifactRef,
     collect_hard_gate_evidence,
     encode_launch_spec,
 )
@@ -49,6 +51,13 @@ from ditto_application.processes.experiments._evidence_inputs import (
     SnapshotManifestProjection,
     project_snapshot_manifest,
     read_unique_preflight_detail,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifact_validation import (  # noqa: E501
+    FoldSelectionTraceArtifactValidationError,
+    validate_fold_selection_trace_artifacts,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
 )
 from ditto_application.processes.experiments._holdout_contract import (
     PersistedHoldoutClaim,
@@ -153,6 +162,7 @@ class ExperimentEvidenceCollector:
             selected,
             selected_rows,
             selection_evidence,
+            collected,
         )
         packet = assemble_review_packet(packet_input)
         self.writer.publish_review_packet(
@@ -370,6 +380,7 @@ def _build_packet_input(
     selected: WalkForwardCandidate,
     selected_rows: tuple[CandidateFoldEvidence, ...],
     selection_evidence: PublishedSelectionEvidence,
+    collected: CollectedWalkForwardEvidence,
 ) -> ReviewPacketInput:
     """Assemble the review packet from exact selected walk-forward evidence."""
     launch_spec = snapshot.launch_spec
@@ -403,7 +414,39 @@ def _build_packet_input(
             launch_spec,
             claim.candidate_id,
         ),
+        selection_trace_artifact_refs=_selection_trace_artifact_refs(collected),
     )
+
+
+def _selection_trace_artifact_refs(
+    collected: CollectedWalkForwardEvidence,
+) -> tuple[SelectionTraceArtifactRef, ...]:
+    """Project only complete verified four-kind blocks into packet v2 refs."""
+    refs: list[SelectionTraceArtifactRef] = []
+    for bundle in collected.selection_traces:
+        try:
+            validate_fold_selection_trace_artifacts(
+                bundle.identity,
+                bundle.evidence,
+                bundle.receipt,
+            )
+            refs.extend(
+                SelectionTraceArtifactRef(
+                    artifact_kind=kind.value,
+                    artifact_id=bundle.receipt.record(kind).artifact_id,
+                    content_hash=bundle.receipt.record(kind).content_hash,
+                )
+                for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+            )
+        except (FoldSelectionTraceArtifactValidationError, ValueError) as error:
+            raise ExperimentIntegrityError(
+                "collected fold selection trace references are inconsistent",
+                details={
+                    "reason_code": ("fold_selection_trace_artifact_integrity_mismatch"),
+                    "reason": "invalid_review_packet_selection_trace_block",
+                },
+            ) from error
+    return tuple(refs)
 
 
 def _candidate_rationale(

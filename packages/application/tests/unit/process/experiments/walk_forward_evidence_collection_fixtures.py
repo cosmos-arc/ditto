@@ -54,11 +54,17 @@ from ditto_analysis.experiments.trial_family import (
     TrialKind,
 )
 from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_application.builders.fold_selection_trace_artifact_adapter import (
+    IndexedFoldSelectionTraceArtifactAdapter,
+)
 from ditto_application.builders.research_artifact_loader import (
     IndexedBacktestReportArtifactAdapter,
 )
 from ditto_application.processes.experiments._evidence_inputs import (
     SnapshotManifestProjection,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FoldSelectionTraceArtifactIdentity,
 )
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
@@ -105,6 +111,7 @@ from ditto_backtest.statistics import (
     empty_aggregated_trade_statistics,
     empty_alpha_statistics,
 )
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
 
 __all__ = [
     "BASELINE_ID",
@@ -122,6 +129,7 @@ __all__ = [
     "build_case",
     "scheduler_snapshot",
     "snapshot_manifest",
+    "trace_identity",
 ]
 
 EXPERIMENT_ID = ExperimentId("experiment-r3-evidence")
@@ -216,7 +224,11 @@ class MemoryArtifactIndex:
 
 def _adapter(
     tmp_path: Path,
-) -> tuple[IndexedBacktestReportArtifactAdapter, MemoryArtifactIndex]:
+) -> tuple[
+    IndexedBacktestReportArtifactAdapter,
+    IndexedFoldSelectionTraceArtifactAdapter,
+    MemoryArtifactIndex,
+]:
     index = MemoryArtifactIndex(tmp_path)
     service = ResearchArtifactService(
         artifact_root=tmp_path,
@@ -225,6 +237,10 @@ def _adapter(
     )
     return (
         IndexedBacktestReportArtifactAdapter(
+            artifact_service=service,
+            artifact_index_reader=index,
+        ),
+        IndexedFoldSelectionTraceArtifactAdapter(
             artifact_service=service,
             artifact_index_reader=index,
         ),
@@ -384,6 +400,24 @@ def artifact_identity(
     run_id = attempt.projection.backtest_run_id
     assert run_id is not None
     return BacktestReportArtifactIdentity(
+        experiment_id=fold.spec.key.experiment_id,
+        candidate_id=fold.spec.key.candidate_id,
+        fold_id=fold.spec.key.fold_id,
+        attempt_id=attempt.spec.attempt_id,
+        attempt_created_at=attempt.spec.created_at,
+        run_id=run_id,
+        test_window=fold.spec.test_window,
+        reproduction_fingerprint=attempt.spec.reproduction_fingerprint,
+    )
+
+
+def trace_identity(
+    fold: FoldView,
+    attempt: AttemptView,
+) -> FoldSelectionTraceArtifactIdentity:
+    run_id = attempt.projection.backtest_run_id
+    assert run_id is not None
+    return FoldSelectionTraceArtifactIdentity(
         experiment_id=fold.spec.key.experiment_id,
         candidate_id=fold.spec.key.candidate_id,
         fold_id=fold.spec.key.fold_id,
@@ -619,6 +653,7 @@ class EvidenceCase:
     attempts: tuple[AttemptView, ...]
     semantics: dict[FoldKey, ResearchExecutionSemantics]
     adapter: IndexedBacktestReportArtifactAdapter
+    trace_adapter: IndexedFoldSelectionTraceArtifactAdapter
     index: MemoryArtifactIndex
 
     def snapshot(
@@ -632,7 +667,7 @@ class EvidenceCase:
             self.attempts if attempts is None else attempts,
         )
 
-    def publish(self, fold: FoldView, attempt: AttemptView) -> None:
+    def publish_report(self, fold: FoldView, attempt: AttemptView) -> None:
         fence = LeaseFence(EXPERIMENT_ID, "evidence-owner", 1, NOW_US + 1_000_000)
         self.adapter.publish(
             artifact_identity(fold, attempt),
@@ -647,6 +682,19 @@ class EvidenceCase:
             now_epoch_us=NOW_US,
         )
 
+    def publish_trace(self, fold: FoldView, attempt: AttemptView) -> None:
+        fence = LeaseFence(EXPERIMENT_ID, "evidence-owner", 1, NOW_US + 1_000_000)
+        self.trace_adapter.publish(
+            trace_identity(fold, attempt),
+            SelectionEvidenceLog(),
+            lease_fence=fence,
+            now_epoch_us=NOW_US,
+        )
+
+    def publish(self, fold: FoldView, attempt: AttemptView) -> None:
+        self.publish_report(fold, attempt)
+        self.publish_trace(fold, attempt)
+
     def assemble(
         self,
         *,
@@ -658,6 +706,7 @@ class EvidenceCase:
         selected_semantics = self.semantics if semantics is None else semantics
         return WalkForwardEvidenceAssembler(
             report_reader=self.adapter,
+            fold_selection_trace_reader=self.trace_adapter,
             semantics_resolver=(
                 Resolver(selected_semantics) if resolver is None else resolver
             ),
@@ -671,6 +720,7 @@ def build_case(
     tmp_path: Path,
     *,
     publish_indices: tuple[int, ...] = (0, 1, 2, 3),
+    trace_publish_indices: tuple[int, ...] | None = None,
 ) -> EvidenceCase:
     folds = tuple(
         _fold(candidate_id, ordinal)
@@ -686,8 +736,20 @@ def build_case(
         )
         for fold in folds
     )
-    adapter, index = _adapter(tmp_path)
-    case = EvidenceCase(folds, attempts, semantics, adapter, index)
+    adapter, trace_adapter, index = _adapter(tmp_path)
+    case = EvidenceCase(
+        folds,
+        attempts,
+        semantics,
+        adapter,
+        trace_adapter,
+        index,
+    )
     for index_value in publish_indices:
-        case.publish(folds[index_value], attempts[index_value])
+        case.publish_report(folds[index_value], attempts[index_value])
+    selected_trace_indices = (
+        publish_indices if trace_publish_indices is None else trace_publish_indices
+    )
+    for index_value in selected_trace_indices:
+        case.publish_trace(folds[index_value], attempts[index_value])
     return case

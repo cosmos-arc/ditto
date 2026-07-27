@@ -7,6 +7,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import polars as pl
 import pytest
 from ditto_analysis.errors import ExperimentConflictError, ExperimentIntegrityError
 from ditto_analysis.experiments import (
@@ -20,13 +21,23 @@ from ditto_analysis.experiments import (
     FoldId,
     LeaseFence,
 )
+from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
 from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_application.processes.execution.backtest_serialization import (
+    serialize_selection_evidence,
+)
 from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
     FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
     FoldSelectionTraceArtifactIdentity,
+    FoldSelectionTraceArtifactKind,
+    LoadedFoldSelectionTraceArtifacts,
 )
 from ditto_strategy.alpha.selection_evidence import (
+    ExclusionEvidence,
+    ExclusionReason,
+    FactorContributionEvidence,
     InitialUniverseEvidence,
+    SelectionEvidence,
     SelectionEvidenceLog,
 )
 
@@ -123,6 +134,28 @@ class _MissingIndexReader:
         return None
 
 
+class _OneSidedIndexReader:
+    def __init__(
+        self,
+        source: _MemoryArtifactIndex,
+        *,
+        missing_path: str,
+    ) -> None:
+        self._source = source
+        self._missing_path = missing_path
+
+    def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
+        return self._source.get_artifact(artifact_id)
+
+    def get_artifact_by_relative_path(
+        self,
+        relative_path: str,
+    ) -> ArtifactRecord | None:
+        if relative_path == self._missing_path:
+            return None
+        return self._source.get_artifact_by_relative_path(relative_path)
+
+
 def _identity() -> FoldSelectionTraceArtifactIdentity:
     return FoldSelectionTraceArtifactIdentity(
         experiment_id=EXPERIMENT_ID,
@@ -133,6 +166,56 @@ def _identity() -> FoldSelectionTraceArtifactIdentity:
         run_id=BacktestRunId("run-1"),
         test_window=DateWindow(date(2026, 7, 1), date(2026, 7, 31)),
         reproduction_fingerprint=ContentHash("a" * 64),
+    )
+
+
+def _evidence() -> SelectionEvidenceLog:
+    return SelectionEvidenceLog(
+        initial_universe=(
+            InitialUniverseEvidence(
+                trade_date="2026-07-28",
+                instrument_id=1,
+                ordinal=1,
+            ),
+            InitialUniverseEvidence(
+                trade_date="2026-07-28",
+                instrument_id="000002.SZ",
+                ordinal=2,
+            ),
+        ),
+        exclusions=(
+            ExclusionEvidence(
+                trade_date="2026-07-28",
+                instrument_id="000002.SZ",
+                stage="top_k",
+                reason_code=ExclusionReason.BELOW_TOP_K,
+                message=None,
+            ),
+        ),
+        selections=(
+            SelectionEvidence(
+                trade_date="2026-07-28",
+                instrument_id=1,
+                score=2.5,
+                rank=1,
+                selected=True,
+            ),
+        ),
+        factor_contributions=(
+            FactorContributionEvidence(
+                trade_date="2026-07-28",
+                instrument_id=1,
+                factor_name="momentum",
+                raw_value=3.0,
+                processed_value=2.5,
+                normalized_value=1.0,
+                weight=2.5,
+                contribution=2.5,
+                factor_signal_score=2.5,
+                rank=1,
+                selected=True,
+            ),
+        ),
     )
 
 
@@ -157,6 +240,60 @@ def _adapter(
             artifact_index_reader=adapter_index or index,
         ),
         index,
+    )
+
+
+def _publish_raw_tables(
+    tmp_path: Path,
+    tables: dict[str, pl.DataFrame],
+):
+    from ditto_application.builders.fold_selection_trace_artifact_adapter import (
+        IndexedFoldSelectionTraceArtifactAdapter,
+    )
+
+    identity = _identity()
+    index = _MemoryArtifactIndex(tmp_path)
+    service = ResearchArtifactService(
+        artifact_root=tmp_path,
+        artifact_reader=index,
+        artifact_writer=index,
+    )
+    for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS:
+        service.publish_indexed_parquet(
+            ArtifactPublicationSpec(
+                artifact_id=identity.artifact_id(kind),
+                experiment_id=identity.experiment_id,
+                candidate_id=identity.candidate_id,
+                fold_id=identity.fold_id,
+                attempt_id=identity.attempt_id,
+                artifact_kind=kind.value,
+                relative_path=identity.relative_path(kind),
+                reproduction_fingerprint=identity.reproduction_fingerprint,
+                audit=identity.audit(kind),
+                created_at=identity.attempt_created_at,
+            ),
+            tables[
+                {
+                    FoldSelectionTraceArtifactKind.CANDIDATE_UNIVERSE: (
+                        "initial_universe_evidence"
+                    ),
+                    FoldSelectionTraceArtifactKind.CANDIDATE_EXCLUSIONS: (
+                        "exclusion_evidence"
+                    ),
+                    FoldSelectionTraceArtifactKind.CANDIDATE_SELECTIONS: (
+                        "selection_evidence"
+                    ),
+                    FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS: (
+                        "factor_contribution_evidence"
+                    ),
+                }[kind]
+            ],
+            lease_fence=FENCE,
+            now_epoch_us=NOW_US,
+        )
+    return IndexedFoldSelectionTraceArtifactAdapter(
+        artifact_service=service,
+        artifact_index_reader=index,
     )
 
 
@@ -264,3 +401,152 @@ def test_adapter_rejects_receipt_not_visible_by_both_id_and_path(
         exc_info.value.details["reason_code"]
         == "fold_selection_trace_artifact_index_drift"
     )
+
+
+def test_adapter_read_returns_none_only_when_all_four_id_and_path_refs_are_missing(
+    tmp_path: Path,
+) -> None:
+    adapter, _ = _adapter(tmp_path)
+
+    assert adapter.read(_identity()) is None
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    [SelectionEvidenceLog(), _evidence()],
+    ids=("four-real-zero-row-files", "populated"),
+)
+def test_adapter_read_rebuilds_verified_selection_evidence_exactly(
+    tmp_path: Path,
+    evidence: SelectionEvidenceLog,
+) -> None:
+    adapter, _ = _adapter(tmp_path)
+    identity = _identity()
+    receipt = adapter.publish(
+        identity,
+        evidence,
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+    )
+
+    loaded = adapter.read(identity)
+
+    assert type(loaded) is LoadedFoldSelectionTraceArtifacts
+    assert loaded.identity == identity
+    assert loaded.receipt == receipt
+    assert loaded.evidence == evidence
+
+
+def test_adapter_read_rejects_partial_four_kind_presence(
+    tmp_path: Path,
+) -> None:
+    adapter, index = _adapter(tmp_path)
+    identity = _identity()
+    adapter.publish(
+        identity,
+        SelectionEvidenceLog(),
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+    )
+    missing_id = identity.artifact_id(
+        FoldSelectionTraceArtifactKind.CANDIDATE_EXCLUSIONS
+    )
+    del index.records[missing_id]
+
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        adapter.read(identity)
+
+    assert exc_info.value.details["reason"] == "partial_fold_selection_trace_artifacts"
+
+
+def test_adapter_read_rejects_one_sided_id_path_presence(
+    tmp_path: Path,
+) -> None:
+    adapter, index = _adapter(tmp_path)
+    identity = _identity()
+    adapter.publish(
+        identity,
+        SelectionEvidenceLog(),
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+    )
+    adapter, _ = _adapter(
+        tmp_path,
+        adapter_index=_OneSidedIndexReader(
+            index,
+            missing_path=identity.relative_path(
+                FoldSelectionTraceArtifactKind.CANDIDATE_SELECTIONS
+            ),
+        ),
+    )
+
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        adapter.read(identity)
+
+    assert exc_info.value.details["reason"] == "one_sided_artifact_index_binding"
+
+
+def test_adapter_read_rejects_corrupt_verified_parquet_bytes(
+    tmp_path: Path,
+) -> None:
+    adapter, _ = _adapter(tmp_path)
+    identity = _identity()
+    receipt = adapter.publish(
+        identity,
+        SelectionEvidenceLog(),
+        lease_fence=FENCE,
+        now_epoch_us=NOW_US,
+    )
+    record = receipt.record(FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS)
+    (tmp_path / record.relative_path).write_bytes(b"corrupt")
+
+    with pytest.raises(ExperimentIntegrityError):
+        adapter.read(identity)
+
+
+@pytest.mark.parametrize(
+    ("table_name", "transform", "expected_reason"),
+    [
+        (
+            "initial_universe_evidence",
+            lambda frame: frame.with_columns(pl.lit("run-other").alias("run_id")),
+            "invalid_fold_selection_trace_evidence",
+        ),
+        (
+            "initial_universe_evidence",
+            lambda frame: frame.with_columns(pl.lit("2026-08-01").alias("trade_date")),
+            "selection_trace_trade_date_outside_test_window",
+        ),
+        (
+            "initial_universe_evidence",
+            lambda frame: frame.with_columns(
+                pl.when(pl.col("instrument_id_kind") == "integer")
+                .then(pl.lit("01"))
+                .otherwise(pl.col("instrument_id"))
+                .alias("instrument_id")
+            ),
+            "invalid_fold_selection_trace_evidence",
+        ),
+        (
+            "initial_universe_evidence",
+            lambda frame: frame.with_columns(pl.col("ordinal").cast(pl.Int32)),
+            "selection_trace_schema_fingerprint_drift",
+        ),
+    ],
+    ids=("run-id", "outside-date", "integer-id", "schema"),
+)
+def test_adapter_read_rejects_verified_bytes_with_semantic_drift(
+    tmp_path: Path,
+    table_name: str,
+    transform: Callable[[pl.DataFrame], pl.DataFrame],
+    expected_reason: str,
+) -> None:
+    identity = _identity()
+    tables = serialize_selection_evidence(str(identity.run_id), _evidence())
+    tables[table_name] = transform(tables[table_name])
+    adapter = _publish_raw_tables(tmp_path, tables)
+
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        adapter.read(identity)
+
+    assert exc_info.value.details["reason"] == expected_reason

@@ -334,10 +334,10 @@ def _require_exact_events[EventT](
     event_type: type[EventT],
 ) -> tuple[EventT, ...]:
     if type(value) is not tuple:
-        raise TypeError("selection evidence events must be an exact tuple")
+        _invalid_selection_evidence_log()
     events = cast("tuple[object, ...]", value)
     if any(type(event) is not event_type for event in events):
-        raise TypeError("selection evidence contains an invalid event type")
+        _invalid_selection_evidence_log()
     return cast("tuple[EventT, ...]", events)
 
 

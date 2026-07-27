@@ -45,6 +45,12 @@ from ditto_application.processes.experiments._execution_bundle_inputs import (
     BaselineExecutorBinding,
     ResearchSnapshotBinding,
 )
+from ditto_application.processes.experiments._worker_attestation import (
+    ResearchBacktestBuildAttestation,
+    ResearchBacktestBuildSource,
+    VerifiedResearchBacktestBuild,
+    seal_verified_research_backtest_build,
+)
 from ditto_application.processes.experiments.execution_bundle import (
     BacktestExecutionConfigBinding,
     CodeEnvironmentLock,
@@ -71,12 +77,6 @@ from ditto_application.processes.experiments.research_data_feed import (
 )
 from ditto_application.processes.experiments.research_policy_artifact import (
     VerifiedInstrumentRulesArtifact,
-)
-from ditto_application.processes.experiments.worker import (
-    ResearchBacktestBuildAttestation,
-    ResearchBacktestBuildSource,
-    VerifiedResearchBacktestBuild,
-    seal_verified_research_backtest_build,
 )
 
 __all__ = [

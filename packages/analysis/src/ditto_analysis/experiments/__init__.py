@@ -8,8 +8,11 @@ analysis-owned contracts and codecs.
 
 from ditto_analysis.experiments.evidence import (
     REVIEW_PACKET_SCHEMA_VERSION,
+    REVIEW_PACKET_SCHEMA_VERSION_V1,
+    REVIEW_PACKET_SELECTION_TRACE_KINDS,
     ReviewPacket,
     ReviewPacketLineage,
+    SelectionTraceArtifactRef,
 )
 from ditto_analysis.experiments.gates import (
     GATE_POLICY_VERSION,
@@ -132,6 +135,8 @@ __all__ = [
     "R3_DIAGNOSTIC_METRIC_IDS",
     "R3_RESEARCH_METRIC_SCHEMA",
     "REVIEW_PACKET_SCHEMA_VERSION",
+    "REVIEW_PACKET_SCHEMA_VERSION_V1",
+    "REVIEW_PACKET_SELECTION_TRACE_KINDS",
     "ArtifactRecord",
     "AtomicHoldoutClaimReceipt",
     "AttemptId",
@@ -202,6 +207,7 @@ __all__ = [
     "SamplingReturnUnit",
     "SchedulerLease",
     "SchedulerSlot",
+    "SelectionTraceArtifactRef",
     "SnapshotId",
     "StatusEventRecord",
     "StatusSubjectType",

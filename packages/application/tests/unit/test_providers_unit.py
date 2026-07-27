@@ -483,9 +483,11 @@ class TestAppProviderStructure:
         )
 
         report_reader = MagicMock()
+        trace_reader = MagicMock()
         semantics_resolver = MagicMock()
         assembler = AppResearchExecutionProvider().walk_forward_evidence_assembler(
             report_reader=report_reader,
+            fold_selection_trace_reader=trace_reader,
             semantics_resolver=semantics_resolver,
         )
         process_provider = AppProcessProvider()
@@ -508,6 +510,7 @@ class TestAppProviderStructure:
 
         assert isinstance(assembler, WalkForwardEvidenceAssembler)
         assert assembler._report_reader is report_reader
+        assert assembler._fold_selection_trace_reader is trace_reader
         assert assembler._semantics_resolver is semantics_resolver
         assert isinstance(selection_service, DurableSelectionEvidenceService)
         assert selection_service.walk_forward_assembler is assembler
@@ -1037,6 +1040,7 @@ class TestAppProviderIntegration:
         )
         from ditto_application.processes.experiments._fold_selection_trace_artifacts import (  # noqa: E501
             FoldSelectionTraceArtifactPublisher,
+            FoldSelectionTraceArtifactReader,
         )
         from ditto_application.processes.experiments._report_evidence import (
             BacktestReportArtifactPublisher,
@@ -1102,6 +1106,7 @@ class TestAppProviderIntegration:
             IndexedFoldSelectionTraceArtifactAdapter,
         )
         assert app_container.get(FoldSelectionTraceArtifactPublisher) is trace_adapter
+        assert app_container.get(FoldSelectionTraceArtifactReader) is trace_adapter
         assembler = app_container.get(WalkForwardEvidenceAssembler)
         assert isinstance(assembler, WalkForwardEvidenceAssembler)
         selection_service = app_container.get(DurableSelectionEvidenceService)

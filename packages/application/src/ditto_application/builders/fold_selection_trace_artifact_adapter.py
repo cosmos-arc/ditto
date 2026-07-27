@@ -4,11 +4,20 @@ from __future__ import annotations
 
 from typing import NoReturn
 
+import polars as pl
 from ditto_analysis.errors import ExperimentIntegrityError
 from ditto_analysis.experiments import ArtifactRecord, LeaseFence
 from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
 from ditto_analysis.research.artifact_service import ResearchArtifactService
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
+from ditto_strategy.alpha.selection_evidence import (
+    ExclusionEvidence,
+    ExclusionReason,
+    FactorContributionEvidence,
+    InitialUniverseEvidence,
+    SelectionEvidence,
+    SelectionEvidenceLog,
+)
+from ditto_strategy.errors import StrategySpecError
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_serialization import (
@@ -24,6 +33,7 @@ from ditto_application.processes.experiments._fold_selection_trace_artifacts imp
     FoldSelectionTraceArtifactIndexReader,
     FoldSelectionTraceArtifactKind,
     FoldSelectionTraceArtifactReceipt,
+    LoadedFoldSelectionTraceArtifacts,
     fold_selection_trace_table_name,
 )
 
@@ -74,8 +84,132 @@ def _require_evidence(
     return value
 
 
+class _SelectionTraceDecodeError(ValueError):
+    """
+    Local control-flow signal for selection trace row decode failures.
+
+    Caught and normalized to a typed integrity error at the decode boundary;
+    never escapes to callers.
+    """
+
+
+def _decode_instrument_id(row: dict[str, object]) -> int | str:
+    raw_value = row["instrument_id"]
+    raw_kind = row["instrument_id_kind"]
+    if type(raw_value) is not str or not raw_value:
+        raise _SelectionTraceDecodeError("instrument_id must be a non-empty string")
+    if raw_kind == "string":
+        return raw_value
+    if raw_kind != "integer":
+        raise _SelectionTraceDecodeError("instrument_id_kind is unsupported")
+    parsed = int(raw_value)
+    if str(parsed) != raw_value:
+        raise _SelectionTraceDecodeError("integer instrument_id is not canonical")
+    return parsed
+
+
+def _require_run_id(
+    row: dict[str, object],
+    identity: FoldSelectionTraceArtifactIdentity,
+) -> None:
+    if row["run_id"] != str(identity.run_id):
+        raise _SelectionTraceDecodeError("selection trace row identifies another run")
+
+
+def _decode_evidence(
+    identity: FoldSelectionTraceArtifactIdentity,
+    frames: dict[FoldSelectionTraceArtifactKind, pl.DataFrame],
+) -> SelectionEvidenceLog:
+    try:
+        initial_universe = tuple(
+            InitialUniverseEvidence(
+                trade_date=str(row["trade_date"]),
+                instrument_id=_decode_instrument_id(row),
+                ordinal=row["ordinal"],
+            )
+            for row in frames[
+                FoldSelectionTraceArtifactKind.CANDIDATE_UNIVERSE
+            ].iter_rows(named=True)
+            if not _require_run_id(row, identity)
+        )
+        exclusions = tuple(
+            ExclusionEvidence(
+                trade_date=str(row["trade_date"]),
+                instrument_id=_decode_instrument_id(row),
+                stage=row["stage"],
+                reason_code=ExclusionReason(row["reason_code"]),
+                message=row["message"],
+            )
+            for row in frames[
+                FoldSelectionTraceArtifactKind.CANDIDATE_EXCLUSIONS
+            ].iter_rows(named=True)
+            if not _require_run_id(row, identity)
+        )
+        selections = tuple(
+            SelectionEvidence(
+                trade_date=str(row["trade_date"]),
+                instrument_id=_decode_instrument_id(row),
+                score=row["score"],
+                rank=row["rank"],
+                selected=row["selected"],
+            )
+            for row in frames[
+                FoldSelectionTraceArtifactKind.CANDIDATE_SELECTIONS
+            ].iter_rows(named=True)
+            if not _require_run_id(row, identity)
+        )
+        contributions = tuple(
+            FactorContributionEvidence(
+                trade_date=str(row["trade_date"]),
+                instrument_id=_decode_instrument_id(row),
+                factor_name=row["factor_name"],
+                raw_value=row["raw_value"],
+                processed_value=row["processed_value"],
+                normalized_value=row["normalized_value"],
+                weight=row["weight"],
+                contribution=row["contribution"],
+                factor_signal_score=row["factor_signal_score"],
+                rank=row["rank"],
+                selected=row["selected"],
+            )
+            for row in frames[
+                FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS
+            ].iter_rows(named=True)
+            if not _require_run_id(row, identity)
+        )
+        evidence = SelectionEvidenceLog(
+            initial_universe=initial_universe,
+            exclusions=exclusions,
+            selections=selections,
+            factor_contributions=contributions,
+        )
+        encoded = serialize_selection_evidence(str(identity.run_id), evidence)
+    except (
+        AppProcessError,
+        KeyError,
+        OverflowError,
+        StrategySpecError,
+        TypeError,
+        ValueError,
+    ) as error:
+        raise FoldSelectionTraceArtifactValidationError(
+            "invalid_fold_selection_trace_evidence"
+        ) from error
+    for kind, frame in frames.items():
+        expected = encoded[fold_selection_trace_table_name(kind)]
+        if frame.schema != expected.schema:
+            raise FoldSelectionTraceArtifactValidationError(
+                "selection_trace_schema_fingerprint_drift"
+            )
+        if not frame.equals(expected, null_equal=True):
+            raise FoldSelectionTraceArtifactValidationError(
+                "fold_selection_trace_decode_round_trip_drift"
+            )
+    return evidence
+
+
 class IndexedFoldSelectionTraceArtifactAdapter:
-    """Publish all four trace frames through the immutable indexed service."""
+    """Publish and read all four traces through the immutable indexed service."""
 
     def __init__(
         self,
@@ -139,6 +273,64 @@ class IndexedFoldSelectionTraceArtifactAdapter:
                 typed_identity,
                 typed_evidence,
                 receipt,
+            )
+        except FoldSelectionTraceArtifactValidationError as error:
+            _integrity(typed_identity, error.reason)
+
+    def read(
+        self,
+        identity: FoldSelectionTraceArtifactIdentity,
+    ) -> LoadedFoldSelectionTraceArtifacts | None:
+        """Read one exact all-four trace bundle through verified indexed APIs."""
+        typed_identity = _require_identity(identity)
+        records: list[ArtifactRecord] = []
+        frames: dict[FoldSelectionTraceArtifactKind, pl.DataFrame] = {}
+        missing_kinds: list[FoldSelectionTraceArtifactKind] = []
+        for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS:
+            artifact_id = typed_identity.artifact_id(kind)
+            relative_path = typed_identity.relative_path(kind)
+            by_id = self._index.get_artifact(artifact_id)
+            by_path = self._index.get_artifact_by_relative_path(relative_path)
+            if by_id is None and by_path is None:
+                missing_kinds.append(kind)
+                continue
+            if by_id is None or by_path is None:
+                _integrity(
+                    typed_identity,
+                    "one_sided_artifact_index_binding",
+                    kind=kind,
+                )
+            if by_id != by_path:
+                _integrity(
+                    typed_identity,
+                    "artifact_id_path_binding_drift",
+                    kind=kind,
+                )
+            records.append(by_id)
+        if len(missing_kinds) == len(FOLD_SELECTION_TRACE_ARTIFACT_KINDS):
+            return None
+        if missing_kinds:
+            _integrity(
+                typed_identity,
+                "partial_fold_selection_trace_artifacts",
+                kind=missing_kinds[0],
+            )
+        receipt = FoldSelectionTraceArtifactReceipt(*records)
+        for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS:
+            frames[kind] = self._artifacts.read_indexed_parquet(
+                typed_identity.artifact_id(kind)
+            )
+        try:
+            evidence = _decode_evidence(typed_identity, frames)
+            validate_fold_selection_trace_artifacts(
+                typed_identity,
+                evidence,
+                receipt,
+            )
+            return LoadedFoldSelectionTraceArtifacts(
+                typed_identity,
+                receipt,
+                evidence,
             )
         except FoldSelectionTraceArtifactValidationError as error:
             _integrity(typed_identity, error.reason)

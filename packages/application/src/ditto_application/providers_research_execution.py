@@ -52,6 +52,7 @@ from ditto_application.processes.experiments._execution_resolution_evidence impo
 )
 from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
     FoldSelectionTraceArtifactPublisher,
+    FoldSelectionTraceArtifactReader,
 )
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactPublisher,
@@ -149,14 +150,24 @@ class AppResearchExecutionProvider(Provider):
         return adapter
 
     @provide
+    def fold_selection_trace_artifact_reader(
+        self,
+        adapter: IndexedFoldSelectionTraceArtifactAdapter,
+    ) -> FoldSelectionTraceArtifactReader:
+        """Expose the same APP-scoped adapter through the evidence read port."""
+        return adapter
+
+    @provide
     def walk_forward_evidence_assembler(
         self,
         report_reader: BacktestReportArtifactReader,
+        fold_selection_trace_reader: FoldSelectionTraceArtifactReader,
         semantics_resolver: ResearchExecutionSemanticsResolver,
     ) -> WalkForwardEvidenceAssembler:
         """Build exact persisted walk-forward evidence for review publication."""
         return WalkForwardEvidenceAssembler(
             report_reader=report_reader,
+            fold_selection_trace_reader=fold_selection_trace_reader,
             semantics_resolver=semantics_resolver,
         )
 

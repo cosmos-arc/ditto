@@ -159,16 +159,16 @@ def _validate_trade_dates(
 ) -> None:
     for frame in tables.values():
         for raw_trade_date in frame["trade_date"].unique().to_list():
+            if type(raw_trade_date) is not str:
+                _invalid("invalid_selection_trace_trade_date")
             try:
-                if type(raw_trade_date) is not str:
-                    raise TypeError
                 trade_date = date.fromisoformat(raw_trade_date)
-                if trade_date.isoformat() != raw_trade_date:
-                    raise ValueError
-            except (TypeError, ValueError) as error:
+            except ValueError as error:
                 raise FoldSelectionTraceArtifactValidationError(
                     "invalid_selection_trace_trade_date"
                 ) from error
+            if trade_date.isoformat() != raw_trade_date:
+                _invalid("invalid_selection_trace_trade_date")
             if not (
                 identity.test_window.start <= trade_date <= identity.test_window.end
             ):

@@ -35,6 +35,12 @@ from ditto_application.processes.experiments._evidence_inputs import (
 from ditto_application.processes.experiments._evidence_values import (
     comparison_error,
 )
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
+    FoldSelectionTraceArtifactIdentity,
+    FoldSelectionTraceArtifactReader,
+    LoadedFoldSelectionTraceArtifacts,
+)
 from ditto_application.processes.experiments._oos_fold_registration import (
     OOSFoldRegistration,
 )
@@ -117,6 +123,67 @@ def _missing_artifact_ref(row: CandidateFoldEvidence) -> str:
     ).relative_path
 
 
+def _selection_trace_identity(
+    row: CandidateFoldEvidence,
+) -> FoldSelectionTraceArtifactIdentity:
+    return FoldSelectionTraceArtifactIdentity(
+        experiment_id=row.experiment_id,
+        candidate_id=row.candidate_id,
+        fold_id=row.fold_id,
+        attempt_id=row.attempt_id,
+        attempt_created_at=row.execution_binding.attempt_view.spec.created_at,
+        run_id=row.run_id,
+        test_window=row.test_window,
+        reproduction_fingerprint=row.reproduction_fingerprint,
+    )
+
+
+def _validated_selection_traces(
+    rows: tuple[CandidateFoldEvidence, ...],
+    value: object,
+) -> dict[FoldSelectionTraceArtifactIdentity, LoadedFoldSelectionTraceArtifacts]:
+    if type(value) is not tuple or any(
+        type(item) is not LoadedFoldSelectionTraceArtifacts
+        for item in cast("tuple[object, ...]", value)
+    ):
+        comparison_error("invalid_fold_selection_trace_artifacts")
+    traces = cast("tuple[LoadedFoldSelectionTraceArtifacts, ...]", value)
+    by_identity = {bundle.identity: bundle for bundle in traces}
+    if len(by_identity) != len(traces):
+        comparison_error("duplicate_fold_selection_trace_artifacts")
+    expected = tuple(
+        by_identity[identity]
+        for row in rows
+        if row.outcome is FoldOutcome.COMPLETED
+        and (identity := _selection_trace_identity(row)) in by_identity
+    )
+    if traces != expected:
+        comparison_error("noncanonical_fold_selection_trace_artifacts")
+    return by_identity
+
+
+def _expected_missing_artifact_refs(
+    rows: tuple[CandidateFoldEvidence, ...],
+    traces: dict[
+        FoldSelectionTraceArtifactIdentity,
+        LoadedFoldSelectionTraceArtifacts,
+    ],
+) -> tuple[str, ...]:
+    expected: list[str] = []
+    for row in rows:
+        if row.outcome is not FoldOutcome.COMPLETED:
+            continue
+        if row.report_artifact is None:
+            expected.append(_missing_artifact_ref(row))
+        trace_identity = _selection_trace_identity(row)
+        if trace_identity not in traces:
+            expected.extend(
+                trace_identity.relative_path(kind)
+                for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+            )
+    return tuple(sorted(expected, key=str.encode))
+
+
 @dataclass(frozen=True, slots=True)
 class CollectedWalkForwardEvidence:
     """One immutable comparison, aggregation, and its exact source rows."""
@@ -125,6 +192,7 @@ class CollectedWalkForwardEvidence:
     aggregation: WalkForwardAggregation
     source_rows: tuple[CandidateFoldEvidence, ...]
     fold_cost_config_hashes: tuple[ContentHash, ...]
+    selection_traces: tuple[LoadedFoldSelectionTraceArtifacts, ...]
     missing_artifact_refs: tuple[str, ...]
 
     def __post_init__(self) -> None:
@@ -158,6 +226,10 @@ class CollectedWalkForwardEvidence:
             )
         ):
             comparison_error("invalid_fold_cost_config_hashes")
+        trace_by_identity = _validated_selection_traces(
+            rows,
+            self.selection_traces,
+        )
         raw_refs: object = self.missing_artifact_refs
         if type(raw_refs) is not tuple or any(
             type(ref) is not str or not ref or ref != ref.strip()
@@ -167,17 +239,7 @@ class CollectedWalkForwardEvidence:
         refs = self.missing_artifact_refs
         if refs != tuple(sorted(set(refs), key=str.encode)):
             comparison_error("noncanonical_missing_artifact_refs")
-        expected_refs = tuple(
-            sorted(
-                (
-                    _missing_artifact_ref(row)
-                    for row in rows
-                    if row.outcome is FoldOutcome.COMPLETED
-                    and row.report_artifact is None
-                ),
-                key=str.encode,
-            )
-        )
+        expected_refs = _expected_missing_artifact_refs(rows, trace_by_identity)
         if refs != expected_refs:
             comparison_error("missing_artifact_ref_parity_drift")
 
@@ -516,9 +578,11 @@ class WalkForwardEvidenceAssembler:
         self,
         *,
         report_reader: BacktestReportArtifactReader,
+        fold_selection_trace_reader: FoldSelectionTraceArtifactReader,
         semantics_resolver: WalkForwardExecutionSemanticsResolver,
     ) -> None:
         self._report_reader = report_reader
+        self._fold_selection_trace_reader = fold_selection_trace_reader
         self._semantics_resolver = semantics_resolver
 
     def _baseline_identity(
@@ -579,8 +643,13 @@ class WalkForwardEvidenceAssembler:
         bindings: WalkForwardExecutionBindings,
         folds: tuple[FoldView, ...],
         selected: dict[FoldKey, AttemptView | None],
-    ) -> tuple[tuple[CandidateFoldEvidence, ...], tuple[str, ...]]:
+    ) -> tuple[
+        tuple[CandidateFoldEvidence, ...],
+        tuple[LoadedFoldSelectionTraceArtifacts, ...],
+        tuple[str, ...],
+    ]:
         rows: list[CandidateFoldEvidence] = []
+        traces_by_fold: dict[FoldKey, LoadedFoldSelectionTraceArtifacts] = {}
         missing: list[str] = []
         for fold in folds:
             attempt = selected[fold.spec.key]
@@ -607,6 +676,24 @@ class WalkForwardEvidenceAssembler:
                 report = self._report_reader.read(identity)
                 if report is None:
                     missing.append(identity.relative_path)
+                trace_identity = FoldSelectionTraceArtifactIdentity(
+                    experiment_id=fold.spec.key.experiment_id,
+                    candidate_id=fold.spec.key.candidate_id,
+                    fold_id=fold.spec.key.fold_id,
+                    attempt_id=attempt.spec.attempt_id,
+                    attempt_created_at=attempt.spec.created_at,
+                    run_id=run_id,
+                    test_window=fold.spec.test_window,
+                    reproduction_fingerprint=(attempt.spec.reproduction_fingerprint),
+                )
+                trace = self._fold_selection_trace_reader.read(trace_identity)
+                if trace is None:
+                    missing.extend(
+                        trace_identity.relative_path(kind)
+                        for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+                    )
+                else:
+                    traces_by_fold[fold.spec.key] = trace
             else:
                 failure = attempt.projection.failure_code
                 if type(failure) is not ExperimentFailureCode:
@@ -627,8 +714,15 @@ class WalkForwardEvidenceAssembler:
                     )
                 )
             )
+        canonical_rows = _canonical_row_order(tuple(rows))
         return (
-            _canonical_row_order(tuple(rows)),
+            canonical_rows,
+            tuple(
+                traces_by_fold[row.execution_binding.fold_view.spec.key]
+                for row in canonical_rows
+                if row.outcome is FoldOutcome.COMPLETED
+                and row.execution_binding.fold_view.spec.key in traces_by_fold
+            ),
             tuple(sorted(set(missing), key=str.encode)),
         )
 
@@ -668,7 +762,7 @@ class WalkForwardEvidenceAssembler:
             selected,
             semantics_by_fold,
         )
-        rows, missing = self._source_rows(
+        rows, selection_traces, missing = self._source_rows(
             snapshot,
             manifest,
             bindings,
@@ -686,5 +780,6 @@ class WalkForwardEvidenceAssembler:
             aggregation,
             rows,
             cost_hashes,
+            selection_traces,
             missing,
         )

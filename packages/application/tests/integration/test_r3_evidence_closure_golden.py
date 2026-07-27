@@ -53,6 +53,9 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentReader,
     SQLiteExperimentWriter,
 )
+from ditto_application.builders.fold_selection_trace_artifact_adapter import (
+    IndexedFoldSelectionTraceArtifactAdapter,
+)
 from ditto_application.builders.research_artifact_loader import (
     IndexedBacktestReportArtifactAdapter,
 )
@@ -66,6 +69,9 @@ from ditto_application.commands.strategy_governance import (
 from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.experiments._evidence_inputs import (
     project_snapshot_manifest,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FoldSelectionTraceArtifactIdentity,
 )
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
@@ -115,6 +121,7 @@ from ditto_backtest.statistics import (
 )
 from ditto_platform.foundation import SQLitePool
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
 from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
@@ -301,6 +308,23 @@ def _report_identity(
     )
 
 
+def _trace_identity(
+    fold: FoldView,
+    attempt: AttemptView,
+) -> FoldSelectionTraceArtifactIdentity:
+    report = _report_identity(fold, attempt)
+    return FoldSelectionTraceArtifactIdentity(
+        experiment_id=report.experiment_id,
+        candidate_id=report.candidate_id,
+        fold_id=report.fold_id,
+        attempt_id=report.attempt_id,
+        attempt_created_at=report.attempt_created_at,
+        run_id=report.run_id,
+        test_window=report.test_window,
+        reproduction_fingerprint=report.reproduction_fingerprint,
+    )
+
+
 def _advance_to_candidate_selection(
     reader: SQLiteExperimentReader,
     writer: SQLiteExperimentWriter,
@@ -372,6 +396,10 @@ def _publish_walk_forward_reports(
         artifact_service=service,
         artifact_index_reader=reader,
     )
+    trace_adapter = IndexedFoldSelectionTraceArtifactAdapter(
+        artifact_service=service,
+        artifact_index_reader=reader,
+    )
     candidates = {candidate.candidate_id: candidate for candidate in launch.candidates}
     for fold in reader.list_folds(launch.experiment_id):
         if fold.spec.fold_role is not FoldRole.WALK_FORWARD:
@@ -389,6 +417,12 @@ def _publish_walk_forward_reports(
             lease_fence=lease.fence,
             now_epoch_us=NOW_US + 8,
         )
+        trace_adapter.publish(
+            _trace_identity(fold, attempt),
+            SelectionEvidenceLog(),
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 8,
+        )
     projection = writer.advance_experiment_stage(
         launch.experiment_id,
         target_stage=ExperimentStage.CANDIDATE_SELECTION,
@@ -403,6 +437,7 @@ def _publish_walk_forward_reports(
     return (
         WalkForwardEvidenceAssembler(
             report_reader=adapter,
+            fold_selection_trace_reader=trace_adapter,
             semantics_resolver=resolver,
         ),
         service,
@@ -727,6 +762,10 @@ def _assert_cost_collection_replay(
         replay_semantics = semantics_transform(replay_semantics)
     restarted_assembler = WalkForwardEvidenceAssembler(
         report_reader=IndexedBacktestReportArtifactAdapter(
+            artifact_service=artifact_service,
+            artifact_index_reader=reader,
+        ),
+        fold_selection_trace_reader=IndexedFoldSelectionTraceArtifactAdapter(
             artifact_service=artifact_service,
             artifact_index_reader=reader,
         ),

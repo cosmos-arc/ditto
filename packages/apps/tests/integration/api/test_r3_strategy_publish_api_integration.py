@@ -22,8 +22,10 @@ from ditto_analysis.experiments import (
     ExperimentId,
     encode_launch_spec,
 )
+from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
 from ditto_analysis.experiments.evidence import (
     REVIEW_PACKET_SCHEMA_VERSION,
+    REVIEW_PACKET_SCHEMA_VERSION_V1,
     ReviewPacket,
     ReviewPacketLineage,
 )
@@ -35,6 +37,7 @@ from ditto_analysis.experiments.gates import (
     evaluate_hard_gates,
 )
 from ditto_analysis.experiments.persistence import LeaseFence
+from ditto_analysis.research._indexed_artifacts import IndexedArtifactIO
 from ditto_analysis.storage.sqlite.experiments import (
     ResearchExperimentDatabase,
     SQLiteExperimentReader,
@@ -186,6 +189,7 @@ def _build_harness(
     tmp_path: Path,
     *,
     drift_launch_identity: bool = False,
+    legacy_packet: bool = False,
 ) -> _PublishHarness:
     lane = golden_support.ETF_GOLDEN_LANE
     research_database = ResearchExperimentDatabase(tmp_path / "research-data")
@@ -216,17 +220,49 @@ def _build_harness(
         candidate_id=str(candidate.candidate_id),
         launch_spec_hash=launch_spec_hash,
     )
-    research_writer.publish_review_packet(
-        packet,
-        lease_fence=LeaseFence(
-            experiment_id=launch.experiment_id,
-            owner_token="http-acceptance",
-            revision=0,
-            lease_until_epoch_us=_NOW_US - 1,
-        ),
-        now_epoch_us=_NOW_US,
-        created_at=_NOW,
+    if legacy_packet:
+        packet = replace(
+            packet,
+            schema_version=REVIEW_PACKET_SCHEMA_VERSION_V1,
+        )
+    fence = LeaseFence(
+        experiment_id=launch.experiment_id,
+        owner_token="http-acceptance",
+        revision=0,
+        lease_until_epoch_us=_NOW_US - 1,
     )
+    if legacy_packet:
+        bundle_hash = packet.bundle_hash
+        IndexedArtifactIO(
+            artifact_root=research_database.artifact_root,
+            reader=research_reader,
+            writer=research_writer,
+        ).publish_json(
+            ArtifactPublicationSpec(
+                artifact_id=f"review-packet-{bundle_hash}",
+                experiment_id=launch.experiment_id,
+                candidate_id=None,
+                fold_id=None,
+                attempt_id=None,
+                artifact_kind="review_packet",
+                relative_path=(
+                    f"experiments/{launch.experiment_id}/review-packet.json"
+                ),
+                reproduction_fingerprint=bundle_hash,
+                audit={"created_at": _NOW.isoformat()},
+                created_at=_NOW,
+            ),
+            packet.canonical_payload(),
+            lease_fence=fence,
+            now_epoch_us=_NOW_US,
+        )
+    else:
+        research_writer.publish_review_packet(
+            packet,
+            lease_fence=fence,
+            now_epoch_us=_NOW_US,
+            created_at=_NOW,
+        )
     assert research_reader.get_review_packet(str(packet.bundle_hash)) == packet
 
     governance_pool = SQLitePool(str(tmp_path / "metadata.sqlite"))
@@ -429,6 +465,21 @@ async def test_http_publish_rejects_packet_launch_identity_drift_without_writes(
             harness,
             expected_status=422,
             expected_error_code="evidence_target_mismatch",
+        )
+    finally:
+        await harness.close()
+
+
+async def test_http_publish_rejects_legacy_v1_packet_without_writes(
+    tmp_path: Path,
+) -> None:
+    """Persisted v1 remains readable but is ineligible for new promotion."""
+    harness = _build_harness(tmp_path, legacy_packet=True)
+    try:
+        await _assert_typed_zero_write_rejection(
+            harness,
+            expected_status=422,
+            expected_error_code="review_packet_schema_unsupported",
         )
     finally:
         await harness.close()

@@ -28,6 +28,10 @@ from ditto_analysis.experiments import (
     ResearchMetricId,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
+    LoadedFoldSelectionTraceArtifacts,
+)
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
 )
@@ -58,6 +62,7 @@ from .walk_forward_evidence_collection_fixtures import (
     artifact_identity,
     build_case,
     snapshot_manifest,
+    trace_identity,
 )
 
 
@@ -126,6 +131,56 @@ def test_collects_real_indexed_reports_into_deterministic_walk_forward_metrics(
         for row in collected.source_rows
     )
     assert collected.missing_artifact_refs == ()
+    assert len(collected.selection_traces) == 4
+    assert all(
+        type(bundle) is LoadedFoldSelectionTraceArtifacts
+        and bundle.evidence.initial_universe == ()
+        for bundle in collected.selection_traces
+    )
+
+
+def test_missing_all_four_trace_files_preserves_report_metrics_and_adds_refs(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path, trace_publish_indices=(0, 1, 3))
+    missing_fold = case.folds[2]
+    missing_attempt = case.attempts[2]
+    identity = trace_identity(missing_fold, missing_attempt)
+
+    collected = case.assemble()
+
+    row = next(
+        item
+        for item in collected.source_rows
+        if item.fold_id == missing_fold.spec.key.fold_id
+        and item.candidate_id == missing_fold.spec.key.candidate_id
+    )
+    assert row.report_artifact is not None
+    assert (
+        collected.aggregation.candidates[1].status
+        is CandidateWalkForwardStatus.COMPLETED
+    )
+    assert collected.missing_artifact_refs == tuple(
+        sorted(
+            (
+                identity.relative_path(kind)
+                for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+            ),
+            key=str.encode,
+        )
+    )
+    assert len(collected.selection_traces) == 3
+
+
+def test_partial_trace_index_fails_integrity_instead_of_producing_collection(
+    tmp_path: Path,
+) -> None:
+    case = build_case(tmp_path)
+    identity = trace_identity(case.folds[2], case.attempts[2])
+    del case.index.records[identity.artifact_id(FOLD_SELECTION_TRACE_ARTIFACT_KINDS[0])]
+
+    with pytest.raises(ExperimentIntegrityError):
+        case.assemble()
 
 
 def test_resolves_execution_semantics_for_every_walk_forward_source_row(
@@ -560,7 +615,11 @@ def test_candidate_with_all_walk_forward_folds_cancelled_cannot_disappear(
 def test_missing_completed_report_is_objective_and_not_evaluated(
     tmp_path: Path,
 ) -> None:
-    case = build_case(tmp_path, publish_indices=(0, 1, 3))
+    case = build_case(
+        tmp_path,
+        publish_indices=(0, 1, 3),
+        trace_publish_indices=(0, 1, 2, 3),
+    )
 
     collected = case.assemble()
 
@@ -576,7 +635,11 @@ def test_missing_completed_report_is_objective_and_not_evaluated(
 def test_multiple_missing_completed_reports_use_canonical_artifact_order(
     tmp_path: Path,
 ) -> None:
-    case = build_case(tmp_path, publish_indices=(1, 3))
+    case = build_case(
+        tmp_path,
+        publish_indices=(1, 3),
+        trace_publish_indices=(0, 1, 2, 3),
+    )
 
     collected = case.assemble()
 
@@ -713,6 +776,14 @@ def test_retry_selects_highest_attempt_and_accepts_independent_checkpoint_ref(
         if row.candidate_id == CANDIDATE_ID and row.fold_ordinal == 2
     )
     assert selected.attempt_id == successor_id
+    selected_trace = next(
+        bundle
+        for bundle in collected.selection_traces
+        if bundle.identity.candidate_id == CANDIDATE_ID
+        and bundle.identity.fold_id == selected.fold_id
+    )
+    assert selected_trace.identity.attempt_id == successor_id
+    assert selected_trace.identity.run_id == successor.projection.backtest_run_id
     assert collected.missing_artifact_refs == ()
 
 
@@ -802,6 +873,7 @@ def test_malformed_attempt_value_fails_closed_without_attribute_error(
     object.__setattr__(snapshot, "attempts", (object(),))
     assembler = WalkForwardEvidenceAssembler(
         report_reader=case.adapter,
+        fold_selection_trace_reader=case.trace_adapter,
         semantics_resolver=Resolver(case.semantics),
     )
 
@@ -859,6 +931,7 @@ def test_duplicate_attempt_id_across_ordinals_fails_closed_after_mutation(
     )
     assembler = WalkForwardEvidenceAssembler(
         report_reader=case.adapter,
+        fold_selection_trace_reader=case.trace_adapter,
         semantics_resolver=Resolver(case.semantics),
     )
 
@@ -895,6 +968,7 @@ def test_cross_fold_duplicate_attempt_id_is_rejected_by_snapshot_revalidation(
     with pytest.raises(AppProcessError) as captured:
         WalkForwardEvidenceAssembler(
             report_reader=case.adapter,
+            fold_selection_trace_reader=case.trace_adapter,
             semantics_resolver=Resolver(case.semantics),
         ).assemble(snapshot, snapshot_manifest())
 
@@ -913,6 +987,7 @@ def test_mutated_manifest_is_revalidated_at_collection_boundary(
     with pytest.raises(AppProcessError) as captured:
         WalkForwardEvidenceAssembler(
             report_reader=case.adapter,
+            fold_selection_trace_reader=case.trace_adapter,
             semantics_resolver=Resolver(case.semantics),
         ).assemble(case.snapshot(), manifest)
 
