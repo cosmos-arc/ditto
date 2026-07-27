@@ -172,38 +172,16 @@ def retry_fold_under_transient_lease(
     its scheduler lifecycle and is never released by this control operation.
     """
     slot = store.get_scheduler_slot()
-    acquired_transient_lease = not authority.has_lease
-    acquired = authority.acquire(
+    return authority.execute_operator_under_transient_lease(
         ExperimentId(request.experiment_id),
         expected_revision=slot.revision,
+        operation=lambda lease, now_epoch_us: recovery.retry_fold(
+            experiment_id=request.experiment_id,
+            candidate_id=request.candidate_id,
+            fold_id=request.fold_id,
+            expected_revision=request.expected_revision,
+            occurred_at=request.occurred_at,
+            lease=lease,
+            now_epoch_us=now_epoch_us(),
+        ),
     )
-    if not acquired:
-        raise AppProcessError(
-            "experiment scheduler operation failed",
-            details={"code": "LEASE_LOST", "reason": "scheduler_slot_busy"},
-        )
-    try:
-        receipt = authority.execute_operator(
-            lambda lease, now_epoch_us: recovery.retry_fold(
-                experiment_id=request.experiment_id,
-                candidate_id=request.candidate_id,
-                fold_id=request.fold_id,
-                expected_revision=request.expected_revision,
-                occurred_at=request.occurred_at,
-                lease=lease,
-                now_epoch_us=now_epoch_us(),
-            )
-        )
-    except BaseException as error:
-        if acquired_transient_lease and authority.has_lease:
-            try:
-                authority.release()
-            except BaseException as release_error:
-                error.add_note(
-                    "transient scheduler lease release also failed: "
-                    + f"{type(release_error).__name__}: {release_error}",
-                )
-        raise
-    if acquired_transient_lease:
-        authority.release()
-    return receipt

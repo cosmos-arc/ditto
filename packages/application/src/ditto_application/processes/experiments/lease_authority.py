@@ -280,6 +280,55 @@ class LeaseAuthority:
                 self._invalidate(type(exc).__name__)
                 raise self._normalized_error(exc) from exc
 
+    def execute_operator_under_transient_lease(
+        self,
+        experiment_id: ExperimentId,
+        *,
+        expected_revision: int,
+        operation: Callable[[SchedulerLease, Callable[[], int]], _ResultT],
+    ) -> _ResultT:
+        """
+        Acquire, execute, and conditionally release as one authority section.
+
+        The outer reentrant lock makes the ownership decision atomic with lease
+        acquisition, operator execution, and cleanup. A lease already held by
+        this authority belongs to the scheduler lifecycle and is preserved.
+        Only a lease acquired by this call is released.
+        """
+        with self._lock:
+            acquired_transient_lease = self._lease is None
+            acquired = self.acquire(
+                experiment_id,
+                expected_revision=expected_revision,
+            )
+            if not acquired:
+                raise AppProcessError(
+                    "experiment scheduler operation failed",
+                    details={
+                        "code": "LEASE_LOST",
+                        "reason": "scheduler_slot_busy",
+                    },
+                )
+            try:
+                result = self.execute_operator(operation)
+            except BaseException as error:
+                if (
+                    acquired_transient_lease
+                    and self._lease is not None
+                    and self._lost_reason is None
+                ):
+                    try:
+                        self.release()
+                    except BaseException as release_error:
+                        error.add_note(
+                            "transient scheduler lease release also failed: "
+                            + f"{type(release_error).__name__}: {release_error}",
+                        )
+                raise
+            if acquired_transient_lease:
+                self.release()
+            return result
+
     def renew(self) -> SchedulerLease:
         """Renew with the current fence and replace it before any later write."""
         with self._lock:
