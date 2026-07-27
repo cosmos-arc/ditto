@@ -24,6 +24,10 @@ from ditto_analysis.experiments.gates import (
     evaluate_hard_gates,
     review_blocked_by_hard_gates,
 )
+from ditto_analysis.experiments.hard_gate_collector import (
+    HardGateEvidenceView,
+    collect_hard_gate_evidence,
+)
 from ditto_analysis.experiments.holdout import (
     AtomicHoldoutClaimReceipt,
     HoldoutClaimAuthorityCommand,
@@ -169,6 +173,7 @@ __all__ = [
     "GateLayer",
     "GateOutcome",
     "HardGateEvidence",
+    "HardGateEvidenceView",
     "HoldoutClaimAuthorityCommand",
     "HoldoutClaimRecord",
     "HoldoutSelectionReason",
@@ -205,6 +210,7 @@ __all__ = [
     "TrialKind",
     "candidate_parameter_hash",
     "canonical_payload",
+    "collect_hard_gate_evidence",
     "decode_launch_spec",
     "encode_candidate_parameters",
     "encode_launch_spec",
