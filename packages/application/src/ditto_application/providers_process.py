@@ -325,19 +325,24 @@ class AppProcessProvider(Provider):
         self,
         store: ExperimentSchedulerStore,
         first_attempt_factory: FirstAttemptFactory,
+        evidence_collector: ExperimentEvidenceCollector,
     ) -> ExperimentExecutionCoordinator:
         """
         Wire the R3 coordinator with the real execution bundle factory.
 
         Control routes (pause/cancel/resume/retry-fold) never dispatch attempts;
         the injected :class:`ExecutionBundleFirstAttemptFactory` only fires when
-        a fold is actually claimed and dispatched through the worker.
+        a fold is actually claimed and dispatched through the worker. The
+        evidence collector closes the EVIDENCE stage by assembling and
+        publishing the immutable review packet before the coordinator
+        transitions the experiment to ``COMPLETED``.
         """
         return ExperimentExecutionCoordinator(
             store=store,
             first_attempt_factory=first_attempt_factory,
             owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
             lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
+            evidence_collector=evidence_collector,
         )
 
     @provide

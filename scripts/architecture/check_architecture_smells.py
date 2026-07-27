@@ -483,6 +483,19 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_coordinator_stage_drivers.py"
+        ),
+        owner="application experiment stage-progression helpers",
+        reason=(
+            "The extracted stage-progression helpers drive the analysis-owned "
+            "EVIDENCE-stage review-packet collector and failed-candidate fold "
+            "cancellation through the same narrow scheduler store as the host "
+            "coordinator; they perform no direct storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/commands/strategy_governance.py"
         ),
         owner="application R3 evidence-gated publish command boundary",

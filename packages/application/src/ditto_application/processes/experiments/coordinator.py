@@ -48,8 +48,15 @@ from ditto_application.processes.experiments._coordinator_progress import (
 from ditto_application.processes.experiments._coordinator_recovery import (
     ExperimentRecoveryOrchestrator,
 )
+from ditto_application.processes.experiments._coordinator_stage_drivers import (
+    cancel_failed_candidate_folds,
+    drive_evidence_completion,
+)
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     deterministic_backtest_run_id,
+)
+from ditto_application.processes.experiments.evidence_collector import (
+    ExperimentEvidenceCollector,
 )
 from ditto_application.processes.experiments.holdout import (
     ClaimHoldoutCandidateRequest,
@@ -181,6 +188,7 @@ class ExperimentExecutionCoordinator:
         clock: Callable[[], datetime] | None = None,
         checkpoint_available: Callable[[str], bool] | None = None,
         checkpoint_resumable: Callable[[str], bool] | None = None,
+        evidence_collector: ExperimentEvidenceCollector | None = None,
     ) -> None:
         self._store = store
         self._authority = LeaseAuthority(
@@ -202,6 +210,7 @@ class ExperimentExecutionCoordinator:
             checkpoint_resumable=checkpoint_resumable or (lambda _run_id: False),
             run_id_factory=deterministic_backtest_run_id,
         )
+        self._evidence_collector = evidence_collector
 
     def tick(self, *, occurred_at: datetime) -> SchedulerTickResult:
         """Acquire the queue head and dispatch at most DB-derived capacity."""
@@ -613,26 +622,15 @@ class ExperimentExecutionCoordinator:
         now_epoch_us: Callable[[], int],
         occurred_at: datetime,
     ) -> ExperimentSchedulerSnapshot:
-        failed_candidates = _snapshot_rules.candidate_failure_ids(
-            snapshot,
-            _SNAPSHOT_VOCABULARY,
+        cancelled = cancel_failed_candidate_folds(
+            store=self._store,
+            snapshot=snapshot,
+            lease=lease,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+            vocabulary=_SNAPSHOT_VOCABULARY,
         )
-        if not failed_candidates:
-            return snapshot
-        for fold in snapshot.folds:
-            if (
-                fold.spec.key.candidate_id in failed_candidates
-                and fold.projection.status is ExperimentStatus.QUEUED
-            ):
-                self._store.transition_fold(
-                    fold,
-                    target_status=ExperimentStatus.CANCELLED,
-                    failure_code=None,
-                    lease=lease,
-                    now_epoch_us=now_epoch_us(),
-                    occurred_at=occurred_at,
-                )
-        return self._load_snapshot(lease.experiment_id)
+        return self._load_snapshot(lease.experiment_id) if cancelled else snapshot
 
     def _advance_completed_stages(
         self,
@@ -649,7 +647,15 @@ class ExperimentExecutionCoordinator:
             if stage is ExperimentStage.HOLDOUT and snapshot.holdout_claim is None:
                 return snapshot, SchedulerTickState.HOLDOUT_GATED
             if stage is ExperimentStage.EVIDENCE:
-                return snapshot, SchedulerTickState.WAITING
+                return drive_evidence_completion(
+                    collector=self._evidence_collector,
+                    store=self._store,
+                    snapshot=snapshot,
+                    lease=lease,
+                    now_epoch_us=now_epoch_us,
+                    occurred_at=occurred_at,
+                    reload_snapshot=self._load_snapshot,
+                )
             role = _STAGE_ROLE.get(stage)
             if role is None:
                 raise _scheduler_error("SPEC_INVALID", "running_stage_not_dispatchable")

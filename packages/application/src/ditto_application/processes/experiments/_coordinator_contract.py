@@ -51,6 +51,7 @@ class SchedulerTickState(StrEnum):
     HOLDOUT_GATED = "holdout_gated"
     RECOVERY_REQUIRED = "recovery_required"
     FAIL_FAST = "fail_fast"
+    COMPLETED = "completed"
 
 
 @dataclass(frozen=True, slots=True)

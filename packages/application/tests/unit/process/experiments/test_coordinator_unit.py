@@ -286,6 +286,7 @@ class _SchedulerStore:
         self.block_first_transition = False
         self.first_transition_entered = Event()
         self.release_first_transition = Event()
+        self.controlled_transitions: list[dict[str, object]] = []
         self._transition_count = 0
         self._active_writes = 0
         self.max_active_writes = 0
@@ -573,6 +574,38 @@ class _SchedulerStore:
         self.folds[index] = updated
         return updated
 
+    def transition_controlled_experiment(
+        self,
+        projection: ExperimentProjection,
+        *,
+        target_status: ExperimentStatus,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        attempt_started: bool,
+        reason_code: str,
+    ) -> ExperimentProjection:
+        """Test double for the lease-fenced whole-experiment transition."""
+        self.write_fences.append(lease.revision)
+        self.controlled_transitions.append(
+            {
+                "target_status": target_status,
+                "target_stage": projection.record.stage,
+                "reason_code": reason_code,
+                "attempt_started": attempt_started,
+            }
+        )
+        self.projection = replace(
+            projection,
+            record=replace(
+                projection.record,
+                status=target_status,
+            ),
+            revision=projection.revision + 1,
+            updated_at=occurred_at,
+        )
+        return self.projection
+
     def _enter_write(self) -> None:
         with self._active_lock:
             self._active_writes += 1
@@ -606,6 +639,7 @@ def _coordinator(
     *,
     owner_token: str | None = None,
     clock_now: datetime = NOW,
+    evidence_collector: _FakeEvidenceCollector | None = None,
 ) -> tuple[ExperimentExecutionCoordinator, _FirstAttemptFactory]:
     factory = _FirstAttemptFactory()
     return (
@@ -615,9 +649,38 @@ def _coordinator(
             owner_token=owner_token or "coordinator-a",
             lease_duration=timedelta(minutes=5),
             clock=lambda: clock_now,
+            evidence_collector=evidence_collector,
         ),
         factory,
     )
+
+
+class _FakeEvidenceCollector:
+    """Test double for ExperimentEvidenceCollector (duck-typed, basic mode)."""
+
+    def __init__(self, *, raise_error: Exception | None = None) -> None:
+        self.collect_calls: list[dict[str, object]] = []
+        self.raise_error = raise_error
+
+    def collect(
+        self,
+        experiment_id: ExperimentId,
+        *,
+        lease_fence: object,
+        now_epoch_us: int,
+        created_at: datetime,
+    ) -> object:
+        self.collect_calls.append(
+            {
+                "experiment_id": experiment_id,
+                "lease_fence": lease_fence,
+                "now_epoch_us": now_epoch_us,
+                "created_at": created_at,
+            }
+        )
+        if self.raise_error is not None:
+            raise self.raise_error
+        return None
 
 
 class _MutableClock:
@@ -1730,6 +1793,79 @@ def test_retry_fold_fails_closed_when_scheduler_slot_busy() -> None:
     details = info.value.details
     assert details["code"] == "LEASE_LOST"
     assert details["reason"] == "scheduler_slot_busy"
+
+
+def _set_evidence_stage_with_terminal_folds(store: _SchedulerStore) -> None:
+    """Promote ``store`` into EVIDENCE with every prior fold marked terminal."""
+    _set_running_stage(store, ExperimentStage.EVIDENCE)
+    for index, fold in enumerate(store.folds):
+        store.folds[index] = replace(
+            fold,
+            projection=replace(
+                fold.projection,
+                status=ExperimentStatus.COMPLETED,
+            ),
+        )
+
+
+def test_evidence_stage_collects_and_transitions_to_completed() -> None:
+    store = _SchedulerStore()
+    _set_evidence_stage_with_terminal_folds(store)
+    collector = _FakeEvidenceCollector()
+    coordinator, _factory = _coordinator(store, evidence_collector=collector)
+
+    result = coordinator.tick(occurred_at=NOW)
+
+    assert result.state is SchedulerTickState.COMPLETED
+    assert result.dispatches == ()
+    assert store.projection.record.status is ExperimentStatus.COMPLETED
+    assert store.projection.record.stage is ExperimentStage.EVIDENCE
+    assert len(collector.collect_calls) == 1
+    call = collector.collect_calls[0]
+    assert call["experiment_id"] == store.launch.experiment_id
+    assert call["created_at"] == NOW
+    assert call["now_epoch_us"] == NOW_US
+    assert call["lease_fence"] is not None
+    assert len(store.controlled_transitions) == 1
+    transition = store.controlled_transitions[0]
+    assert transition["target_status"] is ExperimentStatus.COMPLETED
+    assert transition["target_stage"] is ExperimentStage.EVIDENCE
+    assert transition["reason_code"] == "evidence_collection_completed"
+    assert transition["attempt_started"] is False
+
+
+def test_evidence_stage_fail_fast_on_collector_error() -> None:
+    store = _SchedulerStore()
+    _set_evidence_stage_with_terminal_folds(store)
+    collector_error = AppProcessError(
+        "collector failed",
+        details={"code": "SPEC_INVALID", "reason": "preflight_passed_event_not_found"},
+    )
+    collector = _FakeEvidenceCollector(raise_error=collector_error)
+    coordinator, _factory = _coordinator(store, evidence_collector=collector)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.tick(occurred_at=NOW)
+
+    assert exc_info.value is collector_error
+    assert store.projection.record.status is ExperimentStatus.RUNNING
+    assert store.projection.record.stage is ExperimentStage.EVIDENCE
+    assert len(collector.collect_calls) == 1
+    assert store.controlled_transitions == []
+
+
+def test_evidence_no_op_when_collector_not_configured() -> None:
+    store = _SchedulerStore()
+    _set_evidence_stage_with_terminal_folds(store)
+    coordinator, _factory = _coordinator(store, evidence_collector=None)
+
+    result = coordinator.tick(occurred_at=NOW)
+
+    assert result.state is SchedulerTickState.WAITING
+    assert result.dispatches == ()
+    assert store.projection.record.status is ExperimentStatus.RUNNING
+    assert store.projection.record.stage is ExperimentStage.EVIDENCE
+    assert store.controlled_transitions == []
 
 
 def test_retry_fold_releases_transient_lease_when_fold_not_failed() -> None:
