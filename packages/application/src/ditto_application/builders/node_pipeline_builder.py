@@ -95,6 +95,8 @@ class AttestedNodePipeline:
     _pipeline: StrategyPipeline
     _compiled: CompiledNodePipeline
     _execution_hash: str
+    _evidence_sink: SelectionEvidenceSink | None
+    _evidence_stage_indexes: tuple[int, ...]
 
     @property
     def pipeline(self) -> StrategyPipeline:
@@ -105,6 +107,11 @@ class AttestedNodePipeline:
     def execution_hash(self) -> str:
         """Return the digest of the compiled plan and actual stage state."""
         return self._execution_hash
+
+    @property
+    def evidence_sink(self) -> SelectionEvidenceSink | None:
+        """Return the exact sink sealed with the concrete runner."""
+        return self._evidence_sink
 
     def require_verified_pipeline(
         self, *, expected_execution_hash: str
@@ -132,6 +139,20 @@ class AttestedNodePipeline:
                 expected_execution_hash=expected_execution_hash,
                 actual_execution_hash=actual_hash,
             )
+        evidence_stage_indexes = _selection_evidence_stage_indexes(stages)
+        if (
+            vars(self._pipeline).get("_evidence_sink") is not self._evidence_sink
+            or evidence_stage_indexes != self._evidence_stage_indexes
+            or any(
+                getattr(stages[index], "evidence_sink", object())
+                is not self._evidence_sink
+                for index in evidence_stage_indexes
+            )
+        ):
+            _raise_adapter_error(
+                "Attested research pipeline selection evidence sink drifted",
+                reason="attested_pipeline_evidence_sink_drift",
+            )
         return self._pipeline
 
 
@@ -142,11 +163,53 @@ def _seal_attested_pipeline(
 ) -> AttestedNodePipeline:
     stages = pipeline.stages
     execution_hash = _pipeline_execution_hash(compiled, stages)
+    evidence_sink = vars(pipeline).get("_evidence_sink")
     attested = object.__new__(AttestedNodePipeline)
     object.__setattr__(attested, "_pipeline", pipeline)
     object.__setattr__(attested, "_compiled", compiled)
     object.__setattr__(attested, "_execution_hash", execution_hash)
+    object.__setattr__(attested, "_evidence_sink", evidence_sink)
+    object.__setattr__(
+        attested,
+        "_evidence_stage_indexes",
+        _selection_evidence_stage_indexes(stages),
+    )
     return attested
+
+
+def _selection_evidence_stage_indexes(
+    stages: Sequence[DecisionStage],
+) -> tuple[int, ...]:
+    """Locate only stages whose declared state includes the shared evidence sink."""
+    indexes: list[int] = []
+    for index, stage in enumerate(stages):
+        declares_sink = (
+            is_dataclass(stage)
+            and not isinstance(stage, type)
+            and any(item.name == "evidence_sink" for item in fields(stage))
+        )
+        if not declares_sink:
+            try:
+                declares_sink = "evidence_sink" in vars(stage)
+            except TypeError:
+                declares_sink = False
+        if declares_sink:
+            indexes.append(index)
+    return tuple(indexes)
+
+
+def _bind_selection_evidence_sink(
+    stage: DecisionStage,
+    evidence_sink: SelectionEvidenceSink | None,
+) -> DecisionStage:
+    """Bind caller-owned evidence to every dataclass stage that declares it."""
+    if (
+        is_dataclass(stage)
+        and not isinstance(stage, type)
+        and any(item.name == "evidence_sink" for item in fields(stage))
+    ):
+        return cast("DecisionStage", replace(stage, evidence_sink=evidence_sink))
+    return stage
 
 
 def _state_type(value: object) -> str:
@@ -673,13 +736,15 @@ class NodePipelineBuilder:
         )
         stages: list[DecisionStage] = []
         for node in compiled.nodes:
+            resolved = NodePipelineBuilder._resolve_builtin_stages(
+                node,
+                legacy_groups=legacy_groups,
+                metadata_configs=runtime_view.metadata_configs,
+                evidence_sink=evidence_sink,
+            )
             stages.extend(
-                NodePipelineBuilder._resolve_builtin_stages(
-                    node,
-                    legacy_groups=legacy_groups,
-                    metadata_configs=runtime_view.metadata_configs,
-                    evidence_sink=evidence_sink,
-                ),
+                _bind_selection_evidence_sink(stage, evidence_sink)
+                for stage in resolved
             )
         return _seal_attested_pipeline(
             pipeline=StrategyPipeline(stages, evidence_sink=evidence_sink),

@@ -99,6 +99,7 @@ from ditto_application.processes.experiments.worker import (
 )
 from ditto_backtest.statistics import BacktestReport
 from ditto_features.expression.contracts import CompileIdentity
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
 
 _NOW = datetime(2026, 7, 20, 9, tzinfo=UTC)
 
@@ -114,6 +115,7 @@ def _forged_graph(service: BacktestService) -> ClosedBacktestServiceGraph:
         audit=MagicMock(),
         config=MagicMock(),
         pipeline=MagicMock(),
+        selection_evidence_collector=MagicMock(),
         planner=MagicMock(),
         brokerage=MagicMock(),
         pre_trade=MagicMock(),
@@ -439,6 +441,17 @@ def test_fold_run_result_rejects_state_evidence_mismatch(
 ) -> None:
     with pytest.raises(AppProcessError) as exc_info:
         worker_module.ResearchFoldRunResult(state, evidence)
+
+    assert exc_info.value.details["reason"] == "invalid_research_fold_run_result"
+
+
+def test_fold_run_result_rejects_stopped_selection_evidence() -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        ResearchFoldRunResult(
+            ResearchFoldRunState.STOPPED,
+            None,
+            SelectionEvidenceLog(),
+        )
 
     assert exc_info.value.details["reason"] == "invalid_research_fold_run_result"
 
@@ -1034,10 +1047,12 @@ class _Runner:
         *,
         state: ResearchFoldRunState = ResearchFoldRunState.COMPLETED,
         poll_control: bool = False,
+        selection_evidence: SelectionEvidenceLog | None = None,
     ) -> None:
         self.error = error
         self.state = state
         self.poll_control = poll_control
+        self.selection_evidence = selection_evidence
         self.audits: list[ResearchExecutionAudit] = []
 
     def run(
@@ -1056,6 +1071,7 @@ class _Runner:
         return ResearchFoldRunResult(
             ResearchFoldRunState.COMPLETED,
             _report_evidence(run_id=audit.backtest_run_id),
+            self.selection_evidence,
         )
 
 
@@ -1195,7 +1211,7 @@ def _replace_persisted_fold_key(
 
 def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence() -> None:
     coordinator = _Coordinator()
-    runner = _Runner()
+    runner = _Runner(selection_evidence=SelectionEvidenceLog())
     publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,

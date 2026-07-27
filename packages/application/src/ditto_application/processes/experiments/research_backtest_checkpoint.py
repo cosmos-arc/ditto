@@ -361,12 +361,17 @@ def _decode_resume_state(
         )
     except ValueError:
         raise _error("research_resume_checkpoint_state_drift") from None
+    completed_trading_days = trading_days[: checkpoint.completed_days]
     if (
         runtime.brokerage_fill_counter != checkpoint.fill_count
         or runtime.planner_id_counter < checkpoint.order_count
         or len(audit_state.fills) != checkpoint.fill_count
+        or any(
+            fill.event_time.date().isoformat() not in completed_trading_days
+            for fill in audit_state.fills
+        )
         or tuple(item[0] for item in audit_state.daily_snapshots)
-        != trading_days[: checkpoint.completed_days]
+        != completed_trading_days
         or audit_state.daily_snapshots[-1][1] != account
         or not _audit_runtime_ids_are_consistent(audit_state, runtime)
     ):

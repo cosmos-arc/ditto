@@ -399,6 +399,38 @@ def test_collector_lifecycle_misuse_fails_closed_with_typed_reasons() -> None:
     assert abort_error.value.details["reason"] == "evidence_rebalance_unbound"
 
 
+def test_collector_pristine_state_covers_active_pending_and_committed_events() -> None:
+    collector = SelectionEvidenceCollector()
+
+    assert collector.is_pristine
+
+    collector.begin_rebalance(_TRADE_DATE)
+    assert not collector.is_pristine
+
+    collector.emit(
+        InitialUniverseEvidence(
+            trade_date=_TRADE_DATE,
+            instrument_id=1,
+            ordinal=1,
+        )
+    )
+    assert not collector.is_pristine
+
+    collector.abort_rebalance()
+    assert collector.is_pristine
+
+    collector.begin_rebalance(_TRADE_DATE)
+    collector.emit(
+        InitialUniverseEvidence(
+            trade_date=_TRADE_DATE,
+            instrument_id=1,
+            ordinal=1,
+        )
+    )
+    collector.commit_rebalance()
+    assert not collector.is_pristine
+
+
 def test_collector_rejects_duplicate_exclusion_and_selected_contradiction() -> None:
     collector = SelectionEvidenceCollector()
     collector.begin_rebalance(_TRADE_DATE)

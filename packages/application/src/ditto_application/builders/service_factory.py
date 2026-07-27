@@ -45,6 +45,7 @@ from ditto_risk.pre_trade import (
 )
 from ditto_strategy.alpha.parameters import EffectiveParameter
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -114,6 +115,7 @@ def build_frozen_baseline_pipeline(
     binding: BaselineExecutorBinding,
     *,
     registry: BaselineRegistry | None = None,
+    evidence_sink: SelectionEvidenceSink | None = None,
 ) -> StrategyPipeline:
     """Build the one registered synthetic baseline without moving lookup."""
     if type(binding) is not BaselineExecutorBinding:
@@ -162,7 +164,7 @@ def build_frozen_baseline_pipeline(
                 "reason": "baseline_execution_binding_drift",
             },
         )
-    return StrategyPipeline(())
+    return StrategyPipeline((), evidence_sink=evidence_sink)
 
 
 def _compute_max_lookback(

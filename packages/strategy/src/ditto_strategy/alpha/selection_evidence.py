@@ -357,6 +357,25 @@ class SelectionEvidenceCollector:
         self._contribution_keys: set[tuple[str, EvidenceInstrumentId, str]] = set()
         self._selections: dict[EvidenceKey, SelectionEvidence] = {}
 
+    @property
+    def is_pristine(self) -> bool:
+        """Return whether no active, pending, committed, or indexed evidence exists."""
+        return (
+            self._current_trade_date is None
+            and type(self._events) is list
+            and not self._events
+            and type(self._pending_events) is list
+            and not self._pending_events
+            and type(self._initial_keys) is set
+            and not self._initial_keys
+            and type(self._exclusion_keys) is set
+            and not self._exclusion_keys
+            and type(self._contribution_keys) is set
+            and not self._contribution_keys
+            and type(self._selections) is dict
+            and not self._selections
+        )
+
     def begin_rebalance(self, trade_date: str) -> None:
         """Bind this reusable collector to the next pipeline rebalance date."""
         _validate_trade_date(trade_date)

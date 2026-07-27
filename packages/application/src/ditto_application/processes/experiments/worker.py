@@ -326,9 +326,17 @@ class ExistingBacktestResearchFoldRunner:
             ) from error
         if service.last_run_cancelled:
             return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)
+        # Checkpoint V2 restores numerical runtime state, but not the collector's
+        # pre-checkpoint events. Withhold the suffix-only log until that evidence
+        # has its own exact resume contract.
         return ResearchFoldRunResult(
             ResearchFoldRunState.COMPLETED,
             BacktestReportEvidence.from_report(report),
+            (
+                None
+                if audit.resume_from_run_id is not None
+                else graph.selection_evidence_collector.snapshot()
+            ),
         )
 
 

@@ -7,6 +7,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Protocol, cast
 
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
+
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentDispatch,
@@ -60,14 +62,21 @@ class ResearchFoldRunResult:
 
     state: ResearchFoldRunState
     report_evidence: BacktestReportEvidence | None
+    selection_evidence: SelectionEvidenceLog | None = None
 
     def __post_init__(self) -> None:
         """Keep stopped partial reports out of the durable evidence path."""
         valid = (
             self.state is ResearchFoldRunState.COMPLETED
             and type(self.report_evidence) is BacktestReportEvidence
+            and (
+                self.selection_evidence is None
+                or type(self.selection_evidence) is SelectionEvidenceLog
+            )
         ) or (
-            self.state is ResearchFoldRunState.STOPPED and self.report_evidence is None
+            self.state is ResearchFoldRunState.STOPPED
+            and self.report_evidence is None
+            and self.selection_evidence is None
         )
         if type(cast("object", self.state)) is not ResearchFoldRunState or not valid:
             raise _worker_contract_error("invalid_research_fold_run_result")

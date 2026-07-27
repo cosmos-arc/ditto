@@ -14,7 +14,7 @@ from ditto_application.builders.research_backtest_factory import (
 from ditto_application.builders.research_runtime_builder import (
     ResearchSnapshotIdentity,
 )
-from ditto_application.exceptions import AppProcessError
+from ditto_application.exceptions import AppBuilderError, AppProcessError
 from ditto_application.processes.experiments.baseline_registry import (
     BaselineExecutionPlan,
     BaselinePlanKind,
@@ -28,6 +28,7 @@ from ditto_application.processes.experiments.execution_bundle import (
 from ditto_application.processes.experiments.execution_contracts import (
     ExactUniverseIdentity,
 )
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.alpha.specs import (
     ExecutionSpec,
     ScorerSpec,
@@ -70,8 +71,11 @@ def test_factory_uses_candidate_builder_only_for_non_baseline_runtime() -> None:
 
 
 def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
-    _, candidate_audit, _, _, loader = factory_fixtures._fixture()
-    snapshot = candidate_audit.semantics.snapshot
+    _, candidate_audit, _, _, _ = factory_fixtures._fixture()
+    frames = factory_fixtures._frames()
+    rules = factory_fixtures._rules(member_asset_class="etf")
+    snapshot = factory_fixtures._snapshot(frames, rules)
+    loader = factory_fixtures._Loader(frames, rules)
     spec = StrategySpec(
         strategy_id="published-etf-baseline",
         name="Published ETF baseline",
@@ -121,16 +125,28 @@ def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
         is_baseline=True,
         strategy=binding,
         backtest=replace(
-            candidate_audit.semantics.backtest,
+            factory_fixtures._backtest(snapshot, rules),
             benchmark=None,
             policy_hash=plan.execution_policy.canonical_hash,
         ),
+        snapshot=snapshot,
         baseline_registry_manifest_hash=registry.manifest_hash,
         baseline_plan=plan,
         policy=plan.execution_policy,
     )
+    audit = ResearchExecutionAudit.create(
+        semantics=semantics,
+        attempt_id=candidate_audit.attempt_id,
+        attempt_ordinal=candidate_audit.attempt_ordinal,
+        backtest_run_id=candidate_audit.backtest_run_id,
+        parent_attempt_id=candidate_audit.parent_attempt_id,
+        resume_from_run_id=candidate_audit.resume_from_run_id,
+        created_at=candidate_audit.created_at,
+    )
     candidate_builder = _NeverBuilder()
-    published_builder = factory_fixtures._Builder(runtime)
+    published_builder = factory_fixtures._Builder(
+        delegate=PublishedBaselineRuntimeBuilder(),
+    )
     checkpoints = factory_fixtures._CheckpointStore()
     factory = FrozenAuditResearchBacktestFactory(
         strategy_reader=factory_fixtures._Reader(record, version_state="published"),
@@ -142,24 +158,32 @@ def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
         checkpoint_writer=checkpoints,
     )
 
-    built = factory._build_strategy(semantics, loader.rules)
+    built = factory.build(
+        audit,
+        external_should_stop=factory_fixtures._never_stop,
+    )
+    collector = built.graph.selection_evidence_collector
 
-    assert built.binding == binding
+    assert built.attestation.strategy == binding
     assert candidate_builder.calls == 0
     assert published_builder.calls == 1
+    assert type(collector) is SelectionEvidenceCollector
+    assert published_builder.evidence_sinks == [collector]
 
 
 @pytest.mark.parametrize(
-    ("status", "expected_reason", "expected_builder_calls"),
+    ("status", "expected_error", "expected_reason", "expected_builder_calls"),
     [
         pytest.param(
             "published",
+            AppBuilderError,
             "published_baseline_lane_not_supported",
             1,
             id="wrong-lane",
         ),
         pytest.param(
             "draft",
+            AppProcessError,
             "published_baseline_version_required",
             0,
             id="wrong-status",
@@ -168,11 +192,11 @@ def test_factory_uses_published_builder_only_for_exact_etf_baseline() -> None:
 )
 def test_factory_rejects_invalid_published_baseline_lane_or_status(
     status: str,
+    expected_error: type[AppBuilderError | AppProcessError],
     expected_reason: str,
     expected_builder_calls: int,
 ) -> None:
-    _, candidate_audit, reader, candidate_builder, loader = factory_fixtures._fixture()
-    runtime = replace(candidate_builder.runtime, version_status=status)
+    _, candidate_audit, reader, _candidate_builder, loader = factory_fixtures._fixture()
     reader.version_state = status
     binding = candidate_audit.semantics.strategy
     plan = BaselineExecutionPlan(
@@ -204,7 +228,9 @@ def test_factory_rejects_invalid_published_baseline_lane_or_status(
         resume_from_run_id=candidate_audit.resume_from_run_id,
         created_at=candidate_audit.created_at,
     )
-    published_builder = factory_fixtures._Builder(runtime)
+    published_builder = factory_fixtures._Builder(
+        delegate=PublishedBaselineRuntimeBuilder(),
+    )
     checkpoints = factory_fixtures._CheckpointStore()
     factory = FrozenAuditResearchBacktestFactory(
         strategy_reader=reader,
@@ -216,7 +242,7 @@ def test_factory_rejects_invalid_published_baseline_lane_or_status(
         checkpoint_writer=checkpoints,
     )
 
-    with pytest.raises(AppProcessError) as exc_info:
+    with pytest.raises(expected_error) as exc_info:
         factory.build(audit, external_should_stop=factory_fixtures._never_stop)
 
     assert exc_info.value.details["reason"] == expected_reason

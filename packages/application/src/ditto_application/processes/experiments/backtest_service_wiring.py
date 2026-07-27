@@ -37,6 +37,7 @@ from ditto_risk.pre_trade import (
 )
 from ditto_strategy.alpha.parameters import canonical_parameter_hash
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 
 from ditto_application.exceptions import AppBuilderError, AppProcessError
 from ditto_application.processes.execution.backtest_process import (
@@ -48,6 +49,7 @@ from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     compiled_expressions_execution_hash,
 )
+from ditto_application.processes.experiments import _selection_evidence_graph
 from ditto_application.processes.experiments._backtest_exact_state import (
     all_references_identical,
     has_exact_runtime_value,
@@ -111,8 +113,7 @@ class KnowledgeLagRuleProvider:
         return (parsed - timedelta(days=self.knowledge_lag_days)).isoformat()
 
     def get_definition(
-        self,
-        instrument_id: InstrumentId,
+        self, instrument_id: InstrumentId
     ) -> InstrumentDefinition | None:
         """Return the static definition bound to the verified artifact."""
         return self.inner.get_definition(instrument_id)
@@ -148,11 +149,7 @@ class KnowledgeLagRulesGetter:
 
     provider: KnowledgeLagRuleProvider
 
-    def __call__(
-        self,
-        instrument_id: InstrumentId,
-        trade_date: str,
-    ) -> InstrumentRules:
+    def __call__(self, instrument_id: InstrumentId, trade_date: str) -> InstrumentRules:
         """Return complete rules or fail closed without a fallback provider."""
         resolved = self.provider.get_rules(trade_date, [instrument_id])
         rules = resolved.get(instrument_id)
@@ -198,6 +195,7 @@ class ClosedBacktestServiceGraph:
     audit: ResearchExecutionAudit
     config: BacktestServiceConfig
     pipeline: StrategyPipeline
+    selection_evidence_collector: SelectionEvidenceCollector
     planner: SimpleExecutionPlanner
     brokerage: BacktestBrokerage
     pre_trade: CompositePreTradeCheck
@@ -427,8 +425,12 @@ def _require_pipeline_state(graph: ClosedBacktestServiceGraph) -> None:
         "constructed_strategy_pipeline_state_drift",
     )
     stages = pipeline.stages
-    if type(stages) is not tuple or vars(pipeline).get("_evidence_sink") is not None:
-        raise _error("constructed_strategy_pipeline_state_drift")
+    collector = graph.selection_evidence_collector
+    _selection_evidence_graph.require_pristine_selection_evidence_graph(
+        pipeline=pipeline,
+        collector=collector,
+        stages=stages,
+    )
     strategy = graph.audit.semantics.strategy
     if type(strategy) is BaselineExecutorBinding:
         if graph.pipeline_attestation is not None or stages != ():
@@ -445,6 +447,8 @@ def _require_pipeline_state(graph: ClosedBacktestServiceGraph) -> None:
         or attestation_type.__qualname__ != "AttestedNodePipeline"
     ):
         raise _error("invalid_research_pipeline_attestation")
+    if getattr(attestation, "evidence_sink", object()) is not collector:
+        raise _error("research_pipeline_evidence_sink_drift")
     verifier = getattr(attestation_type, "require_verified_pipeline", None)
     if not callable(verifier):
         raise _error("invalid_research_pipeline_attestation")
@@ -589,11 +593,7 @@ def _require_component_state_shapes(
             {"_checks"},
             "constructed_pre_trade_check_state_drift",
         ),
-        (
-            components.fee_model,
-            set(),
-            "constructed_fee_model_state_drift",
-        ),
+        (components.fee_model, set(), "constructed_fee_model_state_drift"),
         (
             components.slippage_model,
             {"bps"},

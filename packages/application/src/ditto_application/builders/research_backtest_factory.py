@@ -11,10 +11,12 @@ from typing import Protocol, cast
 import polars as pl
 from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_kernel.order import OrderType
-from ditto_strategy.alpha.parameters import (
-    CandidateParameter,
-)
+from ditto_strategy.alpha.parameters import CandidateParameter
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceCollector,
+    SelectionEvidenceSink,
+)
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunCheckpointReaderProtocol,
@@ -155,6 +157,7 @@ class ExactResearchRuntimeBuilder(Protocol):
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
         version_status: str,
+        evidence_sink: SelectionEvidenceSink | None = None,
     ) -> ResearchStrategyRuntime:
         """Build without performing catalog or provider lookup."""
         ...
@@ -170,6 +173,7 @@ class ExactPublishedBaselineRuntimeBuilder(Protocol):
         candidate_parameters: tuple[CandidateParameter, ...],
         snapshot_identity: ResearchSnapshotIdentity,
         version_status: str,
+        evidence_sink: SelectionEvidenceSink | None = None,
     ) -> ResearchStrategyRuntime:
         """Build without catalog lookup, moving pointers, or candidate tuning."""
         ...
@@ -236,8 +240,13 @@ class FrozenAuditResearchBacktestFactory:
         if audit.semantics.environment != self._environment:
             raise _error("actual_code_environment_lock_drift")
         semantics = audit.semantics
+        evidence_collector = SelectionEvidenceCollector()
         loaded = self._load_artifacts(semantics.snapshot)
-        built_strategy = self._build_strategy(semantics, loaded.rules)
+        built_strategy = self._build_strategy(
+            semantics,
+            loaded.rules,
+            evidence_collector=evidence_collector,
+        )
         benchmark = self._build_benchmark(
             semantics,
             built_strategy,
@@ -416,6 +425,8 @@ class FrozenAuditResearchBacktestFactory:
         self,
         semantics: ResearchExecutionSemantics,
         rules: VerifiedInstrumentRulesArtifact,
+        *,
+        evidence_collector: SelectionEvidenceCollector,
     ) -> FrozenBacktestStrategyBuild:
         declared = semantics.strategy
         if type(declared) is BaselineExecutorBinding:
@@ -430,7 +441,10 @@ class FrozenAuditResearchBacktestFactory:
                 registry_manifest_hash=declared.registry_manifest_hash,
                 factor_versions=declared.factor_versions,
             )
-            pipeline = build_frozen_baseline_pipeline(actual)
+            pipeline = build_frozen_baseline_pipeline(
+                actual,
+                evidence_sink=evidence_collector,
+            )
             if actual != declared or semantics.backtest.benchmark is not None:
                 raise _error("synthetic_baseline_execution_drift")
             return FrozenBacktestStrategyBuild(
@@ -441,10 +455,15 @@ class FrozenAuditResearchBacktestFactory:
                 effective_parameters=(),
                 planner_order_type=OrderType.MARKET,
                 rebalance_frequency="fold_schedule",
+                selection_evidence_collector=evidence_collector,
             )
         if type(declared) is not StrategyExecutionBinding:
             raise _error("invalid_strategy_execution_binding")
-        runtime = self._build_exact_strategy_runtime(semantics, declared)
+        runtime = self._build_exact_strategy_runtime(
+            semantics,
+            declared,
+            evidence_collector=evidence_collector,
+        )
         pipeline = self._verified_runtime_pipeline(runtime, declared)
         actual = self._binding_from_runtime(
             runtime,
@@ -471,12 +490,15 @@ class FrozenAuditResearchBacktestFactory:
             effective_parameters=runtime.effective_parameters,
             planner_order_type=order_type,
             rebalance_frequency=frequency,
+            selection_evidence_collector=evidence_collector,
         )
 
     def _build_exact_strategy_runtime(
         self,
         semantics: ResearchExecutionSemantics,
         declared: StrategyExecutionBinding,
+        *,
+        evidence_collector: SelectionEvidenceCollector,
     ) -> ResearchStrategyRuntime:
         record = self._strategies.get_spec(
             declared.exact_strategy.strategy_id,
@@ -504,6 +526,7 @@ class FrozenAuditResearchBacktestFactory:
                 semantics.snapshot.exact_snapshot.manifest_hash,
             ),
             version_status=version_status,
+            evidence_sink=evidence_collector,
         )
         if type(runtime) is not ResearchStrategyRuntime:
             raise _error("exact_strategy_runtime_unavailable")

@@ -14,6 +14,8 @@ import orjson
 import polars as pl
 import pytest
 from ditto_application.builders.research_backtest_factory import (
+    ExactPublishedBaselineRuntimeBuilder,
+    ExactResearchRuntimeBuilder,
     FrozenAuditResearchBacktestFactory,
 )
 from ditto_application.builders.research_factor_registry import (
@@ -125,8 +127,15 @@ from ditto_strategy.alpha.parameters import (
     CandidateParameter,
     EffectiveParameter,
     canonical_parameter_hash,
+    legacy_parameter_path,
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import (
+    InitialUniverseEvidence,
+    SelectionEvidenceCollector,
+    SelectionEvidenceLog,
+    SelectionEvidenceSink,
+)
 from ditto_strategy.alpha.specs import (
     ExecutionSpec,
     ScorerSpec,
@@ -283,6 +292,7 @@ _RULE_SCHEMA: dict[str, pl.DataType] = {
 
 def _rules(
     *,
+    member_asset_class: str = "stock",
     member_lifecycle_state: str = "normal",
     member_delisting_date: date | None = None,
     benchmark_as_of_date: date = date(2026, 1, 1),
@@ -292,7 +302,7 @@ def _rules(
         {
             "instrument_code": ["000001.SZ", "000001.SZ", "000300.SH"],
             "instrument_id": [_MEMBER_ID, _MEMBER_ID, _BENCHMARK_ID],
-            "asset_class": ["stock", "stock", "stock"],
+            "asset_class": [member_asset_class, member_asset_class, "stock"],
             "exchange": ["XSHE", "XSHE", "XSHG"],
             "currency": ["CNY", "CNY", "CNY"],
             "tick_size": [0.01, 0.01, 0.01],
@@ -583,13 +593,39 @@ class _Reader:
 
 
 class _Builder:
-    def __init__(self, runtime: ResearchStrategyRuntime) -> None:
-        self.runtime = runtime
+    def __init__(
+        self,
+        *,
+        delegate: ExactResearchRuntimeBuilder | ExactPublishedBaselineRuntimeBuilder,
+    ) -> None:
+        self._delegate = delegate
         self.calls = 0
+        self.evidence_sinks: list[SelectionEvidenceSink | None] = []
+        self.result_transform: (
+            Callable[[ResearchStrategyRuntime], ResearchStrategyRuntime] | None
+        ) = None
 
-    def build(self, **_kwargs: object) -> ResearchStrategyRuntime:
+    def build(
+        self,
+        *,
+        record: StrategySpecRecord,
+        candidate_parameters: tuple[CandidateParameter, ...],
+        snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
+        evidence_sink: SelectionEvidenceSink | None = None,
+    ) -> ResearchStrategyRuntime:
         self.calls += 1
-        return self.runtime
+        self.evidence_sinks.append(evidence_sink)
+        rebuilt = self._delegate.build(
+            record=record,
+            candidate_parameters=candidate_parameters,
+            snapshot_identity=snapshot_identity,
+            version_status=version_status,
+            evidence_sink=evidence_sink,
+        )
+        if self.result_transform is not None:
+            return self.result_transform(rebuilt)
+        return rebuilt
 
 
 class _Loader:
@@ -665,7 +701,8 @@ def _fixture(
     snapshot = _snapshot(frames, rules)
     registry = ResearchFactorRegistry()
     record = _strategy_record()
-    runtime = ResearchRuntimeBuilder(factor_registry=registry).build(
+    runtime_builder = ResearchRuntimeBuilder(factor_registry=registry)
+    runtime = runtime_builder.build(
         record=record,
         candidate_parameters=(),
         snapshot_identity=ResearchSnapshotIdentity(
@@ -676,7 +713,7 @@ def _fixture(
     )
     binding = _binding(runtime)
     reader = _Reader(record)
-    builder = _Builder(runtime)
+    builder = _Builder(delegate=runtime_builder)
     loader = _Loader(frames, rules)
     checkpoints = checkpoint_store or _CheckpointStore()
     audit = _audit(binding, snapshot, _backtest(snapshot, rules))
@@ -762,7 +799,7 @@ def _resumable_checkpoint(audit: ResearchExecutionAudit) -> StrategyRunCheckpoin
                     fill_price=10.0,
                     fee=0.0,
                     slippage=0.0,
-                    event_time=_NOW,
+                    event_time=datetime.fromisoformat(f"{_DATES[0]}T09:00:00+00:00"),
                     cumulative_quantity=100,
                     leaves_quantity=0,
                 ),
@@ -882,6 +919,42 @@ def test_factory_builds_real_service_and_attests_constructed_objects() -> None:
     ]
 
 
+def test_factory_wires_one_fresh_selection_evidence_collector_per_build() -> None:
+    factory, audit, _reader, builder, _loader = _fixture()
+
+    first = factory.build(audit, external_should_stop=_never_stop)
+    second = factory.build(audit, external_should_stop=_never_stop)
+
+    assert type(first.graph.selection_evidence_collector) is SelectionEvidenceCollector
+    assert type(second.graph.selection_evidence_collector) is SelectionEvidenceCollector
+    assert (
+        first.graph.selection_evidence_collector
+        is not second.graph.selection_evidence_collector
+    )
+    assert builder.evidence_sinks == [
+        first.graph.selection_evidence_collector,
+        second.graph.selection_evidence_collector,
+    ]
+    assert (
+        first.graph.pipeline_attestation.evidence_sink
+        is first.graph.selection_evidence_collector
+    )
+
+
+def test_existing_runner_returns_real_selection_evidence_snapshot() -> None:
+    factory, audit, *_ = _fixture()
+
+    result = ExistingBacktestResearchFoldRunner(factory).run(
+        audit,
+        external_should_stop=_never_stop,
+    )
+
+    assert result.state is ResearchFoldRunState.COMPLETED
+    assert type(result.selection_evidence) is SelectionEvidenceLog
+    assert result.selection_evidence.initial_universe
+    assert result.selection_evidence.selections
+
+
 def test_factory_publishes_only_resumable_strategy_checkpoints() -> None:
     checkpoints = _CheckpointStore()
     factory, audit, *_ = _fixture(checkpoint_store=checkpoints)
@@ -923,23 +996,88 @@ def test_factory_resumes_exact_parent_checkpoint_with_full_runtime_state() -> No
         checkpoint.runtime_state_json
     )
     assert result.service._options.restore_runtime_state == expected_runtime
-    # Exact V2 runtime evidence carries the actual monotonic counters; aggregate
-    # order counts cannot reconstruct IDs consumed by both plans and orders.
     assert expected_runtime.resolved_planner_id_counter == 9
     assert expected_runtime.brokerage_fill_counter == 1
     assert result.graph.components.account.get_view().nav == checkpoint.nav
-    assert (
-        result.graph.components.brokerage.get_settlement_state_snapshot()
-        == BacktestSettlementStateSnapshot.from_json(checkpoint.settlement_state_json)
+    assert result.graph.components.brokerage.get_settlement_state_snapshot() == (
+        BacktestSettlementStateSnapshot.from_json(checkpoint.settlement_state_json)
     )
     assert tuple(
         item.order.client_id.value
         for item in result.graph.components.order_book.get_pending()
     ) == ("plan-order-9",)
+    assert result.graph.audit is audit
+    assert result.graph.audit.parent_attempt_id == parent_audit.attempt_id
+    assert result.graph.audit.resume_from_run_id == parent_audit.backtest_run_id
     assert result.attestation == ResearchBacktestBuildAttestation.from_audit(audit)
+    assert result.attestation.audit_bundle_hash == audit.bundle_hash
     assert result.attestation.reproduction_fingerprint == (
         parent_audit.reproduction_fingerprint
     )
+
+
+def test_resumed_runner_withholds_partial_selection_evidence() -> None:
+    _, parent_audit, *_ = _fixture()
+    checkpoints = _CheckpointStore((_resumable_checkpoint(parent_audit),))
+    factory, parent_audit, *_ = _fixture(checkpoint_store=checkpoints)
+    audit = _resume_audit(parent_audit)
+
+    partial_build = factory.build(audit, external_should_stop=_never_stop)
+    BacktestService.run(partial_build.service)
+    partial_log = partial_build.graph.selection_evidence_collector.snapshot()
+
+    assert partial_build.graph.config.start_date == _DATES[1]
+    assert {item.trade_date for item in partial_log.initial_universe} == {_DATES[1]}
+
+    result = ExistingBacktestResearchFoldRunner(factory).run(
+        audit,
+        external_should_stop=_never_stop,
+    )
+
+    assert result.state is ResearchFoldRunState.COMPLETED
+    assert type(result.report_evidence) is BacktestReportEvidence
+    assert result.report_evidence.period == _DATES
+    assert result.report_evidence.fill_log[0].event_time.date().isoformat() == _DATES[0]
+    # Numerical checkpoint resume remains enabled, but selection evidence has no
+    # checkpoint state yet, so a suffix-only collector snapshot must not escape.
+    assert result.selection_evidence is None
+
+
+def test_factory_rejects_resume_fill_outside_completed_trading_days() -> None:
+    _, parent_audit, *_ = _fixture()
+    checkpoint = _resumable_checkpoint(parent_audit)
+    runtime = BacktestRuntimeStateSnapshot.from_json(checkpoint.runtime_state_json)
+    audit_state = ExecutionAuditStateSnapshot.from_canonical_json(
+        runtime.audit_state_json or "",
+    )
+    poisoned_audit_state = replace(
+        audit_state,
+        fills=(
+            replace(
+                audit_state.fills[0],
+                event_time=_NOW,
+            ),
+        ),
+    )
+    poisoned_runtime = replace(
+        runtime,
+        audit_state_json=poisoned_audit_state.to_json(),
+    )
+    poisoned_checkpoint = replace(
+        checkpoint,
+        runtime_state_json=poisoned_runtime.to_json(),
+        runtime_state_hash=poisoned_runtime.state_hash,
+    )
+    checkpoints = _CheckpointStore((poisoned_checkpoint,))
+    factory, parent_audit, *_ = _fixture(checkpoint_store=checkpoints)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        factory.build(
+            _resume_audit(parent_audit),
+            external_should_stop=_never_stop,
+        )
+
+    assert exc_info.value.details["reason"] == "research_resume_checkpoint_state_drift"
 
 
 def test_factory_rejects_v1_runtime_without_exact_monotonic_state() -> None:
@@ -1214,6 +1352,7 @@ def test_existing_runner_propagates_cooperative_stop_into_real_service() -> None
 
     assert outcome.state is ResearchFoldRunState.STOPPED
     assert outcome.report_evidence is None
+    assert outcome.selection_evidence is None
     assert stop_checks == 3
 
 
@@ -1530,7 +1669,7 @@ def test_factory_rebuilds_typed_parameters_and_actual_compiled_factor_hash() -> 
     declared = audit.semantics.strategy
     assert type(declared) is StrategyExecutionBinding
     parameter = CandidateParameter(
-        "/pipeline/nodes/allocation/config/top_k",
+        legacy_parameter_path("top_k"),
         20,
     )
     effective = EffectiveParameter(parameter.path, parameter.value)
@@ -1593,22 +1732,31 @@ def test_factory_rebuilds_typed_parameters_and_actual_compiled_factor_hash() -> 
         factor_bindings=(execution_factor,),
         candidate_parameters=(parameter,),
     )
-    builder.runtime = replace(
-        builder.runtime,
-        legacy_spec=replace(
-            builder.runtime.legacy_spec,
-            signal_expressions=("momentum_1m",),
-            signal_weights=(1.0,),
-        ),
-        snapshot_identity=ResearchSnapshotIdentity(
-            snapshot.exact_snapshot.snapshot_id,
-            snapshot.exact_snapshot.manifest_hash,
-        ),
-        parameter_hash=binding.parameter_hash,
-        effective_parameters=(effective,),
-        used_factor_bindings=(runtime_factor,),
-        compiled_expressions=compiled,
-    )
+
+    def _with_factor_runtime(
+        runtime: ResearchStrategyRuntime,
+    ) -> ResearchStrategyRuntime:
+        return replace(
+            runtime,
+            legacy_spec=replace(
+                runtime.legacy_spec,
+                signal_expressions=("momentum_1m",),
+                signal_weights=(1.0,),
+            ),
+            snapshot_identity=ResearchSnapshotIdentity(
+                snapshot.exact_snapshot.snapshot_id,
+                snapshot.exact_snapshot.manifest_hash,
+            ),
+            parameter_hash=binding.parameter_hash,
+            effective_parameters=(effective,),
+            used_factor_bindings=(runtime_factor,),
+            compiled_expressions=CompiledExpressions(
+                expressions=(compiled_expression,),
+                weights=(1.0,),
+            ),
+        )
+
+    builder.result_transform = _with_factor_runtime
     semantics = replace(
         audit.semantics,
         strategy=binding,
@@ -1655,29 +1803,39 @@ def test_factory_rebuilds_typed_parameters_and_actual_compiled_factor_hash() -> 
         )
     assert exc_info.value.details["reason"] == "compiled_factor_set_execution_drift"
 
-    builder.runtime = replace(
-        builder.runtime,
-        compiled_expressions=CompiledExpressions(
-            expressions=(replace(compiled_expression, expr=pl.col("open")),),
-            weights=(1.0,),
-        ),
-    )
+    def _with_expression_poison(
+        runtime: ResearchStrategyRuntime,
+    ) -> ResearchStrategyRuntime:
+        return replace(
+            _with_factor_runtime(runtime),
+            compiled_expressions=CompiledExpressions(
+                expressions=(replace(compiled_expression, expr=pl.col("open")),),
+                weights=(1.0,),
+            ),
+        )
+
+    builder.result_transform = _with_expression_poison
     with pytest.raises(AppProcessError) as exc_info:
         factory.build(exact_audit, external_should_stop=_never_stop)
     assert exc_info.value.details["reason"] == "compiled_factor_runtime_drift"
 
-    builder.runtime = replace(
-        builder.runtime,
-        compiled_expressions=CompiledExpressions(
-            expressions=(
-                replace(
-                    compiled_expression,
-                    analysis=replace(compiled_expression.analysis, lookback=1),
+    def _with_analysis_poison(
+        runtime: ResearchStrategyRuntime,
+    ) -> ResearchStrategyRuntime:
+        return replace(
+            _with_factor_runtime(runtime),
+            compiled_expressions=CompiledExpressions(
+                expressions=(
+                    replace(
+                        compiled_expression,
+                        analysis=replace(compiled_expression.analysis, lookback=1),
+                    ),
                 ),
+                weights=(1.0,),
             ),
-            weights=(1.0,),
-        ),
-    )
+        )
+
+    builder.result_transform = _with_analysis_poison
     with pytest.raises(AppProcessError) as exc_info:
         factory.build(exact_audit, external_should_stop=_never_stop)
     assert exc_info.value.details["reason"] == "compiled_factor_runtime_drift"
@@ -1686,14 +1844,16 @@ def test_factory_rebuilds_typed_parameters_and_actual_compiled_factor_hash() -> 
         runtime_factor,
         compiled_expression_hash=_sha("c"),
     )
-    builder.runtime = replace(
-        builder.runtime,
-        used_factor_bindings=(poisoned_factor,),
-        compiled_expressions=CompiledExpressions(
-            expressions=(compiled_expression,),
-            weights=(1.0,),
-        ),
-    )
+
+    def _with_factor_binding_poison(
+        runtime: ResearchStrategyRuntime,
+    ) -> ResearchStrategyRuntime:
+        return replace(
+            _with_factor_runtime(runtime),
+            used_factor_bindings=(poisoned_factor,),
+        )
+
+    builder.result_transform = _with_factor_binding_poison
     with pytest.raises(AppProcessError) as exc_info:
         factory.build(exact_audit, external_should_stop=_never_stop)
     assert exc_info.value.details["reason"] == "compiled_factor_runtime_drift"
@@ -2223,6 +2383,64 @@ def test_existing_runner_rejects_config_subclass_after_official_build(
     )
 
 
+def test_existing_runner_rejects_pipeline_selection_evidence_sink_substitution() -> (
+    None
+):
+    def _mutate(build: VerifiedResearchBacktestBuild) -> None:
+        object.__setattr__(
+            build.graph.pipeline,
+            "_evidence_sink",
+            SelectionEvidenceCollector(),
+        )
+
+    _assert_post_build_mutation_rejected(
+        _mutate,
+        reason="constructed_strategy_pipeline_state_drift",
+    )
+
+
+def test_existing_runner_rejects_stage_selection_evidence_sink_substitution() -> None:
+    def _mutate(build: VerifiedResearchBacktestBuild) -> None:
+        evidence_stage = next(
+            stage
+            for stage in build.graph.pipeline.stages
+            if hasattr(stage, "evidence_sink")
+        )
+        object.__setattr__(
+            evidence_stage,
+            "evidence_sink",
+            SelectionEvidenceCollector(),
+        )
+
+    _assert_post_build_mutation_rejected(
+        _mutate,
+        reason="research_pipeline_execution_drift",
+    )
+
+
+@pytest.mark.parametrize("poison_kind", ["active", "committed"])
+def test_existing_runner_rejects_non_pristine_selection_evidence_collector(
+    poison_kind: str,
+) -> None:
+    def _mutate(build: VerifiedResearchBacktestBuild) -> None:
+        collector = build.graph.selection_evidence_collector
+        collector.begin_rebalance("2025-01-02")
+        collector.emit(
+            InitialUniverseEvidence(
+                trade_date="2025-01-02",
+                instrument_id=999_999,
+                ordinal=1,
+            )
+        )
+        if poison_kind == "committed":
+            collector.commit_rebalance()
+
+    _assert_post_build_mutation_rejected(
+        _mutate,
+        reason="selection_evidence_collector_not_pristine",
+    )
+
+
 @pytest.mark.parametrize("field_name", ["_counter", "_default_lot_size"])
 def test_existing_runner_rejects_planner_integer_subclass_after_official_build(
     field_name: str,
@@ -2453,7 +2671,10 @@ def test_factory_rejects_same_type_service_callable_shadow_poison(
 
 def test_factory_rejects_rebuilt_strategy_drift_before_service_run() -> None:
     factory, audit, _reader, builder, _loader = _fixture()
-    builder.runtime = replace(builder.runtime, resolved_spec_hash=_sha("e"))
+    builder.result_transform = lambda runtime: replace(
+        runtime,
+        resolved_spec_hash=_sha("e"),
+    )
 
     with pytest.raises(AppProcessError) as exc_info:
         factory.build(audit, external_should_stop=_never_stop)
@@ -2463,11 +2684,12 @@ def test_factory_rejects_rebuilt_strategy_drift_before_service_run() -> None:
 
 def test_factory_rejects_rebuilt_pipeline_execution_hash_drift() -> None:
     factory, audit, _reader, builder, _loader = _fixture()
-    object.__setattr__(
-        builder.runtime.attested_pipeline,
-        "_execution_hash",
-        _sha("f"),
-    )
+
+    def _poison(runtime: ResearchStrategyRuntime) -> ResearchStrategyRuntime:
+        object.__setattr__(runtime.attested_pipeline, "_execution_hash", _sha("f"))
+        return runtime
+
+    builder.result_transform = _poison
 
     with pytest.raises(AppProcessError) as exc_info:
         factory.build(audit, external_should_stop=_never_stop)
@@ -2477,14 +2699,20 @@ def test_factory_rejects_rebuilt_pipeline_execution_hash_drift() -> None:
 
 def test_factory_rejects_actual_pipeline_poison_with_unchanged_hash() -> None:
     factory, audit, _reader, builder, _loader = _fixture()
-    original_hash = builder.runtime.pipeline_execution_hash
-    object.__setattr__(
-        builder.runtime.attested_pipeline,
-        "_pipeline",
-        StrategyPipeline(()),
-    )
+    declared = audit.semantics.strategy
+    assert type(declared) is StrategyExecutionBinding
+    original_hash = declared.pipeline_execution_hash
 
-    assert builder.runtime.pipeline_execution_hash == original_hash
+    def _poison(runtime: ResearchStrategyRuntime) -> ResearchStrategyRuntime:
+        assert runtime.pipeline_execution_hash == original_hash
+        object.__setattr__(
+            runtime.attested_pipeline,
+            "_pipeline",
+            StrategyPipeline(()),
+        )
+        return runtime
+
+    builder.result_transform = _poison
     with pytest.raises(AppProcessError) as exc_info:
         factory.build(audit, external_should_stop=_never_stop)
 

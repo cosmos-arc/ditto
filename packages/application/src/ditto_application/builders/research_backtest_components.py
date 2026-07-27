@@ -34,6 +34,7 @@ from ditto_strategy.alpha.parameters import (
     EffectiveParameter,
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import (
@@ -111,6 +112,7 @@ class FrozenBacktestStrategyBuild:
     effective_parameters: tuple[EffectiveParameter, ...]
     planner_order_type: OrderType
     rebalance_frequency: str
+    selection_evidence_collector: SelectionEvidenceCollector
 
 
 @dataclass(frozen=True, slots=True)
@@ -241,6 +243,7 @@ def build_research_backtest_service(
         audit=audit,
         config=config,
         pipeline=strategy.pipeline,
+        selection_evidence_collector=strategy.selection_evidence_collector,
         planner=components.planner,
         brokerage=components.brokerage,
         pre_trade=components.pre_trade,
