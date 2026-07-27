@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 __all__ = [
+    "ExperimentCandidateResponse",
     "ExperimentControlReceiptResponse",
     "ExperimentControlRequest",
     "ExperimentDetailResponse",
+    "ExperimentFoldResponse",
     "ExperimentGateResponse",
     "ExperimentRetryFoldRequest",
     "ExperimentSummaryResponse",
@@ -19,21 +21,69 @@ __all__ = [
 ]
 
 
+class ExperimentCandidateResponse(BaseModel):
+    """API view of one immutable experiment candidate."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    ordinal: int
+    is_baseline: bool
+    parameters: dict[str, Any]
+
+
+class ExperimentFoldResponse(BaseModel):
+    """API view of one persisted fold specification and projection."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    fold_id: str
+    ordinal: int
+    role: str
+    status: str
+    train_start: date | None
+    train_end: date | None
+    test_start: date
+    test_end: date
+    purge_sessions: int
+    embargo_sessions: int
+    claim_owner_token: str | None
+    revision: int
+    updated_at: datetime
+
+
 class ExperimentDetailResponse(BaseModel):
     """API view of one durable experiment's current server truth."""
 
     model_config = ConfigDict(frozen=True)
 
     experiment_id: str
-    status: str
-    stage: str
+    research_cycle_id: str
+    research_cycle_hash: str
     strategy_version: str
     strategy_spec_hash: str
     snapshot_id: str
-    candidate_count: int
-    fold_count: int
+    status: str
+    desired_state: str
+    stage: str
+    failure_code: str | None
+    queue_ordinal: int | None
+    revision: int
     created_at: datetime
     updated_at: datetime
+    seed: int
+    worker_count: int
+    failure_policy: str
+    candidate_limit: int
+    fold_run_limit: int
+    fold_protocol_id: str
+    fold_protocol_version: int
+    fold_protocol_hash: str
+    candidate_count: int
+    fold_count: int
+    candidates: list[ExperimentCandidateResponse]
+    folds: list[ExperimentFoldResponse]
 
 
 class ExperimentGateResponse(BaseModel):
@@ -42,11 +92,18 @@ class ExperimentGateResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     evaluation_id: str
+    experiment_id: str
+    candidate_id: str | None
+    fold_id: str | None
+    attempt_id: str | None
     rule_id: str
     policy_version: str
     layer: str
     outcome: str
+    observed: Any
+    policy: Any
     artifact_id: str | None
+    payload_hash: str
     evaluated_at: datetime
 
 

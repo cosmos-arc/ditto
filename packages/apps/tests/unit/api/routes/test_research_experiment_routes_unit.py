@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from datetime import UTC, datetime
+from collections.abc import Awaitable, Callable
+from datetime import UTC, date, datetime
+from types import MappingProxyType
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,22 +18,37 @@ from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
 from ditto_application.queries.experiments import (
+    ExperimentCandidateReadModel,
     ExperimentDetailReadModel,
+    ExperimentFoldReadModel,
+    ExperimentGateReadModel,
     ExperimentQueryFacade,
 )
 from ditto_apps.api.errors import ConflictError, NotFoundError
+from ditto_apps.api.routes import research_experiment_routes
 from ditto_apps.api.routes.research_experiment_routes import (
     get_experiment,
     pause_experiment,
     retry_fold_experiment,
     to_experiment_response,
+    to_gate_response,
 )
+from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
+    ExperimentCandidateResponse,
+    ExperimentControlReceiptResponse,
     ExperimentControlRequest,
+    ExperimentDetailResponse,
     ExperimentRetryFoldRequest,
 )
 
 pytestmark = pytest.mark.asyncio
+
+_GetRoute = Callable[..., Awaitable[APIResponse[ExperimentDetailResponse]]]
+_CandidateRoute = Callable[
+    ..., Awaitable[APIResponse[list[ExperimentCandidateResponse]]]
+]
+_ControlRoute = Callable[..., Awaitable[APIResponse[ExperimentControlReceiptResponse]]]
 
 
 @pytest.fixture(autouse=True)
@@ -47,6 +64,40 @@ def _inline_experiment_route_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+def _candidate() -> ExperimentCandidateReadModel:
+    return ExperimentCandidateReadModel(
+        candidate_id="candidate-1",
+        ordinal=3,
+        is_baseline=False,
+        parameters=MappingProxyType(
+            {
+                "lookback": 20,
+                "weights": (0.25, 0.75),
+                "meta": MappingProxyType({"family": "momentum"}),
+            }
+        ),
+    )
+
+
+def _fold() -> ExperimentFoldReadModel:
+    return ExperimentFoldReadModel(
+        candidate_id="candidate-1",
+        fold_id="fold-1",
+        ordinal=4,
+        role="walk_forward",
+        status="completed",
+        train_start=date(2018, 1, 1),
+        train_end=date(2023, 12, 31),
+        test_start=date(2024, 1, 1),
+        test_end=date(2024, 12, 31),
+        purge_sessions=5,
+        embargo_sessions=2,
+        claim_owner_token="worker-1",
+        revision=8,
+        updated_at=datetime(2026, 7, 23, 1, 2, 3, tzinfo=UTC),
+    )
+
+
 def _detail() -> ExperimentDetailReadModel:
     return ExperimentDetailReadModel(
         experiment_id="exp-1",
@@ -58,11 +109,11 @@ def _detail() -> ExperimentDetailReadModel:
         status="completed",
         desired_state="running",
         stage="completed",
-        failure_code=None,
-        queue_ordinal=None,
-        revision=1,
-        created_at=datetime(2026, 7, 23, 0, 0, 0),
-        updated_at=datetime(2026, 7, 23, 0, 0, 0),
+        failure_code="candidate_failure",
+        queue_ordinal=7,
+        revision=9,
+        created_at=datetime(2026, 7, 23, 0, 0, 0, tzinfo=UTC),
+        updated_at=datetime(2026, 7, 23, 1, 0, 0, tzinfo=UTC),
         seed=42,
         worker_count=2,
         failure_policy="continue",
@@ -71,23 +122,136 @@ def _detail() -> ExperimentDetailReadModel:
         fold_protocol_id="fold-proto",
         fold_protocol_version=1,
         fold_protocol_hash="fold-hash",
-        candidates=(),
-        folds=(),
+        candidates=(_candidate(),),
+        folds=(_fold(),),
     )
 
 
-async def _call_get(experiment_id: str, facade: MagicMock) -> object:
-    route = getattr(get_experiment, "__dishka_orig_func__", get_experiment)
+async def _call_get(
+    experiment_id: str,
+    facade: MagicMock,
+) -> APIResponse[ExperimentDetailResponse]:
+    route = cast(
+        _GetRoute,
+        getattr(get_experiment, "__dishka_orig_func__", get_experiment),
+    )
     return await route(experiment_id=experiment_id, facade=facade)
 
 
-def test_to_experiment_response_maps_fields() -> None:
+def test_to_experiment_response_maps_every_application_field_without_loss() -> None:
     response = to_experiment_response(_detail())
 
-    assert response.experiment_id == "exp-1"
-    assert response.status == "completed"
-    assert response.candidate_count == 0
-    assert response.fold_count == 0
+    assert response.model_dump(mode="json") == {
+        "experiment_id": "exp-1",
+        "research_cycle_id": "cycle-1",
+        "research_cycle_hash": "cycle-hash",
+        "strategy_version": "v1",
+        "strategy_spec_hash": "spec-hash",
+        "snapshot_id": "snap-1",
+        "status": "completed",
+        "desired_state": "running",
+        "stage": "completed",
+        "failure_code": "candidate_failure",
+        "queue_ordinal": 7,
+        "revision": 9,
+        "created_at": "2026-07-23T00:00:00Z",
+        "updated_at": "2026-07-23T01:00:00Z",
+        "seed": 42,
+        "worker_count": 2,
+        "failure_policy": "continue",
+        "candidate_limit": 128,
+        "fold_run_limit": 24,
+        "fold_protocol_id": "fold-proto",
+        "fold_protocol_version": 1,
+        "fold_protocol_hash": "fold-hash",
+        "candidate_count": 1,
+        "fold_count": 1,
+        "candidates": [
+            {
+                "candidate_id": "candidate-1",
+                "ordinal": 3,
+                "is_baseline": False,
+                "parameters": {
+                    "lookback": 20,
+                    "weights": [0.25, 0.75],
+                    "meta": {"family": "momentum"},
+                },
+            }
+        ],
+        "folds": [
+            {
+                "candidate_id": "candidate-1",
+                "fold_id": "fold-1",
+                "ordinal": 4,
+                "role": "walk_forward",
+                "status": "completed",
+                "train_start": "2018-01-01",
+                "train_end": "2023-12-31",
+                "test_start": "2024-01-01",
+                "test_end": "2024-12-31",
+                "purge_sessions": 5,
+                "embargo_sessions": 2,
+                "claim_owner_token": "worker-1",
+                "revision": 8,
+                "updated_at": "2026-07-23T01:02:03Z",
+            }
+        ],
+    }
+
+
+def test_to_gate_response_preserves_lineage_policy_and_payload_hash() -> None:
+    gate = ExperimentGateReadModel(
+        evaluation_id="gate-1",
+        experiment_id="exp-1",
+        candidate_id="candidate-1",
+        fold_id="fold-1",
+        attempt_id="attempt-1",
+        rule_id="history",
+        policy_version="r3-v1",
+        layer="hard",
+        outcome="pass",
+        observed=MappingProxyType({"months": 96, "warnings": ("none",)}),
+        policy=MappingProxyType({"minimum_months": 96}),
+        artifact_id="artifact-1",
+        payload_hash="a" * 64,
+        evaluated_at=datetime(2026, 7, 23, 2, 0, 0, tzinfo=UTC),
+    )
+
+    response = to_gate_response(gate)
+
+    assert response.model_dump(mode="json") == {
+        "evaluation_id": "gate-1",
+        "experiment_id": "exp-1",
+        "candidate_id": "candidate-1",
+        "fold_id": "fold-1",
+        "attempt_id": "attempt-1",
+        "rule_id": "history",
+        "policy_version": "r3-v1",
+        "layer": "hard",
+        "outcome": "pass",
+        "observed": {"months": 96, "warnings": ["none"]},
+        "policy": {"minimum_months": 96},
+        "artifact_id": "artifact-1",
+        "payload_hash": "a" * 64,
+        "evaluated_at": "2026-07-23T02:00:00Z",
+    }
+
+
+def test_candidate_mapping_rejects_non_string_keys_without_coercion() -> None:
+    candidate = ExperimentCandidateReadModel(
+        candidate_id="candidate-drift",
+        ordinal=1,
+        is_baseline=False,
+        parameters=cast(
+            Any,
+            MappingProxyType(
+                {"nested": MappingProxyType({1: "invalid"})},
+            ),
+        ),
+    )
+
+    with pytest.raises(TypeError, match="mapping key must be str"):
+        research_experiment_routes.to_candidate_response(candidate)
 
 
 async def test_get_experiment_returns_detail() -> None:
@@ -108,6 +272,54 @@ async def test_get_experiment_raises_not_found() -> None:
         await _call_get("missing", facade)
 
 
+async def _call_candidates(
+    experiment_id: str,
+    facade: MagicMock,
+) -> APIResponse[list[ExperimentCandidateResponse]]:
+    endpoint = getattr(
+        research_experiment_routes,
+        "list_experiment_candidates",
+        None,
+    )
+    assert callable(endpoint), "GET /{experiment_id}/candidates is not implemented"
+    route = cast(
+        _CandidateRoute,
+        getattr(endpoint, "__dishka_orig_func__", endpoint),
+    )
+    return await route(experiment_id=experiment_id, facade=facade)
+
+
+async def test_list_experiment_candidates_uses_same_detail_lineage() -> None:
+    facade = MagicMock(spec=ExperimentQueryFacade)
+    facade.get.return_value = _detail()
+
+    response = await _call_candidates("exp-1", facade)
+
+    facade.get.assert_called_once_with("exp-1")
+    assert [candidate.model_dump(mode="json") for candidate in response.data] == [
+        {
+            "candidate_id": "candidate-1",
+            "ordinal": 3,
+            "is_baseline": False,
+            "parameters": {
+                "lookback": 20,
+                "weights": [0.25, 0.75],
+                "meta": {"family": "momentum"},
+            },
+        }
+    ]
+
+
+async def test_list_experiment_candidates_raises_not_found_for_missing_parent() -> None:
+    facade = MagicMock(spec=ExperimentQueryFacade)
+    facade.get.return_value = None
+
+    with pytest.raises(NotFoundError):
+        await _call_candidates("missing", facade)
+
+    facade.get.assert_called_once_with("missing")
+
+
 def _receipt() -> ExperimentControlReceipt:
     return ExperimentControlReceipt(
         experiment_id="exp-1",
@@ -123,8 +335,14 @@ def _control_error(reason: str, *, code: str = "SPEC_INVALID") -> AppCommandErro
     return AppCommandError("control failed", details={"code": code, "reason": reason})
 
 
-async def _call_pause(request: ExperimentControlRequest, handler: MagicMock) -> object:
-    route = getattr(pause_experiment, "__dishka_orig_func__", pause_experiment)
+async def _call_pause(
+    request: ExperimentControlRequest,
+    handler: MagicMock,
+) -> APIResponse[ExperimentControlReceiptResponse]:
+    route = cast(
+        _ControlRoute,
+        getattr(pause_experiment, "__dishka_orig_func__", pause_experiment),
+    )
     return await route(experiment_id="exp-1", request=request, handler=handler)
 
 
