@@ -36,6 +36,10 @@ from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     compiled_expressions_execution_hash,
 )
+from ditto_application.processes.experiments._report_evidence import (
+    BacktestReportEvidence,
+    backtest_report_content_hash,
+)
 from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanRequest,
     BaselineRef,
@@ -96,6 +100,7 @@ from ditto_backtest.simulation import (
     AShareSettlementModel,
     BrokerageModel,
 )
+from ditto_backtest.statistics import BacktestReport
 from ditto_execution.orders.book import OrderBook
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.trade_builder import (
@@ -1122,15 +1127,31 @@ def test_factory_rejects_non_exact_parent_checkpoint(
     assert exc_info.value.details["reason"] == expected_reason
 
 
-def test_existing_runner_executes_the_concrete_factory_and_service() -> None:
+def test_existing_runner_returns_exact_report_evidence_from_concrete_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     factory, audit, *_ = _fixture()
+    reports: list[BacktestReport] = []
+    original_run = BacktestService.run
+
+    def capture_report(service: BacktestService) -> BacktestReport:
+        report = original_run(service)
+        reports.append(report)
+        return report
+
+    monkeypatch.setattr(BacktestService, "run", capture_report)
 
     outcome = ExistingBacktestResearchFoldRunner(factory).run(
         audit,
         external_should_stop=_never_stop,
     )
 
-    assert outcome is ResearchFoldRunState.COMPLETED
+    assert outcome.state is ResearchFoldRunState.COMPLETED
+    assert type(outcome.report_evidence) is BacktestReportEvidence
+    assert outcome.report_evidence == BacktestReportEvidence.from_report(reports[0])
+    assert outcome.report_evidence.content_hash == backtest_report_content_hash(
+        reports[0]
+    )
 
 
 def test_existing_runner_maps_real_strategy_failure_to_candidate_outcome(
@@ -1191,7 +1212,8 @@ def test_existing_runner_propagates_cooperative_stop_into_real_service() -> None
         external_should_stop=_stop_during_engine,
     )
 
-    assert outcome is ResearchFoldRunState.STOPPED
+    assert outcome.state is ResearchFoldRunState.STOPPED
+    assert outcome.report_evidence is None
     assert stop_checks == 3
 
 

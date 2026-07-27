@@ -18,6 +18,7 @@ from ditto_analysis.errors import (
 from ditto_analysis.experiments import (
     AttemptId,
     ExperimentId,
+    LeaseFence,
     SchedulerLease,
     SchedulerSlot,
 )
@@ -31,12 +32,14 @@ from ditto_application.processes.experiments.scheduler_store import (
 
 __all__ = [
     "LeaseAuthority",
+    "RenewedLeaseOperation",
     "ResearchExecutionControl",
     "require_utc_event_time",
     "run_unfenced_scheduler_operation",
 ]
 
 _ResultT = TypeVar("_ResultT")
+type RenewedLeaseOperation[ResultT] = Callable[[LeaseFence, int], ResultT]
 _MICROSECONDS_PER_SECOND = 1_000_000
 _SECONDS_PER_DAY = 86_400
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
@@ -339,17 +342,25 @@ class LeaseAuthority:
                 self._release_transient_fail_closed()
             return result
 
-    def renew(self) -> SchedulerLease:
-        """Renew with the current fence and replace it before any later write."""
+    def execute_recoverable_under_renewed_lease(
+        self,
+        operation: RenewedLeaseOperation[_ResultT],
+    ) -> _ResultT:
+        """
+        Renew then synchronously publish recoverable evidence under one lock.
+
+        The callback receives only the renewed fence and an authority-clock
+        timestamp, and runs before the outer authority section can be released.
+        It must complete the publication synchronously and must not recursively
+        renew this authority. Ordinary publication failures leave the renewed
+        authority usable so the worker can durably fail its attempt. Authority,
+        integrity, replay-conflict, and unknown interruption outcomes fail closed.
+        """
         with self._lock:
             try:
+                self._renew_locked()
                 now_epoch_us = _epoch_us(self._clock())
-                lease = self._require_live_lease(now_epoch_us)
-                renewed = self._store.renew_lease(
-                    lease,
-                    now_epoch_us=now_epoch_us,
-                    new_lease_until_epoch_us=(now_epoch_us + self._lease_duration_us),
-                )
+                current = self._require_live_lease(now_epoch_us)
             except AppProcessError:
                 if self._lost_reason is None:
                     self._invalidate("application_contract_failure")
@@ -357,8 +368,39 @@ class LeaseAuthority:
             except Exception as exc:
                 self._invalidate(type(exc).__name__)
                 raise self._normalized_error(exc) from exc
-            self._lease = renewed
-            return renewed
+            except BaseException:
+                self._invalidate("artifact_publication_renew_interrupted")
+                raise
+            return self._execute_recoverable_publication(
+                operation,
+                current.fence,
+                now_epoch_us,
+            )
+
+    def renew(self) -> SchedulerLease:
+        """Renew with the current fence and replace it before any later write."""
+        with self._lock:
+            return self._renew_locked()
+
+    def _renew_locked(self) -> SchedulerLease:
+        """Renew while the caller owns the authority lock."""
+        try:
+            now_epoch_us = _epoch_us(self._clock())
+            lease = self._require_live_lease(now_epoch_us)
+            renewed = self._store.renew_lease(
+                lease,
+                now_epoch_us=now_epoch_us,
+                new_lease_until_epoch_us=(now_epoch_us + self._lease_duration_us),
+            )
+        except AppProcessError:
+            if self._lost_reason is None:
+                self._invalidate("application_contract_failure")
+            raise
+        except Exception as exc:
+            self._invalidate(type(exc).__name__)
+            raise self._normalized_error(exc) from exc
+        self._lease = renewed
+        return renewed
 
     def release(self) -> SchedulerSlot:
         """Release one terminal occupant and keep this authority reusable."""
@@ -389,6 +431,43 @@ class LeaseAuthority:
         now_epoch_us = _epoch_us(self._clock())
         self._require_live_lease(now_epoch_us)
         return now_epoch_us
+
+    def _execute_recoverable_publication(
+        self,
+        operation: RenewedLeaseOperation[_ResultT],
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> _ResultT:
+        """Classify only the synchronous artifact publication outcome."""
+        try:
+            return operation(lease_fence, now_epoch_us)
+        except AppProcessError as exc:
+            if exc.details.get("code") in {
+                "LEASE_LOST",
+                "EXPERIMENT_INTEGRITY_FAILED",
+            }:
+                self._invalidate("artifact_publication_authority_failure")
+            raise
+        except ExperimentLeaseLostError as exc:
+            self._invalidate(type(exc).__name__)
+            raise self._normalized_error(exc) from exc
+        except ExperimentIntegrityError as exc:
+            self._invalidate(type(exc).__name__)
+            raise self._normalized_error(exc) from exc
+        except ExperimentConflictError as exc:
+            self._invalidate(type(exc).__name__)
+            raise _scheduler_error(
+                "EXPERIMENT_INTEGRITY_FAILED",
+                "artifact_publication_conflict",
+                conflict_reason=str(
+                    exc.details.get("reason_code", "artifact_replay_drift")
+                ),
+            ) from exc
+        except Exception:
+            raise
+        except BaseException:
+            self._invalidate("artifact_publication_interrupted")
+            raise
 
     def _release_transient_fail_closed(self) -> SchedulerSlot:
         try:

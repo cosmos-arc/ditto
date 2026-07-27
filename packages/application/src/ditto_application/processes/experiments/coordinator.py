@@ -52,6 +52,9 @@ from ditto_application.processes.experiments._coordinator_stage_drivers import (
     cancel_failed_candidate_folds,
     drive_evidence_completion,
 )
+from ditto_application.processes.experiments._coordinator_worker_authority import (
+    WorkerLeaseAuthorityCoordinator,
+)
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     deterministic_backtest_run_id,
 )
@@ -174,7 +177,7 @@ _result = _RESULT_BUILDER.result
 _empty_result = _RESULT_BUILDER.empty
 
 
-class ExperimentExecutionCoordinator:
+class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
     """Coordinate only durable first-run work under one singleton lease."""
 
     def __init__(
@@ -231,12 +234,6 @@ class ExperimentExecutionCoordinator:
             if result is not None:
                 return result
             self._authority.release()
-
-    def renew_lease(self, *, occurred_at: datetime | None = None) -> SchedulerLease:
-        """Renew from the authority clock; retain worker-call compatibility."""
-        if occurred_at is not None:
-            _require_utc_event_time(occurred_at)
-        return self._authority.renew()
 
     def pause(
         self,

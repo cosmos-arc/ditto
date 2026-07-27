@@ -21,7 +21,6 @@ from ditto_analysis.experiments import (
     ExperimentStatus,
     FoldRole,
     FoldView,
-    SchedulerLease,
     canonical_payload,
 )
 from ditto_strategy.errors import StrategyError
@@ -33,7 +32,15 @@ from ditto_application.processes.experiments._execution_resolution_evidence impo
     build_successor_queued_attempt,
     rebuild_execution_audit_anchor,
 )
+from ditto_application.processes.experiments._report_evidence import (
+    BacktestReportArtifactIdentity,
+    BacktestReportArtifactPublisher,
+    BacktestReportEvidence,
+)
 from ditto_application.processes.experiments._worker_contract import (
+    ResearchFoldRunResult,
+    ResearchFoldRunState,
+    ResearchWorkerCoordinator,
     ResearchWorkerResult,
     ResearchWorkerState,
 )
@@ -75,6 +82,7 @@ __all__ = [
     "ResearchExecutionControl",
     "ResearchExecutionSemanticsResolver",
     "ResearchExperimentWorker",
+    "ResearchFoldRunResult",
     "ResearchFoldRunState",
     "ResearchFoldRunner",
     "ResearchWorkerResult",
@@ -233,13 +241,6 @@ def _require_verified_research_backtest_build_seal(
         raise _worker_error("unsealed_research_backtest_build")
 
 
-class ResearchFoldRunState(StrEnum):
-    """Typed numerical runner outcome consumed by the durable worker."""
-
-    COMPLETED = "completed"
-    STOPPED = "stopped"
-
-
 class ResearchFoldRunner(Protocol):
     """Run one existing deterministic backtest path from an exact audit bundle."""
 
@@ -248,7 +249,7 @@ class ResearchFoldRunner(Protocol):
         audit: ResearchExecutionAudit,
         *,
         external_should_stop: Callable[[], bool],
-    ) -> ResearchFoldRunState:
+    ) -> ResearchFoldRunResult:
         """Execute one audit-bound fold through the existing backtest path."""
         ...
 
@@ -277,10 +278,10 @@ class ExistingBacktestResearchFoldRunner:
         audit: ResearchExecutionAudit,
         *,
         external_should_stop: Callable[[], bool],
-    ) -> ResearchFoldRunState:
+    ) -> ResearchFoldRunResult:
         """Build and run the existing single-backtest application service."""
         if external_should_stop():
-            return ResearchFoldRunState.STOPPED
+            return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)
         audit_anchor = rebuild_execution_audit_anchor(audit)
         build = self._factory.build(
             audit,
@@ -298,7 +299,7 @@ class ExistingBacktestResearchFoldRunner:
         if rebuild_execution_audit_anchor(audit) != audit_anchor:
             raise _worker_error("research_execution_audit_drift")
         if external_should_stop():
-            return ResearchFoldRunState.STOPPED
+            return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)
         service = build.service
         if type(cast("object", service)) is not BacktestService:
             raise _worker_error("invalid_research_backtest_service")
@@ -315,65 +316,17 @@ class ExistingBacktestResearchFoldRunner:
         )
         _require_verified_research_backtest_build_seal(build)
         try:
-            BacktestService.run(service)
+            report = BacktestService.run(service)
         except StrategyError as error:
             raise ResearchCandidateExecutionError(
                 "research candidate strategy execution failed"
             ) from error
         if service.last_run_cancelled:
-            return ResearchFoldRunState.STOPPED
-        return ResearchFoldRunState.COMPLETED
-
-
-class ResearchWorkerCoordinator(Protocol):
-    """Narrow lease-fenced coordinator operations owned by the worker."""
-
-    def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease: ...
-
-    def start_attempt(
-        self,
-        dispatch: ExperimentDispatch,
-        *,
-        occurred_at: datetime,
-    ) -> PersistedAttemptStart: ...
-
-    def complete_attempt(
-        self,
-        attempt_id: AttemptId,
-        *,
-        occurred_at: datetime,
-    ) -> object: ...
-
-    def fail_attempt(
-        self,
-        attempt_id: AttemptId,
-        failure_code: ExperimentFailureCode,
-        *,
-        occurred_at: datetime,
-    ) -> object: ...
-
-    def poll_execution_directive(
-        self,
-        attempt_id: AttemptId,
-        *,
-        occurred_at: datetime,
-    ) -> ResearchExecutionDirective: ...
-
-    def record_checkpoint(
-        self,
-        attempt_id: AttemptId,
-        checkpoint_ref: CheckpointRef,
-        *,
-        occurred_at: datetime,
-    ) -> object: ...
-
-    def cooperative_stop_attempt(
-        self,
-        attempt_id: AttemptId,
-        directive: ResearchExecutionDirective,
-        *,
-        occurred_at: datetime,
-    ) -> object: ...
+            return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)
+        return ResearchFoldRunResult(
+            ResearchFoldRunState.COMPLETED,
+            BacktestReportEvidence.from_report(report),
+        )
 
 
 _TERMINAL_AUTHORITY_LOSS_CODES = frozenset(
@@ -610,12 +563,14 @@ class ResearchExperimentWorker:
         coordinator: ResearchWorkerCoordinator,
         semantics_resolver: ResearchExecutionSemanticsResolver,
         runner: ResearchFoldRunner,
+        report_publisher: BacktestReportArtifactPublisher,
         checkpoint_available: Callable[[str], bool] | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._coordinator = coordinator
         self._resolver = semantics_resolver
         self._runner = runner
+        self._report_publisher = report_publisher
         self._checkpoint_available: Callable[[str], bool] = checkpoint_available or (
             lambda _run_id: False
         )
@@ -681,7 +636,30 @@ class ResearchExperimentWorker:
             clock=self._clock,
         )
         try:
-            self._run_fold(persisted, attempt, run_id, execution_control)
+            report_evidence = self._run_fold(
+                persisted,
+                attempt,
+                run_id,
+                execution_control,
+            )
+            identity = BacktestReportArtifactIdentity(
+                experiment_id=persisted.fold.spec.key.experiment_id,
+                candidate_id=persisted.fold.spec.key.candidate_id,
+                fold_id=persisted.fold.spec.key.fold_id,
+                attempt_id=attempt.attempt_id,
+                attempt_created_at=attempt.created_at,
+                run_id=run_id,
+                test_window=persisted.fold.spec.test_window,
+                reproduction_fingerprint=attempt.reproduction_fingerprint,
+            )
+            self._coordinator.publish_attempt_artifact(
+                lambda lease_fence, now_epoch_us: self._report_publisher.publish(
+                    identity,
+                    report_evidence,
+                    lease_fence=lease_fence,
+                    now_epoch_us=now_epoch_us,
+                )
+            )
         except Exception as error:
             effective_error = execution_control.failure or error
             if _lost_terminal_authority(effective_error):
@@ -731,7 +709,7 @@ class ResearchExperimentWorker:
         attempt: AttemptPersistenceSpec,
         run_id: BacktestRunId,
         execution_control: ResearchExecutionControl,
-    ) -> None:
+    ) -> BacktestReportEvidence:
         _require_execution_authority(execution_control)
         semantics = self._resolver.resolve(persisted.fold)
         _require_execution_authority(execution_control)
@@ -755,20 +733,27 @@ class ResearchExperimentWorker:
             ),
             created_at=attempt.created_at,
         )
-        run_state = self._runner.run(
+        run_result = self._runner.run(
             audit,
             external_should_stop=execution_control.should_stop,
         )
         if execution_control.failure is not None:
             raise execution_control.failure
-        if run_state is ResearchFoldRunState.STOPPED:
+        if type(cast("object", run_result)) is not ResearchFoldRunResult:
+            raise _worker_error("invalid_research_fold_run_result")
+        if run_result.state is ResearchFoldRunState.STOPPED:
             if execution_control.directive is ResearchExecutionDirective.RUN:
                 raise _worker_error("stop_without_durable_control")
             raise _ResearchCooperativeStopError(
                 "research backtest stopped cooperatively"
             )
-        if run_state is not ResearchFoldRunState.COMPLETED:
-            raise _worker_error("invalid_research_fold_run_state")
+        evidence = run_result.report_evidence
+        if (
+            run_result.state is not ResearchFoldRunState.COMPLETED
+            or type(evidence) is not BacktestReportEvidence
+        ):
+            raise _worker_error("invalid_research_fold_run_result")
+        return evidence
 
     def _finish_controlled_attempt(
         self,

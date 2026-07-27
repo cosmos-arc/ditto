@@ -6,12 +6,14 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from pathlib import Path
 from threading import Event, Lock
 from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptView,
     BacktestRunId,
@@ -28,12 +30,18 @@ from ditto_analysis.experiments import (
     FoldProjection,
     FoldRole,
     FoldView,
+    LeaseFence,
     SchedulerLease,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import BacktestService
+from ditto_application.processes.experiments import worker as worker_module
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     research_execution_error,
+)
+from ditto_application.processes.experiments._report_evidence import (
+    BacktestReportArtifactIdentity,
+    BacktestReportEvidence,
 )
 from ditto_application.processes.experiments.backtest_service_wiring import (
     ClosedBacktestServiceGraph,
@@ -76,6 +84,7 @@ from ditto_application.processes.experiments.worker import (
     ResearchBacktestBuildSource,
     ResearchCandidateExecutionError,
     ResearchExperimentWorker,
+    ResearchFoldRunResult,
     ResearchFoldRunState,
     ResearchWorkerState,
     VerifiedResearchBacktestBuild,
@@ -359,6 +368,41 @@ def _semantics() -> ResearchExecutionSemantics:
     )
 
 
+def _report_evidence(
+    *,
+    run_id: str = "research-run-persisted",
+) -> BacktestReportEvidence:
+    return BacktestReportEvidence(
+        run_id=run_id,
+        period=("2024-01-01", "2024-12-31"),
+        initial_cash=100_000.0,
+        final_nav=101_000.0,
+        nav_series=(
+            ("2024-01-01", 100_000.0),
+            ("2024-12-31", 101_000.0),
+        ),
+        fill_log=(),
+    )
+
+
+@pytest.mark.parametrize(
+    ("state", "evidence"),
+    [
+        (ResearchFoldRunState.COMPLETED, None),
+        (ResearchFoldRunState.STOPPED, _report_evidence()),
+        (cast("ResearchFoldRunState", object()), None),
+    ],
+)
+def test_fold_run_result_rejects_state_evidence_mismatch(
+    state: ResearchFoldRunState,
+    evidence: BacktestReportEvidence | None,
+) -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        worker_module.ResearchFoldRunResult(state, evidence)
+
+    assert exc_info.value.details["reason"] == "invalid_research_fold_run_result"
+
+
 class _Resolver:
     def __init__(self, semantics: ResearchExecutionSemantics | Exception) -> None:
         self.value = semantics
@@ -596,7 +640,8 @@ def test_research_runner_checks_authority_before_factory_build() -> None:
         external_should_stop=lambda: True,
     )
 
-    assert result is ResearchFoldRunState.STOPPED
+    assert result.state is ResearchFoldRunState.STOPPED
+    assert result.report_evidence is None
     factory.build.assert_not_called()
 
 
@@ -624,7 +669,8 @@ def test_research_runner_checks_authority_after_build_before_service_run() -> No
         external_should_stop=lambda: next(checks),
     )
 
-    assert result is ResearchFoldRunState.STOPPED
+    assert result.state is ResearchFoldRunState.STOPPED
+    assert result.report_evidence is None
     factory.build.assert_called_once()
     service.run.assert_not_called()
 
@@ -913,6 +959,17 @@ class _Coordinator:
         self.calls.append(("complete", (attempt_id, occurred_at)))
         return cast("object", object())
 
+    def publish_attempt_artifact(self, operation):
+        fence = LeaseFence(
+            experiment_id=ExperimentId("experiment-1"),
+            owner_token="worker-owner",
+            revision=17,
+            lease_until_epoch_us=int(_NOW.timestamp() * 1_000_000) + 300_000_000,
+        )
+        now_epoch_us = int(_NOW.timestamp() * 1_000_000)
+        self.calls.append(("publish", (fence, now_epoch_us)))
+        return operation(fence, now_epoch_us)
+
     def fail_attempt(self, attempt_id, failure_code, *, occurred_at):
         self.calls.append(("fail", (attempt_id, failure_code, occurred_at)))
         return cast("object", object())
@@ -948,13 +1005,96 @@ class _Runner:
         audit: ResearchExecutionAudit,
         *,
         external_should_stop: Callable[[], bool],
-    ) -> ResearchFoldRunState:
+    ) -> ResearchFoldRunResult:
         self.audits.append(audit)
         if self.error is not None:
             raise self.error
         if self.poll_control and external_should_stop():
-            return ResearchFoldRunState.STOPPED
-        return self.state
+            return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)
+        if self.state is ResearchFoldRunState.STOPPED:
+            return ResearchFoldRunResult(ResearchFoldRunState.STOPPED, None)
+        return ResearchFoldRunResult(
+            ResearchFoldRunState.COMPLETED,
+            _report_evidence(run_id=audit.backtest_run_id),
+        )
+
+
+class _Publisher:
+    def __init__(
+        self,
+        error: Exception | None = None,
+    ) -> None:
+        self.error = error
+        self.calls: list[
+            tuple[
+                BacktestReportArtifactIdentity,
+                BacktestReportEvidence,
+                LeaseFence,
+                int,
+            ]
+        ] = []
+
+    def publish(
+        self,
+        identity: BacktestReportArtifactIdentity,
+        evidence: BacktestReportEvidence,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> object:
+        self.calls.append((identity, evidence, lease_fence, now_epoch_us))
+        if self.error is not None:
+            raise self.error
+        return object()
+
+
+class _MemoryArtifactIndex:
+    """Minimal tmp_path index for worker-to-real-adapter integration."""
+
+    def __init__(self, artifact_root: Path) -> None:
+        self.artifact_root = artifact_root.resolve()
+        self.records: dict[str, ArtifactRecord] = {}
+
+    def get_artifact(self, artifact_id: str) -> ArtifactRecord | None:
+        return self.records.get(artifact_id)
+
+    def get_artifact_by_relative_path(
+        self,
+        relative_path: str,
+    ) -> ArtifactRecord | None:
+        return next(
+            (
+                record
+                for record in self.records.values()
+                if record.relative_path == relative_path
+            ),
+            None,
+        )
+
+    def add_artifact(
+        self,
+        record: ArtifactRecord,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        commit_guard: Callable[[], None],
+    ) -> None:
+        _ = (lease_fence, now_epoch_us)
+        commit_guard()
+        assert self.get_artifact(record.artifact_id) is None
+        assert self.get_artifact_by_relative_path(record.relative_path) is None
+        self.records[record.artifact_id] = record
+
+    def pin_artifact(
+        self,
+        artifact_id: str,
+        *,
+        expected_revision: int,
+        pinned_at: datetime,
+        commit_guard: Callable[[], None],
+    ) -> ArtifactRecord:
+        _ = (artifact_id, expected_revision, pinned_at, commit_guard)
+        raise AssertionError("pin is outside worker publication")
 
 
 def _dispatch() -> ExperimentDispatch:
@@ -1007,10 +1147,12 @@ def _replace_persisted_fold_key(
 def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence() -> None:
     coordinator = _Coordinator()
     runner = _Runner()
+    publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
+        report_publisher=publisher,
         clock=lambda: _NOW,
     )
 
@@ -1026,15 +1168,198 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence() ->
         "start",
         "renew",
         "renew",
+        "publish",
         "renew",
         "complete",
     ]
+    assert len(publisher.calls) == 1
+    identity, evidence, fence, now_epoch_us = publisher.calls[0]
+    persisted = _dispatch()
+    assert identity.experiment_id == persisted.fold.spec.key.experiment_id
+    assert identity.candidate_id == persisted.fold.spec.key.candidate_id
+    assert identity.fold_id == persisted.fold.spec.key.fold_id
+    assert identity.attempt_id == persisted.attempt.spec.attempt_id
+    assert identity.attempt_created_at == persisted.attempt.spec.created_at
+    assert identity.run_id == BacktestRunId("research-run-persisted")
+    assert identity.test_window == persisted.fold.spec.test_window
+    assert identity.reproduction_fingerprint == (
+        persisted.attempt.spec.reproduction_fingerprint
+    )
+    assert evidence == _report_evidence()
+    assert fence.revision == 17
+    assert now_epoch_us == int(_NOW.timestamp() * 1_000_000)
     assert len(runner.audits) == 1
     assert runner.audits[0].attempt_id == str(_dispatch().attempt.spec.attempt_id)
     assert runner.audits[0].reproduction_fingerprint == (
         _dispatch().attempt.spec.reproduction_fingerprint
     )
     assert runner.audits[0].backtest_run_id == "research-run-persisted"
+
+
+def test_worker_publishes_real_indexed_artifact_before_completion(
+    tmp_path: Path,
+) -> None:
+    from ditto_analysis.research.artifact_service import ResearchArtifactService
+    from ditto_application.builders.research_artifact_loader import (
+        IndexedBacktestReportArtifactAdapter,
+    )
+
+    index = _MemoryArtifactIndex(tmp_path)
+    artifact_service = ResearchArtifactService(
+        artifact_root=tmp_path,
+        artifact_reader=index,
+        artifact_writer=index,
+    )
+    adapter = IndexedBacktestReportArtifactAdapter(
+        artifact_service=artifact_service,
+        artifact_index_reader=index,
+    )
+
+    class _ArtifactAwareCoordinator(_Coordinator):
+        artifact_visible_before_complete = False
+
+        def complete_attempt(self, attempt_id, *, occurred_at):
+            self.artifact_visible_before_complete = len(index.records) == 1 and all(
+                (tmp_path / record.relative_path).is_file()
+                for record in index.records.values()
+            )
+            return super().complete_attempt(attempt_id, occurred_at=occurred_at)
+
+    coordinator = _ArtifactAwareCoordinator()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(),
+        report_publisher=adapter,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.COMPLETED
+    assert coordinator.artifact_visible_before_complete is True
+    assert len(index.records) == 1
+    record = next(iter(index.records.values()))
+    assert (tmp_path / record.relative_path).is_file()
+
+
+def test_worker_turns_recoverable_publication_error_into_system_failure() -> None:
+    coordinator = _Coordinator()
+    publisher = _Publisher(RuntimeError("artifact fsync failed"))
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(),
+        report_publisher=publisher,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.SYSTEM_FAILED
+    assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert result.error_type == "RuntimeError"
+    assert len(publisher.calls) == 1
+    assert [name for name, _ in coordinator.calls] == [
+        "renew",
+        "start",
+        "renew",
+        "renew",
+        "publish",
+        "renew",
+        "fail",
+    ]
+
+
+@pytest.mark.parametrize(
+    "code",
+    ["LEASE_LOST", "EXPERIMENT_INTEGRITY_FAILED"],
+)
+def test_worker_rethrows_terminal_publication_error_without_terminal_write(
+    code: str,
+) -> None:
+    class _TerminalPublicationCoordinator(_Coordinator):
+        def publish_attempt_artifact(self, operation):
+            _ = operation
+            self.calls.append(("publish", code))
+            raise AppProcessError(
+                "attempt artifact authority failed",
+                details={"code": code, "reason": "artifact_publication_failed"},
+            )
+
+    coordinator = _TerminalPublicationCoordinator()
+    publisher = _Publisher()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(),
+        report_publisher=publisher,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert exc_info.value.details["code"] == code
+    assert publisher.calls == []
+    assert [name for name, _ in coordinator.calls][-1] == "publish"
+    assert all(name not in {"fail", "complete"} for name, _payload in coordinator.calls)
+
+
+def test_worker_does_not_turn_complete_error_into_reverse_failure() -> None:
+    complete_error = RuntimeError("complete persistence failed")
+
+    class _CompleteFailureCoordinator(_Coordinator):
+        def complete_attempt(self, attempt_id, *, occurred_at):
+            self.calls.append(("complete", (attempt_id, occurred_at)))
+            raise complete_error
+
+    coordinator = _CompleteFailureCoordinator()
+    publisher = _Publisher()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(),
+        report_publisher=publisher,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert exc_info.value is complete_error
+    assert len(publisher.calls) == 1
+    assert [name for name, _ in coordinator.calls][-2:] == ["renew", "complete"]
+    assert all(name != "fail" for name, _payload in coordinator.calls)
+
+
+def test_worker_rejects_non_exact_runner_result_before_publication() -> None:
+    class _InvalidRunner:
+        def run(
+            self,
+            audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> ResearchFoldRunResult:
+            _ = (audit, external_should_stop)
+            return cast("ResearchFoldRunResult", object())
+
+    coordinator = _Coordinator()
+    publisher = _Publisher()
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_InvalidRunner(),
+        report_publisher=publisher,
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.SYSTEM_FAILED
+    assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert publisher.calls == []
+    assert [name for name, _ in coordinator.calls][-2:] == ["renew", "fail"]
 
 
 @pytest.mark.parametrize(
@@ -1069,10 +1394,12 @@ def test_worker_treats_control_winning_start_race_as_normal_stop(
 
     coordinator = _ControlRaceCoordinator()
     runner = _Runner()
+    publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
+        report_publisher=publisher,
         clock=lambda: _NOW,
     )
 
@@ -1082,6 +1409,7 @@ def test_worker_treats_control_winning_start_race_as_normal_stop(
     assert result.failure_code is None
     assert result.error_type is None
     assert runner.audits == []
+    assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
         "renew",
         "directive",
@@ -1110,6 +1438,7 @@ def test_worker_rejects_control_change_with_run_intent() -> None:
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
+        report_publisher=_Publisher(),
         clock=lambda: _NOW,
     )
 
@@ -1180,6 +1509,7 @@ def test_worker_rejects_persisted_dispatch_identity_drift_before_numerics(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
+        report_publisher=_Publisher(),
         clock=lambda: _NOW,
     )
 
@@ -1195,10 +1525,12 @@ def test_worker_rejects_persisted_dispatch_identity_drift_before_numerics(
 def test_worker_rejects_already_running_duplicate_without_numerical_execution() -> None:
     coordinator = _Coordinator(started_now=False)
     runner = _Runner()
+    publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
+        report_publisher=publisher,
         clock=lambda: _NOW,
     )
 
@@ -1208,6 +1540,7 @@ def test_worker_rejects_already_running_duplicate_without_numerical_execution() 
     assert captured.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
     assert captured.value.details["reason"] == "duplicate_attempt_delivery"
     assert runner.audits == []
+    assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == ["renew", "start"]
 
 
@@ -1270,10 +1603,12 @@ def test_worker_returns_terminal_replay_without_numerics_or_second_write(
     coordinator = _TerminalReplayCoordinator()
     resolver = _Resolver(_semantics())
     runner = _Runner()
+    publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=resolver,
         runner=runner,
+        report_publisher=publisher,
         clock=lambda: _NOW,
     )
 
@@ -1284,6 +1619,7 @@ def test_worker_returns_terminal_replay_without_numerics_or_second_write(
     assert result.error_type is None
     assert resolver.calls == 0
     assert runner.audits == []
+    assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == ["renew", "start"]
 
 
@@ -1311,12 +1647,15 @@ def test_concurrent_duplicate_delivery_runs_numerics_exactly_once() -> None:
             audit: ResearchExecutionAudit,
             *,
             external_should_stop: Callable[[], bool],
-        ) -> ResearchFoldRunState:
+        ) -> ResearchFoldRunResult:
             _ = external_should_stop
             self.audits.append(audit)
             self.entered.set()
             assert self.release.wait(timeout=5)
-            return ResearchFoldRunState.COMPLETED
+            return ResearchFoldRunResult(
+                ResearchFoldRunState.COMPLETED,
+                _report_evidence(run_id=audit.backtest_run_id),
+            )
 
     coordinator = _DuplicateCoordinator()
     runner = _BlockingRunner()
@@ -1324,6 +1663,7 @@ def test_concurrent_duplicate_delivery_runs_numerics_exactly_once() -> None:
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=runner,
+        report_publisher=_Publisher(),
         clock=lambda: _NOW,
     )
     dispatch = _dispatch()
@@ -1400,10 +1740,12 @@ def test_worker_persists_typed_failure_classification(
     failure_code: ExperimentFailureCode,
 ) -> None:
     coordinator = _Coordinator()
+    publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(error),
+        report_publisher=publisher,
         clock=lambda: _NOW,
     )
 
@@ -1411,6 +1753,7 @@ def test_worker_persists_typed_failure_classification(
 
     assert result.state is state
     assert result.failure_code is failure_code
+    assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
         "renew",
         "start",
@@ -1425,10 +1768,12 @@ def test_worker_marks_post_claim_semantic_drift_as_input_failure() -> None:
     coordinator = _Coordinator()
     resolver = _Resolver(replace(_semantics(), seed=18))
     runner = _Runner()
+    publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=resolver,
         runner=runner,
+        report_publisher=publisher,
         clock=lambda: _NOW,
     )
 
@@ -1437,6 +1782,7 @@ def test_worker_marks_post_claim_semantic_drift_as_input_failure() -> None:
     assert result.state is ResearchWorkerState.INPUT_FAILED
     assert result.failure_code is ExperimentFailureCode.INPUT_HASH_MISMATCH
     assert runner.audits == []
+    assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
         "renew",
         "start",
@@ -1458,6 +1804,7 @@ def test_worker_renews_authority_before_resolving_persisted_semantics() -> None:
         coordinator=coordinator,
         semantics_resolver=resolver,
         runner=runner,
+        report_publisher=_Publisher(),
         clock=lambda: _NOW,
     )
 
@@ -1482,6 +1829,7 @@ def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(poll_control=True),
+        report_publisher=_Publisher(),
         clock=lambda: _NOW,
     )
 
@@ -1494,10 +1842,12 @@ def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
 
 def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
     coordinator = _Coordinator()
+    publisher = _Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=_Resolver(_semantics()),
         runner=_Runner(state=ResearchFoldRunState.STOPPED),
+        report_publisher=publisher,
         clock=lambda: _NOW,
     )
 
@@ -1505,6 +1855,7 @@ def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
 
     assert result.state is ResearchWorkerState.SYSTEM_FAILED
     assert result.failure_code is ExperimentFailureCode.SYSTEM_ERROR
+    assert publisher.calls == []
     assert [name for name, _ in coordinator.calls] == [
         "renew",
         "start",

@@ -38,6 +38,7 @@ from ditto_analysis.experiments import (
     FoldProtocolSpec,
     FoldRole,
     FoldView,
+    LeaseFence,
     LogicalTrialIdentity,
     ResearchMetricDirection,
     ResearchMetricId,
@@ -1513,6 +1514,28 @@ def test_renewed_lease_fence_is_used_by_every_later_write() -> None:
 
     assert lease.revision == 2
     assert store.write_fences[-1] == lease.revision
+
+
+def test_attempt_artifact_publication_uses_coordinator_owned_renewed_fence() -> None:
+    store = _SchedulerStore(worker_count=2, candidate_count=2)
+    coordinator, _factory = _coordinator(store)
+    dispatched = coordinator.tick(occurred_at=NOW)
+    observed: list[tuple[LeaseFence, int]] = []
+
+    result = coordinator.publish_attempt_artifact(
+        lambda fence, now_epoch_us: (
+            observed.append((fence, now_epoch_us)) or "published"
+        )
+    )
+
+    assert result == "published"
+    assert observed[0][0].revision == 2
+    assert observed[0][1] == NOW_US
+    coordinator.start_attempt(
+        dispatched.dispatches[0],
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+    assert store.write_fences[-1] == 2
 
 
 def test_lease_authority_serializes_concurrent_result_writes() -> None:

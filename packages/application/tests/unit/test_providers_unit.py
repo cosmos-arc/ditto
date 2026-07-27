@@ -968,6 +968,7 @@ class TestAppProviderIntegration:
         必须是 C1/C2 的具体实现类。
         """
         from ditto_application.builders.research_artifact_loader import (
+            IndexedBacktestReportArtifactAdapter,
             IndexedResearchArtifactLoader,
         )
         from ditto_application.builders.research_backtest_factory import (
@@ -983,6 +984,10 @@ class TestAppProviderIntegration:
         )
         from ditto_application.processes.experiments._execution_resolution_evidence import (  # noqa: E501
             FrozenResearchInputsResolver,
+        )
+        from ditto_application.processes.experiments._report_evidence import (
+            BacktestReportArtifactPublisher,
+            BacktestReportArtifactReader,
         )
         from ditto_application.processes.experiments.execution_bundle import (
             CodeEnvironmentLock,
@@ -1022,6 +1027,10 @@ class TestAppProviderIntegration:
             app_container.get(ResearchFoldRunner),
             ExistingBacktestResearchFoldRunner,
         )
+        report_adapter = app_container.get(IndexedBacktestReportArtifactAdapter)
+        assert isinstance(report_adapter, IndexedBacktestReportArtifactAdapter)
+        assert app_container.get(BacktestReportArtifactPublisher) is report_adapter
+        assert app_container.get(BacktestReportArtifactReader) is report_adapter
         assert isinstance(
             app_container.get(FirstAttemptFactory),
             ExecutionBundleFirstAttemptFactory,

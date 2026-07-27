@@ -141,10 +141,12 @@ def test_running_worker_treats_durable_stop_as_control_not_system_failure(
             ),
         ),
     )
+    publisher = worker_fixtures._Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=worker_fixtures._Resolver(worker_fixtures._semantics()),
         runner=worker_fixtures._Runner(poll_control=True),
+        report_publisher=publisher,
         checkpoint_available=lambda run_id: run_id == "research-run-persisted",
         clock=lambda: worker_fixtures._NOW,
     )
@@ -157,6 +159,7 @@ def test_running_worker_treats_durable_stop_as_control_not_system_failure(
     assert result.state is expected_state
     assert result.failure_code is None
     assert result.error_type is None
+    assert publisher.calls == []
     names = [name for name, _payload in coordinator.calls]
     assert "checkpoint" in names
     assert "stop" in names
@@ -172,10 +175,12 @@ def test_control_before_attempt_start_does_not_run_numerics() -> None:
     coordinator = _RecoveryCoordinator(iter((ResearchExecutionDirective.CANCEL,)))
     runner = worker_fixtures._Runner()
     resolver = worker_fixtures._Resolver(worker_fixtures._semantics())
+    publisher = worker_fixtures._Publisher()
     worker = ResearchExperimentWorker(
         coordinator=coordinator,
         semantics_resolver=resolver,
         runner=runner,
+        report_publisher=publisher,
         checkpoint_available=lambda _run_id: False,
         clock=lambda: worker_fixtures._NOW,
     )
@@ -188,6 +193,7 @@ def test_control_before_attempt_start_does_not_run_numerics() -> None:
     assert result.state is ResearchWorkerState.CANCELLED
     assert resolver.calls == 0
     assert runner.audits == []
+    assert publisher.calls == []
     assert [name for name, _payload in coordinator.calls] == [
         "renew",
         "directive",

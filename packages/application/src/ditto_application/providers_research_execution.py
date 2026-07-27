@@ -31,6 +31,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 )
 
 from ditto_application.builders import (
+    IndexedBacktestReportArtifactAdapter,
     IndexedResearchArtifactLoader,
     IndexedResearchInputsResolver,
     PublishedBaselineRuntimeBuilder,
@@ -47,6 +48,10 @@ from ditto_application.builders.research_execution_resolver import (
 )
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     FrozenResearchInputsResolver,
+)
+from ditto_application.processes.experiments._report_evidence import (
+    BacktestReportArtifactPublisher,
+    BacktestReportArtifactReader,
 )
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
@@ -87,6 +92,34 @@ class AppResearchExecutionProvider(Provider):
     ) -> ExactResearchArtifactLoader:
         """C1 indexed loader 直接按 content-addressed id 读 verified Parquet bytes。"""
         return IndexedResearchArtifactLoader(artifact_service=artifact_service)
+
+    @provide
+    def indexed_backtest_report_artifact_adapter(
+        self,
+        artifact_service: ResearchArtifactService,
+        experiment_reader: ExperimentReaderProtocol,
+    ) -> IndexedBacktestReportArtifactAdapter:
+        """Build one APP-scoped immutable report publisher/reader adapter."""
+        return IndexedBacktestReportArtifactAdapter(
+            artifact_service=artifact_service,
+            artifact_index_reader=experiment_reader,
+        )
+
+    @provide
+    def backtest_report_artifact_publisher(
+        self,
+        adapter: IndexedBacktestReportArtifactAdapter,
+    ) -> BacktestReportArtifactPublisher:
+        """Expose the shared report adapter through the worker write port."""
+        return adapter
+
+    @provide
+    def backtest_report_artifact_reader(
+        self,
+        adapter: IndexedBacktestReportArtifactAdapter,
+    ) -> BacktestReportArtifactReader:
+        """Expose the same APP-scoped adapter through the evidence read port."""
+        return adapter
 
     @provide
     def code_environment_lock(
@@ -189,10 +222,12 @@ class AppResearchExecutionProvider(Provider):
         coordinator: ResearchWorkerCoordinator,
         semantics_resolver: ResearchExecutionSemanticsResolver,
         runner: ResearchFoldRunner,
+        report_publisher: BacktestReportArtifactPublisher,
     ) -> ResearchExperimentWorker:
         """执行 claimed fold 并持久化一个 typed terminal outcome。"""
         return ResearchExperimentWorker(
             coordinator=coordinator,
             semantics_resolver=semantics_resolver,
             runner=runner,
+            report_publisher=report_publisher,
         )

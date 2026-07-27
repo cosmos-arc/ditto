@@ -7,6 +7,7 @@ from ditto_application.builders.published_baseline_runtime_builder import (
     PublishedBaselineRuntimeBuilder,
 )
 from ditto_application.builders.research_artifact_loader import (
+    IndexedBacktestReportArtifactAdapter,
     IndexedResearchArtifactLoader,
 )
 from ditto_application.builders.research_input_resolver import (
@@ -30,6 +31,7 @@ from ditto_application.builders.slice_builder import StrategySliceBuilder
 
 __all__ = [
     "BacktestRuntimeBuilder",
+    "IndexedBacktestReportArtifactAdapter",
     "IndexedResearchArtifactLoader",
     "IndexedResearchInputsResolver",
     "PublishedBacktestRuntime",
