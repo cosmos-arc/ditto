@@ -12,6 +12,7 @@ from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_analysis.errors import ExperimentIntegrityError
 from ditto_analysis.experiments import (
     ArtifactRecord,
     AttemptId,
@@ -382,6 +383,31 @@ def _report_evidence(
             ("2024-12-31", 101_000.0),
         ),
         fill_log=(),
+    )
+
+
+def _artifact_receipt(
+    identity: BacktestReportArtifactIdentity,
+    evidence: BacktestReportEvidence,
+) -> ArtifactRecord:
+    return ArtifactRecord(
+        artifact_id=identity.artifact_id,
+        experiment_id=identity.experiment_id,
+        candidate_id=identity.candidate_id,
+        fold_id=identity.fold_id,
+        attempt_id=identity.attempt_id,
+        artifact_kind=identity.artifact_kind,
+        relative_path=identity.relative_path,
+        content_hash=evidence.content_hash,
+        schema_hash=ContentHash(_sha("d")),
+        row_count=1,
+        byte_size=1,
+        reproduction_fingerprint=identity.reproduction_fingerprint,
+        manifest={},
+        is_pinned=False,
+        pinned_at=None,
+        created_at=identity.attempt_created_at,
+        revision=1,
     )
 
 
@@ -1023,8 +1049,17 @@ class _Publisher:
     def __init__(
         self,
         error: Exception | None = None,
+        *,
+        receipt_factory: (
+            Callable[
+                [BacktestReportArtifactIdentity, BacktestReportEvidence],
+                object,
+            ]
+            | None
+        ) = None,
     ) -> None:
         self.error = error
+        self._receipt_factory = receipt_factory or _artifact_receipt
         self.calls: list[
             tuple[
                 BacktestReportArtifactIdentity,
@@ -1041,11 +1076,11 @@ class _Publisher:
         *,
         lease_fence: LeaseFence,
         now_epoch_us: int,
-    ) -> object:
+    ) -> ArtifactRecord:
         self.calls.append((identity, evidence, lease_fence, now_epoch_us))
         if self.error is not None:
             raise self.error
-        return object()
+        return cast("ArtifactRecord", self._receipt_factory(identity, evidence))
 
 
 class _MemoryArtifactIndex:
@@ -1269,6 +1304,91 @@ def test_worker_turns_recoverable_publication_error_into_system_failure() -> Non
         "renew",
         "fail",
     ]
+
+
+@pytest.mark.parametrize(
+    "receipt_transform",
+    [
+        pytest.param(lambda _record: object(), id="object"),
+        pytest.param(lambda _record: None, id="none"),
+        pytest.param(
+            lambda record: replace(
+                record,
+                content_hash=ContentHash(_sha("0")),
+            ),
+            id="content-drift",
+        ),
+        pytest.param(
+            lambda record: replace(
+                record,
+                attempt_id=AttemptId("attempt-receipt-drift"),
+            ),
+            id="lineage-drift",
+        ),
+        pytest.param(
+            lambda record: replace(
+                record,
+                schema_hash=cast("ContentHash", _sha("e")),
+            ),
+            id="non-nominal-schema-hash",
+        ),
+        pytest.param(
+            lambda record: replace(record, row_count=0),
+            id="row-count",
+        ),
+        pytest.param(
+            lambda record: replace(record, byte_size=0),
+            id="byte-size",
+        ),
+    ],
+)
+def test_worker_rejects_invalid_artifact_publication_receipt(
+    receipt_transform: Callable[[ArtifactRecord], object],
+) -> None:
+    class _IntegrityNormalizingCoordinator(_Coordinator):
+        publication_authority_invalidated = False
+
+        def publish_attempt_artifact(self, operation):
+            try:
+                return super().publish_attempt_artifact(operation)
+            except ExperimentIntegrityError as error:
+                self.publication_authority_invalidated = True
+                raise AppProcessError(
+                    "artifact publication integrity failed",
+                    details={
+                        "code": "EXPERIMENT_INTEGRITY_FAILED",
+                        "reason": "scheduler_persistence_integrity_failed",
+                    },
+                ) from error
+
+    coordinator = _IntegrityNormalizingCoordinator()
+    publisher = _Publisher(
+        receipt_factory=lambda identity, evidence: receipt_transform(
+            _artifact_receipt(identity, evidence)
+        )
+    )
+    worker = ResearchExperimentWorker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_Runner(),
+        report_publisher=publisher,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert exc_info.value.details["code"] == "EXPERIMENT_INTEGRITY_FAILED"
+    integrity_error = exc_info.value.__cause__
+    assert isinstance(integrity_error, ExperimentIntegrityError)
+    assert (
+        integrity_error.details["reason_code"]
+        == "backtest_report_artifact_receipt_drift"
+    )
+    assert coordinator.publication_authority_invalidated is True
+    assert len(publisher.calls) == 1
+    assert [name for name, _payload in coordinator.calls][-1] == "publish"
+    assert all(name not in {"complete", "fail"} for name, _payload in coordinator.calls)
 
 
 @pytest.mark.parametrize(

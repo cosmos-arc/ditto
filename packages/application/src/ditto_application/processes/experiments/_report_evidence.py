@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import NoReturn, Protocol, cast
 
+from ditto_analysis.errors import ExperimentIntegrityError
 from ditto_analysis.experiments import (
     ArtifactRecord,
     AttemptId,
@@ -696,6 +697,69 @@ class BacktestReportArtifactPublisher(Protocol):
     ) -> ArtifactRecord:
         """Publish one exact report projection under the worker fence."""
         ...
+
+
+def _artifact_receipt_integrity(
+    identity: BacktestReportArtifactIdentity,
+    reason: str,
+) -> ExperimentIntegrityError:
+    return ExperimentIntegrityError(
+        "backtest report artifact publication receipt is inconsistent",
+        details={
+            "reason_code": "backtest_report_artifact_receipt_drift",
+            "reason": reason,
+            "artifact_id": identity.artifact_id,
+        },
+    )
+
+
+def require_backtest_report_artifact_receipt(
+    identity: BacktestReportArtifactIdentity,
+    evidence: BacktestReportEvidence,
+    receipt: object,
+) -> ArtifactRecord:
+    """Require an exact immutable-index receipt before attempt completion."""
+    if type(receipt) is not ArtifactRecord:
+        raise _artifact_receipt_integrity(identity, "invalid_artifact_receipt")
+    try:
+        loaded = validate_loaded_backtest_report_artifact(
+            LoadedBacktestReportArtifact(record=receipt, evidence=evidence),
+            identity,
+        )
+    except AppProcessError as error:
+        reason = str(error.details.get("reason", "artifact_receipt_identity_drift"))
+        raise _artifact_receipt_integrity(identity, reason) from error
+    record = loaded.record
+    if (
+        type(record.schema_hash) is not ContentHash
+        or type(record.row_count) is not int
+        or record.row_count != 1
+        or type(record.byte_size) is not int
+        or record.byte_size <= 0
+    ):
+        raise _artifact_receipt_integrity(
+            identity,
+            "artifact_receipt_measurement_drift",
+        )
+    return record
+
+
+def publish_verified_backtest_report_artifact(
+    publisher: BacktestReportArtifactPublisher,
+    identity: BacktestReportArtifactIdentity,
+    evidence: BacktestReportEvidence,
+    *,
+    lease_fence: LeaseFence,
+    now_epoch_us: int,
+) -> ArtifactRecord:
+    """Publish and validate the durable receipt inside one lease callback."""
+    receipt = publisher.publish(
+        identity,
+        evidence,
+        lease_fence=lease_fence,
+        now_epoch_us=now_epoch_us,
+    )
+    return require_backtest_report_artifact_receipt(identity, evidence, receipt)
 
 
 class BacktestReportArtifactIndexReader(Protocol):

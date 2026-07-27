@@ -36,6 +36,7 @@ from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
     BacktestReportArtifactPublisher,
     BacktestReportEvidence,
+    publish_verified_backtest_report_artifact,
 )
 from ditto_application.processes.experiments._worker_contract import (
     ResearchFoldRunResult,
@@ -653,11 +654,14 @@ class ResearchExperimentWorker:
                 reproduction_fingerprint=attempt.reproduction_fingerprint,
             )
             self._coordinator.publish_attempt_artifact(
-                lambda lease_fence, now_epoch_us: self._report_publisher.publish(
-                    identity,
-                    report_evidence,
-                    lease_fence=lease_fence,
-                    now_epoch_us=now_epoch_us,
+                lambda lease_fence, now_epoch_us: (
+                    publish_verified_backtest_report_artifact(
+                        self._report_publisher,
+                        identity,
+                        report_evidence,
+                        lease_fence=lease_fence,
+                        now_epoch_us=now_epoch_us,
+                    )
                 )
             )
         except Exception as error:
