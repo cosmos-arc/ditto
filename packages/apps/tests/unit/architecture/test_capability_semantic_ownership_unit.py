@@ -297,6 +297,14 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "_coordinator_stage_drivers.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_evidence_inputs.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "_factor_diagnostics_evidence.py"
         ),
         (
@@ -313,6 +321,10 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "_report_artifact_validation.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "_walk_forward_evidence.py"
         ),
         (
@@ -322,6 +334,10 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         (
             "packages/application/src/ditto_application/processes/experiments/"
             "coordinator.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "evidence_collector.py"
         ),
         ("packages/application/src/ditto_application/commands/strategy_governance.py"),
         (
@@ -428,9 +444,13 @@ def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
     "filename",
     [
         "coordinator.py",
+        "_coordinator_stage_drivers.py",
         "execution_bundle.py",
+        "_evidence_inputs.py",
         "_execution_resolution_evidence.py",
+        "evidence_collector.py",
         "lease_authority.py",
+        "_report_artifact_validation.py",
         "scheduler_store.py",
         "worker.py",
     ],

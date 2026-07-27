@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from inspect import signature
@@ -34,7 +36,14 @@ from ditto_analysis.experiments import (
     ResearchMetricId,
     ResearchMetricValue,
     SnapshotId,
+    canonical_payload,
 )
+from ditto_analysis.experiments.artifact_manifest import (
+    ArtifactFormat,
+    ArtifactManifest,
+    ArtifactPublicationSpec,
+)
+from ditto_analysis.research.artifact_measurement import measure_json_bytes
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._report_evidence import (
     BACKTEST_REPORT_ARTIFACT_KIND,
@@ -59,6 +68,7 @@ from ditto_application.processes.experiments.comparison import (
     FactorDiagnosticsArtifactEvidence,
     FoldReturnEvidence,
     OOSFoldRegistration,
+    PersistedFoldExecutionEvidence,
     ScalarEvidence,
     build_candidate_comparison,
     load_persisted_fold_execution,
@@ -322,6 +332,53 @@ def _execution_binding(
     )
 
 
+def _artifact_record(
+    identity: BacktestReportArtifactIdentity,
+    evidence: BacktestReportEvidence,
+) -> ArtifactRecord:
+    measurement = measure_json_bytes(
+        canonical_payload(evidence.canonical_payload()).json_bytes
+    )
+    return ArtifactManifest.create(
+        spec=ArtifactPublicationSpec(
+            artifact_id=identity.artifact_id,
+            experiment_id=identity.experiment_id,
+            candidate_id=identity.candidate_id,
+            fold_id=identity.fold_id,
+            attempt_id=identity.attempt_id,
+            artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
+            relative_path=identity.relative_path,
+            reproduction_fingerprint=identity.reproduction_fingerprint,
+            audit={
+                "attempt_id": str(identity.attempt_id),
+                "created_at": identity.attempt_created_at.isoformat(),
+                "run_id": str(identity.run_id),
+            },
+            created_at=identity.attempt_created_at,
+        ),
+        artifact_format=ArtifactFormat.JSON,
+        content_hash=measurement.content_hash,
+        schema_hash=measurement.schema_hash,
+        row_count=measurement.row_count,
+        byte_size=measurement.byte_size,
+    ).to_record()
+
+
+def _artifact_identity(
+    binding: PersistedFoldExecutionEvidence,
+) -> BacktestReportArtifactIdentity:
+    return BacktestReportArtifactIdentity(
+        experiment_id=binding.experiment_id,
+        candidate_id=binding.candidate_id,
+        fold_id=binding.fold_id,
+        attempt_id=binding.attempt_id,
+        attempt_created_at=binding.attempt_view.spec.created_at,
+        run_id=binding.run_id,
+        test_window=binding.test_window,
+        reproduction_fingerprint=binding.reproduction_fingerprint,
+    )
+
+
 def _evidence(
     candidate: str,
     candidate_ordinal: int,
@@ -338,36 +395,9 @@ def _evidence(
     resolved_report = _report(candidate_id, fold, navs) if report is None else report
     execution_binding = _execution_binding(candidate_id, fold)
     report_evidence = BacktestReportEvidence.from_report(resolved_report)
-    identity = BacktestReportArtifactIdentity(
-        experiment_id=execution_binding.experiment_id,
-        candidate_id=execution_binding.candidate_id,
-        fold_id=execution_binding.fold_id,
-        attempt_id=execution_binding.attempt_id,
-        attempt_created_at=execution_binding.attempt_view.spec.created_at,
-        run_id=execution_binding.run_id,
-        test_window=execution_binding.test_window,
-        reproduction_fingerprint=execution_binding.reproduction_fingerprint,
-    )
+    identity = _artifact_identity(execution_binding)
     report_artifact = LoadedBacktestReportArtifact(
-        record=ArtifactRecord(
-            artifact_id=identity.artifact_id,
-            experiment_id=identity.experiment_id,
-            candidate_id=identity.candidate_id,
-            fold_id=identity.fold_id,
-            attempt_id=identity.attempt_id,
-            artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
-            relative_path=identity.relative_path,
-            content_hash=report_evidence.content_hash,
-            schema_hash=ContentHash("0" * 64),
-            row_count=1,
-            byte_size=1,
-            reproduction_fingerprint=identity.reproduction_fingerprint,
-            manifest={},
-            is_pinned=False,
-            pinned_at=None,
-            created_at=identity.attempt_created_at,
-            revision=0,
-        ),
+        record=_artifact_record(identity, report_evidence),
         evidence=report_evidence,
     )
     return CandidateFoldEvidence(
@@ -617,7 +647,10 @@ def test_insufficient_nav_or_capital_never_falls_back_to_report_aggregates() -> 
         report_artifact=replace(
             artifact,
             evidence=report,
-            record=replace(artifact.record, content_hash=report.content_hash),
+            record=_artifact_record(
+                _artifact_identity(source.execution_binding),
+                report,
+            ),
         ),
     )
     comparison = build_candidate_comparison(
@@ -914,6 +947,132 @@ def test_candidate_evidence_rejects_forged_loaded_record_identity(
         )
 
     assert exc_info.value.details["reason"] == "report_artifact_identity_drift"
+
+
+def _rebuild_record_measurements(
+    record: ArtifactRecord,
+    *,
+    schema_hash: ContentHash | None = None,
+    row_count: int | None = None,
+    byte_size: int | None = None,
+) -> ArtifactRecord:
+    manifest = ArtifactManifest.from_record(record)
+    return ArtifactManifest.create(
+        spec=manifest.spec,
+        artifact_format=manifest.artifact_format,
+        content_hash=manifest.content_hash,
+        schema_hash=manifest.schema_hash if schema_hash is None else schema_hash,
+        row_count=manifest.row_count if row_count is None else row_count,
+        byte_size=manifest.byte_size if byte_size is None else byte_size,
+    ).to_record()
+
+
+def _mutate_manifest(
+    record: ArtifactRecord,
+    section: str,
+    field: str,
+    value: object,
+) -> ArtifactRecord:
+    manifest = deepcopy(dict(record.manifest))
+    target = cast("dict[str, object]", manifest[section])
+    target[field] = value
+    return replace(record, manifest=manifest)
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        pytest.param(
+            lambda record: _rebuild_record_measurements(
+                record,
+                schema_hash=ContentHash("9" * 64),
+            ),
+            id="self-consistent-schema-hash",
+        ),
+        pytest.param(
+            lambda record: _rebuild_record_measurements(record, row_count=2),
+            id="self-consistent-row-count",
+        ),
+        pytest.param(
+            lambda record: _rebuild_record_measurements(
+                record,
+                byte_size=record.byte_size + 1,
+            ),
+            id="self-consistent-byte-size",
+        ),
+        pytest.param(
+            lambda record: replace(
+                record,
+                schema_hash=cast("ContentHash", str(record.schema_hash)),
+            ),
+            id="non-nominal-schema-hash",
+        ),
+        pytest.param(
+            lambda record: _mutate_manifest(
+                record,
+                "audit",
+                "run_id",
+                "forged-run",
+            ),
+            id="manifest-audit-run",
+        ),
+        pytest.param(
+            lambda record: _mutate_manifest(
+                record,
+                "audit",
+                "attempt_id",
+                "forged-attempt",
+            ),
+            id="manifest-audit-attempt",
+        ),
+        pytest.param(
+            lambda record: _mutate_manifest(
+                record,
+                "audit",
+                "created_at",
+                "2024-01-02T00:00:00+00:00",
+            ),
+            id="manifest-audit-created-at",
+        ),
+        pytest.param(
+            lambda record: replace(
+                record,
+                manifest={**record.manifest, "format": "parquet"},
+            ),
+            id="manifest-format",
+        ),
+    ],
+)
+def test_comparison_revalidates_complete_artifact_after_construction(
+    mutate: Callable[[ArtifactRecord], ArtifactRecord],
+) -> None:
+    source = _evidence("candidate-alpha", 2, 1, (100.0, 101.0))
+    artifact = source.report_artifact
+    assert artifact is not None
+    object.__setattr__(artifact, "record", mutate(artifact.record))
+
+    with pytest.raises(AppProcessError):
+        build_candidate_comparison(
+            _baseline_identity(),
+            (*_baseline_rows(), source),
+        )
+
+
+def test_comparison_revalidates_persisted_binding_after_construction() -> None:
+    source = _evidence("candidate-alpha", 2, 1, (100.0, 101.0))
+    object.__setattr__(
+        source.execution_binding,
+        "content_hash",
+        ContentHash("9" * 64),
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        build_candidate_comparison(
+            _baseline_identity(),
+            (*_baseline_rows(), source),
+        )
+
+    assert exc_info.value.details["reason"] == "persisted_execution_binding_hash_drift"
 
 
 def test_comparison_allows_multiple_missing_artifacts_without_zero_hashes() -> None:

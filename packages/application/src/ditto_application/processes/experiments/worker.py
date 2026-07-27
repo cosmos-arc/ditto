@@ -32,11 +32,13 @@ from ditto_application.processes.experiments._execution_resolution_evidence impo
     build_successor_queued_attempt,
     rebuild_execution_audit_anchor,
 )
+from ditto_application.processes.experiments._report_artifact_validation import (
+    publish_verified_backtest_report_artifact,
+)
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
     BacktestReportArtifactPublisher,
     BacktestReportEvidence,
-    publish_verified_backtest_report_artifact,
 )
 from ditto_application.processes.experiments._worker_contract import (
     ResearchFoldRunResult,

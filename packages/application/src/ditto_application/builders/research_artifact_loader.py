@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from io import BytesIO
 from typing import NoReturn
 
@@ -10,13 +9,9 @@ import polars as pl
 from ditto_analysis.errors import ExperimentIntegrityError, ResearchDatasetError
 from ditto_analysis.experiments import (
     ArtifactRecord,
-    ContentHash,
     LeaseFence,
-    canonical_payload,
 )
 from ditto_analysis.experiments.artifact_manifest import (
-    ArtifactFormat,
-    ArtifactManifest,
     ArtifactPublicationSpec,
 )
 from ditto_analysis.research.artifact_service import ResearchArtifactService
@@ -24,6 +19,10 @@ from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     ContentAddressedResearchInput,
+)
+from ditto_application.processes.experiments._report_artifact_validation import (
+    BacktestReportArtifactValidationError,
+    validate_backtest_report_artifact,
 )
 from ditto_application.processes.experiments._report_evidence import (
     BACKTEST_REPORT_ARTIFACT_KIND,
@@ -131,72 +130,15 @@ def _require_evidence_binding(
     return evidence
 
 
-def _require_record_identity(
+def _require_complete_artifact(
     identity: BacktestReportArtifactIdentity,
     record: object,
-) -> ArtifactManifest:
-    if type(record) is not ArtifactRecord:
-        _integrity(identity, "invalid_artifact_record")
-    if type(record.created_at) is not datetime:
-        _integrity(identity, "artifact_record_identity_drift")
-    expected = (
-        identity.artifact_id,
-        identity.experiment_id,
-        identity.candidate_id,
-        identity.fold_id,
-        identity.attempt_id,
-        identity.attempt_created_at,
-        BACKTEST_REPORT_ARTIFACT_KIND,
-        identity.relative_path,
-        identity.reproduction_fingerprint,
-    )
-    actual = (
-        record.artifact_id,
-        record.experiment_id,
-        record.candidate_id,
-        record.fold_id,
-        record.attempt_id,
-        record.created_at,
-        record.artifact_kind,
-        record.relative_path,
-        record.reproduction_fingerprint,
-    )
-    if actual != expected:
-        _integrity(identity, "artifact_record_identity_drift")
-    if (
-        type(record.content_hash) is not ContentHash
-        or type(record.schema_hash) is not ContentHash
-        or type(record.row_count) is not int
-        or record.row_count != 1
-        or type(record.byte_size) is not int
-        or record.byte_size <= 0
-    ):
-        _integrity(identity, "artifact_record_measurement_drift")
-    manifest = ArtifactManifest.from_record(record)
-    if manifest.artifact_format is not ArtifactFormat.JSON:
-        _integrity(identity, "artifact_format_drift")
-    audit = manifest.audit
-    if (
-        audit.get("created_at") != identity.attempt_created_at.isoformat()
-        or audit.get("run_id") != str(identity.run_id)
-        or audit.get("attempt_id") != str(identity.attempt_id)
-    ):
-        _integrity(identity, "artifact_audit_drift")
-    return manifest
-
-
-def _require_measurement_binding(
-    identity: BacktestReportArtifactIdentity,
-    record: ArtifactRecord,
-    evidence: BacktestReportEvidence,
-) -> None:
-    canonical = canonical_payload(evidence.canonical_payload())
-    if (
-        record.content_hash != evidence.content_hash
-        or canonical.content_hash != evidence.content_hash
-        or record.byte_size != len(canonical.json_bytes)
-    ):
-        _integrity(identity, "artifact_content_measurement_drift")
+    evidence: object,
+) -> LoadedBacktestReportArtifact:
+    try:
+        return validate_backtest_report_artifact(identity, record, evidence)
+    except BacktestReportArtifactValidationError as error:
+        _integrity(identity, error.reason)
 
 
 class IndexedBacktestReportArtifactAdapter:
@@ -244,8 +186,7 @@ class IndexedBacktestReportArtifactAdapter:
             lease_fence=lease_fence,
             now_epoch_us=now_epoch_us,
         )
-        _require_record_identity(typed_identity, record)
-        _require_measurement_binding(typed_identity, record, typed_evidence)
+        _require_complete_artifact(typed_identity, record, typed_evidence)
         return record
 
     def read(
@@ -267,7 +208,6 @@ class IndexedBacktestReportArtifactAdapter:
         ):
             _integrity(typed_identity, "artifact_identity_path_cross_conflict")
         record = record_by_id
-        _require_record_identity(typed_identity, record)
         try:
             payload = self._artifacts.read_indexed_json(typed_identity.artifact_id)
             evidence = decode_backtest_report_evidence(payload)
@@ -284,6 +224,4 @@ class IndexedBacktestReportArtifactAdapter:
                     "artifact_id": typed_identity.artifact_id,
                 },
             ) from exc
-        _require_evidence_binding(typed_identity, evidence)
-        _require_measurement_binding(typed_identity, record, evidence)
-        return LoadedBacktestReportArtifact(record=record, evidence=evidence)
+        return _require_complete_artifact(typed_identity, record, evidence)

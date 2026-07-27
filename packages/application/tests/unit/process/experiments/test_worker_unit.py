@@ -33,7 +33,14 @@ from ditto_analysis.experiments import (
     FoldView,
     LeaseFence,
     SchedulerLease,
+    canonical_payload,
 )
+from ditto_analysis.experiments.artifact_manifest import (
+    ArtifactFormat,
+    ArtifactManifest,
+    ArtifactPublicationSpec,
+)
+from ditto_analysis.research.artifact_measurement import measure_json_bytes
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import BacktestService
 from ditto_application.processes.experiments import worker as worker_module
@@ -390,25 +397,32 @@ def _artifact_receipt(
     identity: BacktestReportArtifactIdentity,
     evidence: BacktestReportEvidence,
 ) -> ArtifactRecord:
-    return ArtifactRecord(
-        artifact_id=identity.artifact_id,
-        experiment_id=identity.experiment_id,
-        candidate_id=identity.candidate_id,
-        fold_id=identity.fold_id,
-        attempt_id=identity.attempt_id,
-        artifact_kind=identity.artifact_kind,
-        relative_path=identity.relative_path,
-        content_hash=evidence.content_hash,
-        schema_hash=ContentHash(_sha("d")),
-        row_count=1,
-        byte_size=1,
-        reproduction_fingerprint=identity.reproduction_fingerprint,
-        manifest={},
-        is_pinned=False,
-        pinned_at=None,
-        created_at=identity.attempt_created_at,
-        revision=1,
+    measurement = measure_json_bytes(
+        canonical_payload(evidence.canonical_payload()).json_bytes
     )
+    return ArtifactManifest.create(
+        spec=ArtifactPublicationSpec(
+            artifact_id=identity.artifact_id,
+            experiment_id=identity.experiment_id,
+            candidate_id=identity.candidate_id,
+            fold_id=identity.fold_id,
+            attempt_id=identity.attempt_id,
+            artifact_kind=identity.artifact_kind,
+            relative_path=identity.relative_path,
+            reproduction_fingerprint=identity.reproduction_fingerprint,
+            audit={
+                "attempt_id": str(identity.attempt_id),
+                "created_at": identity.attempt_created_at.isoformat(),
+                "run_id": str(identity.run_id),
+            },
+            created_at=identity.attempt_created_at,
+        ),
+        artifact_format=ArtifactFormat.JSON,
+        content_hash=measurement.content_hash,
+        schema_hash=measurement.schema_hash,
+        row_count=measurement.row_count,
+        byte_size=measurement.byte_size,
+    ).to_record()
 
 
 @pytest.mark.parametrize(

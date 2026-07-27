@@ -8,48 +8,7 @@ from dataclasses import InitVar, dataclass, replace
 from types import MappingProxyType
 from typing import cast
 
-from ditto_analysis.experiments import (
-    R3_COMPARISON_METRIC_IDS as _R3_COMPARISON_METRIC_IDS,
-)
-from ditto_analysis.experiments import (
-    R3_DIAGNOSTIC_METRIC_IDS as _R3_DIAGNOSTIC_METRIC_IDS,
-)
-from ditto_analysis.experiments import (
-    R3_RESEARCH_METRIC_SCHEMA as _R3_RESEARCH_METRIC_SCHEMA,
-)
-from ditto_analysis.experiments import (
-    AttemptId as _AttemptId,
-)
-from ditto_analysis.experiments import (
-    BacktestRunId as _BacktestRunId,
-)
-from ditto_analysis.experiments import (
-    CandidateId as _CandidateId,
-)
-from ditto_analysis.experiments import (
-    ContentHash as _ContentHash,
-)
-from ditto_analysis.experiments import (
-    DateWindow as _DateWindow,
-)
-from ditto_analysis.experiments import (
-    ExperimentId as _ExperimentId,
-)
-from ditto_analysis.experiments import (
-    FoldId as _FoldId,
-)
-from ditto_analysis.experiments import (
-    ResearchMetricId as _ResearchMetricId,
-)
-from ditto_analysis.experiments import (
-    ResearchMetricSchema as _ResearchMetricSchema,
-)
-from ditto_analysis.experiments import (
-    SnapshotId as _SnapshotId,
-)
-from ditto_analysis.experiments import (
-    canonical_payload as _canonical_payload,
-)
+from ditto_analysis import experiments as _analysis_experiments
 from ditto_features.evaluation.report import (
     R3_FACTOR_DIAGNOSTIC_METRIC_IDS as _FEATURE_DIAGNOSTIC_IDS,
 )
@@ -87,12 +46,15 @@ from ditto_application.processes.experiments._persisted_execution_evidence impor
     _validate_persisted_fold_execution,
     load_persisted_fold_execution,
 )
+from ditto_application.processes.experiments._report_artifact_validation import (
+    BacktestReportArtifactValidationError,
+    validate_loaded_backtest_report_artifact,
+)
 from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactIdentity,
     BacktestReportEvidence,
     LoadedBacktestReportArtifact,
     backtest_report_content_hash,
-    validate_loaded_backtest_report_artifact,
 )
 from ditto_application.processes.experiments.baseline_registry import (
     BaselineExecutionPlan,
@@ -100,6 +62,21 @@ from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanRequest,
     default_baseline_registry,
 )
+
+_AttemptId = _analysis_experiments.AttemptId
+_BacktestRunId = _analysis_experiments.BacktestRunId
+_CandidateId = _analysis_experiments.CandidateId
+_ContentHash = _analysis_experiments.ContentHash
+_DateWindow = _analysis_experiments.DateWindow
+_ExperimentId = _analysis_experiments.ExperimentId
+_FoldId = _analysis_experiments.FoldId
+_R3_COMPARISON_METRIC_IDS = _analysis_experiments.R3_COMPARISON_METRIC_IDS
+_R3_DIAGNOSTIC_METRIC_IDS = _analysis_experiments.R3_DIAGNOSTIC_METRIC_IDS
+_R3_RESEARCH_METRIC_SCHEMA = _analysis_experiments.R3_RESEARCH_METRIC_SCHEMA
+_ResearchMetricId = _analysis_experiments.ResearchMetricId
+_ResearchMetricSchema = _analysis_experiments.ResearchMetricSchema
+_SnapshotId = _analysis_experiments.SnapshotId
+_canonical_payload = _analysis_experiments.canonical_payload
 
 __all__ = [
     "R3_CAPACITY_EVIDENCE_SCHEMA_ID",
@@ -326,7 +303,10 @@ class CandidateFoldEvidence:
             test_window=self.test_window,
             reproduction_fingerprint=self.reproduction_fingerprint,
         )
-        validate_loaded_backtest_report_artifact(artifact, identity)
+        try:
+            validate_loaded_backtest_report_artifact(artifact, identity)
+        except BacktestReportArtifactValidationError as error:
+            _comparison_error(error.reason)
 
     def _validate_diagnostics(self) -> None:
         projection = self.factor_diagnostics
@@ -692,6 +672,7 @@ def _validate_evidence(  # noqa: C901, PLR0912, PLR0915 - fail-closed identity f
     artifact_refs: set[str] = set()
     diagnostic_identity: tuple[object, ...] | None = None
     for value in values:
+        _validate_persisted_fold_execution(value.execution_binding)
         value._validate_report_artifact()
         if value.experiment_id != baseline.experiment_id:
             _comparison_error("experiment_identity_drift")

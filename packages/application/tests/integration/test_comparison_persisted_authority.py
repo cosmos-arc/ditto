@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 from ditto_analysis.experiments import (
-    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -40,12 +39,19 @@ from ditto_analysis.experiments import (
     StrategyVersion,
     TrialFamilyDeclaration,
     TrialKind,
+    canonical_payload,
+)
+from ditto_analysis.experiments.artifact_manifest import (
+    ArtifactFormat,
+    ArtifactManifest,
+    ArtifactPublicationSpec,
 )
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.trial_ledger import (
     ObjectiveMetric,
     PromotionObjective,
 )
+from ditto_analysis.research.artifact_measurement import measure_json_bytes
 from ditto_analysis.storage.sqlite.experiments import (
     ResearchExperimentDatabase,
     SQLiteExperimentReader,
@@ -417,8 +423,11 @@ def test_sqlite_bound_run_identity_rejects_stale_backtest_report(
         test_window=binding.test_window,
         reproduction_fingerprint=binding.reproduction_fingerprint,
     )
-    report_artifact = LoadedBacktestReportArtifact(
-        record=ArtifactRecord(
+    measurement = measure_json_bytes(
+        canonical_payload(evidence.canonical_payload()).json_bytes
+    )
+    record = ArtifactManifest.create(
+        spec=ArtifactPublicationSpec(
             artifact_id=identity.artifact_id,
             experiment_id=identity.experiment_id,
             candidate_id=identity.candidate_id,
@@ -426,17 +435,22 @@ def test_sqlite_bound_run_identity_rejects_stale_backtest_report(
             attempt_id=identity.attempt_id,
             artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
             relative_path=identity.relative_path,
-            content_hash=evidence.content_hash,
-            schema_hash=ContentHash("0" * 64),
-            row_count=1,
-            byte_size=1,
             reproduction_fingerprint=identity.reproduction_fingerprint,
-            manifest={},
-            is_pinned=False,
-            pinned_at=None,
+            audit={
+                "attempt_id": str(identity.attempt_id),
+                "created_at": identity.attempt_created_at.isoformat(),
+                "run_id": str(identity.run_id),
+            },
             created_at=identity.attempt_created_at,
-            revision=0,
         ),
+        artifact_format=ArtifactFormat.JSON,
+        content_hash=measurement.content_hash,
+        schema_hash=measurement.schema_hash,
+        row_count=measurement.row_count,
+        byte_size=measurement.byte_size,
+    ).to_record()
+    report_artifact = LoadedBacktestReportArtifact(
+        record=record,
         evidence=evidence,
     )
 

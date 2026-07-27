@@ -31,7 +31,14 @@ from ditto_analysis.experiments import (
     FoldView,
     ResearchMetricId,
     SnapshotId,
+    canonical_payload,
 )
+from ditto_analysis.experiments.artifact_manifest import (
+    ArtifactFormat,
+    ArtifactManifest,
+    ArtifactPublicationSpec,
+)
+from ditto_analysis.research.artifact_measurement import measure_json_bytes
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._persisted_execution_evidence import (
     PersistedFoldExecutionEvidence,
@@ -296,7 +303,17 @@ def _loaded_report(
     report: BacktestReport,
 ) -> LoadedBacktestReportArtifact:
     evidence = BacktestReportEvidence.from_report(report)
-    identity = BacktestReportArtifactIdentity(
+    identity = _artifact_identity(binding)
+    return LoadedBacktestReportArtifact(
+        record=_artifact_record(identity, evidence),
+        evidence=evidence,
+    )
+
+
+def _artifact_identity(
+    binding: PersistedFoldExecutionEvidence,
+) -> BacktestReportArtifactIdentity:
+    return BacktestReportArtifactIdentity(
         experiment_id=binding.experiment_id,
         candidate_id=binding.candidate_id,
         fold_id=binding.fold_id,
@@ -306,8 +323,17 @@ def _loaded_report(
         test_window=binding.test_window,
         reproduction_fingerprint=binding.reproduction_fingerprint,
     )
-    return LoadedBacktestReportArtifact(
-        record=ArtifactRecord(
+
+
+def _artifact_record(
+    identity: BacktestReportArtifactIdentity,
+    evidence: BacktestReportEvidence,
+) -> ArtifactRecord:
+    measurement = measure_json_bytes(
+        canonical_payload(evidence.canonical_payload()).json_bytes
+    )
+    return ArtifactManifest.create(
+        spec=ArtifactPublicationSpec(
             artifact_id=identity.artifact_id,
             experiment_id=identity.experiment_id,
             candidate_id=identity.candidate_id,
@@ -315,19 +341,20 @@ def _loaded_report(
             attempt_id=identity.attempt_id,
             artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
             relative_path=identity.relative_path,
-            content_hash=evidence.content_hash,
-            schema_hash=ContentHash("0" * 64),
-            row_count=1,
-            byte_size=1,
             reproduction_fingerprint=identity.reproduction_fingerprint,
-            manifest={},
-            is_pinned=False,
-            pinned_at=None,
+            audit={
+                "attempt_id": str(identity.attempt_id),
+                "created_at": identity.attempt_created_at.isoformat(),
+                "run_id": str(identity.run_id),
+            },
             created_at=identity.attempt_created_at,
-            revision=0,
         ),
-        evidence=evidence,
-    )
+        artifact_format=ArtifactFormat.JSON,
+        content_hash=measurement.content_hash,
+        schema_hash=measurement.schema_hash,
+        row_count=measurement.row_count,
+        byte_size=measurement.byte_size,
+    ).to_record()
 
 
 def _with_report(
@@ -341,7 +368,10 @@ def _with_report(
         report_artifact=replace(
             artifact,
             evidence=report,
-            record=replace(artifact.record, content_hash=report.content_hash),
+            record=_artifact_record(
+                _artifact_identity(source.execution_binding),
+                report,
+            ),
         ),
     )
 

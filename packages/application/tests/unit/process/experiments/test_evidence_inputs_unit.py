@@ -7,7 +7,6 @@ from inspect import signature
 
 import pytest
 from ditto_analysis.experiments import (
-    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -25,7 +24,14 @@ from ditto_analysis.experiments import (
     FoldRole,
     FoldView,
     SnapshotId,
+    canonical_payload,
 )
+from ditto_analysis.experiments.artifact_manifest import (
+    ArtifactFormat,
+    ArtifactManifest,
+    ArtifactPublicationSpec,
+)
+from ditto_analysis.research.artifact_measurement import measure_json_bytes
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._evidence_inputs import (
     FoldEvidenceInput,
@@ -60,7 +66,6 @@ SNAPSHOT_HASH = ContentHash("a" * 64)
 PARAMETER_HASH = ContentHash("b" * 64)
 RESOLVED_SPEC_HASH = ContentHash("c" * 64)
 REPRO_FINGERPRINT = ContentHash("e" * 64)
-SCHEMA_HASH = ContentHash("0" * 64)
 REGISTRY_HASH = ContentHash("f" * 64)
 FOLD_TEST_WINDOW = DateWindow(date(2024, 1, 1), date(2024, 1, 3))
 OCCURRED_AT = datetime(2024, 1, 1, tzinfo=UTC)
@@ -127,26 +132,34 @@ def _report_artifact(report: BacktestReport) -> LoadedBacktestReportArtifact:
         test_window=FOLD_TEST_WINDOW,
         reproduction_fingerprint=REPRO_FINGERPRINT,
     )
-    return LoadedBacktestReportArtifact(
-        record=ArtifactRecord(
+    measurement = measure_json_bytes(
+        canonical_payload(evidence.canonical_payload()).json_bytes
+    )
+    record = ArtifactManifest.create(
+        spec=ArtifactPublicationSpec(
             artifact_id=identity.artifact_id,
-            experiment_id=EXPERIMENT_ID,
-            candidate_id=CANDIDATE_ID,
-            fold_id=FOLD_ID,
-            attempt_id=ATTEMPT_ID,
+            experiment_id=identity.experiment_id,
+            candidate_id=identity.candidate_id,
+            fold_id=identity.fold_id,
+            attempt_id=identity.attempt_id,
             artifact_kind=BACKTEST_REPORT_ARTIFACT_KIND,
             relative_path=identity.relative_path,
-            content_hash=evidence.content_hash,
-            schema_hash=SCHEMA_HASH,
-            row_count=1,
-            byte_size=1,
-            reproduction_fingerprint=REPRO_FINGERPRINT,
-            manifest={},
-            is_pinned=False,
-            pinned_at=None,
-            created_at=OCCURRED_AT,
-            revision=1,
+            reproduction_fingerprint=identity.reproduction_fingerprint,
+            audit={
+                "attempt_id": str(identity.attempt_id),
+                "created_at": identity.attempt_created_at.isoformat(),
+                "run_id": str(identity.run_id),
+            },
+            created_at=identity.attempt_created_at,
         ),
+        artifact_format=ArtifactFormat.JSON,
+        content_hash=measurement.content_hash,
+        schema_hash=measurement.schema_hash,
+        row_count=measurement.row_count,
+        byte_size=measurement.byte_size,
+    ).to_record()
+    return LoadedBacktestReportArtifact(
+        record=record,
         evidence=evidence,
     )
 

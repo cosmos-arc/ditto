@@ -33,19 +33,10 @@ from ditto_analysis.experiments.persistence import (
     validate_artifact_relative_path,
 )
 from ditto_analysis.research._artifact_file_primitives import (
-    ArtifactMeasurement as _ArtifactMeasurement,
-)
-from ditto_analysis.research._artifact_file_primitives import (
     measure_json_artifact as _measure_json_artifact,
 )
 from ditto_analysis.research._artifact_file_primitives import (
-    measure_json_bytes as _measure_json_bytes,
-)
-from ditto_analysis.research._artifact_file_primitives import (
     measure_parquet_artifact as _measure_parquet_artifact,
-)
-from ditto_analysis.research._artifact_file_primitives import (
-    measure_parquet_bytes as _measure_parquet_bytes,
 )
 from ditto_analysis.research._artifact_file_primitives import (
     publish_no_clobber as _publish_no_clobber,
@@ -55,6 +46,15 @@ from ditto_analysis.research._artifact_file_primitives import (
 )
 from ditto_analysis.research._artifact_file_primitives import (
     write_parquet_file as _write_parquet_file,
+)
+from ditto_analysis.research.artifact_measurement import (
+    ArtifactMeasurement as _ArtifactMeasurement,
+)
+from ditto_analysis.research.artifact_measurement import (
+    measure_json_bytes as _measure_json_bytes,
+)
+from ditto_analysis.research.artifact_measurement import (
+    measure_parquet_bytes as _measure_parquet_bytes,
 )
 
 __all__ = ["ArtifactIndexReader", "ArtifactIndexWriter", "IndexedArtifactIO"]

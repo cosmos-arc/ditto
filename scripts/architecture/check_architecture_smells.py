@@ -588,6 +588,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "_report_artifact_validation.py"
+        ),
+        owner="application R3 immutable report artifact validation boundary",
+        reason=(
+            "The immutable report receipt/read validator directly checks "
+            "analysis-owned manifests and canonical byte measurements; it is "
+            "pure and performs no storage or file I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "_walk_forward_evidence.py"
         ),
         owner="application R3 walk-forward evidence values",
