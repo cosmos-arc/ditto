@@ -8,7 +8,11 @@
 
 R3 计划 22 task 名义完成 ~19 个，但**核心价值链断开**：experiment tick 跑完 backtest 后，evidence collection 链路完全断开——`assemble_review_packet` / `publish_review_packet` 零生产 caller，`HardGateEvidenceCollector` 不存在。后果是 review packet 在真实运行里为空，Task 17 的 evidence-gated publish 路由虽通但无真实 packet 可消费，R3 北极星「不可篡改的证据驱动治理」在生产中不成立。
 
-**本设计的目标**：补齐 evidence collection 闭环（Task 14 的真正未完成部分），让一个真实 experiment 能从 EVIDENCE stage 产出**非空、hard gate 客观判定**的 immutable review packet，驱动 governance publish 走完整 promote 链路，并让 Task 22 后端 e2e 可行。
+**本设计的目标**：补齐 evidence collection 闭环（Task 14 的真正未完成部分），
+让一个真实 experiment 能从 EVIDENCE stage 产出**非空、11 个 hard gate
+客观判定**的 immutable review packet，并让 Task 22 后端 e2e 如实验证
+promotion 语义：deterministic fixture 的 `r2_live_gate=NOT_EVALUATED` 必须阻断
+publish/activate，只有 explicit live G2 closure 后才能成功。
 
 **非目标（§13 详述）**：前端 W5、live G2 acceptance（需 R2 live Gate 关闭）、`r1_impact` 真实归因、第二套 evidence 类型系统。
 
@@ -123,8 +127,15 @@ coordinator.tick
 **状态更新（2026-07-27）**：C2b 最初的两个 interim 项已经由后续切片关闭：
 Task 5d 使用 durable selection ledger 提供真实 trial declaration，Task 5e 使用
 每个 fold 的 execution-policy canonical hash 提供真实 cost consistency。
-`r2_live_gate` 仍为 `NOT_EVALUATED`，因此 deterministic fixture 仍不得表述为
-R3 live release PASS。
+`r2_live_gate` 仍为 `NOT_EVALUATED`，因此 deterministic fixture 只能证明
+packet/evidence 闭环；promotion 必须返回 `hard_gate_blocked`，active pointer 与
+R1 active version 不变，不得表述为 R3 live release PASS。
+
+Promotion target binding 同时 fail closed：Schema V1 的 `packet.spec_hash`
+字段承载 canonical launch-spec hash；handler 必须由 lineage experiment 读回
+exact launch，核对 `strategy_id@version` 与 launch hash，再把
+`launch.strategy_spec_hash` 交给 promotion 对照 immutable governance version。
+这样不修改 Research Schema V1，也禁止 packet 跨策略/版本重放。
 
 > 每个 gate 的精确判定（如 ninety_six_month 的月数计算、artifact_completeness 的「应产」清单来源）在 TDD 时按 `HardGateEvidenceView` 的 typed 字段精确化；design 在此给出判定方向与证据源。
 
@@ -169,7 +180,7 @@ R3 live release PASS。
 
 | 失败场景 | 处理 |
 |---------|------|
-| artifact 缺失 | collector 正常产出 packet，`artifact_completeness` gate 标 `satisfied=False`（FAIL）→ packet 仍 publish，governance promote 时 hard gate 阻断 |
+| artifact 缺失 | collector 正常产出并持久化 packet，`artifact_completeness` gate 标 `satisfied=False`（FAIL）→ governance promote 时 hard gate 阻断 |
 | metric 缺失（None） | 跳过，gate 标 `NOT_EVALUATED`（不失败） |
 | snapshot manifest 读取失败 | collector 抛 typed `AppProcessError` → tick fail-fast → experiment 卡 EVIDENCE，记 `failure_code` |
 | `publish_review_packet` 失败（lease/IO） | collector 抛 typed error → tick fail-fast → 不推进 COMPLETED，下个 tick 重试 |
@@ -197,16 +208,23 @@ R3 live release PASS。
 1. **commit 1（analysis）**：`HardGateEvidenceView` + `collect_hard_gate_evidence` 纯函数 + 单测（11 gate 各 satisfied True/False/None）。
 2. **commit 2（application collector）**：`ExperimentEvidenceCollector` + `ReviewPacketInput` 装配 + `publish_review_packet` 接线 + 单测（mock reader/writer，验证 18 字段装配 + metric 类型转换 + fold_ids 装配）。
 3. **commit 3（coordinator 接通）**：EVIDENCE 分支接入 collector + `transition_experiment(COMPLETED)` + 单测（验证 tick 推进、失败 fail-fast、CAS 重试）。
-4. **commit 4（Task 22 后端 e2e）**：`test_r3_stock_selection_golden` + `test_r3_etf_research_golden` + `test_r3_governance_recovery` + `test_r3_scheduler_capacity`（deterministic fixture，验证真实 experiment → packet → governance publish 闭环）。
+4. **commit 4（Task 22 后端 e2e）**：`test_r3_stock_selection_golden` +
+   `test_r3_etf_research_golden` + `test_r3_governance_recovery` +
+   `test_r3_scheduler_capacity`（deterministic fixture，验证真实 experiment →
+   packet → promotion `hard_gate_blocked`，active pointer/R1 active 不变）。
 
 ## 12. Task 22 e2e 衔接
 
 evidence 闭环补完后，Task 22 的 4 个后端 e2e（commit 4）可跑通真实闭环：
-- **stock/ETF 双黄金**：typed spec → certified snapshot → walk-forward → holdout claim → **evidence collection → review packet** → governance publish → R1 active signal。
+- **stock/ETF 双黄金**：typed spec → certified snapshot → walk-forward → holdout
+  claim → **evidence collection → review packet** → promotion
+  `hard_gate_blocked` → active pointer/R1 active version 保持不变。
 - **governance recovery**：review decision append-only、active pointer 切换、reactivate。
 - **scheduler capacity**：128 candidate preflight、2/4 worker、单 slot、pause/resume、lease reclaim。
 
-e2e 用 deterministic fixture（不冒充 live provider）；live G2 acceptance 仍待 R2 live Gate（§13 非目标）。
+e2e 用 deterministic fixture（不冒充 live provider），因此只验 packet 产出与
+honest promotion block；publish/activate success 仅由 R2 live Gate 关闭后的
+explicit live G2 acceptance 证明（§13 非目标）。
 
 ## 13. 非目标
 
@@ -218,8 +236,18 @@ e2e 用 deterministic fixture（不冒充 live provider）；live G2 acceptance 
 
 ## 14. 验收标准
 
-- [ ] 一个真实 experiment tick（planning → exploration → walk-forward → candidate_selection → holdout → **evidence**）产出非空 `ReviewPacket`，10 个 hard gate 客观判定（r2_live_gate NOT_EVALUATED）。
-- [ ] packet 经 `POST /strategies/{id}/versions/{v}/publish`（Task 17 #6c）驱动 `StrategyPromotionProcess.promote` 成功（hard gate pass 时）/ 阻断（fail 时）。
+- [ ] 一个真实 experiment tick（planning → exploration → walk-forward →
+      candidate_selection → holdout → **evidence**）产出非空 `ReviewPacket`，
+      11 个 hard gate 客观判定（10 个 PASS，`r2_live_gate=NOT_EVALUATED`）。
+- [ ] deterministic packet 经
+      `POST /strategies/{id}/versions/{v}/publish`（Task 17 #6c）驱动
+      `StrategyPromotionProcess.promote` 返回 `hard_gate_blocked`，active
+      pointer、R1 active version 与 activation history 均不变。
+- [ ] packet lineage → persisted launch hash/`strategy_id@version` →
+      governance version `spec_hash` 三段身份完全一致；缺失或漂移在任何
+      governance 写入前以 typed error 阻断。
+- [ ] 只有 explicit live G2 acceptance 将 `r2_live_gate` 关闭为 PASS 后，才能
+      验证 publish/activate 成功；任何 live blocker 都不得由 fixture 替代。
 - [ ] EVIDENCE stage 后 `experiment.status == COMPLETED`。
 - [ ] artifact/metric 缺失时 packet 仍产出（gate 如实 fail/not_evaluated），不 fail-fast。
 - [ ] manifest/publish 结构性错误时 tick fail-fast，experiment 卡 EVIDENCE，记 failure_code。

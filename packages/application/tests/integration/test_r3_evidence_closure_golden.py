@@ -19,13 +19,14 @@ fresh ``tmp_path`` SQLite research database:
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import pytest
 from ditto_analysis.experiments import (
+    HARD_GATE_RULE_IDS,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -41,6 +42,7 @@ from ditto_analysis.experiments import (
     FoldRole,
     FoldView,
     ResearchMetricId,
+    encode_launch_spec,
 )
 from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_analysis.experiments.gates import GateLayer, GateOutcome
@@ -54,6 +56,11 @@ from ditto_analysis.storage.sqlite.experiments import (
 from ditto_application.builders.research_artifact_loader import (
     IndexedBacktestReportArtifactAdapter,
 )
+from ditto_application.commands.strategy_governance import (
+    PublishStrategyVersionCommand,
+    PublishStrategyVersionHandler,
+)
+from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.experiments._evidence_inputs import (
     project_snapshot_manifest,
 )
@@ -79,9 +86,6 @@ from ditto_application.processes.experiments.evidence_collector import (
 from ditto_application.processes.experiments.execution_bundle import (
     ResearchExecutionSemantics,
 )
-from ditto_application.processes.experiments.execution_contracts import (
-    default_etf_execution_policy,
-)
 from ditto_application.processes.experiments.holdout import (
     ClaimHoldoutCandidateRequest,
 )
@@ -97,10 +101,28 @@ from ditto_application.processes.experiments.scheduler_store import (
     FirstAttempt,
     QueuedAttempt,
 )
+from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
+from ditto_application.strategy_spec_deserialization import (
+    canonical_spec_hash_for_record,
+)
 from ditto_backtest.statistics import (
     BacktestReport,
     empty_aggregated_trade_statistics,
     empty_alpha_statistics,
+)
+from ditto_platform.foundation import SQLitePool
+from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
+from ditto_strategy.governance.service import GovernanceService
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
+)
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    SQLiteStrategyGovernanceStore,
+)
+from ditto_strategy.storage.sqlite.strategy_spec_store import (
+    SQLiteStrategySpecReader,
+    SQLiteStrategySpecWriter,
 )
 from packages.application.tests.integration import (
     r3_evidence_closure_support as golden_support,
@@ -111,19 +133,6 @@ NOW_US = int(NOW.timestamp() * 1_000_000)
 
 _PREFLIGHT_POLICY_VERSION = "r3-experiment-preflight-v1"
 _GATE_RULES = ("matrix", "executor", "authority", "history", "certification", "budget")
-_HARD_GATE_RULE_IDS = (
-    "certified_snapshot",
-    "ninety_six_month_protocol",
-    "pit_known_at",
-    "split_purge_embargo",
-    "reproduction_fingerprint",
-    "cost_assumptions",
-    "baseline_declared",
-    "trial_declaration",
-    "holdout_claim",
-    "artifact_completeness",
-    "r2_live_gate",
-)
 _REPORT_NAVS = {
     (True, 2): (102.0, 101.0),
     (True, 3): (101.0, 104.0),
@@ -400,6 +409,7 @@ def _publish_walk_forward_reports(
 def _store(
     tmp_path: Path,
     *,
+    lane: golden_support.GoldenLaneSpec,
     semantics_transform: _SemanticsTransform | None = None,
 ) -> tuple[
     ResearchExperimentDatabase,
@@ -416,11 +426,11 @@ def _store(
     process = ExperimentPlanningProcess(
         reader=reader,
         writer=writer,
-        certification_probe=golden_support.PlanningCertificationProbe(),
-        executor_probe=golden_support.PlanningExecutorProbe(),
-        authority_probe=golden_support.PlanningAuthorityProbe(),
+        certification_probe=golden_support.PlanningCertificationProbe(lane),
+        executor_probe=golden_support.PlanningExecutorProbe(lane),
+        authority_probe=golden_support.PlanningAuthorityProbe(lane),
     )
-    request = golden_support.build_planning_request()
+    request = golden_support.build_planning_request(lane)
     report = process.preflight(request)
     assert report.plan_hash is not None
     assert report.eligible_month_count == 96
@@ -430,6 +440,7 @@ def _store(
     semantics = golden_support.build_execution_semantics(
         launch,
         reader.list_folds(launch.experiment_id),
+        lane,
     )
     if semantics_transform is not None:
         semantics = semantics_transform(semantics)
@@ -687,6 +698,7 @@ def _assert_durable_selection_replay(
 
 def _assert_cost_collection_replay(
     *,
+    lane: golden_support.GoldenLaneSpec,
     cost_drift: bool,
     collected: CollectedWalkForwardEvidence,
     launch: ExperimentLaunchSpec,
@@ -696,7 +708,7 @@ def _assert_cost_collection_replay(
     preflight_detail: Mapping[str, object],
     semantics_transform: _SemanticsTransform | None,
 ) -> None:
-    expected_cost_hash = ContentHash(default_etf_execution_policy().canonical_hash)
+    expected_cost_hash = ContentHash(lane.execution_policy.canonical_hash)
     assert expected_cost_hash != ContentHash("0" * 64)
     if cost_drift:
         assert len(set(collected.fold_cost_config_hashes)) == 2
@@ -706,6 +718,7 @@ def _assert_cost_collection_replay(
     replay_semantics = golden_support.build_execution_semantics(
         launch,
         reader.list_folds(launch.experiment_id),
+        lane,
     )
     if semantics_transform is not None:
         replay_semantics = semantics_transform(replay_semantics)
@@ -725,15 +738,182 @@ def _assert_cost_collection_replay(
     )
 
 
+def _governance_record(
+    lane: golden_support.GoldenLaneSpec,
+    version: int,
+    *,
+    parent_version: int | None,
+    created_at: str,
+) -> StrategySpecRecord:
+    seed = SEED_STRATEGY_SPECS[lane.strategy_id]
+    base = StrategySpecRecord(
+        strategy_id=lane.strategy_id,
+        name=seed.name,
+        spec_json=asdict(seed),
+        version=version,
+        parent_version=parent_version,
+        created_at=created_at,
+        tags=seed.tags,
+    )
+    return replace(base, spec_hash=canonical_spec_hash_for_record(base))
+
+
+def _governance_event_snapshot(
+    pool: SQLitePool,
+    strategy_id: str,
+) -> tuple[tuple[tuple[object, ...], ...], tuple[tuple[object, ...], ...]]:
+    connection = pool.get_connection()
+    decision_rows = connection.execute(
+        "SELECT event_id, version, decision, actor, reason, decided_at "
+        "FROM strategy_decision_event WHERE strategy_id = ? ORDER BY rowid",
+        (strategy_id,),
+    ).fetchall()
+    activation_rows = connection.execute(
+        "SELECT event_id, target_version, activation_kind, actor, reason, "
+        "activated_at FROM strategy_activation_event "
+        "WHERE strategy_id = ? ORDER BY rowid",
+        (strategy_id,),
+    ).fetchall()
+    return (
+        tuple(tuple(row) for row in decision_rows),
+        tuple(tuple(row) for row in activation_rows),
+    )
+
+
+def _assert_deterministic_promotion_is_blocked(
+    *,
+    tmp_path: Path,
+    lane: golden_support.GoldenLaneSpec,
+    packet: ReviewPacket,
+    reader: SQLiteExperimentReader,
+) -> None:
+    """Prove one real deterministic packet cannot change production state."""
+    pool = SQLitePool(str(tmp_path / f"{lane.lane_id}-governance.sqlite"))
+    spec_writer = SQLiteStrategySpecWriter(pool)
+    spec_writer.init_schema()
+    governance_store = SQLiteStrategyGovernanceStore(pool)
+    governance_store.init_schema()
+    governance = GovernanceService(governance_store)
+    catalog = StrategyCatalogService(
+        reader=SQLiteStrategySpecReader(pool),
+        writer=spec_writer,
+        active_pointer_reader=governance_store,
+    )
+    active_record = _governance_record(
+        lane,
+        1,
+        parent_version=None,
+        created_at="2026-07-27T00:00:00Z",
+    )
+    candidate_record = _governance_record(
+        lane,
+        lane.strategy_version,
+        parent_version=1,
+        created_at="2026-07-27T00:00:10Z",
+    )
+    try:
+        governance.create_draft(
+            strategy_id=lane.strategy_id,
+            version=1,
+            spec_record=active_record,
+            created_at=active_record.created_at,
+        )
+        governance.publish_and_activate(
+            strategy_id=lane.strategy_id,
+            version=1,
+            actor="golden-bootstrap",
+            reason="existing active strategy",
+            decided_at="2026-07-27T00:00:01Z",
+        )
+        governance.create_draft(
+            strategy_id=lane.strategy_id,
+            version=lane.strategy_version,
+            spec_record=candidate_record,
+            created_at=candidate_record.created_at,
+        )
+        governance.submit_review(
+            lane.strategy_id,
+            lane.strategy_version,
+            event_id=f"{lane.lane_id}:candidate:submit",
+            actor="golden-reviewer",
+            reason="deterministic candidate review",
+            decided_at="2026-07-27T00:00:11Z",
+        )
+        governance.approve(
+            lane.strategy_id,
+            lane.strategy_version,
+            event_id=f"{lane.lane_id}:candidate:approve",
+            actor="golden-reviewer",
+            reason="ready except live gate",
+            decided_at="2026-07-27T00:00:12Z",
+        )
+        pointer_before = governance_store.get_active_pointer(lane.strategy_id)
+        candidate_before = governance_store.get_state(
+            lane.strategy_id,
+            lane.strategy_version,
+        )
+        events_before = _governance_event_snapshot(pool, lane.strategy_id)
+        active_spec_before = catalog.get_active_published(lane.strategy_id)
+        reloaded_before = reader.get_review_packet(str(packet.bundle_hash))
+        assert pointer_before is not None
+        assert pointer_before.active_version == 1
+        assert candidate_before is not None
+        assert candidate_before.state.value == "review"
+        assert candidate_before.review_outcome.value == "approved"
+        assert active_spec_before is not None
+        assert active_spec_before.strategy_id == active_record.strategy_id
+        assert active_spec_before.version == active_record.version
+        assert active_spec_before.spec_hash == active_record.spec_hash
+        assert reloaded_before == packet
+        launch = reader.get_launch_spec(ExperimentId(packet.lineage.experiment_id))
+        assert launch is not None
+        assert packet.spec_hash == encode_launch_spec(launch).content_hash
+        assert launch.strategy_spec_hash == ContentHash(candidate_record.spec_hash)
+
+        handler = PublishStrategyVersionHandler(
+            StrategyPromotionProcess(governance),
+            reader,
+        )
+        with pytest.raises(AppCommandError) as captured:
+            handler.handle(
+                PublishStrategyVersionCommand(
+                    strategy_id=lane.strategy_id,
+                    version=lane.strategy_version,
+                    bundle_hash=str(packet.bundle_hash),
+                    actor="golden-publisher",
+                    reason="attempt deterministic promotion",
+                )
+            )
+
+        assert captured.value.details["reason"] == "hard_gate_blocked"
+        assert governance_store.get_active_pointer(lane.strategy_id) == pointer_before
+        assert (
+            governance_store.get_state(lane.strategy_id, lane.strategy_version)
+            == candidate_before
+        )
+        assert _governance_event_snapshot(pool, lane.strategy_id) == events_before
+        assert catalog.get_active_published(lane.strategy_id) == active_spec_before
+        assert reader.get_review_packet(str(packet.bundle_hash)) == packet
+    finally:
+        pool.close_all()
+
+
+@pytest.mark.parametrize(
+    "lane",
+    golden_support.GOLDEN_LANES,
+    ids=lambda lane: lane.lane_id,
+)
 @pytest.mark.parametrize("cost_drift", [False, True], ids=["cost-match", "cost-drift"])
 def test_r3_evidence_closure_drives_review_packet_and_completed_status(
     tmp_path: Path,
+    lane: golden_support.GoldenLaneSpec,
     cost_drift: bool,
 ) -> None:
     """Drive one experiment tick from EVIDENCE to a published packet + COMPLETED."""
     semantics_transform = _drift_one_cost_semantics if cost_drift else None
     database, reader, writer, launch, assembler, artifact_service = _store(
         tmp_path,
+        lane=lane,
         semantics_transform=semantics_transform,
     )
     coordinator, store, _collector, selection = _coordinator_with_collector(
@@ -768,6 +948,7 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
     assert len(collected.source_rows) == 4
     assert collected.missing_artifact_refs == ()
     _assert_cost_collection_replay(
+        lane=lane,
         cost_drift=cost_drift,
         collected=collected,
         launch=launch,
@@ -871,6 +1052,13 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
         expected_cost_hashes=collected.fold_cost_config_hashes,
         expected_cost_outcome=(GateOutcome.FAIL if cost_drift else GateOutcome.PASS),
     )
+    if not cost_drift:
+        _assert_deterministic_promotion_is_blocked(
+            tmp_path=tmp_path,
+            lane=lane,
+            packet=persisted_packet,
+            reader=reader,
+        )
 
     database.close_all()
 
@@ -890,12 +1078,17 @@ def _assert_packet_shape(
 ) -> None:
     """Assert real metric, artifact, and lineage evidence in the frozen packet."""
     gate_by_rule = {entry.rule_id: entry for entry in packet.gate_evaluations}
+    hard_rule_ids = tuple(
+        entry.rule_id
+        for entry in packet.gate_evaluations
+        if entry.layer is GateLayer.HARD
+    )
     hard_gates = {
         rule_id: gate
         for rule_id, gate in gate_by_rule.items()
         if gate.layer is GateLayer.HARD
     }
-    assert set(hard_gates) == set(_HARD_GATE_RULE_IDS)
+    assert hard_rule_ids == HARD_GATE_RULE_IDS
     # Live R2 evidence is intentionally not inferred from this deterministic
     # tmp_path fixture. Cost assumptions are real execution-policy hashes, while
     # G2 promotion readiness remains explicitly NOT_EVALUATED.

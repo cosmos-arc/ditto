@@ -22,6 +22,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
 
+from ditto_analysis.experiments import (
+    ExperimentId,
+    ExperimentLaunchSpec,
+    encode_launch_spec,
+)
 from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_strategy.governance.models import (
     StrategyActivationEvent,
@@ -319,10 +324,16 @@ class ReactivateStrategyHandler:
 
 
 class ReviewPacketReader(Protocol):
-    """Read one immutable review packet by its canonical bundle hash."""
+    """Read one immutable packet and its experiment-owned target identity."""
 
     def get_review_packet(self, bundle_hash: str) -> ReviewPacket | None:
         """Load one review packet or return None if the bundle hash is unknown."""
+        ...
+
+    def get_launch_spec(
+        self, experiment_id: ExperimentId
+    ) -> ExperimentLaunchSpec | None:
+        """Load the launch identity that owns the packet's experiment lineage."""
         ...
 
 
@@ -363,6 +374,39 @@ class PublishStrategyVersionHandler:
                     "bundle_hash": command.bundle_hash,
                 },
             )
+        launch = self._reader.get_launch_spec(
+            ExperimentId(packet.lineage.experiment_id)
+        )
+        if launch is None:
+            raise AppCommandError(
+                "Review packet experiment lineage was not found",
+                details={
+                    "code": "REVIEW_PACKET_EXPERIMENT_NOT_FOUND",
+                    "reason": "evidence_experiment_not_found",
+                    "strategy_id": command.strategy_id,
+                    "version": command.version,
+                    "experiment_id": packet.lineage.experiment_id,
+                },
+            )
+        expected_strategy_version = f"{command.strategy_id}@{command.version}"
+        launch_spec_hash = encode_launch_spec(launch).content_hash
+        if (
+            str(launch.strategy_version) != expected_strategy_version
+            or launch_spec_hash != packet.spec_hash
+        ):
+            raise AppCommandError(
+                "Review packet does not belong to the promotion target",
+                details={
+                    "code": "REVIEW_PACKET_TARGET_MISMATCH",
+                    "reason": "evidence_target_mismatch",
+                    "strategy_id": command.strategy_id,
+                    "version": command.version,
+                    "experiment_id": packet.lineage.experiment_id,
+                    "launch_strategy_version": str(launch.strategy_version),
+                    "launch_spec_hash": str(launch_spec_hash),
+                    "packet_launch_spec_hash": str(packet.spec_hash),
+                },
+            )
         decided_at = _utc_now_iso()
         request = PromotionRequest(
             strategy_id=command.strategy_id,
@@ -372,6 +416,7 @@ class PublishStrategyVersionHandler:
             reason=command.reason,
             decided_at=decided_at,
             expected_bundle_hash=command.bundle_hash,
+            expected_strategy_spec_hash=str(launch.strategy_spec_hash),
         )
         try:
             result = self._process.promote(request)

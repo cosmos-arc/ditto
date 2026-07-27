@@ -23,6 +23,13 @@
 - 不新增前端 graph/DnD 依赖；若实现证明必须新增，暂停并请求批准。
 - 默认测试使用确定性 fixture；真实 provider 和浏览器 acceptance 单独标记，不伪造 live evidence。
 - R2 live Gate 与 W0–W4 并行，未关闭时只能形成 research-only evidence，不能通过 G2。
+- deterministic 双 lane 可以产出完整 ReviewPacket，但只要 `r2_live_gate=NOT_EVALUATED`，
+  promotion 就必须以 `hard_gate_blocked` 失败，active pointer 与 R1 active version 均保持不变；
+  只有 explicit live G2 acceptance 关闭该 gate 后才能断言 publish/activate 成功。
+- Promotion 必须先把 packet lineage 绑定回持久化 launch：V1 `packet.spec_hash`
+  等于 canonical launch-spec hash，launch 的 `strategy_id@version` 等于请求目标，
+  且 `launch.strategy_spec_hash` 等于 governance version `spec_hash`；任一漂移都在
+  governance 写入前阻断，禁止跨策略/版本复用证据包。
 - `analysis` 不得导入 strategy/backtest；strategy 不得导入 features/data/backtest/execution。
 - 不建立第二套回测、factor engine、checkpoint、artifact 或 API 类型系统。
 - API 类型以 OpenAPI codegen 为准；禁止手改 `ditto-app/src/types/generated/api.d.ts`。
@@ -1095,7 +1102,13 @@ git commit -m "feat(research): consume live r3 api contracts"
 
 **Step 1: Write failing golden E2E tests**
 
-个股线覆盖 typed spec、真实 certified snapshot、walk-forward、唯一 candidate、holdout、候选/排除/贡献/暴露、review、publish 和 R1 active signal；ETF 线覆盖当前 R1 baseline、同协议、publish、reactivate 和语义回归。
+个股线覆盖 typed spec、deterministic certified snapshot、walk-forward、唯一
+candidate、holdout、候选/排除/贡献/暴露和 immutable ReviewPacket；ETF 线覆盖当前
+R1 baseline、同协议、historical published reactivate 和语义回归。两线均断言
+11 个 hard gate 中 10 个 `PASS`、`r2_live_gate=NOT_EVALUATED`，随后 promotion
+以 `hard_gate_blocked` 失败且 active pointer/R1 active version 不变；不得在
+deterministic fixture 中断言新版本 publish/activate 成功。两线还必须证明
+packet → persisted launch → governance target 的 exact identity binding。
 
 **Step 2: Add scheduler and recovery acceptance**
 
@@ -1111,7 +1124,9 @@ git commit -m "feat(research): consume live r3 api contracts"
 pixi run -e dev pytest packages/apps/tests/e2e/test_r3_stock_selection_golden.py packages/apps/tests/e2e/test_r3_etf_research_golden.py packages/apps/tests/e2e/test_r3_governance_recovery.py packages/apps/tests/e2e/test_r3_scheduler_capacity.py -m e2e --no-cov -q -n0
 ```
 
-Expected: PASS；fixture evidence 明确标记 deterministic，不冒充 live provider。
+Expected: PASS；fixture evidence 明确标记 deterministic，不冒充 live provider；
+双线都产出完整 packet，但 promotion 必须被 `r2_live_gate=NOT_EVALUATED`
+阻断，active pointer 与 R1 active version 保持不变。
 
 **Step 5: Run explicit live acceptance when R2 Gate is ready**
 
@@ -1119,7 +1134,10 @@ Expected: PASS；fixture evidence 明确标记 deterministic，不冒充 live pr
 DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --output artifacts/acceptance/r3-report.json
 ```
 
-Expected: exit 0；报告证明 96 月、双线、holdout、replay、governance、backup/restore 和 R2 live Gate 均已关闭。凭证或 entitlement 缺失时必须非零退出并列明 blocker。
+Expected: exit 0；报告证明 96 月、双线、holdout、replay、governance、
+backup/restore 和 R2 live Gate 均已关闭，并且仅在此 explicit live closure
+之后证明 publish/activate 成功。凭证或 entitlement 缺失时必须非零退出并列明
+blocker，不能复用 deterministic packet 绕过该 gate。
 
 **Step 6: Run real browser acceptance**
 
@@ -1129,7 +1147,9 @@ Run backend and frontend with live API, then:
 VITE_USE_MOCK=false bun run acceptance:r3-research -- --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000
 ```
 
-Expected: 两条黄金线完整；刷新恢复；holdout duplicate 被阻止；review/publish/reactivate 成功；0 console/page error；保留 evidence JSON、report 和 screenshots。
+Expected: 以前一步 explicit live G2 closure 成功为前提，两条黄金线完整；刷新恢复；
+holdout duplicate 被阻止；review/publish/reactivate 成功；0 console/page
+error；保留 evidence JSON、report 和 screenshots。
 
 **Step 7: Run final repository gates**
 

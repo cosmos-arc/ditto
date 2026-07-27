@@ -39,6 +39,10 @@ class GovernanceService:
     def __init__(self, store: StrategyGovernanceStoreProtocol) -> None:
         self._store = store
 
+    def get_version(self, strategy_id: str, version: int) -> StrategyVersion | None:
+        """Return the immutable version identity used by evidence binding."""
+        return self._store.get_version(strategy_id, version)
+
     def create_draft(
         self,
         *,

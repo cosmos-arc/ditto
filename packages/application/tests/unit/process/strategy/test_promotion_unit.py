@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from ditto_analysis.experiments import (
+    HARD_GATE_RULE_IDS,
     REVIEW_PACKET_SCHEMA_VERSION,
     ContentHash,
     GateEvaluation,
@@ -59,7 +61,7 @@ def _seed_approved_version(service: GovernanceService, version: int = 1) -> None
 def _packet(
     *,
     holdout_claim_id: str | None = "claim-1",
-    hard_outcome: GateOutcome = GateOutcome.PASS,
+    gate_evaluations: tuple[GateEvaluation, ...] | None = None,
 ) -> ReviewPacket:
     return ReviewPacket(
         schema_version=REVIEW_PACKET_SCHEMA_VERSION,
@@ -76,13 +78,7 @@ def _packet(
         registry_hash=ContentHash("e" * 64),
         objective_payload_hash=ContentHash("f" * 64),
         gate_evaluations=(
-            GateEvaluation(
-                rule_id="certified_snapshot",
-                layer=GateLayer.HARD,
-                outcome=hard_outcome,
-                observed="verified",
-                policy={"required": True},
-            ),
+            _hard_gate_evaluations() if gate_evaluations is None else gate_evaluations
         ),
         comparison_payload_hash=ContentHash("9" * 64),
         r1_impact_payload_hash=None,
@@ -92,10 +88,26 @@ def _packet(
     )
 
 
+def _hard_gate_evaluations(
+    outcome: GateOutcome = GateOutcome.PASS,
+) -> tuple[GateEvaluation, ...]:
+    return tuple(
+        GateEvaluation(
+            rule_id=rule_id,
+            layer=GateLayer.HARD,
+            outcome=outcome,
+            observed="verified",
+            policy={"required": True},
+        )
+        for rule_id in HARD_GATE_RULE_IDS
+    )
+
+
 def _request(
     packet: ReviewPacket,
     *,
     expected_bundle_hash: str | None = None,
+    expected_strategy_spec_hash: str = "a" * 64,
 ) -> PromotionRequest:
     return PromotionRequest(
         strategy_id="strategy-1",
@@ -107,6 +119,7 @@ def _request(
         expected_bundle_hash=str(packet.bundle_hash)
         if expected_bundle_hash is None
         else expected_bundle_hash,
+        expected_strategy_spec_hash=expected_strategy_spec_hash,
     )
 
 
@@ -133,16 +146,150 @@ def test_promote_rejects_stale_evidence_bundle(tmp_path: Path) -> None:
     assert exc.value.details["reason"] == "stale_evidence_bundle"
 
 
-def test_promote_rejects_when_hard_gate_blocks(tmp_path: Path) -> None:
+def test_promote_rejects_packet_for_different_strategy_spec_before_write(
+    tmp_path: Path,
+) -> None:
     governance = _governance(tmp_path)
     _seed_approved_version(governance)
     process = StrategyPromotionProcess(governance)
+    state_before = governance._store.get_state("strategy-1", 1)
+    packet = _packet()
 
-    packet = _packet(hard_outcome=GateOutcome.FAIL)
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(packet, expected_strategy_spec_hash="9" * 64))
+
+    assert exc.value.details["reason"] == "strategy_spec_hash_mismatch"
+    assert governance._store.get_state("strategy-1", 1) == state_before
+    assert governance._store.get_active_pointer("strategy-1") is None
+
+
+def test_promote_rejects_unregistered_target_before_write(tmp_path: Path) -> None:
+    governance = _governance(tmp_path)
+    process = StrategyPromotionProcess(governance)
+
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(_packet()))
+
+    assert exc.value.details["reason"] == "strategy_version_not_found"
+    assert governance._store.get_active_pointer("strategy-1") is None
+
+
+@pytest.mark.parametrize(
+    "hard_outcome",
+    [GateOutcome.FAIL, GateOutcome.WARN, GateOutcome.NOT_EVALUATED],
+)
+def test_promote_rejects_when_hard_gate_is_not_explicit_pass(
+    tmp_path: Path,
+    hard_outcome: GateOutcome,
+) -> None:
+    governance = _governance(tmp_path)
+    _seed_approved_version(governance)
+    process = StrategyPromotionProcess(governance)
+    state_before = governance._store.get_state("strategy-1", 1)
+
+    packet = _packet(gate_evaluations=_hard_gate_evaluations(hard_outcome))
     with pytest.raises(AppProcessError) as exc:
         process.promote(_request(packet))
 
     assert exc.value.details["reason"] == "hard_gate_blocked"
+    assert governance._store.get_state("strategy-1", 1) == state_before
+    assert governance._store.get_active_pointer("strategy-1") is None
+
+
+def test_promote_rejects_missing_hard_gate_before_governance_write(
+    tmp_path: Path,
+) -> None:
+    governance = _governance(tmp_path)
+    _seed_approved_version(governance)
+    process = StrategyPromotionProcess(governance)
+    state_before = governance._store.get_state("strategy-1", 1)
+
+    packet = _packet(gate_evaluations=_hard_gate_evaluations()[:-1])
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(packet))
+
+    assert exc.value.details["reason"] == "hard_gate_blocked"
+    assert governance._store.get_state("strategy-1", 1) == state_before
+    assert governance._store.get_active_pointer("strategy-1") is None
+
+
+def test_promote_rejects_duplicate_hard_gate_before_governance_write(
+    tmp_path: Path,
+) -> None:
+    governance = _governance(tmp_path)
+    _seed_approved_version(governance)
+    process = StrategyPromotionProcess(governance)
+    state_before = governance._store.get_state("strategy-1", 1)
+    hard_gates = _hard_gate_evaluations()
+
+    packet = _packet(gate_evaluations=(*hard_gates, hard_gates[-1]))
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(packet))
+
+    assert exc.value.details["reason"] == "hard_gate_blocked"
+    assert governance._store.get_state("strategy-1", 1) == state_before
+    assert governance._store.get_active_pointer("strategy-1") is None
+
+
+def test_promote_rejects_reordered_hard_gates_before_governance_write(
+    tmp_path: Path,
+) -> None:
+    governance = _governance(tmp_path)
+    _seed_approved_version(governance)
+    process = StrategyPromotionProcess(governance)
+    state_before = governance._store.get_state("strategy-1", 1)
+    hard_gates = _hard_gate_evaluations()
+
+    packet = _packet(gate_evaluations=(hard_gates[1], hard_gates[0], *hard_gates[2:]))
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(packet))
+
+    assert exc.value.details["reason"] == "hard_gate_blocked"
+    assert governance._store.get_state("strategy-1", 1) == state_before
+    assert governance._store.get_active_pointer("strategy-1") is None
+
+
+def test_promote_rejects_extra_hard_gate_before_governance_write(
+    tmp_path: Path,
+) -> None:
+    governance = _governance(tmp_path)
+    _seed_approved_version(governance)
+    process = StrategyPromotionProcess(governance)
+    state_before = governance._store.get_state("strategy-1", 1)
+    extra_gate = GateEvaluation(
+        rule_id="unexpected_hard_gate",
+        layer=GateLayer.HARD,
+        outcome=GateOutcome.PASS,
+        observed="verified",
+        policy={"required": True},
+    )
+
+    packet = _packet(gate_evaluations=(*_hard_gate_evaluations(), extra_gate))
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(packet))
+
+    assert exc.value.details["reason"] == "hard_gate_blocked"
+    assert governance._store.get_state("strategy-1", 1) == state_before
+    assert governance._store.get_active_pointer("strategy-1") is None
+
+
+def test_promote_rejects_wrong_hard_gate_layer_before_governance_write(
+    tmp_path: Path,
+) -> None:
+    governance = _governance(tmp_path)
+    _seed_approved_version(governance)
+    process = StrategyPromotionProcess(governance)
+    state_before = governance._store.get_state("strategy-1", 1)
+    hard_gates = _hard_gate_evaluations()
+    wrong_layer = replace(hard_gates[-1], layer=GateLayer.EVIDENCE)
+
+    packet = _packet(gate_evaluations=(*hard_gates, wrong_layer))
+    with pytest.raises(AppProcessError) as exc:
+        process.promote(_request(packet))
+
+    assert exc.value.details["reason"] == "hard_gate_blocked"
+    assert governance._store.get_state("strategy-1", 1) == state_before
+    assert governance._store.get_active_pointer("strategy-1") is None
 
 
 def test_promote_requires_holdout_claim(tmp_path: Path) -> None:

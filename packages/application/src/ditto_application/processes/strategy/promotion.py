@@ -13,7 +13,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_analysis.experiments import ReviewPacket, review_blocked_by_hard_gates
+from ditto_analysis.experiments import (
+    HARD_GATE_RULE_IDS,
+    GateEvaluation,
+    GateLayer,
+    ReviewPacket,
+    review_blocked_by_hard_gates,
+)
 from ditto_strategy.governance.models import (
     StrategyActivationEvent,
     StrategyActivePointer,
@@ -37,6 +43,7 @@ class PromotionRequest:
     reason: str
     decided_at: str
     expected_bundle_hash: str
+    expected_strategy_spec_hash: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +54,27 @@ class PromotionResult:
     version: int
     bundle_hash: str
     active_pointer: StrategyActivePointer
+
+
+def _hard_gate_contract_blocks_promotion(
+    evaluations: tuple[GateEvaluation, ...],
+) -> bool:
+    """Require the canonical hard-gate sequence with no mis-layered duplicate."""
+    hard_rule_ids = tuple(
+        evaluation.rule_id
+        for evaluation in evaluations
+        if evaluation.layer is GateLayer.HARD
+    )
+    if hard_rule_ids != HARD_GATE_RULE_IDS:
+        return True
+    expected_rule_ids = frozenset(HARD_GATE_RULE_IDS)
+    if any(
+        evaluation.rule_id in expected_rule_ids
+        and evaluation.layer is not GateLayer.HARD
+        for evaluation in evaluations
+    ):
+        return True
+    return review_blocked_by_hard_gates(evaluations)
 
 
 class StrategyPromotionProcess:
@@ -65,7 +93,24 @@ class StrategyPromotionProcess:
                 expected=request.expected_bundle_hash,
                 actual=bundle_hash,
             )
-        if review_blocked_by_hard_gates(request.packet.gate_evaluations):
+        target = self._governance.get_version(request.strategy_id, request.version)
+        if target is None:
+            raise AppProcessError(
+                "strategy version is not registered for promotion",
+                reason="strategy_version_not_found",
+                strategy_id=request.strategy_id,
+                version=request.version,
+            )
+        if target.spec_hash != request.expected_strategy_spec_hash:
+            raise AppProcessError(
+                "review packet strategy spec does not match promotion target",
+                reason="strategy_spec_hash_mismatch",
+                strategy_id=request.strategy_id,
+                version=request.version,
+                expected=target.spec_hash,
+                actual=request.expected_strategy_spec_hash,
+            )
+        if _hard_gate_contract_blocks_promotion(request.packet.gate_evaluations):
             raise AppProcessError(
                 "a hard gate blocks promotion",
                 reason="hard_gate_blocked",

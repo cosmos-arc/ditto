@@ -2,7 +2,13 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 接通 R3 evidence collection 链路,让一个真实 experiment 从 EVIDENCE stage 产出非空、hard gate 客观判定的 immutable review packet(含真实 walk-forward 统计证据),驱动 governance publish 走完整 promote 链路。
+**Goal:** 接通 R3 evidence collection 链路,让一个真实 experiment 从 EVIDENCE
+stage 产出非空、11 个 hard gate 客观判定的 immutable review packet(含真实
+walk-forward 统计证据),并让 governance promotion 如实消费该 packet：
+deterministic fixture 下因 `r2_live_gate=NOT_EVALUATED` 而阻断，只有 explicit
+live G2 closure 后才允许 publish/activate 成功；packet 还必须经 persisted
+launch 的 exact `strategy_id@version`/launch hash 绑定到 governance spec hash，
+禁止跨目标复用。
 
 **Architecture:** coordinator 在 EVIDENCE stage 内联触发 `ExperimentEvidenceCollector`——读 experiment snapshot + preflight authority + fold artifacts + backtest reports,装配 `CandidateFoldEvidence` → `build_candidate_comparison` → `aggregate_walk_forward`(接通 Task 11 孤儿链)→ 真实 metric_values,装配 11 个 hard gate(analysis 纯函数投影)+ ReviewPacketInput,调 `assemble_review_packet` → `publish_review_packet`,最后 `transition_experiment(target_status=COMPLETED, target_stage=EVIDENCE)`。契约层零改动。
 
@@ -324,7 +330,7 @@ def test_collect_assembles_review_packet_with_real_metrics(monkeypatch):
     #   - lineage.candidate_id == holdout_claim.candidate_id
     #   - fold_ids == walk-forward fold ids(非 holdout 单 fold)
     #   - metric_values 非空(NET_RETURN 等,来自 aggregate_walk_forward)
-    #   - hard gate 10 个 satisfied(r2_live_gate NOT_EVALUATED)
+    #   - 11 个 hard gate 结果：10 个 PASS，r2_live_gate NOT_EVALUATED
     #   - comparison_payload_hash 非 None
     #   - r1_impact_payload_hash is None
     ...
@@ -519,7 +525,13 @@ git commit -m "feat(research): drive evidence collection at EVIDENCE stage"
 
 ### Task 5a: V1 golden 闭环(本次实施)
 
-验证真实 experiment tick 从 EVIDENCE 产出**非空 ReviewPacket**(V1:`metric_values={}` 可接受 → evidence gate NOT_EVALUATED)→ governance promote 闭环 → `status=COMPLETED`。注入 `evidence_collector` 的 coordinator + 真实 SQLite fixture(复用 `test_holdout_claim_integration.py` 的 `_persist_candidate_selection`/`_complete_fold`/`_owned_coordinator` 模式)。
+验证真实 experiment tick 从 EVIDENCE 产出**非空 ReviewPacket**
+(V1:`metric_values={}` 可接受 → evidence gate NOT_EVALUATED)并推进
+`status=COMPLETED`。packet 可以进入真实 promotion 入口，但 deterministic
+fixture 的 `r2_live_gate=NOT_EVALUATED` 必须得到 `hard_gate_blocked`，不得切换
+active pointer。注入 `evidence_collector` 的 coordinator + 真实 SQLite fixture
+(复用 `test_holdout_claim_integration.py` 的
+`_persist_candidate_selection`/`_complete_fold`/`_owned_coordinator` 模式)。
 
 **Files:**
 - Create: `packages/application/tests/integration/test_r3_evidence_closure_golden.py`
@@ -583,7 +595,10 @@ conflict，不再列为待实施项。剩余按依赖顺序推进：
 
 **Step 1: Write golden e2e tests**
 
-覆盖真实闭环:typed spec → certified snapshot(deterministic fixture)→ planning → exploration → walk-forward → candidate_selection → holdout claim → **evidence collection(review packet 非空 + 10 hard gate + 真实 metric)** → governance publish → R1 active signal。
+覆盖研究闭环:typed spec → certified snapshot(deterministic fixture)→ planning →
+exploration → walk-forward → candidate_selection → holdout claim →
+**evidence collection(review packet 非空 + 11 hard gate + 真实 metric)** →
+promotion attempt `hard_gate_blocked` → active pointer/R1 active version 保持不变。
 
 ```python
 # test_r3_stock_selection_golden.py
@@ -592,17 +607,22 @@ def test_stock_selection_full_research_to_governance_closure(tmp_path):
     # deterministic fixture: certified snapshot + typed stock spec + 96 月 fold protocol
     # 跑 experiment tick 循环直到 stage=EVIDENCE + status=COMPLETED
     # 断言:review packet 已 publish(bundle_hash 可读)
-    #       10 hard gate satisfied(r2_live_gate NOT_EVALUATED)
+    #       11 个 hard gate：10 个 PASS，r2_live_gate NOT_EVALUATED
     #       metric_values 含 NET_RETURN/SHARPE(非空)
-    #       governance publish 经 StrategyPromotionProcess.promote 成功(active pointer 切换)
+    #       StrategyPromotionProcess.promote 返回 hard_gate_blocked
+    #       active pointer 与 R1 active version 均不变
     ...
 ```
 
-- `test_r3_etf_research_golden.py`:ETF lane 同协议 + reactivate 语义回归。
+- `test_r3_etf_research_golden.py`:ETF lane 同协议 + promotion 阻断后 pointer
+  不变 + historical published version reactivate 语义回归；reactivate 不得绕过
+  gate 激活被阻断的新版本。
 - `test_r3_governance_recovery.py`:review decision append-only、active pointer 切换、reactivate expected_revision、stale pointer 409。
 - `test_r3_scheduler_capacity.py`:128 candidate preflight、2/4 worker、单 slot lease、pause/resume、lease reclaim、无重复 claim、artifact lineage。
 
-> fixture evidence 明确标 deterministic,不冒充 live provider。R2 live Gate 未关闭 → `r2_live_gate` NOT_EVALUATED,golden 接受。
+> fixture evidence 明确标 deterministic,不冒充 live provider。R2 live Gate
+> 未关闭 → `r2_live_gate` NOT_EVALUATED,golden 必须接受 packet 产出但拒绝
+> promotion；只有单独的 explicit live G2 closure 才能断言 publish/activate 成功。
 
 **Step 2: Run e2e**
 
@@ -628,7 +648,7 @@ git commit -m "test(research): certify r3 evidence collection closure"
 | Task 2 | `CandidateFoldEvidence` 装配 + `SnapshotManifestProjection`,aggregation 孤儿链首次接通,两个风险点(backtest report/registry_hash)已解决 |
 | Task 3 | collector 装配 18 字段 ReviewPacketInput,metric_values 真实(非 None),publish 经 writer,objective_payload_hash 真实 |
 | Task 4 | coordinator EVIDENCE → collect → transition COMPLETED,失败 fail-fast,DI 注入 |
-| Task 5 | stock/ETF 双黄金 + governance recovery + scheduler capacity 全绿(deterministic),review packet 非空 + governance promote 闭环 |
+| Task 5 | stock/ETF 双黄金 + governance recovery + scheduler capacity 全绿(deterministic),review packet 非空 + promotion `hard_gate_blocked` + active pointer/R1 active 不变 |
 
 ## 最终验收(对账 design doc §14)
 
@@ -637,8 +657,16 @@ pixi run -e dev arch-check
 pixi run -e dev check   # lint + fmt + type + test --fast
 ```
 
-- [ ] 真实 experiment tick 产出非空 ReviewPacket,10 hard gate 客观(r2_live_gate NOT_EVALUATED),metric_values 真实
-- [ ] packet 经 `POST /strategies/{id}/versions/{v}/publish` 驱动 `StrategyPromotionProcess.promote`(pass/fail)
+- [ ] 真实 experiment tick 产出非空 ReviewPacket,11 个 hard gate 客观
+      (10 个 PASS,`r2_live_gate=NOT_EVALUATED`),metric_values 真实
+- [ ] deterministic packet 经 `POST /strategies/{id}/versions/{v}/publish` 驱动
+      `StrategyPromotionProcess.promote`,明确返回 `hard_gate_blocked`,且 active
+      pointer、R1 active version 和 activation history 不变
+- [ ] Schema V1 `packet.spec_hash` 与 persisted launch hash 一致，launch
+      `strategy_id@version` 与请求一致，`launch.strategy_spec_hash` 与
+      governance version `spec_hash` 一致；identity 漂移 zero-write 阻断
+- [ ] 仅 explicit live G2 acceptance 将 `r2_live_gate` 关闭为 PASS 后，才允许
+      publish/activate 成功；live blocker 必须保留为 release blocker
 - [ ] EVIDENCE 后 `experiment.status == COMPLETED`
 - [ ] artifact/metric 缺失时 packet 仍产出(gate fail/not_evaluated),manifest/publish 结构性错误 fail-fast
 - [ ] 37 contracts + arch-smells + type/lint + test 全绿

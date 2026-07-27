@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_analysis.experiments import ContentHash
+from ditto_analysis.experiments import ContentHash, StrategyVersion
 from ditto_analysis.experiments.evidence import (
     REVIEW_PACKET_SCHEMA_VERSION,
     ReviewPacket,
     ReviewPacketLineage,
 )
 from ditto_analysis.experiments.gates import GateEvaluation, GateLayer, GateOutcome
+from ditto_application.commands import strategy_governance as governance_commands
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionCommand,
     PublishStrategyVersionHandler,
@@ -69,9 +71,34 @@ def _command() -> PublishStrategyVersionCommand:
     )
 
 
-def test_publish_strategy_version_handler_promotes() -> None:
+def _reader(
+    *,
+    packet: ReviewPacket | None,
+    strategy_version: str = "s1@1",
+    launch_spec_hash: str = "a" * 64,
+    strategy_spec_hash: str = "b" * 64,
+) -> MagicMock:
     reader = MagicMock(spec=ReviewPacketReader)
-    reader.get_review_packet.return_value = _packet()
+    reader.get_review_packet.return_value = packet
+    reader.get_launch_spec.return_value = SimpleNamespace(
+        strategy_version=StrategyVersion(strategy_version),
+        strategy_spec_hash=ContentHash(strategy_spec_hash),
+        launch_spec_hash=ContentHash(launch_spec_hash),
+    )
+    return reader
+
+
+@pytest.fixture(autouse=True)
+def _encode_test_launch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        governance_commands,
+        "encode_launch_spec",
+        lambda launch: SimpleNamespace(content_hash=launch.launch_spec_hash),
+    )
+
+
+def test_publish_strategy_version_handler_promotes() -> None:
+    reader = _reader(packet=_packet())
     process = MagicMock(spec=StrategyPromotionProcess)
     process.promote.return_value = PromotionResult(
         strategy_id="s1",
@@ -86,11 +113,12 @@ def test_publish_strategy_version_handler_promotes() -> None:
     assert result.strategy_id == "s1"
     assert result.active_version == 1
     process.promote.assert_called_once()
+    request = process.promote.call_args.args[0]
+    assert request.expected_strategy_spec_hash == "b" * 64
 
 
 def test_publish_strategy_version_handler_packet_not_found() -> None:
-    reader = MagicMock(spec=ReviewPacketReader)
-    reader.get_review_packet.return_value = None
+    reader = _reader(packet=None)
     process = MagicMock(spec=StrategyPromotionProcess)
     handler = PublishStrategyVersionHandler(process=process, reader=reader)
 
@@ -100,9 +128,21 @@ def test_publish_strategy_version_handler_packet_not_found() -> None:
     assert info.value.details["code"] == "REVIEW_PACKET_NOT_FOUND"
 
 
+def test_publish_strategy_version_handler_experiment_not_found() -> None:
+    reader = _reader(packet=_packet())
+    reader.get_launch_spec.return_value = None
+    process = MagicMock(spec=StrategyPromotionProcess)
+    handler = PublishStrategyVersionHandler(process=process, reader=reader)
+
+    with pytest.raises(AppCommandError) as info:
+        handler.handle(_command())
+
+    assert info.value.details["reason"] == "evidence_experiment_not_found"
+    process.promote.assert_not_called()
+
+
 def test_publish_strategy_version_handler_maps_process_error() -> None:
-    reader = MagicMock(spec=ReviewPacketReader)
-    reader.get_review_packet.return_value = _packet()
+    reader = _reader(packet=_packet())
     process = MagicMock(spec=StrategyPromotionProcess)
     process.promote.side_effect = AppProcessError(
         "stale",
@@ -115,3 +155,27 @@ def test_publish_strategy_version_handler_maps_process_error() -> None:
 
     assert info.value.details["code"] == "STALE_EVIDENCE_BUNDLE"
     assert info.value.details["strategy_id"] == "s1"
+
+
+def test_publish_strategy_version_handler_rejects_cross_version_packet() -> None:
+    reader = _reader(packet=_packet(), strategy_version="s1@2")
+    process = MagicMock(spec=StrategyPromotionProcess)
+    handler = PublishStrategyVersionHandler(process=process, reader=reader)
+
+    with pytest.raises(AppCommandError) as info:
+        handler.handle(_command())
+
+    assert info.value.details["reason"] == "evidence_target_mismatch"
+    process.promote.assert_not_called()
+
+
+def test_publish_strategy_version_handler_rejects_launch_spec_hash_drift() -> None:
+    reader = _reader(packet=_packet(), launch_spec_hash="9" * 64)
+    process = MagicMock(spec=StrategyPromotionProcess)
+    handler = PublishStrategyVersionHandler(process=process, reader=reader)
+
+    with pytest.raises(AppCommandError) as info:
+        handler.handle(_command())
+
+    assert info.value.details["reason"] == "evidence_target_mismatch"
+    process.promote.assert_not_called()
