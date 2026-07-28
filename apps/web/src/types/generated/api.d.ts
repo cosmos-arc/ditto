@@ -1523,6 +1523,282 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/experiments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Experiments
+         * @description 列出研究实验（newest first，不含候选/fold 展开）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_experiments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Experiment
+         * @description 获取实验详情.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_get_experiment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Experiment Candidates
+         * @description 列出同一持久实验详情中的 immutable candidates.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_experiment_candidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Experiment Gates
+         * @description 列出实验的门禁评估.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_experiment_gates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/review-packet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Research Experiment Review Packet
+         * @description 获取实验的 review packet（完整 hard gate + statistical evidence + lineage）.
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_get_research_experiment_review_packet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Experiment
+         * @description 请求暂停实验 (revision-fenced cooperative pause).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_pause_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Experiment
+         * @description 请求取消实验 (revision-fenced terminal cancel).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_cancel_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Experiment
+         * @description 请求恢复实验 (revision-fenced resume of one paused experiment).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_resume_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/retry-fold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Fold Experiment
+         * @description 请求重试一个失败 fold (revision-fenced successor attempt).
+         *
+         *     expected_revision is the fold projection revision (not experiment revision).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_retry_fold_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/node-descriptors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Node Descriptors
+         * @description 列出 R3 内置策略节点 descriptor（pipeline studio 事实源）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_node_descriptors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/factors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Factors
+         * @description 列出 R3 受控核心因子目录（governed catalog order）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_factors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Reviews
+         * @description 列出跨 strategy 的 review queue（state=REVIEW 版本，newest first）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_reviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/source/{source}/{dataset}": {
         parameters: {
             query?: never;
@@ -1624,7 +1900,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/strategies/{strategy_id}/publish": {
+    "/api/v1/strategies/{strategy_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Strategy Versions
+         * @description 列出策略的 governance 版本历史（newest first）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["strategies_list_strategy_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Active Strategy
+         * @description 获取 active pointer + published payload；无 active pointer 返回 404.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["strategies_get_active_strategy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/submit-review": {
         parameters: {
             query?: never;
             header?: never;
@@ -1634,12 +1954,122 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Publish Strategy
-         * @description 发布策略.
+         * Submit Strategy Review
+         * @description 提交策略版本审查.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        post: operations["strategies_publish_strategy"];
+        post: operations["strategies_submit_strategy_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Strategy Review
+         * @description 审批策略版本.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_approve_strategy_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject Strategy Review
+         * @description 驳回策略版本（驳回后只能 clone 新 draft）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_reject_strategy_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deprecate Strategy Version
+         * @description 弃用已发布版本（弃用后不可再激活）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_deprecate_strategy_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate Strategy Version
+         * @description 重新激活已发布版本（乐观指针 CAS，要求 expected_pointer_revision）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_reactivate_strategy_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish Strategy Version
+         * @description 证据门控发布（经 StrategyPromotionProcess 验证 review packet hard gates）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_publish_strategy_version"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2375,6 +2805,27 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[ExperimentControlReceiptResponse] */
+        APIResponse_ExperimentControlReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentControlReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentDetailResponse] */
+        APIResponse_ExperimentDetailResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentDetailResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentReviewPacketResponse] */
+        APIResponse_ExperimentReviewPacketResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentReviewPacketResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[FillAdjustmentResponse] */
         APIResponse_FillAdjustmentResponse_: {
             /** @description 响应数据 */
@@ -2487,10 +2938,31 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[StrategyActivePointerResponse] */
+        APIResponse_StrategyActivePointerResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyActivePointerResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyActiveResponse] */
+        APIResponse_StrategyActiveResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyActiveResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[StrategyResponse] */
         APIResponse_StrategyResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["StrategyResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyVersionStateResponse] */
+        APIResponse_StrategyVersionStateResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyVersionStateResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -2648,6 +3120,46 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[list[ExperimentCandidateResponse]] */
+        APIResponse_list_ExperimentCandidateResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ExperimentCandidateResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[ExperimentGateResponse]] */
+        APIResponse_list_ExperimentGateResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ExperimentGateResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[ExperimentSummaryResponse]] */
+        APIResponse_list_ExperimentSummaryResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ExperimentSummaryResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[FactorDescriptorResponse]] */
+        APIResponse_list_FactorDescriptorResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["FactorDescriptorResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[list[FillAdjustmentResponse]] */
         APIResponse_list_FillAdjustmentResponse__: {
             /**
@@ -2758,6 +3270,16 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[list[NodeDescriptorResponse]] */
+        APIResponse_list_NodeDescriptorResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["NodeDescriptorResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[list[PositionSnapshotResponse]] */
         APIResponse_list_PositionSnapshotResponse__: {
             /**
@@ -2785,6 +3307,16 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["StrategyResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[StrategyVersionResponse]] */
+        APIResponse_list_StrategyVersionResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["StrategyVersionResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -6283,6 +6815,297 @@ export interface components {
             amount: number;
         };
         /**
+         * ExperimentCandidateResponse
+         * @description API view of one immutable experiment candidate.
+         */
+        ExperimentCandidateResponse: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Ordinal */
+            ordinal: number;
+            /** Is Baseline */
+            is_baseline: boolean;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * ExperimentControlReceiptResponse
+         * @description API view of one durable control receipt (CAS post-state).
+         */
+        ExperimentControlReceiptResponse: {
+            /** Experiment Id */
+            experiment_id: string;
+            /** Status */
+            status: string;
+            /** Desired State */
+            desired_state: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Live Run Ids */
+            live_run_ids: string[];
+        };
+        /**
+         * ExperimentControlRequest
+         * @description Body for one revision-fenced experiment control action (pause/cancel/resume).
+         */
+        ExperimentControlRequest: {
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /**
+         * ExperimentDetailResponse
+         * @description API view of one durable experiment's current server truth.
+         */
+        ExperimentDetailResponse: {
+            /** Experiment Id */
+            experiment_id: string;
+            /** Research Cycle Id */
+            research_cycle_id: string;
+            /** Research Cycle Hash */
+            research_cycle_hash: string;
+            /** Strategy Version */
+            strategy_version: string;
+            /** Strategy Spec Hash */
+            strategy_spec_hash: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Status */
+            status: string;
+            /** Desired State */
+            desired_state: string;
+            /** Stage */
+            stage: string;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Queue Ordinal */
+            queue_ordinal: number | null;
+            /** Revision */
+            revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Seed */
+            seed: number;
+            /** Worker Count */
+            worker_count: number;
+            /** Failure Policy */
+            failure_policy: string;
+            /** Candidate Limit */
+            candidate_limit: number;
+            /** Fold Run Limit */
+            fold_run_limit: number;
+            /** Fold Protocol Id */
+            fold_protocol_id: string;
+            /** Fold Protocol Version */
+            fold_protocol_version: number;
+            /** Fold Protocol Hash */
+            fold_protocol_hash: string;
+            /** Candidate Count */
+            candidate_count: number;
+            /** Fold Count */
+            fold_count: number;
+            /** Candidates */
+            candidates: components["schemas"]["ExperimentCandidateResponse"][];
+            /** Folds */
+            folds: components["schemas"]["ExperimentFoldResponse"][];
+        };
+        /**
+         * ExperimentFoldResponse
+         * @description API view of one persisted fold specification and projection.
+         */
+        ExperimentFoldResponse: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Ordinal */
+            ordinal: number;
+            /** Role */
+            role: string;
+            /** Status */
+            status: string;
+            /** Train Start */
+            train_start: string | null;
+            /** Train End */
+            train_end: string | null;
+            /**
+             * Test Start
+             * Format: date
+             */
+            test_start: string;
+            /**
+             * Test End
+             * Format: date
+             */
+            test_end: string;
+            /** Purge Sessions */
+            purge_sessions: number;
+            /** Embargo Sessions */
+            embargo_sessions: number;
+            /** Claim Owner Token */
+            claim_owner_token: string | null;
+            /** Revision */
+            revision: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ExperimentGateResponse
+         * @description API view of one append-only gate evaluation.
+         */
+        ExperimentGateResponse: {
+            /** Evaluation Id */
+            evaluation_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Candidate Id */
+            candidate_id: string | null;
+            /** Fold Id */
+            fold_id: string | null;
+            /** Attempt Id */
+            attempt_id: string | null;
+            /** Rule Id */
+            rule_id: string;
+            /** Policy Version */
+            policy_version: string;
+            /** Layer */
+            layer: string;
+            /** Outcome */
+            outcome: string;
+            /** Observed */
+            observed: unknown;
+            /** Policy */
+            policy: unknown;
+            /** Artifact Id */
+            artifact_id: string | null;
+            /** Payload Hash */
+            payload_hash: string;
+            /**
+             * Evaluated At
+             * Format: date-time
+             */
+            evaluated_at: string;
+        };
+        /**
+         * ExperimentRetryFoldRequest
+         * @description Body for one revision-fenced terminal fold retry.
+         *
+         *     expected_revision is the fold projection revision (not experiment revision).
+         */
+        ExperimentRetryFoldRequest: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /**
+         * ExperimentReviewPacketResponse
+         * @description API view of one immutable promotion review packet.
+         */
+        ExperimentReviewPacketResponse: {
+            /** Experiment Id */
+            experiment_id: string;
+            /** Candidate Id */
+            candidate_id: string | null;
+            /** Bundle Hash */
+            bundle_hash: string;
+            /** Hard Review Blocked */
+            hard_review_blocked: boolean;
+            /** Gate Outcomes */
+            gate_outcomes: components["schemas"]["ReviewGateOutcomeResponse"][];
+            /** Schema Version */
+            schema_version: number;
+            /** Fold Ids */
+            fold_ids: string[];
+            /** Attempt Ids */
+            attempt_ids: string[];
+            /** Spec Hash */
+            spec_hash: string;
+            /** Resolved Spec Hash */
+            resolved_spec_hash: string;
+            /** Parameter Hash */
+            parameter_hash: string;
+            /** Snapshot Hash */
+            snapshot_hash: string;
+            /** Registry Hash */
+            registry_hash: string;
+            /** Objective Payload Hash */
+            objective_payload_hash: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string | null;
+            /** R1 Impact Payload Hash */
+            r1_impact_payload_hash: string | null;
+            /** Selection Evidence Artifact Id */
+            selection_evidence_artifact_id: string | null;
+            /** Holdout Claim Id */
+            holdout_claim_id: string | null;
+            /** Candidate Rationale */
+            candidate_rationale: string;
+            /** Selection Trace Artifact Refs */
+            selection_trace_artifact_refs: components["schemas"]["ReviewSelectionTraceRefResponse"][];
+        };
+        /**
+         * ExperimentSummaryResponse
+         * @description API view of one experiment root in list views (no candidate/fold expansion).
+         */
+        ExperimentSummaryResponse: {
+            /** Experiment Id */
+            experiment_id: string;
+            /** Status */
+            status: string;
+            /** Desired State */
+            desired_state: string;
+            /** Stage */
+            stage: string;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Queue Ordinal */
+            queue_ordinal: number | null;
+            /** Revision */
+            revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * FactorDescriptorResponse
+         * @description API view of one governed core-factor descriptor.
+         */
+        FactorDescriptorResponse: {
+            /** Factor Id */
+            factor_id: string;
+            /** Resolved Payload */
+            resolved_payload: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * FillAdjustmentResponse
          * @description 不可变成交修正事件响应。
          */
@@ -6520,6 +7343,22 @@ export interface components {
              * @default 1000
              */
             limit: number;
+        };
+        /**
+         * GovernanceDecisionRequest
+         * @description Shared actor + reason body for one governance state-machine decision.
+         */
+        GovernanceDecisionRequest: {
+            /**
+             * Actor
+             * @description 决策执行者
+             */
+            actor: string;
+            /**
+             * Reason
+             * @description 决策原因
+             */
+            reason: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -7254,6 +8093,36 @@ export interface components {
              */
             nav: number;
         };
+        /**
+         * NodeDescriptorResponse
+         * @description API view of one immutable strategy pipeline node descriptor.
+         */
+        NodeDescriptorResponse: {
+            /** Node Type */
+            node_type: string;
+            /** Version */
+            version: string;
+            /** Category */
+            category: string;
+            /** Display Name */
+            display_name: string;
+            /** Implementation Key */
+            implementation_key: string;
+            /** Config Schema */
+            config_schema: {
+                [key: string]: string;
+            };
+            /** Default Config */
+            default_config: {
+                [key: string]: unknown;
+            };
+            /** Required Datasets */
+            required_datasets: string[];
+            /** Capability Tags */
+            capability_tags: string[];
+            /** Deterministic */
+            deterministic: boolean;
+        };
         NonBlankStr: string;
         /**
          * PaginationResponse
@@ -7704,15 +8573,41 @@ export interface components {
             count: number;
         };
         /**
-         * PublishStrategyRequest
-         * @description 发布策略请求.
+         * PublishStrategyVersionRequest
+         * @description Body for one evidence-gated strategy version publish.
          */
-        PublishStrategyRequest: {
+        PublishStrategyVersionRequest: {
+            /** Bundle Hash */
+            bundle_hash: string;
+            /** Actor */
+            actor: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * ReactivateStrategyRequest
+         * @description Reactivate one published version with an optimistic pointer CAS guard.
+         */
+        ReactivateStrategyRequest: {
             /**
-             * Version
-             * @description 版本号
+             * Actor
+             * @description 决策执行者
              */
-            version: number;
+            actor: string;
+            /** @description 重新激活原因 */
+            reason: components["schemas"]["NonBlankStr"];
+            /**
+             * Confirmation
+             * @description 与目标版本及 pointer revision 精确绑定的确认语句
+             */
+            confirmation: string;
+            /** @description 当前版本切换到目标版本的影响摘要 */
+            impact_summary: components["schemas"]["NonBlankStr"];
+            /**
+             * Expected Pointer Revision
+             * @description 最后读到的 active pointer revision (optimistic CAS)
+             */
+            expected_pointer_revision: number;
         };
         /**
          * RecordFillRequest
@@ -8008,6 +8903,30 @@ export interface components {
             status: string;
         };
         /**
+         * ReviewGateOutcomeResponse
+         * @description API view of one gate rule's identity and outcome in a review packet.
+         */
+        ReviewGateOutcomeResponse: {
+            /** Rule Id */
+            rule_id: string;
+            /** Layer */
+            layer: string;
+            /** Outcome */
+            outcome: string;
+        };
+        /**
+         * ReviewSelectionTraceRefResponse
+         * @description API view of one verified selection-trace artifact reference.
+         */
+        ReviewSelectionTraceRefResponse: {
+            /** Artifact Kind */
+            artifact_kind: string;
+            /** Artifact Id */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+        };
+        /**
          * RunResponse
          * @description 运行记录响应.
          */
@@ -8166,6 +9085,31 @@ export interface components {
             query_time_ms: number;
         };
         /**
+         * StrategyActivePointerResponse
+         * @description Active pointer returned after a reactivate decision.
+         */
+        StrategyActivePointerResponse: {
+            /** Strategy Id */
+            strategy_id: string;
+            /** Active Version */
+            active_version: number;
+            /** Pointer Revision */
+            pointer_revision: number;
+        };
+        /**
+         * StrategyActiveResponse
+         * @description Active pointer joined with its published payload (get-active view).
+         */
+        StrategyActiveResponse: {
+            /** Strategy Id */
+            strategy_id: string;
+            /** Active Version */
+            active_version: number;
+            /** Pointer Revision */
+            pointer_revision: number;
+            spec: components["schemas"]["StrategyResponse"];
+        };
+        /**
          * StrategyResponse
          * @description 策略响应.
          */
@@ -8188,15 +9132,44 @@ export interface components {
              */
             created_at: string;
             /**
-             * Updated At
-             * @default
-             */
-            updated_at: string;
-            /**
              * Tags
              * @default []
              */
             tags: string[];
+        };
+        /**
+         * StrategyVersionResponse
+         * @description One immutable governance version (list-versions view, no payload bytes).
+         */
+        StrategyVersionResponse: {
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+            /** Parent Version */
+            parent_version: number | null;
+            /** Spec Hash */
+            spec_hash: string;
+            /** State */
+            state: string;
+            /** Review Outcome */
+            review_outcome: string;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * StrategyVersionStateResponse
+         * @description Lifecycle projection returned after one governance state-machine decision.
+         */
+        StrategyVersionStateResponse: {
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+            /** State */
+            state: string;
+            /** Review Outcome */
+            review_outcome: string;
         };
         /**
          * TradeIntentResponse
@@ -10725,6 +11698,350 @@ export interface operations {
             };
         };
     };
+    research_list_research_experiments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ExperimentSummaryResponse__"];
+                };
+            };
+        };
+    };
+    research_get_experiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentDetailResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_experiment_candidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ExperimentCandidateResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_experiment_gates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ExperimentGateResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_get_research_experiment_review_packet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentReviewPacketResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_pause_experiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_cancel_experiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_resume_experiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_retry_fold_experiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentRetryFoldRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_research_node_descriptors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_NodeDescriptorResponse__"];
+                };
+            };
+        };
+    };
+    research_list_research_factors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_FactorDescriptorResponse__"];
+                };
+            };
+        };
+    };
+    research_list_research_reviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_StrategyVersionResponse__"];
+                };
+            };
+        };
+    };
     source_get_source_data: {
         parameters: {
             query: {
@@ -10899,7 +12216,7 @@ export interface operations {
             };
         };
     };
-    strategies_publish_strategy: {
+    strategies_list_strategy_versions: {
         parameters: {
             query?: never;
             header?: never;
@@ -10908,9 +12225,72 @@ export interface operations {
             };
             cookie?: never;
         };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_StrategyVersionResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_get_active_strategy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyActiveResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_submit_strategy_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PublishStrategyRequest"];
+                "application/json": components["schemas"]["GovernanceDecisionRequest"];
             };
         };
         responses: {
@@ -10920,7 +12300,187 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_bool_"];
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_approve_strategy_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GovernanceDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_reject_strategy_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GovernanceDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_deprecate_strategy_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GovernanceDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_reactivate_strategy_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateStrategyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyActivePointerResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_publish_strategy_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishStrategyVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyActivePointerResponse_"];
                 };
             };
             /** @description Validation Error */
