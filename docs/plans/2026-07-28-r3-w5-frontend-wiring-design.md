@@ -41,7 +41,8 @@
 - **解法**：加 `GET /research/reviews` 聚合端点——跨 strategy 收集 `state=review` 的版本作为 review queue 数据源（application query facade 读 governance store，返回 `StrategyVersionStateInfo` 列表）。**不加 POST 集合**（保留 nested action 模型）。前端 review queue = 此聚合的派生 view。
 
 **错配 2：review-detail 的 11-hard-gate 明细无 read 端点。** `StrategyVersionResponse` 只返回 scalar `review_outcome`，不含 gate 明细/statistical evidence/lineage。
-- **解法**：加 `GET /strategies/{id}/versions/{v}/review-packet`——读已持久化的 ReviewPacket（Task 14 + closure 已落库的 11-hard-gate 明细 + comparison + statistical evidence + lineage + R1 impact），返回 `ReviewPacketReadModel`。前端 review-detail 渲染此 read model。
+- **解法（2026-07-28 修订：experiment 键）**：加 `GET /research/experiments/{id}/review-packet`——读已持久化的 ReviewPacket。**键修订**：ReviewPacket 按 experiment 持久化（`packet.lineage.experiment_id`），不按 strategy/version——用 experiment 键匹配持久化、避免 version→launch→packet 反向查找；review queue（错配 1 端点）每条携带 `experiment_id` + `strategy_id/version`（从 packet launch binding lineage），前端 review-queue → experiment → review-packet 自然导航。
+- **read model 扩展**：`ExperimentReviewPacketReadModel` 当前只有 `gate_outcomes`（rule_id/layer/outcome），需扩展 `build_review_packet_read_model` 暴露 statistical evidence（metric_values / comparison_payload_hash）、lineage（spec/snapshot/registry hashes）、R1 impact 字段，满足决策 4「完整 ReviewPacket」。前端 review-detail 渲染此 read model。
 
 两个端点都是 application query facade + thin route（apps route 只解析 DTO 调 facade，不触 store），每个 1-2 commit。
 
@@ -86,7 +87,7 @@
 
 ## 5. Task 20 Review / Publish / Reactivate
 
-**后端依赖**：Task 0 的 2 端点（`GET /research/reviews` 聚合 + `GET /strategies/{id}/versions/{v}/review-packet`）+ 已有 governance mutations（submit-review/approve/reject/deprecate/reactivate/publish）。
+**后端依赖**：Task 0 的 2 端点（`GET /research/reviews` 聚合 + `GET /research/experiments/{id}/review-packet`）+ 已有 governance mutations（submit-review/approve/reject/deprecate/reactivate/publish）。
 
 **前端接线**：
 - 路由：`/research/reviews/index.tsx`（queue，`GET /research/reviews`）+ `/$id`（detail）。
@@ -116,7 +117,7 @@
 | Task | 端点 | 已有实现 | 缺口 |
 |------|------|---------|------|
 | T0 | `GET /research/reviews`（跨 strategy 聚合 submitted） | governance store 有数据 | route + query facade |
-| T0 | `GET /strategies/{id}/versions/{v}/review-packet` | ReviewPacket 已持久化 | route + read model facade |
+| T0 | `GET /research/experiments/{id}/review-packet` | ReviewPacket 已持久化（experiment 键） | route + read model 扩展（statistical evidence/lineage/R1 impact） |
 | T18 | `GET /strategies/{id}/versions/{v}/diff` | — | route + diff facade |
 | T18 | `POST /strategies/{id}/versions/{v}/validate` | canonical hash 已有 | route + validate facade |
 | T19 | `POST /research/experiments`（create） | `LaunchExperimentHandler` | route wiring |
