@@ -46,6 +46,8 @@
 
 两个端点都是 application query facade + thin route（apps route 只解析 DTO 调 facade，不触 store），每个 1-2 commit。
 
+> **✅ ditto 后端 Task 0 完成**（2026-07-28，commit `4fe17d44` + `be3bca26`，分支 `docs/r3-research-governance-design`）。实际落地决策：review queue 走 **governance MVP**——`GET /research/reviews` 返回跨 strategy `state=REVIEW` 的 `StrategyVersion` 列表（复用 `StrategyVersionResponse` DTO，**不带 experiment_id**：governance 层不持有 experiment identity，跨域 spec_hash 桥接推迟到 T20 前端接线时补，修正上文「每条携带 experiment_id」的初步设想）。`GET /research/experiments/{id}/review-packet` 按 experiment 键读 packet（reader `get_review_packet_for_experiment` 复用 `_load_verified_review_packet` helper），`ExperimentReviewPacketReadModel` 扩展为完整 ReviewPacket（11 gate 明细 + 6 reproduction hashes + comparison/r1 payload hashes + lineage fold/attempt ids + candidate_rationale + selection_trace_artifact_refs）。`pixi check` 全绿（arch 37 contracts + basedpyright 0 + ruff + 11675 test passed）。**下一步 §2.2 ditto-app baseline**（建 `feat/r3-research-wiring` 分支 + gen:api + 路由骨架）。
+
 ### 2.2 ditto-app baseline
 - 建分支 `feat/r3-research-wiring`（从 main）。
 - 起后端（注意：server 启动需 env，Wave 1 教训——`wave1_env.sh` 漏 `TUSHARE_TOKEN` 导致 granarian worker 崩；R3 acceptance env 要补齐），跑 `bun run gen:api` 对 `http://localhost:8000/openapi.json`，验证 research/strategy-governance schema 出现，commit baseline `api.d.ts`。
