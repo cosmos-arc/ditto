@@ -34,7 +34,10 @@ from ditto_application.queries.experiments import (
     ExperimentFoldReadModel,
     ExperimentGateReadModel,
     ExperimentQueryFacade,
+    ExperimentReviewPacketReadModel,
     ExperimentSummaryReadModel,
+    ReviewGateOutcome,
+    ReviewSelectionTraceRef,
 )
 from fastapi import APIRouter
 
@@ -48,7 +51,10 @@ from ditto_apps.models.research import (
     ExperimentFoldResponse,
     ExperimentGateResponse,
     ExperimentRetryFoldRequest,
+    ExperimentReviewPacketResponse,
     ExperimentSummaryResponse,
+    ReviewGateOutcomeResponse,
+    ReviewSelectionTraceRefResponse,
 )
 
 router = APIRouter(prefix="/research/experiments", tags=["research"])
@@ -249,6 +255,81 @@ async def list_experiment_gates(
     """列出实验的门禁评估."""
     gates = await run_blocking(facade.list_gate_evaluations, experiment_id)
     return APIResponse(data=[to_gate_response(gate) for gate in gates])
+
+
+def to_review_gate_outcome_response(
+    outcome: ReviewGateOutcome,
+) -> ReviewGateOutcomeResponse:
+    """将 ReviewGateOutcome 转 API 响应."""
+    return ReviewGateOutcomeResponse(
+        rule_id=outcome.rule_id,
+        layer=outcome.layer,
+        outcome=outcome.outcome,
+    )
+
+
+def to_selection_trace_ref_response(
+    ref: ReviewSelectionTraceRef,
+) -> ReviewSelectionTraceRefResponse:
+    """将 ReviewSelectionTraceRef 转 API 响应."""
+    return ReviewSelectionTraceRefResponse(
+        artifact_kind=ref.artifact_kind,
+        artifact_id=ref.artifact_id,
+        content_hash=ref.content_hash,
+    )
+
+
+def to_review_packet_response(
+    packet: ExperimentReviewPacketReadModel,
+) -> ExperimentReviewPacketResponse:
+    """将 ExperimentReviewPacketReadModel 转 API 响应（完整 review surface）."""
+    return ExperimentReviewPacketResponse(
+        experiment_id=packet.experiment_id,
+        candidate_id=packet.candidate_id,
+        bundle_hash=packet.bundle_hash,
+        hard_review_blocked=packet.hard_review_blocked,
+        gate_outcomes=[
+            to_review_gate_outcome_response(outcome) for outcome in packet.gate_outcomes
+        ],
+        schema_version=packet.schema_version,
+        fold_ids=list(packet.fold_ids),
+        attempt_ids=list(packet.attempt_ids),
+        spec_hash=packet.spec_hash,
+        resolved_spec_hash=packet.resolved_spec_hash,
+        parameter_hash=packet.parameter_hash,
+        snapshot_hash=packet.snapshot_hash,
+        registry_hash=packet.registry_hash,
+        objective_payload_hash=packet.objective_payload_hash,
+        comparison_payload_hash=packet.comparison_payload_hash,
+        r1_impact_payload_hash=packet.r1_impact_payload_hash,
+        selection_evidence_artifact_id=packet.selection_evidence_artifact_id,
+        holdout_claim_id=packet.holdout_claim_id,
+        candidate_rationale=packet.candidate_rationale,
+        selection_trace_artifact_refs=[
+            to_selection_trace_ref_response(ref)
+            for ref in packet.selection_trace_artifact_refs
+        ],
+    )
+
+
+@router.get(
+    "/{experiment_id}/review-packet",
+    response_model=APIResponse[ExperimentReviewPacketResponse],
+)
+@inject
+async def get_research_experiment_review_packet(
+    experiment_id: str,
+    facade: Annotated[ExperimentQueryFacade, FromComponent()],
+) -> APIResponse[ExperimentReviewPacketResponse]:
+    """
+    获取实验的 review packet（完整 hard gate + statistical evidence + lineage）.
+
+    Maturity: experimental — R3 research control-plane surface.
+    """
+    packet = await run_blocking(facade.get_review_packet, experiment_id)
+    if packet is None:
+        raise NotFoundError(f"Review packet not found for experiment: {experiment_id}")
+    return APIResponse(data=to_review_packet_response(packet))
 
 
 _CONTROL_NOT_FOUND_REASONS = frozenset({"experiment_not_found"})

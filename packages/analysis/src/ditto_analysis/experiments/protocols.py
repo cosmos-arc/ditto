@@ -100,6 +100,10 @@ class ExperimentReaderProtocol(Protocol):
 
     def get_review_packet(self, bundle_hash: str) -> ReviewPacket | None: ...
 
+    def get_review_packet_for_experiment(
+        self, experiment_id: ExperimentId
+    ) -> ReviewPacket | None: ...
+
     def get_gate_evaluation(
         self, evaluation_id: str
     ) -> GateEvaluationRecord | None: ...

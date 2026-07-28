@@ -15,9 +15,12 @@ __all__ = [
     "ExperimentFoldResponse",
     "ExperimentGateResponse",
     "ExperimentRetryFoldRequest",
+    "ExperimentReviewPacketResponse",
     "ExperimentSummaryResponse",
     "FactorDescriptorResponse",
     "NodeDescriptorResponse",
+    "ReviewGateOutcomeResponse",
+    "ReviewSelectionTraceRefResponse",
 ]
 
 
@@ -105,6 +108,53 @@ class ExperimentGateResponse(BaseModel):
     artifact_id: str | None
     payload_hash: str
     evaluated_at: datetime
+
+
+class ReviewGateOutcomeResponse(BaseModel):
+    """API view of one gate rule's identity and outcome in a review packet."""
+
+    model_config = ConfigDict(frozen=True)
+
+    rule_id: str
+    layer: str
+    outcome: str
+
+
+class ReviewSelectionTraceRefResponse(BaseModel):
+    """API view of one verified selection-trace artifact reference."""
+
+    model_config = ConfigDict(frozen=True)
+
+    artifact_kind: str
+    artifact_id: str
+    content_hash: str
+
+
+class ExperimentReviewPacketResponse(BaseModel):
+    """API view of one immutable promotion review packet."""
+
+    model_config = ConfigDict(frozen=True)
+
+    experiment_id: str
+    candidate_id: str | None
+    bundle_hash: str
+    hard_review_blocked: bool
+    gate_outcomes: list[ReviewGateOutcomeResponse]
+    schema_version: int
+    fold_ids: list[str]
+    attempt_ids: list[str]
+    spec_hash: str
+    resolved_spec_hash: str
+    parameter_hash: str
+    snapshot_hash: str
+    registry_hash: str
+    objective_payload_hash: str
+    comparison_payload_hash: str | None
+    r1_impact_payload_hash: str | None
+    selection_evidence_artifact_id: str | None
+    holdout_claim_id: str | None
+    candidate_rationale: str
+    selection_trace_artifact_refs: list[ReviewSelectionTraceRefResponse]
 
 
 class ExperimentSummaryResponse(BaseModel):

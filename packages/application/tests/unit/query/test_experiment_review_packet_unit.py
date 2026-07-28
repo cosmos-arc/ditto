@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from ditto_analysis.experiments import (
     REVIEW_PACKET_SCHEMA_VERSION,
     ContentHash,
@@ -10,10 +12,12 @@ from ditto_analysis.experiments import (
     GateOutcome,
     ReviewPacket,
     ReviewPacketLineage,
+    SelectionTraceArtifactRef,
 )
 from ditto_application.queries.experiments import (
     ExperimentReviewPacketReadModel,
     ReviewGateOutcome,
+    ReviewSelectionTraceRef,
     build_review_packet_read_model,
 )
 
@@ -118,4 +122,56 @@ def test_read_model_exposes_every_gate_outcome() -> None:
             layer="evidence",
             outcome="not_evaluated",
         ),
+    )
+
+
+def test_read_model_exposes_reproduction_hashes_and_lineage() -> None:
+    read_model = build_review_packet_read_model(_packet())
+
+    assert read_model.schema_version == REVIEW_PACKET_SCHEMA_VERSION
+    assert read_model.spec_hash == "a" * 64
+    assert read_model.resolved_spec_hash == "b" * 64
+    assert read_model.parameter_hash == "c" * 64
+    assert read_model.snapshot_hash == "d" * 64
+    assert read_model.registry_hash == "e" * 64
+    assert read_model.objective_payload_hash == "f" * 64
+    assert read_model.fold_ids == ("fold-1",)
+    assert read_model.attempt_ids == ("attempt-1",)
+
+
+def test_read_model_exposes_evidence_and_rationale() -> None:
+    read_model = build_review_packet_read_model(_packet())
+
+    assert read_model.comparison_payload_hash == "9" * 64
+    assert read_model.r1_impact_payload_hash is None
+    assert read_model.selection_evidence_artifact_id == "artifact-1"
+    assert read_model.holdout_claim_id == "claim-1"
+    assert read_model.candidate_rationale == "Captures durable net return after costs."
+
+
+def test_read_model_exposes_selection_trace_refs() -> None:
+    kinds = (
+        "fold_selection_trace_candidate_universe_v1",
+        "fold_selection_trace_candidate_exclusions_v1",
+        "fold_selection_trace_candidate_selections_v1",
+        "fold_selection_trace_factor_contributions_v1",
+    )
+    refs = tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=kind,
+            artifact_id=f"trace-{index}",
+            content_hash=ContentHash("1" * 64),
+        )
+        for index, kind in enumerate(kinds)
+    )
+    packet = replace(_packet(), selection_trace_artifact_refs=refs)
+    read_model = build_review_packet_read_model(packet)
+
+    assert read_model.selection_trace_artifact_refs == tuple(
+        ReviewSelectionTraceRef(
+            artifact_kind=kind,
+            artifact_id=f"trace-{index}",
+            content_hash="1" * 64,
+        )
+        for index, kind in enumerate(kinds)
     )

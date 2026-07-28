@@ -639,14 +639,53 @@ class SQLiteExperimentReader:
         )
         if row is None:
             return None
-        target = self._database.artifact_root / Path(str(row["relative_path"]))
+        return self._load_verified_review_packet(
+            str(row["artifact_id"]),
+            str(row["relative_path"]),
+            bundle_hash,
+        )
+
+    def get_review_packet_for_experiment(
+        self, experiment_id: ExperimentId
+    ) -> ReviewPacket | None:
+        """
+        Load one experiment's review packet by its lineage identity.
+
+        Each experiment owns at most one review packet (fixed canonical path);
+        the defensive ``ORDER BY ... LIMIT 1`` keeps this robust if that
+        invariant ever relaxes. Bytes are re-read and the bundle hash is
+        verified against the indexed reproduction fingerprint.
+        """
+        row = self._one(
+            """
+            SELECT artifact_id, relative_path, reproduction_fingerprint
+            FROM research_artifact
+            WHERE experiment_id=? AND artifact_kind='review_packet'
+            ORDER BY created_at_epoch_us DESC
+            LIMIT 1
+            """,
+            (str(experiment_id),),
+        )
+        if row is None:
+            return None
+        return self._load_verified_review_packet(
+            str(row["artifact_id"]),
+            str(row["relative_path"]),
+            str(row["reproduction_fingerprint"]),
+        )
+
+    def _load_verified_review_packet(
+        self, artifact_id: str, relative_path: str, expected_hash: str
+    ) -> ReviewPacket:
+        """Read one review packet payload and verify its bundle hash identity."""
+        target = self._database.artifact_root / Path(relative_path)
         payload = _json_object(target.read_text(encoding="utf-8"), "review_packet")
         verified = review_packet_from_payload(payload)
-        if str(verified.bundle_hash) != bundle_hash:
+        if str(verified.bundle_hash) != expected_hash:
             raise _integrity(
                 "review packet bundle hash disagrees with its indexed identity",
                 "review_packet_bundle_hash_mismatch",
-                artifact_id=str(row["artifact_id"]),
+                artifact_id=artifact_id,
             )
         return verified
 

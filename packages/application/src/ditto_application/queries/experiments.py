@@ -11,6 +11,7 @@ from typing import cast
 from ditto_analysis.errors import AnalysisError, ExperimentIdentityError
 from ditto_analysis.experiments import (
     CandidateId,
+    ContentHash,
     ExperimentId,
     ExperimentProjection,
     ExperimentReaderProtocol,
@@ -32,6 +33,7 @@ __all__ = [
     "ExperimentReviewPacketReadModel",
     "ExperimentSummaryReadModel",
     "ReviewGateOutcome",
+    "ReviewSelectionTraceRef",
     "build_review_packet_read_model",
 ]
 
@@ -219,6 +221,15 @@ class ReviewGateOutcome:
 
 
 @dataclass(frozen=True, slots=True)
+class ReviewSelectionTraceRef:
+    """One verified positive selection-trace artifact reference in a packet."""
+
+    artifact_kind: str
+    artifact_id: str
+    content_hash: str
+
+
+@dataclass(frozen=True, slots=True)
 class ExperimentReviewPacketReadModel:
     """Application view of one immutable promotion review packet."""
 
@@ -227,6 +238,21 @@ class ExperimentReviewPacketReadModel:
     bundle_hash: str
     hard_review_blocked: bool
     gate_outcomes: tuple[ReviewGateOutcome, ...]
+    schema_version: int
+    fold_ids: tuple[str, ...]
+    attempt_ids: tuple[str, ...]
+    spec_hash: str
+    resolved_spec_hash: str
+    parameter_hash: str
+    snapshot_hash: str
+    registry_hash: str
+    objective_payload_hash: str
+    comparison_payload_hash: str | None
+    r1_impact_payload_hash: str | None
+    selection_evidence_artifact_id: str | None
+    holdout_claim_id: str | None
+    candidate_rationale: str
+    selection_trace_artifact_refs: tuple[ReviewSelectionTraceRef, ...]
 
 
 def build_review_packet_read_model(
@@ -246,7 +272,34 @@ def build_review_packet_read_model(
             )
             for evaluation in packet.gate_evaluations
         ),
+        schema_version=packet.schema_version,
+        fold_ids=packet.lineage.fold_ids,
+        attempt_ids=packet.lineage.attempt_ids,
+        spec_hash=str(packet.spec_hash),
+        resolved_spec_hash=str(packet.resolved_spec_hash),
+        parameter_hash=str(packet.parameter_hash),
+        snapshot_hash=str(packet.snapshot_hash),
+        registry_hash=str(packet.registry_hash),
+        objective_payload_hash=str(packet.objective_payload_hash),
+        comparison_payload_hash=_optional_hash(packet.comparison_payload_hash),
+        r1_impact_payload_hash=_optional_hash(packet.r1_impact_payload_hash),
+        selection_evidence_artifact_id=packet.selection_evidence_artifact_id,
+        holdout_claim_id=packet.holdout_claim_id,
+        candidate_rationale=packet.candidate_rationale,
+        selection_trace_artifact_refs=tuple(
+            ReviewSelectionTraceRef(
+                artifact_kind=ref.artifact_kind,
+                artifact_id=ref.artifact_id,
+                content_hash=str(ref.content_hash),
+            )
+            for ref in packet.selection_trace_artifact_refs
+        ),
     )
+
+
+def _optional_hash(value: ContentHash | None) -> str | None:
+    """Render one optional content hash as a string, preserving ``None``."""
+    return None if value is None else str(value)
 
 
 class ExperimentQueryFacade:
@@ -467,6 +520,25 @@ class ExperimentQueryFacade:
         typed_id = self._experiment_id(experiment_id)
         records = _analysis_read(lambda: self._reader.list_gate_evaluations(typed_id))
         return tuple(self._gate_model(record) for record in records)
+
+    def get_review_packet(
+        self, experiment_id: str
+    ) -> ExperimentReviewPacketReadModel | None:
+        """
+        Return one experiment's promotion review packet read model, or None.
+
+        Loads the content-addressed packet by experiment lineage identity and
+        projects the full review surface (hard gates, statistical evidence,
+        reproduction hashes, selection-trace refs and rationale) for the
+        review-detail view.
+        """
+        typed_id = self._experiment_id(experiment_id)
+        packet = _analysis_read(
+            lambda: self._reader.get_review_packet_for_experiment(typed_id)
+        )
+        if packet is None:
+            return None
+        return build_review_packet_read_model(packet)
 
     @staticmethod
     def _experiment_id(value: str) -> ExperimentId:

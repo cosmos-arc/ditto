@@ -2783,6 +2783,34 @@ def test_publish_review_packet_round_trips_through_bundle_hash(
     assert reader.get_review_packet("0" * 64) is None
 
 
+def test_get_review_packet_for_experiment_round_trips_by_lineage(
+    tmp_path: Path,
+) -> None:
+    """ReviewPacket reloads via experiment_id lineage identity."""
+    from ditto_analysis.experiments.persistence import LeaseFence
+
+    _, reader, writer, _api = _store(tmp_path)
+    _create_experiment(writer, _api)
+    packet = _review_packet()
+    fence = LeaseFence(
+        experiment_id=ExperimentId("experiment-1"),
+        owner_token="promotion-owner",
+        revision=0,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    writer.publish_review_packet(
+        packet,
+        lease_fence=fence,
+        now_epoch_us=NOW_US + 1,
+        created_at=NOW,
+    )
+
+    restored = reader.get_review_packet_for_experiment(ExperimentId("experiment-1"))
+    assert restored is not None
+    assert restored == packet
+    assert reader.get_review_packet_for_experiment(ExperimentId("missing")) is None
+
+
 def test_publish_review_packet_does_not_require_active_lease(tmp_path: Path) -> None:
     """ReviewPacket is a post-execution governance artifact; lease is exempt."""
     from ditto_analysis.experiments.persistence import LeaseFence
