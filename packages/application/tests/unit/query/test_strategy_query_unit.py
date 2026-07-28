@@ -107,14 +107,21 @@ class TestStrategyQueryFacadeGetSpec:
         service.get_spec.assert_called_once_with("s-1", 3)
 
 
-def _make_version(version: int = 1, parent: int | None = None) -> StrategyVersion:
+def _make_version(
+    version: int = 1,
+    parent: int | None = None,
+    *,
+    strategy_id: str = "s-1",
+    spec_hash: str = "a" * 64,
+    created_at: str = "2026-07-25T00:00:00Z",
+) -> StrategyVersion:
     return StrategyVersion(
-        strategy_id="s-1",
+        strategy_id=strategy_id,
         version=version,
         parent_version=parent,
         schema_version=1,
-        spec_hash="a" * 64,
-        created_at="2026-07-25T00:00:00Z",
+        spec_hash=spec_hash,
+        created_at=created_at,
     )
 
 
@@ -185,6 +192,67 @@ class TestStrategyQueryFacadeListVersions:
         facade = StrategyQueryFacade(MagicMock(spec=["list_specs", "get_spec"]))
 
         assert facade.list_versions("s-1") == []
+
+
+class TestStrategyQueryFacadeListReviews:
+    """list_reviews aggregates state=REVIEW versions across strategies."""
+
+    def test_returns_review_versions_from_governance(self) -> None:
+        governance_reader = MagicMock(
+            spec=["list_versions", "list_versions_by_state", "get_active_pointer"]
+        )
+        state_reader = MagicMock(spec=["get_state"])
+        governance_reader.list_versions_by_state.return_value = (
+            _make_version(2, parent=1),
+        )
+        state_reader.get_state.return_value = _make_state(
+            2, state=StrategyVersionState.REVIEW, review=ReviewOutcome.PENDING
+        )
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            version_state_reader=state_reader,
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.list_reviews()
+
+        assert result == [
+            StrategyVersionInfo(
+                strategy_id="s-1",
+                version=2,
+                parent_version=1,
+                spec_hash="a" * 64,
+                state="review",
+                review_outcome="pending",
+                created_at="2026-07-25T00:00:00Z",
+            )
+        ]
+        governance_reader.list_versions_by_state.assert_called_once_with(
+            StrategyVersionState.REVIEW
+        )
+        state_reader.get_state.assert_called_once_with("s-1", 2)
+
+    def test_skips_versions_without_state_projection(self) -> None:
+        governance_reader = MagicMock(
+            spec=["list_versions", "list_versions_by_state", "get_active_pointer"]
+        )
+        state_reader = MagicMock(spec=["get_state"])
+        governance_reader.list_versions_by_state.return_value = (
+            _make_version(2, parent=1),
+        )
+        state_reader.get_state.return_value = None
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            version_state_reader=state_reader,
+            governance_version_reader=governance_reader,
+        )
+
+        assert facade.list_reviews() == []
+
+    def test_returns_empty_without_governance_reader(self) -> None:
+        facade = StrategyQueryFacade(MagicMock(spec=["list_specs", "get_spec"]))
+
+        assert facade.list_reviews() == []
 
 
 class TestStrategyQueryFacadeGetActive:

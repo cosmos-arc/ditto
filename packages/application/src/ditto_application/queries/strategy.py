@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from ditto_strategy.contracts import StrategyCatalogReader
+from ditto_strategy.governance.models import (
+    StrategyVersion,
+    StrategyVersionState,
+)
 from ditto_strategy.governance.protocols import (
     StrategyGovernanceVersionReader,
     StrategyVersionStateReader,
@@ -72,9 +76,36 @@ class StrategyQueryFacade:
         ):
             return []
         versions = self._governance_version_reader.list_versions(strategy_id)
+        return self._project_version_infos(versions, self._version_state_reader)
+
+    def list_reviews(self) -> list[StrategyVersionInfo]:
+        """
+        列出跨 strategy 所有 state=REVIEW 的版本（review queue，newest first）.
+
+        聚合 governance review 状态版本投影为 review queue；不拉取 payload
+        bytes，不携带 experiment_id（governance 层不持有，experiment 关联键
+        spec_hash 的跨域桥接留 T20 前端接线）。未注入 governance reader 时
+        返回空列表（降级，不伪造状态）。
+        """
+        if (
+            self._governance_version_reader is None
+            or self._version_state_reader is None
+        ):
+            return []
+        versions = self._governance_version_reader.list_versions_by_state(
+            StrategyVersionState.REVIEW
+        )
+        return self._project_version_infos(versions, self._version_state_reader)
+
+    @staticmethod
+    def _project_version_infos(
+        versions: tuple[StrategyVersion, ...],
+        state_reader: StrategyVersionStateReader,
+    ) -> list[StrategyVersionInfo]:
+        """Project governance versions + lifecycle state into StrategyVersionInfo."""
         infos: list[StrategyVersionInfo] = []
         for version in versions:
-            state = self._version_state_reader.get_state(strategy_id, version.version)
+            state = state_reader.get_state(version.strategy_id, version.version)
             if state is None:
                 continue
             infos.append(

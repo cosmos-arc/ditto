@@ -110,6 +110,15 @@ FROM strategy_version
 WHERE strategy_id = ?
 ORDER BY version DESC
 """
+_LIST_VERSIONS_BY_STATE = """
+SELECT v.strategy_id, v.version, v.parent_version, v.schema_version,
+       v.spec_hash, v.created_at
+FROM strategy_version v
+JOIN strategy_version_state s
+  ON s.strategy_id = v.strategy_id AND s.version = v.version
+WHERE s.state = ?
+ORDER BY v.created_at DESC
+"""
 _GET_STATE = """
 SELECT strategy_id, version, state, review_outcome, state_revision
 FROM strategy_version_state
@@ -289,6 +298,22 @@ class SQLiteStrategyGovernanceStore:
         """List every immutable version for a strategy, newest first."""
         conn = self._pool.get_connection()
         rows = conn.execute(_LIST_VERSIONS, (strategy_id,)).fetchall()
+        return tuple(_row_to_version(row) for row in rows)
+
+    @traced("governance.list_versions_by_state")
+    def list_versions_by_state(
+        self, state: StrategyVersionState
+    ) -> tuple[StrategyVersion, ...]:
+        """
+        List every immutable version currently in one lifecycle state.
+
+        Cross-strategy aggregation ordered by version creation time, newest
+        first. The state projection has no timestamp of its own, so the
+        immutable version's ``created_at`` drives the ordering. Used to surface
+        the review queue (``state == REVIEW``) across all strategies.
+        """
+        conn = self._pool.get_connection()
+        rows = conn.execute(_LIST_VERSIONS_BY_STATE, (state.value,)).fetchall()
         return tuple(_row_to_version(row) for row in rows)
 
     @traced("governance.get_state")

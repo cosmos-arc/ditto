@@ -39,6 +39,7 @@ def _version(
     strategy_id: str = "strategy-1",
     version: int = 1,
     spec_hash: str = "a" * 64,
+    created_at: str = "2026-07-23T00:00:00Z",
 ) -> StrategyVersion:
     return StrategyVersion(
         strategy_id=strategy_id,
@@ -46,7 +47,7 @@ def _version(
         parent_version=None,
         schema_version=GOVERNANCE_SCHEMA_VERSION,
         spec_hash=spec_hash,
-        created_at="2026-07-23T00:00:00Z",
+        created_at=created_at,
     )
 
 
@@ -55,10 +56,11 @@ def _decision(
     event_id: str = "event-1",
     decision: StrategyDecision = StrategyDecision.SUBMIT_REVIEW,
     version: int = 1,
+    strategy_id: str = "strategy-1",
 ) -> StrategyDecisionEvent:
     return StrategyDecisionEvent(
         event_id=event_id,
-        strategy_id="strategy-1",
+        strategy_id=strategy_id,
         version=version,
         decision=decision,
         actor="reviewer-1",
@@ -350,6 +352,65 @@ def test_list_versions_returns_newest_first(tmp_path: Path) -> None:
 
     versions = store.list_versions("strategy-1")
     assert [item.version for item in versions] == [2, 1]
+
+
+def test_list_versions_by_state_filters_across_strategies_newest_first(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(
+        _version(
+            strategy_id="alpha",
+            version=1,
+            spec_hash="a" * 64,
+            created_at="2026-07-23T00:00:00Z",
+        )
+    )
+    store.append_decision(
+        _decision(
+            strategy_id="alpha",
+            event_id="alpha:1:submit",
+            decision=StrategyDecision.SUBMIT_REVIEW,
+            version=1,
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+    store.insert_version(
+        _version(
+            strategy_id="beta",
+            version=1,
+            spec_hash="b" * 64,
+            created_at="2026-07-24T00:00:00Z",
+        )
+    )
+    store.append_decision(
+        _decision(
+            strategy_id="beta",
+            event_id="beta:1:submit",
+            decision=StrategyDecision.SUBMIT_REVIEW,
+            version=1,
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+    store.insert_version(_version(strategy_id="gamma", version=1, spec_hash="c" * 64))
+
+    reviews = store.list_versions_by_state(StrategyVersionState.REVIEW)
+    assert [(v.strategy_id, v.version) for v in reviews] == [
+        ("beta", 1),
+        ("alpha", 1),
+    ]
+
+
+def test_list_versions_by_state_returns_empty_when_no_match(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version(strategy_id="solo", version=1, spec_hash="a" * 64))
+
+    reviews = store.list_versions_by_state(StrategyVersionState.REVIEW)
+    assert reviews == ()
 
 
 def test_create_draft_version_writes_payload_and_governance_atomically(

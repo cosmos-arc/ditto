@@ -75,6 +75,7 @@ class TestMainRoutesAssembly:
             "metadata",
             "research_catalog_routes",
             "research_experiment_routes",
+            "research_review_routes",
             "source",
             "strategy",
             "trade",

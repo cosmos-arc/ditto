@@ -111,6 +111,12 @@ class StrategyGovernanceVersionReader(Protocol):
         """List every immutable version for a strategy, newest first."""
         ...
 
+    def list_versions_by_state(
+        self, state: StrategyVersionState
+    ) -> tuple[StrategyVersion, ...]:
+        """List every version currently in one lifecycle state, newest first."""
+        ...
+
     def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
         """Return the single active pointer for a strategy, or None."""
         ...
