@@ -82,12 +82,19 @@ class AppStrategyQueryProvider(Provider):
         self,
         catalog_service: StrategyCatalogReader,
         strategy_governance_store: SQLiteStrategyGovernanceStore,
+        experiment_query_facade: ExperimentQueryFacade,
     ) -> StrategyQueryFacade:
-        """策略只读查询 facade — status/version/active 由 governance 投影."""
+        """
+        策略只读查询 facade — status/version/active 由 governance 投影.
+
+        review queue 的 experiment_id 桥接由 ExperimentQueryFacade 按 spec_hash
+        解析（application 同层 join，strategy 不直 import analysis 合同）.
+        """
         return StrategyQueryFacade(
             catalog_service=catalog_service,
             version_state_reader=strategy_governance_store,
             governance_version_reader=strategy_governance_store,
+            experiment_resolver=experiment_query_facade,
         )
 
     @provide

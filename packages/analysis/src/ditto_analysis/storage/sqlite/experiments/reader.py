@@ -73,6 +73,9 @@ from ditto_analysis.storage.sqlite.experiments._events import (
 from ditto_analysis.storage.sqlite.experiments._holdout import (
     holdout_claim_from_row,
 )
+from ditto_analysis.storage.sqlite.experiments._review_packet import (
+    fetch_experiment_id_by_spec_hash,
+)
 from ditto_analysis.storage.sqlite.experiments._scheduler_queue import (
     scheduler_queue_candidates,
 )
@@ -673,6 +676,10 @@ class SQLiteExperimentReader:
             str(row["relative_path"]),
             str(row["reproduction_fingerprint"]),
         )
+
+    def get_experiment_id_by_spec_hash(self, spec_hash: str) -> ExperimentId | None:
+        """Resolve the latest experiment owning a review packet for ``spec_hash``."""
+        return fetch_experiment_id_by_spec_hash(self._one, spec_hash)
 
     def _load_verified_review_packet(
         self, artifact_id: str, relative_path: str, expected_hash: str

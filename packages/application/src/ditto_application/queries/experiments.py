@@ -313,6 +313,22 @@ class ExperimentQueryFacade:
         projections = _analysis_read(self._reader.list_experiments)
         return [self._to_summary(projection) for projection in projections]
 
+    def resolve_experiment_id_by_spec_hash(self, spec_hash: str) -> str | None:
+        """
+        Bridge a strategy spec hash to the experiment_id owning its review packet.
+
+        The spec hash is the content-addressed join key from a governance review
+        queue item to its experiment review packet. Resolves the latest
+        experiment with a persisted review packet for this spec hash, or
+        ``None`` when no such experiment exists. Structurally satisfies the
+        application-local ``ExperimentIdResolver`` Protocol so the review queue
+        can enrich each item without ``queries.strategy`` importing analysis.
+        """
+        experiment_id = _analysis_read(
+            lambda: self._reader.get_experiment_id_by_spec_hash(spec_hash)
+        )
+        return None if experiment_id is None else str(experiment_id)
+
     @staticmethod
     def _to_summary(projection: ExperimentProjection) -> ExperimentSummaryReadModel:
         """Project one experiment root into a list-view read model."""

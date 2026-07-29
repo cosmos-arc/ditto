@@ -2811,6 +2811,39 @@ def test_get_review_packet_for_experiment_round_trips_by_lineage(
     assert reader.get_review_packet_for_experiment(ExperimentId("missing")) is None
 
 
+def test_get_experiment_id_by_spec_hash_resolves_only_when_packet_exists(
+    tmp_path: Path,
+) -> None:
+    """spec_hash bridge resolves the experiment owning a persisted review packet."""
+    from ditto_analysis.experiments.persistence import LeaseFence
+
+    _, reader, writer, _api = _store(tmp_path)
+    _create_experiment(writer, _api)
+    # Experiment exists (strategy_spec_hash="a"*64) but has no review packet yet.
+    assert reader.get_experiment_id_by_spec_hash("a" * 64) is None
+    # Unknown spec hash never resolves.
+    assert reader.get_experiment_id_by_spec_hash("0" * 64) is None
+
+    packet = _review_packet()
+    fence = LeaseFence(
+        experiment_id=ExperimentId("experiment-1"),
+        owner_token="promotion-owner",
+        revision=0,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    writer.publish_review_packet(
+        packet,
+        lease_fence=fence,
+        now_epoch_us=NOW_US + 1,
+        created_at=NOW,
+    )
+
+    # Now the packet exists → the spec hash resolves to its experiment.
+    assert reader.get_experiment_id_by_spec_hash("a" * 64) == ExperimentId(
+        "experiment-1"
+    )
+
+
 def test_publish_review_packet_does_not_require_active_lease(tmp_path: Path) -> None:
     """ReviewPacket is a post-execution governance artifact; lease is exempt."""
     from ditto_analysis.experiments.persistence import LeaseFence

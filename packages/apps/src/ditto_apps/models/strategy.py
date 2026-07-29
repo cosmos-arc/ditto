@@ -86,6 +86,7 @@ class StrategyVersionResponse(BaseModel):
     state: str
     review_outcome: str
     created_at: str
+    experiment_id: str | None = None
 
     model_config = ConfigDict(strict=True, extra="ignore")
 

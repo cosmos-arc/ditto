@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
+from typing import Any, Protocol
 
 import polars as pl
 from ditto_kernel.strategy import ImpactModel
@@ -123,6 +123,20 @@ class StrategyVersionInfo:
     state: str
     review_outcome: str
     created_at: str
+    experiment_id: str | None = None
+
+
+class ExperimentIdResolver(Protocol):
+    """
+    Narrow read port bridging a strategy spec hash to its experiment identity.
+
+    Implemented structurally by :class:`ExperimentQueryFacade`; injected into
+    :class:`StrategyQueryFacade` so the review queue can enrich each item with
+    the ``experiment_id`` owning its review packet, without ``queries.strategy``
+    importing analysis contracts directly.
+    """
+
+    def resolve_experiment_id_by_spec_hash(self, spec_hash: str) -> str | None: ...
 
 
 @dataclass(frozen=True)

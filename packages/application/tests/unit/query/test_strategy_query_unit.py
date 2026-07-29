@@ -203,7 +203,7 @@ class TestStrategyQueryFacadeListVersions:
 
 
 class TestStrategyQueryFacadeListReviews:
-    """list_reviews aggregates state=REVIEW versions across strategies."""
+    """list_reviews aggregates state=REVIEW versions, enriched with experiment_id."""
 
     def test_returns_review_versions_from_governance(self) -> None:
         governance_reader = MagicMock(
@@ -238,7 +238,89 @@ class TestStrategyQueryFacadeListReviews:
         governance_reader.list_versions_by_state.assert_called_once_with(
             StrategyVersionState.REVIEW
         )
-        state_reader.get_state.assert_called_once_with("s-1", 2)
+
+    def test_enriches_experiment_id_when_resolver_present(self) -> None:
+        governance_reader = MagicMock(
+            spec=["list_versions", "list_versions_by_state", "get_active_pointer"]
+        )
+        state_reader = MagicMock(spec=["get_state"])
+        governance_reader.list_versions_by_state.return_value = (
+            _make_version(2, parent=1),
+        )
+        state_reader.get_state.return_value = _make_state(
+            2, state=StrategyVersionState.REVIEW, review=ReviewOutcome.APPROVED
+        )
+        resolver = MagicMock(spec=["resolve_experiment_id_by_spec_hash"])
+        resolver.resolve_experiment_id_by_spec_hash.return_value = "exp-1"
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            version_state_reader=state_reader,
+            governance_version_reader=governance_reader,
+            experiment_resolver=resolver,
+        )
+
+        result = facade.list_reviews()
+
+        assert result == [
+            StrategyVersionInfo(
+                strategy_id="s-1",
+                version=2,
+                parent_version=1,
+                spec_hash="a" * 64,
+                state="review",
+                review_outcome="approved",
+                created_at="2026-07-25T00:00:00Z",
+                experiment_id="exp-1",
+            )
+        ]
+        resolver.resolve_experiment_id_by_spec_hash.assert_called_once_with("a" * 64)
+
+    def test_resolver_returning_none_yields_none_experiment_id(self) -> None:
+        governance_reader = MagicMock(
+            spec=["list_versions", "list_versions_by_state", "get_active_pointer"]
+        )
+        state_reader = MagicMock(spec=["get_state"])
+        governance_reader.list_versions_by_state.return_value = (
+            _make_version(2, parent=1),
+        )
+        state_reader.get_state.return_value = _make_state(
+            2, state=StrategyVersionState.REVIEW, review=ReviewOutcome.PENDING
+        )
+        resolver = MagicMock(spec=["resolve_experiment_id_by_spec_hash"])
+        resolver.resolve_experiment_id_by_spec_hash.return_value = None
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            version_state_reader=state_reader,
+            governance_version_reader=governance_reader,
+            experiment_resolver=resolver,
+        )
+
+        result = facade.list_reviews()
+
+        assert result
+        assert result[0].experiment_id is None
+
+    def test_without_resolver_experiment_id_is_none(self) -> None:
+        governance_reader = MagicMock(
+            spec=["list_versions", "list_versions_by_state", "get_active_pointer"]
+        )
+        state_reader = MagicMock(spec=["get_state"])
+        governance_reader.list_versions_by_state.return_value = (
+            _make_version(2, parent=1),
+        )
+        state_reader.get_state.return_value = _make_state(
+            2, state=StrategyVersionState.REVIEW, review=ReviewOutcome.PENDING
+        )
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            version_state_reader=state_reader,
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.list_reviews()
+
+        assert result
+        assert result[0].experiment_id is None
 
     def test_skips_versions_without_state_projection(self) -> None:
         governance_reader = MagicMock(

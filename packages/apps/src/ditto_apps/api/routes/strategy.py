@@ -149,6 +149,7 @@ def to_version_response(info: StrategyVersionInfo) -> StrategyVersionResponse:
         state=info.state,
         review_outcome=info.review_outcome,
         created_at=info.created_at,
+        experiment_id=info.experiment_id,
     )
 
 

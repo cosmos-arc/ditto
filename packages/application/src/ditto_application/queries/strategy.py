@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.governance.models import (
@@ -15,6 +17,7 @@ from ditto_strategy.governance.protocols import (
 from ditto_strategy.models import StrategySpecRecord
 
 from ditto_application.contracts import (
+    ExperimentIdResolver,
     StrategyActiveInfo,
     StrategySpecInfo,
     StrategySpecValidationInfo,
@@ -46,10 +49,12 @@ class StrategyQueryFacade:
         catalog_service: StrategyCatalogReader,
         version_state_reader: StrategyVersionStateReader | None = None,
         governance_version_reader: StrategyGovernanceVersionReader | None = None,
+        experiment_resolver: ExperimentIdResolver | None = None,
     ) -> None:
         self._service = catalog_service
         self._version_state_reader = version_state_reader
         self._governance_version_reader = governance_version_reader
+        self._experiment_resolver = experiment_resolver
 
     def list_specs(self) -> list[StrategySpecInfo]:
         """列出所有策略（最新版本）."""
@@ -91,10 +96,11 @@ class StrategyQueryFacade:
         """
         列出跨 strategy 所有 state=REVIEW 的版本（review queue，newest first）.
 
-        聚合 governance review 状态版本投影为 review queue；不拉取 payload
-        bytes，不携带 experiment_id（governance 层不持有，experiment 关联键
-        spec_hash 的跨域桥接留 T20 前端接线）。未注入 governance reader 时
-        返回空列表（降级，不伪造状态）。
+        REVIEW 状态同时覆盖「待审查」（review_outcome=PENDING）与「已批准待发布」
+        （review_outcome=APPROVED，publish 前不离开 REVIEW）。当 experiment resolver
+        注入时，按 spec_hash 桥接为每条补 ``experiment_id``（指向持有 review packet
+        的 experiment），供前端 review queue → review-detail 导航 + evidence-gated
+        publish。未注入 governance reader 时返回空列表（降级，不伪造状态）。
         """
         if (
             self._governance_version_reader is None
@@ -104,7 +110,18 @@ class StrategyQueryFacade:
         versions = self._governance_version_reader.list_versions_by_state(
             StrategyVersionState.REVIEW
         )
-        return self._project_version_infos(versions, self._version_state_reader)
+        infos = self._project_version_infos(versions, self._version_state_reader)
+        if self._experiment_resolver is None:
+            return infos
+        return [
+            replace(
+                info,
+                experiment_id=self._experiment_resolver.resolve_experiment_id_by_spec_hash(
+                    info.spec_hash
+                ),
+            )
+            for info in infos
+        ]
 
     def validate_spec(
         self,
