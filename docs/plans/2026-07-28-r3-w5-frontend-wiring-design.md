@@ -95,6 +95,9 @@
 
 **后端依赖**：Task 0 的 2 端点（`GET /research/reviews` 聚合 + `GET /research/experiments/{id}/review-packet`）+ 已有 governance mutations（submit-review/approve/reject/deprecate/reactivate/publish）。
 
+> **✅ T20 review-detail + publish + reviews queue 完成**（2026-07-30，ditto `dae9ec54` + ditto-app `feat/r3-research-wiring`）。**跨域桥接**：后端 `list_reviews` 按 spec_hash application 层同层 join 补 `experiment_id`（本地 `ExperimentIdResolver` Protocol，strategy.py 零 analysis import；reader `get_experiment_id_by_spec_hash` EXISTS 过滤优先有 packet 的最新 experiment，抽到 `_review_packet.py` leaf 守 800 行）。**关键认知**：lifecycle 无 APPROVED 状态——APPROVE 决策让版本**留在 REVIEW** 但 `review_outcome=APPROVED`，直到 PUBLISH 才转 PUBLISHED；故 REVIEW 态队列天然含「待审查 + 已批准待发布」，无需改状态过滤。**前端**：review 5 件套（types/review + reviews/review-packet adapter+mapper + reviewKeys + useReviews/useReviewPacket + MSW live-shape）+ review-detail（ReviewDecisionBanner/HardGateList/EvidenceHashes/LineagePanel/CandidateRationale/SpecDiffView 复用 useVersionDiff，绝不伪造 gate）+ review-queue 列表页（experimentId=null 行禁用）+ publish（useStrategyGovernance.publish +reviews scope 失效 + PublishDialog bundle_hash 证据 + type-to-confirm + ReviewDecisionPanel：pending→批准/驳回、approved&!hard_blocked→发布）+ 移除 GovernanceActions 死的 disabled publish 按钮。路由 `/research/reviews/$experimentId` + validateSearch(strategyId,version)。ditto 11711 test + 37 contracts + type 0；ditto-app 185 files/2025 tests + biome 0 + tsc 0；audit:routes(32) + prototype:gates 过。**剩余**：research 导航入口（research 布局是裸 Outlet，无既有子导航 hook，属独立 IA 增强）、Task 19 experiment 工作台、T22 双黄金/live G2 acceptance。
+
+
 **前端接线**：
 - 路由：`/research/reviews/index.tsx`（queue，`GET /research/reviews`）+ `/$id`（detail）。
 - review-detail 排列（DecisionBanner → hard gates → statistical evidence → spec diff → rationale → lineage → R1 impact → decision form），数据来自 `review-packet` read model。宽屏 persistent detail，窄屏 Sheet（`useOverlayController`）。
