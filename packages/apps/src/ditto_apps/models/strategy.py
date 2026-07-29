@@ -122,13 +122,64 @@ class StrategyActiveResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class StrategySpecValidateRequest(BaseModel):
+    """Pre-save candidate spec validation request (Strategy Studio 编辑校验)."""
+
+    spec_json: dict[str, Any] = Field(description="candidate 策略定义 JSON")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class StrategySpecValidationResponse(BaseModel):
+    """Canonical hash + validity + change-detection result for a candidate spec."""
+
+    strategy_id: str
+    version: int
+    canonical_hash: str
+    base_spec_hash: str
+    changed: bool
+    valid: bool
+    errors: list[str] = []
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class SpecChangeResponse(BaseModel):
+    """One field-level change between two canonical spec payloads."""
+
+    path: str
+    op: str
+    old: Any | None = None
+    new: Any | None = None
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class StrategyVersionDiffResponse(BaseModel):
+    """Field-level canonical spec diff of one version against its parent."""
+
+    strategy_id: str
+    version: int
+    parent_version: int | None
+    base_spec_hash: str
+    target_spec_hash: str
+    changed: bool
+    changes: list[SpecChangeResponse] = []
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 __all__ = [
     "CreateStrategyRequest",
     "GovernanceDecisionRequest",
     "ReactivateStrategyRequest",
+    "SpecChangeResponse",
     "StrategyActivePointerResponse",
     "StrategyActiveResponse",
     "StrategyResponse",
+    "StrategySpecValidateRequest",
+    "StrategySpecValidationResponse",
+    "StrategyVersionDiffResponse",
     "StrategyVersionResponse",
     "StrategyVersionStateResponse",
     "UpdateStrategyRequest",

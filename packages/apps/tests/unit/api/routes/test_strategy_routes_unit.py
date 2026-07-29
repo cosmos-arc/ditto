@@ -19,9 +19,12 @@ from ditto_application.commands.strategy_governance import (
     SubmitReviewHandler,
 )
 from ditto_application.contracts import (
+    SpecChange,
     StrategyActiveInfo,
     StrategyActivePointerInfo,
     StrategySpecInfo,
+    StrategySpecValidationInfo,
+    StrategyVersionDiffInfo,
     StrategyVersionInfo,
     StrategyVersionStateInfo,
 )
@@ -31,6 +34,7 @@ from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.strategy import (
     approve_strategy_review,
     deprecate_strategy_version,
+    diff_strategy_version,
     get_active_strategy,
     list_strategy_versions,
     reactivate_strategy_version,
@@ -38,14 +42,19 @@ from ditto_apps.api.routes.strategy import (
     router,
     submit_strategy_review,
     update_strategy,
+    validate_strategy_version,
 )
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.strategy import (
     GovernanceDecisionRequest,
     ReactivateStrategyRequest,
+    SpecChangeResponse,
     StrategyActivePointerResponse,
     StrategyActiveResponse,
     StrategyResponse,
+    StrategySpecValidateRequest,
+    StrategySpecValidationResponse,
+    StrategyVersionDiffResponse,
     StrategyVersionResponse,
     StrategyVersionStateResponse,
     UpdateStrategyRequest,
@@ -587,3 +596,186 @@ class TestReactivateStrategyVersion:
         assert exc_info.value.status_code == expected_status
         if expected_status == 422:
             assert exc_info.value.error_code == code
+
+
+_ValidateRoute = Callable[..., Awaitable[APIResponse[StrategySpecValidationResponse]]]
+_DiffRoute = Callable[..., Awaitable[APIResponse[StrategyVersionDiffResponse]]]
+
+
+def _validation_info(
+    *,
+    valid: bool = True,
+    changed: bool = False,
+) -> StrategySpecValidationInfo:
+    return StrategySpecValidationInfo(
+        strategy_id="s1",
+        version=2,
+        canonical_hash="c" * 64 if valid else "",
+        base_spec_hash="a" * 64,
+        changed=changed,
+        valid=valid,
+        errors=() if valid else ("bad spec",),
+    )
+
+
+def _diff_info(
+    *,
+    parent: int | None = 1,
+    changed: bool = True,
+) -> StrategyVersionDiffInfo:
+    return StrategyVersionDiffInfo(
+        strategy_id="s1",
+        version=2,
+        parent_version=parent,
+        base_spec_hash="p" * 64 if parent is not None else "",
+        target_spec_hash="c" * 64,
+        changed=changed,
+        changes=(
+            SpecChange(
+                path="pipeline.nodes[0].config.k",
+                op="changed",
+                old_value=5,
+                new_value=10,
+            ),
+        )
+        if changed
+        else (),
+    )
+
+
+async def _call_validate(
+    strategy_id: str,
+    version: int,
+    request: StrategySpecValidateRequest,
+    facade: StrategyQueryFacade,
+) -> APIResponse[StrategySpecValidationResponse]:
+    route = cast(_ValidateRoute, _unwrap(validate_strategy_version))
+    return await route(
+        strategy_id=strategy_id, version=version, request=request, facade=facade
+    )
+
+
+async def _call_diff(
+    strategy_id: str,
+    version: int,
+    facade: StrategyQueryFacade,
+) -> APIResponse[StrategyVersionDiffResponse]:
+    route = cast(_DiffRoute, _unwrap(diff_strategy_version))
+    return await route(strategy_id=strategy_id, version=version, facade=facade)
+
+
+class TestValidateStrategyVersion:
+    """POST /strategies/{id}/versions/{v}/validate — candidate spec pre-save 校验."""
+
+    async def test_valid_candidate_returns_validation_response(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.validate_spec.return_value = _validation_info(
+            valid=True, changed=True
+        )
+
+        result = await _call_validate(
+            "s1",
+            2,
+            StrategySpecValidateRequest(spec_json={"template": "etf_rotation"}),
+            mock_query_facade,
+        )
+
+        assert result.data == StrategySpecValidationResponse(
+            strategy_id="s1",
+            version=2,
+            canonical_hash="c" * 64,
+            base_spec_hash="a" * 64,
+            changed=True,
+            valid=True,
+            errors=[],
+        )
+        mock_query_facade.validate_spec.assert_called_once_with(
+            "s1", 2, {"template": "etf_rotation"}
+        )
+
+    async def test_invalid_candidate_returns_valid_false(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.validate_spec.return_value = _validation_info(
+            valid=False, changed=False
+        )
+
+        result = await _call_validate(
+            "s1",
+            2,
+            StrategySpecValidateRequest(spec_json={"template": "x"}),
+            mock_query_facade,
+        )
+
+        assert result.data.valid is False
+        assert result.data.changed is False
+        assert result.data.canonical_hash == ""
+        assert result.data.errors == ["bad spec"]
+
+    async def test_version_not_found_returns_404(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.validate_spec.return_value = None
+
+        with pytest.raises(APIError) as exc_info:
+            await _call_validate(
+                "s1",
+                99,
+                StrategySpecValidateRequest(spec_json={}),
+                mock_query_facade,
+            )
+
+        assert exc_info.value.status_code == 404
+
+
+class TestDiffStrategyVersion:
+    """GET /strategies/{id}/versions/{v}/diff — version vs parent spec diff."""
+
+    async def test_returns_diff_response_with_changes(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.diff_version.return_value = _diff_info(parent=1, changed=True)
+
+        result = await _call_diff("s1", 2, mock_query_facade)
+
+        assert result.data == StrategyVersionDiffResponse(
+            strategy_id="s1",
+            version=2,
+            parent_version=1,
+            base_spec_hash="p" * 64,
+            target_spec_hash="c" * 64,
+            changed=True,
+            changes=[
+                SpecChangeResponse(
+                    path="pipeline.nodes[0].config.k",
+                    op="changed",
+                    old=5,
+                    new=10,
+                ),
+            ],
+        )
+        mock_query_facade.diff_version.assert_called_once_with("s1", 2)
+
+    async def test_first_version_returns_empty_changes(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.diff_version.return_value = _diff_info(
+            parent=None, changed=False
+        )
+
+        result = await _call_diff("s1", 1, mock_query_facade)
+
+        assert result.data.parent_version is None
+        assert result.data.changes == []
+        assert result.data.changed is False
+
+    async def test_version_not_found_returns_404(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.diff_version.return_value = None
+
+        with pytest.raises(APIError) as exc_info:
+            await _call_diff("s1", 99, mock_query_facade)
+
+        assert exc_info.value.status_code == 404

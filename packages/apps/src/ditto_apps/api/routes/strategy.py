@@ -14,6 +14,8 @@
 - POST   /strategies/{id}/versions/{v}/deprecate       弃用
 - POST   /strategies/{id}/versions/{v}/reactivate      重新激活（乐观 CAS）
 - POST   /strategies/{id}/versions/{v}/publish         证据门控发布
+- POST   /strategies/{id}/versions/{v}/validate        candidate spec pre-save 校验
+- GET    /strategies/{id}/versions/{v}/diff            版本 spec diff（vs parent）
 """
 
 from __future__ import annotations
@@ -48,6 +50,8 @@ from ditto_application.contracts import (
     StrategyActiveInfo,
     StrategyActivePointerInfo,
     StrategySpecInfo,
+    StrategySpecValidationInfo,
+    StrategyVersionDiffInfo,
     StrategyVersionInfo,
     StrategyVersionStateInfo,
 )
@@ -68,9 +72,13 @@ from ditto_apps.models.strategy import (
     GovernanceDecisionRequest,
     PublishStrategyVersionRequest,
     ReactivateStrategyRequest,
+    SpecChangeResponse,
     StrategyActivePointerResponse,
     StrategyActiveResponse,
     StrategyResponse,
+    StrategySpecValidateRequest,
+    StrategySpecValidationResponse,
+    StrategyVersionDiffResponse,
     StrategyVersionResponse,
     StrategyVersionStateResponse,
     UpdateStrategyRequest,
@@ -422,3 +430,78 @@ async def publish_strategy_version(
     except AppError as exc:
         _raise_publish_error(exc)
     return APIResponse(data=to_active_pointer_response(pointer))
+
+
+def to_validation_response(
+    info: StrategySpecValidationInfo,
+) -> StrategySpecValidationResponse:
+    """将 candidate spec 校验 read model 转为 API 响应."""
+    return StrategySpecValidationResponse(
+        strategy_id=info.strategy_id,
+        version=info.version,
+        canonical_hash=info.canonical_hash,
+        base_spec_hash=info.base_spec_hash,
+        changed=info.changed,
+        valid=info.valid,
+        errors=list(info.errors),
+    )
+
+
+def to_diff_response(
+    info: StrategyVersionDiffInfo,
+) -> StrategyVersionDiffResponse:
+    """将 version diff read model 转为 API 响应."""
+    return StrategyVersionDiffResponse(
+        strategy_id=info.strategy_id,
+        version=info.version,
+        parent_version=info.parent_version,
+        base_spec_hash=info.base_spec_hash,
+        target_spec_hash=info.target_spec_hash,
+        changed=info.changed,
+        changes=[
+            SpecChangeResponse(
+                path=change.path,
+                op=change.op,
+                old=change.old_value,
+                new=change.new_value,
+            )
+            for change in info.changes
+        ],
+    )
+
+
+@router.post(
+    "/{strategy_id}/versions/{version}/validate",
+    response_model=APIResponse[StrategySpecValidationResponse],
+)
+@inject
+async def validate_strategy_version(
+    strategy_id: str,
+    version: int,
+    request: StrategySpecValidateRequest,
+    facade: Annotated[StrategyQueryFacade, FromComponent()],
+) -> APIResponse[StrategySpecValidationResponse]:
+    """校验 candidate spec_json（pre-save），返回 canonical hash + 合法性 + 变更检测."""
+    info = await run_blocking(
+        facade.validate_spec, strategy_id, version, request.spec_json
+    )
+    if info is None:
+        raise NotFoundError(f"Strategy version not found: {strategy_id} v{version}")
+    return APIResponse(data=to_validation_response(info))
+
+
+@router.get(
+    "/{strategy_id}/versions/{version}/diff",
+    response_model=APIResponse[StrategyVersionDiffResponse],
+)
+@inject
+async def diff_strategy_version(
+    strategy_id: str,
+    version: int,
+    facade: Annotated[StrategyQueryFacade, FromComponent()],
+) -> APIResponse[StrategyVersionDiffResponse]:
+    """返回 version v 相对 parent_version 的 canonical spec 字段级 diff."""
+    info = await run_blocking(facade.diff_version, strategy_id, version)
+    if info is None:
+        raise NotFoundError(f"Strategy version not found: {strategy_id} v{version}")
+    return APIResponse(data=to_diff_response(info))
