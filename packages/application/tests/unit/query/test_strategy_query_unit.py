@@ -392,28 +392,40 @@ class TestStrategyQueryFacadeValidateSpec:
         assert facade.validate_spec("s-1", 2, {}) is None
 
 
+def _version_record(
+    version: int,
+    *,
+    parent: int | None = None,
+    spec_hash: str = "a" * 64,
+    spec_json: dict[str, object] | None = None,
+) -> StrategySpecRecord:
+    """构造含 spec_hash/parent_version/spec_json 的 catalog record."""
+    return StrategySpecRecord(
+        strategy_id="s-1",
+        name="n",
+        spec_json={} if spec_json is None else spec_json,
+        version=version,
+        parent_version=parent,
+        spec_hash=spec_hash,
+    )
+
+
 class TestStrategyQueryFacadeDiffVersion:
     """diff_version 计算 version v 相对 parent_version 的 canonical spec 字段级 diff."""
 
     def test_returns_none_when_version_not_found(self) -> None:
-        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
-        governance_reader.list_versions.return_value = ()
-        facade = StrategyQueryFacade(
-            MagicMock(spec=["list_specs", "get_spec"]),
-            governance_version_reader=governance_reader,
-        )
+        catalog = MagicMock(spec=["list_specs", "get_spec", "list_versions"])
+        catalog.list_versions.return_value = []
+        facade = StrategyQueryFacade(catalog)
 
         assert facade.diff_version("s-1", 99) is None
 
     def test_first_version_without_parent_returns_empty_diff(self) -> None:
-        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
-        governance_reader.list_versions.return_value = (
-            _make_version(1, parent=None, spec_hash="a" * 64),
-        )
-        facade = StrategyQueryFacade(
-            MagicMock(spec=["list_specs", "get_spec"]),
-            governance_version_reader=governance_reader,
-        )
+        catalog = MagicMock(spec=["list_specs", "get_spec", "list_versions"])
+        catalog.list_versions.return_value = [
+            _version_record(1, parent=None, spec_hash="a" * 64),
+        ]
+        facade = StrategyQueryFacade(catalog)
 
         result = facade.diff_version("s-1", 1)
 
@@ -433,26 +445,12 @@ class TestStrategyQueryFacadeDiffVersion:
         selector = child_json.get("selector")
         assert isinstance(selector, dict)
         selector["method"] = "top_k_changed"
-
-        def spec_for_version(_sid: str, ver: int) -> StrategySpecRecord:
-            return StrategySpecRecord(
-                strategy_id="s-1",
-                name="n",
-                spec_json=child_json if ver == 2 else parent_json,
-                version=ver,
-            )
-
-        catalog = MagicMock(spec=["list_specs", "get_spec"])
-        catalog.get_spec.side_effect = spec_for_version
-        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
-        governance_reader.list_versions.return_value = (
-            _make_version(1, parent=None, spec_hash="p" * 64),
-            _make_version(2, parent=1, spec_hash="c" * 64),
-        )
-        facade = StrategyQueryFacade(
-            catalog,
-            governance_version_reader=governance_reader,
-        )
+        catalog = MagicMock(spec=["list_specs", "get_spec", "list_versions"])
+        catalog.list_versions.return_value = [
+            _version_record(1, parent=None, spec_hash="p" * 64, spec_json=parent_json),
+            _version_record(2, parent=1, spec_hash="c" * 64, spec_json=child_json),
+        ]
+        facade = StrategyQueryFacade(catalog)
 
         result = facade.diff_version("s-1", 2)
 
@@ -462,3 +460,20 @@ class TestStrategyQueryFacadeDiffVersion:
         assert result.target_spec_hash == "c" * 64
         assert result.changed is True
         assert len(result.changes) > 0
+        catalog.list_versions.assert_called_once_with("s-1")
+
+    def test_equal_hash_short_circuits_to_empty_diff(self) -> None:
+        """target/parent 同 spec_hash（同 spec 重发版）→ 空差，不调 payload diff."""
+        catalog = MagicMock(spec=["list_specs", "get_spec", "list_versions"])
+        catalog.list_versions.return_value = [
+            _version_record(1, parent=None, spec_hash="s" * 64),
+            _version_record(2, parent=1, spec_hash="s" * 64),
+        ]
+        facade = StrategyQueryFacade(catalog)
+
+        result = facade.diff_version("s-1", 2)
+
+        assert result is not None
+        assert result.changed is False
+        assert result.changes == ()
+        assert result.base_spec_hash == result.target_spec_hash

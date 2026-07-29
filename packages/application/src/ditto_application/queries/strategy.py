@@ -162,14 +162,14 @@ class StrategyQueryFacade:
         """
         计算 version ``version`` 相对 parent_version 的 canonical spec 字段级 diff.
 
-        基于 ``canonical_spec_payload_for_record`` 的规范化 payload 做递归 diff，
-        与 canonical hash 同源。首版本（无 parent）返回空 diff。governance reader
-        未注入或 version 不存在时返回 None（route 映射 404）。
+        一次 ``catalog.list_versions`` 取回该策略全部版本 record（含 spec_json/
+        spec_hash/parent_version），按键定位 target/parent，避免逐版本 ``get_spec``
+        往返。基于 ``canonical_spec_payload_for_record`` 做递归 diff，与 canonical
+        hash 同源。target/parent 同 spec_hash 时短路返回空 diff；首版本（无 parent）
+        返回空 diff；version 不存在返回 None（route 映射 404）。
         """
-        if self._governance_version_reader is None:
-            return None
-        versions = self._governance_version_reader.list_versions(strategy_id)
-        target = self._find_version(versions, version)
+        records = self._service.list_versions(strategy_id)
+        target = self._find_record(records, version)
         if target is None:
             return None
         target_hash = target.spec_hash
@@ -183,15 +183,23 @@ class StrategyQueryFacade:
                 changed=False,
                 changes=(),
             )
-        parent = self._find_version(versions, target.parent_version)
-        base_hash = parent.spec_hash if parent is not None else ""
-        target_record = self._service.get_spec(strategy_id, version)
-        parent_record = self._service.get_spec(strategy_id, target.parent_version)
-        if target_record is None or parent_record is None:
+        parent = self._find_record(records, target.parent_version)
+        if parent is None:
             return None
+        base_hash = parent.spec_hash
+        if target_hash == base_hash:
+            return StrategyVersionDiffInfo(
+                strategy_id=strategy_id,
+                version=version,
+                parent_version=target.parent_version,
+                base_spec_hash=base_hash,
+                target_spec_hash=target_hash,
+                changed=False,
+                changes=(),
+            )
         changes = diff_canonical_payloads(
-            canonical_spec_payload_for_record(parent_record),
-            canonical_spec_payload_for_record(target_record),
+            canonical_spec_payload_for_record(parent),
+            canonical_spec_payload_for_record(target),
         )
         return StrategyVersionDiffInfo(
             strategy_id=strategy_id,
@@ -212,6 +220,17 @@ class StrategyQueryFacade:
         for item in versions:
             if item.version == version:
                 return item
+        return None
+
+    @staticmethod
+    def _find_record(
+        records: list[StrategySpecRecord],
+        version: int,
+    ) -> StrategySpecRecord | None:
+        """从 catalog records 中按 version 号查找单个版本 record."""
+        for record in records:
+            if record.version == version:
+                return record
         return None
 
     @staticmethod
