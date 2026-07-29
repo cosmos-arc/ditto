@@ -49,10 +49,10 @@ describe("GovernanceActions", () => {
 		expect(screen.getByRole("button", { name: "驳回" })).toBeInTheDocument();
 	});
 
-	it("approved state shows a disabled publish action plus deprecate", () => {
+	it("approved state shows deprecate only (publish lives on review-detail)", () => {
 		renderActions("approved");
-		expect(screen.getByRole("button", { name: "发布" })).toBeDisabled();
 		expect(screen.getByRole("button", { name: "弃用" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "发布" })).not.toBeInTheDocument();
 	});
 
 	it("published state with a pointer revision shows reactivate", () => {

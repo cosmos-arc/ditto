@@ -5,10 +5,11 @@ import {
 	mockFactorAnalysis,
 	mockFactorDetail,
 	mockFactors,
+	mockReviewQueue as mockPrototypeReviewQueue,
 	mockResearchPulse,
 	mockResearchRuns,
-	mockReviewQueue,
 } from "../fixtures/research";
+import { mockReviewPacket, mockReviewQueue } from "../fixtures/review-live";
 
 export const researchHandlers: RequestHandler[] = [
 	http.get("/api/research/pulse", () => {
@@ -47,7 +48,7 @@ export const researchHandlers: RequestHandler[] = [
 	}),
 
 	http.get("/api/research/review-queue", () => {
-		return HttpResponse.json(mockReviewQueue);
+		return HttpResponse.json(mockPrototypeReviewQueue);
 	}),
 
 	// === R3 live-shape handler（/api/v1/research/experiments，generated DTO + {data} 信封）===
@@ -57,4 +58,14 @@ export const researchHandlers: RequestHandler[] = [
 			pagination: { total: mockExperimentSummaryList.length, limit: 50, offset: 0, has_more: false },
 		}),
 	),
+
+	// === R3 review queue + review-packet live-shape（generated DTO + {data} 信封）===
+	http.get("/api/v1/research/reviews", () => HttpResponse.json({ data: mockReviewQueue })),
+	http.get("/api/v1/research/experiments/:experimentId/review-packet", ({ params }) => {
+		const experimentId = String(params.experimentId);
+		if (experimentId !== mockReviewPacket.experiment_id) {
+			return new HttpResponse(null, { status: 404 });
+		}
+		return HttpResponse.json({ data: mockReviewPacket });
+	}),
 ];

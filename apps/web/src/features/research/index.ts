@@ -4,6 +4,8 @@ export { FactorOverview } from "./components/factor-overview";
 export { FactorPage } from "./components/factor-page";
 export { RegimePage } from "./components/regime-page";
 export { ResearchPage } from "./components/research-page";
+export { ReviewDetailPage } from "./components/review-detail-page";
+export { ReviewQueuePage } from "./components/review-queue-page";
 export { UniverseListPage } from "./components/universe-list-page";
 export { useRegimeCurrent } from "./hooks/use-regime-current";
 export { useRegimeDrivers } from "./hooks/use-regime-drivers";

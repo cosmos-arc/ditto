@@ -275,6 +275,13 @@ export type {
 	ResearchRun,
 	ReviewQueueItem,
 } from "./research";
+// === Review 域（R3 review queue + review-packet）===
+export type {
+	ReviewGate,
+	ReviewPacket,
+	ReviewQueueEntry,
+	SelectionTraceRef,
+} from "./review";
 // === Trading 域 ===
 export type {
 	AttributionFactor,

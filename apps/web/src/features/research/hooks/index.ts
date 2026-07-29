@@ -30,6 +30,8 @@ export function useResearchRuns() {
 }
 
 export { useExperiments } from "./use-experiments";
+export { useReviewPacket } from "./use-review-packet";
+export { useReviews } from "./use-reviews";
 
 export function useReviewQueue() {
 	return useQuery({

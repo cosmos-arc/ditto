@@ -1,4 +1,5 @@
 export { NodeLibrary } from "./components/node-library";
+export { ReviewDecisionPanel } from "./components/review-decision-panel";
 export { StrategyDetailPage } from "./components/strategy-detail-page";
 export { StrategyEditor } from "./components/strategy-editor";
 export { StrategyFactorsView } from "./components/strategy-factors-view";

@@ -57,9 +57,9 @@ function isDecisionPending(governance: Governance, kind: DecisionKind): boolean 
  * 版本治理动作面板（接入 StrategyVersionsView 每行）。
  *
  * 按 `version.lifecycleState` 渲染可用决策动作 + reactivate（published 且持有 active pointer
- * revision 时）；publish 在 approved 状态显示为禁用（evidence-gated，需 review-detail 的
- * bundle_hash，本次 UI 不调用）。决策动作经 DecisionDialog（actor+reason），reactivate 经
- * ReactivateDialog（type-to-confirm + CAS）。
+ * revision 时）。publish 不在此面板——它是 evidence-gated（需 review packet 的 bundle_hash），
+ * 由 review-detail 页的 `ReviewDecisionPanel` 在 approved 结论下执行。决策动作经
+ * DecisionDialog（actor+reason），reactivate 经 ReactivateDialog（type-to-confirm + CAS）。
  */
 export function GovernanceActions({
 	strategyId,
@@ -71,7 +71,6 @@ export function GovernanceActions({
 
 	const actions = ACTIONS_BY_STATE[version.lifecycleState] ?? [];
 	const canReactivate = version.lifecycleState === "published" && expectedPointerRevision !== null;
-	const showPublishDisabled = version.lifecycleState === "approved";
 	const activeDecision = dialog !== null && dialog !== "reactivate" ? dialog : null;
 	const decisionMeta = activeDecision ? DECISION_TITLES[activeDecision] : null;
 
@@ -114,16 +113,6 @@ export function GovernanceActions({
 						className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg)"
 					>
 						重新激活
-					</button>
-				)}
-				{showPublishDisabled && (
-					<button
-						type="button"
-						disabled
-						title="需 review-detail 的 evidence bundle（bundle_hash）方可发布"
-						className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-tertiary) opacity-50"
-					>
-						发布
 					</button>
 				)}
 			</div>

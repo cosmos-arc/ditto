@@ -3,6 +3,7 @@ import { strategyKeys } from "../api/query-keys";
 import {
 	approveStrategyReview,
 	deprecateStrategyVersion,
+	publishStrategyVersion,
 	reactivateStrategyVersion,
 	rejectStrategyReview,
 	submitStrategyReview,
@@ -25,8 +26,18 @@ export type ReactivateVariables = {
 	readonly expectedPointerRevision: number;
 };
 
+/** publish 变量（evidence-gated：需 review packet 的 bundle_hash）。 */
+export type PublishVariables = {
+	readonly version: number;
+	readonly bundleHash: string;
+	readonly actor: string;
+	readonly reason: string;
+};
+
 /** 治理 mutation 成功后失效的 scope（版本历史 + active pointer 都会变）。 */
 const GOVERNANCE_INVALIDATION_SCOPES = ["versions", "active"] as const;
+/** review queue 命名空间（治理决策改变队列成员；与 reviewKeys.all 同源）。 */
+const REVIEW_QUEUE_QUERY_KEY = ["research", "reviews"] as const;
 
 /**
  * 版本治理 mutations（T20 动作面板数据层）。
@@ -43,6 +54,7 @@ export function useStrategyGovernance(strategyId: string) {
 		for (const scope of GOVERNANCE_INVALIDATION_SCOPES) {
 			void queryClient.invalidateQueries({ queryKey: [...strategyKeys.all, scope] });
 		}
+		void queryClient.invalidateQueries({ queryKey: REVIEW_QUEUE_QUERY_KEY });
 	}
 
 	const submitReview = useMutation({
@@ -76,6 +88,11 @@ export function useStrategyGovernance(strategyId: string) {
 			}),
 		onSuccess: invalidateGovernedScopes,
 	});
+	const publish = useMutation({
+		mutationFn: ({ version, bundleHash, actor, reason }: PublishVariables) =>
+			publishStrategyVersion(strategyId, version, { bundle_hash: bundleHash, actor, reason }),
+		onSuccess: invalidateGovernedScopes,
+	});
 
-	return { submitReview, approve, reject, deprecate, reactivate };
+	return { submitReview, approve, reject, deprecate, reactivate, publish };
 }

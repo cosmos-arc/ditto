@@ -47,6 +47,9 @@ export const strategyHandlers: RequestHandler[] = [
 	http.post("/api/v1/strategies/:id/versions/:version/reactivate", () =>
 		HttpResponse.json({ data: mockActivePointerDto }),
 	),
+	http.post("/api/v1/strategies/:id/versions/:version/publish", () =>
+		HttpResponse.json({ data: mockActivePointerDto }),
+	),
 
 	http.get("/api/v1/research/node-descriptors", () => HttpResponse.json({ data: mockNodeDescriptorList })),
 ];
