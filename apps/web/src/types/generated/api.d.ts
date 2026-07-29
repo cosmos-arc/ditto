@@ -9287,6 +9287,8 @@ export interface components {
             review_outcome: string;
             /** Created At */
             created_at: string;
+            /** Experiment Id */
+            experiment_id?: string | null;
         };
         /**
          * StrategyVersionStateResponse

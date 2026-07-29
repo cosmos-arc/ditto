@@ -5,10 +5,12 @@
  * 负责 generated snake_case DTO → 此处 camelCase view-model 的翻译，吸收后端契约漂移。
  *
  * 关键事实（设计依据）：
- * - 后端 `StrategyResponse.spec_json` 存储的是 **legacy `StrategySpec` 的 asdict**
- *   （template/universe/scorer/selector/execution/constraints/params），不是 V2 canonical
- *   pipeline 形态。canonical payload（pipeline.nodes/sequence）由后端从 legacy 派生，
- *   仅供 hash/diff。前端编辑 legacy spec_json，validate 端点计算 canonical hash。
+ * - 后端 `StrategyResponse.spec_json` 存储的是 legacy `StrategySpec` 的完整 `asdict()`
+ *   （strategy_id/name/template/universe/asset_class/benchmark/scorer/selector/execution/
+ *   constraints/params/signal_expressions/signal_weights/param_constraints/tags/
+ *   required_datasets），不是 V2 canonical pipeline 形态。canonical payload
+ *   （pipeline.nodes/sequence）由后端从 legacy 派生，仅供 hash/diff。前端编辑 legacy
+ *   spec_json，validate 端点计算 canonical hash；本 view-model 只投影前端需要编辑的子集。
  * - `status` / `state` / `review_outcome` 在 generated schema 中是自由格式 string，
  *   枚举语义在 mapper 层用 LUT 派生（`lifecycleState` / `reviewOutcome`）。
  */
@@ -37,17 +39,38 @@ export type CostModelSpec = {
 	readonly commissionRate?: number;
 	readonly slippageBps?: number;
 	readonly stampDuty?: number;
+	readonly impactModel?: string;
 };
 
 export type ExecutionSpec = {
 	readonly frequency: string;
 	readonly method: string;
+	/** 下单类型（后端 `default_order_type`，StrEnum 序列化为小写如 "market"），参与 canonical hash。 */
+	readonly defaultOrderType: string;
 	readonly costModel?: CostModelSpec;
 };
 
 export type ConstraintSpec = {
 	readonly type: string;
 	readonly params: Readonly<Record<string, unknown>>;
+};
+
+/** 参数约束支持的数据类型（与后端 `ParamConstraint.dtype` 对应）。 */
+export type ParamDtype = "bool" | "int" | "float" | "str";
+
+/**
+ * 单个参数约束（legacy spec_json `param_constraints` 条目的结构化投影）。
+ *
+ * `min/max/step` 仅对数值型（int/float）有意义；`allowedValues` 用于枚举约束。
+ * 所有可选字段缺失时不写入 view-model，mapper 容忍后端省略。
+ */
+export type ParamConstraintSpec = {
+	readonly name: string;
+	readonly dtype: ParamDtype;
+	readonly minValue?: number;
+	readonly maxValue?: number;
+	readonly step?: number;
+	readonly allowedValues: readonly string[];
 };
 
 /**
@@ -68,6 +91,16 @@ export type StrategySpec = {
 	readonly execution: ExecutionSpec;
 	readonly constraints: readonly ConstraintSpec[];
 	readonly params: Readonly<Record<string, unknown>>;
+	/**
+	 * 信号表达式名列表（legacy `signal_expressions`）。
+	 *
+	 * 与 {@link signalWeights} 长度耦合——后端校验等长；编辑器必须成对增删/重排。
+	 */
+	readonly signalExpressions: readonly string[];
+	/** 信号权重（legacy `signal_weights`），与 {@link signalExpressions} 一一对应。 */
+	readonly signalWeights: readonly number[];
+	/** 参数约束（legacy `param_constraints`），影响 canonical hash 的 parameter_schema。 */
+	readonly paramConstraints: readonly ParamConstraintSpec[];
 };
 
 // === 策略列表 / 详情 ===

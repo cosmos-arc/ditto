@@ -11,6 +11,8 @@ import type {
 	CostModelSpec,
 	ExecutionSpec,
 	NodeDescriptorView,
+	ParamConstraintSpec,
+	ParamDtype,
 	ScorerSpec,
 	SelectorSpec,
 	SpecChange,
@@ -65,6 +67,50 @@ function asParams(value: unknown): Readonly<Record<string, unknown>> {
 	return isRecord(value) ? { ...value } : {};
 }
 
+function asStringArray(value: unknown): readonly string[] {
+	return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function asNumberArray(value: unknown): readonly number[] {
+	return Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : [];
+}
+
+const PARAM_DTYPES: readonly ParamDtype[] = ["bool", "int", "float", "str"];
+
+function isParamDtype(value: unknown): value is ParamDtype {
+	return typeof value === "string" && (PARAM_DTYPES as readonly string[]).includes(value);
+}
+
+function asOptionalNumber(value: unknown): number | undefined {
+	return typeof value === "number" ? value : undefined;
+}
+
+/**
+ * 从 legacy `param_constraints` 条目解析结构化约束。
+ *
+ * 容错策略：非 record 或缺有效 `dtype` 的条目直接丢弃（dtype 是渲染判别式，缺失无法
+ * 意义化展示）；`name` 缺失回退空串；`min/max/step` 非数值则忽略；`allowed_values`
+ * 非字符串数组则回退空数组。
+ */
+function parseParamConstraints(value: unknown): readonly ParamConstraintSpec[] {
+	if (!Array.isArray(value)) return [];
+	return value.flatMap((item: unknown): ParamConstraintSpec[] => {
+		if (!isRecord(item) || !isParamDtype(item.dtype)) return [];
+		const constraint: { name: string; dtype: ParamDtype; allowedValues: readonly string[] } & {
+			minValue?: number;
+			maxValue?: number;
+			step?: number;
+		} = { name: asString(item.name), dtype: item.dtype, allowedValues: asStringArray(item.allowed_values) };
+		const minValue = asOptionalNumber(item.min_value);
+		const maxValue = asOptionalNumber(item.max_value);
+		const step = asOptionalNumber(item.step);
+		if (minValue !== undefined) constraint.minValue = minValue;
+		if (maxValue !== undefined) constraint.maxValue = maxValue;
+		if (step !== undefined) constraint.step = step;
+		return [constraint];
+	});
+}
+
 function parseScorer(value: unknown): ScorerSpec {
 	if (!isRecord(value)) return { method: "", params: {} };
 	return { method: asString(value.method), params: asParams(value.params) };
@@ -77,18 +123,20 @@ function parseSelector(value: unknown): SelectorSpec {
 
 function parseCostModel(value: unknown): CostModelSpec | undefined {
 	if (!isRecord(value)) return undefined;
-	const model: { commissionRate?: number; slippageBps?: number; stampDuty?: number } = {};
+	const model: { commissionRate?: number; slippageBps?: number; stampDuty?: number; impactModel?: string } = {};
 	if (typeof value.commission_rate === "number") model.commissionRate = value.commission_rate;
 	if (typeof value.slippage_bps === "number") model.slippageBps = value.slippage_bps;
 	if (typeof value.stamp_duty === "number") model.stampDuty = value.stamp_duty;
+	if (typeof value.impact_model === "string") model.impactModel = value.impact_model;
 	return Object.keys(model).length > 0 ? model : undefined;
 }
 
 function parseExecution(value: unknown): ExecutionSpec {
-	if (!isRecord(value)) return { frequency: "", method: "" };
+	if (!isRecord(value)) return { frequency: "", method: "", defaultOrderType: "market" };
 	return {
 		frequency: asString(value.frequency),
 		method: asString(value.method),
+		defaultOrderType: asString(value.default_order_type) || "market",
 		costModel: parseCostModel(value.cost_model),
 	};
 }
@@ -119,6 +167,9 @@ export function parseSpecJson(
 		execution: parseExecution(spec.execution),
 		constraints: parseConstraints(spec.constraints),
 		params: asParams(spec.params),
+		signalExpressions: asStringArray(spec.signal_expressions),
+		signalWeights: asNumberArray(spec.signal_weights),
+		paramConstraints: parseParamConstraints(spec.param_constraints),
 	};
 }
 
@@ -197,12 +248,26 @@ export function mapNodeDescriptor(dto: NodeDescriptorResponse): NodeDescriptorVi
 	};
 }
 
+/** 将单个参数约束 view-model 序列化回 legacy snake_case 形态（与 parse 互逆）。 */
+function serializeParamConstraint(constraint: ParamConstraintSpec): Record<string, unknown> {
+	const out: { name: string; dtype: ParamDtype; allowed_values: readonly string[] } & {
+		min_value?: number;
+		max_value?: number;
+		step?: number;
+	} = { name: constraint.name, dtype: constraint.dtype, allowed_values: constraint.allowedValues };
+	if (constraint.minValue !== undefined) out.min_value = constraint.minValue;
+	if (constraint.maxValue !== undefined) out.max_value = constraint.maxValue;
+	if (constraint.step !== undefined) out.step = constraint.step;
+	return out;
+}
+
 /**
  * 将 view-model spec 序列化回 legacy spec_json（snake_case）。
  *
  * 与 {@link parseSpecJson} 互逆，保证表单/流水线编辑后保存的 spec_json 形态与
  * 后端存储一致；`scorer`/`selector`/`constraints`/`params` 的字段名（method/params/type）
- * 本就是 spec 子结构的通用键，无需 case 转换。
+ * 本就是 spec 子结构的通用键，无需 case 转换。`signal_*` 原生 snake，`param_constraints`
+ * 子键（min_value/max_value/allowed_values）需 camel→snake 还原。
  */
 export function serializeStrategySpec(spec: StrategySpec): Record<string, unknown> {
 	return {
@@ -217,13 +282,18 @@ export function serializeStrategySpec(spec: StrategySpec): Record<string, unknow
 		execution: {
 			frequency: spec.execution.frequency,
 			method: spec.execution.method,
+			default_order_type: spec.execution.defaultOrderType,
 			cost_model: spec.execution.costModel && {
 				commission_rate: spec.execution.costModel.commissionRate,
 				slippage_bps: spec.execution.costModel.slippageBps,
 				stamp_duty: spec.execution.costModel.stampDuty,
+				impact_model: spec.execution.costModel.impactModel,
 			},
 		},
 		constraints: spec.constraints,
 		params: spec.params,
+		signal_expressions: spec.signalExpressions,
+		signal_weights: spec.signalWeights,
+		param_constraints: spec.paramConstraints.map(serializeParamConstraint),
 	};
 }

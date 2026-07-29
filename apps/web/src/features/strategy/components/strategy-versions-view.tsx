@@ -1,7 +1,8 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useStrategyVersions } from "../hooks";
+import { useStrategyActive, useStrategyVersions } from "../hooks";
+import { GovernanceActions } from "./governance-actions";
 
 interface StrategyVersionsViewProps {
 	readonly id: string;
@@ -9,6 +10,8 @@ interface StrategyVersionsViewProps {
 
 export function StrategyVersionsView({ id }: StrategyVersionsViewProps) {
 	const { data, isLoading, refetch } = useStrategyVersions(id);
+	const active = useStrategyActive(id);
+	const pointerRevision = active.data?.pointer_revision ?? null;
 	const versions = data ?? [];
 
 	if (isLoading) {
@@ -26,9 +29,12 @@ export function StrategyVersionsView({ id }: StrategyVersionsViewProps) {
 									key={ver.version}
 									className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 								>
-									<div className="flex items-center gap-3">
-										<span className="font-medium">v{ver.version}</span>
-										<span className="text-(--color-foreground-tertiary)">{ver.reviewOutcome}</span>
+									<div className="flex flex-col gap-1">
+										<div className="flex items-center gap-3">
+											<span className="font-medium">v{ver.version}</span>
+											<span className="text-(--color-foreground-tertiary)">{ver.reviewOutcome}</span>
+										</div>
+										<GovernanceActions strategyId={id} version={ver} expectedPointerRevision={pointerRevision} />
 									</div>
 									<span className="text-xs text-(--color-foreground-tertiary)">
 										{new Date(ver.createdAt).toLocaleDateString("zh-CN")}

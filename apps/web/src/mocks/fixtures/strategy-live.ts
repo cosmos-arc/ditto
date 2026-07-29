@@ -5,8 +5,9 @@
  * `/api/v1/strategies/*` handler 消费本文件，旧 `/api/strategies/*` handler 保留
  * 给未迁移组件。组件迁移完成后旧 prototype mock 一并清理。
  *
- * `spec_json` 用后端 legacy `StrategySpec` asdict 形态（template/scorer/selector/
- * execution/constraints/params），与真实 seed 一致。
+ * `spec_json` 用后端 legacy `StrategySpec` asdict 完整形态（template/scorer/selector/
+ * execution/constraints/params/signal_expressions/signal_weights/param_constraints），
+ * 与真实 seed（etf_industry_rotation）一致。
  */
 import type { components } from "@/types/generated/api";
 
@@ -15,6 +16,8 @@ type StrategyVersionResponse = components["schemas"]["StrategyVersionResponse"];
 type StrategySpecValidationResponse = components["schemas"]["StrategySpecValidationResponse"];
 type StrategyVersionDiffResponse = components["schemas"]["StrategyVersionDiffResponse"];
 type NodeDescriptorResponse = components["schemas"]["NodeDescriptorResponse"];
+type StrategyActivePointerResponse = components["schemas"]["StrategyActivePointerResponse"];
+type StrategyVersionStateResponse = components["schemas"]["StrategyVersionStateResponse"];
 
 const seedSpecJson = {
 	strategy_id: "seed_etf_industry_rotation",
@@ -28,13 +31,20 @@ const seedSpecJson = {
 	execution: {
 		frequency: "M",
 		method: "calendar",
-		cost_model: { commission_rate: 0.0003, slippage_bps: 5.0 },
+		default_order_type: "market",
+		cost_model: { commission_rate: 0.0003, slippage_bps: 5.0, impact_model: "none" },
 	},
 	constraints: [
 		{ type: "max_weight_per_instrument", params: { max_weight: 0.3 } },
 		{ type: "max_turnover", params: { max_turnover: 0.5 } },
 	],
 	params: { lookback: 252, vol_window: 60 },
+	signal_expressions: ["momentum_1m", "reversal_1w", "volatility_factor"],
+	signal_weights: [0.5, 0.3, 0.2],
+	param_constraints: [
+		{ name: "lookback", dtype: "int", min_value: 21, max_value: 504, step: 1, allowed_values: [] },
+		{ name: "top_k", dtype: "int", min_value: 1, max_value: 50, step: 1, allowed_values: [] },
+	],
 } satisfies Record<string, unknown>;
 
 export const mockStrategyList: StrategyResponse[] = [
@@ -170,4 +180,17 @@ export const mockSpecDiffDto: StrategyVersionDiffResponse = {
 		{ path: "selector.params.k", op: "replace", old: 3, new: 5 },
 		{ path: "params.vol_window", op: "replace", old: 40, new: 60 },
 	],
+};
+
+export const mockActivePointerDto: StrategyActivePointerResponse = {
+	strategy_id: "seed_etf_industry_rotation",
+	active_version: 3,
+	pointer_revision: 1,
+};
+
+export const mockVersionStateDto: StrategyVersionStateResponse = {
+	strategy_id: "seed_etf_industry_rotation",
+	version: 3,
+	state: "review",
+	review_outcome: "pending",
 };

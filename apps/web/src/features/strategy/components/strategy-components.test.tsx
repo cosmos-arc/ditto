@@ -4,10 +4,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { strategyHandlers } from "@/mocks/handlers/strategy";
 import { server } from "@/mocks/server";
-import { FactorBrowser } from "./factor-browser";
-import { StrategyEditor } from "./strategy-editor";
 import { StrategyHeader } from "./strategy-header";
-import { StrategyInspector } from "./strategy-inspector";
 import { StrategyListPage } from "./strategy-list-page";
 
 function createQueryClient(): QueryClient {
@@ -53,44 +50,5 @@ describe("StrategyHeader", () => {
 	});
 });
 
-describe("FactorBrowser", () => {
-	it("渲染因子库标题", async () => {
-		render(<FactorBrowser />, { wrapper: createWrapper() });
-		await expect(screen.findByText("因子库")).resolves.toBeInTheDocument();
-	});
-
-	it("显示因子列表", async () => {
-		render(<FactorBrowser />, { wrapper: createWrapper() });
-		await expect(screen.findByText("价值因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("情绪因子")).resolves.toBeInTheDocument();
-	});
-});
-
-describe("StrategyEditor", () => {
-	it("渲染最新版本信息", async () => {
-		render(<StrategyEditor id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText(/spec_hash/)).resolves.toBeInTheDocument();
-	});
-
-	it("显示当前版本 spec hash", async () => {
-		render(<StrategyEditor id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText(/h-v3/)).resolves.toBeInTheDocument();
-	});
-});
-
-describe("StrategyInspector", () => {
-	it("渲染策略参数", async () => {
-		render(<StrategyInspector id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("策略参数")).resolves.toBeInTheDocument();
-	});
-
-	it("显示股票池", async () => {
-		render(<StrategyInspector id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("csi_etf_broad")).resolves.toBeInTheDocument();
-	});
-
-	it("显示策略模板", async () => {
-		render(<StrategyInspector id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("etf_rotation")).resolves.toBeInTheDocument();
-	});
-});
+// StrategyEditor / NodeInspector 已迁移到独立 co-located 测试（API 改为受控 props）。
+// FactorBrowser 已删除（dead code，node-library 取代）。

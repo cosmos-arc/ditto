@@ -116,6 +116,51 @@ describe("strategy mappers", () => {
 			expect(spec.execution.frequency).toBe("M");
 			expect(spec.execution.costModel).toBeUndefined();
 		});
+
+		it("parses signal_expressions / signal_weights / param_constraints from spec_json", () => {
+			const spec = mapStrategyDetail({
+				...baseStrategy,
+				spec_json: {
+					...SPEC_JSON,
+					signal_expressions: ["momentum_1m", "reversal_1w"],
+					signal_weights: [0.6, 0.4],
+					param_constraints: [
+						{ name: "lookback", dtype: "int", min_value: 21, max_value: 504, step: 1, allowed_values: [] },
+						{ name: "mode", dtype: "str", allowed_values: ["fast", "slow"] },
+					],
+				} satisfies Record<string, unknown>,
+			}).spec;
+			expect(spec.signalExpressions).toEqual(["momentum_1m", "reversal_1w"]);
+			expect(spec.signalWeights).toEqual([0.6, 0.4]);
+			expect(spec.paramConstraints).toEqual([
+				{ name: "lookback", dtype: "int", minValue: 21, maxValue: 504, step: 1, allowedValues: [] },
+				{ name: "mode", dtype: "str", allowedValues: ["fast", "slow"] },
+			]);
+		});
+
+		it("defaults signal/param fields to empty arrays when spec_json omits them", () => {
+			const spec = mapStrategyDetail({ ...baseStrategy, spec_json: {} }).spec;
+			expect(spec.signalExpressions).toEqual([]);
+			expect(spec.signalWeights).toEqual([]);
+			expect(spec.paramConstraints).toEqual([]);
+		});
+
+		it("gracefully handles malformed signal/param entries (non-array / non-record)", () => {
+			const spec = mapStrategyDetail({
+				...baseStrategy,
+				spec_json: {
+					signal_expressions: "not-an-array",
+					signal_weights: { a: 1 },
+					param_constraints: [null, "x", { dtype: "int" }, { name: "ok", dtype: "float", min_value: "bad" }],
+				} satisfies Record<string, unknown>,
+			}).spec;
+			expect(spec.signalExpressions).toEqual([]);
+			expect(spec.signalWeights).toEqual([]);
+			expect(spec.paramConstraints).toEqual([
+				{ name: "", dtype: "int", allowedValues: [] },
+				{ name: "ok", dtype: "float", allowedValues: [] },
+			]);
+		});
 	});
 
 	describe("mapStrategyVersion", () => {

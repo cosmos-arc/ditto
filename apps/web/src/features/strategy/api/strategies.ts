@@ -33,3 +33,10 @@ export function fetchVersionDiff(strategyId: string, version: number): Promise<S
 		`/v1/strategies/${encodeURIComponent(strategyId)}/versions/${version}/diff`,
 	);
 }
+
+export type StrategyActiveResponse = components["schemas"]["StrategyActiveResponse"];
+
+/** 读取 active pointer（`GET /v1/strategies/{id}/active`）；无 active 时后端返 404。 */
+export function fetchActive(strategyId: string): Promise<StrategyActiveResponse> {
+	return apiClient.get<StrategyActiveResponse>(`/v1/strategies/${encodeURIComponent(strategyId)}/active`);
+}

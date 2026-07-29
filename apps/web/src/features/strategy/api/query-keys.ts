@@ -9,6 +9,7 @@ export const strategyKeys = {
 	list: (limit?: number, offset?: number) => [...strategyKeys.all, "list", limit ?? 50, offset ?? 0] as const,
 	detail: (strategyId: string) => [...strategyKeys.all, "detail", strategyId] as const,
 	versions: (strategyId: string) => [...strategyKeys.all, "versions", strategyId] as const,
+	active: (strategyId: string) => [...strategyKeys.all, "active", strategyId] as const,
 	diff: (strategyId: string, version: number) => [...strategyKeys.all, "diff", strategyId, version] as const,
 	nodeDescriptors: () => [...strategyKeys.all, "node-descriptors"] as const,
 } as const;

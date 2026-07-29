@@ -79,4 +79,72 @@ describe("strategy spec round-trip", () => {
 		expect(edited.selector.params).toEqual({ k: 10 });
 		expect(original.selector.params).toEqual({ k: 5 });
 	});
+
+	it("preserves execution.default_order_type and cost_model.impact_model across round-trip", () => {
+		const specWithExecutionDetails = {
+			...SEED_SPEC_JSON,
+			execution: {
+				frequency: "M",
+				method: "calendar",
+				default_order_type: "market",
+				cost_model: { commission_rate: 0.0003, slippage_bps: 5.0, impact_model: "none" },
+			},
+		};
+		const detail = mapStrategyDetail({ ...baseResponse, spec_json: specWithExecutionDetails });
+		const roundTripped = mapStrategyDetail({
+			...baseResponse,
+			spec_json: serializeStrategySpec(detail.spec),
+		});
+
+		expect(detail.spec.execution.defaultOrderType).toBe("market");
+		expect(detail.spec.execution.costModel?.impactModel).toBe("none");
+		expect(roundTripped.spec).toEqual(detail.spec);
+	});
+
+	it("preserves signal_expressions / signal_weights / param_constraints across round-trip", () => {
+		const specWithSignals = {
+			...SEED_SPEC_JSON,
+			signal_expressions: ["momentum_1m", "reversal_1w", "volatility_factor"],
+			signal_weights: [0.5, 0.3, 0.2],
+			param_constraints: [
+				{ name: "lookback", dtype: "int", min_value: 21, max_value: 504, step: 1, allowed_values: [] },
+				{ name: "mode", dtype: "str", allowed_values: ["fast", "slow"] },
+			],
+		} satisfies Record<string, unknown>;
+		const detail = mapStrategyDetail({ ...baseResponse, spec_json: specWithSignals });
+		const roundTripped = mapStrategyDetail({
+			...baseResponse,
+			spec_json: serializeStrategySpec(detail.spec),
+		});
+
+		expect(detail.spec.signalExpressions).toEqual(["momentum_1m", "reversal_1w", "volatility_factor"]);
+		expect(detail.spec.signalWeights).toEqual([0.5, 0.3, 0.2]);
+		expect(detail.spec.paramConstraints).toEqual([
+			{ name: "lookback", dtype: "int", minValue: 21, maxValue: 504, step: 1, allowedValues: [] },
+			{ name: "mode", dtype: "str", allowedValues: ["fast", "slow"] },
+		]);
+		expect(roundTripped.spec).toEqual(detail.spec);
+	});
+
+	it("serialize emits snake_case param_constraints keys (min_value/allowed_values)", () => {
+		const spec = parseSpecJson(
+			{
+				...SEED_SPEC_JSON,
+				param_constraints: [
+					{ name: "lookback", dtype: "int", min_value: 21, max_value: 504, step: 1, allowed_values: [] },
+				],
+			},
+			{ strategyId: "s", name: "n" },
+		);
+		const json = serializeStrategySpec(spec);
+		const constraints = json.param_constraints as ReadonlyArray<Record<string, unknown>>;
+
+		expect(Array.isArray(constraints)).toBe(true);
+		expect(constraints[0]).toMatchObject({ name: "lookback", dtype: "int", min_value: 21, max_value: 504, step: 1 });
+		expect(constraints[0]).toHaveProperty("allowed_values");
+		expect(constraints[0]).not.toHaveProperty("minValue");
+		expect(constraints[0]).not.toHaveProperty("allowedValues");
+		expect(json.signal_expressions).toEqual(spec.signalExpressions);
+		expect(json.signal_weights).toEqual(spec.signalWeights);
+	});
 });

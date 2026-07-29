@@ -1,40 +1,52 @@
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import type { ReactElement } from "react";
 import { ContextSection } from "@/components/domain/context-section";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useStrategyVersions } from "../hooks/use-strategy-versions";
+import { serializeStrategySpec } from "@/features/strategy/api/mappers";
+import type { StrategySpec } from "@/types/strategy";
+import type { StudioMode } from "../state/strategy-studio-store";
+import { ParamConstraintsEditor } from "./param-constraints-editor";
+import { SignalExpressionsEditor } from "./signal-expressions-editor";
+import { ConstraintsPipeline } from "./strategy-pipeline-view";
+import { StrategySpecForm } from "./strategy-spec-form";
 
 interface StrategyEditorProps {
-	readonly id: string;
+	readonly spec: StrategySpec;
+	readonly mode: StudioMode;
+	readonly selectedKey: string | null;
+	readonly onChange: (updater: (draft: StrategySpec) => StrategySpec) => void;
+	readonly onSelect: (key: string | null) => void;
 }
 
-function StrategyEditorContent({ id }: StrategyEditorProps) {
-	const { data, isLoading, isError } = useStrategyVersions(id);
-
-	if (isLoading) {
-		return <LoadingSkeleton />;
-	}
-
-	if (isError || !data || data.length === 0) {
-		throw new Error("Failed to load strategy versions");
-	}
-
-	const latest = data[data.length - 1];
-
-	return (
-		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-			<ContextSection title="最新版本">
-				<pre className="overflow-auto p-[var(--density-panel-padding)] text-sm text-(--color-foreground-tertiary)">
-					<code>{`version: ${latest.version}\nspec_hash: ${latest.specHash}\nstate: ${latest.state}\nreview: ${latest.reviewOutcome}`}</code>
+/**
+ * 策略编辑容器（Studio main 区域）。
+ *
+ * `form` 模式：{@link StrategySpecForm}（标量 + 单例槽位）+ {@link ConstraintsPipeline}
+ * （约束 CRUD）+ {@link SignalExpressionsEditor}（信号/权重耦合对）+
+ * {@link ParamConstraintsEditor}（参数约束 CRUD）。`code` 模式：serialize 后的 legacy
+ * spec_json 只读预览（与后端存储形态一致）。工作副本与选中态由 `useStrategyStudioStore`
+ * 持有，由 StrategyPage 注入。
+ */
+export function StrategyEditor({ spec, mode, selectedKey, onChange, onSelect }: StrategyEditorProps): ReactElement {
+	if (mode === "code") {
+		return (
+			<ContextSection title="Spec JSON（只读）">
+				<pre className="overflow-auto p-(--density-panel-padding) text-xs text-(--color-foreground-tertiary)">
+					<code>{JSON.stringify(serializeStrategySpec(spec), null, 2)}</code>
 				</pre>
 			</ContextSection>
-		</div>
-	);
-}
+		);
+	}
 
-export function StrategyEditor(props: StrategyEditorProps) {
 	return (
-		<DittoErrorBoundary>
-			<StrategyEditorContent {...props} />
-		</DittoErrorBoundary>
+		<div className="flex flex-col gap-(--section-gap)">
+			<StrategySpecForm spec={spec} onChange={onChange} />
+			<ConstraintsPipeline
+				constraints={spec.constraints}
+				onChange={onChange}
+				onSelect={onSelect}
+				selectedKey={selectedKey}
+			/>
+			<SignalExpressionsEditor spec={spec} onChange={onChange} />
+			<ParamConstraintsEditor spec={spec} onChange={onChange} />
+		</div>
 	);
 }
