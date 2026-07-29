@@ -2076,6 +2076,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Strategy Version
+         * @description 校验 candidate spec_json（pre-save），返回 canonical hash + 合法性 + 变更检测.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_validate_strategy_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diff Strategy Version
+         * @description 返回 version v 相对 parent_version 的 canonical spec 字段级 diff.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["strategies_diff_strategy_version"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trade/account-baseline": {
         parameters: {
             query?: never;
@@ -2956,6 +3000,20 @@ export interface components {
         APIResponse_StrategyResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["StrategyResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategySpecValidationResponse] */
+        APIResponse_StrategySpecValidationResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategySpecValidationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyVersionDiffResponse] */
+        APIResponse_StrategyVersionDiffResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyVersionDiffResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -9085,6 +9143,20 @@ export interface components {
             query_time_ms: number;
         };
         /**
+         * SpecChangeResponse
+         * @description One field-level change between two canonical spec payloads.
+         */
+        SpecChangeResponse: {
+            /** Path */
+            path: string;
+            /** Op */
+            op: string;
+            /** Old */
+            old?: unknown | null;
+            /** New */
+            new?: unknown | null;
+        };
+        /**
          * StrategyActivePointerResponse
          * @description Active pointer returned after a reactivate decision.
          */
@@ -9136,6 +9208,65 @@ export interface components {
              * @default []
              */
             tags: string[];
+        };
+        /**
+         * StrategySpecValidateRequest
+         * @description Pre-save candidate spec validation request (Strategy Studio 编辑校验).
+         */
+        StrategySpecValidateRequest: {
+            /**
+             * Spec Json
+             * @description candidate 策略定义 JSON
+             */
+            spec_json: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * StrategySpecValidationResponse
+         * @description Canonical hash + validity + change-detection result for a candidate spec.
+         */
+        StrategySpecValidationResponse: {
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+            /** Canonical Hash */
+            canonical_hash: string;
+            /** Base Spec Hash */
+            base_spec_hash: string;
+            /** Changed */
+            changed: boolean;
+            /** Valid */
+            valid: boolean;
+            /**
+             * Errors
+             * @default []
+             */
+            errors: string[];
+        };
+        /**
+         * StrategyVersionDiffResponse
+         * @description Field-level canonical spec diff of one version against its parent.
+         */
+        StrategyVersionDiffResponse: {
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+            /** Parent Version */
+            parent_version: number | null;
+            /** Base Spec Hash */
+            base_spec_hash: string;
+            /** Target Spec Hash */
+            target_spec_hash: string;
+            /** Changed */
+            changed: boolean;
+            /**
+             * Changes
+             * @default []
+             */
+            changes: components["schemas"]["SpecChangeResponse"][];
         };
         /**
          * StrategyVersionResponse
@@ -12481,6 +12612,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_StrategyActivePointerResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_validate_strategy_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategySpecValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategySpecValidationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_diff_strategy_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionDiffResponse_"];
                 };
             };
             /** @description Validation Error */
