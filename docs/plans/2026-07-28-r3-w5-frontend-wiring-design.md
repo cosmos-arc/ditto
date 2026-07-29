@@ -71,6 +71,8 @@
 
 **替换**：`experiment-list-page.tsx` + `strategy-list-page.tsx`（硬编码行）→ 真实 adapter 驱动；`hooks/index.ts`（strategy）+ `types/research.ts`（手写 DTO）→ generated + view-model。
 
+> **✅ T18 前端 Strategy Studio 完成**（2026-07-29，ditto-app 分支 `feat/r3-research-wiring`）：数据层 5 件套（`types/strategy` view-model + mapper parse/serialize 双向 + adapter node-descriptors/strategies/strategy-lifecycle + query-keys + runtime）+ MSW live-shape（`/api/v1/strategies` + diff/validate + node-descriptors + experiment）+ 6 hooks + `strategy-studio-store`（Zustand working/server/dirty）+ 8 组件迁移（header/meta/inspector/overview/factors/editor/versions/experiment-queue 接 generated DTO→camelCase view-model）+ strategy-list/experiment-list 硬编码→真实 adapter + `node-library`（节点调色板，NodeDescriptor by category）+ `validation-panel`（validate 端点 canonical hash/valid/changed/errors 展示）集成 Studio + `strategy-spec-roundtrip` 测试（parse↔serialize 幂等）。关键认知：**spec_json 存的是 legacy `StrategySpec` asdict**（template/scorer/selector/execution/constraints/params），非 V2 canonical pipeline；前端 view-model 基于 legacy 解析，validate 端点算 canonical hash（后端从 legacy 派生）。`bun run check` 全绿（171 files / 1966 tests + lint + type + design-system 合规）。**后续增量**：完整 pipeline 编辑器（add/remove/reorder/configure）+ spec-form 编辑表单 + node-inspector 节点配置——legacy→V2 spec 编辑深度适配，留作 T18 增量；治理 mutations（submit/approve/publish）UI 留 T20；types/research.ts 手写 strategy 类型 + 旧 prototype mock/handler dead code 清理留 simplify。
+
 ## 4. Task 19 Experiment 工作台
 
 **后端依赖（交错先补，本 Task 最多）**：
