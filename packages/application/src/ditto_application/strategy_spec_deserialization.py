@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
+from typing import cast
 
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE, DEFAULT_SLIPPAGE_BPS
+from ditto_platform.foundation.json_types import JsonValue
 from ditto_strategy.alpha.nodes import (
     NodeCategory,
     NodeInstance,
@@ -17,6 +19,7 @@ from ditto_strategy.alpha.nodes import (
 from ditto_strategy.alpha.spec_codec import (
     adapt_legacy_strategy_spec,
     canonical_spec_hash,
+    canonical_spec_payload,
 )
 from ditto_strategy.alpha.specs import (
     STRATEGY_SPEC_V2_SCHEMA_VERSION,
@@ -44,6 +47,7 @@ from ditto_strategy.alpha.templates import (
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.models import StrategySpecRecord
 
+from ditto_application.contracts import SpecChange
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.strategy_spec_fields import (
     as_float_tuple,
@@ -66,6 +70,7 @@ __all__ = [
     "_DEFAULT_TRAILING_STOP_PCT",
     "_normalize_impact_model",
     "canonical_spec_hash_for_record",
+    "canonical_spec_payload_for_record",
     "default_required_datasets_for_template",
     "deserialize_constraint",
     "deserialize_constraints",
@@ -77,6 +82,7 @@ __all__ = [
     "deserialize_selector",
     "deserialize_strategy_spec",
     "deserialize_strategy_spec_v2",
+    "diff_canonical_payloads",
     "inject_template_constraints",
     "resolve_rebalance_frequency",
 ]
@@ -179,16 +185,107 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
     return inject_template_constraints(spec)
 
 
+def canonical_spec_payload_for_record(record: StrategySpecRecord) -> dict[str, object]:
+    """
+    计算 ``record.spec_json`` 的 canonical V2 payload.
+
+    走 legacy deserialize → V2 adapt → ``canonical_spec_payload``，与
+    ``canonical_spec_hash_for_record`` 同源，供 spec diff 复用同一规范化形态。
+    """
+    spec = deserialize_strategy_spec(record)
+    v2 = adapt_legacy_strategy_spec(spec)
+    return canonical_spec_payload(v2)
+
+
 def canonical_spec_hash_for_record(record: StrategySpecRecord) -> str:
     """
     计算 ``record.spec_json`` 的 canonical V2 hash.
 
-    走 legacy deserialize → V2 adapt → ``canonical_spec_hash``，与 backtest
-    manifest 的 spec_hash 同源，保证 governance 版本与回测版本内容寻址一致。
+    委托 ``canonical_spec_hash``（与 ``canonical_spec_payload_for_record`` 共享
+    同一 V2 payload 来源），与 backtest manifest 的 spec_hash 同源，保证
+    governance 版本与回测版本内容寻址一致。
     """
-    spec = deserialize_strategy_spec(record)
-    v2 = adapt_legacy_strategy_spec(spec)
-    return canonical_spec_hash(v2)
+    return canonical_spec_hash(
+        adapt_legacy_strategy_spec(deserialize_strategy_spec(record))
+    )
+
+
+def diff_canonical_payloads(
+    base: dict[str, object],
+    target: dict[str, object],
+) -> tuple[SpecChange, ...]:
+    """
+    递归比较两个 canonical spec payload，返回字段级变更.
+
+    dict 按 key（sorted）遍历，list 按 index 对齐；非 dict/list leaf 用相等
+    判定。type 不匹配（如 dict vs scalar）整体记为 ``changed``，不递归。
+    """
+    changes: list[SpecChange] = []
+    _collect_payload_changes(
+        "",
+        cast("JsonValue", base),
+        cast("JsonValue", target),
+        changes,
+    )
+    return tuple(changes)
+
+
+def _collect_payload_changes(
+    prefix: str,
+    base: JsonValue,
+    target: JsonValue,
+    changes: list[SpecChange],
+) -> None:
+    if isinstance(base, dict) and isinstance(target, dict):
+        for key in sorted(set(base) | set(target), key=str):
+            path = f"{prefix}.{key}" if prefix else str(key)
+            if key not in base:
+                changes.append(
+                    SpecChange(
+                        path=path,
+                        op="added",
+                        old_value=None,
+                        new_value=target[key],
+                    ),
+                )
+            elif key not in target:
+                changes.append(
+                    SpecChange(
+                        path=path,
+                        op="removed",
+                        old_value=base[key],
+                        new_value=None,
+                    ),
+                )
+            else:
+                _collect_payload_changes(path, base[key], target[key], changes)
+    elif isinstance(base, list) and isinstance(target, list):
+        for index in range(max(len(base), len(target))):
+            path = f"{prefix}[{index}]"
+            if index >= len(base):
+                changes.append(
+                    SpecChange(
+                        path=path,
+                        op="added",
+                        old_value=None,
+                        new_value=target[index],
+                    ),
+                )
+            elif index >= len(target):
+                changes.append(
+                    SpecChange(
+                        path=path,
+                        op="removed",
+                        old_value=base[index],
+                        new_value=None,
+                    ),
+                )
+            else:
+                _collect_payload_changes(path, base[index], target[index], changes)
+    elif base != target:
+        changes.append(
+            SpecChange(path=prefix, op="changed", old_value=base, new_value=target),
+        )
 
 
 def deserialize_strategy_spec_v2(record: StrategySpecRecord) -> StrategySpecV2:

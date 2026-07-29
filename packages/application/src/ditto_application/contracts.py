@@ -154,13 +154,52 @@ class StrategyActivePointerInfo:
     pointer_revision: int
 
 
+@dataclass(frozen=True)
+class SpecChange:
+    """One field-level change between two canonical spec payloads."""
+
+    path: str
+    op: str
+    old_value: object | None
+    new_value: object | None
+
+
+@dataclass(frozen=True)
+class StrategySpecValidationInfo:
+    """Result of validating a candidate spec against a base governance version."""
+
+    strategy_id: str
+    version: int
+    canonical_hash: str
+    base_spec_hash: str
+    changed: bool
+    valid: bool
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class StrategyVersionDiffInfo:
+    """Field-level canonical spec diff of one version against its parent."""
+
+    strategy_id: str
+    version: int
+    parent_version: int | None
+    base_spec_hash: str
+    target_spec_hash: str
+    changed: bool
+    changes: tuple[SpecChange, ...]
+
+
 __all__ = [
     "CheckDataQualityCommand",
     "CostConfig",
     "IngestDateCommand",
+    "SpecChange",
     "StrategyActiveInfo",
     "StrategyActivePointerInfo",
     "StrategySpecInfo",
+    "StrategySpecValidationInfo",
+    "StrategyVersionDiffInfo",
     "StrategyVersionInfo",
     "StrategyVersionStateInfo",
     "to_spec_info",

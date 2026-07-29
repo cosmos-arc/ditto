@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ditto_strategy.contracts import StrategyCatalogReader
+from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.governance.models import (
     StrategyVersion,
     StrategyVersionState,
@@ -16,8 +17,16 @@ from ditto_strategy.models import StrategySpecRecord
 from ditto_application.contracts import (
     StrategyActiveInfo,
     StrategySpecInfo,
+    StrategySpecValidationInfo,
+    StrategyVersionDiffInfo,
     StrategyVersionInfo,
     to_spec_info,
+)
+from ditto_application.exceptions import AppBuilderError
+from ditto_application.strategy_spec_deserialization import (
+    canonical_spec_hash_for_record,
+    canonical_spec_payload_for_record,
+    diff_canonical_payloads,
 )
 
 __all__ = ["StrategyQueryFacade"]
@@ -96,6 +105,114 @@ class StrategyQueryFacade:
             StrategyVersionState.REVIEW
         )
         return self._project_version_infos(versions, self._version_state_reader)
+
+    def validate_spec(
+        self,
+        strategy_id: str,
+        version: int,
+        spec_json: dict[str, object],
+    ) -> StrategySpecValidationInfo | None:
+        """
+        校验 candidate ``spec_json``，返回 hash + 合法性 + 变更检测.
+
+        candidate 非法是 pre-save 校验的正常路径，返回 ``valid=False`` + errors，
+        不抛错；仅当 governance reader 未注入或 version 不存在时返回 None（route
+        映射 404）。canonical hash 与 governance version 的 spec_hash 同源，故
+        ``changed`` 判定可信。
+        """
+        if self._governance_version_reader is None:
+            return None
+        versions = self._governance_version_reader.list_versions(strategy_id)
+        base = self._find_version(versions, version)
+        if base is None:
+            return None
+        base_hash = base.spec_hash
+        candidate_record = StrategySpecRecord(
+            strategy_id=strategy_id,
+            name="",
+            spec_json=spec_json,
+        )
+        try:
+            candidate_hash = canonical_spec_hash_for_record(candidate_record)
+        except (AppBuilderError, StrategySpecError, ValueError) as exc:
+            return StrategySpecValidationInfo(
+                strategy_id=strategy_id,
+                version=version,
+                canonical_hash="",
+                base_spec_hash=base_hash,
+                changed=False,
+                valid=False,
+                errors=(str(exc),),
+            )
+        return StrategySpecValidationInfo(
+            strategy_id=strategy_id,
+            version=version,
+            canonical_hash=candidate_hash,
+            base_spec_hash=base_hash,
+            changed=candidate_hash != base_hash,
+            valid=True,
+            errors=(),
+        )
+
+    def diff_version(
+        self,
+        strategy_id: str,
+        version: int,
+    ) -> StrategyVersionDiffInfo | None:
+        """
+        计算 version ``version`` 相对 parent_version 的 canonical spec 字段级 diff.
+
+        基于 ``canonical_spec_payload_for_record`` 的规范化 payload 做递归 diff，
+        与 canonical hash 同源。首版本（无 parent）返回空 diff。governance reader
+        未注入或 version 不存在时返回 None（route 映射 404）。
+        """
+        if self._governance_version_reader is None:
+            return None
+        versions = self._governance_version_reader.list_versions(strategy_id)
+        target = self._find_version(versions, version)
+        if target is None:
+            return None
+        target_hash = target.spec_hash
+        if target.parent_version is None:
+            return StrategyVersionDiffInfo(
+                strategy_id=strategy_id,
+                version=version,
+                parent_version=None,
+                base_spec_hash="",
+                target_spec_hash=target_hash,
+                changed=False,
+                changes=(),
+            )
+        parent = self._find_version(versions, target.parent_version)
+        base_hash = parent.spec_hash if parent is not None else ""
+        target_record = self._service.get_spec(strategy_id, version)
+        parent_record = self._service.get_spec(strategy_id, target.parent_version)
+        if target_record is None or parent_record is None:
+            return None
+        changes = diff_canonical_payloads(
+            canonical_spec_payload_for_record(parent_record),
+            canonical_spec_payload_for_record(target_record),
+        )
+        return StrategyVersionDiffInfo(
+            strategy_id=strategy_id,
+            version=version,
+            parent_version=target.parent_version,
+            base_spec_hash=base_hash,
+            target_spec_hash=target_hash,
+            changed=bool(changes),
+            changes=changes,
+        )
+
+    @staticmethod
+    def _find_version(
+        versions: tuple[StrategyVersion, ...],
+        version: int,
+    ) -> StrategyVersion | None:
+        """从 governance versions 中按 version 号查找单个版本."""
+        for item in versions:
+            if item.version == version:
+                return item
+        return None
 
     @staticmethod
     def _project_version_infos(

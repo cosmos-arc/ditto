@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from dataclasses import asdict
 from unittest.mock import MagicMock
 
 from ditto_application.contracts import (
     StrategyActiveInfo,
     StrategySpecInfo,
+    StrategySpecValidationInfo,
+    StrategyVersionDiffInfo,
     StrategyVersionInfo,
 )
 from ditto_application.queries.strategy import StrategyQueryFacade
+from ditto_application.strategy_spec_deserialization import (
+    canonical_spec_hash_for_record,
+)
+from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.governance.models import (
     ReviewOutcome,
     StrategyActivePointer,
@@ -293,3 +301,164 @@ class TestStrategyQueryFacadeGetActive:
         facade = StrategyQueryFacade(MagicMock(spec=["list_specs", "get_spec"]))
 
         assert facade.get_active("s-1") is None
+
+
+def _candidate_spec() -> tuple[dict[str, object], str]:
+    """合法 candidate spec_json 及其 canonical hash（供 validate/diff 测试）."""
+    seed = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    spec_json: dict[str, object] = asdict(seed)
+    digest = canonical_spec_hash_for_record(
+        StrategySpecRecord(strategy_id=seed.strategy_id, name="", spec_json=spec_json),
+    )
+    return spec_json, digest
+
+
+class TestStrategyQueryFacadeValidateSpec:
+    """validate_spec 校验 candidate spec_json 并检测变更."""
+
+    def test_valid_candidate_unchanged_when_hash_matches_base(self) -> None:
+        candidate, candidate_hash = _candidate_spec()
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = (
+            _make_version(2, spec_hash=candidate_hash),
+        )
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.validate_spec("s-1", 2, candidate)
+
+        assert result == StrategySpecValidationInfo(
+            strategy_id="s-1",
+            version=2,
+            canonical_hash=candidate_hash,
+            base_spec_hash=candidate_hash,
+            changed=False,
+            valid=True,
+            errors=(),
+        )
+
+    def test_valid_candidate_changed_when_hash_diverges(self) -> None:
+        candidate, candidate_hash = _candidate_spec()
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = (
+            _make_version(2, spec_hash="b" * 64),
+        )
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.validate_spec("s-1", 2, candidate)
+
+        assert result is not None
+        assert result.valid is True
+        assert result.changed is True
+        assert result.canonical_hash == candidate_hash
+        assert result.base_spec_hash == "b" * 64
+
+    def test_invalid_candidate_returns_valid_false_with_errors(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = (
+            _make_version(2, spec_hash="b" * 64),
+        )
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.validate_spec("s-1", 2, {"template": "different"})
+
+        assert result is not None
+        assert result.valid is False
+        assert result.canonical_hash == ""
+        assert result.changed is False
+        assert len(result.errors) > 0
+
+    def test_returns_none_when_version_not_found(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = ()
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            governance_version_reader=governance_reader,
+        )
+
+        assert facade.validate_spec("s-1", 99, {}) is None
+
+    def test_returns_none_without_governance_reader(self) -> None:
+        facade = StrategyQueryFacade(MagicMock(spec=["list_specs", "get_spec"]))
+
+        assert facade.validate_spec("s-1", 2, {}) is None
+
+
+class TestStrategyQueryFacadeDiffVersion:
+    """diff_version 计算 version v 相对 parent_version 的 canonical spec 字段级 diff."""
+
+    def test_returns_none_when_version_not_found(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = ()
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            governance_version_reader=governance_reader,
+        )
+
+        assert facade.diff_version("s-1", 99) is None
+
+    def test_first_version_without_parent_returns_empty_diff(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = (
+            _make_version(1, parent=None, spec_hash="a" * 64),
+        )
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.diff_version("s-1", 1)
+
+        assert result == StrategyVersionDiffInfo(
+            strategy_id="s-1",
+            version=1,
+            parent_version=None,
+            base_spec_hash="",
+            target_spec_hash="a" * 64,
+            changed=False,
+            changes=(),
+        )
+
+    def test_diff_against_parent_reports_changes(self) -> None:
+        parent_json, _ = _candidate_spec()
+        child_json = deepcopy(parent_json)
+        selector = child_json.get("selector")
+        assert isinstance(selector, dict)
+        selector["method"] = "top_k_changed"
+
+        def spec_for_version(_sid: str, ver: int) -> StrategySpecRecord:
+            return StrategySpecRecord(
+                strategy_id="s-1",
+                name="n",
+                spec_json=child_json if ver == 2 else parent_json,
+                version=ver,
+            )
+
+        catalog = MagicMock(spec=["list_specs", "get_spec"])
+        catalog.get_spec.side_effect = spec_for_version
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        governance_reader.list_versions.return_value = (
+            _make_version(1, parent=None, spec_hash="p" * 64),
+            _make_version(2, parent=1, spec_hash="c" * 64),
+        )
+        facade = StrategyQueryFacade(
+            catalog,
+            governance_version_reader=governance_reader,
+        )
+
+        result = facade.diff_version("s-1", 2)
+
+        assert result is not None
+        assert result.parent_version == 1
+        assert result.base_spec_hash == "p" * 64
+        assert result.target_spec_hash == "c" * 64
+        assert result.changed is True
+        assert len(result.changes) > 0
