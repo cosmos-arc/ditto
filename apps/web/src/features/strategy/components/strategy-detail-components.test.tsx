@@ -28,25 +28,23 @@ beforeEach(() => server.use(...strategyHandlers));
 describe("StrategyDetailMeta", () => {
 	it("渲染策略名称", async () => {
 		render(<StrategyDetailMeta id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("多因子动量策略 v3")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("ETF 行业轮动")).resolves.toBeInTheDocument();
 	});
 
 	it("显示策略版本和股票池", async () => {
 		render(<StrategyDetailMeta id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findAllByText(/v3/)).resolves.toHaveLength(2);
-		await expect(screen.findByText(/沪深300/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/v3 · csi_etf_broad/)).resolves.toBeInTheDocument();
 	});
 
-	it("显示策略状态", async () => {
+	it("显示策略生命周期", async () => {
 		render(<StrategyDetailMeta id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("completed")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("published")).resolves.toBeInTheDocument();
 	});
 
-	it("显示因子标签", async () => {
+	it("显示策略标签", async () => {
 		render(<StrategyDetailMeta id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("动量因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("波动率因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("北向资金因子")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("etf")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("rotation")).resolves.toBeInTheDocument();
 	});
 });
 
@@ -58,50 +56,45 @@ describe("StrategyVersionsView", () => {
 		await expect(screen.findByText("v3")).resolves.toBeInTheDocument();
 	});
 
-	it("显示版本变更说明", async () => {
+	it("显示版本审查结论", async () => {
 		render(<StrategyVersionsView id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("初始版本：单因子动量策略")).resolves.toBeInTheDocument();
+		const approved = await screen.findAllByText("approved");
+		expect(approved.length).toBeGreaterThanOrEqual(1);
 	});
 });
 
 describe("StrategyOverview", () => {
-	it("渲染 Pipeline 流程", async () => {
+	it("渲染策略流程", async () => {
 		render(<StrategyOverview id="strat-001" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("策略流程")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("股票池过滤")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("因子合成")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("评分")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("选取")).resolves.toBeInTheDocument();
 	});
 
-	it("渲染风控规则", async () => {
+	it("渲染风控约束", async () => {
 		render(<StrategyOverview id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("风控规则")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("个股最大持仓权重")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("风控约束")).resolves.toBeInTheDocument();
+		// max_weight_per_instrument 同时出现在派生节点（流程）与风控约束区
+		const constraints = await screen.findAllByText("max_weight_per_instrument");
+		expect(constraints.length).toBeGreaterThanOrEqual(1);
 	});
 
-	it("显示因子权重配比", async () => {
+	it("显示策略参数", async () => {
 		render(<StrategyOverview id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("因子权重")).resolves.toBeInTheDocument();
-		await expect(screen.findByText(/40%/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText("策略参数")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("252")).resolves.toBeInTheDocument();
 	});
 });
 
 describe("StrategyFactorsView", () => {
-	it("渲染因子配置区域", async () => {
+	it("渲染策略参数区域", async () => {
 		render(<StrategyFactorsView id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("因子配置")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("策略参数")).resolves.toBeInTheDocument();
 	});
 
-	it("显示因子权重分配", async () => {
+	it("显示参数键值", async () => {
 		render(<StrategyFactorsView id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("动量因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText(/40%/)).resolves.toBeInTheDocument();
-		const factors30 = await screen.findAllByText(/30%/);
-		expect(factors30).toHaveLength(2);
-	});
-
-	it("显示因子列表", async () => {
-		render(<StrategyFactorsView id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("波动率因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("北向资金因子")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("lookback")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("vol_window")).resolves.toBeInTheDocument();
 	});
 });

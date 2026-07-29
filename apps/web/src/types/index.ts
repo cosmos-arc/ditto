@@ -236,6 +236,7 @@ export type {
 	DryRunStrategyRequest,
 	DryRunStrategyResponse,
 	Experiment,
+	ExperimentListItem,
 	Factor,
 	FactorAnalysisResponse,
 	FactorDecayPoint,

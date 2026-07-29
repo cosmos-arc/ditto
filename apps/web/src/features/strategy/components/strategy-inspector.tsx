@@ -22,21 +22,25 @@ function StrategyInspectorContent({ id }: StrategyInspectorProps) {
 		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
 			<ContextSection title="策略参数">
 				<ul className="flex flex-col gap-[var(--section-gap)]">
-					<li className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm">
+					<li className="flex items-center justify-between rounded-sm p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg)">
 						<span>股票池</span>
-						<span className="text-(--color-foreground-tertiary)">{data.universe}</span>
+						<span className="text-(--color-foreground-tertiary)">{data.spec.universe}</span>
 					</li>
-					<li className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm">
-						<span>模式</span>
-						<span className="text-(--color-foreground-tertiary)">{data.mode}</span>
+					<li className="flex items-center justify-between rounded-sm p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg)">
+						<span>模板</span>
+						<span className="text-(--color-foreground-tertiary)">{data.spec.template}</span>
 					</li>
-					{data.factors.map((factor) => (
+					<li className="flex items-center justify-between rounded-sm p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg)">
+						<span>资产类别</span>
+						<span className="text-(--color-foreground-tertiary)">{data.spec.assetClass}</span>
+					</li>
+					{data.tags.map((tag) => (
 						<li
-							key={factor}
-							className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
+							key={tag}
+							className="flex items-center justify-between rounded-sm p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg)"
 						>
-							<span>{factor}</span>
-							<span className="text-(--color-foreground-tertiary)">因子</span>
+							<span>{tag}</span>
+							<span className="text-(--color-foreground-tertiary)">标签</span>
 						</li>
 					))}
 				</ul>

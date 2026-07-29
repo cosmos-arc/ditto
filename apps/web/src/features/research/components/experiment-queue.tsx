@@ -6,6 +6,7 @@ import { useExperiments, useReviewQueue } from "../hooks";
 const STATUS_VARIANT: Record<string, "healthy" | "warning" | "error" | "default"> = {
 	completed: "healthy",
 	running: "healthy",
+	queued: "warning",
 	pending: "warning",
 	failed: "error",
 	approved: "healthy",
@@ -19,30 +20,25 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export function ExperimentQueue() {
-	const { data: experimentsData, isLoading: expLoading } = useExperiments();
-
+	const { data: experiments, isLoading: expLoading } = useExperiments();
 	const { data: reviewData, isLoading: reviewLoading } = useReviewQueue();
 
 	return (
 		<div className="flex flex-col gap-4">
-			<ContextSection title="实验" count={experimentsData?.total}>
+			<ContextSection title="实验" count={experiments?.length}>
 				{expLoading && <LoadingSkeleton variant="table" rows={2} />}
-				{experimentsData && (
+				{experiments && (
 					<div className="space-y-1">
-						{experimentsData.items.map((exp) => (
+						{experiments.map((exp) => (
 							<div
-								key={exp.id}
+								key={exp.experimentId}
 								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
 							>
 								<div className="flex items-center gap-2">
 									<StatusBadge variant={STATUS_VARIANT[exp.status] ?? "default"} label={exp.status} size="sm" />
-									<span className="font-medium">{exp.name}</span>
+									<span className="font-medium">{exp.experimentId}</span>
 								</div>
-								<div className="flex gap-2 text-xs text-(--color-foreground-tertiary)">
-									{exp.factors.map((f) => (
-										<span key={f}>{f}</span>
-									))}
-								</div>
+								<span className="text-xs text-(--color-foreground-tertiary)">{exp.stage}</span>
 							</div>
 						))}
 					</div>

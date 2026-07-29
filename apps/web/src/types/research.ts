@@ -169,6 +169,19 @@ export type Experiment = {
 
 export type GetExperimentsResponse = PaginatedResponse<Experiment>;
 
+/** 实验列表项（R3 live-shape，基于 `ExperimentSummaryResponse`）。完整工作台属 T19。 */
+export type ExperimentListItem = {
+	readonly experimentId: string;
+	readonly status: string;
+	readonly desiredState: string;
+	readonly stage: string;
+	readonly failureCode: string | null;
+	readonly queueOrdinal: number | null;
+	readonly revision: number;
+	readonly createdAt: string;
+	readonly updatedAt: string;
+};
+
 /** 审核队列项 */
 export type ReviewQueueItem = {
 	readonly id: string;

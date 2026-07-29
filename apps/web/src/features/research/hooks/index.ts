@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient, withQueryParams } from "@/lib/api-client";
 import type {
-	GetExperimentsResponse,
 	GetFactorsResponse,
 	GetResearchRunsResponse,
 	GetReviewQueueResponse,
@@ -30,12 +29,7 @@ export function useResearchRuns() {
 	});
 }
 
-export function useExperiments() {
-	return useQuery({
-		queryKey: ["research", "experiments"],
-		queryFn: () => apiClient.get<GetExperimentsResponse>("/research/experiments"),
-	});
-}
+export { useExperiments } from "./use-experiments";
 
 export function useReviewQueue() {
 	return useQuery({

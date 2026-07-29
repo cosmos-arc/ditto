@@ -14,18 +14,17 @@ function StrategyEditorContent({ id }: StrategyEditorProps) {
 		return <LoadingSkeleton />;
 	}
 
-	if (isError || !data) {
+	if (isError || !data || data.length === 0) {
 		throw new Error("Failed to load strategy versions");
 	}
 
-	const latestVersion = data.versions[data.versions.length - 1];
-	const code = latestVersion?.code ?? "";
+	const latest = data[data.length - 1];
 
 	return (
 		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-			<ContextSection title="策略代码">
+			<ContextSection title="最新版本">
 				<pre className="overflow-auto p-[var(--density-panel-padding)] text-sm text-(--color-foreground-tertiary)">
-					<code>{code}</code>
+					<code>{`version: ${latest.version}\nspec_hash: ${latest.specHash}\nstate: ${latest.state}\nreview: ${latest.reviewOutcome}`}</code>
 				</pre>
 			</ContextSection>
 		</div>

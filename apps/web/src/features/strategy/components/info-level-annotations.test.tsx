@@ -31,7 +31,7 @@ function createWrapper() {
 	};
 }
 
-// ── StrategyDetailPage: 3 L1 (active tab only), 3 L2, 3 L3 ──
+// ── StrategyDetailPage: 3 L1 (active tab only), 3 L2, 5 L3 (派生节点) ──
 
 describe("StrategyDetailPage info-level annotations", () => {
 	beforeEach(() => server.use(...strategyHandlers));
@@ -39,8 +39,7 @@ describe("StrategyDetailPage info-level annotations", () => {
 	it("annotates 3 L1 information units (active tab only)", async () => {
 		render(<StrategyDetailPage />, { wrapper: createWrapper() });
 
-		// Wait for strategy data to load
-		await screen.findByText("多因子动量策略 v3");
+		await screen.findByText("ETF 行业轮动");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
 		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
@@ -59,12 +58,12 @@ describe("StrategyDetailPage info-level annotations", () => {
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("strategy-pipeline");
-		expect(l2UnitNames).toContain("factor-weights");
+		expect(l2UnitNames).toContain("strategy-params");
 		expect(l2UnitNames).toContain("risk-rules");
 		expect(l2Units).toHaveLength(3);
 	});
 
-	it("annotates 3 L3 pipeline node items", async () => {
+	it("annotates L3 pipeline node items (scorer + selector + execution + constraints)", async () => {
 		render(<StrategyDetailPage />, { wrapper: createWrapper() });
 
 		await screen.findByText("策略流程");
@@ -72,12 +71,13 @@ describe("StrategyDetailPage info-level annotations", () => {
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
 		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
-		expect(l3UnitNames.filter((n) => n === "pipeline-node")).toHaveLength(3);
-		expect(l3Units).toHaveLength(3);
+		// 派生节点：scorer + selector + execution + 2 constraints = 5
+		expect(l3UnitNames.filter((n) => n === "pipeline-node")).toHaveLength(5);
+		expect(l3Units).toHaveLength(5);
 	});
 });
 
-// ── StrategyPage (Studio): 4 L1, 1 L2 ──
+// ── StrategyPage (Studio): 4 L1, 2 L2 ──
 
 describe("StrategyPage info-level annotations", () => {
 	beforeEach(() => server.use(...strategyHandlers));
@@ -85,7 +85,7 @@ describe("StrategyPage info-level annotations", () => {
 	it("annotates 4 L1 information units", async () => {
 		render(<StrategyPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("因子库");
+		await screen.findByText("节点库");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
 		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
@@ -93,26 +93,27 @@ describe("StrategyPage info-level annotations", () => {
 		expect(l1UnitNames).toContain("studio-mode-bar");
 		expect(l1UnitNames).toContain("strategy-header");
 		expect(l1UnitNames).toContain("strategy-code");
-		expect(l1UnitNames).toContain("factor-browser");
+		expect(l1UnitNames).toContain("node-library");
 		expect(l1Units).toHaveLength(4);
 	});
 
-	it("annotates 1 L2 information unit", async () => {
+	it("annotates 2 L2 information units", async () => {
 		render(<StrategyPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("因子库");
+		await screen.findByText("节点库");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("strategy-inspector");
-		expect(l2Units).toHaveLength(1);
+		expect(l2UnitNames).toContain("validation-panel");
+		expect(l2Units).toHaveLength(2);
 	});
 
 	it("annotates 0 L3 information units", async () => {
 		render(<StrategyPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("因子库");
+		await screen.findByText("节点库");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
 		expect(l3Units).toHaveLength(0);
