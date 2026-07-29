@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Mapping
 from dataclasses import replace
 from typing import cast
 
@@ -230,6 +231,12 @@ def diff_canonical_payloads(
     return tuple(changes)
 
 
+_KEYED_LIST_FIELDS: Mapping[str, str] = {
+    "parameter_schema": "name",
+    "pipeline.nodes": "node_id",
+}
+
+
 def _collect_payload_changes(
     prefix: str,
     base: JsonValue,
@@ -260,32 +267,90 @@ def _collect_payload_changes(
             else:
                 _collect_payload_changes(path, base[key], target[key], changes)
     elif isinstance(base, list) and isinstance(target, list):
-        for index in range(max(len(base), len(target))):
-            path = f"{prefix}[{index}]"
-            if index >= len(base):
-                changes.append(
-                    SpecChange(
-                        path=path,
-                        op="added",
-                        old_value=None,
-                        new_value=target[index],
-                    ),
-                )
-            elif index >= len(target):
-                changes.append(
-                    SpecChange(
-                        path=path,
-                        op="removed",
-                        old_value=base[index],
-                        new_value=None,
-                    ),
-                )
-            else:
-                _collect_payload_changes(path, base[index], target[index], changes)
+        key_field = _KEYED_LIST_FIELDS.get(prefix)
+        if key_field is None:
+            _collect_indexed_list(prefix, base, target, changes)
+        else:
+            _collect_keyed_list(prefix, key_field, base, target, changes)
     elif base != target:
         changes.append(
             SpecChange(path=prefix, op="changed", old_value=base, new_value=target),
         )
+
+
+def _collect_indexed_list(
+    prefix: str,
+    base: list[JsonValue],
+    target: list[JsonValue],
+    changes: list[SpecChange],
+) -> None:
+    for index in range(max(len(base), len(target))):
+        path = f"{prefix}[{index}]"
+        if index >= len(base):
+            changes.append(
+                SpecChange(
+                    path=path,
+                    op="added",
+                    old_value=None,
+                    new_value=target[index],
+                ),
+            )
+        elif index >= len(target):
+            changes.append(
+                SpecChange(
+                    path=path,
+                    op="removed",
+                    old_value=base[index],
+                    new_value=None,
+                ),
+            )
+        else:
+            _collect_payload_changes(path, base[index], target[index], changes)
+
+
+def _collect_keyed_list(
+    prefix: str,
+    key_field: str,
+    base: list[JsonValue],
+    target: list[JsonValue],
+    changes: list[SpecChange],
+) -> None:
+    """
+    对按键字段定位身份的 list（parameter_schema/pipeline.nodes）按键 diff.
+
+    避免 index 对齐在中间插入/删除时级联假变更——按 name/node_id 匹配元素身份。
+    """
+    base_map = {_list_key(item, key_field): item for item in base}
+    target_map = {_list_key(item, key_field): item for item in target}
+    for key in sorted(set(base_map) | set(target_map), key=str):
+        path = f"{prefix}[{key}]"
+        if key not in base_map:
+            changes.append(
+                SpecChange(
+                    path=path,
+                    op="added",
+                    old_value=None,
+                    new_value=target_map[key],
+                ),
+            )
+        elif key not in target_map:
+            changes.append(
+                SpecChange(
+                    path=path,
+                    op="removed",
+                    old_value=base_map[key],
+                    new_value=None,
+                ),
+            )
+        else:
+            _collect_payload_changes(path, base_map[key], target_map[key], changes)
+
+
+def _list_key(item: JsonValue, key_field: str) -> str:
+    if isinstance(item, dict):
+        value = item.get(key_field)
+        return value if isinstance(value, str) else ""
+    return ""
 
 
 def deserialize_strategy_spec_v2(record: StrategySpecRecord) -> StrategySpecV2:

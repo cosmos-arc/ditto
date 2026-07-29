@@ -92,6 +92,96 @@ class TestDiffCanonicalPayloads:
         assert SpecChange(path="d", op="added", old_value=None, new_value=4) in result
         assert len(result) == 3
 
+    def test_keyed_list_added_by_key_field(self) -> None:
+        """parameter_schema 按 name 键定位：新增一条只报该键 added（path 用键值）."""
+        base = {"parameter_schema": [{"name": "a", "dtype": "int"}]}
+        target = {
+            "parameter_schema": [
+                {"name": "a", "dtype": "int"},
+                {"name": "b", "dtype": "float"},
+            ]
+        }
+        result = diff_canonical_payloads(base, target)
+        assert result == (
+            SpecChange(
+                path="parameter_schema[b]",
+                op="added",
+                old_value=None,
+                new_value={"dtype": "float", "name": "b"},
+            ),
+        )
+
+    def test_keyed_list_removed_by_key_field(self) -> None:
+        base = {
+            "parameter_schema": [
+                {"name": "a", "dtype": "int"},
+                {"name": "b", "dtype": "float"},
+            ]
+        }
+        target = {"parameter_schema": [{"name": "a", "dtype": "int"}]}
+        result = diff_canonical_payloads(base, target)
+        assert result == (
+            SpecChange(
+                path="parameter_schema[b]",
+                op="removed",
+                old_value={"dtype": "float", "name": "b"},
+                new_value=None,
+            ),
+        )
+
+    def test_keyed_list_change_inside_matched_element(self) -> None:
+        """同键元素的字段变化按键匹配后递归（path 含键值 + 字段）."""
+        base = {"parameter_schema": [{"name": "a", "dtype": "int"}]}
+        target = {"parameter_schema": [{"name": "a", "dtype": "float"}]}
+        result = diff_canonical_payloads(base, target)
+        assert result == (
+            SpecChange(
+                path="parameter_schema[a].dtype",
+                op="changed",
+                old_value="int",
+                new_value="float",
+            ),
+        )
+
+    def test_keyed_list_middle_insert_does_not_cascade(self) -> None:
+        """中间插入一条只报该键 added，既有键不级联（altitude 核心 case）."""
+        base = {
+            "parameter_schema": [
+                {"name": "a", "v": 1},
+                {"name": "c", "v": 3},
+            ]
+        }
+        target = {
+            "parameter_schema": [
+                {"name": "a", "v": 1},
+                {"name": "b", "v": 2},
+                {"name": "c", "v": 3},
+            ]
+        }
+        result = diff_canonical_payloads(base, target)
+        assert result == (
+            SpecChange(
+                path="parameter_schema[b]",
+                op="added",
+                old_value=None,
+                new_value={"name": "b", "v": 2},
+            ),
+        )
+
+    def test_pipeline_nodes_keyed_by_node_id(self) -> None:
+        """pipeline.nodes 按 node_id 键定位（验证嵌套 keyed list path）."""
+        base = {"pipeline": {"nodes": [{"enabled": True, "node_id": "universe"}]}}
+        target = {"pipeline": {"nodes": [{"enabled": False, "node_id": "universe"}]}}
+        result = diff_canonical_payloads(base, target)
+        assert result == (
+            SpecChange(
+                path="pipeline.nodes[universe].enabled",
+                op="changed",
+                old_value=True,
+                new_value=False,
+            ),
+        )
+
 
 class TestCanonicalSpecPayloadForRecord:
     """canonical_spec_payload_for_record 与 canonical_spec_hash_for_record 同源."""
