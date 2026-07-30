@@ -136,12 +136,14 @@ export function GovernanceActions({
 					onOpenChange={(open) => {
 						if (!open) setDialog(null);
 					}}
+					strategyId={strategyId}
 					targetVersion={version.version}
 					expectedPointerRevision={expectedPointerRevision}
 					isPending={governance.reactivate.isPending}
 					onConfirm={(variables) => {
-						governance.reactivate.mutate(variables);
-						setDialog(null);
+						governance.reactivate.mutate(variables, {
+							onSuccess: () => setDialog(null),
+						});
 					}}
 				/>
 			)}

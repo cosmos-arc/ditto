@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { DecisionDialog, ReactivateDialog } from "./governance-dialogs";
+import { DecisionDialog, ReactivateDialog, reactivateConfirmation } from "./governance-dialogs";
 
 describe("DecisionDialog", () => {
 	it("disables confirm until actor and reason are both non-empty", () => {
@@ -43,11 +43,16 @@ describe("DecisionDialog", () => {
 });
 
 describe("ReactivateDialog", () => {
+	it("derives the exact server confirmation from strategy, version, and pointer revision", () => {
+		expect(reactivateConfirmation("s", 3, 2)).toBe("strategy:reactivate:s@3:pointer-revision:2:confirm");
+	});
+
 	it("disables confirm until the confirmation phrase matches the target version", () => {
 		render(
 			<ReactivateDialog
 				open
 				onOpenChange={vi.fn()}
+				strategyId="s"
 				targetVersion={3}
 				expectedPointerRevision={2}
 				isPending={false}
@@ -60,7 +65,9 @@ describe("ReactivateDialog", () => {
 
 		expect(screen.getByRole("button", { name: "确认重新激活" })).toBeDisabled();
 
-		fireEvent.change(screen.getByLabelText("确认句"), { target: { value: "重新激活 v3" } });
+		fireEvent.change(screen.getByLabelText("确认句"), {
+			target: { value: "strategy:reactivate:s@3:pointer-revision:2:confirm" },
+		});
 		expect(screen.getByRole("button", { name: "确认重新激活" })).not.toBeDisabled();
 	});
 
@@ -70,6 +77,7 @@ describe("ReactivateDialog", () => {
 			<ReactivateDialog
 				open
 				onOpenChange={vi.fn()}
+				strategyId="s"
 				targetVersion={3}
 				expectedPointerRevision={2}
 				isPending={false}
@@ -79,11 +87,17 @@ describe("ReactivateDialog", () => {
 		fireEvent.change(screen.getByLabelText("执行者"), { target: { value: "analyst" } });
 		fireEvent.change(screen.getByLabelText("原因"), { target: { value: "切回 v3" } });
 		fireEvent.change(screen.getByLabelText("影响摘要"), { target: { value: "回滚" } });
-		fireEvent.change(screen.getByLabelText("确认句"), { target: { value: "重新激活 v3" } });
+		fireEvent.change(screen.getByLabelText("确认句"), {
+			target: { value: "strategy:reactivate:s@3:pointer-revision:2:confirm" },
+		});
 		fireEvent.click(screen.getByRole("button", { name: "确认重新激活" }));
 
 		expect(onConfirm).toHaveBeenCalledWith(
-			expect.objectContaining({ version: 3, expectedPointerRevision: 2, confirmation: "重新激活 v3" }),
+			expect.objectContaining({
+				version: 3,
+				expectedPointerRevision: 2,
+				confirmation: "strategy:reactivate:s@3:pointer-revision:2:confirm",
+			}),
 		);
 	});
 });

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api-client";
 import { strategyKeys } from "../api/query-keys";
 import {
 	approveStrategyReview,
@@ -50,6 +51,13 @@ const REVIEW_QUEUE_QUERY_KEY = ["research", "reviews"] as const;
 export function useStrategyGovernance(strategyId: string) {
 	const queryClient = useQueryClient();
 
+	async function recoverActivePointerAfterConflict(error: Error): Promise<void> {
+		if (!(error instanceof ApiError) || error.status !== 409) return;
+		const queryKey = strategyKeys.active(strategyId);
+		await queryClient.invalidateQueries({ queryKey, refetchType: "none" });
+		await queryClient.refetchQueries({ queryKey });
+	}
+
 	function invalidateGovernedScopes() {
 		for (const scope of GOVERNANCE_INVALIDATION_SCOPES) {
 			void queryClient.invalidateQueries({ queryKey: [...strategyKeys.all, scope] });
@@ -87,6 +95,7 @@ export function useStrategyGovernance(strategyId: string) {
 				expected_pointer_revision: variables.expectedPointerRevision,
 			}),
 		onSuccess: invalidateGovernedScopes,
+		onError: recoverActivePointerAfterConflict,
 	});
 	const publish = useMutation({
 		mutationFn: ({ version, bundleHash, actor, reason }: PublishVariables) =>

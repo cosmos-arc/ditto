@@ -85,16 +85,23 @@ export function DecisionDialog({
 interface ReactivateDialogProps {
 	readonly open: boolean;
 	readonly onOpenChange: (open: boolean) => void;
+	readonly strategyId: string;
 	readonly targetVersion: number;
 	readonly expectedPointerRevision: number;
 	readonly isPending: boolean;
 	readonly onConfirm: (variables: ReactivateVariables) => void;
 }
 
+/** 构造后端要求的、绑定策略版本与 active pointer revision 的精确确认串。 */
+export function reactivateConfirmation(strategyId: string, version: number, pointerRevision: number): string {
+	return `strategy:reactivate:${strategyId}@${version}:pointer-revision:${pointerRevision}:confirm`;
+}
+
 /** 重新激活 dialog（乐观指针 CAS + type-to-confirm）。 */
 export function ReactivateDialog({
 	open,
 	onOpenChange,
+	strategyId,
 	targetVersion,
 	expectedPointerRevision,
 	isPending,
@@ -105,7 +112,7 @@ export function ReactivateDialog({
 	const [impactSummary, setImpactSummary] = useState("");
 	const [confirmation, setConfirmation] = useState("");
 
-	const expectedConfirmation = `重新激活 v${targetVersion}`;
+	const expectedConfirmation = reactivateConfirmation(strategyId, targetVersion, expectedPointerRevision);
 
 	useEffect(() => {
 		if (!open) {
