@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 __all__ = [
+    "ExperimentArtifactResponse",
     "ExperimentCandidateResponse",
     "ExperimentControlReceiptResponse",
     "ExperimentControlRequest",
@@ -108,6 +109,30 @@ class ExperimentGateResponse(BaseModel):
     artifact_id: str | None
     payload_hash: str
     evaluated_at: datetime
+
+
+class ExperimentArtifactResponse(BaseModel):
+    """API view of one immutable indexed experiment artifact."""
+
+    model_config = ConfigDict(frozen=True)
+
+    artifact_id: str
+    experiment_id: str
+    candidate_id: str | None
+    fold_id: str | None
+    attempt_id: str | None
+    artifact_kind: str
+    relative_path: str
+    content_hash: str
+    schema_hash: str
+    row_count: int
+    byte_size: int
+    reproduction_fingerprint: str
+    manifest: Any
+    is_pinned: bool
+    pinned_at: datetime | None
+    created_at: datetime
+    revision: int
 
 
 class ReviewGateOutcomeResponse(BaseModel):

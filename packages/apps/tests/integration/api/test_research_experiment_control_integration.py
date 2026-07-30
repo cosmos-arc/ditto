@@ -31,3 +31,17 @@ def test_control_routes_exposed_with_experimental_maturity(
         assert path in paths, f"missing control route {path}"
         post = paths[path]["post"]
         assert post["x-ditto-maturity"] == "experimental"
+
+
+def test_evidence_read_routes_exposed_with_experimental_maturity(
+    client: TestClient,
+) -> None:
+    """Evidence read routes exist in OpenAPI with experimental maturity."""
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+    for suffix in ("/candidates", "/gates", "/artifacts"):
+        path = f"/api/v1/research/experiments/{{experiment_id}}{suffix}"
+        assert path in paths, f"missing read route {path}"
+        get = paths[path]["get"]
+        assert get["x-ditto-maturity"] == "experimental"

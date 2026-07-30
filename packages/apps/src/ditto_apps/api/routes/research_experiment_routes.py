@@ -29,6 +29,7 @@ from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
 from ditto_application.queries.experiments import (
+    ExperimentArtifactReadModel,
     ExperimentCandidateReadModel,
     ExperimentDetailReadModel,
     ExperimentFoldReadModel,
@@ -44,6 +45,7 @@ from fastapi import APIRouter
 from ditto_apps.api.errors import BadRequestError, ConflictError, NotFoundError
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
+    ExperimentArtifactResponse,
     ExperimentCandidateResponse,
     ExperimentControlReceiptResponse,
     ExperimentControlRequest,
@@ -182,6 +184,31 @@ def to_gate_response(gate: ExperimentGateReadModel) -> ExperimentGateResponse:
     )
 
 
+def to_artifact_response(
+    artifact: ExperimentArtifactReadModel,
+) -> ExperimentArtifactResponse:
+    """将 ExperimentArtifactReadModel 转 API 响应."""
+    return ExperimentArtifactResponse(
+        artifact_id=artifact.artifact_id,
+        experiment_id=artifact.experiment_id,
+        candidate_id=artifact.candidate_id,
+        fold_id=artifact.fold_id,
+        attempt_id=artifact.attempt_id,
+        artifact_kind=artifact.artifact_kind,
+        relative_path=artifact.relative_path,
+        content_hash=artifact.content_hash,
+        schema_hash=artifact.schema_hash,
+        row_count=artifact.row_count,
+        byte_size=artifact.byte_size,
+        reproduction_fingerprint=artifact.reproduction_fingerprint,
+        manifest=_to_json_value(artifact.manifest),
+        is_pinned=artifact.is_pinned,
+        pinned_at=artifact.pinned_at,
+        created_at=artifact.created_at,
+        revision=artifact.revision,
+    )
+
+
 def _to_summary_response(
     summary: ExperimentSummaryReadModel,
 ) -> ExperimentSummaryResponse:
@@ -255,6 +282,27 @@ async def list_experiment_gates(
     """列出实验的门禁评估."""
     gates = await run_blocking(facade.list_gate_evaluations, experiment_id)
     return APIResponse(data=[to_gate_response(gate) for gate in gates])
+
+
+@router.get(
+    "/{experiment_id}/artifacts",
+    response_model=APIResponse[list[ExperimentArtifactResponse]],
+)
+@inject
+async def list_experiment_artifacts(
+    experiment_id: str,
+    facade: Annotated[ExperimentQueryFacade, FromComponent()],
+) -> APIResponse[list[ExperimentArtifactResponse]]:
+    """
+    列出实验的 immutable indexed artifacts（lineage order）.
+
+    Maturity: experimental — R3 research control-plane surface.
+    """
+    detail = await run_blocking(facade.get, experiment_id)
+    if detail is None:
+        raise NotFoundError(f"Experiment not found: {experiment_id}")
+    artifacts = await run_blocking(facade.list_artifacts, experiment_id)
+    return APIResponse(data=[to_artifact_response(artifact) for artifact in artifacts])
 
 
 def to_review_gate_outcome_response(

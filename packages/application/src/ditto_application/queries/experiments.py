@@ -10,6 +10,7 @@ from typing import cast
 
 from ditto_analysis.errors import AnalysisError, ExperimentIdentityError
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     CandidateId,
     ContentHash,
     ExperimentId,
@@ -25,6 +26,7 @@ from ditto_analysis.experiments import (
 from ditto_application.exceptions import AppQueryError
 
 __all__ = [
+    "ExperimentArtifactReadModel",
     "ExperimentCandidateReadModel",
     "ExperimentDetailReadModel",
     "ExperimentFoldReadModel",
@@ -209,6 +211,29 @@ class ExperimentGateReadModel:
     artifact_id: str | None
     payload_hash: str
     evaluated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ExperimentArtifactReadModel:
+    """One immutable indexed artifact with lineage and one-way pin projection."""
+
+    artifact_id: str
+    experiment_id: str
+    candidate_id: str | None
+    fold_id: str | None
+    attempt_id: str | None
+    artifact_kind: str
+    relative_path: str
+    content_hash: str
+    schema_hash: str
+    row_count: int
+    byte_size: int
+    reproduction_fingerprint: str
+    manifest: Mapping[str, ReadValue]
+    is_pinned: bool
+    pinned_at: datetime | None
+    created_at: datetime
+    revision: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -537,6 +562,16 @@ class ExperimentQueryFacade:
         records = _analysis_read(lambda: self._reader.list_gate_evaluations(typed_id))
         return tuple(self._gate_model(record) for record in records)
 
+    def list_artifacts(
+        self, experiment_id: str
+    ) -> tuple[ExperimentArtifactReadModel, ...]:
+        """Return every indexed artifact for one experiment, in lineage order."""
+        typed_id = self._experiment_id(experiment_id)
+        records = _analysis_read(
+            lambda: self._reader.list_experiment_artifacts(typed_id)
+        )
+        return tuple(self._artifact_model(record) for record in records)
+
     def get_review_packet(
         self, experiment_id: str
     ) -> ExperimentReviewPacketReadModel | None:
@@ -620,4 +655,31 @@ class ExperimentQueryFacade:
             artifact_id=record.artifact_id,
             payload_hash=str(record.payload_hash),
             evaluated_at=record.evaluated_at,
+        )
+
+    @staticmethod
+    def _artifact_model(record: ArtifactRecord) -> ExperimentArtifactReadModel:
+        return ExperimentArtifactReadModel(
+            artifact_id=record.artifact_id,
+            experiment_id=str(record.experiment_id),
+            candidate_id=(
+                None if record.candidate_id is None else str(record.candidate_id)
+            ),
+            fold_id=None if record.fold_id is None else str(record.fold_id),
+            attempt_id=(None if record.attempt_id is None else str(record.attempt_id)),
+            artifact_kind=record.artifact_kind,
+            relative_path=record.relative_path,
+            content_hash=str(record.content_hash),
+            schema_hash=str(record.schema_hash),
+            row_count=record.row_count,
+            byte_size=record.byte_size,
+            reproduction_fingerprint=str(record.reproduction_fingerprint),
+            manifest=cast(
+                "Mapping[str, ReadValue]",
+                _freeze_read_value(record.manifest),
+            ),
+            is_pinned=record.is_pinned,
+            pinned_at=record.pinned_at,
+            created_at=record.created_at,
+            revision=record.revision,
         )

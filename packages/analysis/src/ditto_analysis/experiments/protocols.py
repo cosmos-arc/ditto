@@ -94,6 +94,10 @@ class ExperimentReaderProtocol(Protocol):
 
     def get_artifact(self, artifact_id: str) -> ArtifactRecord | None: ...
 
+    def list_experiment_artifacts(
+        self, experiment_id: ExperimentId
+    ) -> tuple[ArtifactRecord, ...]: ...
+
     def get_artifact_by_relative_path(
         self, relative_path: str
     ) -> ArtifactRecord | None: ...

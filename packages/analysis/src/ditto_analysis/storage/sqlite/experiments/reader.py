@@ -66,6 +66,10 @@ from ditto_analysis.experiments.specs import (
     ExperimentLaunchSpec,
     FrozenValue,
 )
+from ditto_analysis.storage.sqlite.experiments._artifacts import (
+    artifact_record,
+    fetch_experiment_artifacts,
+)
 from ditto_analysis.storage.sqlite.experiments._events import (
     canonical_status_event_id,
     event_values,
@@ -592,32 +596,17 @@ class SQLiteExperimentReader:
         row = self._one(
             "SELECT * FROM research_artifact WHERE artifact_id=?", (artifact_id,)
         )
-        if row is None:
-            return None
-        return ArtifactRecord(
-            artifact_id=row["artifact_id"],
-            experiment_id=ExperimentId(row["experiment_id"]),
-            candidate_id=None
-            if row["candidate_id"] is None
-            else CandidateId(row["candidate_id"]),
-            fold_id=None if row["fold_id"] is None else FoldId(row["fold_id"]),
-            attempt_id=None
-            if row["attempt_id"] is None
-            else AttemptId(row["attempt_id"]),
-            artifact_kind=row["artifact_kind"],
-            relative_path=row["relative_path"],
-            content_hash=ContentHash(row["content_hash"]),
-            schema_hash=ContentHash(row["schema_hash"]),
-            row_count=row["row_count"],
-            byte_size=row["byte_size"],
-            reproduction_fingerprint=ContentHash(row["reproduction_fingerprint"]),
-            manifest=_json_object(row["manifest_json"], "manifest_json"),
-            is_pinned=bool(row["is_pinned"]),
-            pinned_at=None
-            if row["pinned_at_epoch_us"] is None
-            else _dt(row["pinned_at_epoch_us"]),
-            created_at=_dt(row["created_at_epoch_us"]),
-            revision=row["revision"],
+        return None if row is None else artifact_record(row)
+
+    def list_experiment_artifacts(
+        self, experiment_id: ExperimentId
+    ) -> tuple[ArtifactRecord, ...]:
+        """List every indexed artifact for one experiment in stable lineage order."""
+        return fetch_experiment_artifacts(
+            lambda sql, parameters: (
+                self._database.get_connection().execute(sql, parameters).fetchall()
+            ),
+            experiment_id,
         )
 
     def get_artifact_by_relative_path(

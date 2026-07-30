@@ -1039,6 +1039,40 @@ def test_list_experiment_attempts_reads_all_folds_in_snapshot_order(
     )
 
 
+def test_list_experiment_artifacts_reads_all_in_lineage_order(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api, role="walk_forward")
+    lease = _dispatch_first_attempt(writer, api, fold, owner="owner-artifacts")
+    lineage_artifact = _artifact(api)
+    exempt_artifact = replace(
+        _artifact(api),
+        artifact_id="artifact-2",
+        candidate_id=None,
+        fold_id=None,
+        attempt_id=None,
+        artifact_kind="review_packet",
+        relative_path="experiments/experiment-1/review_packet.json",
+        content_hash=ContentHash("3" * 64),
+    )
+    for offset, artifact in enumerate((lineage_artifact, exempt_artifact)):
+        writer.add_artifact(
+            artifact,
+            lease_fence=lease.fence,
+            now_epoch_us=NOW_US + 10 + offset,
+            commit_guard=lambda: None,
+        )
+
+    listed = reader.list_experiment_artifacts(ExperimentId("experiment-1"))
+
+    assert [record.artifact_id for record in listed] == ["artifact-2", "artifact-1"]
+    assert listed[0] == reader.get_artifact("artifact-2")
+    assert listed[1] == reader.get_artifact("artifact-1")
+    assert reader.list_experiment_artifacts(ExperimentId("experiment-other")) == ()
+
+
 def test_fold_create_replay_after_claim_is_noop(tmp_path: Path) -> None:
     database, reader, writer, api = _store(tmp_path)
     _create_experiment(writer, api)

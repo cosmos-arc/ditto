@@ -18,6 +18,7 @@ from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
 from ditto_application.queries.experiments import (
+    ExperimentArtifactReadModel,
     ExperimentCandidateReadModel,
     ExperimentDetailReadModel,
     ExperimentFoldReadModel,
@@ -28,13 +29,16 @@ from ditto_apps.api.errors import ConflictError, NotFoundError
 from ditto_apps.api.routes import research_experiment_routes
 from ditto_apps.api.routes.research_experiment_routes import (
     get_experiment,
+    list_experiment_artifacts,
     pause_experiment,
     retry_fold_experiment,
+    to_artifact_response,
     to_experiment_response,
     to_gate_response,
 )
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
+    ExperimentArtifactResponse,
     ExperimentCandidateResponse,
     ExperimentControlReceiptResponse,
     ExperimentControlRequest,
@@ -48,6 +52,7 @@ _GetRoute = Callable[..., Awaitable[APIResponse[ExperimentDetailResponse]]]
 _CandidateRoute = Callable[
     ..., Awaitable[APIResponse[list[ExperimentCandidateResponse]]]
 ]
+_ArtifactRoute = Callable[..., Awaitable[APIResponse[list[ExperimentArtifactResponse]]]]
 _ControlRoute = Callable[..., Awaitable[APIResponse[ExperimentControlReceiptResponse]]]
 
 
@@ -318,6 +323,90 @@ async def test_list_experiment_candidates_raises_not_found_for_missing_parent() 
         await _call_candidates("missing", facade)
 
     facade.get.assert_called_once_with("missing")
+
+
+def _artifact_read_model() -> ExperimentArtifactReadModel:
+    return ExperimentArtifactReadModel(
+        artifact_id="artifact-1",
+        experiment_id="exp-1",
+        candidate_id="candidate-1",
+        fold_id="fold-1",
+        attempt_id="attempt-1",
+        artifact_kind="comparison-ledger",
+        relative_path="experiments/exp-1/comparison.parquet",
+        content_hash="a" * 64,
+        schema_hash="b" * 64,
+        row_count=2,
+        byte_size=128,
+        reproduction_fingerprint="d" * 64,
+        manifest=MappingProxyType({"format": "parquet"}),
+        is_pinned=False,
+        pinned_at=None,
+        created_at=datetime(2026, 7, 23, 0, 0, 0, tzinfo=UTC),
+        revision=0,
+    )
+
+
+def test_to_artifact_response_maps_every_application_field_without_loss() -> None:
+    response = to_artifact_response(_artifact_read_model())
+
+    assert response.model_dump(mode="json") == {
+        "artifact_id": "artifact-1",
+        "experiment_id": "exp-1",
+        "candidate_id": "candidate-1",
+        "fold_id": "fold-1",
+        "attempt_id": "attempt-1",
+        "artifact_kind": "comparison-ledger",
+        "relative_path": "experiments/exp-1/comparison.parquet",
+        "content_hash": "a" * 64,
+        "schema_hash": "b" * 64,
+        "row_count": 2,
+        "byte_size": 128,
+        "reproduction_fingerprint": "d" * 64,
+        "manifest": {"format": "parquet"},
+        "is_pinned": False,
+        "pinned_at": None,
+        "created_at": "2026-07-23T00:00:00Z",
+        "revision": 0,
+    }
+
+
+async def _call_artifacts(
+    experiment_id: str,
+    facade: MagicMock,
+) -> APIResponse[list[ExperimentArtifactResponse]]:
+    route = cast(
+        "_ArtifactRoute",
+        getattr(
+            list_experiment_artifacts, "__dishka_orig_func__", list_experiment_artifacts
+        ),
+    )
+    return await route(experiment_id=experiment_id, facade=facade)
+
+
+async def test_list_experiment_artifacts_returns_lineage_in_storage_order() -> None:
+    facade = MagicMock(spec=ExperimentQueryFacade)
+    facade.get.return_value = _detail()
+    facade.list_artifacts.return_value = (_artifact_read_model(),)
+
+    response = await _call_artifacts("exp-1", facade)
+
+    facade.get.assert_called_once_with("exp-1")
+    facade.list_artifacts.assert_called_once_with("exp-1")
+    assert [artifact.model_dump(mode="json") for artifact in response.data] == [
+        to_artifact_response(_artifact_read_model()).model_dump(mode="json")
+    ]
+
+
+async def test_list_experiment_artifacts_raises_not_found_for_missing_parent() -> None:
+    facade = MagicMock(spec=ExperimentQueryFacade)
+    facade.get.return_value = None
+
+    with pytest.raises(NotFoundError):
+        await _call_artifacts("missing", facade)
+
+    facade.get.assert_called_once_with("missing")
+    facade.list_artifacts.assert_not_called()
 
 
 def _receipt() -> ExperimentControlReceipt:
