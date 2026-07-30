@@ -82,7 +82,15 @@
 - **补 `GET /research/experiments/{id}/selection-evidence`**（selection evidence read——artifact 已 emit，缺 route）。
 - 已有：`GET /research/experiments`（list）、`GET /{id}`（detail）、`GET /{id}/candidates`、control mutations（pause/cancel/resume/retry）、`GET /{id}/gates`。
 
+> **✅ T19 后端 read 端点 E1-E3 完成**（2026-07-30，分支 `docs/r3-research-governance-design`，3 commits）：调研揭示 4 端点底层多「半现成」但缺 route/新 query/DTO，且 W5 原估「仅缺 route」偏轻。**架构硬约束 r8-queries-no-processes + apps 禁 import analysis 值对象** → read 端点用 **process-layer reader 接收 `str`**（不污染 route）。落地：
+> - **E1 `GET .../artifacts`**（`472b05a1`）：`ExperimentReaderProtocol.list_experiment_artifacts`（抽 `_artifacts.py` leaf 守 reader <800 行，索引覆盖查询）+ `ExperimentQueryFacade.list_artifacts`/`ExperimentArtifactReadModel` + `ExperimentArtifactResponse` DTO + route。
+> - **E2 `GET .../selection-evidence`**（`3a2c7b5a`）：`ExperimentSelectionEvidenceReader`（process，`get_artifact_by_relative_path` canonical path 解析 → `DurableSelectionEvidenceService.read_selection_evidence` 重建验证 → `SelectionEvidenceView` ledger payload）+ DTO + route + production-analysis allowance。
+> - **E3 `GET .../comparison`**（`47bdee7d`）：`ExperimentComparisonReader`（process，精确复用 `evidence_collector.collect:128-136` 读路径但截断在 holdout/publish 前 → `CandidateComparisonProjection.canonical_payload()` → `CandidateComparisonView`）+ DTO + route + allowance。
+> - **E4 `POST /preflight` + `POST /`（launch）剩余**：2 端点（launch 内部重算 plan 硬校验 `confirmed_plan_hash` + experiment launch 前不存在 → 单端点不可行）+ `_planning_request_builder.py`（组合 `decode_validation_protocol`/`_matrix_spec`/`_dataset_bindings`/`seal_promotion_objective` 成 JSON→`ExperimentPlanningRequest`，caller 提供预装配 canonical 文档；从 certified 数据装配文档的 assembler 是独立未来能力）+ preflight/launch DTO + 错误映射（PLAN_HASH_MISMATCH→409）。详见 `/home/chevy/.claude/plans/fizzy-rolling-engelbart.md`。
+> - 关键坑：**formatter（ruff）每次 edit 后删 unused import**——import 必须与用法在同一 edit 落地（命中 6 次）；长 module 名触发 E501（`experiment_selection_evidence_reader`→`selection_evidence_reader`）。每端点 pixi check 全绿（arch 37 contracts + type 0 + ruff + 24 测试）。
+
 **前端接线**：
+
 - 路由：`/research/experiments/index.tsx`（catalog）+ `/new`（create flow，分段非 modal）+ `/$id`（detail）。
 - `features/research/api/experiments.ts` + `hooks/use-experiments.ts`（list）+ `use-experiment.ts`（detail，**refetchInterval gated on `state==='running'`**，所有进度真理来自 `GET /{id}`，断网停 spinner，无合成动画）+ `use-experiment-mutations.ts`（pause/cancel/resume/retry）。
 - 单 active experiment 由**服务端强制**（2/4 worker 单 slot）——UI 只反射 409/conflict `error_code`，不复制 gate。
