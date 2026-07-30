@@ -491,6 +491,19 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "selection_evidence_reader.py"
+        ),
+        owner="application R3 selection-evidence read boundary",
+        reason=(
+            "The read-only boundary resolves the content-addressed selection "
+            "ledger via the analysis-owned experiment reader contract and "
+            "delegates verification to the durable selection-evidence service; "
+            "it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/processes/strategy/promotion.py"
         ),
         owner="application R3 strategy promotion process",

@@ -17,6 +17,7 @@ __all__ = [
     "ExperimentGateResponse",
     "ExperimentRetryFoldRequest",
     "ExperimentReviewPacketResponse",
+    "ExperimentSelectionEvidenceResponse",
     "ExperimentSummaryResponse",
     "FactorDescriptorResponse",
     "NodeDescriptorResponse",
@@ -133,6 +134,20 @@ class ExperimentArtifactResponse(BaseModel):
     pinned_at: datetime | None
     created_at: datetime
     revision: int
+
+
+class ExperimentSelectionEvidenceResponse(BaseModel):
+    """API view of one experiment's verified selection-evidence ledger."""
+
+    model_config = ConfigDict(frozen=True)
+
+    artifact_id: str
+    experiment_id: str
+    content_hash: str
+    byte_size: int
+    is_pinned: bool
+    created_at: datetime
+    payload: Any
 
 
 class ReviewGateOutcomeResponse(BaseModel):

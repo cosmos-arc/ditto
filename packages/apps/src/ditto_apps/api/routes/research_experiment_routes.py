@@ -28,6 +28,10 @@ from ditto_application.exceptions import AppError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
+from ditto_application.processes.experiments.selection_evidence_reader import (
+    ExperimentSelectionEvidenceReader,
+    SelectionEvidenceView,
+)
 from ditto_application.queries.experiments import (
     ExperimentArtifactReadModel,
     ExperimentCandidateReadModel,
@@ -54,6 +58,7 @@ from ditto_apps.models.research import (
     ExperimentGateResponse,
     ExperimentRetryFoldRequest,
     ExperimentReviewPacketResponse,
+    ExperimentSelectionEvidenceResponse,
     ExperimentSummaryResponse,
     ReviewGateOutcomeResponse,
     ReviewSelectionTraceRefResponse,
@@ -209,6 +214,21 @@ def to_artifact_response(
     )
 
 
+def to_selection_evidence_response(
+    view: SelectionEvidenceView,
+) -> ExperimentSelectionEvidenceResponse:
+    """将 SelectionEvidenceView 转 API 响应."""
+    return ExperimentSelectionEvidenceResponse(
+        artifact_id=view.artifact_id,
+        experiment_id=view.experiment_id,
+        content_hash=view.content_hash,
+        byte_size=view.byte_size,
+        is_pinned=view.is_pinned,
+        created_at=view.created_at,
+        payload=_to_json_value(dict(view.payload)),
+    )
+
+
 def _to_summary_response(
     summary: ExperimentSummaryReadModel,
 ) -> ExperimentSummaryResponse:
@@ -303,6 +323,28 @@ async def list_experiment_artifacts(
         raise NotFoundError(f"Experiment not found: {experiment_id}")
     artifacts = await run_blocking(facade.list_artifacts, experiment_id)
     return APIResponse(data=[to_artifact_response(artifact) for artifact in artifacts])
+
+
+@router.get(
+    "/{experiment_id}/selection-evidence",
+    response_model=APIResponse[ExperimentSelectionEvidenceResponse],
+)
+@inject
+async def get_experiment_selection_evidence(
+    experiment_id: str,
+    reader: Annotated[ExperimentSelectionEvidenceReader, FromComponent()],
+) -> APIResponse[ExperimentSelectionEvidenceResponse]:
+    """
+    读取实验已发布并验证的 selection-evidence ledger.
+
+    Maturity: experimental — R3 research control-plane surface.
+    """
+    view = await run_blocking(reader.load_view, experiment_id)
+    if view is None:
+        raise NotFoundError(
+            f"Selection evidence not found for experiment: {experiment_id}"
+        )
+    return APIResponse(data=to_selection_evidence_response(view))
 
 
 def to_review_gate_outcome_response(

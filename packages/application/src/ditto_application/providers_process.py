@@ -114,6 +114,9 @@ from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
     FirstAttemptFactory,
 )
+from ditto_application.processes.experiments.selection_evidence_reader import (
+    ExperimentSelectionEvidenceReader,
+)
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitPorts,
@@ -368,6 +371,18 @@ class AppProcessProvider(Provider):
             reader=reader,
             artifact_service=research_artifact_service,
             walk_forward_assembler=walk_forward_assembler,
+        )
+
+    @provide
+    def selection_evidence_reader(
+        self,
+        reader: ExperimentReaderProtocol,
+        selection_evidence_service: DurableSelectionEvidenceService,
+    ) -> ExperimentSelectionEvidenceReader:
+        """Bind the read-only selection-evidence view to durable experiment ports."""
+        return ExperimentSelectionEvidenceReader(
+            reader=reader,
+            selection_service=selection_evidence_service,
         )
 
     @provide

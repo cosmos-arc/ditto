@@ -17,6 +17,10 @@ from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
+from ditto_application.processes.experiments.selection_evidence_reader import (
+    ExperimentSelectionEvidenceReader,
+    SelectionEvidenceView,
+)
 from ditto_application.queries.experiments import (
     ExperimentArtifactReadModel,
     ExperimentCandidateReadModel,
@@ -29,12 +33,14 @@ from ditto_apps.api.errors import ConflictError, NotFoundError
 from ditto_apps.api.routes import research_experiment_routes
 from ditto_apps.api.routes.research_experiment_routes import (
     get_experiment,
+    get_experiment_selection_evidence,
     list_experiment_artifacts,
     pause_experiment,
     retry_fold_experiment,
     to_artifact_response,
     to_experiment_response,
     to_gate_response,
+    to_selection_evidence_response,
 )
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
@@ -44,6 +50,7 @@ from ditto_apps.models.research import (
     ExperimentControlRequest,
     ExperimentDetailResponse,
     ExperimentRetryFoldRequest,
+    ExperimentSelectionEvidenceResponse,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -53,6 +60,9 @@ _CandidateRoute = Callable[
     ..., Awaitable[APIResponse[list[ExperimentCandidateResponse]]]
 ]
 _ArtifactRoute = Callable[..., Awaitable[APIResponse[list[ExperimentArtifactResponse]]]]
+_SelectionEvidenceRoute = Callable[
+    ..., Awaitable[APIResponse[ExperimentSelectionEvidenceResponse]]
+]
 _ControlRoute = Callable[..., Awaitable[APIResponse[ExperimentControlReceiptResponse]]]
 
 
@@ -407,6 +417,66 @@ async def test_list_experiment_artifacts_raises_not_found_for_missing_parent() -
 
     facade.get.assert_called_once_with("missing")
     facade.list_artifacts.assert_not_called()
+
+
+def _selection_view() -> SelectionEvidenceView:
+    return SelectionEvidenceView(
+        artifact_id="selection-evidence-" + "a" * 64,
+        experiment_id="exp-1",
+        content_hash="a" * 64,
+        byte_size=128,
+        is_pinned=True,
+        created_at=datetime(2026, 7, 30, 0, 0, 0, tzinfo=UTC),
+        payload=MappingProxyType({"selected": ("candidate-1",)}),
+    )
+
+
+def test_to_selection_evidence_response_maps_payload_and_metadata() -> None:
+    response = to_selection_evidence_response(_selection_view())
+
+    assert response.model_dump(mode="json") == {
+        "artifact_id": "selection-evidence-" + "a" * 64,
+        "experiment_id": "exp-1",
+        "content_hash": "a" * 64,
+        "byte_size": 128,
+        "is_pinned": True,
+        "created_at": "2026-07-30T00:00:00Z",
+        "payload": {"selected": ["candidate-1"]},
+    }
+
+
+async def _call_selection_evidence(
+    experiment_id: str,
+    reader: MagicMock,
+) -> APIResponse[ExperimentSelectionEvidenceResponse]:
+    route = cast(
+        "_SelectionEvidenceRoute",
+        getattr(
+            get_experiment_selection_evidence,
+            "__dishka_orig_func__",
+            get_experiment_selection_evidence,
+        ),
+    )
+    return await route(experiment_id=experiment_id, reader=reader)
+
+
+async def test_get_experiment_selection_evidence_returns_view() -> None:
+    reader = MagicMock(spec=ExperimentSelectionEvidenceReader)
+    reader.load_view.return_value = _selection_view()
+
+    response = await _call_selection_evidence("exp-1", reader)
+
+    reader.load_view.assert_called_once_with("exp-1")
+    assert response.data.content_hash == "a" * 64
+    assert response.data.payload == {"selected": ["candidate-1"]}
+
+
+async def test_get_experiment_selection_evidence_raises_not_found_when_absent() -> None:
+    reader = MagicMock(spec=ExperimentSelectionEvidenceReader)
+    reader.load_view.return_value = None
+
+    with pytest.raises(NotFoundError):
+        await _call_selection_evidence("exp-1", reader)
 
 
 def _receipt() -> ExperimentControlReceipt:
