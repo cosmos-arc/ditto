@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 __all__ = [
     "ExperimentArtifactResponse",
     "ExperimentCandidateResponse",
+    "ExperimentComparisonResponse",
     "ExperimentControlReceiptResponse",
     "ExperimentControlRequest",
     "ExperimentDetailResponse",
@@ -147,6 +148,15 @@ class ExperimentSelectionEvidenceResponse(BaseModel):
     byte_size: int
     is_pinned: bool
     created_at: datetime
+    payload: Any
+
+
+class ExperimentComparisonResponse(BaseModel):
+    """API view of one experiment's candidate comparison projection."""
+
+    model_config = ConfigDict(frozen=True)
+
+    experiment_id: str
     payload: Any
 
 

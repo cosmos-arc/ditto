@@ -504,6 +504,19 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "comparison_reader.py"
+        ),
+        owner="application R3 candidate-comparison read boundary",
+        reason=(
+            "The read-only boundary reuses the analysis-owned walk-forward "
+            "evidence assembler and experiment reader contract to project a "
+            "candidate comparison without holdout or review publication; it "
+            "performs no storage writes or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/processes/strategy/promotion.py"
         ),
         owner="application R3 strategy promotion process",

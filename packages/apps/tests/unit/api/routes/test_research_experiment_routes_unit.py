@@ -17,6 +17,10 @@ from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
+from ditto_application.processes.experiments.comparison_reader import (
+    CandidateComparisonView,
+    ExperimentComparisonReader,
+)
 from ditto_application.processes.experiments.selection_evidence_reader import (
     ExperimentSelectionEvidenceReader,
     SelectionEvidenceView,
@@ -33,11 +37,13 @@ from ditto_apps.api.errors import ConflictError, NotFoundError
 from ditto_apps.api.routes import research_experiment_routes
 from ditto_apps.api.routes.research_experiment_routes import (
     get_experiment,
+    get_experiment_comparison,
     get_experiment_selection_evidence,
     list_experiment_artifacts,
     pause_experiment,
     retry_fold_experiment,
     to_artifact_response,
+    to_comparison_response,
     to_experiment_response,
     to_gate_response,
     to_selection_evidence_response,
@@ -46,6 +52,7 @@ from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
     ExperimentArtifactResponse,
     ExperimentCandidateResponse,
+    ExperimentComparisonResponse,
     ExperimentControlReceiptResponse,
     ExperimentControlRequest,
     ExperimentDetailResponse,
@@ -63,6 +70,7 @@ _ArtifactRoute = Callable[..., Awaitable[APIResponse[list[ExperimentArtifactResp
 _SelectionEvidenceRoute = Callable[
     ..., Awaitable[APIResponse[ExperimentSelectionEvidenceResponse]]
 ]
+_ComparisonRoute = Callable[..., Awaitable[APIResponse[ExperimentComparisonResponse]]]
 _ControlRoute = Callable[..., Awaitable[APIResponse[ExperimentControlReceiptResponse]]]
 
 
@@ -477,6 +485,61 @@ async def test_get_experiment_selection_evidence_raises_not_found_when_absent() 
 
     with pytest.raises(NotFoundError):
         await _call_selection_evidence("exp-1", reader)
+
+
+def _comparison_view() -> CandidateComparisonView:
+    return CandidateComparisonView(
+        experiment_id="exp-1",
+        payload=MappingProxyType(
+            {"baseline": MappingProxyType({"candidate_id": "candidate-1"}), "folds": ()}
+        ),
+    )
+
+
+def test_to_comparison_response_maps_payload() -> None:
+    response = to_comparison_response(_comparison_view())
+
+    assert response.model_dump(mode="json") == {
+        "experiment_id": "exp-1",
+        "payload": {"baseline": {"candidate_id": "candidate-1"}, "folds": []},
+    }
+
+
+async def _call_comparison(
+    experiment_id: str,
+    reader: MagicMock,
+) -> APIResponse[ExperimentComparisonResponse]:
+    route = cast(
+        "_ComparisonRoute",
+        getattr(
+            get_experiment_comparison,
+            "__dishka_orig_func__",
+            get_experiment_comparison,
+        ),
+    )
+    return await route(experiment_id=experiment_id, reader=reader)
+
+
+async def test_get_experiment_comparison_returns_view() -> None:
+    reader = MagicMock(spec=ExperimentComparisonReader)
+    reader.load_comparison.return_value = _comparison_view()
+
+    response = await _call_comparison("exp-1", reader)
+
+    reader.load_comparison.assert_called_once_with("exp-1")
+    assert response.data.experiment_id == "exp-1"
+    assert response.data.payload == {
+        "baseline": {"candidate_id": "candidate-1"},
+        "folds": [],
+    }
+
+
+async def test_get_experiment_comparison_raises_not_found_when_absent() -> None:
+    reader = MagicMock(spec=ExperimentComparisonReader)
+    reader.load_comparison.return_value = None
+
+    with pytest.raises(NotFoundError):
+        await _call_comparison("exp-1", reader)
 
 
 def _receipt() -> ExperimentControlReceipt:

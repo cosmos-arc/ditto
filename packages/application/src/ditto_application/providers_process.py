@@ -101,6 +101,9 @@ from ditto_application.processes.experiments._selection_evidence_artifact import
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
 )
+from ditto_application.processes.experiments.comparison_reader import (
+    ExperimentComparisonReader,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
 )
@@ -383,6 +386,20 @@ class AppProcessProvider(Provider):
         return ExperimentSelectionEvidenceReader(
             reader=reader,
             selection_service=selection_evidence_service,
+        )
+
+    @provide
+    def experiment_comparison_reader(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        reader: ExperimentReaderProtocol,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
+    ) -> ExperimentComparisonReader:
+        """Bind the read-only candidate-comparison view to durable experiment ports."""
+        return ExperimentComparisonReader(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            walk_forward_assembler=walk_forward_assembler,
         )
 
     @provide

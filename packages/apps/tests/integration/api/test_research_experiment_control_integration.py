@@ -40,7 +40,13 @@ def test_evidence_read_routes_exposed_with_experimental_maturity(
     response = client.get("/openapi.json")
     assert response.status_code == 200
     paths = response.json()["paths"]
-    for suffix in ("/candidates", "/gates", "/artifacts", "/selection-evidence"):
+    for suffix in (
+        "/candidates",
+        "/gates",
+        "/artifacts",
+        "/selection-evidence",
+        "/comparison",
+    ):
         path = f"/api/v1/research/experiments/{{experiment_id}}{suffix}"
         assert path in paths, f"missing read route {path}"
         get = paths[path]["get"]

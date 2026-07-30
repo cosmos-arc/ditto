@@ -28,6 +28,10 @@ from ditto_application.exceptions import AppError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
+from ditto_application.processes.experiments.comparison_reader import (
+    CandidateComparisonView,
+    ExperimentComparisonReader,
+)
 from ditto_application.processes.experiments.selection_evidence_reader import (
     ExperimentSelectionEvidenceReader,
     SelectionEvidenceView,
@@ -51,6 +55,7 @@ from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
     ExperimentArtifactResponse,
     ExperimentCandidateResponse,
+    ExperimentComparisonResponse,
     ExperimentControlReceiptResponse,
     ExperimentControlRequest,
     ExperimentDetailResponse,
@@ -229,6 +234,16 @@ def to_selection_evidence_response(
     )
 
 
+def to_comparison_response(
+    view: CandidateComparisonView,
+) -> ExperimentComparisonResponse:
+    """将 CandidateComparisonView 转 API 响应."""
+    return ExperimentComparisonResponse(
+        experiment_id=view.experiment_id,
+        payload=_to_json_value(dict(view.payload)),
+    )
+
+
 def _to_summary_response(
     summary: ExperimentSummaryReadModel,
 ) -> ExperimentSummaryResponse:
@@ -345,6 +360,26 @@ async def get_experiment_selection_evidence(
             f"Selection evidence not found for experiment: {experiment_id}"
         )
     return APIResponse(data=to_selection_evidence_response(view))
+
+
+@router.get(
+    "/{experiment_id}/comparison",
+    response_model=APIResponse[ExperimentComparisonResponse],
+)
+@inject
+async def get_experiment_comparison(
+    experiment_id: str,
+    reader: Annotated[ExperimentComparisonReader, FromComponent()],
+) -> APIResponse[ExperimentComparisonResponse]:
+    """
+    读取实验的 candidate comparison（walk-forward 投影）.
+
+    Maturity: experimental — R3 research control-plane surface.
+    """
+    view = await run_blocking(reader.load_comparison, experiment_id)
+    if view is None:
+        raise NotFoundError(f"Experiment not found: {experiment_id}")
+    return APIResponse(data=to_comparison_response(view))
 
 
 def to_review_gate_outcome_response(
