@@ -341,7 +341,15 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "selection_evidence_reader.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "comparison.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "comparison_reader.py"
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
