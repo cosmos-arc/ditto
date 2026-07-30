@@ -1,7 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ExperimentListPage } from "@/features/research";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/research/experiments")({
-	component: ExperimentListPage,
-	staticData: { title: "实验队列" },
+	component: Outlet,
+	staticData: { title: "实验" },
 });

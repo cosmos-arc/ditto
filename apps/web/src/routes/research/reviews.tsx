@@ -1,7 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ReviewQueuePage } from "@/features/research/components/review-queue-page";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/research/reviews")({
-	component: ReviewQueuePage,
-	staticData: { title: "审查队列" },
+	component: Outlet,
+	staticData: { title: "审查" },
 });
