@@ -47,6 +47,26 @@ describe("ReactivateDialog", () => {
 		expect(reactivateConfirmation("s", 3, 2)).toBe("strategy:reactivate:s@3:pointer-revision:2:confirm");
 	});
 
+	it("rejects user close requests while the mutation is pending", () => {
+		const onOpenChange = vi.fn();
+		render(
+			<ReactivateDialog
+				open
+				onOpenChange={onOpenChange}
+				strategyId="s"
+				targetVersion={3}
+				expectedPointerRevision={2}
+				isPending
+				onConfirm={vi.fn()}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+		expect(onOpenChange).not.toHaveBeenCalled();
+		expect(screen.getByRole("heading", { name: "重新激活 v3" })).toBeInTheDocument();
+	});
+
 	it("disables confirm until the confirmation phrase matches the target version", () => {
 		render(
 			<ReactivateDialog

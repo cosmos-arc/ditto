@@ -139,8 +139,13 @@ export function ReactivateDialog({
 		});
 	}
 
+	function handleOpenChange(nextOpen: boolean): void {
+		if (!nextOpen && isPending) return;
+		onOpenChange(nextOpen);
+	}
+
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>重新激活 v{targetVersion}</DialogTitle>
