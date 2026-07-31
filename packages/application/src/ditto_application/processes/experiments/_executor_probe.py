@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import replace
+from types import MappingProxyType
 from typing import cast
 
 import orjson
@@ -11,6 +12,9 @@ from ditto_analysis.experiments import canonical_payload
 from ditto_strategy.alpha.parameters import CandidateParameter, ParameterValue
 from ditto_strategy.models import StrategySpecRecord
 
+from ditto_application.processes.experiments._planning_request_identity import (
+    plain_planning_value,
+)
 from ditto_application.processes.experiments._planning_values import (
     BaselineInputValue,
 )
@@ -72,7 +76,7 @@ def _request_payload(
     candidates = request.candidates
     if (
         type(strategy) is not StrategySpecRecord
-        or type(strategy.spec_json) is not dict
+        or type(strategy.spec_json) not in {dict, MappingProxyType}
         or type(strategy.version) is not int
         or type(strategy.tags) is not tuple
         or not all(type(tag) is str for tag in strategy.tags)
@@ -93,6 +97,9 @@ def _request_payload(
         raise experiment_process_error(
             "executor request graph has a non-canonical node"
         )
+    plain_spec_json = plain_planning_value(strategy.spec_json)
+    if type(plain_spec_json) is not dict:
+        raise experiment_process_error("strategy spec must be an object")
     candidate_payloads: list[Mapping[str, object]] = []
     for candidate in candidates:
         if type(candidate.binder_parameters) is not tuple or not all(
@@ -123,7 +130,7 @@ def _request_payload(
         "strategy_record": {
             "strategy_id": strategy.strategy_id,
             "name": strategy.name,
-            "spec_json": strategy.spec_json,
+            "spec_json": cast("dict[str, object]", plain_spec_json),
             "version": strategy.version,
             "spec_hash": strategy.spec_hash,
             "created_at": strategy.created_at,

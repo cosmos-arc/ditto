@@ -40,7 +40,11 @@ from ditto_application.research_validation_protocol import (
     canonical_validation_protocol_payload,
 )
 
-__all__ = ["planning_request_hash", "validate_planning_request_graph"]
+__all__ = [
+    "plain_planning_value",
+    "planning_request_hash",
+    "validate_planning_request_graph",
+]
 
 
 def _invalid(reason: str) -> NoReturn:
@@ -50,7 +54,11 @@ def _invalid(reason: str) -> NoReturn:
     )
 
 
-def _plain(value: object, *, active: set[int] | None = None) -> object:
+def plain_planning_value(
+    value: object,
+    *,
+    active: set[int] | None = None,
+) -> object:
     """Copy only exact JSON containers; reject stateful protocol impostors."""
     if value is None or type(value) in {bool, int, str}:
         return value
@@ -70,7 +78,7 @@ def _plain(value: object, *, active: set[int] | None = None) -> object:
             for key, item in mapping.items():
                 if type(key) is not str:
                     _invalid("invalid_planning_request_mapping_key")
-                plain[key] = _plain(item, active=active_ids)
+                plain[key] = plain_planning_value(item, active=active_ids)
             return plain
         finally:
             active_ids.remove(container_id)
@@ -81,7 +89,7 @@ def _plain(value: object, *, active: set[int] | None = None) -> object:
         active_ids.add(container_id)
         try:
             return [
-                _plain(item, active=active_ids)
+                plain_planning_value(item, active=active_ids)
                 for item in cast("tuple[object, ...] | list[object]", value)
             ]
         finally:
@@ -103,7 +111,7 @@ def _matrix_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
     return {
         "baseline": {
             "descriptor_type": matrix.baseline.descriptor_type,
-            "payload": _plain(matrix.baseline.payload),
+            "payload": plain_planning_value(matrix.baseline.payload),
             "schema_version": matrix.baseline.schema_version,
         },
         "axes": [
@@ -209,10 +217,10 @@ def _validated_request_graph(
         or type(strategy.version) is not int
         or type(strategy.tags) is not tuple
         or any(type(value) is not str for value in strategy.tags)
-        or type(strategy.spec_json) is not dict
+        or type(strategy.spec_json) not in {dict, MappingProxyType}
     ):
         _invalid("invalid_strategy_record_identity")
-    _plain(strategy.spec_json)
+    plain_planning_value(strategy.spec_json)
     ExperimentSnapshotIdentity(snapshot.snapshot_id, snapshot.manifest_hash)
     rebuilt_requirements = tuple(
         ResearchDatasetRequirement(
@@ -300,7 +308,7 @@ def _request_payload(request: ExperimentPlanningRequest) -> Mapping[str, object]
         "strategy_record": {
             "strategy_id": strategy.strategy_id,
             "name": strategy.name,
-            "spec_json": _plain(strategy.spec_json),
+            "spec_json": plain_planning_value(strategy.spec_json),
             "version": strategy.version,
             "spec_hash": strategy.spec_hash,
             "created_at": strategy.created_at,

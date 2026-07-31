@@ -1,5 +1,7 @@
 """Tests for _spec_deserializer helpers."""
 
+from types import MappingProxyType
+
 import pytest
 from ditto_application.builders._spec_deserializer import (
     _read_clamped_float,
@@ -331,6 +333,31 @@ class TestAsObjectDict:
     @pytest.mark.unit
     def test_normal_dict(self) -> None:
         assert as_object_dict({"a": 1}, field_name="x") == {"a": 1}
+
+    @pytest.mark.unit
+    def test_exact_mapping_proxy_is_copied_to_plain_dict(self) -> None:
+        source = MappingProxyType({"a": 1})
+
+        result = as_object_dict(source, field_name="x")
+
+        assert result == {"a": 1}
+        assert type(result) is dict
+
+    @pytest.mark.unit
+    def test_dict_subclass_is_rejected_without_iteration(self) -> None:
+        class _StatefulDict(dict[str, object]):
+            iterations = 0
+
+            def items(self):
+                self.iterations += 1
+                return super().items()
+
+        source = _StatefulDict({"a": 1})
+
+        with pytest.raises(AppBuilderError):
+            as_object_dict(source, field_name="x")
+
+        assert source.iterations == 0
 
     @pytest.mark.unit
     def test_none(self) -> None:

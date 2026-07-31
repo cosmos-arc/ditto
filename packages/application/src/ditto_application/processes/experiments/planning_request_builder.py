@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Mapping
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
+from hashlib import sha256
 from types import MappingProxyType
 from typing import NoReturn, cast
 
@@ -49,6 +51,8 @@ from ditto_application.processes.experiments.planning_probes import (
 )
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
+    canonical_spec_payload_for_record,
+    deserialize_strategy_spec,
 )
 
 __all__ = ["build_experiment_planning_request"]
@@ -83,6 +87,9 @@ _UTC_SUFFIX = "Z"
 
 type _JsonScalar = None | bool | int | float | str
 type _JsonValue = _JsonScalar | list["_JsonValue"] | dict[str, "_JsonValue"]
+type _FrozenJsonValue = (
+    _JsonScalar | tuple["_FrozenJsonValue", ...] | Mapping[str, "_FrozenJsonValue"]
+)
 
 
 def _invalid(reason: str) -> NoReturn:
@@ -90,6 +97,57 @@ def _invalid(reason: str) -> NoReturn:
         "experiment planning document is invalid",
         details={"code": "SPEC_INVALID", "reason": reason},
     )
+
+
+def _snapshot_mapping_items(
+    mapping: Mapping[object, object],
+) -> tuple[tuple[object, object], ...]:
+    try:
+        size_before = len(mapping)
+        items = tuple(mapping.items())
+        size_after = len(mapping)
+    except (KeyError, RuntimeError, TypeError, ValueError):
+        _invalid("planning_document_changed_during_snapshot")
+    if size_before != size_after or len(items) != size_before:
+        _invalid("planning_document_changed_during_snapshot")
+    return items
+
+
+def _detach_mapping(
+    mapping: Mapping[object, object],
+    *,
+    active_ids: set[int],
+) -> dict[str, _JsonValue]:
+    container_id = id(mapping)
+    if container_id in active_ids:
+        _invalid("cyclic_planning_document_value")
+    active_ids.add(container_id)
+    try:
+        result: dict[str, _JsonValue] = {}
+        for key, item in _snapshot_mapping_items(mapping):
+            if type(key) is not str:
+                _invalid("invalid_planning_document_mapping_key")
+            if key in result:
+                _invalid("planning_document_changed_during_snapshot")
+            result[key] = _detach_json(item, active=active_ids)
+        return result
+    finally:
+        active_ids.remove(container_id)
+
+
+def _detach_list(
+    items: list[object],
+    *,
+    active_ids: set[int],
+) -> list[_JsonValue]:
+    container_id = id(items)
+    if container_id in active_ids:
+        _invalid("cyclic_planning_document_value")
+    active_ids.add(container_id)
+    try:
+        return [_detach_json(item, active=active_ids) for item in items]
+    finally:
+        active_ids.remove(container_id)
 
 
 def _detach_json(
@@ -105,40 +163,33 @@ def _detach_json(
             _invalid("non_finite_planning_document_value")
         return value
     active_ids: set[int] = set() if active is None else active
-    if type(value) in {dict, MappingProxyType}:
-        container_id = id(value)
-        if container_id in active_ids:
-            _invalid("cyclic_planning_document_value")
-        active_ids.add(container_id)
-        try:
-            result: dict[str, _JsonValue] = {}
-            for key, item in cast("Mapping[object, object]", value).items():
-                if type(key) is not str:
-                    _invalid("invalid_planning_document_mapping_key")
-                result[key] = _detach_json(item, active=active_ids)
-            return result
-        finally:
-            active_ids.remove(container_id)
+    if isinstance(value, Mapping):
+        return _detach_mapping(
+            cast("Mapping[object, object]", value),
+            active_ids=active_ids,
+        )
     if type(value) is list:
-        items = cast("list[object]", value)
-        container_id = id(items)
-        if container_id in active_ids:
-            _invalid("cyclic_planning_document_value")
-        active_ids.add(container_id)
-        try:
-            return [_detach_json(item, active=active_ids) for item in items]
-        finally:
-            active_ids.remove(container_id)
+        return _detach_list(cast("list[object]", value), active_ids=active_ids)
     _invalid("invalid_planning_document_value_type")
 
 
 def _document_copy(document: Mapping[str, object]) -> dict[str, object]:
-    if type(document) not in {dict, MappingProxyType}:
-        _invalid("planning_document_must_be_an_exact_mapping")
     detached = _detach_json(document)
     if type(detached) is not dict:
         _invalid("planning_document_must_be_an_object")
     return cast("dict[str, object]", detached)
+
+
+def _freeze_json(value: _JsonValue) -> _FrozenJsonValue:
+    """Deep-freeze one already-detached JSON graph."""
+    if type(value) is dict:
+        source = cast("dict[str, _JsonValue]", value)
+        return MappingProxyType(
+            {key: _freeze_json(item) for key, item in source.items()}
+        )
+    if type(value) is list:
+        return tuple(_freeze_json(item) for item in cast("list[_JsonValue]", value))
+    return cast("_JsonScalar", value)
 
 
 def _exact_object(
@@ -247,19 +298,37 @@ def _strategy_record(
     if any(type(item) is not str for item in raw_tag_items):
         _invalid("invalid_strategy_spec_tags")
     tags = tuple(cast("str", item) for item in raw_tag_items)
+    detached_spec_json = cast("dict[str, _JsonValue]", _detach_json(spec_json))
     record = StrategySpecRecord(
         strategy_id=strategy_id,
         name=name,
-        spec_json=cast("dict[str, object]", _detach_json(spec_json)),
+        spec_json=cast("dict[str, object]", detached_spec_json),
         spec_hash=supplied_hash,
         version=version,
         created_at=created_at_text,
         tags=tags,
     )
-    canonical_hash = canonical_spec_hash_for_record(record)
+    # The V2 payload is execution identity only; it deliberately differs from the
+    # complete legacy persistence payload checked by the round-trip below.
+    canonical_identity = canonical_spec_payload_for_record(record)
+    canonical_hash = sha256(
+        orjson.dumps(canonical_identity, option=orjson.OPT_SORT_KEYS)
+    ).hexdigest()
+    if canonical_hash != canonical_spec_hash_for_record(record):
+        _invalid("canonical_strategy_spec_hash_disagreement")
     if supplied_hash != canonical_hash:
         _invalid("strategy_spec_hash_mismatch")
-    return record
+    typed_legacy = deserialize_strategy_spec(record)
+    legacy_round_trip = orjson.loads(orjson.dumps(asdict(typed_legacy)))
+    if not _same_canonical_json(detached_spec_json, legacy_round_trip):
+        _invalid("noncanonical_strategy_spec_payload")
+    frozen_spec_json = _freeze_json(detached_spec_json)
+    if type(frozen_spec_json) is not MappingProxyType:
+        _invalid("invalid_strategy_spec_payload")
+    return replace(
+        record,
+        spec_json=cast("dict[str, object]", frozen_spec_json),
+    )
 
 
 def _snapshot_identity(value: object) -> ExperimentSnapshotIdentity:

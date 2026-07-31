@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections import UserDict
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import asdict
 from datetime import UTC, date, datetime, timedelta
+from types import MappingProxyType
 from typing import cast
 
 import orjson
@@ -28,6 +30,9 @@ from ditto_analysis.experiments.trial_ledger import (
     PromotionObjective,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._planning_request_identity import (
+    planning_request_hash,
+)
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
@@ -60,6 +65,8 @@ from ditto_application.research_validation_protocol import (
 )
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
+    canonical_spec_payload_for_record,
+    deserialize_strategy_spec,
 )
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.models import StrategySpecRecord
@@ -71,6 +78,46 @@ _SNAPSHOT_HASH = "d" * 64
 
 type PlanningDocument = dict[str, object]
 type DocumentMutation = Callable[[PlanningDocument], None]
+
+
+class _ReadOnlyMapping(Mapping[str, object]):
+    def __init__(self, values: Mapping[str, object]) -> None:
+        self._values = values
+
+    def __getitem__(self, key: str) -> object:
+        return self._values[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._values)
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+
+class _MutatingMapping(Mapping[str, object]):
+    def __init__(self, values: Mapping[str, object]) -> None:
+        self._values = dict(values)
+
+    def __getitem__(self, key: str) -> object:
+        return self._values[key]
+
+    def __iter__(self) -> Iterator[str]:
+        for index, key in enumerate(tuple(self._values)):
+            yield key
+            if index == 0:
+                self._values["injected_during_iteration"] = True
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+
+def _plain_json(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {key: _plain_json(item) for key, item in value.items()}
+    if type(value) in {list, tuple}:
+        items = cast("list[object] | tuple[object, ...]", value)
+        return [_plain_json(item) for item in items]
+    return value
 
 
 def _next_month(month: CalendarMonth) -> CalendarMonth:
@@ -239,9 +286,28 @@ def _promotion_objective(
 
 
 def _plain_seed_spec() -> dict[str, object]:
+    seed = SEED_STRATEGY_SPECS[_STRATEGY_ID]
+    persisted = cast(
+        "dict[str, object]",
+        orjson.loads(orjson.dumps(asdict(seed))),
+    )
+    record = StrategySpecRecord(
+        strategy_id=seed.strategy_id,
+        name=seed.name,
+        spec_json=persisted,
+        version=2,
+        created_at="2026-07-30T00:00:00Z",
+        tags=seed.tags,
+    )
     return cast(
         "dict[str, object]",
-        orjson.loads(orjson.dumps(asdict(SEED_STRATEGY_SPECS[_STRATEGY_ID]))),
+        orjson.loads(
+            orjson.dumps(
+                asdict(
+                    deserialize_strategy_spec(record),
+                )
+            )
+        ),
     )
 
 
@@ -360,7 +426,7 @@ def test_builder_decodes_every_field_into_the_exact_planning_contract() -> None:
     assert request.strategy_record.strategy_id == strategy["strategy_id"]
     assert request.strategy_record.version == strategy["version"]
     assert request.strategy_record.spec_hash == strategy["spec_hash"]
-    assert request.strategy_record.spec_json == strategy["spec_json"]
+    assert _plain_json(request.strategy_record.spec_json) == strategy["spec_json"]
     assert request.snapshot_identity.snapshot_id == "certified-snapshot-1"
     assert request.snapshot_identity.manifest_hash == _SNAPSHOT_HASH
     assert (
@@ -532,3 +598,77 @@ def test_builder_detaches_every_nested_value_from_caller_mutation() -> None:
     assert request.validation_request.trading_sessions
     assert request.matrix_spec.axes
     assert request.dataset_requirements
+
+
+@pytest.mark.parametrize(
+    "wrapper_name",
+    ["user_dict", "read_only"],
+)
+def test_builder_snapshots_arbitrary_mapping_inputs_once(
+    wrapper_name: str,
+) -> None:
+    document = _planning_document()
+    wrapped = (
+        UserDict(document)
+        if wrapper_name == "user_dict"
+        else _ReadOnlyMapping(document)
+    )
+
+    request = build_experiment_planning_request(wrapped)
+    _mapping_at(document, "strategy")["spec_json"] = {"name": "mutated"}
+
+    assert request.strategy_record.name == "ETF 趋势追踪"
+    assert request.strategy_record.spec_json["name"] == "ETF 趋势追踪"
+
+
+def test_builder_rejects_mapping_that_mutates_while_being_snapshotted() -> None:
+    document = _MutatingMapping(_planning_document())
+
+    with pytest.raises(AppProcessError) as caught:
+        build_experiment_planning_request(document)
+
+    assert caught.value.details == {
+        "code": "SPEC_INVALID",
+        "reason": "planning_document_changed_during_snapshot",
+    }
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda spec_json: spec_json.update({"unknown_spec_field": True}),
+        lambda spec_json: cast(
+            "dict[str, object]",
+            spec_json["execution"],
+        ).pop("default_order_type"),
+    ],
+)
+def test_builder_rejects_noncanonical_legacy_strategy_payload_aliases(
+    mutate: Callable[[dict[str, object]], object],
+) -> None:
+    document = _planning_document()
+    strategy = _mapping_at(document, "strategy")
+    spec_json = cast("dict[str, object]", strategy["spec_json"])
+    mutate(spec_json)
+
+    _assert_spec_invalid(document)
+
+
+def test_builder_deep_freezes_strategy_spec_without_breaking_identity_codecs() -> None:
+    request = build_experiment_planning_request(_planning_document())
+    spec_json = request.strategy_record.spec_json
+    execution = cast("dict[str, object]", spec_json["execution"])
+    cost_model = cast("dict[str, object]", execution["cost_model"])
+
+    assert type(spec_json) is MappingProxyType
+    assert type(execution) is MappingProxyType
+    assert type(cost_model) is MappingProxyType
+    with pytest.raises(TypeError):
+        spec_json["name"] = "mutated"
+    with pytest.raises(TypeError):
+        execution["frequency"] = "D"
+    with pytest.raises(TypeError):
+        cost_model["slippage_bps"] = 999.0
+
+    assert planning_request_hash(request)
+    assert canonical_spec_payload_for_record(request.strategy_record)

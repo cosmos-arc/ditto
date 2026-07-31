@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import cast
 
 from ditto_strategy.alpha.builtins.regime import (
@@ -129,10 +131,10 @@ def as_object_dict(
     """
     if raw_value is None:
         return {}
-    if not isinstance(raw_value, dict):
+    if type(raw_value) not in {dict, MappingProxyType}:
         msg = f"{field_name} 必须是 object/dict"
         raise AppBuilderError(msg)
-    raw_dict = cast("dict[object, object]", raw_value)
+    raw_dict = cast("Mapping[object, object]", raw_value)
     result: dict[str, object] = {}
     for key, value in raw_dict.items():
         if not isinstance(key, str):
