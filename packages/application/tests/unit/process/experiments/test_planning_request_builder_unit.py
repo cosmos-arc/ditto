@@ -111,6 +111,23 @@ class _MutatingMapping(Mapping[str, object]):
         return len(self._values)
 
 
+class _SameSizeMutatingMapping(Mapping[str, object]):
+    def __init__(self, values: Mapping[str, object]) -> None:
+        self._values = dict(values)
+
+    def __getitem__(self, key: str) -> object:
+        return self._values[key]
+
+    def __iter__(self) -> Iterator[str]:
+        for index, key in enumerate(tuple(self._values)):
+            yield key
+            if index == 0:
+                self._values["seed"] = 99
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+
 def _plain_json(value: object) -> object:
     if isinstance(value, Mapping):
         return {key: _plain_json(item) for key, item in value.items()}
@@ -286,11 +303,15 @@ def _promotion_objective(
 
 
 def _plain_seed_spec() -> dict[str, object]:
-    seed = SEED_STRATEGY_SPECS[_STRATEGY_ID]
-    persisted = cast(
+    return cast(
         "dict[str, object]",
-        orjson.loads(orjson.dumps(asdict(seed))),
+        orjson.loads(orjson.dumps(asdict(SEED_STRATEGY_SPECS[_STRATEGY_ID]))),
     )
+
+
+def _default_injected_seed_spec() -> dict[str, object]:
+    persisted = _plain_seed_spec()
+    seed = SEED_STRATEGY_SPECS[_STRATEGY_ID]
     record = StrategySpecRecord(
         strategy_id=seed.strategy_id,
         name=seed.name,
@@ -301,13 +322,7 @@ def _plain_seed_spec() -> dict[str, object]:
     )
     return cast(
         "dict[str, object]",
-        orjson.loads(
-            orjson.dumps(
-                asdict(
-                    deserialize_strategy_spec(record),
-                )
-            )
-        ),
+        orjson.loads(orjson.dumps(asdict(deserialize_strategy_spec(record)))),
     )
 
 
@@ -623,6 +638,21 @@ def test_builder_snapshots_arbitrary_mapping_inputs_once(
 
 def test_builder_rejects_mapping_that_mutates_while_being_snapshotted() -> None:
     document = _MutatingMapping(_planning_document())
+
+    with pytest.raises(AppProcessError) as caught:
+        build_experiment_planning_request(document)
+
+    assert caught.value.details == {
+        "code": "SPEC_INVALID",
+        "reason": "planning_document_changed_during_snapshot",
+    }
+
+
+def test_builder_rejects_same_size_value_replacement_during_snapshot() -> None:
+    source = _planning_document()
+    strategy = _mapping_at(source, "strategy")
+    strategy["spec_json"] = _default_injected_seed_spec()
+    document = _SameSizeMutatingMapping(source)
 
     with pytest.raises(AppProcessError) as caught:
         build_experiment_planning_request(document)

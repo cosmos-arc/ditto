@@ -52,7 +52,7 @@ from ditto_application.processes.experiments.planning_probes import (
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
     canonical_spec_payload_for_record,
-    deserialize_strategy_spec,
+    deserialize_persisted_legacy_strategy_spec,
 )
 
 __all__ = ["build_experiment_planning_request"]
@@ -174,9 +174,21 @@ def _detach_json(
 
 
 def _document_copy(document: Mapping[str, object]) -> dict[str, object]:
+    stable_preimage: _JsonValue | None = None
+    if type(document) not in {dict, MappingProxyType}:
+        try:
+            pre_read = {key: document[key] for key in sorted(_TOP_LEVEL_KEYS)}
+        except (KeyError, RuntimeError, TypeError, ValueError):
+            _invalid("planning_document_changed_during_snapshot")
+        stable_preimage = _detach_json(pre_read)
     detached = _detach_json(document)
     if type(detached) is not dict:
         _invalid("planning_document_must_be_an_object")
+    if stable_preimage is not None and orjson.dumps(
+        stable_preimage,
+        option=orjson.OPT_SORT_KEYS,
+    ) != orjson.dumps(detached, option=orjson.OPT_SORT_KEYS):
+        _invalid("planning_document_changed_during_snapshot")
     return cast("dict[str, object]", detached)
 
 
@@ -318,7 +330,7 @@ def _strategy_record(
         _invalid("canonical_strategy_spec_hash_disagreement")
     if supplied_hash != canonical_hash:
         _invalid("strategy_spec_hash_mismatch")
-    typed_legacy = deserialize_strategy_spec(record)
+    typed_legacy = deserialize_persisted_legacy_strategy_spec(record)
     legacy_round_trip = orjson.loads(orjson.dumps(asdict(typed_legacy)))
     if not _same_canonical_json(detached_spec_json, legacy_round_trip):
         _invalid("noncanonical_strategy_spec_payload")

@@ -79,6 +79,7 @@ __all__ = [
     "deserialize_execution",
     "deserialize_param_constraint",
     "deserialize_param_constraints",
+    "deserialize_persisted_legacy_strategy_spec",
     "deserialize_scorer",
     "deserialize_selector",
     "deserialize_strategy_spec",
@@ -146,8 +147,10 @@ def _normalize_order_type(raw: str | None) -> OrderType:
 # ---------------------------------------------------------------------------
 
 
-def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
-    """将 catalog 中的 ``spec_json`` 恢复为 ``StrategySpec``。"""
+def deserialize_persisted_legacy_strategy_spec(
+    record: StrategySpecRecord,
+) -> StrategySpec:
+    """Losslessly decode the persisted legacy shape without template injection."""
     payload = as_object_dict(record.spec_json, field_name="spec_json")
     template = read_required_str(payload, "template")
     required_datasets = as_str_tuple(
@@ -159,7 +162,7 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
         message += "; using template migration default"
         warnings.warn(message, stacklevel=2)
         required_datasets = default_required_datasets_for_template(template)
-    spec = StrategySpec(
+    return StrategySpec(
         strategy_id=read_optional_str(payload.get("strategy_id")) or record.strategy_id,
         name=read_optional_str(payload.get("name")) or record.name,
         template=template,
@@ -183,7 +186,13 @@ def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
         ),
         required_datasets=required_datasets,
     )
-    return inject_template_constraints(spec)
+
+
+def deserialize_strategy_spec(record: StrategySpecRecord) -> StrategySpec:
+    """将 catalog 中的 ``spec_json`` 恢复为 ``StrategySpec``。"""
+    return inject_template_constraints(
+        deserialize_persisted_legacy_strategy_spec(record)
+    )
 
 
 def canonical_spec_payload_for_record(record: StrategySpecRecord) -> dict[str, object]:
