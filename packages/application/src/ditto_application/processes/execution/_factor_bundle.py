@@ -4,40 +4,42 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import date
-from typing import TYPE_CHECKING
+from typing import Protocol
 
 import polars as pl
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.steps import StepContext
+from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppProcessError
 
-if TYPE_CHECKING:
-    from ditto_application.processes.execution.factor_bridge import (
-        CompiledExpressions,
-        FactorBridge,
-    )
-
 __all__ = ["build_factor_aware_bundle_builder", "build_factor_bundle"]
 
 
-def register_factor_bridge_runtime_types(
-    *,
-    bridge_type: type[object],
-    compiled_type: type[object],
-) -> None:
-    """Resolve public forward annotations after the bridge module is initialized."""
-    globals()["FactorBridge"] = bridge_type
-    globals()["CompiledExpressions"] = compiled_type
+class _CompiledExpressionSet(Protocol):
+    """Read-only compiled-expression surface consumed by the bundle builder."""
+
+    @property
+    def expressions(self) -> tuple[CompiledDerivedExpression, ...]: ...
 
 
-def build_factor_aware_bundle_builder(
+class _FactorSignalComputer[CompiledT: _CompiledExpressionSet](Protocol):
+    """Structural signal-computation seam that keeps this module cycle-free."""
+
+    def compute_signals(
+        self,
+        df: pl.DataFrame,
+        compiled: CompiledT,
+    ) -> pl.DataFrame: ...
+
+
+def build_factor_aware_bundle_builder[CompiledT: _CompiledExpressionSet](
     *,
-    bridge: FactorBridge,
-    compiled: CompiledExpressions,
+    bridge: _FactorSignalComputer[CompiledT],
+    compiled: CompiledT,
     data_feed: DataFeed,
     strategy_id: str,
     run_id: str,
@@ -62,13 +64,13 @@ def build_factor_aware_bundle_builder(
     return _build
 
 
-def build_factor_bundle(
+def build_factor_bundle[CompiledT: _CompiledExpressionSet](
     *,
     ctx: StepContext,
     strategy_id: str,
     run_id: str,
-    bridge: FactorBridge,
-    compiled: CompiledExpressions,
+    bridge: _FactorSignalComputer[CompiledT],
+    compiled: CompiledT,
     data_feed: DataFeed,
     lookback_days: int,
 ) -> StrategyInputBundle:

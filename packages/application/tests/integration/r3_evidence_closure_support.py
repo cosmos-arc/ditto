@@ -116,6 +116,7 @@ from ditto_application.research_validation_protocol import (
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
 )
+from ditto_strategy.alpha.parameters import CandidateParameter
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.models import StrategySpecRecord
 
@@ -757,7 +758,13 @@ def _execution_semantics(
             factor_registry_manifest_hash="d" * 64,
             compiled_factor_set_hash=compiled_expressions_execution_hash(None),
             factor_bindings=(),
-            candidate_parameters=(),
+            candidate_parameters=tuple(
+                CandidateParameter(path=path, value=value)
+                for path, value in sorted(
+                    candidate.parameters.items(),
+                    key=lambda item: item[0].encode(),
+                )
+            ),
         )
         plan_hash = str(execution.resolved_spec_hash)
         baseline_plan = None

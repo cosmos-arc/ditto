@@ -11,18 +11,15 @@ FactorBridge 将声明式因子表达式字符串桥接到回测引擎的信号�
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields
 from math import isfinite
 from typing import Any, cast
 
 import orjson
 import polars as pl
-from ditto_features.derived_types import (
-    DerivedRole,
-    DerivedSpec,
-    MaterializationProfile,
-)
+from ditto_backtest.data_feed import DataFeed
+from ditto_backtest.steps import StepContext
 from ditto_features.expression.compiler import ExpressionCompiler
 from ditto_features.expression.contracts import (
     Analysis,
@@ -33,13 +30,19 @@ from ditto_features.expression.contracts import (
 from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
-from ditto_kernel.strategy import ExecutionPolicy
+from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution._factor_bundle import (
-    build_factor_aware_bundle_builder,
-    build_factor_bundle,
-    register_factor_bridge_runtime_types,
+    build_factor_aware_bundle_builder as _build_factor_aware_bundle_builder,
+)
+from ditto_application.processes.execution._factor_bundle import (
+    build_factor_bundle as _build_factor_bundle,
+)
+from ditto_application.processes.execution._factor_signal_spec import (
+    build_signal_spec,
+    factor_normalized_column,
+    factor_value_column,
 )
 
 __all__ = [
@@ -53,16 +56,6 @@ __all__ = [
     "factor_normalized_column",
     "factor_value_column",
 ]
-
-
-def factor_value_column(index: int) -> str:
-    """Return the stable materialized value column for one compiled factor."""
-    return f"factor_{index}"
-
-
-def factor_normalized_column(index: int) -> str:
-    """Return the stable rank-normalized column for one compiled factor."""
-    return f"rank_{factor_value_column(index)}"
 
 
 def _validate_factor_weight(value: object, *, index: int) -> None:
@@ -80,42 +73,6 @@ def _validate_factor_weight(value: object, *, index: int) -> None:
                 "weight_index": index,
             },
         )
-
-
-def build_signal_spec(
-    expr_str: str,
-    index: int,
-    *,
-    derived_id: str | None = None,
-    version: int = 1,
-) -> DerivedSpec:
-    """
-    从表达式字符串构建信号 DerivedSpec.
-
-    统一默认值: role=SIGNAL, materialization_profile=SERIES,
-    entity_keys=("instrument_id",), grain="1d", calendar="cn_stock".
-
-    Args:
-        expr_str: 因子表达式字符串（如 ``"ts_mean(close, 20)"``）。
-        index: 因子序号，用于生成 ``signal_{index}`` 形式的 id。
-        derived_id: 可选的精确注册因子 ID；普通 legacy 路径保持 ``signal_{index}``。
-        version: ``derived_id`` 对应的精确注册版本。
-
-    Returns:
-        配置好默认值的 ``DerivedSpec``。
-
-    """
-    return DerivedSpec(
-        id=derived_id if derived_id is not None else f"signal_{index}",
-        version=version,
-        role=DerivedRole.SIGNAL,
-        materialization_profile=MaterializationProfile.SERIES,
-        expression=expr_str,
-        entity_keys=("instrument_id",),
-        grain="1d",
-        calendar="cn_stock",
-        execution_policy=ExecutionPolicy(),
-    )
 
 
 @dataclass(frozen=True)
@@ -585,7 +542,41 @@ class FactorBridge:
         )
 
 
-register_factor_bridge_runtime_types(
-    bridge_type=FactorBridge,
-    compiled_type=CompiledExpressions,
-)
+def build_factor_aware_bundle_builder(
+    *,
+    bridge: FactorBridge,
+    compiled: CompiledExpressions,
+    data_feed: DataFeed,
+    strategy_id: str,
+    run_id: str,
+) -> Callable[[StepContext], StrategyInputBundle]:
+    """Build a reusable factor-aware input-bundle factory for one run."""
+    return _build_factor_aware_bundle_builder(
+        bridge=bridge,
+        compiled=compiled,
+        data_feed=data_feed,
+        strategy_id=strategy_id,
+        run_id=run_id,
+    )
+
+
+def build_factor_bundle(
+    *,
+    ctx: StepContext,
+    strategy_id: str,
+    run_id: str,
+    bridge: FactorBridge,
+    compiled: CompiledExpressions,
+    data_feed: DataFeed,
+    lookback_days: int,
+) -> StrategyInputBundle:
+    """Build one PIT-aware daily bundle and its compiled factor signal values."""
+    return _build_factor_bundle(
+        ctx=ctx,
+        strategy_id=strategy_id,
+        run_id=run_id,
+        bridge=bridge,
+        compiled=compiled,
+        data_feed=data_feed,
+        lookback_days=lookback_days,
+    )

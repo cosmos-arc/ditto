@@ -114,6 +114,13 @@ from ditto_application.processes.experiments.holdout import (
 from ditto_application.processes.experiments.holdout import (
     HoldoutSelectionReason as ApplicationSelectionReason,
 )
+from ditto_application.processes.experiments.planning import (
+    CandidateMatrixSpec,
+    ParameterAxis,
+)
+from ditto_application.processes.experiments.planning_contracts import (
+    declare_trial_family,
+)
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
     reconstruct_preflight_report,
@@ -1158,6 +1165,18 @@ def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
             for item in log.factor_contributions
             if item.instrument_id == selection.instrument_id
         ) == pytest.approx(selection.score)
+    repeated_runtime, repeated_log = _run_stock_golden_selection_trace(
+        candidate_parameters=(),
+        snapshot_identity=ResearchSnapshotIdentity(
+            "stock-golden-factor-snapshot",
+            "8" * 64,
+        ),
+        strategy_version=3,
+        trade_date="2026-07-22",
+        run_id="stock-golden-selection-trace",
+    )
+    assert repeated_runtime.resolved_spec_hash == _runtime.resolved_spec_hash
+    assert repeated_log == log
 
 
 def test_stock_trace_nonempty_candidate_parameter_changes_hash_and_selection() -> None:
@@ -1196,6 +1215,84 @@ def test_stock_trace_nonempty_candidate_parameter_changes_hash_and_selection() -
     assert sum(item.selected for item in override_log.selections) == 2
     assert default_log.exclusions
     assert override_log.exclusions
+
+
+def test_stock_trace_launch_semantics_preserve_nonempty_candidate_parameter(
+    tmp_path: Path,
+) -> None:
+    """Launch lineage must carry one typed override into the exact fold runtime."""
+    lane = golden_support.STOCK_GOLDEN_LANE
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    reader = SQLiteExperimentReader(database)
+    writer = SQLiteExperimentWriter(database)
+    base = golden_support.build_planning_request(lane)
+    parameter_path = legacy_parameter_path("top_k")
+    matrix = CandidateMatrixSpec(
+        baseline=base.matrix_spec.baseline,
+        axes=(ParameterAxis(parameter_path, (2,)),),
+    )
+    family = declare_trial_family(
+        experiment_id=base.experiment_id,
+        matrix_spec=matrix,
+        family_id=base.promotion_objective.trial_family.family_id,
+    )
+    request = replace(
+        base,
+        matrix_spec=matrix,
+        promotion_objective=replace(
+            base.promotion_objective,
+            baseline_candidate_id=family.current_members[0].candidate_id,
+            trial_family=family,
+        ),
+    )
+    process = ExperimentPlanningProcess(
+        reader=reader,
+        writer=writer,
+        certification_probe=golden_support.PlanningCertificationProbe(lane),
+        executor_probe=golden_support.PlanningExecutorProbe(
+            lane,
+            bind_real_candidate_identity=True,
+        ),
+        authority_probe=golden_support.PlanningAuthorityProbe(lane),
+    )
+
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    process.launch(request, confirmed_plan_hash=report.plan_hash)
+    launch = reader.get_launch_spec(ExperimentId(request.experiment_id))
+    assert launch is not None
+    candidate = next(
+        item for item in launch.candidates if item.parameters.get(parameter_path) == 2
+    )
+    fold = next(
+        item
+        for item in reader.list_folds(launch.experiment_id)
+        if item.spec.fold_role is FoldRole.WALK_FORWARD
+        and item.spec.key.candidate_id == candidate.candidate_id
+    )
+    semantics = golden_support.build_execution_semantics(
+        launch,
+        reader.list_folds(launch.experiment_id),
+        lane,
+    )[fold.spec.key]
+    assert isinstance(semantics.strategy, StrategyExecutionBinding)
+    assert semantics.strategy.candidate_parameters == (
+        CandidateParameter(path=parameter_path, value=2),
+    )
+
+    runtime, log = _run_stock_golden_selection_trace(
+        candidate_parameters=semantics.strategy.candidate_parameters,
+        snapshot_identity=ResearchSnapshotIdentity(
+            semantics.snapshot.exact_snapshot.snapshot_id,
+            semantics.snapshot.exact_snapshot.manifest_hash,
+        ),
+        strategy_version=semantics.strategy.exact_strategy.version,
+        trade_date=fold.spec.test_window.start.isoformat(),
+        run_id="stock-golden-nonempty-launch-lineage",
+    )
+    assert runtime.resolved_spec_hash == semantics.strategy.resolved_spec_hash
+    assert sum(item.selected for item in log.selections) == 2
 
 
 def _assert_persisted_selection_trace_provenance(

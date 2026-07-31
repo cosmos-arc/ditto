@@ -9,6 +9,12 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.processes.execution._factor_bundle import (
+    build_factor_aware_bundle_builder as build_factor_aware_bundle_builder_impl,
+)
+from ditto_application.processes.execution._factor_bundle import (
+    build_factor_bundle as build_factor_bundle_impl,
+)
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
@@ -128,6 +134,14 @@ class TestFactorAwareBundleBuilder:
         assert bundle_hints["compiled"] is CompiledExpressions
         assert factory_hints["bridge"] is FactorBridge
         assert factory_hints["compiled"] is CompiledExpressions
+
+    def test_internal_bundle_type_hints_are_self_contained(self) -> None:
+        """The cycle-free implementation must not depend on facade side effects."""
+        bundle_hints = get_type_hints(build_factor_bundle_impl)
+        factory_hints = get_type_hints(build_factor_aware_bundle_builder_impl)
+
+        assert {"bridge", "compiled", "return"} <= bundle_hints.keys()
+        assert {"bridge", "compiled", "return"} <= factory_hints.keys()
 
     def test_factor_bundle_produces_signal_values(self) -> None:
         """含因子表达式的 bundle builder 产出 signal_value 列."""
