@@ -26,6 +26,12 @@ from ditto_strategy.storage.sqlite.strategy_governance_store import (
 )
 from ditto_strategy.storage.sqlite.strategy_spec_store import SQLiteStrategySpecWriter
 
+_T1 = "2026-07-23T00:00:01Z"
+_T2 = "2026-07-23T00:00:02Z"
+_T3 = "2026-07-23T00:00:03Z"
+_T4 = "2026-07-23T00:00:04Z"
+_T5 = "2026-07-23T00:00:05Z"
+
 
 def _service(tmp_path: Path) -> GovernanceService:
     pool = SQLitePool(str(tmp_path / "governance.sqlite"))
@@ -52,7 +58,7 @@ def test_submit_review_moves_draft_to_review(tmp_path: Path) -> None:
     _seed_version(service)
 
     record = service.submit_review(
-        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at=_T1
     )
 
     assert record.state is StrategyVersionState.REVIEW
@@ -63,14 +69,14 @@ def test_approve_then_publish(tmp_path: Path) -> None:
     service = _service(tmp_path)
     _seed_version(service)
     service.submit_review(
-        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at=_T1
     )
     service.approve(
-        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at=_T2
     )
 
     published = service.publish(
-        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at=_T3
     )
 
     assert published.state is StrategyVersionState.PUBLISHED
@@ -82,10 +88,10 @@ def test_publish_reviewed_and_activate_switches_pointer_atomically(
     service = _service(tmp_path)
     _seed_version(service)
     service.submit_review(
-        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at=_T1
     )
     service.approve(
-        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at=_T2
     )
 
     pointer = service.publish_reviewed_and_activate(
@@ -96,7 +102,7 @@ def test_publish_reviewed_and_activate_switches_pointer_atomically(
             activate_event_id="a1",
             actor="publisher",
             reason="evidence passed",
-            decided_at="t3",
+            decided_at=_T3,
         )
     )
 
@@ -110,15 +116,15 @@ def test_rejected_review_cannot_be_published(tmp_path: Path) -> None:
     service = _service(tmp_path)
     _seed_version(service)
     service.submit_review(
-        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at=_T1
     )
     service.reject(
-        "strategy-1", 1, event_id="e2", actor="r", reason="no", decided_at="t2"
+        "strategy-1", 1, event_id="e2", actor="r", reason="no", decided_at=_T2
     )
 
     with pytest.raises(ValueError):
         service.publish(
-            "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+            "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at=_T3
         )
 
 
@@ -126,13 +132,13 @@ def test_activate_switches_active_pointer(tmp_path: Path) -> None:
     service = _service(tmp_path)
     _seed_version(service)
     service.submit_review(
-        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at=_T1
     )
     service.approve(
-        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at=_T2
     )
     service.publish(
-        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at=_T3
     )
 
     pointer = service.activate(
@@ -146,21 +152,21 @@ def test_deprecated_version_cannot_be_activated(tmp_path: Path) -> None:
     service = _service(tmp_path)
     _seed_version(service)
     service.submit_review(
-        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at="t1"
+        "strategy-1", 1, event_id="e1", actor="r", reason="ok", decided_at=_T1
     )
     service.approve(
-        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at="t2"
+        "strategy-1", 1, event_id="e2", actor="r", reason="ok", decided_at=_T2
     )
     service.publish(
-        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at="t3"
+        "strategy-1", 1, event_id="e3", actor="r", reason="go", decided_at=_T3
     )
     service.deprecate(
-        "strategy-1", 1, event_id="e4", actor="r", reason="retire", decided_at="t4"
+        "strategy-1", 1, event_id="e4", actor="r", reason="retire", decided_at=_T4
     )
 
     with pytest.raises(ValueError):
         service.activate(
-            "strategy-1", 1, _activation_event(reason="revive", decided_at="t5")
+            "strategy-1", 1, _activation_event(reason="revive", decided_at=_T5)
         )
 
 
@@ -174,7 +180,7 @@ def test_unknown_version_raises(tmp_path: Path) -> None:
             event_id="e1",
             actor="r",
             reason="ok",
-            decided_at="t1",
+            decided_at=_T1,
         )
 
 
@@ -292,7 +298,7 @@ def _advance_to_published(service: GovernanceService, *, version: int = 1) -> No
         event_id=f"{prefix}:submit",
         actor="r",
         reason="ok",
-        decided_at="t1",
+        decided_at=_T1,
     )
     service.approve(
         "strategy-1",
@@ -300,7 +306,7 @@ def _advance_to_published(service: GovernanceService, *, version: int = 1) -> No
         event_id=f"{prefix}:approve",
         actor="r",
         reason="ok",
-        decided_at="t2",
+        decided_at=_T2,
     )
     service.publish(
         "strategy-1",
@@ -308,7 +314,7 @@ def _advance_to_published(service: GovernanceService, *, version: int = 1) -> No
         event_id=f"{prefix}:publish",
         actor="r",
         reason="go",
-        decided_at="t3",
+        decided_at=_T3,
     )
 
 
@@ -317,7 +323,7 @@ def _activation_event(
     *,
     kind: StrategyDecision = StrategyDecision.REACTIVATE,
     reason: str = "go live",
-    decided_at: str = "t4",
+    decided_at: str = _T4,
 ) -> StrategyActivationEvent:
     """Build one activation event for the seeded strategy-1/version-1 target."""
     return StrategyActivationEvent(
@@ -352,7 +358,7 @@ def test_activate_with_stale_expected_pointer_revision_conflicts(
         service.activate(
             "strategy-1",
             1,
-            _activation_event(event_id="a2", reason="reapply", decided_at="t5"),
+            _activation_event(event_id="a2", reason="reapply", decided_at=_T5),
             expected_pointer_revision=0,
         )
 

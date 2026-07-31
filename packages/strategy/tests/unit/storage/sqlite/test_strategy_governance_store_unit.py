@@ -19,6 +19,8 @@ from ditto_strategy.governance.models import (
     StrategyVersionState,
     StrategyVersionStateRecord,
 )
+from ditto_strategy.governance.protocols import StrategyGovernanceEventIntegrityError
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.strategy_governance_store import (
     SQLiteStrategyGovernanceStore,
@@ -60,6 +62,7 @@ def _decision(
     decision: StrategyDecision = StrategyDecision.SUBMIT_REVIEW,
     version: int = 1,
     strategy_id: str = "strategy-1",
+    decided_at: str = "2026-07-23T00:00:01Z",
 ) -> StrategyDecisionEvent:
     return StrategyDecisionEvent(
         event_id=event_id,
@@ -68,7 +71,7 @@ def _decision(
         decision=decision,
         actor="reviewer-1",
         reason="initial review",
-        decided_at="2026-07-23T00:00:01Z",
+        decided_at=decided_at,
     )
 
 
@@ -77,6 +80,7 @@ def _activation(
     event_id: str = "activation-1",
     kind: StrategyDecision = StrategyDecision.PUBLISH,
     target_version: int = 1,
+    activated_at: str = "2026-07-23T00:00:02Z",
 ) -> StrategyActivationEvent:
     return StrategyActivationEvent(
         event_id=event_id,
@@ -85,7 +89,7 @@ def _activation(
         activation_kind=kind,
         actor="publisher-1",
         reason="go live",
-        activated_at="2026-07-23T00:00:02Z",
+        activated_at=activated_at,
     )
 
 
@@ -94,11 +98,13 @@ def _advance_to_approved(
     *,
     version: int,
 ) -> None:
+    base_second = version * 10
     store.append_decision(
         _decision(
             event_id=f"strategy-1:{version}:submit",
             decision=StrategyDecision.SUBMIT_REVIEW,
             version=version,
+            decided_at=f"2026-07-23T00:00:{base_second + 1:02d}Z",
         ),
         StrategyVersionState.REVIEW,
         ReviewOutcome.PENDING,
@@ -109,6 +115,7 @@ def _advance_to_approved(
             event_id=f"strategy-1:{version}:approve",
             decision=StrategyDecision.APPROVE,
             version=version,
+            decided_at=f"2026-07-23T00:00:{base_second + 2:02d}Z",
         ),
         StrategyVersionState.REVIEW,
         ReviewOutcome.APPROVED,
@@ -322,8 +329,9 @@ def test_publish_reviewed_and_activate_commits_one_atomic_transition(
         _decision(
             event_id="publish-1",
             decision=StrategyDecision.PUBLISH,
+            decided_at="2026-07-23T00:00:13Z",
         ),
-        _activation(event_id="activation-1"),
+        _activation(event_id="activation-1", activated_at="2026-07-23T00:00:13Z"),
         expected_state_revision=2,
         expected_pointer_revision=0,
     )
@@ -353,8 +361,9 @@ def test_publish_reviewed_and_activate_returns_pointer_from_its_transaction(
         _decision(
             event_id="publish-1",
             decision=StrategyDecision.PUBLISH,
+            decided_at="2026-07-23T00:00:13Z",
         ),
-        _activation(event_id="activation-1"),
+        _activation(event_id="activation-1", activated_at="2026-07-23T00:00:13Z"),
         expected_state_revision=2,
         expected_pointer_revision=0,
     )
@@ -376,8 +385,13 @@ def test_publish_reviewed_and_activate_rolls_back_every_write_on_pointer_conflic
         event_id="publish-2",
         decision=StrategyDecision.PUBLISH,
         version=2,
+        decided_at="2026-07-23T00:00:23Z",
     )
-    activation = _activation(event_id="activation-2", target_version=2)
+    activation = _activation(
+        event_id="activation-2",
+        target_version=2,
+        activated_at="2026-07-23T00:00:23Z",
+    )
 
     with pytest.raises(StrategyGovernanceCasConflict):
         store.publish_reviewed_and_activate(
@@ -479,20 +493,6 @@ def test_list_governance_events_merges_append_only_streams_with_stable_cursor(
 ) -> None:
     store = _store(tmp_path)
     store.insert_version(_version())
-    store.append_decision(
-        StrategyDecisionEvent(
-            event_id="decision-b",
-            strategy_id="strategy-1",
-            version=1,
-            decision=StrategyDecision.SUBMIT_REVIEW,
-            actor="alice",
-            reason="review",
-            decided_at="2026-07-23T00:00:01Z",
-        ),
-        StrategyVersionState.REVIEW,
-        ReviewOutcome.PENDING,
-        expected_revision=0,
-    )
     store.activate(
         "strategy-1",
         1,
@@ -506,6 +506,20 @@ def test_list_governance_events_merges_append_only_streams_with_stable_cursor(
             activated_at="2026-07-23T00:00:01Z",
         ),
         expected_pointer_revision=0,
+    )
+    store.append_decision(
+        StrategyDecisionEvent(
+            event_id="decision-b",
+            strategy_id="strategy-1",
+            version=1,
+            decision=StrategyDecision.SUBMIT_REVIEW,
+            actor="alice",
+            reason="review",
+            decided_at="2026-07-23T00:00:01Z",
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
     )
 
     events = store.list_governance_events("strategy-1", after_event_id=None, limit=20)
@@ -531,6 +545,286 @@ def test_list_governance_events_merges_append_only_streams_with_stable_cursor(
     assert store.list_governance_events(
         "strategy-1", after_event_id="activation-a", limit=1
     ) == (events[1],)
+
+
+def test_list_governance_events_orders_second_and_microsecond_timestamps_semantically(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    store.append_decision(
+        StrategyDecisionEvent(
+            event_id="z-second",
+            strategy_id="strategy-1",
+            version=1,
+            decision=StrategyDecision.SUBMIT_REVIEW,
+            actor="alice",
+            reason="review",
+            decided_at="2026-07-23T00:00:01Z",
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+    store.append_decision(
+        StrategyDecisionEvent(
+            event_id="a-microsecond",
+            strategy_id="strategy-1",
+            version=1,
+            decision=StrategyDecision.APPROVE,
+            actor="bob",
+            reason="approve",
+            decided_at="2026-07-23T00:00:01.000001Z",
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.APPROVED,
+        expected_revision=1,
+    )
+
+    events = store.list_governance_events("strategy-1", after_event_id=None, limit=20)
+
+    assert [event.event_id for event in events] == ["z-second", "a-microsecond"]
+    assert store.list_governance_events(
+        "strategy-1", after_event_id="z-second", limit=20
+    ) == (events[1],)
+
+
+@pytest.mark.parametrize("after_event_id", [None, "shared"])
+def test_list_governance_events_fails_closed_on_legacy_cross_table_id_collision(
+    tmp_path: Path,
+    after_event_id: str | None,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    connection = store._pool.get_connection()
+    connection.execute(
+        "INSERT INTO strategy_decision_event VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            "shared",
+            "strategy-1",
+            1,
+            "submit_review",
+            "alice",
+            "review",
+            "2026-07-23T00:00:01Z",
+        ),
+    )
+    connection.execute(
+        "INSERT INTO strategy_activation_event VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            "shared",
+            "strategy-1",
+            1,
+            "reactivate",
+            "bob",
+            "activate",
+            "2026-07-23T00:00:02Z",
+        ),
+    )
+    connection.commit()
+
+    with pytest.raises(
+        StrategyGovernanceEventIntegrityError,
+        match="STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+    ):
+        store.list_governance_events(
+            "strategy-1", after_event_id=after_event_id, limit=20
+        )
+
+
+@pytest.mark.parametrize(
+    "occurred_at",
+    ["not-a-timestamp", "2026-07-23T00:00:01"],
+    ids=["invalid", "naive"],
+)
+def test_list_governance_events_fails_closed_on_invalid_legacy_timestamp(
+    tmp_path: Path,
+    occurred_at: str,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    connection = store._pool.get_connection()
+    connection.execute(
+        "INSERT INTO strategy_decision_event VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            "legacy",
+            "strategy-1",
+            1,
+            "submit_review",
+            "alice",
+            "review",
+            occurred_at,
+        ),
+    )
+    connection.commit()
+
+    with pytest.raises(
+        StrategyGovernanceEventIntegrityError,
+        match="STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+    ):
+        store.list_governance_events("strategy-1", after_event_id=None, limit=20)
+
+
+def test_append_decision_rejects_late_key_before_issued_cursor(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    occurred_at = "2026-07-23T00:00:01Z"
+    store.append_decision(
+        StrategyDecisionEvent(
+            event_id="z-submit",
+            strategy_id="strategy-1",
+            version=1,
+            decision=StrategyDecision.SUBMIT_REVIEW,
+            actor="alice",
+            reason="review",
+            decided_at=occurred_at,
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+    issued_page = store.list_governance_events(
+        "strategy-1", after_event_id=None, limit=1
+    )
+    assert [event.event_id for event in issued_page] == ["z-submit"]
+    state_before = store.get_state("strategy-1", 1)
+
+    with pytest.raises(StrategyGovernanceCasConflict):
+        store.append_decision(
+            StrategyDecisionEvent(
+                event_id="a-approve",
+                strategy_id="strategy-1",
+                version=1,
+                decision=StrategyDecision.APPROVE,
+                actor="bob",
+                reason="approve",
+                decided_at=occurred_at,
+            ),
+            StrategyVersionState.REVIEW,
+            ReviewOutcome.APPROVED,
+            expected_revision=1,
+        )
+
+    assert store.get_state("strategy-1", 1) == state_before
+    assert (
+        store.list_governance_events("strategy-1", after_event_id="z-submit", limit=20)
+        == ()
+    )
+
+
+@pytest.mark.parametrize("decided_at", ["invalid", "2026-07-23T00:00:02"])
+def test_append_decision_rejects_invalid_new_timestamp_without_writes(
+    tmp_path: Path,
+    decided_at: str,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    state_before = store.get_state("strategy-1", 1)
+
+    with pytest.raises(StrategyGovernanceCasConflict):
+        store.append_decision(
+            _decision(event_id="invalid-time", decided_at=decided_at),
+            StrategyVersionState.REVIEW,
+            ReviewOutcome.PENDING,
+            expected_revision=0,
+        )
+
+    assert store.get_state("strategy-1", 1) == state_before
+    assert (
+        store.list_governance_events("strategy-1", after_event_id=None, limit=20) == ()
+    )
+
+
+def test_atomic_publish_rejects_same_event_id_without_writes(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    _advance_to_approved(store, version=1)
+    state_before = store.get_state("strategy-1", 1)
+    history_before = store.list_governance_events(
+        "strategy-1", after_event_id=None, limit=20
+    )
+
+    with pytest.raises(StrategyGovernanceCasConflict):
+        store.publish_reviewed_and_activate(
+            _decision(
+                event_id="shared",
+                decision=StrategyDecision.PUBLISH,
+                decided_at="2026-07-23T00:00:13Z",
+            ),
+            _activation(
+                event_id="shared",
+                activated_at="2026-07-23T00:00:13Z",
+            ),
+            expected_state_revision=2,
+            expected_pointer_revision=0,
+        )
+
+    assert store.get_state("strategy-1", 1) == state_before
+    assert store.get_active_pointer("strategy-1") is None
+    assert (
+        store.list_governance_events("strategy-1", after_event_id=None, limit=20)
+        == history_before
+    )
+
+
+def test_service_rejects_cross_table_duplicate_event_id_without_writes(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    service = GovernanceService(store)
+    service.submit_review(
+        "strategy-1",
+        1,
+        event_id="shared",
+        actor="reviewer",
+        reason="review",
+        decided_at="2026-07-23T00:00:01Z",
+    )
+    service.approve(
+        "strategy-1",
+        1,
+        event_id="approve",
+        actor="reviewer",
+        reason="approve",
+        decided_at="2026-07-23T00:00:02Z",
+    )
+    service.publish(
+        "strategy-1",
+        1,
+        event_id="publish",
+        actor="publisher",
+        reason="publish",
+        decided_at="2026-07-23T00:00:03Z",
+    )
+    state_before = store.get_state("strategy-1", 1)
+    history_before = store.list_governance_events(
+        "strategy-1", after_event_id=None, limit=20
+    )
+
+    with pytest.raises(StrategyGovernanceCasConflict):
+        service.activate(
+            "strategy-1",
+            1,
+            StrategyActivationEvent(
+                event_id="shared",
+                strategy_id="strategy-1",
+                target_version=1,
+                activation_kind=StrategyDecision.PUBLISH,
+                actor="publisher",
+                reason="activate",
+                activated_at="2026-07-23T00:00:04Z",
+            ),
+        )
+
+    assert store.get_state("strategy-1", 1) == state_before
+    assert store.get_active_pointer("strategy-1") is None
+    assert (
+        store.list_governance_events("strategy-1", after_event_id=None, limit=20)
+        == history_before
+    )
 
 
 def test_list_governance_events_rejects_missing_or_cross_strategy_cursor(

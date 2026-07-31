@@ -25,10 +25,14 @@ from ditto_strategy.governance.models import (
     StrategyVersionStateRecord,
 )
 from ditto_strategy.governance.protocols import (
-    InvalidStrategyGovernanceEventCursor,
     StrategyGovernanceEventStrategyNotFound,
 )
 from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite._governance_event_stream import (
+    PendingGovernanceEvent,
+    list_governance_events,
+    validate_new_governance_events,
+)
 from ditto_strategy.storage.sqlite.strategy_spec_store import (
     get_spec_payload,
     insert_spec_payload,
@@ -185,41 +189,6 @@ _STRATEGY_EXISTS = """
 SELECT 1 FROM strategy_version WHERE strategy_id = ? LIMIT 1
 """
 _MAX_GOVERNANCE_EVENTS_PAGE_SIZE = 100
-_GOVERNANCE_EVENTS_UNION = """
-SELECT event_id, strategy_id, 'decision' AS event_type,
-       version AS target_version, decision AS decision_or_activation_kind,
-       actor, reason, decided_at AS occurred_at
-FROM strategy_decision_event
-WHERE strategy_id = ?
-UNION ALL
-SELECT event_id, strategy_id, 'activation' AS event_type,
-       target_version, activation_kind AS decision_or_activation_kind,
-       actor, reason, activated_at AS occurred_at
-FROM strategy_activation_event
-WHERE strategy_id = ?
-"""
-_LIST_GOVERNANCE_EVENTS = "".join(
-    (
-        "SELECT * FROM (",
-        _GOVERNANCE_EVENTS_UNION,
-        ") ORDER BY occurred_at, event_id LIMIT ?",
-    )
-)
-_GET_GOVERNANCE_EVENT_CURSOR = "".join(
-    (
-        "SELECT occurred_at FROM (",
-        _GOVERNANCE_EVENTS_UNION,
-        ") WHERE event_id = ?",
-    )
-)
-_LIST_GOVERNANCE_EVENTS_AFTER = "".join(
-    (
-        "SELECT * FROM (",
-        _GOVERNANCE_EVENTS_UNION,
-        ") WHERE occurred_at > ? OR (occurred_at = ? AND event_id > ?) ",
-        "ORDER BY occurred_at, event_id LIMIT ?",
-    )
-)
 
 
 def _row_to_version(row: sqlite3.Row) -> StrategyVersion:
@@ -279,20 +248,6 @@ def _row_to_activation_event(row: sqlite3.Row) -> StrategyActivationEvent:
         actor=str(d["actor"]),
         reason=str(d["reason"]),
         activated_at=str(d["activated_at"]),
-    )
-
-
-def _row_to_governance_event(row: sqlite3.Row) -> StrategyGovernanceEvent:
-    d: dict[str, object] = dict(row)
-    return StrategyGovernanceEvent(
-        event_id=str(d["event_id"]),
-        strategy_id=str(d["strategy_id"]),
-        event_type=str(d["event_type"]),
-        target_version=int(d["target_version"]),  # type: ignore[arg-type]
-        decision_or_activation_kind=str(d["decision_or_activation_kind"]),
-        actor=str(d["actor"]),
-        reason=str(d["reason"]),
-        occurred_at=str(d["occurred_at"]),
     )
 
 
@@ -362,6 +317,18 @@ class SQLiteStrategyGovernanceStore:
         conn = self._pool.get_connection()
         conn.execute("BEGIN IMMEDIATE")
         try:
+            if audit_event is not None:
+                validate_new_governance_events(
+                    conn,
+                    version.strategy_id,
+                    (
+                        PendingGovernanceEvent(
+                            audit_event.event_id,
+                            audit_event.decided_at,
+                        ),
+                    ),
+                    StrategyGovernanceCasConflict,
+                )
             insert_spec_payload(conn, spec_record)
             self._insert_version_rows(conn, version)
             if audit_event is not None:
@@ -487,6 +454,12 @@ class SQLiteStrategyGovernanceStore:
         conn = self._pool.get_connection()
         conn.execute("BEGIN IMMEDIATE")
         try:
+            validate_new_governance_events(
+                conn,
+                event.strategy_id,
+                (PendingGovernanceEvent(event.event_id, event.decided_at),),
+                StrategyGovernanceCasConflict,
+            )
             conn.execute(
                 _INSERT_DECISION_EVENT,
                 (
@@ -551,6 +524,21 @@ class SQLiteStrategyGovernanceStore:
         conn = self._pool.get_connection()
         conn.execute("BEGIN IMMEDIATE")
         try:
+            validate_new_governance_events(
+                conn,
+                strategy_id,
+                (
+                    PendingGovernanceEvent(
+                        publish_event.event_id,
+                        publish_event.decided_at,
+                    ),
+                    PendingGovernanceEvent(
+                        activation_event.event_id,
+                        activation_event.activated_at,
+                    ),
+                ),
+                StrategyGovernanceCasConflict,
+            )
             conn.execute(
                 _INSERT_DECISION_EVENT,
                 (
@@ -654,6 +642,12 @@ class SQLiteStrategyGovernanceStore:
         conn = self._pool.get_connection()
         conn.execute("BEGIN IMMEDIATE")
         try:
+            validate_new_governance_events(
+                conn,
+                strategy_id,
+                (PendingGovernanceEvent(event.event_id, event.activated_at),),
+                StrategyGovernanceCasConflict,
+            )
             conn.execute(
                 _INSERT_ACTIVATION_EVENT,
                 (
@@ -738,30 +732,9 @@ class SQLiteStrategyGovernanceStore:
             raise StrategyGovernanceEventStrategyNotFound(
                 f"STRATEGY_NOT_FOUND: {strategy_id}"
             )
-        if after_event_id is None:
-            rows = conn.execute(
-                _LIST_GOVERNANCE_EVENTS,
-                (strategy_id, strategy_id, limit),
-            ).fetchall()
-        else:
-            cursor = conn.execute(
-                _GET_GOVERNANCE_EVENT_CURSOR,
-                (strategy_id, strategy_id, after_event_id),
-            ).fetchone()
-            if cursor is None:
-                raise InvalidStrategyGovernanceEventCursor(
-                    f"INVALID_EVENT_CURSOR: {after_event_id}"
-                )
-            occurred_at = str(cursor["occurred_at"])
-            rows = conn.execute(
-                _LIST_GOVERNANCE_EVENTS_AFTER,
-                (
-                    strategy_id,
-                    strategy_id,
-                    occurred_at,
-                    occurred_at,
-                    after_event_id,
-                    limit,
-                ),
-            ).fetchall()
-        return tuple(_row_to_governance_event(row) for row in rows)
+        return list_governance_events(
+            conn,
+            strategy_id,
+            after_event_id=after_event_id,
+            limit=limit,
+        )

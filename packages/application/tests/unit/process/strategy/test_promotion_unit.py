@@ -53,10 +53,20 @@ def _seed_approved_version(service: GovernanceService, version: int = 1) -> None
         )
     )
     service.submit_review(
-        "strategy-1", version, event_id="e1", actor="r", reason="ok", decided_at="t1"
+        "strategy-1",
+        version,
+        event_id="e1",
+        actor="r",
+        reason="ok",
+        decided_at="2026-07-23T00:00:01Z",
     )
     service.approve(
-        "strategy-1", version, event_id="e2", actor="r", reason="ok", decided_at="t2"
+        "strategy-1",
+        version,
+        event_id="e2",
+        actor="r",
+        reason="ok",
+        decided_at="2026-07-23T00:00:02Z",
     )
 
 
@@ -117,7 +127,7 @@ def _request(
         packet=packet,
         actor="publisher-1",
         reason="go live",
-        decided_at="t3",
+        decided_at="2026-07-23T00:00:03Z",
         expected_bundle_hash=str(packet.bundle_hash)
         if expected_bundle_hash is None
         else expected_bundle_hash,

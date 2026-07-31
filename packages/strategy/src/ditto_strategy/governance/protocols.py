@@ -19,6 +19,7 @@ from ditto_strategy.models import StrategySpecRecord
 __all__ = [
     "InvalidStrategyGovernanceEventCursor",
     "StrategyActivePointerReader",
+    "StrategyGovernanceEventIntegrityError",
     "StrategyGovernanceEventReader",
     "StrategyGovernanceEventStrategyNotFound",
     "StrategyGovernanceStoreProtocol",
@@ -29,6 +30,10 @@ __all__ = [
 
 class InvalidStrategyGovernanceEventCursor(ValueError):
     """Raised when a cursor is absent from the requested strategy stream."""
+
+
+class StrategyGovernanceEventIntegrityError(RuntimeError):
+    """Raised when persisted governance events cannot form one stable stream."""
 
 
 class StrategyGovernanceEventStrategyNotFound(LookupError):

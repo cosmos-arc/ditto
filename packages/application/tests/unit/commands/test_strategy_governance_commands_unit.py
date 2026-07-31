@@ -10,11 +10,15 @@ types never leak past the boundary.
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_application.commands import strategy as strategy_commands
 from ditto_application.commands import strategy_governance as governance_commands
 from ditto_application.commands.strategy_governance import (
     ApproveReviewCommand,
@@ -41,6 +45,9 @@ from ditto_strategy.governance.models import (
     StrategyDecision,
     StrategyVersionState,
     StrategyVersionStateRecord,
+)
+from ditto_strategy.governance.protocols import (
+    StrategyGovernanceEventIntegrityError,
 )
 from ditto_strategy.governance.service import (
     GovernanceService,
@@ -92,6 +99,68 @@ def _pointer_info() -> StrategyActivePointerInfo:
 _ErrorFactory = Callable[[], Exception]
 
 
+def _timestamp(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def test_governance_clock_is_shared_and_strictly_monotonic_on_clock_rollback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    values = iter(
+        (
+            datetime(2026, 7, 31, 12, 0, 2, tzinfo=UTC),
+            datetime(2026, 7, 31, 12, 0, 1, tzinfo=UTC),
+        )
+    )
+
+    class ReversingDatetime:
+        @classmethod
+        def now(cls, tz: object) -> datetime:
+            del cls, tz
+            return next(values)
+
+    modules = {
+        importlib.import_module(strategy_commands._utc_now_iso.__module__),
+        importlib.import_module(governance_commands._utc_now_iso.__module__),
+    }
+    for module in modules:
+        monkeypatch.setattr(module, "datetime", ReversingDatetime)
+
+    first = strategy_commands._utc_now_iso()
+    second = governance_commands._utc_now_iso()
+
+    assert strategy_commands._utc_now_iso is governance_commands._utc_now_iso
+    assert _timestamp(second) > _timestamp(first)
+    assert len(first.rsplit(".", maxsplit=1)[-1].removesuffix("Z")) == 6
+    assert len(second.rsplit(".", maxsplit=1)[-1].removesuffix("Z")) == 6
+
+
+def test_governance_clock_is_unique_under_concurrent_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frozen = datetime(2026, 7, 31, 12, 0, 0, tzinfo=UTC)
+
+    class FrozenDatetime:
+        @classmethod
+        def now(cls, tz: object) -> datetime:
+            del cls, tz
+            return frozen
+
+    modules = {
+        importlib.import_module(strategy_commands._utc_now_iso.__module__),
+        importlib.import_module(governance_commands._utc_now_iso.__module__),
+    }
+    for module in modules:
+        monkeypatch.setattr(module, "datetime", FrozenDatetime)
+    clocks = (strategy_commands._utc_now_iso, governance_commands._utc_now_iso) * 32
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        timestamps = tuple(executor.map(lambda clock: clock(), clocks))
+
+    assert len(set(timestamps)) == len(timestamps)
+    assert all("." in value and value.endswith("Z") for value in timestamps)
+
+
 def _submit_handler(
     governance: GovernanceService,
     monkeypatch: pytest.MonkeyPatch,
@@ -116,20 +185,30 @@ def _submit_handler(
 
 
 @pytest.mark.parametrize(
-    ("exc_factory", "keyword"),
+    ("exc_factory", "code"),
     [
-        (lambda: StrategyGovernanceError("governance version not found"), "not found"),
+        (
+            lambda: StrategyGovernanceError("governance version not found"),
+            "STRATEGY_VERSION_NOT_FOUND",
+        ),
         (
             lambda: StrategyGovernanceCasConflict("pointer CAS missed revision"),
-            "conflict",
+            "STRATEGY_REVISION_CONFLICT",
         ),
-        (lambda: ValueError("requires published/approved"), "transition"),
+        (
+            lambda: ValueError("requires published/approved"),
+            "STRATEGY_INVALID_TRANSITION",
+        ),
+        (
+            lambda: StrategyGovernanceEventIntegrityError("corrupt stream"),
+            "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+        ),
     ],
-    ids=["not_found", "cas_conflict", "invalid_transition"],
+    ids=["not_found", "cas_conflict", "invalid_transition", "event_integrity"],
 )
 def test_submit_review_maps_governance_errors(
     exc_factory: _ErrorFactory,
-    keyword: str,
+    code: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """All three governance failure modes become a typed AppCommandError."""
@@ -148,7 +227,7 @@ def test_submit_review_maps_governance_errors(
             )
         )
 
-    assert keyword in str(info.value).lower()
+    assert info.value.details["code"] == code
 
 
 class TestSubmitReviewHandler:

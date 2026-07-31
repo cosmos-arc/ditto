@@ -12,6 +12,7 @@ from ditto_strategy.governance.models import (
 )
 from ditto_strategy.governance.protocols import (
     InvalidStrategyGovernanceEventCursor,
+    StrategyGovernanceEventIntegrityError,
     StrategyGovernanceEventReader,
     StrategyGovernanceEventStrategyNotFound,
     StrategyGovernanceVersionReader,
@@ -156,6 +157,11 @@ class StrategyQueryFacade:
             raise AppQueryError(
                 str(exc),
                 details={"code": "STRATEGY_NOT_FOUND"},
+            ) from exc
+        except StrategyGovernanceEventIntegrityError as exc:
+            raise AppQueryError(
+                str(exc),
+                details={"code": "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR"},
             ) from exc
         return [
             StrategyGovernanceEventInfo(

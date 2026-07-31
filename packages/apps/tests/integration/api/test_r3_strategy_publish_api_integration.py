@@ -53,6 +53,7 @@ from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
 from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
+from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
 )
@@ -358,6 +359,12 @@ def _build_harness(
         reader=research_reader,
     )
     submit_handler = SubmitReviewHandler(governance, research_reader)
+    query_facade = StrategyQueryFacade(
+        catalog,
+        version_state_reader=governance_store,
+        governance_version_reader=governance_store,
+        governance_event_reader=governance_store,
+    )
 
     class TestProvider(Provider):
         scope = Scope.APP
@@ -369,6 +376,10 @@ def _build_harness(
         @provide
         def submit_review_handler(self) -> SubmitReviewHandler:
             return submit_handler
+
+        @provide
+        def strategy_query_facade(self) -> StrategyQueryFacade:
+            return query_facade
 
     container = make_async_container(TestProvider())
     app = FastAPI()
@@ -588,6 +599,97 @@ async def test_http_submit_review_allows_soft_metric_failure_and_replays_exactly
         )
         assert reused.status_code == 409
         assert reused.json()["error_code"] == "IDEMPOTENCY_KEY_REUSED"
+    finally:
+        await harness.close()
+
+
+async def test_http_submit_review_rejects_late_event_with_typed_409_and_zero_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = _build_harness(
+        tmp_path,
+        r2_live_gate=True,
+        prepare_candidate_review=False,
+    )
+    monkeypatch.setattr(
+        "ditto_application.commands.strategy_governance._utc_now_iso",
+        lambda: "2026-07-28T00:00:01Z",
+    )
+    try:
+        state_before = harness.governance_store.get_state(
+            harness.strategy_id,
+            harness.candidate_version,
+        )
+        history_before = _governance_history(
+            harness.governance_pool,
+            harness.strategy_id,
+        )
+
+        response = await _submit_review(
+            harness,
+            bundle_hash=str(harness.packet.bundle_hash),
+            idempotency_key="submit-late-event",
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error_code"] == "STRATEGY_REVISION_CONFLICT"
+        assert (
+            harness.governance_store.get_state(
+                harness.strategy_id,
+                harness.candidate_version,
+            )
+            == state_before
+        )
+        assert (
+            _governance_history(harness.governance_pool, harness.strategy_id)
+            == history_before
+        )
+    finally:
+        await harness.close()
+
+
+async def test_http_governance_events_fails_closed_on_legacy_cross_table_id(
+    tmp_path: Path,
+) -> None:
+    harness = _build_harness(tmp_path)
+    try:
+        connection = harness.governance_pool.get_connection()
+        duplicate_event_id = "legacy-cross-table-duplicate"
+        connection.execute(
+            "INSERT INTO strategy_decision_event VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                duplicate_event_id,
+                harness.strategy_id,
+                harness.candidate_version,
+                "submit_review",
+                "legacy-writer",
+                "legacy decision",
+                "2026-07-28T00:00:13Z",
+            ),
+        )
+        connection.execute(
+            "INSERT INTO strategy_activation_event VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                duplicate_event_id,
+                harness.strategy_id,
+                harness.candidate_version,
+                "reactivate",
+                "legacy-writer",
+                "legacy activation",
+                "2026-07-28T00:00:14Z",
+            ),
+        )
+        connection.commit()
+
+        response = await harness.client.get(
+            f"/api/v1/strategies/{harness.strategy_id}/events",
+        )
+
+        assert response.status_code == 500
+        assert (
+            response.json()["error_code"] == "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR"
+        )
     finally:
         await harness.close()
 

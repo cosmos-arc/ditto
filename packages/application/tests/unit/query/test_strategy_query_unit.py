@@ -31,6 +31,7 @@ from ditto_strategy.governance.models import (
 )
 from ditto_strategy.governance.protocols import (
     InvalidStrategyGovernanceEventCursor,
+    StrategyGovernanceEventIntegrityError,
     StrategyGovernanceEventStrategyNotFound,
 )
 from ditto_strategy.models import StrategySpecRecord
@@ -242,6 +243,10 @@ class TestStrategyQueryFacadeGovernanceEvents:
             (
                 StrategyGovernanceEventStrategyNotFound("missing strategy"),
                 "STRATEGY_NOT_FOUND",
+            ),
+            (
+                StrategyGovernanceEventIntegrityError("corrupt stream"),
+                "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
             ),
         ],
     )

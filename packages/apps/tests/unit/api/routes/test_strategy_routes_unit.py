@@ -422,6 +422,34 @@ class TestUpdateStrategyErrorMapping:
         assert exc_info.value.status_code == 409
         assert "conflict" in exc_info.value.message.lower()
 
+    @pytest.mark.parametrize(
+        ("code", "expected_status"),
+        [
+            ("STRATEGY_REVISION_CONFLICT", 409),
+            ("STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR", 500),
+        ],
+    )
+    async def test_update_maps_typed_governance_storage_errors(
+        self,
+        mock_update_handler: MagicMock,
+        code: str,
+        expected_status: int,
+    ) -> None:
+        mock_update_handler.handle.side_effect = AppCommandError(
+            code,
+            details={"code": code},
+        )
+
+        with pytest.raises(APIError) as exc_info:
+            await _call_update(
+                "s1",
+                UpdateStrategyRequest(name="x", spec_json={}, version=1, tags=[]),
+                mock_update_handler,
+            )
+
+        assert exc_info.value.status_code == expected_status
+        assert exc_info.value.error_code == code
+
 
 class TestListStrategyVersions:
     """GET /strategies/{id}/versions — governance 版本历史."""
@@ -580,7 +608,11 @@ class TestStrategyGovernanceEvents:
 
     @pytest.mark.parametrize(
         ("code", "status"),
-        [("INVALID_EVENT_CURSOR", 422), ("STRATEGY_NOT_FOUND", 404)],
+        [
+            ("INVALID_EVENT_CURSOR", 422),
+            ("STRATEGY_NOT_FOUND", 404),
+            ("STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR", 500),
+        ],
     )
     async def test_maps_typed_query_errors(
         self,

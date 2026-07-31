@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
 from typing import cast
 
 from ditto_strategy.governance.models import StrategyDecision, StrategyDecisionEvent
+from ditto_strategy.governance.protocols import StrategyGovernanceEventIntegrityError
 from ditto_strategy.governance.service import (
     GovernanceService,
     StrategyGovernanceError,
@@ -16,7 +16,13 @@ from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    StrategyGovernanceCasConflict,
+)
 
+from ditto_application.commands.strategy_governance_clock import (
+    utc_now_iso as _utc_now_iso,
+)
 from ditto_application.contracts import StrategySpecInfo, to_spec_info
 from ditto_application.exceptions import AppCommandError
 from ditto_application.mutation_idempotency import (
@@ -40,12 +46,6 @@ __all__ = [
 ]
 
 _COMMAND_ACTOR = "command"
-_UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
-
-
-def _utc_now_iso() -> str:
-    """Stable ISO-8601 UTC timestamp for governance events."""
-    return datetime.now(UTC).strftime(_UTC_FMT)
 
 
 @dataclass(frozen=True)
@@ -270,6 +270,32 @@ class CreateStrategyHandler:
                 created_at=now,
                 audit_event=audit_event,
             )
+        except StrategyGovernanceCasConflict as exc:
+            replay = _replay_spec(
+                self._governance,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+            )
+            if replay is not None:
+                return replay
+            raise AppCommandError(
+                f"Strategy revision conflict for {command.strategy_id}: {exc}",
+                details={
+                    "code": "STRATEGY_REVISION_CONFLICT",
+                    "strategy_id": command.strategy_id,
+                    "version": 1,
+                },
+            ) from exc
+        except StrategyGovernanceEventIntegrityError as exc:
+            raise AppCommandError(
+                "Strategy governance event integrity error for "
+                + f"{command.strategy_id}: {exc}",
+                details={
+                    "code": "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+                    "strategy_id": command.strategy_id,
+                    "version": 1,
+                },
+            ) from exc
         except sqlite3.IntegrityError as exc:
             replay = _replay_spec(
                 self._governance,
@@ -356,6 +382,33 @@ class UpdateStrategyHandler:
                 created_at=now,
                 audit_event=audit_event,
             )
+        except StrategyGovernanceCasConflict as exc:
+            replay = _replay_spec(
+                self._governance,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+            )
+            if replay is not None:
+                return replay
+            raise AppCommandError(
+                f"Strategy revision conflict for {command.strategy_id} "
+                + f"v{new_version}: {exc}",
+                details={
+                    "code": "STRATEGY_REVISION_CONFLICT",
+                    "strategy_id": command.strategy_id,
+                    "version": new_version,
+                },
+            ) from exc
+        except StrategyGovernanceEventIntegrityError as exc:
+            raise AppCommandError(
+                "Strategy governance event integrity error for "
+                + f"{command.strategy_id} v{new_version}: {exc}",
+                details={
+                    "code": "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+                    "strategy_id": command.strategy_id,
+                    "version": new_version,
+                },
+            ) from exc
         except sqlite3.IntegrityError as exc:
             replay = _replay_spec(
                 self._governance,
@@ -387,6 +440,26 @@ class PublishStrategyHandler:
                 reason="strategy publish command",
                 decided_at=_utc_now_iso(),
             )
+        except StrategyGovernanceCasConflict as exc:
+            raise AppCommandError(
+                f"Strategy revision conflict for {command.strategy_id} "
+                + f"v{command.version}: {exc}",
+                details={
+                    "code": "STRATEGY_REVISION_CONFLICT",
+                    "strategy_id": command.strategy_id,
+                    "version": command.version,
+                },
+            ) from exc
+        except StrategyGovernanceEventIntegrityError as exc:
+            raise AppCommandError(
+                "Strategy governance event integrity error for "
+                + f"{command.strategy_id} v{command.version}: {exc}",
+                details={
+                    "code": "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+                    "strategy_id": command.strategy_id,
+                    "version": command.version,
+                },
+            ) from exc
         except StrategyGovernanceError as exc:
             msg = (
                 f"Strategy version not found: {command.strategy_id} v{command.version}"

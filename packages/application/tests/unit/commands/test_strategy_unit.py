@@ -9,11 +9,15 @@ from unittest.mock import MagicMock
 import pytest
 from ditto_application.exceptions import AppCommandError
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
+from ditto_strategy.governance.protocols import StrategyGovernanceEventIntegrityError
 from ditto_strategy.governance.service import (
     GovernanceService,
     StrategyGovernanceError,
 )
 from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    StrategyGovernanceCasConflict,
+)
 
 
 def _make_governance_service() -> MagicMock:
@@ -65,6 +69,44 @@ class TestCreateStrategyHandler:
         assert result.tags == ()
         assert result.created_at != ""
         gov_mock.create_draft.assert_called_once()
+
+    @pytest.mark.parametrize(
+        ("failure", "code"),
+        [
+            (
+                StrategyGovernanceCasConflict("late event"),
+                "STRATEGY_REVISION_CONFLICT",
+            ),
+            (
+                StrategyGovernanceEventIntegrityError("corrupt stream"),
+                "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+            ),
+        ],
+    )
+    def test_handle_maps_governance_event_storage_failures(
+        self,
+        failure: Exception,
+        code: str,
+    ) -> None:
+        from ditto_application.commands.strategy import (
+            CreateStrategyCommand,
+            CreateStrategyHandler,
+        )
+
+        gov_mock = _make_governance_service()
+        gov_mock.create_draft.side_effect = failure
+        handler = CreateStrategyHandler(governance=gov_mock)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(
+                CreateStrategyCommand(
+                    strategy_id="strat-1",
+                    name="Test",
+                    spec_json=_valid_spec_json(),
+                )
+            )
+
+        assert info.value.details["code"] == code
         call_kwargs = gov_mock.create_draft.call_args.kwargs
         assert call_kwargs["strategy_id"] == "strat-1"
         assert call_kwargs["version"] == 1
@@ -230,6 +272,52 @@ class TestUpdateStrategyHandler:
             handler.handle(cmd)
         gov_mock.create_draft.assert_not_called()
 
+    @pytest.mark.parametrize(
+        ("failure", "code"),
+        [
+            (
+                StrategyGovernanceCasConflict("late event"),
+                "STRATEGY_REVISION_CONFLICT",
+            ),
+            (
+                StrategyGovernanceEventIntegrityError("corrupt stream"),
+                "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+            ),
+        ],
+    )
+    def test_handle_maps_governance_event_storage_failures(
+        self,
+        failure: Exception,
+        code: str,
+    ) -> None:
+        from ditto_application.commands.strategy import (
+            UpdateStrategyCommand,
+            UpdateStrategyHandler,
+        )
+
+        catalog_mock = _make_catalog_service()
+        catalog_mock.get_spec.return_value = StrategySpecRecord(
+            strategy_id="strat-1",
+            name="Old",
+            spec_json=_valid_spec_json(),
+            version=1,
+        )
+        gov_mock = _make_governance_service()
+        gov_mock.create_draft.side_effect = failure
+        handler = UpdateStrategyHandler(catalog_mock, gov_mock)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(
+                UpdateStrategyCommand(
+                    strategy_id="strat-1",
+                    name="New",
+                    spec_json=_valid_spec_json(),
+                    version=1,
+                )
+            )
+
+        assert info.value.details["code"] == code
+
     def test_handle_succeeds_when_version_matches(self) -> None:
         """version 匹配时正常更新，新版本为 existing.version + 1."""
         from ditto_application.commands.strategy import (
@@ -336,6 +424,42 @@ class TestPublishStrategyHandler:
             handler.handle(cmd)
 
         gov_mock.publish_and_activate.assert_called_once()
+
+    @pytest.mark.parametrize(
+        ("failure", "code"),
+        [
+            (
+                StrategyGovernanceCasConflict("late event"),
+                "STRATEGY_REVISION_CONFLICT",
+            ),
+            (
+                StrategyGovernanceEventIntegrityError("corrupt stream"),
+                "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+            ),
+        ],
+    )
+    def test_handle_maps_governance_event_storage_failures(
+        self,
+        failure: Exception,
+        code: str,
+    ) -> None:
+        from ditto_application.commands.strategy import (
+            PublishStrategyCommand,
+            PublishStrategyHandler,
+        )
+
+        gov_mock = _make_governance_service()
+        gov_mock.publish_and_activate.side_effect = failure
+        handler = PublishStrategyHandler(governance=gov_mock)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(PublishStrategyCommand(strategy_id="strat-1", version=2))
+
+        assert info.value.details == {
+            "code": code,
+            "strategy_id": "strat-1",
+            "version": 2,
+        }
 
 
 # ---------------------------------------------------------------------------

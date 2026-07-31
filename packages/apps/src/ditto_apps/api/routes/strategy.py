@@ -108,6 +108,10 @@ def _raise_mutation_error(exc: AppError) -> Never:
         raise ConflictError(str(exc), error_code=code) from exc
     if isinstance(code, str) and code == "IDEMPOTENCY_RECEIPT_INVALID":
         raise APIError(str(exc), status_code=500, error_code=code) from exc
+    if isinstance(code, str) and code == "STRATEGY_REVISION_CONFLICT":
+        raise ConflictError(str(exc), error_code=code) from exc
+    if isinstance(code, str) and code == "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR":
+        raise APIError(str(exc), status_code=500, error_code=code) from exc
     raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
 
 
@@ -119,6 +123,8 @@ def _raise_publish_error(exc: AppError) -> Never:
     code = exc.details.get("code")
     if isinstance(code, str) and code == "STRATEGY_REVISION_CONFLICT":
         raise ConflictError(str(exc), error_code=code) from exc
+    if isinstance(code, str) and code == "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR":
+        raise APIError(str(exc), status_code=500, error_code=code) from exc
     raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
 
 
@@ -147,6 +153,8 @@ def _raise_reactivate_error(exc: AppError) -> Never:
         raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
     if code == "STRATEGY_REVISION_CONFLICT":
         raise ConflictError(str(exc), error_code=code) from exc
+    if code == "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR":
+        raise APIError(str(exc), status_code=500, error_code=code) from exc
     if code == "STRATEGY_VERSION_NOT_FOUND":
         raise NotFoundError(str(exc)) from exc
     if code in {
@@ -418,6 +426,12 @@ async def list_strategy_governance_events(
         if code == "STRATEGY_NOT_FOUND":
             raise APIError(
                 str(exc), status_code=404, error_code="STRATEGY_NOT_FOUND"
+            ) from exc
+        if code == "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR":
+            raise APIError(
+                str(exc),
+                status_code=500,
+                error_code="STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
             ) from exc
         raise_business_error(exc)
     return APIResponse(data=[to_governance_event_response(event) for event in events])

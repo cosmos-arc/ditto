@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
 import orjson
 from ditto_strategy.governance.models import (
@@ -28,6 +27,9 @@ from ditto_strategy.governance.models import (
     StrategyActivePointer,
     StrategyDecision,
     StrategyVersionStateRecord,
+)
+from ditto_strategy.governance.protocols import (
+    StrategyGovernanceEventIntegrityError,
 )
 from ditto_strategy.governance.service import (
     GovernanceService,
@@ -37,6 +39,9 @@ from ditto_strategy.storage.sqlite.strategy_governance_store import (
     StrategyGovernanceCasConflict,
 )
 
+from ditto_application.commands.strategy_governance_clock import (
+    utc_now_iso as _utc_now_iso,
+)
 from ditto_application.commands.strategy_governance_receipts import (
     invalid_strategy_receipt,
     pointer_receipt,
@@ -80,19 +85,14 @@ __all__ = [
     "reactivate_confirmation_phrase",
 ]
 
-_UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
 #: Governance failures mapped at this boundary into one typed AppCommandError.
 _GOVERNANCE_FAILURES = (
     sqlite3.IntegrityError,
     StrategyGovernanceError,
     StrategyGovernanceCasConflict,
+    StrategyGovernanceEventIntegrityError,
     ValueError,
 )
-
-
-def _utc_now_iso() -> str:
-    """Stable ISO-8601 UTC timestamp for governance decision provenance."""
-    return datetime.now(UTC).strftime(_UTC_FMT)
 
 
 def _event_id(strategy_id: str, version: int, decision: str, decided_at: str) -> str:
@@ -159,6 +159,15 @@ def _map_governance_error(
         return AppCommandError(
             f"Strategy revision conflict for {strategy_id} v{version}: {exc}",
             details={**details, "code": "STRATEGY_REVISION_CONFLICT"},
+        )
+    if isinstance(exc, StrategyGovernanceEventIntegrityError):
+        return AppCommandError(
+            "Strategy governance event integrity error for "
+            + f"{strategy_id} v{version}: {exc}",
+            details={
+                **details,
+                "code": "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+            },
         )
     if isinstance(exc, ValueError):
         return AppCommandError(

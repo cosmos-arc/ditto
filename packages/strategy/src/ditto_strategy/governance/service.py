@@ -11,6 +11,7 @@ upstream promotion process, not this service.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from ditto_strategy.governance.models import (
     GOVERNANCE_SCHEMA_VERSION,
@@ -37,6 +38,18 @@ __all__ = [
 
 class StrategyGovernanceError(Exception):
     """Raised when a governance operation targets an unknown version."""
+
+
+def _next_event_time(value: str) -> str:
+    """Advance one explicit aware timestamp for a multi-transaction seed path."""
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("governance event timestamp must be timezone-aware")
+    return (
+        (parsed.astimezone(UTC) + timedelta(microseconds=1))
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z")
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -310,44 +323,48 @@ class GovernanceService:
                 f"cannot revive deprecated version: {strategy_id}/{version}"
             )
         prefix = f"{strategy_id}:{version}"
+        event_time = decided_at
         if state.state is StrategyVersionState.DRAFT:
             state = self.submit_review(
                 strategy_id,
                 version,
-                event_id=f"{prefix}:submit_review:{decided_at}",
+                event_id=f"{prefix}:submit_review:{event_time}",
                 actor=actor,
                 reason=reason,
-                decided_at=decided_at,
+                decided_at=event_time,
             )
+            event_time = _next_event_time(event_time)
         if state.review_outcome is ReviewOutcome.PENDING:
             state = self.approve(
                 strategy_id,
                 version,
-                event_id=f"{prefix}:approve:{decided_at}",
+                event_id=f"{prefix}:approve:{event_time}",
                 actor=actor,
                 reason=reason,
-                decided_at=decided_at,
+                decided_at=event_time,
             )
+            event_time = _next_event_time(event_time)
         if state.state is StrategyVersionState.REVIEW:
             self.publish(
                 strategy_id,
                 version,
-                event_id=f"{prefix}:publish:{decided_at}",
+                event_id=f"{prefix}:publish:{event_time}",
                 actor=actor,
                 reason=reason,
-                decided_at=decided_at,
+                decided_at=event_time,
             )
+            event_time = _next_event_time(event_time)
         pointer = self._store.get_active_pointer(strategy_id)
         if pointer is not None and pointer.active_version == version:
             return pointer
         activate_event = StrategyActivationEvent(
-            f"{prefix}:activate:{decided_at}",
+            f"{prefix}:activate:{event_time}",
             strategy_id,
             version,
             StrategyDecision.PUBLISH,
             actor,
             reason,
-            decided_at,
+            event_time,
         )
         return self.activate(strategy_id, version, activate_event)
 
