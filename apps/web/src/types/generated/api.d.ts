@@ -1379,28 +1379,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/logs/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Generate Test Logs
-         * @description 测试日志记录功能（仅开发/测试环境可用）.
-         *
-         *     Capability maturity: `debug`. Debug-only surface; must not be exposed in production.
-         */
-        get: operations["debug_generate_test_logs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/macro/indicators": {
         parameters: {
             query?: never;
@@ -11849,28 +11827,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_IngestionStatusResponse_"];
-                };
-            };
-        };
-    };
-    debug_generate_test_logs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
                 };
             };
         };
