@@ -563,10 +563,14 @@ def _confirmed_durable_detail(
             },
         )
     if identities.get("request_hash") != request_hash:
-        raise _saga_error(
-            "durable_launch_request_mismatch",
-            durable_request_hash=identities.get("request_hash"),
-            caller_request_hash=request_hash,
+        raise AppProcessError(
+            "experiment already exists with a different planning request",
+            details={
+                "code": "EXPERIMENT_ALREADY_EXISTS",
+                "reason": "durable_launch_request_mismatch",
+                "durable_request_hash": identities.get("request_hash"),
+                "caller_request_hash": request_hash,
+            },
         )
     return decoded_detail, report
 

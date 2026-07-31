@@ -17,7 +17,11 @@ __all__ = [
     "ExperimentDetailResponse",
     "ExperimentFoldResponse",
     "ExperimentGateResponse",
+    "ExperimentLaunchRequest",
+    "ExperimentLaunchResponse",
     "ExperimentPlanningRequest",
+    "ExperimentPreflightCheckResponse",
+    "ExperimentPreflightResponse",
     "ExperimentRetryFoldRequest",
     "ExperimentReviewPacketResponse",
     "ExperimentSelectionEvidenceResponse",
@@ -129,6 +133,57 @@ class ExperimentPlanningRequest(_StrictPlanningModel):
     worker_count: int
     failure_policy: Literal["continue_candidate_failures", "fail_fast"]
     created_at: str
+
+
+class ExperimentLaunchRequest(ExperimentPlanningRequest):
+    """Canonical planning document plus the operator-confirmed plan identity."""
+
+    confirmed_plan_hash: str
+
+
+class ExperimentPreflightCheckResponse(BaseModel):
+    """Transport view of one deterministic planning gate result."""
+
+    model_config = ConfigDict(frozen=True)
+
+    rule_id: str
+    outcome: str
+    code: str | None
+    reason: str | None
+    remediation: str | None
+    observed: dict[str, JsonValue]
+    policy: dict[str, JsonValue]
+
+
+class ExperimentPreflightResponse(BaseModel):
+    """Complete operator confirmation surface returned by read-only preflight."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: str
+    plan_hash: str | None
+    checks: list[ExperimentPreflightCheckResponse]
+    candidate_count: int
+    planned_fold_count: int
+    budget_run_count: int
+    estimated_trading_sessions: int
+    estimated_disk_bytes: int
+    eligible_month_count: int
+    isolation_width_sessions: int
+
+
+class ExperimentLaunchResponse(BaseModel):
+    """Durable server truth returned after launch or exact replay."""
+
+    model_config = ConfigDict(frozen=True)
+
+    experiment_id: str
+    status: str
+    queue_ordinal: int
+    revision: int
+    candidate_count: int
+    fold_count: int
+    plan_hash: str
 
 
 class ExperimentCandidateResponse(BaseModel):

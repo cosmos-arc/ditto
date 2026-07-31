@@ -10,16 +10,28 @@ from unittest.mock import MagicMock
 
 import pytest
 from ditto_application.commands.experiments import (
+    LaunchExperimentCommand,
+    LaunchExperimentHandler,
     PauseExperimentHandler,
     RetryExperimentFoldHandler,
 )
-from ditto_application.exceptions import AppCommandError
+from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
 from ditto_application.processes.experiments.comparison_reader import (
     CandidateComparisonView,
     ExperimentComparisonReader,
+)
+from ditto_application.processes.experiments.planning_contracts import (
+    ExperimentPreflightCheck,
+    PreflightOutcome,
+)
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentLaunchReceipt,
+    ExperimentPlanningProcess,
+    ExperimentPreflightReport,
+    ExperimentPreflightStatus,
 )
 from ditto_application.processes.experiments.selection_evidence_reader import (
     ExperimentSelectionEvidenceReader,
@@ -33,14 +45,20 @@ from ditto_application.queries.experiments import (
     ExperimentGateReadModel,
     ExperimentQueryFacade,
 )
-from ditto_apps.api.errors import ConflictError, NotFoundError
+from ditto_apps.api.errors import (
+    ConflictError,
+    NotFoundError,
+    UnprocessableEntityError,
+)
 from ditto_apps.api.routes import research_experiment_routes
 from ditto_apps.api.routes.research_experiment_routes import (
     get_experiment,
     get_experiment_comparison,
     get_experiment_selection_evidence,
+    launch_experiment,
     list_experiment_artifacts,
     pause_experiment,
+    preflight_experiment,
     retry_fold_experiment,
     to_artifact_response,
     to_comparison_response,
@@ -56,6 +74,10 @@ from ditto_apps.models.research import (
     ExperimentControlReceiptResponse,
     ExperimentControlRequest,
     ExperimentDetailResponse,
+    ExperimentLaunchRequest,
+    ExperimentLaunchResponse,
+    ExperimentPlanningRequest,
+    ExperimentPreflightResponse,
     ExperimentRetryFoldRequest,
     ExperimentSelectionEvidenceResponse,
 )
@@ -72,6 +94,8 @@ _SelectionEvidenceRoute = Callable[
 ]
 _ComparisonRoute = Callable[..., Awaitable[APIResponse[ExperimentComparisonResponse]]]
 _ControlRoute = Callable[..., Awaitable[APIResponse[ExperimentControlReceiptResponse]]]
+_PreflightRoute = Callable[..., Awaitable[APIResponse[ExperimentPreflightResponse]]]
+_LaunchRoute = Callable[..., Awaitable[APIResponse[ExperimentLaunchResponse]]]
 
 
 @pytest.fixture(autouse=True)
@@ -99,6 +123,92 @@ def _candidate() -> ExperimentCandidateReadModel:
                 "meta": MappingProxyType({"family": "momentum"}),
             }
         ),
+    )
+
+
+def _planning_payload() -> dict[str, object]:
+    return {
+        "experiment_id": "exp-1",
+        "research_cycle_id": "cycle-1",
+        "research_cycle_hash": "a" * 64,
+        "strategy": {
+            "strategy_id": "strategy-1",
+            "version": 2,
+            "spec_hash": "b" * 64,
+            "spec_json": {"name": "Strategy"},
+        },
+        "snapshot": {
+            "snapshot_id": "snapshot-1",
+            "manifest_hash": "c" * 64,
+        },
+        "validation": {"trading_sessions": ["2026-07-30"]},
+        "matrix": {
+            "baseline": {
+                "descriptor_type": "active-strategy",
+                "payload": {"strategy_id": "strategy-1"},
+                "schema_version": 1,
+            },
+            "axes": [
+                {
+                    "name": "selector.top_k",
+                    "values": [{"type": "int", "value": 10}],
+                }
+            ],
+            "candidate_limit": 4,
+        },
+        "promotion_objective": {
+            "schema_id": "r3-promotion-objective",
+            "schema_version": 1,
+        },
+        "dataset_requirements": [
+            {
+                "dataset_id": "etf_daily",
+                "expected_snapshot_ids": ["provider-snapshot-1"],
+                "requires_pit_universe": True,
+                "certified_from": "2016-01-01",
+            }
+        ],
+        "cost_model": {
+            "bytes_per_run": 100,
+            "bytes_per_trading_session": 2,
+        },
+        "budget": {
+            "candidate_limit": 4,
+            "fold_run_limit": 100,
+            "trading_session_limit": 10_000,
+            "disk_byte_limit": 1_000_000,
+        },
+        "seed": 42,
+        "worker_count": 2,
+        "failure_policy": "fail_fast",
+        "created_at": "2026-07-30T00:00:00Z",
+    }
+
+
+def _preflight_report() -> ExperimentPreflightReport:
+    return ExperimentPreflightReport(
+        status=ExperimentPreflightStatus.READY,
+        plan_hash="d" * 64,
+        checks=(
+            ExperimentPreflightCheck(
+                rule_id="history",
+                outcome=PreflightOutcome.PASS,
+                code=None,
+                reason=None,
+                remediation=None,
+                observed=MappingProxyType({"eligible_month_count": 96}),
+                policy=MappingProxyType({"promotion_minimum": 96}),
+            ),
+        ),
+        candidate_count=2,
+        planned_fold_count=8,
+        budget_run_count=7,
+        estimated_trading_sessions=1234,
+        estimated_disk_bytes=5678,
+        eligible_month_count=96,
+        isolation_width_sessions=5,
+        validation_plan=None,
+        work_plan=None,
     )
 
 
@@ -293,6 +403,195 @@ async def test_get_experiment_raises_not_found() -> None:
 
     with pytest.raises(NotFoundError):
         await _call_get("missing", facade)
+
+
+async def _call_preflight(
+    request: ExperimentPlanningRequest,
+    process: MagicMock,
+) -> APIResponse[ExperimentPreflightResponse]:
+    route = cast(
+        _PreflightRoute,
+        getattr(preflight_experiment, "__dishka_orig_func__", preflight_experiment),
+    )
+    return await route(experiment_id="exp-1", request=request, process=process)
+
+
+async def test_preflight_builds_canonical_request_and_maps_every_typed_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = ExperimentPlanningRequest.model_validate(_planning_payload())
+    application_request = MagicMock()
+    builder = MagicMock(return_value=application_request)
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "build_experiment_planning_request",
+        builder,
+    )
+    process = MagicMock(spec=ExperimentPlanningProcess)
+    process.preflight.return_value = _preflight_report()
+
+    response = await _call_preflight(request, process)
+
+    builder.assert_called_once_with(request.model_dump(mode="python"))
+    process.preflight.assert_called_once_with(application_request)
+    assert response.data.model_dump(mode="json") == {
+        "status": "ready",
+        "plan_hash": "d" * 64,
+        "checks": [
+            {
+                "rule_id": "history",
+                "outcome": "pass",
+                "code": None,
+                "reason": None,
+                "remediation": None,
+                "observed": {"eligible_month_count": 96},
+                "policy": {"promotion_minimum": 96},
+            }
+        ],
+        "candidate_count": 2,
+        "planned_fold_count": 8,
+        "budget_run_count": 7,
+        "estimated_trading_sessions": 1234,
+        "estimated_disk_bytes": 5678,
+        "eligible_month_count": 96,
+        "isolation_width_sessions": 5,
+    }
+
+
+async def test_preflight_rejects_path_body_experiment_identity_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = ExperimentPlanningRequest.model_validate(_planning_payload())
+    builder = MagicMock()
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "build_experiment_planning_request",
+        builder,
+    )
+    process = MagicMock(spec=ExperimentPlanningProcess)
+    route = getattr(preflight_experiment, "__dishka_orig_func__", preflight_experiment)
+
+    with pytest.raises(UnprocessableEntityError) as caught:
+        await route(experiment_id="different", request=request, process=process)
+
+    assert caught.value.error_code == "SPEC_INVALID"
+    builder.assert_not_called()
+    process.preflight.assert_not_called()
+
+
+async def test_preflight_maps_typed_builder_failure_to_unprocessable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = ExperimentPlanningRequest.model_validate(_planning_payload())
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "build_experiment_planning_request",
+        MagicMock(
+            side_effect=AppProcessError(
+                "canonical planning document is invalid",
+                details={"code": "SPEC_INVALID", "reason": "strategy_hash_mismatch"},
+            )
+        ),
+    )
+    process = MagicMock(spec=ExperimentPlanningProcess)
+
+    with pytest.raises(UnprocessableEntityError) as caught:
+        await _call_preflight(request, process)
+
+    assert caught.value.error_code == "SPEC_INVALID"
+    process.preflight.assert_not_called()
+
+
+async def _call_launch(
+    request: ExperimentLaunchRequest,
+    handler: MagicMock,
+) -> APIResponse[ExperimentLaunchResponse]:
+    route = cast(
+        _LaunchRoute,
+        getattr(launch_experiment, "__dishka_orig_func__", launch_experiment),
+    )
+    return await route(request=request, handler=handler)
+
+
+async def test_launch_rebuilds_same_document_and_returns_exact_receipt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {**_planning_payload(), "confirmed_plan_hash": "d" * 64}
+    request = ExperimentLaunchRequest.model_validate(payload)
+    application_request = MagicMock()
+    builder = MagicMock(return_value=application_request)
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "build_experiment_planning_request",
+        builder,
+    )
+    handler = MagicMock(spec=LaunchExperimentHandler)
+    handler.handle.return_value = ExperimentLaunchReceipt(
+        experiment_id="exp-1",
+        status="queued",
+        queue_ordinal=3,
+        revision=1,
+        candidate_count=2,
+        fold_count=8,
+        plan_hash="d" * 64,
+    )
+
+    response = await _call_launch(request, handler)
+
+    expected_document = _planning_payload()
+    builder.assert_called_once_with(expected_document)
+    command = handler.handle.call_args.args[0]
+    assert type(command) is LaunchExperimentCommand
+    assert command.request is application_request
+    assert command.confirmed_plan_hash == "d" * 64
+    assert response.data.model_dump(mode="json") == {
+        "experiment_id": "exp-1",
+        "status": "queued",
+        "queue_ordinal": 3,
+        "revision": 1,
+        "candidate_count": 2,
+        "fold_count": 8,
+        "plan_hash": "d" * 64,
+    }
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_error"),
+    [
+        ("PLAN_HASH_MISMATCH", ConflictError),
+        ("EXPERIMENT_ALREADY_EXISTS", ConflictError),
+        ("HARD_GATE_FAILED", UnprocessableEntityError),
+        ("SPEC_INVALID", UnprocessableEntityError),
+        ("MATRIX_TOO_LARGE", UnprocessableEntityError),
+        ("BUDGET_EXCEEDED", UnprocessableEntityError),
+        ("SNAPSHOT_NOT_CERTIFIED", UnprocessableEntityError),
+        ("INSUFFICIENT_HISTORY", UnprocessableEntityError),
+        ("WINDOW_LEAKAGE", UnprocessableEntityError),
+        ("EXECUTOR_UNAVAILABLE", UnprocessableEntityError),
+    ],
+)
+async def test_launch_maps_only_typed_planning_error_codes(
+    code: str,
+    expected_error: type[ConflictError] | type[UnprocessableEntityError],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {**_planning_payload(), "confirmed_plan_hash": "d" * 64}
+    request = ExperimentLaunchRequest.model_validate(payload)
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "build_experiment_planning_request",
+        MagicMock(return_value=MagicMock()),
+    )
+    handler = MagicMock(spec=LaunchExperimentHandler)
+    handler.handle.side_effect = AppCommandError(
+        "launch rejected",
+        details={"code": code, "reason": "typed_failure"},
+    )
+
+    with pytest.raises(expected_error) as caught:
+        await _call_launch(request, handler)
+
+    assert caught.value.error_code == code
 
 
 async def _call_candidates(

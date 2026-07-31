@@ -721,6 +721,54 @@
         "title": "APIResponse[ExperimentDetailResponse]",
         "type": "object"
       },
+      "APIResponse_ExperimentLaunchResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ExperimentLaunchResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ExperimentLaunchResponse]",
+        "type": "object"
+      },
+      "APIResponse_ExperimentPreflightResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ExperimentPreflightResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ExperimentPreflightResponse]",
+        "type": "object"
+      },
       "APIResponse_ExperimentReviewPacketResponse_": {
         "properties": {
           "data": {
@@ -8873,6 +8921,641 @@
         "title": "ExperimentGateResponse",
         "type": "object"
       },
+      "ExperimentLaunchRequest": {
+        "additionalProperties": false,
+        "description": "Canonical planning document plus the operator-confirmed plan identity.",
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/ExperimentPlanningBudgetRequest"
+          },
+          "confirmed_plan_hash": {
+            "title": "Confirmed Plan Hash",
+            "type": "string"
+          },
+          "cost_model": {
+            "$ref": "#/components/schemas/ExperimentPlanningCostModelRequest"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_requirements": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentPlanningDatasetRequirementRequest"
+            },
+            "title": "Dataset Requirements",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "failure_policy": {
+            "enum": [
+              "continue_candidate_failures",
+              "fail_fast"
+            ],
+            "title": "Failure Policy",
+            "type": "string"
+          },
+          "matrix": {
+            "$ref": "#/components/schemas/ExperimentPlanningMatrixRequest"
+          },
+          "promotion_objective": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "title": "Promotion Objective",
+            "type": "object"
+          },
+          "research_cycle_hash": {
+            "title": "Research Cycle Hash",
+            "type": "string"
+          },
+          "research_cycle_id": {
+            "title": "Research Cycle Id",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ExperimentPlanningSnapshotRequest"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/ExperimentPlanningStrategyRequest"
+          },
+          "validation": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "title": "Validation",
+            "type": "object"
+          },
+          "worker_count": {
+            "title": "Worker Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "research_cycle_id",
+          "research_cycle_hash",
+          "strategy",
+          "snapshot",
+          "validation",
+          "matrix",
+          "promotion_objective",
+          "dataset_requirements",
+          "cost_model",
+          "budget",
+          "seed",
+          "worker_count",
+          "failure_policy",
+          "created_at",
+          "confirmed_plan_hash"
+        ],
+        "title": "ExperimentLaunchRequest",
+        "type": "object"
+      },
+      "ExperimentLaunchResponse": {
+        "description": "Durable server truth returned after launch or exact replay.",
+        "properties": {
+          "candidate_count": {
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "fold_count": {
+            "title": "Fold Count",
+            "type": "integer"
+          },
+          "plan_hash": {
+            "title": "Plan Hash",
+            "type": "string"
+          },
+          "queue_ordinal": {
+            "title": "Queue Ordinal",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "status",
+          "queue_ordinal",
+          "revision",
+          "candidate_count",
+          "fold_count",
+          "plan_hash"
+        ],
+        "title": "ExperimentLaunchResponse",
+        "type": "object"
+      },
+      "ExperimentPlanningBaselineRequest": {
+        "additionalProperties": false,
+        "description": "Typed baseline descriptor envelope for the candidate matrix.",
+        "properties": {
+          "descriptor_type": {
+            "title": "Descriptor Type",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "title": "Payload",
+            "type": "object"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "descriptor_type",
+          "payload",
+          "schema_version"
+        ],
+        "title": "ExperimentPlanningBaselineRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningBudgetRequest": {
+        "additionalProperties": false,
+        "description": "Pre-registered hard resource ceilings.",
+        "properties": {
+          "candidate_limit": {
+            "title": "Candidate Limit",
+            "type": "integer"
+          },
+          "disk_byte_limit": {
+            "title": "Disk Byte Limit",
+            "type": "integer"
+          },
+          "fold_run_limit": {
+            "title": "Fold Run Limit",
+            "type": "integer"
+          },
+          "trading_session_limit": {
+            "title": "Trading Session Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "candidate_limit",
+          "fold_run_limit",
+          "trading_session_limit",
+          "disk_byte_limit"
+        ],
+        "title": "ExperimentPlanningBudgetRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningCostModelRequest": {
+        "additionalProperties": false,
+        "description": "Deterministic resource-estimation coefficients.",
+        "properties": {
+          "bytes_per_run": {
+            "title": "Bytes Per Run",
+            "type": "integer"
+          },
+          "bytes_per_trading_session": {
+            "title": "Bytes Per Trading Session",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bytes_per_run",
+          "bytes_per_trading_session"
+        ],
+        "title": "ExperimentPlanningCostModelRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningDatasetRequirementRequest": {
+        "additionalProperties": false,
+        "description": "One exact certified dataset binding.",
+        "properties": {
+          "certified_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certified From"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "expected_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Expected Snapshot Ids",
+            "type": "array"
+          },
+          "requires_pit_universe": {
+            "title": "Requires Pit Universe",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "expected_snapshot_ids",
+          "requires_pit_universe",
+          "certified_from"
+        ],
+        "title": "ExperimentPlanningDatasetRequirementRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningMatrixRequest": {
+        "additionalProperties": false,
+        "description": "Complete candidate matrix preimage.",
+        "properties": {
+          "axes": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentPlanningParameterAxisRequest"
+            },
+            "title": "Axes",
+            "type": "array"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/ExperimentPlanningBaselineRequest"
+          },
+          "candidate_limit": {
+            "title": "Candidate Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "baseline",
+          "axes",
+          "candidate_limit"
+        ],
+        "title": "ExperimentPlanningMatrixRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningParameterAxisRequest": {
+        "additionalProperties": false,
+        "description": "One ordered candidate-matrix parameter axis.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentPlanningParameterValueRequest"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "values"
+        ],
+        "title": "ExperimentPlanningParameterAxisRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningParameterValueRequest": {
+        "additionalProperties": false,
+        "description": "One tagged scalar matrix value.",
+        "properties": {
+          "type": {
+            "enum": [
+              "bool",
+              "int",
+              "float",
+              "string"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "title": "ExperimentPlanningParameterValueRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningRequest": {
+        "additionalProperties": false,
+        "description": "Complete transport-only document passed unchanged to the builder.",
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/ExperimentPlanningBudgetRequest"
+          },
+          "cost_model": {
+            "$ref": "#/components/schemas/ExperimentPlanningCostModelRequest"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_requirements": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentPlanningDatasetRequirementRequest"
+            },
+            "title": "Dataset Requirements",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "failure_policy": {
+            "enum": [
+              "continue_candidate_failures",
+              "fail_fast"
+            ],
+            "title": "Failure Policy",
+            "type": "string"
+          },
+          "matrix": {
+            "$ref": "#/components/schemas/ExperimentPlanningMatrixRequest"
+          },
+          "promotion_objective": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "title": "Promotion Objective",
+            "type": "object"
+          },
+          "research_cycle_hash": {
+            "title": "Research Cycle Hash",
+            "type": "string"
+          },
+          "research_cycle_id": {
+            "title": "Research Cycle Id",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ExperimentPlanningSnapshotRequest"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/ExperimentPlanningStrategyRequest"
+          },
+          "validation": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "title": "Validation",
+            "type": "object"
+          },
+          "worker_count": {
+            "title": "Worker Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "research_cycle_id",
+          "research_cycle_hash",
+          "strategy",
+          "snapshot",
+          "validation",
+          "matrix",
+          "promotion_objective",
+          "dataset_requirements",
+          "cost_model",
+          "budget",
+          "seed",
+          "worker_count",
+          "failure_policy",
+          "created_at"
+        ],
+        "title": "ExperimentPlanningRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningSnapshotRequest": {
+        "additionalProperties": false,
+        "description": "Exact certified research snapshot identity supplied to planning.",
+        "properties": {
+          "manifest_hash": {
+            "title": "Manifest Hash",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "manifest_hash"
+        ],
+        "title": "ExperimentPlanningSnapshotRequest",
+        "type": "object"
+      },
+      "ExperimentPlanningStrategyRequest": {
+        "additionalProperties": false,
+        "description": "Exact strategy-version content identity supplied to planning.",
+        "properties": {
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "spec_json": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "title": "Spec Json",
+            "type": "object"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "version",
+          "spec_hash",
+          "spec_json"
+        ],
+        "title": "ExperimentPlanningStrategyRequest",
+        "type": "object"
+      },
+      "ExperimentPreflightCheckResponse": {
+        "description": "Transport view of one deterministic planning gate result.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "observed": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
+            "title": "Observed",
+            "type": "object"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "policy": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
+            "title": "Policy",
+            "type": "object"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "remediation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediation"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "outcome",
+          "code",
+          "reason",
+          "remediation",
+          "observed",
+          "policy"
+        ],
+        "title": "ExperimentPreflightCheckResponse",
+        "type": "object"
+      },
+      "ExperimentPreflightResponse": {
+        "description": "Complete operator confirmation surface returned by read-only preflight.",
+        "properties": {
+          "budget_run_count": {
+            "title": "Budget Run Count",
+            "type": "integer"
+          },
+          "candidate_count": {
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentPreflightCheckResponse"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "eligible_month_count": {
+            "title": "Eligible Month Count",
+            "type": "integer"
+          },
+          "estimated_disk_bytes": {
+            "title": "Estimated Disk Bytes",
+            "type": "integer"
+          },
+          "estimated_trading_sessions": {
+            "title": "Estimated Trading Sessions",
+            "type": "integer"
+          },
+          "isolation_width_sessions": {
+            "title": "Isolation Width Sessions",
+            "type": "integer"
+          },
+          "plan_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Hash"
+          },
+          "planned_fold_count": {
+            "title": "Planned Fold Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "plan_hash",
+          "checks",
+          "candidate_count",
+          "planned_fold_count",
+          "budget_run_count",
+          "estimated_trading_sessions",
+          "estimated_disk_bytes",
+          "eligible_month_count",
+          "isolation_width_sessions"
+        ],
+        "title": "ExperimentPreflightResponse",
+        "type": "object"
+      },
       "ExperimentRetryFoldRequest": {
         "description": "Body for one revision-fenced terminal fold retry.\n\nexpected_revision is the fold projection revision (not experiment revision).",
         "properties": {
@@ -9915,6 +10598,63 @@
       "IsoCalendarDateStr": {
         "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
         "type": "string"
+      },
+      "JsonPrimitive": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "JsonValue-Input": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonPrimitive"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "JsonValue-Output": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonPrimitive"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
+            "type": "object"
+          }
+        ]
       },
       "LineageResponse": {
         "description": "运行血统链响应.",
@@ -17367,6 +18107,47 @@
           "research"
         ],
         "x-ditto-maturity": "experimental"
+      },
+      "post": {
+        "description": "Rebuild and launch one exact operator-confirmed planning document.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "research_launch_experiment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentLaunchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ExperimentLaunchResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Launch Experiment",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
       }
     },
     "/api/v1/research/experiments/{experiment_id}": {
@@ -17691,6 +18472,60 @@
           }
         },
         "summary": "Pause Experiment",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/research/experiments/{experiment_id}/preflight": {
+      "post": {
+        "description": "Compute deterministic experiment eligibility without writing.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "research_preflight_experiment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentPlanningRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ExperimentPreflightResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preflight Experiment",
         "tags": [
           "research"
         ],

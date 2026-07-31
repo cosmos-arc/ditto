@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import Annotated
+from pathlib import Path
+from typing import Annotated, cast
 
+import orjson
 import typer
 from ditto_application.commands.experiments import (
     CancelExperimentCommand,
+    LaunchExperimentCommand,
     PauseExperimentCommand,
     ResumeExperimentCommand,
     RetryExperimentFoldCommand,
@@ -16,11 +20,23 @@ from ditto_application.commands.experiments import (
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentLaunchReceipt,
+    ExperimentPreflightReport,
+)
+from ditto_application.processes.experiments.planning_request_builder import (
+    build_experiment_planning_request,
+)
+from pydantic import ValidationError
 
 from ditto_apps.cli.utils.output import output_json_dict
+from ditto_apps.models.research import ExperimentPlanningRequest
 from ditto_apps.registry.contexts import create_research_bundle
 
 app = typer.Typer(help="研究实验查询与控制")
+
+type JsonScalar = str | bool | int | float | None
+type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 
 
 def _receipt_payload(receipt: ExperimentControlReceipt) -> dict[str, object]:
@@ -33,6 +49,128 @@ def _receipt_payload(receipt: ExperimentControlReceipt) -> dict[str, object]:
         "occurred_at": receipt.occurred_at.isoformat(),
         "live_run_ids": list(receipt.live_run_ids),
     }
+
+
+def _to_json_value(value: object) -> JsonValue:
+    """Convert immutable application values to JSON-native containers."""
+    if isinstance(value, Mapping):
+        mapping = cast("Mapping[object, object]", value)
+        result: dict[str, JsonValue] = {}
+        for key, item in mapping.items():
+            if type(key) is not str:
+                raise TypeError(
+                    "research planning output mapping key must be exact str"
+                )
+            result[key] = _to_json_value(item)
+        return result
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        sequence = cast("Sequence[object]", value)
+        return [_to_json_value(item) for item in sequence]
+    if value is None or type(value) in {str, bool, int, float}:
+        return cast("JsonScalar", value)
+    raise TypeError("research planning output must be JSON-compatible")
+
+
+def _preflight_payload(report: ExperimentPreflightReport) -> dict[str, object]:
+    """Serialize the same typed preflight surface exposed over HTTP."""
+    return {
+        "status": report.status.value,
+        "plan_hash": report.plan_hash,
+        "checks": [
+            {
+                "rule_id": check.rule_id,
+                "outcome": check.outcome.value,
+                "code": check.code,
+                "reason": check.reason,
+                "remediation": check.remediation,
+                "observed": _to_json_value(check.observed),
+                "policy": _to_json_value(check.policy),
+            }
+            for check in report.checks
+        ],
+        "candidate_count": report.candidate_count,
+        "planned_fold_count": report.planned_fold_count,
+        "budget_run_count": report.budget_run_count,
+        "estimated_trading_sessions": report.estimated_trading_sessions,
+        "estimated_disk_bytes": report.estimated_disk_bytes,
+        "eligible_month_count": report.eligible_month_count,
+        "isolation_width_sessions": report.isolation_width_sessions,
+    }
+
+
+def _launch_payload(receipt: ExperimentLaunchReceipt) -> dict[str, object]:
+    """Serialize durable launch server truth for both commit and exact replay."""
+    return {
+        "experiment_id": receipt.experiment_id,
+        "status": receipt.status,
+        "queue_ordinal": receipt.queue_ordinal,
+        "revision": receipt.revision,
+        "candidate_count": receipt.candidate_count,
+        "fold_count": receipt.fold_count,
+        "plan_hash": receipt.plan_hash,
+    }
+
+
+def _load_planning_document(document: Path) -> dict[str, object]:
+    """Load and strictly validate one canonical planning document."""
+    try:
+        decoded = orjson.loads(document.read_bytes())
+        request = ExperimentPlanningRequest.model_validate(decoded)
+    except (OSError, orjson.JSONDecodeError, ValidationError) as exc:
+        raise typer.BadParameter(
+            "document must contain one strict canonical planning request",
+            param_hint="--document",
+        ) from exc
+    return request.model_dump(mode="python")
+
+
+@app.command("preflight")
+def preflight_planning_document(
+    document: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="完整 canonical planning document JSON",
+        ),
+    ],
+) -> None:
+    """执行只读 experiment preflight."""
+    request = build_experiment_planning_request(_load_planning_document(document))
+    with create_research_bundle() as bundle:
+        report = bundle.planning_process.preflight(request)
+    output_json_dict(_preflight_payload(report))
+
+
+@app.command("launch")
+def launch_planning_document(
+    document: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="完整 canonical planning document JSON",
+        ),
+    ],
+    confirmed_plan_hash: Annotated[
+        str,
+        typer.Option(help="操作者确认的 preflight plan_hash"),
+    ],
+) -> None:
+    """重新构建并启动一个已确认计划."""
+    request = build_experiment_planning_request(_load_planning_document(document))
+    with create_research_bundle() as bundle:
+        receipt = bundle.launch_handler.handle(
+            LaunchExperimentCommand(
+                request=request,
+                confirmed_plan_hash=confirmed_plan_hash,
+            )
+        )
+    output_json_dict(_launch_payload(receipt))
 
 
 @app.command("list-experiments")

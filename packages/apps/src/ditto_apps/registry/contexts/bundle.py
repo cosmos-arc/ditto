@@ -7,6 +7,7 @@ from ditto_application.commands.data_product_certification import (
 )
 from ditto_application.commands.experiments import (
     CancelExperimentHandler,
+    LaunchExperimentHandler,
     PauseExperimentHandler,
     ResumeExperimentHandler,
     RetryExperimentFoldHandler,
@@ -20,6 +21,9 @@ from ditto_application.processes.execution.strategy_run_process import StrategyF
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
+)
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
 )
 from ditto_application.processes.experiments.worker import ResearchExperimentWorker
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
@@ -98,9 +102,11 @@ class StrategyBundle:
 
 @dataclass(frozen=True)
 class ResearchBundle:
-    """研究实验上下文组合包（control + query）。"""
+    """研究实验上下文组合包（planning + control + query）。"""
 
     experiment_query: ExperimentQueryFacade
+    planning_process: ExperimentPlanningProcess
+    launch_handler: LaunchExperimentHandler
     pause_handler: PauseExperimentHandler
     cancel_handler: CancelExperimentHandler
     resume_handler: ResumeExperimentHandler

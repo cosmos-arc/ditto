@@ -2696,7 +2696,7 @@ def test_committed_enqueue_rejects_caller_request_drift_before_probes() -> None:
             authority=authority,
         ).launch(drifted, confirmed_plan_hash=report.plan_hash)
 
-    assert exc_info.value.details["code"] == "EXPERIMENT_LAUNCH_CONFLICT"
+    assert exc_info.value.details["code"] == "EXPERIMENT_ALREADY_EXISTS"
     assert exc_info.value.details["reason"] == "durable_launch_request_mismatch"
     assert certification.calls == []
     assert executor.calls == 0

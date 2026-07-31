@@ -1,9 +1,4 @@
-"""
-Research experiment REST routes exposing durable experiment truth.
-
-Maturity: experimental — R3 research control-plane surface, gated by the
-analysis-owned experiment query facade; no storage or execution I/O here.
-"""
+"""Experimental research experiment REST routes over application-owned truth."""
 
 from __future__ import annotations
 
@@ -17,6 +12,8 @@ from dishka.integrations.fastapi import inject
 from ditto_application.commands.experiments import (
     CancelExperimentCommand,
     CancelExperimentHandler,
+    LaunchExperimentCommand,
+    LaunchExperimentHandler,
     PauseExperimentCommand,
     PauseExperimentHandler,
     ResumeExperimentCommand,
@@ -31,6 +28,20 @@ from ditto_application.processes.experiments._coordinator_contract import (
 from ditto_application.processes.experiments.comparison_reader import (
     CandidateComparisonView,
     ExperimentComparisonReader,
+)
+from ditto_application.processes.experiments.planning_contracts import (
+    ExperimentPlanningRequest as ApplicationExperimentPlanningRequest,
+)
+from ditto_application.processes.experiments.planning_contracts import (
+    ExperimentPreflightCheck,
+)
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentLaunchReceipt,
+    ExperimentPlanningProcess,
+    ExperimentPreflightReport,
+)
+from ditto_application.processes.experiments.planning_request_builder import (
+    build_experiment_planning_request,
 )
 from ditto_application.processes.experiments.selection_evidence_reader import (
     ExperimentSelectionEvidenceReader,
@@ -50,7 +61,12 @@ from ditto_application.queries.experiments import (
 )
 from fastapi import APIRouter
 
-from ditto_apps.api.errors import BadRequestError, ConflictError, NotFoundError
+from ditto_apps.api.errors import (
+    BadRequestError,
+    ConflictError,
+    NotFoundError,
+    UnprocessableEntityError,
+)
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
     ExperimentArtifactResponse,
@@ -61,6 +77,11 @@ from ditto_apps.models.research import (
     ExperimentDetailResponse,
     ExperimentFoldResponse,
     ExperimentGateResponse,
+    ExperimentLaunchRequest,
+    ExperimentLaunchResponse,
+    ExperimentPlanningRequest,
+    ExperimentPreflightCheckResponse,
+    ExperimentPreflightResponse,
     ExperimentRetryFoldRequest,
     ExperimentReviewPacketResponse,
     ExperimentSelectionEvidenceResponse,
@@ -75,6 +96,30 @@ P = ParamSpec("P")
 R = TypeVar("R")
 type JsonScalar = str | bool | int | float | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
+
+_PLANNING_CONFLICT_CODES = frozenset(
+    {
+        "PLAN_HASH_MISMATCH",
+        "EXPERIMENT_ALREADY_EXISTS",
+    }
+)
+_PLANNING_UNPROCESSABLE_CODES = frozenset(
+    {
+        "BUDGET_EXCEEDED",
+        "EXECUTOR_UNAVAILABLE",
+        "HARD_GATE_FAILED",
+        "INPUT_HASH_MISMATCH",
+        "INSUFFICIENT_HISTORY",
+        "MATRIX_TOO_LARGE",
+        "PREFLIGHT_DETAIL_TOO_LARGE",
+        "REPRODUCIBILITY_FAILED",
+        "SNAPSHOT_NOT_CERTIFIED",
+        "SPEC_INVALID",
+        "VALIDATION_AUTHORITY_INVALID",
+        "VALIDATION_AUTHORITY_MISMATCH",
+        "WINDOW_LEAKAGE",
+    }
+)
 
 
 async def run_blocking[**P, R](
@@ -259,6 +304,128 @@ def _to_summary_response(
         created_at=summary.created_at,
         updated_at=summary.updated_at,
     )
+
+
+def _to_preflight_check_response(
+    check: ExperimentPreflightCheck,
+) -> ExperimentPreflightCheckResponse:
+    """Map one application-owned deterministic check without policy inference."""
+    return ExperimentPreflightCheckResponse(
+        rule_id=check.rule_id,
+        outcome=check.outcome.value,
+        code=check.code,
+        reason=check.reason,
+        remediation=check.remediation,
+        observed=_to_json_mapping(check.observed),
+        policy=_to_json_mapping(check.policy),
+    )
+
+
+def _to_preflight_response(
+    report: ExperimentPreflightReport,
+) -> ExperimentPreflightResponse:
+    """Map the complete preflight confirmation surface."""
+    return ExperimentPreflightResponse(
+        status=report.status.value,
+        plan_hash=report.plan_hash,
+        checks=[_to_preflight_check_response(check) for check in report.checks],
+        candidate_count=report.candidate_count,
+        planned_fold_count=report.planned_fold_count,
+        budget_run_count=report.budget_run_count,
+        estimated_trading_sessions=report.estimated_trading_sessions,
+        estimated_disk_bytes=report.estimated_disk_bytes,
+        eligible_month_count=report.eligible_month_count,
+        isolation_width_sessions=report.isolation_width_sessions,
+    )
+
+
+def _to_launch_response(
+    receipt: ExperimentLaunchReceipt,
+) -> ExperimentLaunchResponse:
+    """Map durable launch server truth, including exact replay receipts."""
+    return ExperimentLaunchResponse(
+        experiment_id=receipt.experiment_id,
+        status=receipt.status,
+        queue_ordinal=receipt.queue_ordinal,
+        revision=receipt.revision,
+        candidate_count=receipt.candidate_count,
+        fold_count=receipt.fold_count,
+        plan_hash=receipt.plan_hash,
+    )
+
+
+def _raise_planning_error(exc: AppError) -> Never:
+    """Map only application-owned planning error codes to HTTP semantics."""
+    code = exc.details.get("code")
+    if type(code) is not str:
+        raise exc
+    if code in _PLANNING_CONFLICT_CODES:
+        raise ConflictError(str(exc), error_code=code) from exc
+    if code in _PLANNING_UNPROCESSABLE_CODES:
+        raise UnprocessableEntityError(str(exc), error_code=code) from exc
+    raise exc
+
+
+def _build_transport_planning_request(
+    request: ExperimentPlanningRequest | ExperimentLaunchRequest,
+) -> ApplicationExperimentPlanningRequest:
+    """Validate and decode one strict transport planning document."""
+    exclude = (
+        {"confirmed_plan_hash"} if type(request) is ExperimentLaunchRequest else None
+    )
+    document = request.model_dump(mode="python", exclude=exclude)
+    try:
+        return build_experiment_planning_request(document)
+    except AppError as exc:
+        _raise_planning_error(exc)
+
+
+@router.post(
+    "/{experiment_id}/preflight",
+    response_model=APIResponse[ExperimentPreflightResponse],
+)
+@inject
+async def preflight_experiment(
+    experiment_id: str,
+    request: ExperimentPlanningRequest,
+    process: Annotated[ExperimentPlanningProcess, FromComponent()],
+) -> APIResponse[ExperimentPreflightResponse]:
+    """Compute deterministic experiment eligibility without writing."""
+    if experiment_id != request.experiment_id:
+        raise UnprocessableEntityError(
+            "path experiment_id must equal planning document experiment_id",
+            error_code="SPEC_INVALID",
+        )
+    planning_request = _build_transport_planning_request(request)
+    try:
+        report = await run_blocking(process.preflight, planning_request)
+    except AppError as exc:
+        _raise_planning_error(exc)
+    return APIResponse(data=_to_preflight_response(report))
+
+
+@router.post(
+    "",
+    response_model=APIResponse[ExperimentLaunchResponse],
+)
+@inject
+async def launch_experiment(
+    request: ExperimentLaunchRequest,
+    handler: Annotated[LaunchExperimentHandler, FromComponent()],
+) -> APIResponse[ExperimentLaunchResponse]:
+    """Rebuild and launch one exact operator-confirmed planning document."""
+    planning_request = _build_transport_planning_request(request)
+    try:
+        receipt = await run_blocking(
+            handler.handle,
+            LaunchExperimentCommand(
+                request=planning_request,
+                confirmed_plan_hash=request.confirmed_plan_hash,
+            ),
+        )
+    except AppError as exc:
+        _raise_planning_error(exc)
+    return APIResponse(data=_to_launch_response(receipt))
 
 
 @router.get("", response_model=APIResponse[list[ExperimentSummaryResponse]])
