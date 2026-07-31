@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from unittest.mock import Mock
 
 import polars as pl
@@ -19,6 +20,8 @@ from ditto_application.processes.execution.factor_bridge import (
 )
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_features.expression.compiler import ExpressionCompiler
+from ditto_strategy.alpha.specs import ScorerSpec, SelectorSpec, StrategySpec
+from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -26,6 +29,29 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+def _catalog_record(strategy_id: str) -> StrategySpecRecord:
+    """Build the complete persisted legacy payload required by the handler."""
+    spec = StrategySpec(
+        strategy_id=strategy_id,
+        name=strategy_id,
+        template="etf_rotation",
+        universe="csi_etf_broad",
+        asset_class="etf",
+        scorer=ScorerSpec(method="rank"),
+        selector=SelectorSpec(method="top_k", params={"k": 3}),
+        params={"top_k": 3},
+        signal_expressions=("ts_mean(close, 5)", "ts_std(close, 10)"),
+        signal_weights=(0.6, 0.4),
+        required_datasets=("etf_daily",),
+    )
+    return StrategySpecRecord(
+        strategy_id=strategy_id,
+        name=strategy_id,
+        spec_json=asdict(spec),
+        version=1,
+    )
 
 
 @pytest.fixture
@@ -38,11 +64,8 @@ def factor_bridge() -> FactorBridge:
 def mock_catalog_service() -> Mock:
     """Mock StrategyCatalogService with a published strategy."""
     service = Mock(spec=StrategyCatalogService)
-    record = Mock()
-    record.spec_json = {
-        "signal_expressions": ["ts_mean(close, 5)", "ts_std(close, 10)"],
-        "signal_weights": [0.6, 0.4],
-    }
+    record = _catalog_record("momentum-etf")
+    service.get_active_published.return_value = record
     service.get_spec.return_value = record
     return service
 
@@ -165,8 +188,11 @@ class TestBacktestRunHandlerEndToEnd:
 
         handler.handle(command)
 
-        # 验证 get_spec 被调用
-        mock_catalog_service.get_spec.assert_called_once_with("momentum-etf")
+        # 验证 active pointer 解析为一个精确 immutable version。
+        mock_catalog_service.get_active_published.assert_called_once_with(
+            "momentum-etf"
+        )
+        mock_catalog_service.get_spec.assert_called_once_with("momentum-etf", 1)
 
     def test_handler_with_factor_bridge_integration(
         self,
@@ -174,6 +200,9 @@ class TestBacktestRunHandlerEndToEnd:
         mock_run_service: Mock,
     ) -> None:
         """FactorBridge 集成: 编译策略表达式并产生 CompiledExpressions."""
+        record = _catalog_record("test-strategy")
+        mock_catalog_service.get_active_published.return_value = record
+        mock_catalog_service.get_spec.return_value = record
         factor_bridge = FactorBridge(compiler=ExpressionCompiler())
         handler = BacktestRunHandler(
             catalog_service=mock_catalog_service,
