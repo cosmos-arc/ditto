@@ -84,6 +84,18 @@ class ScoringStage:
         factor_ids = tuple(binding.factor_id for binding in self.factor_bindings)
         if len(factor_ids) != len(set(factor_ids)):
             raise ValueError("factor_bindings must use unique factor_id values")
+        if (
+            self.evidence_sink is not None
+            and self.factor_bindings
+            and self.method is not ScoringMethod.RAW
+        ):
+            raise StrategySpecError(
+                "factor contribution evidence requires additive raw scoring",
+                details={
+                    "reason": "non_additive_factor_evidence_scoring",
+                    "scoring_method": self.method.value,
+                },
+            )
 
     def process(
         self,
@@ -105,7 +117,7 @@ class ScoringStage:
             return result
 
         if self.method == ScoringMethod.RANK:
-            rank_expr = col.rank(method="average", descending=not self.ascending)
+            rank_expr = col.rank(method="average", descending=self.ascending)
             count_expr = col.count()
             result = frame.with_columns(
                 (rank_expr / count_expr).alias(self.output_column),
@@ -116,10 +128,11 @@ class ScoringStage:
         # ScoringMethod.ZSCORE
         mean = col.mean()
         std = col.std()
+        direction = -1.0 if self.ascending else 1.0
         result = frame.with_columns(
             pl.when(std == 0)
             .then(pl.lit(0.0))
-            .otherwise((col - mean) / std)
+            .otherwise(direction * (col - mean) / std)
             .alias(self.output_column),
         )
         self._emit_factor_contributions(result)
@@ -137,7 +150,7 @@ class ScoringStage:
                 binding.processed_column,
                 binding.normalized_column,
             )
-        } | {self.input_column}
+        } | {self.output_column}
         missing = tuple(sorted(required_columns - set(result.columns)))
         if missing:
             raise StrategySpecError(
@@ -150,15 +163,18 @@ class ScoringStage:
         weight_sum = sum(binding.weight for binding in self.factor_bindings)
         for binding in self.factor_bindings:
             effective_weight = 0.0 if weight_sum == 0 else binding.weight / weight_sum
+            contribution = (
+                pl.lit(0.0)
+                if effective_weight == 0.0
+                else pl.col(binding.normalized_column) * pl.lit(effective_weight)
+            )
             rows = result.select(
                 FrameCol.INSTRUMENT_ID,
                 pl.col(binding.raw_column).alias("raw_value"),
                 pl.col(binding.processed_column).alias("processed_value"),
                 pl.col(binding.normalized_column).alias("normalized_value"),
-                (pl.col(binding.normalized_column) * pl.lit(effective_weight)).alias(
-                    "contribution"
-                ),
-                pl.col(self.input_column).alias("factor_signal_score"),
+                contribution.alias("contribution"),
+                pl.col(self.output_column).alias("factor_signal_score"),
             ).iter_rows()
             for values in rows:
                 self.evidence_sink.emit(

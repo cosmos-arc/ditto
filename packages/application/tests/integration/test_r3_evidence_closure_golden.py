@@ -166,7 +166,11 @@ _SemanticsTransform = Callable[
 ]
 
 
-def _run_stock_golden_selection_trace() -> SelectionEvidenceLog:
+def _run_stock_golden_selection_trace(
+    *,
+    trade_date: str,
+    run_id: str,
+) -> SelectionEvidenceLog:
     """Run the stock golden's real compiler, factor bridge, and strategy pipeline."""
     source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
     spec = replace(
@@ -204,9 +208,9 @@ def _run_stock_golden_selection_trace() -> SelectionEvidenceLog:
     runtime.pipeline.run(
         StrategyContext(),
         StrategyInputBundle(
-            trade_date="2026-07-22",
+            trade_date=trade_date,
             strategy_id=spec.strategy_id,
-            run_id="stock-golden-selection-trace",
+            run_id=run_id,
             instruments=factors.select("instrument_id"),
             market_data=factors,
             signal_values=FactorBridge().compute_signals(factors, compiled),
@@ -445,6 +449,7 @@ def _publish_walk_forward_reports(
     launch: ExperimentLaunchSpec,
     lease: Any,
     resolver: Any,
+    lane: golden_support.GoldenLaneSpec,
 ) -> tuple[WalkForwardEvidenceAssembler, ResearchArtifactService]:
     service = ResearchArtifactService(
         artifact_root=tmp_path / "legacy",
@@ -477,9 +482,17 @@ def _publish_walk_forward_reports(
             lease_fence=lease.fence,
             now_epoch_us=NOW_US + 8,
         )
+        trace = (
+            _run_stock_golden_selection_trace(
+                trade_date=fold.spec.test_window.start.isoformat(),
+                run_id=str(attempt.spec.attempt_id),
+            )
+            if lane.asset_lane is golden_support.ResearchAssetLane.STOCK
+            else SelectionEvidenceLog()
+        )
         trace_adapter.publish(
             _trace_identity(fold, attempt),
-            SelectionEvidenceLog(),
+            trace,
             lease_fence=lease.fence,
             now_epoch_us=NOW_US + 8,
         )
@@ -552,6 +565,7 @@ def _store(
         launch,
         lease,
         resolver,
+        lane,
     )
     return database, reader, writer, launch, assembler, artifact_service
 
@@ -1019,12 +1033,53 @@ def _assert_deterministic_promotion_is_blocked(
 
 def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
     """Stock evidence must come from the real scoring path, not a fabricated log."""
-    log = _run_stock_golden_selection_trace()
+    log = _run_stock_golden_selection_trace(
+        trade_date="2026-07-22",
+        run_id="stock-golden-selection-trace",
+    )
 
     assert log.initial_universe
     assert log.exclusions
     assert log.selections
     assert log.factor_contributions
+    expected_contributions = (
+        (1, "quality_roe", (0.10, 0.10, 1.0 / 3.0, 0.6, 0.2, 0.6), 3, False),
+        (2, "quality_roe", (0.30, 0.30, 1.0, 0.6, 0.6, 11.0 / 15.0), 1, True),
+        (3, "quality_roe", (0.20, 0.20, 2.0 / 3.0, 0.6, 0.4, 2.0 / 3.0), 2, True),
+        (1, "value_pe", (-10.0, -10.0, 1.0, 0.4, 0.4, 0.6), 3, False),
+        (
+            2,
+            "value_pe",
+            (-30.0, -30.0, 1.0 / 3.0, 0.4, 2.0 / 15.0, 11.0 / 15.0),
+            1,
+            True,
+        ),
+        (3, "value_pe", (-20.0, -20.0, 2.0 / 3.0, 0.4, 4.0 / 15.0, 2.0 / 3.0), 2, True),
+    )
+    for item, expected in zip(
+        log.factor_contributions,
+        expected_contributions,
+        strict=True,
+    ):
+        instrument_id, factor_name, numeric_values, rank, selected = expected
+        assert item.instrument_id == instrument_id
+        assert item.factor_name == factor_name
+        assert item.rank == rank
+        assert item.selected is selected
+        assert (
+            item.raw_value,
+            item.processed_value,
+            item.normalized_value,
+            item.weight,
+            item.contribution,
+            item.factor_signal_score,
+        ) == pytest.approx(numeric_values)
+    for selection in log.selections:
+        assert sum(
+            item.contribution or 0.0
+            for item in log.factor_contributions
+            if item.instrument_id == selection.instrument_id
+        ) == pytest.approx(selection.score)
 
 
 @pytest.mark.parametrize(
@@ -1075,6 +1130,23 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
         project_snapshot_manifest(events[0].detail),
     )
     assert len(collected.source_rows) == 4
+    assert len(collected.selection_traces) == 4
+    if lane.asset_lane is golden_support.ResearchAssetLane.STOCK:
+        assert all(
+            trace.evidence.factor_contributions for trace in collected.selection_traces
+        )
+        for trace in collected.selection_traces:
+            for selection_item in trace.evidence.selections:
+                assert sum(
+                    item.contribution or 0.0
+                    for item in trace.evidence.factor_contributions
+                    if item.instrument_id == selection_item.instrument_id
+                ) == pytest.approx(selection_item.score)
+    else:
+        assert all(
+            trace.evidence == SelectionEvidenceLog()
+            for trace in collected.selection_traces
+        )
     assert collected.missing_artifact_refs == ()
     _assert_cost_collection_replay(
         lane=lane,
@@ -1267,5 +1339,6 @@ def _assert_packet_shape(
     assert packet.comparison_payload_hash == expected_comparison_hash
     assert packet.r1_impact_payload_hash is None
     assert packet.selection_evidence_artifact_id == expected_selection_artifact_id
+    assert len(packet.selection_trace_artifact_refs) == 16
     assert packet.candidate_rationale
     assert packet.candidate_rationale == packet.candidate_rationale.strip()

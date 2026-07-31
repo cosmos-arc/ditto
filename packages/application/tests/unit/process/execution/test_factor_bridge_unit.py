@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from math import inf, nan
+from typing import cast
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -238,6 +240,27 @@ class TestCompileAndValidate:
             weights=(0.0,),
         )
         assert result.weights == (0.0,)
+
+    @pytest.mark.parametrize(
+        "invalid_weight",
+        [True, "1.0", nan, inf, -inf],
+        ids=("bool", "text", "nan", "positive-inf", "negative-inf"),
+    )
+    def test_invalid_weight_type_and_finiteness_fail_closed(
+        self,
+        invalid_weight: object,
+    ) -> None:
+        with pytest.raises(AppProcessError) as exc_info:
+            FactorBridge().compile_and_validate(
+                expressions=("close",),
+                weights=cast("tuple[float, ...]", (invalid_weight,)),
+            )
+
+        assert exc_info.value.details == {
+            "code": "SPEC_INVALID",
+            "reason": "invalid_factor_weight",
+            "weight_index": 0,
+        }
 
     def test_custom_compiler_is_used(self) -> None:
         """传入自定义 compiler 时使用它."""
@@ -498,6 +521,48 @@ class TestComputeSignals:
         result_ids = set(result["instrument_id"].to_list())
         expected_ids = set(sample_df["instrument_id"].to_list())
         assert result_ids == expected_ids
+
+    def test_average_tie_rank_is_independent_of_input_order(self) -> None:
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close",),
+            weights=(1.0,),
+        )
+        original = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3, 4],
+                "close": [10.0, 10.0, 20.0, 30.0],
+            }
+        )
+        shuffled = original.reverse()
+
+        first = bridge.compute_signals(original, compiled).sort("instrument_id")
+        second = bridge.compute_signals(shuffled, compiled).sort("instrument_id")
+
+        assert first["rank_factor_0"].to_list() == second["rank_factor_0"].to_list()
+        assert first["signal_value"].to_list() == second["signal_value"].to_list()
+        assert first["rank_factor_0"].to_list() == [0.375, 0.375, 0.75, 1.0]
+
+    def test_zero_weight_null_factor_does_not_poison_signal(self) -> None:
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close", "volume"),
+            weights=(1.0, 0.0),
+        )
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "close": [10.0, 20.0, 30.0],
+                "volume": [None, None, None],
+            }
+        )
+
+        result = bridge.compute_signals(frame, compiled)
+
+        assert result["rank_factor_1"].null_count() == 3
+        assert result["signal_value"].to_list() == pytest.approx(
+            [1.0 / 3.0, 2.0 / 3.0, 1.0]
+        )
 
 
 # ===========================================================================

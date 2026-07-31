@@ -74,9 +74,10 @@ def build_typed_legacy_runtime(
         legacy_spec,
         factor_bridge=factor_bridge,
     )
-    factor_bindings = _compiled_factor_bindings(
-        legacy_spec,
-        compiled_expressions,
+    factor_bindings = (
+        _compiled_factor_bindings(legacy_spec, compiled_expressions)
+        if evidence_sink is not None
+        else ()
     )
     pipeline_execution_hash: str | None = None
     attested_pipeline: AttestedNodePipeline | None = None
@@ -123,16 +124,26 @@ def _compiled_factor_bindings(
     """Bind only compiler-proven factor identities to materialized score columns."""
     if compiled is None:
         return ()
-    return tuple(
-        FactorScoreColumnBinding(
-            factor_id=factor_id,
-            raw_column=factor_value_column(index),
-            processed_column=factor_value_column(index),
-            normalized_column=factor_normalized_column(index),
-            weight=compiled.weights[index],
-        )
-        for index, factor_id in enumerate(spec.signal_expressions)
-    )
+    aggregated: dict[str, FactorScoreColumnBinding] = {}
+    for index, factor_id in enumerate(spec.signal_expressions):
+        existing = aggregated.get(factor_id)
+        if existing is None:
+            aggregated[factor_id] = FactorScoreColumnBinding(
+                factor_id=factor_id,
+                raw_column=factor_value_column(index),
+                processed_column=factor_value_column(index),
+                normalized_column=factor_normalized_column(index),
+                weight=compiled.weights[index],
+            )
+        else:
+            aggregated[factor_id] = FactorScoreColumnBinding(
+                factor_id=existing.factor_id,
+                raw_column=existing.raw_column,
+                processed_column=existing.processed_column,
+                normalized_column=existing.normalized_column,
+                weight=existing.weight + compiled.weights[index],
+            )
+    return tuple(aggregated.values())
 
 
 def _compile_signal_expressions(

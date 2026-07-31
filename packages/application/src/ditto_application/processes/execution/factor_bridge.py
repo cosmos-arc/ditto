@@ -66,6 +66,23 @@ def factor_normalized_column(index: int) -> str:
     return f"rank_{factor_value_column(index)}"
 
 
+def _validate_factor_weight(value: object, *, index: int) -> None:
+    """Reject booleans, non-numbers, and non-finite values at the typed seam."""
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not isfinite(value)
+    ):
+        raise AppProcessError(
+            f"factor weight must be a finite number: weights[{index}]",
+            details={
+                "code": "SPEC_INVALID",
+                "reason": "invalid_factor_weight",
+                "weight_index": index,
+            },
+        )
+
+
 def build_signal_spec(
     expr_str: str,
     index: int,
@@ -438,6 +455,7 @@ class FactorBridge:
             )
 
         for i, w in enumerate(weights):
+            _validate_factor_weight(w, index=i)
             if w < 0:
                 msg = f"权重不能为负: weights[{i}] = {w}"
                 raise AppProcessError(msg)
@@ -535,7 +553,7 @@ class FactorBridge:
         for index, col_name in enumerate(factor_columns):
             rank_exprs.append(
                 (
-                    pl.col(col_name).rank(method="ordinal").cast(pl.Float64)
+                    pl.col(col_name).rank(method="average").cast(pl.Float64)
                     / pl.len().cast(pl.Float64)
                 ).alias(factor_normalized_column(index)),
             )
@@ -555,6 +573,8 @@ class FactorBridge:
 
         weighted_sum = pl.lit(0.0)
         for i, w in enumerate(compiled.weights):
+            if w == 0:
+                continue
             rank_col = factor_normalized_column(i)
             weighted_sum = weighted_sum + pl.col(rank_col) * w
 

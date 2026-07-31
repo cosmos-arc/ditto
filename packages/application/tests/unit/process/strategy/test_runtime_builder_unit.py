@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from inspect import Parameter, signature
 from unittest.mock import MagicMock
 
@@ -12,6 +12,7 @@ from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
 from ditto_application.exceptions import AppBuilderError
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
+from ditto_strategy.alpha.builtins.scoring import ScoringStage
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
@@ -151,6 +152,63 @@ class TestStrategyRuntimeBuilder:
         )
         assert evidence_stages
         assert all(stage.evidence_sink is collector for stage in evidence_stages)
+
+    def test_published_runtime_without_evidence_accepts_duplicate_expressions(
+        self,
+    ) -> None:
+        source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+        spec = replace(
+            source,
+            signal_expressions=("momentum_1m", "momentum_1m"),
+            signal_weights=(0.25, 0.75),
+        )
+        record = _make_spec_record(spec, version=7)
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = record
+
+        runtime = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        ).build_published_runtime(spec.strategy_id, 7)
+
+        assert runtime.compiled_expressions is not None
+        assert len(runtime.compiled_expressions.expressions) == 2
+        scoring = next(
+            stage
+            for stage in runtime.pipeline.stages
+            if isinstance(stage, ScoringStage)
+        )
+        assert scoring.factor_bindings == ()
+
+    def test_evidence_runtime_aggregates_duplicate_expression_weights(
+        self,
+    ) -> None:
+        source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+        spec = replace(
+            source,
+            signal_expressions=("momentum_1m", "momentum_1m"),
+            signal_weights=(0.25, 0.75),
+        )
+        record = _make_spec_record(spec, version=7)
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = record
+
+        runtime = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        ).build_published_runtime(
+            spec.strategy_id,
+            7,
+            evidence_sink=SelectionEvidenceCollector(),
+        )
+
+        scoring = next(
+            stage
+            for stage in runtime.pipeline.stages
+            if isinstance(stage, ScoringStage)
+        )
+        assert len(scoring.factor_bindings) == 1
+        assert scoring.factor_bindings[0].factor_id == "momentum_1m"
+        assert scoring.factor_bindings[0].weight == pytest.approx(1.0)
+        assert scoring.factor_bindings[0].normalized_column == "rank_factor_0"
 
     def test_runtime_routes_legacy_catalog_through_node_pipeline_builder(self) -> None:
         """legacy record 必须显式 adapt 后走 registry/compiler builder。"""
