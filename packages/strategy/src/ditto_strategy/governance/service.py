@@ -292,6 +292,10 @@ class GovernanceService:
         lock over the pointer it last read. When it is ``None`` the service
         reads the current revision, preserving the legacy seed/system path.
         """
+        if event.strategy_id != strategy_id or event.target_version != version:
+            raise ValueError(
+                "activation event target does not match the requested strategy version"
+            )
         state = self._require_state(strategy_id, version)
         validate_reactivation_target(state.state, state.review_outcome)
         if expected_pointer_revision is None:

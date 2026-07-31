@@ -372,3 +372,34 @@ def test_activate_without_expected_reads_current(tmp_path: Path) -> None:
     pointer = service.activate("strategy-1", 1, _activation_event())
 
     assert pointer.active_version == 1
+
+
+def test_activate_rejects_event_target_mismatch_before_store_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = _service(tmp_path)
+    _seed_version(service)
+    _advance_to_published(service)
+
+    def unexpected_store_activate(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("mismatched activation event reached the store write boundary")
+
+    monkeypatch.setattr(service._store, "activate", unexpected_store_activate)
+    mismatched_event = StrategyActivationEvent(
+        "mismatched",
+        "strategy-2",
+        1,
+        StrategyDecision.REACTIVATE,
+        "r",
+        "wrong target",
+        _T4,
+    )
+
+    with pytest.raises(ValueError, match="activation event target"):
+        service.activate(
+            "strategy-1",
+            1,
+            mismatched_event,
+            expected_pointer_revision=0,
+        )

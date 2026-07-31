@@ -639,6 +639,10 @@ class SQLiteStrategyGovernanceStore:
         ``expected_pointer_revision == 0`` inserts the first pointer; any later
         activation must supply the current revision or conflict.
         """
+        if event.strategy_id != strategy_id or event.target_version != target_version:
+            raise ValueError(
+                "activation event target does not match the requested strategy version"
+            )
         conn = self._pool.get_connection()
         conn.execute("BEGIN IMMEDIATE")
         try:

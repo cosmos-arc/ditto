@@ -80,11 +80,12 @@ def _activation(
     event_id: str = "activation-1",
     kind: StrategyDecision = StrategyDecision.PUBLISH,
     target_version: int = 1,
+    strategy_id: str = "strategy-1",
     activated_at: str = "2026-07-23T00:00:02Z",
 ) -> StrategyActivationEvent:
     return StrategyActivationEvent(
         event_id=event_id,
-        strategy_id="strategy-1",
+        strategy_id=strategy_id,
         target_version=target_version,
         activation_kind=kind,
         actor="publisher-1",
@@ -824,6 +825,61 @@ def test_service_rejects_cross_table_duplicate_event_id_without_writes(
     assert (
         store.list_governance_events("strategy-1", after_event_id=None, limit=20)
         == history_before
+    )
+
+
+def test_activate_rejects_event_target_mismatch_without_cross_strategy_writes(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version(strategy_id="strategy-a"))
+    store.insert_version(_version(strategy_id="strategy-b", spec_hash="b" * 64))
+    store.activate(
+        "strategy-b",
+        1,
+        _activation(
+            event_id="z-cursor",
+            strategy_id="strategy-b",
+            activated_at="2026-07-23T00:00:10Z",
+        ),
+        expected_pointer_revision=0,
+    )
+    history_before = store.list_governance_events(
+        "strategy-b",
+        after_event_id=None,
+        limit=20,
+    )
+    pointer_before = store.get_active_pointer("strategy-b")
+
+    with pytest.raises(ValueError, match="activation event target"):
+        store.activate(
+            "strategy-a",
+            1,
+            _activation(
+                event_id="a-late",
+                strategy_id="strategy-b",
+                activated_at="2026-07-23T00:00:01Z",
+            ),
+            expected_pointer_revision=0,
+        )
+
+    assert store.get_active_pointer("strategy-a") is None
+    assert store.get_active_pointer("strategy-b") == pointer_before
+    assert (
+        store.list_governance_events(
+            "strategy-b",
+            after_event_id=None,
+            limit=20,
+        )
+        == history_before
+    )
+    assert (
+        store.list_governance_events(
+            "strategy-b",
+            after_event_id="z-cursor",
+            limit=20,
+        )
+        == ()
     )
 
 
