@@ -39,6 +39,7 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution._factor_bundle import (
     build_factor_aware_bundle_builder,
     build_factor_bundle,
+    register_factor_bridge_runtime_types,
 )
 
 __all__ = [
@@ -582,3 +583,9 @@ class FactorBridge:
             *(factor_normalized_column(i) for i in range(len(factor_columns))),
             (weighted_sum / weight_sum).alias("signal_value"),
         )
+
+
+register_factor_bridge_runtime_types(
+    bridge_type=FactorBridge,
+    compiled_type=CompiledExpressions,
+)

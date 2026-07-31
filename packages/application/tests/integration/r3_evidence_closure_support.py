@@ -31,6 +31,10 @@ from ditto_analysis.experiments.trial_ledger import (
 from ditto_application.builders._research_execution_bindings import (
     build_synthetic_baseline_binding,
 )
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+    ResearchSnapshotIdentity,
+)
 from ditto_application.processes.execution.factor_bridge import (
     compiled_expressions_execution_hash,
 )
@@ -477,6 +481,7 @@ class PlanningExecutorProbe:
     """Return deterministic runtime and candidate identities for real preflight."""
 
     lane: GoldenLaneSpec = ETF_GOLDEN_LANE
+    bind_real_candidate_identity: bool = False
 
     def probe(
         self,
@@ -484,6 +489,33 @@ class PlanningExecutorProbe:
     ) -> ResearchExecutorProbeResult:
         registry = default_baseline_registry()
         baseline = resolve_planning_baseline(request.baseline, registry)
+        candidate_evidence_items: list[CandidateExecutorEvidence] = []
+        for candidate in request.candidates:
+            if self.bind_real_candidate_identity:
+                runtime = ResearchRuntimeBuilder().build(
+                    record=request.strategy_record,
+                    candidate_parameters=candidate.binder_parameters,
+                    snapshot_identity=ResearchSnapshotIdentity(
+                        request.snapshot_identity.snapshot_id,
+                        request.snapshot_identity.manifest_hash,
+                    ),
+                    version_status="draft",
+                )
+                resolved_spec_hash = runtime.resolved_spec_hash
+                parameter_hash = runtime.parameter_hash
+            else:
+                resolved_spec_hash = f"{candidate.ordinal:064x}"
+                parameter_hash = f"{candidate.ordinal + 128:064x}"
+            candidate_evidence_items.append(
+                CandidateExecutorEvidence(
+                    candidate_hash=candidate.candidate_hash,
+                    resolved_spec_hash=resolved_spec_hash,
+                    parameter_hash=parameter_hash,
+                    pipeline_execution_hash=f"{candidate.ordinal + 256:064x}",
+                    compiled_factor_set_hash=compiled_expressions_execution_hash(None),
+                )
+            )
+        candidate_evidence = tuple(candidate_evidence_items)
         baseline_runtime = (
             None
             if baseline.exact_strategy is None
@@ -507,16 +539,7 @@ class PlanningExecutorProbe:
             strategy_spec_hash=canonical_spec_hash_for_record(request.strategy_record),
             node_registry_manifest_hash="e" * 64,
             required_datasets=self.lane.required_datasets,
-            candidates=tuple(
-                CandidateExecutorEvidence(
-                    candidate_hash=candidate.candidate_hash,
-                    resolved_spec_hash=f"{candidate.ordinal:064x}",
-                    parameter_hash=f"{candidate.ordinal + 128:064x}",
-                    pipeline_execution_hash=f"{candidate.ordinal + 256:064x}",
-                    compiled_factor_set_hash=compiled_expressions_execution_hash(None),
-                )
-                for candidate in request.candidates
-            ),
+            candidates=candidate_evidence,
             runtime_validation_evidence=RuntimeValidationEvidence(
                 lane=self.lane.runtime_lane,
                 universe_id=self.lane.universe_id,

@@ -24,6 +24,16 @@ if TYPE_CHECKING:
 __all__ = ["build_factor_aware_bundle_builder", "build_factor_bundle"]
 
 
+def register_factor_bridge_runtime_types(
+    *,
+    bridge_type: type[object],
+    compiled_type: type[object],
+) -> None:
+    """Resolve public forward annotations after the bridge module is initialized."""
+    globals()["FactorBridge"] = bridge_type
+    globals()["CompiledExpressions"] = compiled_type
+
+
 def build_factor_aware_bundle_builder(
     *,
     bridge: FactorBridge,

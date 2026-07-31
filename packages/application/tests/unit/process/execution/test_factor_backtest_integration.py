@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
+from typing import get_type_hints
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -14,7 +15,9 @@ from ditto_application.processes.execution.backtest_process import (
     BacktestServiceOptions,
 )
 from ditto_application.processes.execution.factor_bridge import (
+    CompiledExpressions,
     FactorBridge,
+    build_factor_aware_bundle_builder,
     build_factor_bundle,
 )
 from ditto_backtest.data_feed import Slice
@@ -116,6 +119,15 @@ class _StrictHistoryDataFeed:
 
 class TestFactorAwareBundleBuilder:
     """验证含因子信号注入的 input_bundle_builder."""
+
+    def test_public_bundle_type_hints_resolve_at_runtime(self) -> None:
+        bundle_hints = get_type_hints(build_factor_bundle)
+        factory_hints = get_type_hints(build_factor_aware_bundle_builder)
+
+        assert bundle_hints["bridge"] is FactorBridge
+        assert bundle_hints["compiled"] is CompiledExpressions
+        assert factory_hints["bridge"] is FactorBridge
+        assert factory_hints["compiled"] is CompiledExpressions
 
     def test_factor_bundle_produces_signal_values(self) -> None:
         """含因子表达式的 bundle builder 产出 signal_value 列."""

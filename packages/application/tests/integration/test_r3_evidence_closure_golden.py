@@ -23,6 +23,7 @@ from dataclasses import asdict, replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
@@ -63,6 +64,7 @@ from ditto_application.builders.research_artifact_loader import (
 from ditto_application.builders.research_runtime_builder import (
     ResearchRuntimeBuilder,
     ResearchSnapshotIdentity,
+    ResearchStrategyRuntime,
 )
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionCommand,
@@ -72,7 +74,10 @@ from ditto_application.commands.strategy_governance import (
     reactivate_confirmation_phrase,
 )
 from ditto_application.exceptions import AppCommandError
-from ditto_application.processes.execution.factor_bridge import FactorBridge
+from ditto_application.processes.execution.factor_bridge import (
+    FactorBridge,
+    build_factor_bundle,
+)
 from ditto_application.processes.experiments._evidence_inputs import (
     project_snapshot_manifest,
 )
@@ -122,15 +127,18 @@ from ditto_application.processes.strategy.promotion import StrategyPromotionProc
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
 )
+from ditto_backtest.data_feed import Slice
 from ditto_backtest.statistics import (
     BacktestReport,
     empty_aggregated_trade_statistics,
     empty_alpha_statistics,
 )
+from ditto_backtest.steps import StepContext
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.time_context import TimeContext
 from ditto_platform.foundation import SQLitePool
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.parameters import CandidateParameter
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.parameters import CandidateParameter, legacy_parameter_path
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.alpha.selection_evidence import (
     SelectionEvidenceCollector,
@@ -176,16 +184,9 @@ def _run_stock_golden_selection_trace(
     strategy_version: int,
     trade_date: str,
     run_id: str,
-) -> SelectionEvidenceLog:
+) -> tuple[ResearchStrategyRuntime, SelectionEvidenceLog]:
     """Run the stock golden's real compiler, factor bridge, and strategy pipeline."""
-    source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
-    spec = replace(
-        source,
-        signal_expressions=("quality_roe", "value_pe"),
-        signal_weights=(0.6, 0.4),
-        selector=replace(source.selector, params={"k": 2}),
-        params={**source.params, "top_k": 2},
-    )
+    spec = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
     collector = SelectionEvidenceCollector()
     runtime = ResearchRuntimeBuilder().build(
         record=StrategySpecRecord(
@@ -201,25 +202,78 @@ def _run_stock_golden_selection_trace(
     )
     compiled = runtime.compiled_expressions
     assert compiled is not None
-    factors = pl.DataFrame(
+    trade_day = date.fromisoformat(trade_date)
+    knowledge_date = trade_day - timedelta(days=1)
+    instrument_ids = list(range(1, 22))
+    bars: dict[InstrumentId, MagicMock] = {}
+    history_rows: list[dict[str, object]] = []
+    for instrument_id in instrument_ids:
+        base = 10.0 + instrument_id
+        growth = 0.001 + instrument_id * 0.00005
+        for offset in range(26, 1, -1):
+            historical_close = base * (1 + growth * (26 - offset))
+            history_rows.append(
+                {
+                    "instrument_id": instrument_id,
+                    "trade_date": (trade_day - timedelta(days=offset)).isoformat(),
+                    "open": historical_close * 0.99,
+                    "high": historical_close * 1.01,
+                    "low": historical_close * 0.98,
+                    "close": historical_close,
+                    "volume": 1_000_000.0,
+                }
+            )
+        close = base * (1 + growth * 25)
+        bar = MagicMock()
+        bar.open = close * 0.99
+        bar.high = close * 1.01
+        bar.low = close * 0.98
+        bar.close = close
+        bar.volume = 1_000_000.0
+        bars[InstrumentId(instrument_id)] = bar
+
+    slice_ = MagicMock(spec=Slice)
+    slice_.bars = bars
+    slice_.benchmark_close = None
+    step_context = StepContext(
+        time_context=TimeContext(
+            decision_time=datetime.combine(
+                trade_day,
+                datetime.min.time(),
+                tzinfo=UTC,
+            ),
+            knowledge_date=knowledge_date,
+            trade_date=trade_date,
+        ),
+        is_rebalance_day=True,
+        bars=bars,
+        slice_=slice_,
+    )
+    data_feed = MagicMock()
+    data_feed.get_history.return_value = pl.DataFrame(history_rows)
+    data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
         {
-            "instrument_id": [1, 2, 3],
-            "roe": [0.10, 0.30, 0.20],
-            "pe_ratio": [10.0, 30.0, 20.0],
+            "instrument_id": instrument_ids,
+            "roe": [0.05 + instrument_id * 0.005 for instrument_id in instrument_ids],
+            "eps": [0.50 + instrument_id * 0.05 for instrument_id in instrument_ids],
         }
+    )
+    data_feed.get_classification_snapshot.return_value = pl.DataFrame()
+    bridge = FactorBridge()
+    bundle = build_factor_bundle(
+        ctx=step_context,
+        strategy_id=spec.strategy_id,
+        run_id=run_id,
+        bridge=bridge,
+        compiled=compiled,
+        data_feed=data_feed,
+        lookback_days=25,
     )
     runtime.pipeline.run(
         StrategyContext(),
-        StrategyInputBundle(
-            trade_date=trade_date,
-            strategy_id=spec.strategy_id,
-            run_id=run_id,
-            instruments=factors.select("instrument_id"),
-            market_data=factors,
-            signal_values=FactorBridge().compute_signals(factors, compiled),
-        ),
+        bundle,
     )
-    return collector.snapshot()
+    return runtime, collector.snapshot()
 
 
 def _drift_one_cost_semantics(
@@ -489,7 +543,7 @@ def _publish_walk_forward_reports(
         )
         semantics = resolver.resolve(fold)
         assert semantics.is_baseline is candidate.is_baseline
-        trace = (
+        trace_run = (
             _run_stock_golden_selection_trace(
                 candidate_parameters=semantics.strategy.candidate_parameters,
                 snapshot_identity=ResearchSnapshotIdentity(
@@ -507,6 +561,11 @@ def _publish_walk_forward_reports(
             )
             else SelectionEvidenceLog()
         )
+        if isinstance(trace_run, tuple):
+            runtime, trace = trace_run
+            assert runtime.resolved_spec_hash == semantics.strategy.resolved_spec_hash
+        else:
+            trace = trace_run
         trace_adapter.publish(
             _trace_identity(fold, attempt),
             trace,
@@ -555,7 +614,10 @@ def _store(
         reader=reader,
         writer=writer,
         certification_probe=golden_support.PlanningCertificationProbe(lane),
-        executor_probe=golden_support.PlanningExecutorProbe(lane),
+        executor_probe=golden_support.PlanningExecutorProbe(
+            lane,
+            bind_real_candidate_identity=True,
+        ),
         authority_probe=golden_support.PlanningAuthorityProbe(lane),
     )
     request = golden_support.build_planning_request(lane)
@@ -1050,7 +1112,7 @@ def _assert_deterministic_promotion_is_blocked(
 
 def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
     """Stock evidence must come from the real scoring path, not a fabricated log."""
-    log = _run_stock_golden_selection_trace(
+    _runtime, log = _run_stock_golden_selection_trace(
         candidate_parameters=(),
         snapshot_identity=ResearchSnapshotIdentity(
             "stock-golden-factor-snapshot",
@@ -1065,44 +1127,75 @@ def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
     assert log.exclusions
     assert log.selections
     assert log.factor_contributions
-    expected_contributions = (
-        (1, "quality_roe", (0.10, 0.10, 1.0 / 3.0, 0.6, 0.2, 0.6), 3, False),
-        (2, "quality_roe", (0.30, 0.30, 1.0, 0.6, 0.6, 11.0 / 15.0), 1, True),
-        (3, "quality_roe", (0.20, 0.20, 2.0 / 3.0, 0.6, 0.4, 2.0 / 3.0), 2, True),
-        (1, "value_pe", (-10.0, -10.0, 1.0, 0.4, 0.4, 0.6), 3, False),
-        (
-            2,
-            "value_pe",
-            (-30.0, -30.0, 1.0 / 3.0, 0.4, 2.0 / 15.0, 11.0 / 15.0),
-            1,
-            True,
-        ),
-        (3, "value_pe", (-20.0, -20.0, 2.0 / 3.0, 0.4, 4.0 / 15.0, 2.0 / 3.0), 2, True),
+    assert len(log.initial_universe) == 21
+    assert len(log.selections) == 21
+    assert sum(item.selected for item in log.selections) == 20
+    assert len(log.exclusions) == 1
+    assert len(log.factor_contributions) == 21 * 3
+    assert tuple(item.factor_name for item in log.factor_contributions) == (
+        *("quality_roe" for _ in range(21)),
+        *("value_pe" for _ in range(21)),
+        *("momentum_1m" for _ in range(21)),
     )
-    for item, expected in zip(
-        log.factor_contributions,
-        expected_contributions,
-        strict=True,
-    ):
-        instrument_id, factor_name, numeric_values, rank, selected = expected
-        assert item.instrument_id == instrument_id
-        assert item.factor_name == factor_name
-        assert item.rank == rank
-        assert item.selected is selected
-        assert (
-            item.raw_value,
-            item.processed_value,
-            item.normalized_value,
-            item.weight,
-            item.contribution,
-            item.factor_signal_score,
-        ) == pytest.approx(numeric_values)
+    assert {item.factor_name: item.weight for item in log.factor_contributions} == {
+        "quality_roe": 0.4,
+        "value_pe": 0.3,
+        "momentum_1m": 0.3,
+    }
+    assert all(
+        item.raw_value is not None
+        and item.processed_value is not None
+        and item.normalized_value is not None
+        and item.contribution is not None
+        and item.factor_signal_score is not None
+        and item.rank is not None
+        and item.selected is not None
+        for item in log.factor_contributions
+    )
     for selection in log.selections:
         assert sum(
             item.contribution or 0.0
             for item in log.factor_contributions
             if item.instrument_id == selection.instrument_id
         ) == pytest.approx(selection.score)
+
+
+def test_stock_trace_nonempty_candidate_parameter_changes_hash_and_selection() -> None:
+    """A typed top-k override must affect both runtime identity and trace output."""
+    snapshot = ResearchSnapshotIdentity(
+        "stock-golden-factor-snapshot",
+        "8" * 64,
+    )
+    default_runtime, default_log = _run_stock_golden_selection_trace(
+        candidate_parameters=(),
+        snapshot_identity=snapshot,
+        strategy_version=3,
+        trade_date="2026-07-22",
+        run_id="stock-golden-default-parameter",
+    )
+    override_runtime, override_log = _run_stock_golden_selection_trace(
+        candidate_parameters=(
+            CandidateParameter(path=legacy_parameter_path("top_k"), value=2),
+        ),
+        snapshot_identity=snapshot,
+        strategy_version=3,
+        trade_date="2026-07-22",
+        run_id="stock-golden-overridden-parameter",
+    )
+
+    assert default_runtime.legacy_spec.signal_expressions == (
+        "quality_roe",
+        "value_pe",
+        "momentum_1m",
+    )
+    assert default_runtime.resolved_spec_hash != override_runtime.resolved_spec_hash
+    assert {item.path: item.value for item in override_runtime.effective_parameters}[
+        legacy_parameter_path("top_k")
+    ] == 2
+    assert sum(item.selected for item in default_log.selections) == 20
+    assert sum(item.selected for item in override_log.selections) == 2
+    assert default_log.exclusions
+    assert override_log.exclusions
 
 
 def _assert_persisted_selection_trace_provenance(
