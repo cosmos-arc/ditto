@@ -17,6 +17,7 @@ from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha._canonical_values import canonical_json_value
 from ditto_strategy.alpha.builtins.filtering import TrendFilterStage
+from ditto_strategy.alpha.builtins.scoring import FactorScoreColumnBinding
 from ditto_strategy.alpha.node_registry import NodeRegistry
 from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.pipeline import (
@@ -701,6 +702,7 @@ class NodePipelineBuilder:
         legacy_spec: StrategySpec,
         pipeline: PipelineSpec,
         strategy_kind: StrategyKind,
+        factor_bindings: tuple[FactorScoreColumnBinding, ...] = (),
         evidence_sink: SelectionEvidenceSink | None = None,
     ) -> StrategyPipeline:
         """经 compiler 和 versioned legacy adapter 构造唯一现有 runner。"""
@@ -709,6 +711,7 @@ class NodePipelineBuilder:
             legacy_spec=legacy_spec,
             pipeline=pipeline,
             strategy_kind=strategy_kind,
+            factor_bindings=factor_bindings,
             evidence_sink=evidence_sink,
         ).pipeline
 
@@ -718,6 +721,7 @@ class NodePipelineBuilder:
         legacy_spec: StrategySpec,
         pipeline: PipelineSpec,
         strategy_kind: StrategyKind,
+        factor_bindings: tuple[FactorScoreColumnBinding, ...] = (),
         evidence_sink: SelectionEvidenceSink | None = None,
     ) -> AttestedNodePipeline:
         """Build once and bind the actual ordered stage implementations."""
@@ -732,6 +736,7 @@ class NodePipelineBuilder:
         runtime_view = _build_legacy_runtime_view(legacy_spec, compiled.nodes)
         legacy_groups = build_legacy_node_stage_groups(
             runtime_view.spec,
+            factor_bindings=factor_bindings,
             evidence_sink=evidence_sink,
         )
         stages: list[DecisionStage] = []

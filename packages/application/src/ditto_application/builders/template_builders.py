@@ -24,7 +24,11 @@ from ditto_portfolio.rebalancing import (
     TradabilityConstraint,
 )
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
-from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
+from ditto_strategy.alpha.builtins.scoring import (
+    FactorScoreColumnBinding,
+    ScoringMethod,
+    ScoringStage,
+)
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.protocols import DecisionStage
@@ -207,6 +211,7 @@ def _legacy_stock_selection_stage_groups(
     spec: StrategySpec,
     *,
     scoring_method: ScoringMethod,
+    factor_bindings: tuple[FactorScoreColumnBinding, ...],
     evidence_sink: SelectionEvidenceSink | None,
 ) -> tuple[
     tuple[DecisionStage, ...],
@@ -243,7 +248,14 @@ def _legacy_stock_selection_stage_groups(
             SignalStage(source_column="signal_value"),
             replace(trend_filter, signal_column="signal_value"),
         ),
-        (ScoringStage(method=scoring_method, ascending=False),),
+        (
+            ScoringStage(
+                method=scoring_method,
+                ascending=False,
+                factor_bindings=factor_bindings,
+                evidence_sink=evidence_sink,
+            ),
+        ),
         (
             RiskLockFilter(evidence_sink=evidence_sink),
             SelectionStage(top_k=config.top_k, evidence_sink=evidence_sink),
@@ -305,6 +317,7 @@ def _legacy_alpha_slices(
 def build_legacy_node_stage_groups(
     spec: StrategySpec,
     *,
+    factor_bindings: tuple[FactorScoreColumnBinding, ...] = (),
     evidence_sink: SelectionEvidenceSink | None = None,
 ) -> Mapping[str, tuple[DecisionStage, ...]]:
     """把 legacy template factory 结果按稳定 implementation key 分组。"""
@@ -315,6 +328,7 @@ def build_legacy_node_stage_groups(
             _legacy_stock_selection_stage_groups(
                 runtime_spec,
                 scoring_method=scoring_method,
+                factor_bindings=factor_bindings,
                 evidence_sink=evidence_sink,
             )
         )

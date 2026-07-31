@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_strategy.alpha.builtins.scoring import FactorScoreColumnBinding
 from ditto_strategy.alpha.node_registry import NodeRegistry
 from ditto_strategy.alpha.parameters import (
     CandidateParameter,
@@ -25,6 +26,8 @@ from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
+    factor_normalized_column,
+    factor_value_column,
 )
 from ditto_application.strategy_spec_deserialization import deserialize_strategy_spec
 
@@ -67,6 +70,14 @@ def build_typed_legacy_runtime(
         )
     except StrategySpecError as exc:
         raise AppBuilderError(str(exc), details=exc.details) from exc
+    compiled_expressions = _compile_signal_expressions(
+        legacy_spec,
+        factor_bridge=factor_bridge,
+    )
+    factor_bindings = _compiled_factor_bindings(
+        legacy_spec,
+        compiled_expressions,
+    )
     pipeline_execution_hash: str | None = None
     attested_pipeline: AttestedNodePipeline | None = None
     if require_pipeline_attestation:
@@ -75,6 +86,7 @@ def build_typed_legacy_runtime(
             legacy_spec=legacy_spec,
             pipeline=binding.resolved_spec.pipeline,
             strategy_kind=binding.resolved_spec.strategy_kind,
+            factor_bindings=factor_bindings,
             evidence_sink=evidence_sink,
         )
         pipeline = attested.pipeline
@@ -85,6 +97,7 @@ def build_typed_legacy_runtime(
             legacy_spec=legacy_spec,
             pipeline=binding.resolved_spec.pipeline,
             strategy_kind=binding.resolved_spec.strategy_kind,
+            factor_bindings=factor_bindings,
             evidence_sink=evidence_sink,
         )
     return TypedLegacyRuntime(
@@ -99,10 +112,26 @@ def build_typed_legacy_runtime(
         node_registry_manifest_hash=registry.manifest_hash,
         pipeline_execution_hash=pipeline_execution_hash,
         attested_pipeline=attested_pipeline,
-        compiled_expressions=_compile_signal_expressions(
-            legacy_spec,
-            factor_bridge=factor_bridge,
-        ),
+        compiled_expressions=compiled_expressions,
+    )
+
+
+def _compiled_factor_bindings(
+    spec: StrategySpec,
+    compiled: CompiledExpressions | None,
+) -> tuple[FactorScoreColumnBinding, ...]:
+    """Bind only compiler-proven factor identities to materialized score columns."""
+    if compiled is None:
+        return ()
+    return tuple(
+        FactorScoreColumnBinding(
+            factor_id=factor_id,
+            raw_column=factor_value_column(index),
+            processed_column=factor_value_column(index),
+            normalized_column=factor_normalized_column(index),
+            weight=compiled.weights[index],
+        )
+        for index, factor_id in enumerate(spec.signal_expressions)
     )
 
 

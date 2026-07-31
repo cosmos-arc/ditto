@@ -24,6 +24,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import polars as pl
 import pytest
 from ditto_analysis.experiments import (
     HARD_GATE_RULE_IDS,
@@ -59,6 +60,10 @@ from ditto_application.builders.fold_selection_trace_artifact_adapter import (
 from ditto_application.builders.research_artifact_loader import (
     IndexedBacktestReportArtifactAdapter,
 )
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+    ResearchSnapshotIdentity,
+)
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionCommand,
     PublishStrategyVersionHandler,
@@ -67,6 +72,7 @@ from ditto_application.commands.strategy_governance import (
     reactivate_confirmation_phrase,
 )
 from ditto_application.exceptions import AppCommandError
+from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.experiments._evidence_inputs import (
     project_snapshot_manifest,
 )
@@ -120,8 +126,13 @@ from ditto_backtest.statistics import (
     empty_alpha_statistics,
 )
 from ditto_platform.foundation import SQLitePool
+from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.pipeline import StrategyInputBundle
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceCollector,
+    SelectionEvidenceLog,
+)
 from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
@@ -153,6 +164,55 @@ _SemanticsTransform = Callable[
     [dict[FoldKey, ResearchExecutionSemantics]],
     dict[FoldKey, ResearchExecutionSemantics],
 ]
+
+
+def _run_stock_golden_selection_trace() -> SelectionEvidenceLog:
+    """Run the stock golden's real compiler, factor bridge, and strategy pipeline."""
+    source = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    spec = replace(
+        source,
+        signal_expressions=("quality_roe", "value_pe"),
+        signal_weights=(0.6, 0.4),
+        selector=replace(source.selector, params={"k": 2}),
+        params={**source.params, "top_k": 2},
+    )
+    collector = SelectionEvidenceCollector()
+    runtime = ResearchRuntimeBuilder().build(
+        record=StrategySpecRecord(
+            strategy_id=spec.strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=3,
+        ),
+        candidate_parameters=(),
+        snapshot_identity=ResearchSnapshotIdentity(
+            "stock-golden-factor-snapshot",
+            "8" * 64,
+        ),
+        version_status="draft",
+        evidence_sink=collector,
+    )
+    compiled = runtime.compiled_expressions
+    assert compiled is not None
+    factors = pl.DataFrame(
+        {
+            "instrument_id": [1, 2, 3],
+            "roe": [0.10, 0.30, 0.20],
+            "pe_ratio": [10.0, 30.0, 20.0],
+        }
+    )
+    runtime.pipeline.run(
+        StrategyContext(),
+        StrategyInputBundle(
+            trade_date="2026-07-22",
+            strategy_id=spec.strategy_id,
+            run_id="stock-golden-selection-trace",
+            instruments=factors.select("instrument_id"),
+            market_data=factors,
+            signal_values=FactorBridge().compute_signals(factors, compiled),
+        ),
+    )
+    return collector.snapshot()
 
 
 def _drift_one_cost_semantics(
@@ -955,6 +1015,16 @@ def _assert_deterministic_promotion_is_blocked(
         assert reader.get_review_packet(str(packet.bundle_hash)) == packet
     finally:
         pool.close_all()
+
+
+def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
+    """Stock evidence must come from the real scoring path, not a fabricated log."""
+    log = _run_stock_golden_selection_trace()
+
+    assert log.initial_universe
+    assert log.exclusions
+    assert log.selections
+    assert log.factor_contributions
 
 
 @pytest.mark.parametrize(

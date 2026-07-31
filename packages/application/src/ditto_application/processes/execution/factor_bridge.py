@@ -51,7 +51,19 @@ __all__ = [
     "build_signal_spec",
     "compiled_expressions_actual_max_lookback",
     "compiled_expressions_execution_hash",
+    "factor_normalized_column",
+    "factor_value_column",
 ]
+
+
+def factor_value_column(index: int) -> str:
+    """Return the stable materialized value column for one compiled factor."""
+    return f"factor_{index}"
+
+
+def factor_normalized_column(index: int) -> str:
+    """Return the stable rank-normalized column for one compiled factor."""
+    return f"rank_{factor_value_column(index)}"
 
 
 def build_signal_spec(
@@ -470,23 +482,34 @@ class FactorBridge:
             compiled: 编译后的表达式集合。
 
         Returns:
-            包含 ``instrument_id`` + ``signal_value`` 列的 DataFrame。
+            包含 ``instrument_id``、编译后 factor/rank 列与 ``signal_value``
+            的 DataFrame；factor/rank 列供 strategy scoring 原路径审计。
 
         """
         compiled_expressions_execution_hash(compiled)
         if df.height == 0:
-            return pl.DataFrame(
-                schema={
-                    "instrument_id": df["instrument_id"].dtype,
-                    "signal_value": pl.Float64,
-                },
+            evidence_columns = tuple(
+                column
+                for index in range(len(compiled.expressions))
+                for column in (
+                    factor_value_column(index),
+                    factor_normalized_column(index),
+                )
             )
+            schema = pl.Schema(
+                (
+                    ("instrument_id", df["instrument_id"].dtype),
+                    *((column, pl.Float64) for column in evidence_columns),
+                    ("signal_value", pl.Float64),
+                )
+            )
+            return pl.DataFrame(schema=schema)
 
         # Step 1: 计算各因子列
         factor_columns: list[str] = []
         factor_exprs: list[pl.Expr] = []
         for i, compiled_expr in enumerate(compiled.expressions):
-            col_name = f"factor_{i}"
+            col_name = factor_value_column(i)
             factor_columns.append(col_name)
             factor_exprs.append(pl.Expr.alias(compiled_expr.expr, col_name))
 
@@ -509,12 +532,12 @@ class FactorBridge:
             )
 
         rank_exprs: list[pl.Expr] = []
-        for col_name in factor_columns:
+        for index, col_name in enumerate(factor_columns):
             rank_exprs.append(
                 (
                     pl.col(col_name).rank(method="ordinal").cast(pl.Float64)
                     / pl.len().cast(pl.Float64)
-                ).alias(f"rank_{col_name}"),
+                ).alias(factor_normalized_column(index)),
             )
 
         enriched = enriched.with_columns(rank_exprs)
@@ -525,16 +548,20 @@ class FactorBridge:
             # 所有权重为零时，signal_value 全部为零
             return enriched.select(
                 "instrument_id",
+                *factor_columns,
+                *(factor_normalized_column(i) for i in range(len(factor_columns))),
                 pl.lit(0.0).alias("signal_value"),
             )
 
         weighted_sum = pl.lit(0.0)
         for i, w in enumerate(compiled.weights):
-            rank_col = f"rank_factor_{i}"
+            rank_col = factor_normalized_column(i)
             weighted_sum = weighted_sum + pl.col(rank_col) * w
 
         return enriched.select(
             "instrument_id",
+            *factor_columns,
+            *(factor_normalized_column(i) for i in range(len(factor_columns))),
             (weighted_sum / weight_sum).alias("signal_value"),
         )
 

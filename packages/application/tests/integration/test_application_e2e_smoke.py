@@ -253,8 +253,8 @@ class TestPipelineAssembly:
         assert result.label == "bull"
         assert len(result.indicator_values) == 1
 
-    def test_factor_bridge_produces_signal_value_column(self) -> None:
-        """FactorBridge 最终产出 instrument_id + signal_value 两列."""
+    def test_factor_bridge_preserves_compiled_factor_score_columns(self) -> None:
+        """FactorBridge exposes the exact terms consumed by strategy scoring."""
         bridge = FactorBridge(compiler=ExpressionCompiler())
         compiled = bridge.compile_and_validate(
             ("ts_mean(close, 3)",),
@@ -269,5 +269,10 @@ class TestPipelineAssembly:
         )
 
         result = bridge.compute_signals(df, compiled)
-        assert set(result.columns) == {"instrument_id", "signal_value"}
+        assert set(result.columns) == {
+            "instrument_id",
+            "factor_0",
+            "rank_factor_0",
+            "signal_value",
+        }
         assert result.height == 3
