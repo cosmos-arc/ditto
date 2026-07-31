@@ -708,6 +708,7 @@ class _Store:
         self.cycle = None
         self.spec = None
         self.projection: ExperimentProjection | None = None
+        self.creation_event: StatusEventRecord | None = None
         self.gates = {}
         self.folds = {}
         self.events: list[StatusEventRecord] = []
@@ -761,13 +762,24 @@ class _Store:
         return tuple(sorted(self.gates.values(), key=lambda gate: gate.evaluation_id))
 
     def list_status_events(self, experiment_id):
-        return tuple(self.events)
+        creation = () if self.creation_event is None else (self.creation_event,)
+        return (*creation, *self.events)
 
-    def create_experiment(self, cycle, spec, initial_record):
+    def create_experiment(
+        self,
+        cycle,
+        spec,
+        initial_record,
+        *,
+        creation_detail=None,
+    ):
         self.calls.append("create")
+        detail = {} if creation_detail is None else dict(creation_detail)
         if self.spec is not None:
             assert self.cycle == cycle
             assert self.spec == spec
+            assert self.creation_event is not None
+            assert self.creation_event.detail in ({}, detail)
             return
         self.cycle = cycle
         self.spec = spec
@@ -776,6 +788,24 @@ class _Store:
             queue_ordinal=None,
             revision=0,
             updated_at=initial_record.created_at,
+        )
+        self.creation_event = StatusEventRecord(
+            event_id=f"experiment:{spec.experiment_id}:0",
+            experiment_id=spec.experiment_id,
+            candidate_id=None,
+            fold_id=None,
+            attempt_id=None,
+            subject_type=StatusSubjectType.EXPERIMENT,
+            subject_revision=0,
+            previous_status=None,
+            status=ExperimentStatus.DRAFT,
+            desired_state=ExperimentDesiredState.RUN,
+            stage=ExperimentStage.PREFLIGHT,
+            failure_code=None,
+            reason_code="experiment_created",
+            detail=detail,
+            detail_hash=canonical_payload(detail).content_hash,
+            occurred_at=initial_record.created_at,
         )
 
     def add_gate_evaluation(self, record):
@@ -2674,13 +2704,141 @@ def test_partial_draft_rejects_immutable_request_drift_without_writes() -> None:
 
     assert exc_info.value.details == {
         "code": "EXPERIMENT_ALREADY_EXISTS",
-        "reason": "immutable_experiment_replay_drift",
-        "experiment_id": request.experiment_id,
+        "reason": "durable_launch_request_mismatch",
+        "durable_request_hash": planning_request_hash(request),
+        "caller_request_hash": planning_request_hash(drifted),
     }
     assert store.calls == []
 
     receipt = process.launch(request, confirmed_plan_hash=report.plan_hash)
     assert receipt.status == "queued"
+
+
+def test_partial_draft_fences_full_request_identity_before_preflight() -> None:
+    store = _Store()
+    store.fail_fold_call = 3
+    request = _request()
+    process = _process(store)
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+
+    with pytest.raises(AppProcessError):
+        process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert store.projection is not None
+    assert store.projection.record.status is ExperimentStatus.DRAFT
+
+    drifted = replace(
+        request,
+        budget=replace(request.budget, disk_byte_limit=1),
+    )
+    certification = _BombCertificationProbe()
+    executor = _BombExecutorProbe()
+    authority = _BombAuthorityProbe()
+    store.fail_fold_call = None
+    store.calls.clear()
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _process(
+            store,
+            certification=certification,
+            executor=executor,
+            authority=authority,
+        ).launch(drifted, confirmed_plan_hash=report.plan_hash)
+
+    assert exc_info.value.details["code"] == "EXPERIMENT_ALREADY_EXISTS"
+    assert exc_info.value.details["reason"] == "durable_launch_request_mismatch"
+    assert exc_info.value.details["durable_request_hash"] == planning_request_hash(
+        request
+    )
+    assert exc_info.value.details["caller_request_hash"] == planning_request_hash(
+        drifted
+    )
+    assert certification.calls == []
+    assert executor.calls == 0
+    assert authority.calls == 0
+    assert store.calls == []
+
+    receipt = process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert receipt.status == "queued"
+
+
+def test_legacy_partial_draft_recovers_without_backfilling_creation_detail() -> None:
+    store = _Store()
+    store.fail_fold_call = 3
+    request = _request()
+    process = _process(store)
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+
+    with pytest.raises(AppProcessError):
+        process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert store.creation_event is not None
+    store.creation_event = replace(
+        store.creation_event,
+        detail={},
+        detail_hash=canonical_payload({}).content_hash,
+    )
+    store.fail_fold_call = None
+    store.calls.clear()
+
+    receipt = process.launch(request, confirmed_plan_hash=report.plan_hash)
+
+    assert receipt.status == "queued"
+    assert store.creation_event.detail == {}
+
+
+@pytest.mark.parametrize(
+    ("mutation", "reason"),
+    [
+        ("malformed-detail", "durable_creation_identity_invalid"),
+        ("duplicate-event", "durable_creation_event_invalid"),
+    ],
+)
+def test_partial_draft_creation_identity_corruption_fails_before_probes(
+    mutation: str,
+    reason: str,
+) -> None:
+    store = _Store()
+    store.fail_fold_call = 3
+    request = _request()
+    process = _process(store)
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+
+    with pytest.raises(AppProcessError):
+        process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert store.creation_event is not None
+    if mutation == "malformed-detail":
+        malformed = {**store.creation_event.detail, "unexpected": True}
+        store.creation_event = replace(
+            store.creation_event,
+            detail=malformed,
+            detail_hash=canonical_payload(malformed).content_hash,
+        )
+    else:
+        store.events.append(
+            replace(store.creation_event, event_id="duplicate-creation-event")
+        )
+    certification = _BombCertificationProbe()
+    executor = _BombExecutorProbe()
+    authority = _BombAuthorityProbe()
+    store.fail_fold_call = None
+    store.calls.clear()
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _process(
+            store,
+            certification=certification,
+            executor=executor,
+            authority=authority,
+        ).launch(request, confirmed_plan_hash=report.plan_hash)
+
+    assert exc_info.value.details["code"] == "EXPERIMENT_LAUNCH_CONFLICT"
+    assert exc_info.value.details["reason"] == reason
+    assert certification.calls == []
+    assert executor.calls == 0
+    assert authority.calls == 0
+    assert store.calls == []
 
 
 def test_committed_enqueue_retry_replays_before_every_planning_probe() -> None:

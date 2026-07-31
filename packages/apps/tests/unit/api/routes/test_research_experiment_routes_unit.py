@@ -46,6 +46,7 @@ from ditto_application.queries.experiments import (
     ExperimentQueryFacade,
 )
 from ditto_apps.api.errors import (
+    APIError,
     ConflictError,
     NotFoundError,
     UnprocessableEntityError,
@@ -591,6 +592,37 @@ async def test_launch_maps_only_typed_planning_error_codes(
     with pytest.raises(expected_error) as caught:
         await _call_launch(request, handler)
 
+    assert caught.value.error_code == code
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "EXPERIMENT_PERSISTENCE_FAILED",
+        "FUTURE_TYPED_PLANNING_FAILURE",
+    ],
+)
+async def test_launch_maps_unrecognized_typed_errors_to_stable_internal_error(
+    code: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {**_planning_payload(), "confirmed_plan_hash": "d" * 64}
+    request = ExperimentLaunchRequest.model_validate(payload)
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "build_experiment_planning_request",
+        MagicMock(return_value=MagicMock()),
+    )
+    handler = MagicMock(spec=LaunchExperimentHandler)
+    handler.handle.side_effect = AppCommandError(
+        "launch failed internally",
+        details={"code": code, "reason": "typed_internal_failure"},
+    )
+
+    with pytest.raises(APIError) as caught:
+        await _call_launch(request, handler)
+
+    assert caught.value.status_code == 500
     assert caught.value.error_code == code
 
 

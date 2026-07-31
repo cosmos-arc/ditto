@@ -39,6 +39,9 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._baseline_runtime_evidence import (
     baseline_runtime_payload,
 )
+from ditto_application.processes.experiments._creation_identity import (
+    compile_creation_identity,
+)
 from ditto_application.processes.experiments._launch_saga import (
     PreparedExperimentLaunch,
 )
@@ -695,6 +698,10 @@ def compile_launch_material(
         )
     )
     plan_hash = str(plan_preimage_payload.content_hash)
+    creation_detail, creation_detail_payload = compile_creation_identity(
+        request_hash=planning_request_hash(material.request),
+        plan_hash=plan_hash,
+    )
     enqueue_detail, enqueue_detail_payload = _canonical_frozen_mapping(
         {
             "plan_hash": plan_hash,
@@ -740,6 +747,9 @@ def compile_launch_material(
             preflight_hash=preflight_payload.content_hash,
             plan_preimage_json=plan_preimage_payload.json_bytes,
             plan_hash=plan_hash,
+            creation_detail=creation_detail,
+            creation_detail_json=creation_detail_payload.json_bytes,
+            creation_detail_hash=creation_detail_payload.content_hash,
             enqueue_detail=enqueue_detail,
             enqueue_detail_json=enqueue_detail_payload.json_bytes,
             enqueue_detail_hash=enqueue_detail_payload.content_hash,

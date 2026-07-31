@@ -135,6 +135,8 @@ class ExperimentWriterProtocol(Protocol):
         cycle: ResearchCycleIdentity,
         spec: ExperimentLaunchSpec,
         initial_record: ExperimentRecord,
+        *,
+        creation_detail: Mapping[str, object] | None = None,
     ) -> None: ...
 
     def transition_experiment(

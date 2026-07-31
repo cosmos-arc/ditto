@@ -186,6 +186,21 @@ class SQLiteExperimentReader:
                 "launch_projection_drift",
                 experiment_id=str(experiment_id),
             )
+        creation = self._one(
+            """
+            SELECT * FROM experiment_status_event
+            WHERE experiment_id=? AND subject_type='experiment'
+              AND subject_revision=0
+            """,
+            (str(experiment_id),),
+        )
+        if creation is None:
+            raise _integrity(
+                "launch creation event is missing or drifted",
+                "launch_creation_event_drift",
+                experiment_id=str(experiment_id),
+            )
+        creation_detail = _json_object(creation["detail_json"], "detail_json")
         expected_creation = event_values(
             subject_type="experiment",
             experiment_id=str(experiment_id),
@@ -199,18 +214,10 @@ class SQLiteExperimentReader:
             stage=ExperimentStage.PREFLIGHT,
             failure_code=None,
             reason_code="experiment_created",
-            detail={},
+            detail=creation_detail,
             occurred_at_epoch_us=epoch_us(spec.created_at),
         )
-        creation = self._one(
-            """
-            SELECT * FROM experiment_status_event
-            WHERE experiment_id=? AND subject_type='experiment'
-              AND subject_revision=0
-            """,
-            (str(experiment_id),),
-        )
-        if creation is None or tuple(creation) != expected_creation:
+        if tuple(creation) != expected_creation:
             raise _integrity(
                 "launch creation event is missing or drifted",
                 "launch_creation_event_drift",

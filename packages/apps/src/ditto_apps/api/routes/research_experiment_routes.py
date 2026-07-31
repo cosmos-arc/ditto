@@ -62,6 +62,7 @@ from ditto_application.queries.experiments import (
 from fastapi import APIRouter
 
 from ditto_apps.api.errors import (
+    APIError,
     BadRequestError,
     ConflictError,
     NotFoundError,
@@ -363,7 +364,7 @@ def _raise_planning_error(exc: AppError) -> Never:
         raise ConflictError(str(exc), error_code=code) from exc
     if code in _PLANNING_UNPROCESSABLE_CODES:
         raise UnprocessableEntityError(str(exc), error_code=code) from exc
-    raise exc
+    raise APIError(str(exc), status_code=500, error_code=code) from exc
 
 
 def _build_transport_planning_request(

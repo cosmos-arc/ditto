@@ -277,6 +277,10 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "_creation_identity.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "_launch_material.py"
         ),
         (
@@ -470,6 +474,23 @@ def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
         "from ditto_analysis.experiments import FoldPersistenceSpec",
         near_miss,
     ) == [f"{near_miss}: production imports ditto_analysis (check import-linter)"]
+
+
+def test_creation_identity_is_exactly_allowed_to_wire_analysis_contracts():
+    rel_path = (
+        "packages/application/src/ditto_application/processes/experiments/"
+        "_creation_identity.py"
+    )
+    near_miss = rel_path.replace(
+        "_creation_identity.py",
+        "_creation_identity_extra.py",
+    )
+    source = "from ditto_analysis.experiments import ExperimentReaderProtocol"
+
+    assert check_production_no_analysis(source, rel_path) == []
+    assert check_production_no_analysis(source, near_miss) == [
+        f"{near_miss}: production imports ditto_analysis (check import-linter)"
+    ]
 
 
 @pytest.mark.parametrize(

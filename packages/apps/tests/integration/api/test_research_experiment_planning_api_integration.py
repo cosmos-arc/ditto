@@ -14,8 +14,10 @@ import orjson
 import pytest
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
+from ditto_analysis.errors import ExperimentPersistenceError
 from ditto_analysis.experiments import (
     ExperimentId,
+    ExperimentWriterProtocol,
     ResearchMetricDirection,
     ResearchMetricId,
     ResearchMetricValue,
@@ -417,6 +419,14 @@ class _AuthorityProbe:
         )
 
 
+class _FailingCreationWriter:
+    def create_experiment(self, *_args: object, **_kwargs: object) -> None:
+        raise ExperimentPersistenceError(
+            "injected experiment creation failure",
+            details={"reason_code": "injected_creation_failure"},
+        )
+
+
 def _planning_test_app(
     planning: ExperimentPlanningProcess,
     launch: LaunchExperimentHandler,
@@ -608,11 +618,13 @@ async def test_partial_draft_identity_drift_is_409_and_zero_write(
         prepared.launch.cycle,
         prepared.launch.spec,
         prepared.launch.initial_record,
+        creation_detail=prepared.launch.creation_detail,
     )
     connection = database.get_connection()
     writes_after_partial_draft = connection.total_changes
     drifted_document = deepcopy(document)
-    drifted_document["seed"] = 43
+    drifted_budget = cast("dict[str, object]", drifted_document["budget"])
+    drifted_budget["disk_byte_limit"] = 1
     test_app, container = _planning_test_app(planning, launch)
 
     try:
@@ -623,21 +635,11 @@ async def test_partial_draft_identity_drift_is_409_and_zero_write(
             ),
             base_url="http://testserver",
         ) as client:
-            experiment_id = str(document["experiment_id"])
-            drifted_preflight = await client.post(
-                f"/api/v1/research/experiments/{experiment_id}/preflight",
-                json=drifted_document,
-            )
-            assert drifted_preflight.status_code == 200, drifted_preflight.text
-            drifted_plan_hash = drifted_preflight.json()["data"]["plan_hash"]
-            assert isinstance(drifted_plan_hash, str)
-            assert connection.total_changes == writes_after_partial_draft
-
             drift = await client.post(
                 "/api/v1/research/experiments",
                 json={
                     **drifted_document,
-                    "confirmed_plan_hash": drifted_plan_hash,
+                    "confirmed_plan_hash": prepared.report.plan_hash,
                 },
             )
 
@@ -655,6 +657,67 @@ async def test_partial_draft_identity_drift_is_409_and_zero_write(
             assert exact.status_code == 200, exact.text
             assert exact.json()["data"]["status"] == "queued"
             assert connection.total_changes > writes_after_partial_draft
+    finally:
+        await container.close()
+        database.close_all()
+
+
+async def test_persistence_failure_is_stable_typed_500(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise the real command path and preserve its typed persistence code."""
+
+    async def run_inline(
+        func: object,
+        /,
+        *args: object,
+        **kwargs: object,
+    ) -> object:
+        assert callable(func)
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(research_experiment_routes, "run_blocking", run_inline)
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    reader = SQLiteExperimentReader(database)
+    planning = ExperimentPlanningProcess(
+        reader=reader,
+        writer=cast("ExperimentWriterProtocol", _FailingCreationWriter()),
+        certification_probe=_CertificationProbe(),
+        executor_probe=_ExecutorProbe(),
+        authority_probe=_AuthorityProbe(),
+    )
+    launch = LaunchExperimentHandler(planning)
+    document = _planning_document()
+    test_app, container = _planning_test_app(planning, launch)
+
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(
+                app=test_app,
+                raise_app_exceptions=False,
+            ),
+            base_url="http://testserver",
+        ) as client:
+            experiment_id = str(document["experiment_id"])
+            preflight = await client.post(
+                f"/api/v1/research/experiments/{experiment_id}/preflight",
+                json=document,
+            )
+            assert preflight.status_code == 200, preflight.text
+            plan_hash = preflight.json()["data"]["plan_hash"]
+            assert isinstance(plan_hash, str)
+
+            failed = await client.post(
+                "/api/v1/research/experiments",
+                json={**document, "confirmed_plan_hash": plan_hash},
+            )
+
+            assert failed.status_code == 500
+            assert failed.json()["error_code"] == "EXPERIMENT_PERSISTENCE_FAILED"
+            assert reader.get_experiment_projection(ExperimentId(experiment_id)) is None
+            assert reader.list_status_events(ExperimentId(experiment_id)) == ()
     finally:
         await container.close()
         database.close_all()

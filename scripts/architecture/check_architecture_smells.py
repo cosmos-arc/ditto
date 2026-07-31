@@ -824,6 +824,17 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "_creation_identity.py"
+        ),
+        owner="application experiment creation identity fence",
+        reason=(
+            "The private fail-closed boundary validates the analysis-owned "
+            "revision-zero event and reader projection before planning probes."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "_launch_saga.py"
         ),
         owner="application experiment launch saga",

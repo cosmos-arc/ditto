@@ -81,9 +81,14 @@ class SQLiteExperimentCreationMixin:
         cycle: ResearchCycleIdentity,
         spec: ExperimentLaunchSpec,
         initial_record: ExperimentRecord,
+        *,
+        creation_detail: Mapping[str, object] | None = None,
     ) -> None:
         """Atomically insert an experiment, all candidates, and its revision-0 event."""
         self._validate_initial_experiment(spec, initial_record)
+        durable_creation_detail = (
+            {} if creation_detail is None else dict(creation_detail)
+        )
         launch = encode_launch_spec(spec)
         candidates = tuple(
             (candidate, encode_candidate_parameters(candidate.parameters))
@@ -120,6 +125,7 @@ class SQLiteExperimentCreationMixin:
                     connection,
                     expected_experiment,
                     candidates,
+                    durable_creation_detail,
                 )
                 connection.commit()
                 return
@@ -166,7 +172,7 @@ class SQLiteExperimentCreationMixin:
                 stage=initial_record.stage,
                 failure_code=initial_record.failure_code,
                 reason_code="experiment_created",
-                detail={},
+                detail=durable_creation_detail,
                 occurred_at=initial_record.created_at,
             )
             connection.commit()
@@ -205,6 +211,7 @@ class SQLiteExperimentCreationMixin:
         connection: sqlite3.Connection,
         expected_experiment: tuple[object, ...],
         candidates: tuple[tuple[CandidateSpec, CanonicalPayload], ...],
+        creation_detail: Mapping[str, object],
     ) -> None:
         existing = connection.execute(
             "SELECT * FROM experiment WHERE experiment_id=?",
@@ -268,8 +275,10 @@ class SQLiteExperimentCreationMixin:
                 else ExperimentFailureCode(str(expected_experiment[13]))
             ),
             reason_code="experiment_created",
+            detail=creation_detail,
             occurred_at_epoch_us=cast("int", expected_experiment[14]),
             replay_reason_code="experiment_aggregate_replay_drift",
+            allow_legacy_detail=True,
         )
 
     @classmethod
@@ -300,6 +309,7 @@ class SQLiteExperimentCreationMixin:
             stage=None,
             failure_code=None,
             reason_code="fold_created",
+            detail={},
             occurred_at_epoch_us=cast("int", values[15]),
             replay_reason_code="fold_aggregate_replay_drift",
         )
@@ -332,6 +342,7 @@ class SQLiteExperimentCreationMixin:
             stage=None,
             failure_code=initial.failure_code,
             reason_code="attempt_created",
+            detail={},
             occurred_at_epoch_us=cast("int", values[12]),
             replay_reason_code="attempt_aggregate_replay_drift",
         )
@@ -350,8 +361,10 @@ class SQLiteExperimentCreationMixin:
         stage: ExperimentStage | None,
         failure_code: ExperimentFailureCode | None,
         reason_code: str,
+        detail: Mapping[str, object],
         occurred_at_epoch_us: int,
         replay_reason_code: str,
+        allow_legacy_detail: bool = False,
     ) -> None:
         expected = event_values(
             subject_type=subject_type,
@@ -366,14 +379,36 @@ class SQLiteExperimentCreationMixin:
             stage=stage,
             failure_code=failure_code,
             reason_code=reason_code,
-            detail={},
+            detail=detail,
             occurred_at_epoch_us=occurred_at_epoch_us,
         )
         event = connection.execute(
             "SELECT * FROM experiment_status_event WHERE event_id=?",
             (expected[0],),
         ).fetchone()
-        if event is None or tuple(event) != expected:
+        actual = None if event is None else tuple(event)
+        legacy_expected = (
+            None
+            if not allow_legacy_detail or not detail
+            else event_values(
+                subject_type=subject_type,
+                experiment_id=experiment_id,
+                candidate_id=candidate_id,
+                fold_id=fold_id,
+                attempt_id=attempt_id,
+                revision=0,
+                previous_status=None,
+                status=status,
+                desired_state=desired_state,
+                stage=stage,
+                failure_code=failure_code,
+                reason_code=reason_code,
+                detail={},
+                occurred_at_epoch_us=occurred_at_epoch_us,
+            )
+        )
+        matches_legacy = legacy_expected is not None and actual == legacy_expected
+        if actual != expected and not matches_legacy:
             raise _conflict(
                 "aggregate replay found a missing or drifted creation event",
                 replay_reason_code,

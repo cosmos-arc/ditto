@@ -607,6 +607,16 @@ def test_create_experiment_is_atomic_lossless_and_exact_replay_is_noop(
     writer.create_experiment(cycle, spec, initial)
     before = database.get_connection().total_changes
     writer.create_experiment(cycle, spec, initial)
+    writer.create_experiment(
+        cycle,
+        spec,
+        initial,
+        creation_detail={
+            "schema_version": 1,
+            "request_hash": "a" * 64,
+            "plan_hash": "b" * 64,
+        },
+    )
 
     projection = reader.get_experiment_projection(spec.experiment_id)
     assert projection is not None
@@ -621,8 +631,57 @@ def test_create_experiment_is_atomic_lossless_and_exact_replay_is_noop(
         CandidateId("candidate-1"),
         CandidateId("candidate-2"),
     ]
-    assert len(reader.list_status_events(spec.experiment_id)) == 1
+    creation_events = reader.list_status_events(spec.experiment_id)
+    assert len(creation_events) == 1
+    assert creation_events[0].detail == {}
     assert database.get_connection().total_changes == before
+
+
+def test_create_experiment_atomically_fences_canonical_creation_detail(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    cycle = api.ResearchCycleIdentity("cycle-2026-h2", ContentHash("c" * 64))
+    spec = _launch()
+    initial = _record()
+    detail = {
+        "schema_version": 1,
+        "request_hash": "a" * 64,
+        "plan_hash": "b" * 64,
+    }
+
+    writer.create_experiment(
+        cycle,
+        spec,
+        initial,
+        creation_detail=detail,
+    )
+    writes_after_create = database.get_connection().total_changes
+    writer.create_experiment(
+        cycle,
+        spec,
+        initial,
+        creation_detail=detail,
+    )
+
+    creation = reader.list_status_events(spec.experiment_id)
+    assert len(creation) == 1
+    assert creation[0].detail == detail
+    assert reader.get_launch_spec(spec.experiment_id) == spec
+    assert database.get_connection().total_changes == writes_after_create
+
+    with pytest.raises(api.ExperimentConflictError) as exc_info:
+        writer.create_experiment(
+            cycle,
+            spec,
+            initial,
+            creation_detail={**detail, "request_hash": "f" * 64},
+        )
+
+    assert exc_info.value.details["reason_code"] == (
+        "experiment_aggregate_replay_drift"
+    )
+    assert database.get_connection().total_changes == writes_after_create
 
 
 def test_create_experiment_conflicting_replay_and_partial_insert_fail_closed(

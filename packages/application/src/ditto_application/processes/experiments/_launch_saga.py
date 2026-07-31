@@ -32,6 +32,11 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._creation_identity import (
+    compile_creation_identity,
+    fence_durable_draft_launch,
+    verify_creation_identity_payload,
+)
 from ditto_application.processes.experiments._launch_reconstruction import (
     validate_prepared_launch_rows,
 )
@@ -71,6 +76,9 @@ class PreparedExperimentLaunch:
     preflight_hash: ContentHash
     plan_preimage_json: bytes
     plan_hash: str
+    creation_detail: Mapping[str, object]
+    creation_detail_json: bytes
+    creation_detail_hash: ContentHash
     enqueue_detail: Mapping[str, object]
     enqueue_detail_json: bytes
     enqueue_detail_hash: ContentHash
@@ -126,42 +134,13 @@ def _exact_string_list(value: object, field_name: str) -> tuple[str, ...]:
     return tuple(cast("list[str]", items))
 
 
-def _verify_prepared_rows(prepared: PreparedExperimentLaunch) -> None:
+def _verify_prepared_payloads(prepared: PreparedExperimentLaunch) -> None:
     launch = encode_launch_spec(prepared.spec)
     if (
         launch.json_bytes != prepared.launch_spec_json
         or launch.content_hash != prepared.launch_spec_hash
     ):
         raise experiment_process_error("launch_spec")
-    if tuple(gate.payload_hash for gate in prepared.gates) != (
-        prepared.gate_payload_hashes
-    ):
-        raise experiment_process_error("gate_payload_hashes")
-    recreated_folds = tuple(
-        FoldPersistenceSpec.create(
-            key=fold.key,
-            ordinal=fold.ordinal,
-            fold_role=fold.fold_role,
-            train_window=fold.train_window,
-            test_window=fold.test_window,
-            purge_sessions=fold.purge_sessions,
-            embargo_sessions=fold.embargo_sessions,
-        )
-        for fold in prepared.folds
-    )
-    if any(
-        recreated.canonical_payload != existing.canonical_payload
-        or recreated.payload_hash != existing.payload_hash
-        for recreated, existing in zip(recreated_folds, prepared.folds, strict=True)
-    ):
-        raise experiment_process_error("fold_payload")
-    if tuple(fold.payload_hash for fold in prepared.folds) != (
-        prepared.fold_payload_hashes
-    ):
-        raise experiment_process_error("fold_payload_hashes")
-
-
-def _verify_prepared_payloads(prepared: PreparedExperimentLaunch) -> None:
     preflight = _canonical_decoded_mapping(prepared.preflight_json)
     if _content_hash(prepared.preflight_json) != prepared.preflight_hash:
         raise experiment_process_error("preflight_hash")
@@ -178,6 +157,13 @@ def _verify_prepared_payloads(prepared: PreparedExperimentLaunch) -> None:
         or plan_preimage.get("preflight_hash") != str(prepared.preflight_hash)
     ):
         raise experiment_process_error("plan_preimage")
+    verify_creation_identity_payload(
+        detail=prepared.creation_detail,
+        detail_json=prepared.creation_detail_json,
+        detail_hash=prepared.creation_detail_hash,
+        expected_request_hash=plan_preimage.get("request_hash"),
+        expected_plan_hash=prepared.plan_hash,
+    )
     enqueue_detail = _canonical_decoded_mapping(prepared.enqueue_detail_json)
     preflight_from_detail = enqueue_detail.get("preflight")
     plan_preimage_from_detail = enqueue_detail.get("plan_preimage")
@@ -222,7 +208,6 @@ def _verify_prepared_initial_record(prepared: PreparedExperimentLaunch) -> None:
 def _verify_prepared_identity(prepared: PreparedExperimentLaunch) -> None:
     """Recompute every cross-linked identity before the first writer call."""
     try:
-        _verify_prepared_rows(prepared)
         _verify_prepared_payloads(prepared)
         _verify_prepared_initial_record(prepared)
     except Exception as exc:
@@ -651,6 +636,10 @@ def _prepared_from_durable_enqueue(
     preflight_payload = canonical_payload(preflight)
     plan_preimage_payload = canonical_payload(plan_preimage)
     detail_payload = canonical_payload(detail)
+    creation_detail, creation_detail_payload = compile_creation_identity(
+        request_hash=request_hash,
+        plan_hash=report.plan_hash,
+    )
     prepared = PreparedExperimentLaunch(
         cycle=cycle,
         spec=spec,
@@ -671,6 +660,9 @@ def _prepared_from_durable_enqueue(
         preflight_hash=preflight_payload.content_hash,
         plan_preimage_json=plan_preimage_payload.json_bytes,
         plan_hash=report.plan_hash,
+        creation_detail=creation_detail,
+        creation_detail_json=creation_detail_payload.json_bytes,
+        creation_detail_hash=creation_detail_payload.content_hash,
         enqueue_detail=detail,
         enqueue_detail_json=detail_payload.json_bytes,
         enqueue_detail_hash=detail_payload.content_hash,
@@ -691,7 +683,17 @@ def try_replay_durable_launch(
     request_hash: str | None = None
     for _ in range(_STABLE_AGGREGATE_READ_ATTEMPTS):
         before = reader.get_experiment_projection(typed_experiment_id)
-        if before is None or before.record.status is ExperimentStatus.DRAFT:
+        if before is None:
+            return None
+        if before.record.status is ExperimentStatus.DRAFT:
+            if request_hash is None:
+                request_hash = request_hash_factory()
+            fence_durable_draft_launch(
+                reader=reader,
+                experiment_id=experiment_id,
+                confirmed_plan_hash=confirmed_plan_hash,
+                request_hash=request_hash,
+            )
             return None
         if not _is_progressed(before):
             raise _saga_error(
@@ -745,6 +747,7 @@ def persist_prepared_launch(
         prepared.cycle,
         prepared.spec,
         prepared.initial_record,
+        creation_detail=prepared.creation_detail,
     )
     for gate in prepared.gates:
         writer.add_gate_evaluation(gate)
