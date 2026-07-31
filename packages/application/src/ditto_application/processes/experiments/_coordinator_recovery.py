@@ -15,6 +15,7 @@ from ditto_application.processes.experiments._coordinator_snapshot import (
 )
 from ditto_application.processes.experiments._mutation_receipts import (
     OperatorControlIntent,
+    RetryFoldRequestContext,
     control_receipt_detail,
     persist_operator_control,
     replay_control_receipt,
@@ -180,7 +181,15 @@ class ExperimentRecoveryOrchestrator:
         detail = (
             {}
             if request.idempotency is None
-            else control_receipt_detail(request.idempotency, expected_receipt)
+            else control_receipt_detail(
+                request.idempotency,
+                expected_receipt,
+                request_context=RetryFoldRequestContext(
+                    candidate_id=request.candidate_id,
+                    fold_id=request.fold_id,
+                    expected_revision=request.expected_revision,
+                ),
+            )
         )
         try:
             self._store.retry_terminal_fold(

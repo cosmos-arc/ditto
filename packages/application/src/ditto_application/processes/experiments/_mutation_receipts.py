@@ -13,11 +13,13 @@ from ditto_analysis.experiments import (
     ExperimentStatus,
     StatusEventRecord,
     StatusSubjectType,
+    canonical_payload,
 )
 
 from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.mutation_idempotency import (
     MutationIdempotency,
+    canonical_request_hash,
     canonical_resource_id,
     find_mutation_receipt,
     mutation_receipt_detail,
@@ -38,21 +40,33 @@ _CONTROL_OPERATIONS = frozenset(
     }
 )
 _LIVE = frozenset({ExperimentStatus.QUEUED, ExperimentStatus.RUNNING})
+_CONTROL_CONTEXT_KEY = "experiment_control_request"
+_CONTROL_CONTEXT_KIND = "ditto_experiment_control_request"
+_CONTROL_CONTEXT_KEYS = frozenset({"schema_version", "kind", "operation_id", "request"})
 _EXPERIMENT_EVENT_SEMANTICS = {
     "research_pause_experiment": (
         ExperimentStatus.PAUSE_REQUESTED,
         ExperimentDesiredState.PAUSE,
         "operator_pause",
+        frozenset({ExperimentStatus.RUNNING}),
     ),
     "research_cancel_experiment": (
         ExperimentStatus.CANCEL_REQUESTED,
         ExperimentDesiredState.CANCEL,
         "operator_cancel",
+        frozenset(
+            {
+                ExperimentStatus.QUEUED,
+                ExperimentStatus.RUNNING,
+                ExperimentStatus.PAUSED,
+            }
+        ),
     ),
     "research_resume_experiment": (
         ExperimentStatus.QUEUED,
         ExperimentDesiredState.RUN,
         "operator_resume",
+        frozenset({ExperimentStatus.PAUSED}),
     ),
 }
 
@@ -68,6 +82,50 @@ class OperatorControlIntent:
     reason_code: str
 
 
+@dataclass(frozen=True, slots=True)
+class OperatorControlRequestContext:
+    """Canonical request fields that bind one experiment-control event."""
+
+    expected_revision: int
+
+    def __post_init__(self) -> None:
+        if type(self.expected_revision) is not int or self.expected_revision < 0:
+            raise _invalid_receipt()
+
+    def request_payload(self) -> dict[str, object]:
+        return {"expected_revision": self.expected_revision}
+
+
+@dataclass(frozen=True, slots=True)
+class RetryFoldRequestContext:
+    """Canonical request fields that bind one exact fold-retry event."""
+
+    candidate_id: str
+    fold_id: str
+    expected_revision: int
+
+    def __post_init__(self) -> None:
+        if (
+            type(self.candidate_id) is not str
+            or not self.candidate_id
+            or type(self.fold_id) is not str
+            or not self.fold_id
+            or type(self.expected_revision) is not int
+            or self.expected_revision < 0
+        ):
+            raise _invalid_receipt()
+
+    def request_payload(self) -> dict[str, object]:
+        return {
+            "candidate_id": self.candidate_id,
+            "fold_id": self.fold_id,
+            "expected_revision": self.expected_revision,
+        }
+
+
+type ControlRequestContext = OperatorControlRequestContext | RetryFoldRequestContext
+
+
 def _invalid_receipt() -> AppProcessError:
     return AppProcessError(
         "durable experiment mutation receipt is invalid",
@@ -75,6 +133,17 @@ def _invalid_receipt() -> AppProcessError:
             "code": "IDEMPOTENCY_RECEIPT_INVALID",
             "reason": "idempotency_receipt_invalid",
         },
+    )
+
+
+def _has_exact_string_keys(
+    value: Mapping[object, object],
+    expected: frozenset[str],
+) -> bool:
+    keys = tuple(value)
+    return (
+        all(type(key) is str for key in keys)
+        and cast("frozenset[str]", frozenset(keys)) == expected
     )
 
 
@@ -94,13 +163,33 @@ def control_receipt_detail(
     identity: MutationIdempotency,
     receipt: ExperimentControlReceipt,
     *,
+    request_context: ControlRequestContext,
     detail: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Embed one typed control receipt into the transition event detail."""
+    is_retry = identity.operation_id == "research_retry_fold_experiment"
+    if (
+        identity.operation_id not in _CONTROL_OPERATIONS
+        or (is_retry and type(request_context) is not RetryFoldRequestContext)
+        or (not is_retry and type(request_context) is not OperatorControlRequestContext)
+        or (detail is not None and _CONTROL_CONTEXT_KEY in detail)
+    ):
+        raise _invalid_receipt()
+    request_payload = request_context.request_payload()
+    if canonical_request_hash(request_payload) != identity.request_hash:
+        raise _invalid_receipt()
     return mutation_receipt_detail(
         identity,
         response=control_receipt_payload(receipt),
-        detail=detail,
+        detail={
+            **dict(detail or {}),
+            _CONTROL_CONTEXT_KEY: {
+                "schema_version": 1,
+                "kind": _CONTROL_CONTEXT_KIND,
+                "operation_id": identity.operation_id,
+                "request": request_payload,
+            },
+        },
     )
 
 
@@ -164,6 +253,12 @@ def _receipt_match(
         except AppCommandError as exc:
             raise AppProcessError(str(exc), details=exc.details) from exc
         if receipt is not None:
+            try:
+                actual_hash = canonical_payload(event.detail).content_hash
+            except (TypeError, ValueError) as exc:
+                raise _invalid_receipt() from exc
+            if actual_hash != event.detail_hash:
+                raise _invalid_receipt()
             matches.append((event, receipt))
     if len(matches) > 1:
         raise _invalid_receipt()
@@ -171,6 +266,59 @@ def _receipt_match(
         return None
     event, value = matches[0]
     return _decode_control_receipt(value), event
+
+
+def _decode_request_context(
+    event: StatusEventRecord,
+    identity: MutationIdempotency,
+    *,
+    is_retry: bool,
+    candidate_id: str | None,
+    fold_id: str | None,
+) -> int:
+    raw_context = event.detail.get(_CONTROL_CONTEXT_KEY)
+    if not isinstance(raw_context, Mapping):
+        raise _invalid_receipt()
+    context = cast("Mapping[object, object]", raw_context)
+    if (
+        not _has_exact_string_keys(context, _CONTROL_CONTEXT_KEYS)
+        or context["schema_version"] != 1
+        or context["kind"] != _CONTROL_CONTEXT_KIND
+        or context["operation_id"] != identity.operation_id
+        or not isinstance(context["request"], Mapping)
+    ):
+        raise _invalid_receipt()
+    request = cast("Mapping[object, object]", context["request"])
+    expected_keys = (
+        frozenset({"candidate_id", "fold_id", "expected_revision"})
+        if is_retry
+        else frozenset({"expected_revision"})
+    )
+    if (
+        not _has_exact_string_keys(request, expected_keys)
+        or type(request["expected_revision"]) is not int
+        or request["expected_revision"] < 0
+        or (
+            is_retry
+            and (
+                type(request["candidate_id"]) is not str
+                or not request["candidate_id"]
+                or type(request["fold_id"]) is not str
+                or not request["fold_id"]
+                or request["candidate_id"] != candidate_id
+                or request["fold_id"] != fold_id
+            )
+        )
+    ):
+        raise _invalid_receipt()
+    typed_request = cast("Mapping[str, object]", request)
+    try:
+        request_hash = canonical_request_hash(typed_request)
+    except AppCommandError as exc:
+        raise _invalid_receipt() from exc
+    if request_hash != identity.request_hash:
+        raise _invalid_receipt()
+    return request["expected_revision"]
 
 
 def _expected_resource(
@@ -240,10 +388,11 @@ def _validate_transition_event(
     *,
     operation_id: str,
     is_retry: bool,
+    expected_revision: int,
 ) -> None:
     if is_retry:
         invalid = (
-            event.subject_revision < 1
+            event.subject_revision != expected_revision + 1
             or event.previous_status is not ExperimentStatus.FAILED
             or event.status is not ExperimentStatus.QUEUED
             or event.desired_state is not None
@@ -253,14 +402,15 @@ def _validate_transition_event(
             or event.reason_code != "terminal_fold_retry"
         )
     else:
-        expected_status, expected_desired, expected_reason = (
+        expected_status, expected_desired, expected_reason, legal_predecessors = (
             _EXPERIMENT_EVENT_SEMANTICS[operation_id]
         )
         invalid = (
-            event.candidate_id is not None
+            event.subject_revision != expected_revision + 1
+            or event.candidate_id is not None
             or event.fold_id is not None
             or event.attempt_id is not None
-            or event.previous_status is None
+            or event.previous_status not in legal_predecessors
             or event.status is not expected_status
             or event.desired_state is not expected_desired
             or event.stage is None
@@ -307,6 +457,13 @@ def _find_control_receipt_event(
         return None
     receipt, event = match
     is_retry = identity.operation_id == "research_retry_fold_experiment"
+    expected_revision = _decode_request_context(
+        event,
+        identity,
+        is_retry=is_retry,
+        candidate_id=candidate_id,
+        fold_id=fold_id,
+    )
     _validate_event_target(
         event,
         receipt,
@@ -321,6 +478,7 @@ def _find_control_receipt_event(
         receipt,
         operation_id=identity.operation_id,
         is_retry=is_retry,
+        expected_revision=expected_revision,
     )
     _validate_receipt_projection_event(events, receipt)
     return receipt, event
@@ -431,7 +589,13 @@ def persist_operator_control(
         live_run_ids=live_run_ids,
     )
     detail = (
-        {} if identity is None else control_receipt_detail(identity, expected_receipt)
+        {}
+        if identity is None
+        else control_receipt_detail(
+            identity,
+            expected_receipt,
+            request_context=OperatorControlRequestContext(intent.expected_revision),
+        )
     )
     try:
         projection = store.transition_operator_experiment(
@@ -468,6 +632,8 @@ def persist_operator_control(
 
 __all__ = [
     "OperatorControlIntent",
+    "OperatorControlRequestContext",
+    "RetryFoldRequestContext",
     "control_receipt_detail",
     "control_receipt_payload",
     "experiment_status_events",

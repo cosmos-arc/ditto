@@ -122,10 +122,8 @@ def raise_research_control_error(exc: AppError) -> Never:
         raise APIError(message, status_code=500, error_code=code) from exc
     if reason in _CONTROL_NOT_FOUND_REASONS or "not_found" in reason:
         raise NotFoundError(message) from exc
-    if (
-        reason in _CONTROL_CONFLICT_REASONS
-        or any(reason.startswith(prefix) for prefix in _CONTROL_CONFLICT_PREFIXES)
-        or message == "experiment control was persisted but notification failed"
+    if reason in _CONTROL_CONFLICT_REASONS or any(
+        reason.startswith(prefix) for prefix in _CONTROL_CONFLICT_PREFIXES
     ):
         raise ConflictError(message) from exc
     raise BadRequestError(message) from exc

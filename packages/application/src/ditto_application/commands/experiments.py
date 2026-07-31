@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
+from ditto_platform.foundation import logger
+
 from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.mutation_idempotency import MutationIdempotency
 from ditto_application.processes.experiments._coordinator_contract import (
@@ -312,13 +314,13 @@ class _ExperimentControlHandler:
                     occurred_at=receipt.occurred_at,
                 )
             except Exception as exc:
-                raise _notification_error(
+                _record_notification_warning(
                     exc,
                     receipt,
                     command_name=command_name,
                     notification="stop_live_run",
                     notification_target=run_id,
-                ) from exc
+                )
 
     def _notify_scheduler(
         self,
@@ -334,13 +336,13 @@ class _ExperimentControlHandler:
                 occurred_at=receipt.occurred_at,
             )
         except Exception as exc:
-            raise _notification_error(
+            _record_notification_warning(
                 exc,
                 receipt,
                 command_name=command_name,
                 notification="scheduler_action",
                 notification_target=action,
-            ) from exc
+            )
 
 
 class PauseExperimentHandler(_ExperimentControlHandler):
@@ -472,28 +474,23 @@ def _control_process_error(
     return AppCommandError(str(error), details=details)
 
 
-def _notification_error(
+def _record_notification_warning(
     error: Exception,
     receipt: ExperimentControlReceipt,
     *,
     command_name: str,
     notification: str,
     notification_target: str,
-) -> AppCommandError:
-    details = dict(error.details) if isinstance(error, AppProcessError) else {}
-    details.update(
-        {
-            "command": command_name,
-            "notification": notification,
-            "notification_target": notification_target,
-            "error_type": type(error).__name__,
-            "experiment_id": receipt.experiment_id,
-            "status": receipt.status,
-            "desired_state": receipt.desired_state,
-            "revision": receipt.revision,
-        },
-    )
-    return AppCommandError(
-        "experiment control was persisted but notification failed",
-        details=details,
+) -> None:
+    logger.warning(
+        "experiment_control_notification_failed",
+        event="experiment_control_notification_failed",
+        command=command_name,
+        notification=notification,
+        notification_target=notification_target,
+        error_type=type(error).__name__,
+        experiment_id=receipt.experiment_id,
+        status=receipt.status,
+        desired_state=receipt.desired_state,
+        revision=receipt.revision,
     )

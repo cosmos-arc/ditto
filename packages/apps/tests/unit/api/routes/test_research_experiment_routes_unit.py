@@ -939,6 +939,20 @@ async def test_pause_experiment_maps_not_found_reason_to_not_found() -> None:
         await _call_pause(ExperimentControlRequest(expected_revision=1), handler)
 
 
+async def test_pause_experiment_maps_invalid_receipt_to_stable_internal_error() -> None:
+    handler = MagicMock(spec=PauseExperimentHandler)
+    handler.handle.side_effect = _control_error(
+        "idempotency_receipt_invalid",
+        code="IDEMPOTENCY_RECEIPT_INVALID",
+    )
+
+    with pytest.raises(APIError) as caught:
+        await _call_pause(ExperimentControlRequest(expected_revision=1), handler)
+
+    assert caught.value.status_code == 500
+    assert caught.value.error_code == "IDEMPOTENCY_RECEIPT_INVALID"
+
+
 async def test_retry_fold_experiment_passes_fold_fields() -> None:
     handler = MagicMock(spec=RetryExperimentFoldHandler)
     handler.handle.return_value = _receipt()

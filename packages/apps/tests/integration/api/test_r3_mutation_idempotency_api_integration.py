@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 import httpx
 import pytest
@@ -15,7 +17,13 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentReader,
     SQLiteExperimentWriter,
 )
-from ditto_application.commands.experiments import LaunchExperimentHandler
+from ditto_application.commands.experiments import (
+    ExperimentControlNotifier,
+    ExperimentControlProcess,
+    ExperimentControlReceipt,
+    LaunchExperimentHandler,
+    PauseExperimentHandler,
+)
 from ditto_application.commands.strategy import (
     CreateStrategyHandler,
     UpdateStrategyHandler,
@@ -35,7 +43,11 @@ from ditto_application.processes.experiments.planning_request_builder import (
     build_experiment_planning_request,
 )
 from ditto_apps.api.errors import APIError
+from ditto_apps.api.routes import research_experiment_routes
 from ditto_apps.api.routes import strategy as strategy_routes
+from ditto_apps.api.routes.research_experiment_routes import (
+    router as research_experiment_router,
+)
 from ditto_apps.api.routes.strategy import router
 from ditto_apps.middleware import (
     api_error_handler,
@@ -673,6 +685,99 @@ async def test_launch_receipt_replays_after_database_and_container_restart(
     finally:
         await restarted_container.close()
         restarted_database.close_all()
+
+
+async def test_control_notification_failure_still_returns_exact_http_replay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def run_inline(
+        func: object,
+        /,
+        *args: object,
+        **kwargs: object,
+    ) -> object:
+        assert callable(func)
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(research_experiment_routes, "run_blocking", run_inline)
+
+    class ReplayProcess:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.durable_events = 0
+            self.identity = None
+            self.receipt: ExperimentControlReceipt | None = None
+
+        def pause(self, **values: object) -> ExperimentControlReceipt:
+            self.calls += 1
+            if self.receipt is None:
+                self.durable_events += 1
+                self.identity = values["idempotency"]
+                self.receipt = ExperimentControlReceipt(
+                    experiment_id=str(values["experiment_id"]),
+                    status="pause_requested",
+                    desired_state="pause",
+                    revision=8,
+                    occurred_at=cast("datetime", values["occurred_at"]),
+                    live_run_ids=("run-1",),
+                )
+                return self.receipt
+            assert values["idempotency"] == self.identity
+            return replace(self.receipt, replayed=True)
+
+    class FailingNotifier:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def notify_run_stop(self, **_values: object) -> None:
+            self.calls += 1
+            raise RuntimeError("transport unavailable")
+
+        def notify_scheduler(self, **_values: object) -> None:
+            raise AssertionError("pause must not wake the scheduler")
+
+    process = ReplayProcess()
+    notifier = FailingNotifier()
+    handler = PauseExperimentHandler(
+        process=cast("ExperimentControlProcess", process),
+        notifier=cast("ExperimentControlNotifier", notifier),
+    )
+
+    class TestProvider(Provider):
+        scope = Scope.APP
+
+        @provide
+        def pause_handler(self) -> PauseExperimentHandler:
+            return handler
+
+    container = make_async_container(TestProvider())
+    app = FastAPI()
+    setup_dishka(container=container, app=app)
+    app.include_router(research_experiment_router, prefix="/api/v1")
+    app.add_exception_handler(APIError, api_error_handler)
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+            base_url="http://testserver",
+        ) as client:
+            first = await client.post(
+                "/api/v1/research/experiments/experiment-1/pause",
+                json={"expected_revision": 7},
+                headers={"Idempotency-Key": "pause.notification-failure-001"},
+            )
+            replay = await client.post(
+                "/api/v1/research/experiments/experiment-1/pause",
+                json={"expected_revision": 7},
+                headers={"Idempotency-Key": "pause.notification-failure-001"},
+            )
+    finally:
+        await container.close()
+
+    assert first.status_code == replay.status_code == 200
+    assert first.json() == replay.json()
+    assert process.calls == 2
+    assert process.durable_events == 1
+    assert notifier.calls == 1
 
 
 async def test_required_header_validation_and_openapi_surface(

@@ -24,6 +24,10 @@ from ditto_application.commands.experiments import (
     RetryExperimentFoldHandler,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.mutation_idempotency import (
+    build_mutation_idempotency,
+    canonical_resource_id,
+)
 from ditto_application.processes.experiments.planning_process import (
     ExperimentLaunchReceipt,
     ExperimentPlanningProcess,
@@ -393,6 +397,146 @@ def test_exact_control_replay_does_not_repeat_post_commit_notification() -> None
 
 
 @pytest.mark.parametrize(
+    ("operation_id", "handler_type", "command", "process_action", "notification"),
+    [
+        (
+            "research_pause_experiment",
+            PauseExperimentHandler,
+            PauseExperimentCommand,
+            "pause",
+            "notify_run_stop",
+        ),
+        (
+            "research_cancel_experiment",
+            CancelExperimentHandler,
+            CancelExperimentCommand,
+            "cancel",
+            "notify_run_stop",
+        ),
+        (
+            "research_resume_experiment",
+            ResumeExperimentHandler,
+            ResumeExperimentCommand,
+            "resume",
+            "notify_scheduler",
+        ),
+        (
+            "research_retry_fold_experiment",
+            RetryExperimentFoldHandler,
+            RetryExperimentFoldCommand,
+            "retry_fold",
+            "notify_scheduler",
+        ),
+    ],
+)
+def test_first_notification_failure_and_same_key_replay_return_exact_response(
+    operation_id: str,
+    handler_type: type[
+        PauseExperimentHandler
+        | CancelExperimentHandler
+        | ResumeExperimentHandler
+        | RetryExperimentFoldHandler
+    ],
+    command: type[
+        PauseExperimentCommand
+        | CancelExperimentCommand
+        | ResumeExperimentCommand
+        | RetryExperimentFoldCommand
+    ],
+    process_action: str,
+    notification: str,
+) -> None:
+    timeline: list[tuple[object, ...]] = []
+    raw_key = f"{process_action}.notification-failure-001"
+    request_payload: dict[str, object] = {"expected_revision": 7}
+    resource_id = canonical_resource_id(
+        "experiment",
+        {"experiment_id": "experiment-1"},
+    )
+    command_values: tuple[object, ...] = ("experiment-1", 7, NOW)
+    receipt_status = {
+        "pause": ("pause_requested", "pause"),
+        "cancel": ("cancel_requested", "cancel"),
+        "resume": ("queued", "run"),
+        "retry_fold": ("running", "run"),
+    }[process_action]
+    if process_action == "retry_fold":
+        request_payload = {
+            "candidate_id": "candidate-2",
+            "fold_id": "fold-3",
+            "expected_revision": 7,
+        }
+        resource_id = canonical_resource_id(
+            "experiment_fold",
+            {
+                "experiment_id": "experiment-1",
+                "candidate_id": "candidate-2",
+                "fold_id": "fold-3",
+            },
+        )
+        command_values = ("experiment-1", "candidate-2", "fold-3", 7, NOW)
+    identity = build_mutation_idempotency(
+        operation_id=operation_id,
+        resource_id=resource_id,
+        raw_key=raw_key,
+        request_payload=request_payload,
+    )
+    receipts = iter(
+        (
+            _ReplayAwareControlReceipt(
+                "experiment-1",
+                receipt_status[0],
+                receipt_status[1],
+                8,
+                NOW,
+                ("run-1",) if notification == "notify_run_stop" else (),
+                False,
+            ),
+            _ReplayAwareControlReceipt(
+                "experiment-1",
+                receipt_status[0],
+                receipt_status[1],
+                8,
+                NOW,
+                ("run-1",) if notification == "notify_run_stop" else (),
+                True,
+            ),
+        )
+    )
+
+    class ReplayProcess:
+        def _result(self, **values: object) -> _ReplayAwareControlReceipt:
+            timeline.append(("process", process_action, values))
+            return next(receipts)
+
+        pause = _result
+        cancel = _result
+        resume = _result
+        retry_fold = _result
+
+    handler = handler_type(
+        process=cast("ExperimentControlProcess", ReplayProcess()),
+        notifier=cast(
+            "ExperimentControlNotifier",
+            _ControlNotifierDouble(
+                timeline=timeline,
+                error=RuntimeError("transport unavailable"),
+            ),
+        ),
+    )
+    request = command(*command_values, identity)
+
+    first = handler.handle(request)
+    replay = handler.handle(request)
+
+    assert first == replay
+    assert [item for item in timeline if item[0] == notification] == [
+        next(item for item in timeline if item[0] == notification)
+    ]
+    assert len([item for item in timeline if item[0] == "process"]) == 2
+
+
+@pytest.mark.parametrize(
     ("handler_type", "command", "status", "desired_state", "command_name"),
     [
         (
@@ -417,6 +561,7 @@ def test_stop_notification_failure_preserves_durable_receipt_without_retry(
     status: str,
     desired_state: str,
     command_name: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     timeline: list[tuple[object, ...]] = []
     receipt = _control_receipt(
@@ -428,19 +573,23 @@ def test_stop_notification_failure_preserves_durable_receipt_without_retry(
         receipts={desired_state: receipt},
         timeline=timeline,
     )
-    notification_error = RuntimeError("transport unavailable")
     notifier = _ControlNotifierDouble(
         timeline=timeline,
-        error=notification_error,
+        error=RuntimeError("transport unavailable"),
+    )
+    warning = Mock()
+    monkeypatch.setattr(
+        "ditto_application.commands.experiments.logger.warning",
+        warning,
     )
     handler = handler_type(
         process=cast("ExperimentControlProcess", process),
         notifier=cast("ExperimentControlNotifier", notifier),
     )
 
-    with pytest.raises(AppCommandError) as exc_info:
-        handler.handle(command)
+    result = handler.handle(command)
 
+    assert result is receipt
     assert timeline == [
         ("process", desired_state, "experiment-1", 7, NOW),
         (
@@ -450,18 +599,28 @@ def test_stop_notification_failure_preserves_durable_receipt_without_retry(
             desired_state,
             NOW,
         ),
+        (
+            "notify_run_stop",
+            "experiment-1",
+            "run-2",
+            desired_state,
+            NOW,
+        ),
     ]
-    assert exc_info.value.details == {
-        "command": command_name,
-        "notification": "stop_live_run",
-        "notification_target": "run-1",
-        "error_type": "RuntimeError",
-        "experiment_id": "experiment-1",
-        "status": status,
-        "desired_state": desired_state,
-        "revision": 8,
-    }
-    assert exc_info.value.__cause__ is notification_error
+    assert warning.call_count == 2
+    for call, run_id in zip(warning.call_args_list, ("run-1", "run-2"), strict=True):
+        assert call.args == ("experiment_control_notification_failed",)
+        assert call.kwargs == {
+            "event": "experiment_control_notification_failed",
+            "command": command_name,
+            "notification": "stop_live_run",
+            "notification_target": run_id,
+            "error_type": "RuntimeError",
+            "experiment_id": "experiment-1",
+            "status": status,
+            "desired_state": desired_state,
+            "revision": 8,
+        }
 
 
 def test_resume_persists_then_notifies_scheduler_without_child_run() -> None:
@@ -521,37 +680,77 @@ def test_retry_fold_persists_then_notifies_scheduler_without_child_run() -> None
     ]
 
 
-def test_scheduler_notification_failure_preserves_durable_receipt() -> None:
+@pytest.mark.parametrize(
+    ("handler_type", "command", "process_action", "command_name"),
+    [
+        (
+            ResumeExperimentHandler,
+            ResumeExperimentCommand("experiment-1", 8, NOW),
+            "resume",
+            "resume_experiment",
+        ),
+        (
+            RetryExperimentFoldHandler,
+            RetryExperimentFoldCommand(
+                "experiment-1",
+                "candidate-2",
+                "fold-3",
+                8,
+                NOW,
+            ),
+            "retry_fold",
+            "retry_experiment_fold",
+        ),
+    ],
+)
+def test_scheduler_notification_failure_preserves_durable_receipt(
+    handler_type: type[ResumeExperimentHandler | RetryExperimentFoldHandler],
+    command: ResumeExperimentCommand | RetryExperimentFoldCommand,
+    process_action: str,
+    command_name: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     timeline: list[tuple[object, ...]] = []
     receipt = _control_receipt(status="queued", desired_state="run", revision=9)
-    process = _ControlProcessDouble(receipts={"resume": receipt}, timeline=timeline)
-    notification_error = RuntimeError("scheduler wake failed")
+    process = _ControlProcessDouble(
+        receipts={process_action: receipt},
+        timeline=timeline,
+    )
     notifier = _ControlNotifierDouble(
         timeline=timeline,
-        error=notification_error,
+        error=RuntimeError("scheduler wake failed"),
     )
-    handler = ResumeExperimentHandler(
+    warning = Mock()
+    monkeypatch.setattr(
+        "ditto_application.commands.experiments.logger.warning",
+        warning,
+    )
+    handler = handler_type(
         process=cast("ExperimentControlProcess", process),
         notifier=cast("ExperimentControlNotifier", notifier),
     )
 
-    with pytest.raises(AppCommandError) as exc_info:
-        handler.handle(ResumeExperimentCommand("experiment-1", 8, NOW))
+    result = handler.handle(command)
 
-    assert timeline == [
-        ("process", "resume", "experiment-1", 8, NOW),
-        ("notify_scheduler", "experiment-1", "resume", NOW),
-    ]
-    assert exc_info.value.details == {
-        "command": "resume_experiment",
-        "notification": "scheduler_action",
-        "notification_target": "resume",
-        "error_type": "RuntimeError",
-        "experiment_id": "experiment-1",
-        "status": "queued",
-        "desired_state": "run",
-        "revision": 9,
-    }
+    assert result is receipt
+    assert timeline[-1] == (
+        "notify_scheduler",
+        "experiment-1",
+        process_action,
+        NOW,
+    )
+    warning.assert_called_once_with(
+        "experiment_control_notification_failed",
+        event="experiment_control_notification_failed",
+        command=command_name,
+        notification="scheduler_action",
+        notification_target=process_action,
+        error_type="RuntimeError",
+        experiment_id="experiment-1",
+        status="queued",
+        desired_state="run",
+        revision=9,
+    )
 
 
 @pytest.mark.parametrize(
