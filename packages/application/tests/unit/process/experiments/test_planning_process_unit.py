@@ -2646,6 +2646,43 @@ def test_partial_draft_replays_exactly_and_queued_replay_is_zero_write() -> None
     assert store.calls == []
 
 
+def test_partial_draft_rejects_immutable_request_drift_without_writes() -> None:
+    store = _Store()
+    store.fail_fold_call = 3
+    process = _process(store)
+    request = _request()
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+
+    with pytest.raises(AppProcessError):
+        process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert store.projection is not None
+    assert store.projection.record.status is ExperimentStatus.DRAFT
+
+    drifted = replace(request, seed=request.seed + 1)
+    drifted_report = process.preflight(drifted)
+    assert drifted_report.plan_hash is not None
+    assert drifted_report.plan_hash != report.plan_hash
+    store.fail_fold_call = None
+    store.calls.clear()
+
+    with pytest.raises(AppProcessError) as exc_info:
+        process.launch(
+            drifted,
+            confirmed_plan_hash=drifted_report.plan_hash,
+        )
+
+    assert exc_info.value.details == {
+        "code": "EXPERIMENT_ALREADY_EXISTS",
+        "reason": "immutable_experiment_replay_drift",
+        "experiment_id": request.experiment_id,
+    }
+    assert store.calls == []
+
+    receipt = process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert receipt.status == "queued"
+
+
 def test_committed_enqueue_retry_replays_before_every_planning_probe() -> None:
     store = _Store()
     request = _request()

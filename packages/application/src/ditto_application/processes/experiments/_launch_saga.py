@@ -255,9 +255,13 @@ def _verify_immutable_root(
         or projection.record.experiment_id != experiment_id
         or projection.record.created_at != prepared.spec.created_at
     ):
-        raise _saga_error(
-            "immutable_experiment_replay_drift",
-            experiment_id=str(experiment_id),
+        raise AppProcessError(
+            "experiment already exists with a different immutable planning identity",
+            details={
+                "code": "EXPERIMENT_ALREADY_EXISTS",
+                "reason": "immutable_experiment_replay_drift",
+                "experiment_id": str(experiment_id),
+            },
         )
 
 

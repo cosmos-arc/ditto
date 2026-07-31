@@ -63,6 +63,9 @@ from ditto_application.processes.experiments.planning_process import (
     ResearchCertificationResult,
     ResearchSnapshotEvidence,
 )
+from ditto_application.processes.experiments.planning_request_builder import (
+    build_experiment_planning_request,
+)
 from ditto_application.research_validation_contracts import (
     ResearchValidationAuthorityEvidence,
     ResearchValidationAuthorityRequest,
@@ -563,6 +566,95 @@ async def test_planning_routes_are_zero_write_for_preflight_and_replay_launch(
             schema["paths"]["/api/v1/research/experiments"]["post"]["operationId"]
             == "research_launch_experiment"
         )
+    finally:
+        await container.close()
+        database.close_all()
+
+
+async def test_partial_draft_identity_drift_is_409_and_zero_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject caller drift against one durable DRAFT root without mutation."""
+
+    async def run_inline(
+        func: object,
+        /,
+        *args: object,
+        **kwargs: object,
+    ) -> object:
+        assert callable(func)
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(research_experiment_routes, "run_blocking", run_inline)
+    database = ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+    reader = SQLiteExperimentReader(database)
+    writer = SQLiteExperimentWriter(database)
+    planning = ExperimentPlanningProcess(
+        reader=reader,
+        writer=writer,
+        certification_probe=_CertificationProbe(),
+        executor_probe=_ExecutorProbe(),
+        authority_probe=_AuthorityProbe(),
+    )
+    launch = LaunchExperimentHandler(planning)
+    document = _planning_document()
+    request = build_experiment_planning_request(document)
+    prepared = planning._prepare(request)
+    assert prepared.launch is not None
+    assert prepared.report.plan_hash is not None
+    writer.create_experiment(
+        prepared.launch.cycle,
+        prepared.launch.spec,
+        prepared.launch.initial_record,
+    )
+    connection = database.get_connection()
+    writes_after_partial_draft = connection.total_changes
+    drifted_document = deepcopy(document)
+    drifted_document["seed"] = 43
+    test_app, container = _planning_test_app(planning, launch)
+
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(
+                app=test_app,
+                raise_app_exceptions=False,
+            ),
+            base_url="http://testserver",
+        ) as client:
+            experiment_id = str(document["experiment_id"])
+            drifted_preflight = await client.post(
+                f"/api/v1/research/experiments/{experiment_id}/preflight",
+                json=drifted_document,
+            )
+            assert drifted_preflight.status_code == 200, drifted_preflight.text
+            drifted_plan_hash = drifted_preflight.json()["data"]["plan_hash"]
+            assert isinstance(drifted_plan_hash, str)
+            assert connection.total_changes == writes_after_partial_draft
+
+            drift = await client.post(
+                "/api/v1/research/experiments",
+                json={
+                    **drifted_document,
+                    "confirmed_plan_hash": drifted_plan_hash,
+                },
+            )
+
+            assert drift.status_code == 409
+            assert drift.json()["error_code"] == "EXPERIMENT_ALREADY_EXISTS"
+            assert connection.total_changes == writes_after_partial_draft
+
+            exact = await client.post(
+                "/api/v1/research/experiments",
+                json={
+                    **document,
+                    "confirmed_plan_hash": prepared.report.plan_hash,
+                },
+            )
+            assert exact.status_code == 200, exact.text
+            assert exact.json()["data"]["status"] == "queued"
+            assert connection.total_changes > writes_after_partial_draft
     finally:
         await container.close()
         database.close_all()

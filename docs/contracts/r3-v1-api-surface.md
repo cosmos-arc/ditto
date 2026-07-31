@@ -16,7 +16,7 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
 
 ## 1. 结论
 
-当前 runtime 有 29 个 R3 research/strategy operations；设计 §12.2 有 37 个。
+当前 runtime 有 31 个 R3 research/strategy operations；设计 §12.2 有 37 个。
 清单共 40 项：37 个设计 operation，加 3 个 W5/runtime-only operation。
 
 | 分类 | 数量 | 含义 |
