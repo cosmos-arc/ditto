@@ -688,13 +688,14 @@ def try_replay_durable_launch(
         if before.record.status is ExperimentStatus.DRAFT:
             if request_hash is None:
                 request_hash = request_hash_factory()
-            fence_durable_draft_launch(
+            if fence_durable_draft_launch(
                 reader=reader,
                 experiment_id=experiment_id,
                 confirmed_plan_hash=confirmed_plan_hash,
                 request_hash=request_hash,
-            )
-            return None
+            ):
+                return None
+            continue
         if not _is_progressed(before):
             raise _saga_error(
                 "experiment_not_replayable",

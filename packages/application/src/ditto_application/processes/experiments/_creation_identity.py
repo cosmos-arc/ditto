@@ -183,13 +183,18 @@ def fence_durable_draft_launch(
     experiment_id: str,
     confirmed_plan_hash: str,
     request_hash: str,
-) -> None:
-    """Fence modern DRAFT identity before probes; legacy empty detail falls back."""
+) -> bool:
+    """Return true for stable DRAFT; signal advanced state for reclassification."""
     typed_experiment_id = ExperimentId(experiment_id)
     for _ in range(_STABLE_DRAFT_READ_ATTEMPTS):
         before = reader.get_experiment_projection(typed_experiment_id)
-        if before is None or before.record.status is not ExperimentStatus.DRAFT:
-            return
+        if before is None:
+            raise _identity_error(
+                "concurrent_experiment_update",
+                experiment_id=experiment_id,
+            )
+        if before.record.status is not ExperimentStatus.DRAFT:
+            return False
         events = reader.list_status_events(typed_experiment_id)
         after = reader.get_experiment_projection(typed_experiment_id)
         if after is None or after != before:
@@ -208,7 +213,7 @@ def fence_durable_draft_launch(
             experiment_id=typed_experiment_id,
         )
         if identity is None:
-            return
+            return True
         if identity.request_hash != request_hash:
             raise AppProcessError(
                 "experiment already exists with a different planning request",
@@ -228,7 +233,7 @@ def fence_durable_draft_launch(
                     "confirmed_plan_hash": confirmed_plan_hash,
                 },
             )
-        return
+        return True
     raise _identity_error(
         "concurrent_experiment_update",
         experiment_id=experiment_id,

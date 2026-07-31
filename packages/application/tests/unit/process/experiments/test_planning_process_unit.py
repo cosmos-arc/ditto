@@ -3070,6 +3070,45 @@ def test_progressed_exact_aggregate_replay_returns_original_queued_receipt() -> 
     assert store.calls == []
 
 
+def test_draft_to_queued_read_race_replays_before_probes_or_writes() -> None:
+    store = _Store()
+    request = _request()
+    process = _process(store)
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    original = process.launch(request, confirmed_plan_hash=report.plan_hash)
+    assert store.projection is not None
+    queued = store.projection
+    store.projection = replace(
+        queued,
+        record=replace(
+            queued.record,
+            status=ExperimentStatus.DRAFT,
+            stage=ExperimentStage.PREFLIGHT,
+        ),
+        queue_ordinal=None,
+        revision=0,
+    )
+    store.projection_read_hook = lambda: setattr(store, "projection", queued)
+    store.calls.clear()
+    certification = _BombCertificationProbe()
+    executor = _BombExecutorProbe()
+    authority = _BombAuthorityProbe()
+
+    replay = _process(
+        store,
+        certification=certification,
+        executor=executor,
+        authority=authority,
+    ).launch(request, confirmed_plan_hash=report.plan_hash)
+
+    assert replay == original
+    assert certification.calls == []
+    assert executor.calls == 0
+    assert authority.calls == 0
+    assert store.calls == []
+
+
 def test_queued_to_running_read_race_retries_to_one_stable_launch_receipt() -> None:
     store = _Store()
     process = _process(store)
