@@ -5,11 +5,12 @@
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `689ccf11efc5e7651624e2ead1a42c84d745a58ffde379b3b70511a635727535`
+> JSON canonical SHA-256: `34c36ebc893cacc16e8b09baf1297a36890f7ead2a7c188e43f8aaa7ddb9a4c7`
 
 Task 4 classification 已由用户批准；批准 reference 为
-`user-message:2026-07-31:final-task4-classification-approved`。Candidate evidence
-bundle proposal 仍是 Task 9 的独立 `PENDING` checkpoint。
+`user-message:2026-07-31:final-task4-classification-approved`。Task 9 candidate
+evidence bundle proposal 也已独立批准；批准 reference 为
+`user-message:2026-08-01:task9-artifact-proposal-approved`。
 JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 SHA-256 对 JSON
 执行 UTF-8、对象 key 排序、无多余空白的 canonical serialization 后计算，
 用于证明本文绑定的是当前 machine-readable snapshot。
@@ -64,7 +65,7 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
     "candidate_evidence_bundle_proposal"
   ],
   "classification_approval_state": "APPROVED",
-  "candidate_bundle_proposal_state": "PENDING"
+  "candidate_bundle_proposal_state": "APPROVED"
 }
 ```
 <!-- END MACHINE-DERIVED APPROVAL SUMMARY -->
@@ -73,18 +74,18 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
 idempotency 仍可由 Task 7 加固，但不能因此把 replacement 伪标为不存在。
 `DEFER` 不设置 closing task。
 
-审批使用两个独立状态机，当前真实快照为 `APPROVED / PENDING`：
+审批使用两个独立状态机，当前真实快照为 `APPROVED / APPROVED`：
 
 1. Task 4 classification approval：`approval_state=PENDING` 时
    `approval_required` 与全部 `DEFER/EQUIVALENT.user_approval` 都必须为
    `PENDING`，其 `decision/reference=null`。
 2. 用户已批准完整 classification：顶层、`approval_required` 与上述每个 entry
-   已同步为 `APPROVED`，并记录非空 decision/reference；candidate bundle
-   proposal 按规则仍保持 `PENDING`。
+   已同步为 `APPROVED`，并记录非空 decision/reference。
 3. Task 9 单独 artifact checkpoint 后，proposal 才能变为 `APPROVED` 或
    `NOT_REQUIRED`。前者必须记录单独批准 reference；后者必须记录
    `schema unchanged`、复用 generic envelope 的证据 reference。classification
-   尚未 `APPROVED` 时，proposal 不得离开 `PENDING`。
+   尚未 `APPROVED` 时，proposal 不得离开 `PENDING`。当前 proposal 已按前者
+   独立转为 `APPROVED`。
 
 ## 2. APPROVED CLASSIFICATION DECISION
 
@@ -115,8 +116,7 @@ idempotency 仍可由 Task 7 加固，但不能因此把 replacement 伪标为�
 这 8 项的新增 scope、跨层文件和前端依赖已补进 completion plan，并已作为
 Task 4 classification 的完整范围获批。
 
-**Candidate immutable bundle/manifest proposal（仍待 Task 9 单独 artifact
-批准）：**
+**Candidate immutable bundle/manifest proposal（Task 9 已独立批准）：**
 
 - manifest identity 为
   `experiment_id + candidate_id + comparison_payload_hash + comparison_revision`；
@@ -141,10 +141,13 @@ Task 4 classification 的完整范围获批。
 - 必须覆盖 2+ folds、retry 新旧 attempts、stable order、page boundary/no
   duplicate、cross-kind cursor rejection、hash drift 和 restart parity。
 
-以上只冻结提案，不表示 artifact kind/version/manifest 已获批。若不能复用现有
-generic content-addressed envelope，Task 9 Step 4 必须展示 schema/version、
-compatibility、migration、backup/restore 与 owner 影响并获得单独批准；批准前
-不得写 production artifact。
+批准结论为：ArtifactManifest v1 与 Research SQLite Schema v1 均保持不变并
+复用既有 generic content-addressed envelope/index；不新增 DDL、migration、
+backfill、architecture allowance 或环境配置。新增 artifact kind 为
+`fold_selection_trace_exposures_v1` 与 `candidate_evidence_bundle_v1`；新写入使用
+ReviewPacket v3，v1/v2/v3 均可读，v1/v2 只读且不迁移、不回填。ETF proving lane
+显式记录 `NOT_APPLICABLE / ETF_LANE`。批准 reference 为
+`user-message:2026-08-01:task9-artifact-proposal-approved`。
 
 ### 2.3 六个 EQUIVALENT
 

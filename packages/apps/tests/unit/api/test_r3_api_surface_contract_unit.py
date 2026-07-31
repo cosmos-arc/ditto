@@ -28,6 +28,16 @@ _TASK4_APPROVAL_DECISION = (
     "Approved: 6 EQUIVALENT + 1 redundant launch alias DEFER + "
     "8 full-scope IMPLEMENT + pin-max-4 session-local."
 )
+_TASK9_ARTIFACT_APPROVAL_REFERENCE = (
+    "user-message:2026-08-01:task9-artifact-proposal-approved"
+)
+_TASK9_ARTIFACT_APPROVAL_DECISION = (
+    "Approved Task 9 artifact contract: ArtifactManifest v1 and Research SQLite "
+    "Schema v1 remain unchanged with no DDL; add "
+    "fold_selection_trace_exposures_v1 and candidate_evidence_bundle_v1; "
+    "ReviewPacket v3 is write-current while v1/v2 remain read-only without "
+    "migration/backfill; ETF uses NOT_APPLICABLE/ETF_LANE."
+)
 app = create_openapi_app(include_debug=False)
 
 _DESIGN_12_2_OPERATIONS = frozenset(
@@ -491,10 +501,10 @@ def test_approval_state_machines_are_auditable_and_independent(
         _assert_approval_state_machine(invalid)
 
 
-def test_current_task4_checkpoint_is_approved_with_task9_proposal_pending(
+def test_current_task4_and_task9_checkpoints_are_independently_approved(
     surface: dict[str, Any],
 ) -> None:
-    """The checked-in checkpoint advances only through an explicit follow-up."""
+    """Each checked-in checkpoint binds its own explicit user approval."""
     assert surface["approval_state"] == "APPROVED"
     approval = surface["approval_required"]
     assert approval["status"] == "APPROVED"
@@ -507,9 +517,28 @@ def test_current_task4_checkpoint_is_approved_with_task9_proposal_pending(
             assert entry["user_approval"]["reference"] == _TASK4_APPROVAL_REFERENCE
 
     proposal = surface["candidate_evidence_bundle_proposal"]
-    assert proposal["approval_state"] == "PENDING"
-    assert proposal["decision"] is None
-    assert proposal["reference"] is None
+    assert proposal["approval_state"] == "APPROVED"
+    assert proposal["decision"] == _TASK9_ARTIFACT_APPROVAL_DECISION
+    assert proposal["reference"] == _TASK9_ARTIFACT_APPROVAL_REFERENCE
+    assert proposal["approved_contract"] == {
+        "artifact_manifest_schema_version": 1,
+        "research_sqlite_schema_version": 1,
+        "database_ddl": "NONE",
+        "artifact_kinds": [
+            "fold_selection_trace_exposures_v1",
+            "candidate_evidence_bundle_v1",
+        ],
+        "review_packet": {
+            "write_version": 3,
+            "read_versions": [1, 2, 3],
+            "migration": "NONE",
+            "backfill": "NONE",
+        },
+        "etf_applicability": {
+            "status": "NOT_APPLICABLE",
+            "lane": "ETF_LANE",
+        },
+    }
 
 
 def test_approval_projection_is_exact_and_unique(surface: dict[str, Any]) -> None:

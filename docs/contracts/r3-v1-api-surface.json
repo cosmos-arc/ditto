@@ -55,10 +55,29 @@
     ]
   },
   "candidate_evidence_bundle_proposal": {
-    "approval_state": "PENDING",
-    "decision": null,
-    "reference": null,
-    "schema_change_policy": "This is a Task 9 artifact proposal, not approval to write production artifacts. If it requires a new artifact kind/version or manifest schema, Task 9 Step 4 must present the exact schema, compatibility, migration, backup/restore, and ownership impact and obtain separate approval first.",
+    "approval_state": "APPROVED",
+    "decision": "Approved Task 9 artifact contract: ArtifactManifest v1 and Research SQLite Schema v1 remain unchanged with no DDL; add fold_selection_trace_exposures_v1 and candidate_evidence_bundle_v1; ReviewPacket v3 is write-current while v1/v2 remain read-only without migration/backfill; ETF uses NOT_APPLICABLE/ETF_LANE.",
+    "reference": "user-message:2026-08-01:task9-artifact-proposal-approved",
+    "schema_change_policy": "Approved without ArtifactManifest or Research SQLite schema change: both remain v1 and the existing generic content-addressed artifact envelope/index is reused. No DDL, migration, backfill, architecture allowance, or additional environment configuration is authorized.",
+    "approved_contract": {
+      "artifact_manifest_schema_version": 1,
+      "research_sqlite_schema_version": 1,
+      "database_ddl": "NONE",
+      "artifact_kinds": [
+        "fold_selection_trace_exposures_v1",
+        "candidate_evidence_bundle_v1"
+      ],
+      "review_packet": {
+        "write_version": 3,
+        "read_versions": [1, 2, 3],
+        "migration": "NONE",
+        "backfill": "NONE"
+      },
+      "etf_applicability": {
+        "status": "NOT_APPLICABLE",
+        "lane": "ETF_LANE"
+      }
+    },
     "manifest_identity": [
       "experiment_id",
       "candidate_id",
