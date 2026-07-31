@@ -16,14 +16,10 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments.preflight_authority import (
     decode_preflight_authority,
 )
-from ditto_strategy.alpha.parameters import ParameterValue
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._baseline_runtime_evidence import (
     decode_baseline_runtime_evidence,
-)
-from ditto_application.processes.experiments._planning_values import (
-    BaselineInputValue,
 )
 from ditto_application.processes.experiments._preflight_certification_codec import (
     validate_certification_preimage,
@@ -33,9 +29,6 @@ from ditto_application.processes.experiments._preflight_check_codec import (
 )
 from ditto_application.processes.experiments._preflight_decode_values import (
     decode_boolean as _boolean,
-)
-from ditto_application.processes.experiments._preflight_decode_values import (
-    decode_date as _date,
 )
 from ditto_application.processes.experiments._preflight_decode_values import (
     decode_integer as _integer,
@@ -69,14 +62,12 @@ from ditto_application.processes.experiments._process_error import (
 )
 from ditto_application.processes.experiments.planning import (
     BaselineCandidatePlan,
-    BaselineDescriptor,
     BinderCandidatePlan,
     CandidateMatrixSpec,
     ExperimentBudgetSpec,
     ExperimentPlanningSpec,
     ExperimentTrack,
     ExperimentWorkPlan,
-    ParameterAxis,
     ResourceCostModel,
     ValidationWorkload,
     plan_experiment_work,
@@ -84,10 +75,15 @@ from ditto_application.processes.experiments.planning import (
 from ditto_application.processes.experiments.planning_contracts import (
     ExperimentPreflightCheck,
 )
+from ditto_application.processes.experiments.planning_document_codec import (
+    candidate_matrix_spec_payload,
+    decode_candidate_matrix_spec,
+    decode_dataset_requirements,
+    planning_parameter_type,
+)
 from ditto_application.processes.experiments.planning_probes import (
     CandidateExecutorEvidence,
     ExperimentSnapshotIdentity,
-    ResearchDatasetRequirement,
     is_canonical_content_hash,
 )
 from ditto_application.research_validation_contracts import (
@@ -221,65 +217,6 @@ def _validation_plan(value: object) -> ValidationProtocolPlan:
     )
 
 
-def _parameter_type(value: object) -> str:
-    if type(value) is bool:
-        return "bool"
-    if type(value) is int:
-        return "int"
-    if type(value) is float:
-        return "float"
-    if type(value) is str:
-        return "string"
-    raise experiment_process_error("candidate parameter has an unsupported JSON type")
-
-
-def _typed_parameter(value: object, declared_type: object) -> ParameterValue:
-    if _parameter_type(value) != _string(declared_type, "candidate_parameter.type"):
-        raise experiment_process_error(
-            "candidate parameter type tag does not match its value"
-        )
-    return cast("ParameterValue", value)
-
-
-def _matrix_spec(value: object) -> CandidateMatrixSpec:
-    payload = _mapping(value, "work.matrix_spec")
-    baseline = _mapping(payload.get("baseline"), "work.matrix_spec.baseline")
-    axes = tuple(
-        ParameterAxis(
-            name=_string(axis.get("name"), "work.matrix_spec.axis.name"),
-            values=tuple(
-                _typed_parameter(item.get("value"), item.get("type"))
-                for raw_item in _list(
-                    axis.get("values"), "work.matrix_spec.axis.values"
-                )
-                for item in (_mapping(raw_item, "work.matrix_spec.axis.value"),)
-            ),
-        )
-        for raw_axis in _list(payload.get("axes"), "work.matrix_spec.axes")
-        for axis in (_mapping(raw_axis, "work.matrix_spec.axis"),)
-    )
-    return CandidateMatrixSpec(
-        baseline=BaselineDescriptor(
-            descriptor_type=_string(
-                baseline.get("descriptor_type"),
-                "work.matrix_spec.baseline.descriptor_type",
-            ),
-            payload=cast(
-                "Mapping[str, BaselineInputValue]",
-                _mapping(baseline.get("payload"), "work.matrix_spec.baseline.payload"),
-            ),
-            schema_version=_integer(
-                baseline.get("schema_version"),
-                "work.matrix_spec.baseline.schema_version",
-            ),
-        ),
-        axes=axes,
-        candidate_limit=_integer(
-            payload.get("candidate_limit"), "work.matrix_spec.candidate_limit"
-        ),
-    )
-
-
 def _candidate_payload(
     candidate: BaselineCandidatePlan | BinderCandidatePlan,
 ) -> Mapping[str, object]:
@@ -303,32 +240,11 @@ def _candidate_payload(
         "parameters": [
             {
                 "path": parameter.path,
-                "type": _parameter_type(parameter.value),
+                "type": planning_parameter_type(parameter.value),
                 "value": parameter.value,
             }
             for parameter in candidate.binder_parameters
         ],
-    }
-
-
-def _matrix_spec_payload(matrix: CandidateMatrixSpec) -> Mapping[str, object]:
-    return {
-        "baseline": {
-            "descriptor_type": matrix.baseline.descriptor_type,
-            "payload": matrix.baseline.payload,
-            "schema_version": matrix.baseline.schema_version,
-        },
-        "axes": [
-            {
-                "name": axis.name,
-                "values": [
-                    {"type": _parameter_type(value), "value": value}
-                    for value in axis.values
-                ],
-            }
-            for axis in matrix.axes
-        ],
-        "candidate_limit": matrix.candidate_limit,
     }
 
 
@@ -373,13 +289,13 @@ def _work_payload(
                 for candidate in work.candidate_matrix.candidates
             ],
         },
-        "matrix_spec": _matrix_spec_payload(matrix),
+        "matrix_spec": candidate_matrix_spec_payload(matrix),
     }
 
 
 def _work(value: object) -> ExperimentWorkPlan:
     payload = _mapping(value, "work")
-    matrix = _matrix_spec(payload.get("matrix_spec"))
+    matrix = decode_candidate_matrix_spec(payload.get("matrix_spec"))
     workload = _mapping(payload.get("workload"), "work.workload")
     cost = _mapping(payload.get("cost_model"), "work.cost_model")
     budget = _mapping(payload.get("budget"), "work.budget")
@@ -478,30 +394,6 @@ def _runtime_evidence(value: object) -> RuntimeValidationEvidence:
             isolation.get("execution_lag_sessions"),
             "runtime_validation.isolation.execution_lag_sessions",
         ),
-    )
-
-
-def _dataset_bindings(value: object) -> tuple[ResearchDatasetRequirement, ...]:
-    return tuple(
-        ResearchDatasetRequirement(
-            dataset_id=_string(item.get("dataset_id"), "binding.dataset_id"),
-            expected_snapshot_ids=tuple(
-                _string(snapshot_id, "binding.expected_snapshot_id")
-                for snapshot_id in _list(
-                    item.get("expected_snapshot_ids"),
-                    "binding.expected_snapshot_ids",
-                )
-            ),
-            requires_pit_universe=_boolean(
-                item.get("requires_pit_universe"), "binding.requires_pit_universe"
-            ),
-            certified_from=_date(
-                item.get("certified_from"),
-                "binding.certified_from",
-            ),
-        )
-        for raw_item in _list(value, "authority.dataset_bindings")
-        for item in (_mapping(raw_item, "authority.dataset_binding"),)
     )
 
 
@@ -613,7 +505,7 @@ def _validate_executor_and_authority(
             authority.get("requires_pit_universe"),
             "authority.requires_pit_universe",
         ),
-        dataset_bindings=_dataset_bindings(authority.get("dataset_bindings")),
+        dataset_bindings=decode_dataset_requirements(authority.get("dataset_bindings")),
     )
     identities = _mapping(preflight.get("identities"), "identities")
     identity_snapshot = _mapping(
@@ -630,7 +522,9 @@ def _validate_executor_and_authority(
             "identities.snapshot_identity.manifest_hash",
         ),
     )
-    declared_requirements = _dataset_bindings(identities.get("dataset_requirements"))
+    declared_requirements = decode_dataset_requirements(
+        identities.get("dataset_requirements")
+    )
     if (
         rebuilt.payload_hash
         != _string(authority.get("payload_hash"), "authority.payload_hash")

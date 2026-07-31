@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
+from ditto_platform.foundation.json_types import JsonValue
 from pydantic import BaseModel, ConfigDict
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "ExperimentDetailResponse",
     "ExperimentFoldResponse",
     "ExperimentGateResponse",
+    "ExperimentPlanningRequest",
     "ExperimentRetryFoldRequest",
     "ExperimentReviewPacketResponse",
     "ExperimentSelectionEvidenceResponse",
@@ -25,6 +27,108 @@ __all__ = [
     "ReviewGateOutcomeResponse",
     "ReviewSelectionTraceRefResponse",
 ]
+
+
+class _StrictPlanningModel(BaseModel):
+    """Fail-closed transport base for one canonical planning document node."""
+
+    model_config = ConfigDict(
+        strict=True,
+        frozen=True,
+        extra="forbid",
+        allow_inf_nan=False,
+    )
+
+
+class ExperimentPlanningStrategyRequest(_StrictPlanningModel):
+    """Exact strategy-version content identity supplied to planning."""
+
+    strategy_id: str
+    version: int
+    spec_hash: str
+    spec_json: dict[str, JsonValue]
+
+
+class ExperimentPlanningSnapshotRequest(_StrictPlanningModel):
+    """Exact certified research snapshot identity supplied to planning."""
+
+    snapshot_id: str
+    manifest_hash: str
+
+
+class ExperimentPlanningBaselineRequest(_StrictPlanningModel):
+    """Typed baseline descriptor envelope for the candidate matrix."""
+
+    descriptor_type: str
+    payload: dict[str, JsonValue]
+    schema_version: int
+
+
+class ExperimentPlanningParameterValueRequest(_StrictPlanningModel):
+    """One tagged scalar matrix value."""
+
+    type: Literal["bool", "int", "float", "string"]
+    value: bool | int | float | str
+
+
+class ExperimentPlanningParameterAxisRequest(_StrictPlanningModel):
+    """One ordered candidate-matrix parameter axis."""
+
+    name: str
+    values: list[ExperimentPlanningParameterValueRequest]
+
+
+class ExperimentPlanningMatrixRequest(_StrictPlanningModel):
+    """Complete candidate matrix preimage."""
+
+    baseline: ExperimentPlanningBaselineRequest
+    axes: list[ExperimentPlanningParameterAxisRequest]
+    candidate_limit: int
+
+
+class ExperimentPlanningDatasetRequirementRequest(_StrictPlanningModel):
+    """One exact certified dataset binding."""
+
+    dataset_id: str
+    expected_snapshot_ids: list[str]
+    requires_pit_universe: bool
+    certified_from: str | None
+
+
+class ExperimentPlanningCostModelRequest(_StrictPlanningModel):
+    """Deterministic resource-estimation coefficients."""
+
+    bytes_per_run: int
+    bytes_per_trading_session: int
+
+
+class ExperimentPlanningBudgetRequest(_StrictPlanningModel):
+    """Pre-registered hard resource ceilings."""
+
+    candidate_limit: int
+    fold_run_limit: int
+    trading_session_limit: int
+    disk_byte_limit: int
+
+
+class ExperimentPlanningRequest(_StrictPlanningModel):
+    """Complete transport-only document passed unchanged to the builder."""
+
+    experiment_id: str
+    research_cycle_id: str
+    research_cycle_hash: str
+    strategy: ExperimentPlanningStrategyRequest
+    snapshot: ExperimentPlanningSnapshotRequest
+    validation: dict[str, JsonValue]
+    matrix: ExperimentPlanningMatrixRequest
+    promotion_objective: dict[str, JsonValue]
+    dataset_requirements: list[ExperimentPlanningDatasetRequirementRequest]
+    cost_model: ExperimentPlanningCostModelRequest
+    budget: ExperimentPlanningBudgetRequest
+    seed: int
+    worker_count: int
+    failure_policy: Literal["continue_candidate_failures", "fail_fast"]
+    created_at: str
 
 
 class ExperimentCandidateResponse(BaseModel):

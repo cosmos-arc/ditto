@@ -14,7 +14,11 @@ from ditto_analysis.experiments import (
     ExperimentFailurePolicy,
     ExperimentId,
 )
+from ditto_analysis.experiments.preflight_authority import (
+    canonical_research_cycle_hash,
+)
 from ditto_analysis.experiments.promotion_objective import (
+    decode_promotion_objective,
     promotion_objective_payload,
     validate_promotion_objective_graph,
 )
@@ -37,15 +41,93 @@ from ditto_application.processes.experiments.planning_probes import (
     ExperimentSnapshotIdentity,
     ResearchDatasetRequirement,
 )
-from ditto_application.research_validation_protocol import ValidationProtocolRequest
+from ditto_application.research_validation_protocol import (
+    ValidationProtocolRequest,
+    compile_validation_protocol,
+)
 
 __all__ = [
     "ExperimentPlanningRequest",
     "ExperimentPreflightCheck",
     "PreflightOutcome",
     "declare_trial_family",
+    "decode_canonical_promotion_objective",
+    "decode_experiment_failure_policy",
+    "derive_canonical_research_cycle_hash",
     "seal_promotion_objective",
 ]
+
+
+def _planning_contract_error(
+    message: str,
+    *,
+    reason: str,
+) -> AppProcessError:
+    return AppProcessError(
+        message,
+        details={"code": "SPEC_INVALID", "reason": reason},
+    )
+
+
+def decode_canonical_promotion_objective(value: object) -> PromotionObjective:
+    """Decode one exact versioned objective payload into a detached graph."""
+    try:
+        return decode_promotion_objective(value)
+    except AnalysisError as exc:
+        raise _planning_contract_error(
+            "planning request has no canonical promotion objective",
+            reason="invalid_promotion_objective_payload",
+        ) from exc
+
+
+def decode_experiment_failure_policy(value: object) -> ExperimentFailurePolicy:
+    """Decode one exact failure-policy string without accepting coercion."""
+    if type(value) is not str:
+        raise _planning_contract_error(
+            "planning request has no canonical failure policy",
+            reason="invalid_experiment_failure_policy",
+        )
+    try:
+        return ExperimentFailurePolicy(value)
+    except ValueError as exc:
+        raise _planning_contract_error(
+            "planning request has no canonical failure policy",
+            reason="invalid_experiment_failure_policy",
+        ) from exc
+
+
+def derive_canonical_research_cycle_hash(
+    *,
+    strategy_family_id: str,
+    validation_request: ValidationProtocolRequest,
+) -> str:
+    """Derive the cycle hash from the validated reserved-holdout authority."""
+    try:
+        validation_plan = compile_validation_protocol(validation_request)
+    except AppProcessError as exc:
+        raise _planning_contract_error(
+            "planning request has no canonical research-cycle authority",
+            reason="invalid_research_cycle_authority",
+        ) from exc
+    holdout = validation_plan.reserved_holdout
+    if holdout is None:
+        raise _planning_contract_error(
+            "planning request has no reserved holdout authority",
+            reason="research_cycle_requires_reserved_holdout",
+        )
+    try:
+        return str(
+            canonical_research_cycle_hash(
+                strategy_family_id=strategy_family_id,
+                certified_data_cutoff=holdout.test_window.end,
+                oos_window=holdout.test_window,
+            )
+        )
+    except AnalysisError as exc:
+        raise _planning_contract_error(
+            "planning request has no canonical research-cycle authority",
+            reason="invalid_research_cycle_authority",
+        ) from exc
 
 
 def declare_trial_family(
