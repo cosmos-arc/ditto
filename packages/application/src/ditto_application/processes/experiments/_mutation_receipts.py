@@ -282,6 +282,7 @@ def _decode_request_context(
     context = cast("Mapping[object, object]", raw_context)
     if (
         not _has_exact_string_keys(context, _CONTROL_CONTEXT_KEYS)
+        or type(context["schema_version"]) is not int
         or context["schema_version"] != 1
         or context["kind"] != _CONTROL_CONTEXT_KIND
         or context["operation_id"] != identity.operation_id

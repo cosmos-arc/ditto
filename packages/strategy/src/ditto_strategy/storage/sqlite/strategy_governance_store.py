@@ -456,13 +456,19 @@ class SQLiteStrategyGovernanceStore:
                     "state CAS missed revision "
                     + f"{expected_revision} for {event.strategy_id}/{event.version}"
                 )
+            state_row = conn.execute(
+                _GET_STATE,
+                (event.strategy_id, event.version),
+            ).fetchone()
+            if state_row is None:
+                raise RuntimeError(
+                    "governance state projection missing during CAS advance"
+                )
+            record = _row_to_state(state_row)
             conn.commit()
         except Exception:
             conn.rollback()
             raise
-        record = self.get_state(event.strategy_id, event.version)
-        if record is None:
-            raise RuntimeError("governance state projection missing after CAS advance")
         return record
 
     @traced("governance.publish_reviewed_and_activate")
@@ -622,6 +628,15 @@ class SQLiteStrategyGovernanceStore:
                         "pointer CAS missed revision "
                         + f"{expected_pointer_revision} for {strategy_id}"
                     )
+            pointer_row = conn.execute(
+                _GET_ACTIVE_POINTER,
+                (strategy_id,),
+            ).fetchone()
+            if pointer_row is None:
+                raise RuntimeError(
+                    "governance active pointer missing during activation transaction"
+                )
+            pointer = _row_to_pointer(pointer_row)
             conn.commit()
         except sqlite3.IntegrityError as exc:
             conn.rollback()
@@ -633,9 +648,6 @@ class SQLiteStrategyGovernanceStore:
         except Exception:
             conn.rollback()
             raise
-        pointer = self.get_active_pointer(strategy_id)
-        if pointer is None:
-            raise RuntimeError("governance active pointer missing after activation")
         return pointer
 
     @traced("governance.get_active_pointer")

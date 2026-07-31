@@ -411,6 +411,11 @@ async def _assert_typed_zero_write_rejection(
             f"/api/v1/strategies/{harness.strategy_id}/versions/"
             f"{harness.candidate_version}/publish"
         ),
+        headers={
+            "Idempotency-Key": (
+                f"publish-zero-write-{expected_status}-{expected_error_code}"
+            )
+        },
         json={
             "bundle_hash": str(harness.packet.bundle_hash),
             "actor": "http-acceptance-publisher",

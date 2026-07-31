@@ -11,10 +11,12 @@ from ditto_strategy.governance.models import (
     GOVERNANCE_SCHEMA_VERSION,
     ReviewOutcome,
     StrategyActivationEvent,
+    StrategyActivePointer,
     StrategyDecision,
     StrategyDecisionEvent,
     StrategyVersion,
     StrategyVersionState,
+    StrategyVersionStateRecord,
 )
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.strategy_governance_store import (
@@ -156,6 +158,35 @@ def test_append_decision_advances_state_with_cas(tmp_path: Path) -> None:
     assert record.state_revision == 1
 
 
+def test_append_decision_returns_exact_state_selected_before_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    durable_get_state = store.get_state
+    later_state = StrategyVersionStateRecord(
+        strategy_id="strategy-1",
+        version=1,
+        state=StrategyVersionState.REVIEW,
+        review_outcome=ReviewOutcome.APPROVED,
+        state_revision=2,
+    )
+    monkeypatch.setattr(store, "get_state", lambda *_args: later_state)
+
+    first = store.append_decision(
+        _decision(),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+
+    persisted = durable_get_state("strategy-1", 1)
+    assert persisted is not None
+    assert persisted.state_revision == 1
+    assert first == persisted
+
+
 def test_append_decision_rejects_stale_state_revision(tmp_path: Path) -> None:
     store = _store(tmp_path)
     store.insert_version(_version())
@@ -218,6 +249,35 @@ def test_activate_swaps_pointer_with_cas(tmp_path: Path) -> None:
 
     assert pointer.pointer_revision == 2
     assert pointer.activation_event_id == "activation-2"
+
+
+def test_activate_returns_exact_pointer_selected_before_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    store.activate("strategy-1", 1, _activation(), expected_pointer_revision=0)
+    durable_get_pointer = store.get_active_pointer
+    later_pointer = StrategyActivePointer(
+        strategy_id="strategy-1",
+        active_version=1,
+        pointer_revision=3,
+        activation_event_id="activation-3",
+    )
+    monkeypatch.setattr(store, "get_active_pointer", lambda *_args: later_pointer)
+
+    first = store.activate(
+        "strategy-1",
+        1,
+        _activation(event_id="activation-2", kind=StrategyDecision.REACTIVATE),
+        expected_pointer_revision=1,
+    )
+
+    persisted = durable_get_pointer("strategy-1")
+    assert persisted is not None
+    assert persisted.pointer_revision == 2
+    assert first == persisted
 
 
 def test_activate_rejects_stale_pointer_revision(tmp_path: Path) -> None:

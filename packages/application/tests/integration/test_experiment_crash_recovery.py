@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from threading import Barrier
+from typing import cast
 
 import pytest
 from ditto_analysis.experiments import (
@@ -40,6 +42,7 @@ from ditto_analysis.experiments import (
     ResearchCycleIdentity,
     ResearchMetricDirection,
     ResearchMetricId,
+    SchedulerLease,
     SnapshotId,
     StrategyVersion,
     TrialFamilyDeclaration,
@@ -67,6 +70,7 @@ from ditto_application.processes.experiments.coordinator import (
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentExecutionControlChanged,
     ExperimentSchedulerStore,
+    ExperimentSchedulerStoreProtocol,
     FirstAttempt,
     QueuedAttempt,
     ResearchExecutionDirective,
@@ -293,11 +297,12 @@ def _coordinator(
     checkpoints: set[str] | None = None,
     resumable_checkpoints: set[str] | None = None,
     lease_duration: timedelta = timedelta(seconds=5),
+    scheduler_store: ExperimentSchedulerStoreProtocol | None = None,
 ) -> ExperimentExecutionCoordinator:
     available = set() if checkpoints is None else checkpoints
     resumable = set() if resumable_checkpoints is None else resumable_checkpoints
     return ExperimentExecutionCoordinator(
-        store=_store(database),
+        store=_store(database) if scheduler_store is None else scheduler_store,
         first_attempt_factory=_RecoveryFactory(),
         owner_token=owner,
         lease_duration=lease_duration,
@@ -305,6 +310,43 @@ def _coordinator(
         checkpoint_available=available.__contains__,
         checkpoint_resumable=resumable.__contains__,
     )
+
+
+class _PostWriteRetryStore:
+    """Pause retry return after its SQLite commit to expose readback races."""
+
+    def __init__(
+        self,
+        delegate: ExperimentSchedulerStore,
+        post_write_barrier: Barrier,
+    ) -> None:
+        self._delegate = delegate
+        self._post_write_barrier = post_write_barrier
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._delegate, name)
+
+    def retry_terminal_fold(
+        self,
+        fold: FoldView,
+        parent_attempt: AttemptView,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object] | None = None,
+    ) -> FoldView:
+        persisted = self._delegate.retry_terminal_fold(
+            fold,
+            parent_attempt,
+            lease,
+            now_epoch_us=now_epoch_us,
+            occurred_at=occurred_at,
+            detail=detail,
+        )
+        self._post_write_barrier.wait(timeout=5)
+        self._post_write_barrier.wait(timeout=5)
+        return persisted
 
 
 def _live_attempt_count(
@@ -952,6 +994,89 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
         parent.spec.reproduction_fingerprint
     )
     assert _live_attempt_count(database, launch.experiment_id) == 1
+    database.close_all()
+
+
+def test_idempotent_retry_returns_persisted_receipt_across_post_write_projection_race(
+    tmp_path: Path,
+) -> None:
+    database, reader, launch = _setup(tmp_path, "experiment-retry-readback-race")
+    post_write_barrier = Barrier(2)
+    racing_store = _PostWriteRetryStore(_store(database), post_write_barrier)
+    coordinator = _coordinator(
+        database,
+        owner="retry-race-owner",
+        clock=NOW + timedelta(seconds=1),
+        lease_duration=timedelta(minutes=5),
+        scheduler_store=cast("ExperimentSchedulerStoreProtocol", racing_store),
+    )
+    first_tick = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
+    parent = coordinator.start_attempt(
+        first_tick.dispatches[0],
+        occurred_at=NOW + timedelta(seconds=2),
+    ).attempt
+    coordinator.fail_attempt(
+        parent.spec.attempt_id,
+        ExperimentFailureCode.SYSTEM_ERROR,
+        occurred_at=NOW + timedelta(seconds=3),
+    )
+    failed_fold = next(
+        item
+        for item in reader.list_folds(launch.experiment_id)
+        if item.spec.key == parent.spec.fold_key
+    )
+    identity = build_mutation_idempotency(
+        operation_id="research_retry_fold_experiment",
+        resource_id=canonical_resource_id(
+            "experiment_fold",
+            {
+                "experiment_id": str(launch.experiment_id),
+                "candidate_id": str(parent.spec.fold_key.candidate_id),
+                "fold_id": str(parent.spec.fold_key.fold_id),
+            },
+        ),
+        raw_key="retry-readback-race-001",
+        request_payload={
+            "candidate_id": str(parent.spec.fold_key.candidate_id),
+            "fold_id": str(parent.spec.fold_key.fold_id),
+            "expected_revision": failed_fold.projection.revision,
+        },
+    )
+    request = {
+        "experiment_id": str(launch.experiment_id),
+        "candidate_id": str(parent.spec.fold_key.candidate_id),
+        "fold_id": str(parent.spec.fold_key.fold_id),
+        "expected_revision": failed_fold.projection.revision,
+        "occurred_at": NOW + timedelta(seconds=5),
+        "idempotency": identity,
+    }
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(coordinator.retry_fold, **request)
+        post_write_barrier.wait(timeout=5)
+        concurrent_store = _store(database)
+        current = concurrent_store.load_snapshot(launch.experiment_id).projection
+        concurrent_store.transition_operator_experiment(
+            current,
+            target_status=ExperimentStatus.PAUSE_REQUESTED,
+            target_desired_state=ExperimentDesiredState.PAUSE,
+            expected_revision=current.revision,
+            occurred_at=NOW + timedelta(seconds=6),
+            reason_code="operator_pause",
+            detail={},
+        )
+        post_write_barrier.wait(timeout=5)
+        first = future.result(timeout=5)
+
+    replay = _coordinator(
+        database,
+        owner="retry-race-replay-owner",
+        clock=NOW + timedelta(seconds=7),
+    ).retry_fold(**request)
+
+    assert first == replay
+    assert first.replayed is False
+    assert replay.replayed is True
     database.close_all()
 
 

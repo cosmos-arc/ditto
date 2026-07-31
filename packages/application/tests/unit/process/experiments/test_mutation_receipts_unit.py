@@ -210,6 +210,28 @@ def test_control_receipt_recomputes_request_hash_from_durable_context() -> None:
     assert exc_info.value.details["code"] == "IDEMPOTENCY_RECEIPT_INVALID"
 
 
+def test_control_receipt_rejects_bool_schema_with_recomputed_detail_hash() -> None:
+    event, identity = _pause_event()
+    detail = dict(event.detail)
+    context = dict(cast("dict[str, object]", detail["experiment_control_request"]))
+    context["schema_version"] = True
+    detail["experiment_control_request"] = context
+    drifted = replace(
+        event,
+        detail=detail,
+        detail_hash=canonical_payload(detail).content_hash,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        find_control_receipt(
+            (drifted,),
+            identity,
+            experiment_id="experiment-1",
+        )
+
+    assert exc_info.value.details["code"] == "IDEMPOTENCY_RECEIPT_INVALID"
+
+
 @pytest.mark.parametrize(
     "event_change",
     [

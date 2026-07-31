@@ -320,7 +320,8 @@ def _parse_receipt(
     except (AppCommandError, ValueError, TypeError) as exc:
         raise _invalid_receipt(identity) from exc
     if (
-        typed_receipt["schema_version"] != 1
+        type(typed_receipt["schema_version"]) is not int
+        or typed_receipt["schema_version"] != 1
         or typed_receipt["kind"] != _RECEIPT_KIND
         or receipt_hash != actual_hash
         or type(typed_receipt["operation_id"]) is not str
@@ -392,6 +393,7 @@ def find_mutation_receipt_in_reasons(
                 "human_reason",
                 _RECEIPT_KEY,
             }
+            or type(wrapper["schema_version"]) is not int
             or wrapper["schema_version"] != 1
             or wrapper["kind"] != _REASON_KIND
             or type(wrapper["human_reason"]) is not str
@@ -440,7 +442,8 @@ def _parse_fence(
     except (AppCommandError, ValueError, TypeError) as exc:
         raise _invalid_receipt(identity) from exc
     if (
-        typed_fence["schema_version"] != 1
+        type(typed_fence["schema_version"]) is not int
+        or typed_fence["schema_version"] != 1
         or typed_fence["kind"] != _FENCE_KIND
         or fence_hash != actual_hash
         or type(typed_fence["operation_id"]) is not str

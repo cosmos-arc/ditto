@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from datetime import datetime
 
 from ditto_application.mutation_idempotency import MutationIdempotency
@@ -211,14 +212,22 @@ class ExperimentRecoveryOrchestrator:
             if replay is not None:
                 return replay
             raise
-        projection = self._store.load_snapshot(key.experiment_id).projection
-        result = _receipt(projection, request.occurred_at, ())
-        if request.idempotency is not None and result != expected_receipt:
-            raise scheduler_error(
-                "IDEMPOTENCY_RECEIPT_INVALID",
-                "idempotency_receipt_invalid",
+        if request.idempotency is not None:
+            persisted = replay_control_receipt(
+                self._store,
+                request.idempotency,
+                experiment_id=request.experiment_id,
+                candidate_id=request.candidate_id,
+                fold_id=request.fold_id,
             )
-        return result
+            if persisted is None:
+                raise scheduler_error(
+                    "IDEMPOTENCY_RECEIPT_INVALID",
+                    "idempotency_receipt_invalid",
+                )
+            return replace(persisted, replayed=False)
+        projection = self._store.load_snapshot(key.experiment_id).projection
+        return _receipt(projection, request.occurred_at, ())
 
     def poll_directive(
         self,

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import cast
 
+import orjson
 import pytest
 from ditto_application.commands.mutation_idempotency import (
     IDEMPOTENCY_KEY_MAX_LENGTH,
@@ -12,8 +14,12 @@ from ditto_application.commands.mutation_idempotency import (
     canonical_request_hash,
     canonical_resource_id,
     find_mutation_receipt,
+    find_mutation_receipt_in_reasons,
     mutation_event_id,
+    mutation_fence_detail,
     mutation_receipt_detail,
+    mutation_receipt_reason,
+    validate_mutation_fence_detail,
     without_validated_mutation_receipt,
 )
 from ditto_application.exceptions import AppCommandError
@@ -156,12 +162,55 @@ def test_receipt_reader_fails_closed_on_duplicate_or_malformed_envelopes() -> No
 
 def test_identity_free_receipt_validation_rejects_self_hashed_invalid_fields() -> None:
     detail = mutation_receipt_detail(_identity(), response={"revision": 8})
-    envelope = dict(detail["mutation_idempotency"])  # type: ignore[arg-type]
+    envelope = dict(cast("Mapping[str, object]", detail["mutation_idempotency"]))
     envelope["key_hash"] = "not-a-sha256"
     body = {key: value for key, value in envelope.items() if key != "receipt_hash"}
     envelope["receipt_hash"] = canonical_request_hash(body)
 
     with pytest.raises(AppCommandError) as invalid:
         without_validated_mutation_receipt({"mutation_idempotency": envelope})
+
+    assert invalid.value.details["code"] == "IDEMPOTENCY_RECEIPT_INVALID"
+
+
+def test_receipt_reader_rejects_bool_schema_version_with_recomputed_hash() -> None:
+    identity = _identity()
+    detail = mutation_receipt_detail(identity, response={"revision": 8})
+    envelope = dict(detail["mutation_idempotency"])  # type: ignore[arg-type]
+    envelope["schema_version"] = True
+    body = {key: value for key, value in envelope.items() if key != "receipt_hash"}
+    envelope["receipt_hash"] = canonical_request_hash(body)
+
+    with pytest.raises(AppCommandError) as invalid:
+        find_mutation_receipt(({"mutation_idempotency": envelope},), identity)
+
+    assert invalid.value.details["code"] == "IDEMPOTENCY_RECEIPT_INVALID"
+
+
+def test_reason_reader_rejects_bool_schema_version() -> None:
+    identity = _identity()
+    reason = mutation_receipt_reason(
+        identity,
+        response={"revision": 8},
+        human_reason="reviewed",
+    )
+    wrapper = orjson.loads(reason)
+    wrapper["schema_version"] = True
+
+    with pytest.raises(AppCommandError) as invalid:
+        find_mutation_receipt_in_reasons((orjson.dumps(wrapper).decode(),), identity)
+
+    assert invalid.value.details["code"] == "IDEMPOTENCY_RECEIPT_INVALID"
+
+
+def test_fence_reader_rejects_bool_schema_version_with_recomputed_hash() -> None:
+    detail = mutation_fence_detail(_identity())
+    fence = dict(cast("Mapping[str, object]", detail["mutation_idempotency_fence"]))
+    fence["schema_version"] = True
+    body = {key: value for key, value in fence.items() if key != "fence_hash"}
+    fence["fence_hash"] = canonical_request_hash(body)
+
+    with pytest.raises(AppCommandError) as invalid:
+        validate_mutation_fence_detail({"mutation_idempotency_fence": fence})
 
     assert invalid.value.details["code"] == "IDEMPOTENCY_RECEIPT_INVALID"
