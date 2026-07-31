@@ -25,7 +25,6 @@ coordinator can be constructed for control-route DI.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from ditto_analysis.experiments import (
@@ -39,6 +38,7 @@ from ditto_platform.foundation import logger
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
+    RetryFoldControlRequest,
 )
 from ditto_application.processes.experiments._coordinator_recovery import (
     ExperimentRecoveryOrchestrator,
@@ -142,17 +142,6 @@ def _factory_error() -> AppProcessError:
     )
 
 
-@dataclass(frozen=True, slots=True)
-class RetryFoldControlRequest:
-    """One operator-initiated terminal fold retry request (control route)."""
-
-    experiment_id: str
-    candidate_id: str
-    fold_id: str
-    expected_revision: int
-    occurred_at: datetime
-
-
 def retry_fold_under_transient_lease(
     *,
     store: ExperimentSchedulerStoreProtocol,
@@ -176,11 +165,7 @@ def retry_fold_under_transient_lease(
         ExperimentId(request.experiment_id),
         expected_revision=slot.revision,
         operation=lambda lease, now_epoch_us: recovery.retry_fold(
-            experiment_id=request.experiment_id,
-            candidate_id=request.candidate_id,
-            fold_id=request.fold_id,
-            expected_revision=request.expected_revision,
-            occurred_at=request.occurred_at,
+            request,
             lease=lease,
             now_epoch_us=now_epoch_us(),
         ),

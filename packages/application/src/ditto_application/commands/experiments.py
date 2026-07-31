@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Protocol
 
 from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.mutation_idempotency import MutationIdempotency
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
 )
@@ -45,6 +46,7 @@ class LaunchExperimentCommand:
 
     request: ExperimentPlanningRequest
     confirmed_plan_hash: str
+    idempotency: MutationIdempotency | None = None
 
 
 class LaunchExperimentHandler:
@@ -59,6 +61,11 @@ class LaunchExperimentHandler:
             return self._process.launch(
                 command.request,
                 confirmed_plan_hash=command.confirmed_plan_hash,
+                **(
+                    {"idempotency": command.idempotency}
+                    if command.idempotency is not None
+                    else {}
+                ),
             )
         except AppProcessError as exc:
             details = dict(exc.details)
@@ -168,6 +175,7 @@ class PauseExperimentCommand:
     experiment_id: str
     expected_revision: int
     occurred_at: datetime
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +185,7 @@ class CancelExperimentCommand:
     experiment_id: str
     expected_revision: int
     occurred_at: datetime
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,6 +195,7 @@ class ResumeExperimentCommand:
     experiment_id: str
     expected_revision: int
     occurred_at: datetime
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,6 +207,7 @@ class RetryExperimentFoldCommand:
     fold_id: str
     expected_revision: int
     occurred_at: datetime
+    idempotency: MutationIdempotency | None = None
 
 
 class ExperimentControlProcess(Protocol):
@@ -208,6 +219,7 @@ class ExperimentControlProcess(Protocol):
         experiment_id: str,
         expected_revision: int,
         occurred_at: datetime,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentControlReceipt:
         """Persist pause intent and return committed server truth."""
         ...
@@ -218,6 +230,7 @@ class ExperimentControlProcess(Protocol):
         experiment_id: str,
         expected_revision: int,
         occurred_at: datetime,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentControlReceipt:
         """Persist cancel intent and return committed server truth."""
         ...
@@ -228,6 +241,7 @@ class ExperimentControlProcess(Protocol):
         experiment_id: str,
         expected_revision: int,
         occurred_at: datetime,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentControlReceipt:
         """Persist run intent for a paused experiment."""
         ...
@@ -240,6 +254,7 @@ class ExperimentControlProcess(Protocol):
         fold_id: str,
         expected_revision: int,
         occurred_at: datetime,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentControlReceipt:
         """Persist one successor-attempt request without creating a child run."""
         ...
@@ -338,6 +353,11 @@ class PauseExperimentHandler(_ExperimentControlHandler):
                 experiment_id=command.experiment_id,
                 expected_revision=command.expected_revision,
                 occurred_at=command.occurred_at,
+                **(
+                    {"idempotency": command.idempotency}
+                    if command.idempotency is not None
+                    else {}
+                ),
             )
         except AppProcessError as exc:
             raise _control_process_error(
@@ -345,7 +365,8 @@ class PauseExperimentHandler(_ExperimentControlHandler):
                 command_name="pause_experiment",
                 experiment_id=command.experiment_id,
             ) from exc
-        self._notify_live_runs(receipt, command_name="pause_experiment")
+        if not receipt.replayed:
+            self._notify_live_runs(receipt, command_name="pause_experiment")
         return receipt
 
 
@@ -359,6 +380,11 @@ class CancelExperimentHandler(_ExperimentControlHandler):
                 experiment_id=command.experiment_id,
                 expected_revision=command.expected_revision,
                 occurred_at=command.occurred_at,
+                **(
+                    {"idempotency": command.idempotency}
+                    if command.idempotency is not None
+                    else {}
+                ),
             )
         except AppProcessError as exc:
             raise _control_process_error(
@@ -366,7 +392,8 @@ class CancelExperimentHandler(_ExperimentControlHandler):
                 command_name="cancel_experiment",
                 experiment_id=command.experiment_id,
             ) from exc
-        self._notify_live_runs(receipt, command_name="cancel_experiment")
+        if not receipt.replayed:
+            self._notify_live_runs(receipt, command_name="cancel_experiment")
         return receipt
 
 
@@ -380,6 +407,11 @@ class ResumeExperimentHandler(_ExperimentControlHandler):
                 experiment_id=command.experiment_id,
                 expected_revision=command.expected_revision,
                 occurred_at=command.occurred_at,
+                **(
+                    {"idempotency": command.idempotency}
+                    if command.idempotency is not None
+                    else {}
+                ),
             )
         except AppProcessError as exc:
             raise _control_process_error(
@@ -387,11 +419,12 @@ class ResumeExperimentHandler(_ExperimentControlHandler):
                 command_name="resume_experiment",
                 experiment_id=command.experiment_id,
             ) from exc
-        self._notify_scheduler(
-            receipt,
-            command_name="resume_experiment",
-            action="resume",
-        )
+        if not receipt.replayed:
+            self._notify_scheduler(
+                receipt,
+                command_name="resume_experiment",
+                action="resume",
+            )
         return receipt
 
 
@@ -407,6 +440,11 @@ class RetryExperimentFoldHandler(_ExperimentControlHandler):
                 fold_id=command.fold_id,
                 expected_revision=command.expected_revision,
                 occurred_at=command.occurred_at,
+                **(
+                    {"idempotency": command.idempotency}
+                    if command.idempotency is not None
+                    else {}
+                ),
             )
         except AppProcessError as exc:
             raise _control_process_error(
@@ -414,11 +452,12 @@ class RetryExperimentFoldHandler(_ExperimentControlHandler):
                 command_name="retry_experiment_fold",
                 experiment_id=command.experiment_id,
             ) from exc
-        self._notify_scheduler(
-            receipt,
-            command_name="retry_experiment_fold",
-            action="retry_fold",
-        )
+        if not receipt.replayed:
+            self._notify_scheduler(
+                receipt,
+                command_name="retry_experiment_fold",
+                action="retry_fold",
+            )
         return receipt
 
 

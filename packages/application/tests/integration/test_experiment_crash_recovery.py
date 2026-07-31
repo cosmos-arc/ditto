@@ -56,6 +56,10 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentWriter,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.mutation_idempotency import (
+    build_mutation_idempotency,
+    canonical_resource_id,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
     SchedulerTickState,
@@ -321,6 +325,56 @@ def _live_attempt_count(
     )
     assert row is not None
     return int(row[0])
+
+
+def test_pause_receipt_replays_after_coordinator_restart_without_second_event(
+    tmp_path: Path,
+) -> None:
+    database, reader, launch = _setup(tmp_path, "experiment-pause-idempotency")
+    coordinator = _coordinator(
+        database,
+        owner="pause-first-owner",
+        clock=NOW + timedelta(seconds=1),
+    )
+    coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
+    current = reader.get_experiment_projection(launch.experiment_id)
+    assert current is not None
+    expected_revision = current.revision
+    identity = build_mutation_idempotency(
+        operation_id="research_pause_experiment",
+        resource_id=canonical_resource_id(
+            "experiment",
+            {"experiment_id": str(launch.experiment_id)},
+        ),
+        raw_key="pause-integration-001",
+        request_payload={"expected_revision": expected_revision},
+    )
+    first = coordinator.pause(
+        experiment_id=str(launch.experiment_id),
+        expected_revision=expected_revision,
+        occurred_at=NOW + timedelta(seconds=1),
+        idempotency=identity,
+    )
+    event_count = len(reader.list_status_events(launch.experiment_id))
+
+    replay = _coordinator(
+        database,
+        owner="pause-restarted-owner",
+        clock=NOW + timedelta(seconds=2),
+    ).pause(
+        experiment_id=str(launch.experiment_id),
+        expected_revision=expected_revision,
+        occurred_at=NOW + timedelta(seconds=2),
+        idempotency=identity,
+    )
+
+    assert replay == first
+    assert replay.replayed is True
+    assert len(reader.list_status_events(launch.experiment_id)) == event_count
+    assert "pause-integration-001" not in repr(
+        reader.list_status_events(launch.experiment_id)
+    )
+    database.close_all()
 
 
 @pytest.mark.parametrize("parent_started", [False, True])
@@ -843,14 +897,49 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
     renewed = coordinator.renew_lease()
     assert renewed.experiment_id == launch.experiment_id
 
-    coordinator.retry_fold(
+    retry_identity = build_mutation_idempotency(
+        operation_id="research_retry_fold_experiment",
+        resource_id=canonical_resource_id(
+            "experiment_fold",
+            {
+                "experiment_id": str(launch.experiment_id),
+                "candidate_id": str(parent.spec.fold_key.candidate_id),
+                "fold_id": str(parent.spec.fold_key.fold_id),
+            },
+        ),
+        raw_key="retry-integration-001",
+        request_payload={
+            "candidate_id": str(parent.spec.fold_key.candidate_id),
+            "fold_id": str(parent.spec.fold_key.fold_id),
+            "expected_revision": failed_fold.projection.revision,
+        },
+    )
+    first_retry = coordinator.retry_fold(
         experiment_id=str(launch.experiment_id),
         candidate_id=str(parent.spec.fold_key.candidate_id),
         fold_id=str(parent.spec.fold_key.fold_id),
         expected_revision=failed_fold.projection.revision,
         occurred_at=NOW + timedelta(seconds=5),
+        idempotency=retry_identity,
+    )
+    event_count = len(reader.list_status_events(launch.experiment_id))
+    replay_retry = _coordinator(
+        database,
+        owner="retry-restarted-owner",
+        clock=NOW + timedelta(seconds=5),
+        lease_duration=timedelta(minutes=5),
+    ).retry_fold(
+        experiment_id=str(launch.experiment_id),
+        candidate_id=str(parent.spec.fold_key.candidate_id),
+        fold_id=str(parent.spec.fold_key.fold_id),
+        expected_revision=failed_fold.projection.revision,
+        occurred_at=NOW + timedelta(seconds=5),
+        idempotency=retry_identity,
     )
 
+    assert replay_retry == first_retry
+    assert replay_retry.replayed is True
+    assert len(reader.list_status_events(launch.experiment_id)) == event_count
     assert len(reader.list_attempts(parent.spec.fold_key)) == 1
     retried = coordinator.tick(occurred_at=NOW + timedelta(seconds=6))
     assert retried.state is SchedulerTickState.DISPATCHED

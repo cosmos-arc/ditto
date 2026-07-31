@@ -181,7 +181,7 @@ class TestUpdateStrategyHandler:
         assert result.spec_json == spec_json
         assert result.version == 2  # existing.version + 1
         assert result.status == "draft"
-        assert result.created_at == "2026-01-01T00:00:00Z"
+        assert result.created_at != existing.created_at
         gov_mock.create_draft.assert_called_once()
         call_kwargs = gov_mock.create_draft.call_args.kwargs
         assert call_kwargs["strategy_id"] == "strat-1"
@@ -190,6 +190,8 @@ class TestUpdateStrategyHandler:
         assert saved_record.strategy_id == "strat-1"
         assert saved_record.version == 2
         assert saved_record.parent_version == 1
+        assert saved_record.created_at == result.created_at
+        assert call_kwargs["created_at"] == result.created_at
         catalog_mock.get_spec.assert_called_once_with("strat-1")
 
     def test_handle_raises_on_version_conflict(self) -> None:

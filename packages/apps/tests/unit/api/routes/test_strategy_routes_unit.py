@@ -146,7 +146,12 @@ async def _call_update(
     handler: UpdateStrategyHandler,
 ) -> APIResponse[StrategyResponse]:
     route = cast(_UpdateRoute, _unwrap(update_strategy))
-    return await route(strategy_id=strategy_id, request=request, handler=handler)
+    return await route(
+        strategy_id=strategy_id,
+        request=request,
+        handler=handler,
+        idempotency_key="unit.update-001",
+    )
 
 
 async def _call_list_versions(
@@ -215,7 +220,11 @@ async def _call_submit_review(
 ) -> APIResponse[StrategyVersionStateResponse]:
     route = cast(_StateRoute, _unwrap(submit_strategy_review))
     return await route(
-        strategy_id=strategy_id, version=version, request=request, handler=handler
+        strategy_id=strategy_id,
+        version=version,
+        request=request,
+        handler=handler,
+        idempotency_key="unit.submit-review-001",
     )
 
 
@@ -229,7 +238,11 @@ async def _call_decision(
 ) -> APIResponse[StrategyVersionStateResponse]:
     route = cast(_StateRoute, _unwrap(route_fn))
     return await route(
-        strategy_id=strategy_id, version=version, request=request, handler=handler
+        strategy_id=strategy_id,
+        version=version,
+        request=request,
+        handler=handler,
+        idempotency_key="unit.governance-decision-001",
     )
 
 
@@ -241,7 +254,11 @@ async def _call_reactivate(
 ) -> APIResponse[StrategyActivePointerResponse]:
     route = cast(_ReactivateRoute, _unwrap(reactivate_strategy_version))
     return await route(
-        strategy_id=strategy_id, version=version, request=request, handler=handler
+        strategy_id=strategy_id,
+        version=version,
+        request=request,
+        handler=handler,
+        idempotency_key="unit.reactivate-001",
     )
 
 

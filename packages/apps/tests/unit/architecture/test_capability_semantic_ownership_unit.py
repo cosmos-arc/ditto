@@ -289,6 +289,30 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_contracts.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_durable_reconstruction.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_idempotency.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_mutation_receipts.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_planning_launch.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_scheduler_mutations.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
             "_launch_reconstruction.py"
         ),
         (
@@ -508,6 +532,12 @@ def test_creation_identity_is_exactly_allowed_to_wire_analysis_contracts():
         "_walk_forward_execution_semantics.py",
         "scheduler_store.py",
         "worker.py",
+        "_launch_contracts.py",
+        "_launch_durable_reconstruction.py",
+        "_launch_idempotency.py",
+        "_mutation_receipts.py",
+        "_planning_launch.py",
+        "_scheduler_mutations.py",
     ],
 )
 def test_experiment_runtime_wiring_allowances_are_exact_paths(filename: str) -> None:

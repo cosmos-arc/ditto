@@ -846,6 +846,72 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_contracts.py"
+        ),
+        owner="application experiment launch immutable contracts",
+        reason=(
+            "The extracted contracts carry the analysis-owned immutable launch "
+            "rows shared by compilation, strict replay, and persistence."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_durable_reconstruction.py"
+        ),
+        owner="application experiment durable launch reconstruction",
+        reason=(
+            "The strict readback boundary reconstructs analysis-owned launch, "
+            "gate, and fold rows before any durable enqueue can be replayed."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_idempotency.py"
+        ),
+        owner="application experiment launch idempotency boundary",
+        reason=(
+            "The mutation boundary binds and verifies durable receipts over the "
+            "analysis-owned experiment event and projection contracts."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_mutation_receipts.py"
+        ),
+        owner="application experiment control receipt boundary",
+        reason=(
+            "The typed receipt boundary validates analysis-owned status events "
+            "and persists control responses through the approved scheduler port."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_planning_launch.py"
+        ),
+        owner="application experiment durable planning launch",
+        reason=(
+            "The extracted mutation path replays and persists analysis-owned "
+            "experiment launch contracts after read-only preflight planning."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_scheduler_mutations.py"
+        ),
+        owner="application experiment scheduler mutation store",
+        reason=(
+            "The extracted mutation store implements exact operator transition "
+            "and fold retry operations over the approved analysis persistence ports."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
             "_launch_reconstruction.py"
         ),
         owner="application experiment launch reconstruction boundary",

@@ -25,17 +25,15 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import (
     _coordinator_snapshot as _snapshot_rules,
 )
-from ditto_application.processes.experiments._control_runtime import (
-    RetryFoldControlRequest,
-    retry_fold_under_transient_lease,
-)
 from ditto_application.processes.experiments._coordinator_contract import (
-    ExperimentControlReceipt,
     ExperimentDispatch,
     ExperimentProgress,
     PersistedAttemptStart,
     SchedulerTickResult,
     SchedulerTickState,
+)
+from ditto_application.processes.experiments._coordinator_controls import (
+    ExperimentControlCoordinatorMixin,
 )
 from ditto_application.processes.experiments._coordinator_holdout import (
     HoldoutCoordinatorAuthority,
@@ -72,7 +70,6 @@ from ditto_application.processes.experiments.holdout import (
 from ditto_application.processes.experiments.lease_authority import (
     LeaseAuthority,
     require_utc_event_time,
-    run_unfenced_scheduler_operation,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
@@ -180,7 +177,10 @@ _result = _RESULT_BUILDER.result
 _empty_result = _RESULT_BUILDER.empty
 
 
-class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
+class ExperimentExecutionCoordinator(
+    ExperimentControlCoordinatorMixin,
+    WorkerLeaseAuthorityCoordinator,
+):
     """Coordinate only durable first-run work under one singleton lease."""
 
     def __init__(
@@ -240,81 +240,6 @@ class ExperimentExecutionCoordinator(WorkerLeaseAuthorityCoordinator):
             if result is not None:
                 return result
             self._authority.release()
-
-    def pause(
-        self,
-        *,
-        experiment_id: str,
-        expected_revision: int,
-        occurred_at: datetime,
-    ) -> ExperimentControlReceipt:
-        """Persist pause intent before any child notification occurs."""
-        _require_utc_event_time(occurred_at)
-        return run_unfenced_scheduler_operation(
-            lambda: self._recovery.pause(
-                experiment_id=experiment_id,
-                expected_revision=expected_revision,
-                occurred_at=occurred_at,
-            )
-        )
-
-    def cancel(
-        self,
-        *,
-        experiment_id: str,
-        expected_revision: int,
-        occurred_at: datetime,
-    ) -> ExperimentControlReceipt:
-        """Persist cancellation intent before any child notification occurs."""
-        _require_utc_event_time(occurred_at)
-        return run_unfenced_scheduler_operation(
-            lambda: self._recovery.cancel(
-                experiment_id=experiment_id,
-                expected_revision=expected_revision,
-                occurred_at=occurred_at,
-            )
-        )
-
-    def resume(
-        self,
-        *,
-        experiment_id: str,
-        expected_revision: int,
-        occurred_at: datetime,
-    ) -> ExperimentControlReceipt:
-        """Persist RUN intent without constructing a successor attempt early."""
-        _require_utc_event_time(occurred_at)
-        return run_unfenced_scheduler_operation(
-            lambda: self._recovery.resume(
-                experiment_id=experiment_id,
-                expected_revision=expected_revision,
-                occurred_at=occurred_at,
-            )
-        )
-
-    def retry_fold(
-        self,
-        *,
-        experiment_id: str,
-        candidate_id: str,
-        fold_id: str,
-        expected_revision: int,
-        occurred_at: datetime,
-    ) -> ExperimentControlReceipt:
-        """Requeue one eligible terminal fold via a transient control-route lease."""
-        _require_utc_event_time(occurred_at)
-        return retry_fold_under_transient_lease(
-            store=self._store,
-            authority=self._authority,
-            recovery=self._recovery,
-            request=RetryFoldControlRequest(
-                experiment_id=experiment_id,
-                candidate_id=candidate_id,
-                fold_id=fold_id,
-                expected_revision=expected_revision,
-                occurred_at=occurred_at,
-            ),
-        )
 
     def claim_holdout_candidate(
         self,

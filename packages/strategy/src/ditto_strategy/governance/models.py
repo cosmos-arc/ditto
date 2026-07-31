@@ -49,6 +49,8 @@ class ReviewOutcome(StrEnum):
 class StrategyDecision(StrEnum):
     """Append-only governance decisions recorded as provenance events."""
 
+    AUDIT_CREATE_DRAFT = "audit_create_draft"
+    AUDIT_UPDATE_DRAFT = "audit_update_draft"
     SUBMIT_REVIEW = "submit_review"
     APPROVE = "approve"
     REJECT = "reject"

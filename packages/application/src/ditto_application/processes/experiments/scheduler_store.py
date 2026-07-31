@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, cast
@@ -33,6 +34,7 @@ from ditto_analysis.experiments import (
     HoldoutSelectionReason,
     SchedulerLease,
     SchedulerSlot,
+    StatusEventRecord,
 )
 
 from ditto_application.exceptions import AppProcessError
@@ -48,6 +50,9 @@ from ditto_application.processes.experiments._process_error import (
 from ditto_application.processes.experiments._scheduler_control import (
     ExperimentExecutionControlChanged,
     ResearchExecutionDirective,
+)
+from ditto_application.processes.experiments._scheduler_mutations import (
+    ExperimentMutationStoreMixin,
 )
 from ditto_application.processes.experiments._scheduler_reasons import (
     attempt_reason,
@@ -212,6 +217,10 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         self, experiment_id: ExperimentId
     ) -> ExperimentSchedulerSnapshot: ...
 
+    def list_status_events(
+        self, experiment_id: ExperimentId
+    ) -> tuple[StatusEventRecord, ...]: ...
+
     def claim_holdout_candidate(
         self,
         request: HoldoutClaimPersistenceRequest,
@@ -268,6 +277,7 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         expected_revision: int,
         occurred_at: datetime,
         reason_code: str,
+        detail: Mapping[str, object] | None = None,
     ) -> ExperimentProjection: ...
 
     def transition_controlled_experiment(
@@ -354,10 +364,11 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         *,
         now_epoch_us: int,
         occurred_at: datetime,
+        detail: Mapping[str, object] | None = None,
     ) -> FoldView: ...
 
 
-class ExperimentSchedulerStore:
+class ExperimentSchedulerStore(ExperimentMutationStoreMixin):
     """Adapt the exact Task 7 reader/writer protocols to scheduler intents."""
 
     def __init__(
@@ -561,30 +572,6 @@ class ExperimentSchedulerStore:
             AttemptView(attempt.spec, attempt_projection),
         )
 
-    def transition_operator_experiment(
-        self,
-        projection: ExperimentProjection,
-        *,
-        target_status: ExperimentStatus,
-        target_desired_state: ExperimentDesiredState,
-        expected_revision: int,
-        occurred_at: datetime,
-        reason_code: str,
-    ) -> ExperimentProjection:
-        return self._writer.transition_experiment(
-            projection.record.experiment_id,
-            target_status=target_status,
-            target_desired_state=target_desired_state,
-            target_stage=projection.record.stage,
-            failure_code=None,
-            expected_revision=expected_revision,
-            occurred_at=occurred_at,
-            attempt_started=False,
-            precondition_repairable=False,
-            reason_code=reason_code,
-            detail={},
-        )
-
     def transition_controlled_experiment(
         self,
         projection: ExperimentProjection,
@@ -777,24 +764,3 @@ class ExperimentSchedulerStore:
             FoldView(fold.spec, fold_projection),
             AttemptView(attempt.spec, attempt_projection),
         )
-
-    def retry_terminal_fold(
-        self,
-        fold: FoldView,
-        parent_attempt: AttemptView,
-        lease: SchedulerLease,
-        *,
-        now_epoch_us: int,
-        occurred_at: datetime,
-    ) -> FoldView:
-        projection = self._writer.requeue_failed_fold_for_retry(
-            fold.spec.key,
-            parent_attempt.spec.attempt_id,
-            expected_fold_revision=fold.projection.revision,
-            expected_parent_attempt_revision=parent_attempt.projection.revision,
-            lease_fence=lease.fence,
-            now_epoch_us=now_epoch_us,
-            occurred_at=occurred_at,
-            detail={"requested_by": lease.owner_token},
-        )
-        return FoldView(fold.spec, projection)

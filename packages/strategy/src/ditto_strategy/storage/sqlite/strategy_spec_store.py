@@ -22,6 +22,8 @@ from ditto_strategy.models import StrategySpecRecord
 __all__ = [
     "SQLiteStrategySpecReader",
     "SQLiteStrategySpecWriter",
+    "get_spec_payload",
+    "insert_spec_payload",
 ]
 
 # ---------------------------------------------------------------------------
@@ -138,6 +140,16 @@ def insert_spec_payload(conn: sqlite3.Connection, record: StrategySpecRecord) ->
     )
 
 
+def get_spec_payload(
+    conn: sqlite3.Connection,
+    strategy_id: str,
+    version: int,
+) -> StrategySpecRecord | None:
+    """Read one immutable payload on a caller-owned connection."""
+    row = conn.execute(_GET_BY_VERSION_SQL, (strategy_id, version)).fetchone()
+    return None if row is None else _row_to_record(row)
+
+
 # ---------------------------------------------------------------------------
 # Writer
 # ---------------------------------------------------------------------------
@@ -194,7 +206,7 @@ class SQLiteStrategySpecReader:
         """Get a strategy spec. version=None returns the latest version."""
         conn = self._pool.get_connection()
         if version is not None:
-            row = conn.execute(_GET_BY_VERSION_SQL, (strategy_id, version)).fetchone()
+            return get_spec_payload(conn, strategy_id, version)
         else:
             row = conn.execute(_GET_LATEST_SQL, (strategy_id,)).fetchone()
 

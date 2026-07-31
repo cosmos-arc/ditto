@@ -42,7 +42,7 @@ from ditto_application.processes.experiments._baseline_runtime_evidence import (
 from ditto_application.processes.experiments._creation_identity import (
     compile_creation_identity,
 )
-from ditto_application.processes.experiments._launch_saga import (
+from ditto_application.processes.experiments._launch_contracts import (
     PreparedExperimentLaunch,
 )
 from ditto_application.processes.experiments._planning_request_identity import (

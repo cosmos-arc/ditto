@@ -10,6 +10,8 @@ upstream promotion process, not this service.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ditto_strategy.governance.models import (
     GOVERNANCE_SCHEMA_VERSION,
     ReviewOutcome,
@@ -26,11 +28,29 @@ from ditto_strategy.governance.models import (
 from ditto_strategy.governance.protocols import StrategyGovernanceStoreProtocol
 from ditto_strategy.models import StrategySpecRecord
 
-__all__ = ["GovernanceService", "StrategyGovernanceError"]
+__all__ = [
+    "GovernanceService",
+    "PublishReviewedActivationRequest",
+    "StrategyGovernanceError",
+]
 
 
 class StrategyGovernanceError(Exception):
     """Raised when a governance operation targets an unknown version."""
+
+
+@dataclass(frozen=True, slots=True)
+class PublishReviewedActivationRequest:
+    """One atomic approved-review publication and pointer activation."""
+
+    strategy_id: str
+    version: int
+    publish_event_id: str
+    activate_event_id: str
+    actor: str
+    reason: str
+    decided_at: str
+    expected_pointer_revision: int | None = None
 
 
 class GovernanceService:
@@ -43,6 +63,14 @@ class GovernanceService:
         """Return the immutable version identity used by evidence binding."""
         return self._store.get_version(strategy_id, version)
 
+    def get_spec_record(
+        self,
+        strategy_id: str,
+        version: int,
+    ) -> StrategySpecRecord | None:
+        """Return the immutable payload bound to one governance version."""
+        return self._store.get_spec_record(strategy_id, version)
+
     def create_draft(
         self,
         *,
@@ -51,6 +79,7 @@ class GovernanceService:
         spec_record: StrategySpecRecord,
         created_at: str,
         schema_version: int = GOVERNANCE_SCHEMA_VERSION,
+        audit_event: StrategyDecisionEvent | None = None,
     ) -> None:
         """
         Create a draft version: persist spec payload + governance version.
@@ -68,7 +97,19 @@ class GovernanceService:
             spec_hash=spec_record.spec_hash,
             created_at=created_at,
         )
-        self._store.create_draft_version(spec_record, gov_version)
+        self._store.create_draft_version(spec_record, gov_version, audit_event)
+
+    def get_decision_event(self, event_id: str) -> StrategyDecisionEvent | None:
+        """Return one immutable lifecycle/audit event by id."""
+        return self._store.get_decision_event(event_id)
+
+    def get_activation_event(self, event_id: str) -> StrategyActivationEvent | None:
+        """Return one immutable activation event by id."""
+        return self._store.get_activation_event(event_id)
+
+    def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
+        """Return the current active pointer."""
+        return self._store.get_active_pointer(strategy_id)
 
     def submit_review(
         self,
@@ -156,17 +197,10 @@ class GovernanceService:
 
     def publish_reviewed_and_activate(
         self,
-        strategy_id: str,
-        version: int,
-        *,
-        publish_event_id: str,
-        activate_event_id: str,
-        actor: str,
-        reason: str,
-        decided_at: str,
+        request: PublishReviewedActivationRequest,
     ) -> StrategyActivePointer:
         """Atomically publish one approved review and advance the active pointer."""
-        state = self._require_state(strategy_id, version)
+        state = self._require_state(request.strategy_id, request.version)
         next_state, next_review = next_lifecycle(
             state.state,
             state.review_outcome,
@@ -177,25 +211,29 @@ class GovernanceService:
             or next_review is not ReviewOutcome.APPROVED
         ):
             raise ValueError("publish transition did not resolve to approved/published")
-        pointer = self._store.get_active_pointer(strategy_id)
-        expected_pointer_revision = 0 if pointer is None else pointer.pointer_revision
+        expected_pointer_revision = request.expected_pointer_revision
+        if expected_pointer_revision is None:
+            pointer = self._store.get_active_pointer(request.strategy_id)
+            expected_pointer_revision = (
+                0 if pointer is None else pointer.pointer_revision
+            )
         publish_event = StrategyDecisionEvent(
-            publish_event_id,
-            strategy_id,
-            version,
+            request.publish_event_id,
+            request.strategy_id,
+            request.version,
             StrategyDecision.PUBLISH,
-            actor,
-            reason,
-            decided_at,
+            request.actor,
+            request.reason,
+            request.decided_at,
         )
         activation_event = StrategyActivationEvent(
-            activate_event_id,
-            strategy_id,
-            version,
+            request.activate_event_id,
+            request.strategy_id,
+            request.version,
             StrategyDecision.PUBLISH,
-            actor,
-            reason,
-            decided_at,
+            request.actor,
+            request.reason,
+            request.decided_at,
         )
         return self._store.publish_reviewed_and_activate(
             publish_event,

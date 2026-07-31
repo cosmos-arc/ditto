@@ -177,6 +177,7 @@ class _RetryRecovery:
 
     def retry_fold(
         self,
+        _request: RetryFoldControlRequest,
         **_kwargs: object,
     ) -> ExperimentControlReceipt:
         if self.probe is not None:

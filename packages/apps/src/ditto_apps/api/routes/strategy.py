@@ -56,15 +56,21 @@ from ditto_application.contracts import (
     StrategyVersionStateInfo,
 )
 from ditto_application.exceptions import AppError
+from ditto_application.mutation_idempotency import canonical_resource_id
 from ditto_application.queries.strategy import StrategyQueryFacade
 from fastapi import APIRouter, Depends
 
 from ditto_apps.api.deps import paginate, pagination_params
 from ditto_apps.api.errors import (
+    APIError,
     ConflictError,
     NotFoundError,
     UnprocessableEntityError,
     raise_business_error,
+)
+from ditto_apps.api.mutation_idempotency import (
+    IdempotencyKeyHeader,
+    mutation_idempotency,
 )
 from ditto_apps.models.common import APIResponse, PaginationRequest
 from ditto_apps.models.strategy import (
@@ -88,6 +94,16 @@ router = APIRouter(prefix="/strategies", tags=["strategies"])
 
 #: Governance decision error messages carrying these keywords map to 409.
 _CONFLICT_KEYWORDS = ("conflict",)
+
+
+def _raise_mutation_error(exc: AppError) -> Never:
+    """Map stable mutation-idempotency failures before generic message mapping."""
+    code = exc.details.get("code")
+    if isinstance(code, str) and code == "IDEMPOTENCY_KEY_REUSED":
+        raise ConflictError(str(exc), error_code=code) from exc
+    if isinstance(code, str) and code == "IDEMPOTENCY_RECEIPT_INVALID":
+        raise APIError(str(exc), status_code=500, error_code=code) from exc
+    raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
 
 
 def _raise_publish_error(exc: AppError) -> Never:
@@ -186,11 +202,16 @@ def to_active_pointer_response(
     )
 
 
-@router.post("", response_model=APIResponse[StrategyResponse])
+@router.post(
+    "",
+    response_model=APIResponse[StrategyResponse],
+    operation_id="strategies_create_strategy",
+)
 @inject
 async def create_strategy(
     request: CreateStrategyRequest,
     handler: Annotated[CreateStrategyHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyResponse]:
     """创建策略."""
     cmd = CreateStrategyCommand(
@@ -198,8 +219,20 @@ async def create_strategy(
         name=request.name,
         spec_json=request.spec_json,
         tags=tuple(request.tags),
+        idempotency=mutation_idempotency(
+            operation_id="strategies_create_strategy",
+            resource_id=canonical_resource_id(
+                "strategy",
+                {"strategy_id": request.strategy_id},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
-    info = await run_blocking(handler.handle, cmd)
+    try:
+        info = await run_blocking(handler.handle, cmd)
+    except AppError as exc:
+        _raise_mutation_error(exc)
     return APIResponse(data=to_strategy_response(info))
 
 
@@ -227,12 +260,17 @@ async def get_strategy(
     return APIResponse(data=to_strategy_response(info))
 
 
-@router.put("/{strategy_id}", response_model=APIResponse[StrategyResponse])
+@router.put(
+    "/{strategy_id}",
+    response_model=APIResponse[StrategyResponse],
+    operation_id="strategies_update_strategy",
+)
 @inject
 async def update_strategy(
     strategy_id: str,
     request: UpdateStrategyRequest,
     handler: Annotated[UpdateStrategyHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyResponse]:
     """更新策略."""
     cmd = UpdateStrategyCommand(
@@ -241,10 +279,21 @@ async def update_strategy(
         spec_json=request.spec_json,
         version=request.version,
         tags=tuple(request.tags),
+        idempotency=mutation_idempotency(
+            operation_id="strategies_update_strategy",
+            resource_id=canonical_resource_id(
+                "strategy",
+                {"strategy_id": strategy_id},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
     try:
         info = await run_blocking(handler.handle, cmd)
     except (AppError, ValueError) as exc:
+        if isinstance(exc, AppError):
+            _raise_mutation_error(exc)
         raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=to_strategy_response(info))
 
@@ -282,6 +331,7 @@ async def get_active_strategy(
 @router.post(
     "/{strategy_id}/versions/{version}/submit-review",
     response_model=APIResponse[StrategyVersionStateResponse],
+    operation_id="strategies_submit_strategy_review",
 )
 @inject
 async def submit_strategy_review(
@@ -289,6 +339,7 @@ async def submit_strategy_review(
     version: int,
     request: GovernanceDecisionRequest,
     handler: Annotated[SubmitReviewHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyVersionStateResponse]:
     """提交策略版本审查."""
     cmd = SubmitReviewCommand(
@@ -296,17 +347,27 @@ async def submit_strategy_review(
         version=version,
         actor=request.actor,
         reason=request.reason,
+        idempotency=mutation_idempotency(
+            operation_id="strategies_submit_strategy_review",
+            resource_id=canonical_resource_id(
+                "strategy_version",
+                {"strategy_id": strategy_id, "version": version},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
     try:
         record = await run_blocking(handler.handle, cmd)
     except AppError as exc:
-        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+        _raise_mutation_error(exc)
     return APIResponse(data=to_version_state_response(record))
 
 
 @router.post(
     "/{strategy_id}/versions/{version}/approve",
     response_model=APIResponse[StrategyVersionStateResponse],
+    operation_id="strategies_approve_strategy_review",
 )
 @inject
 async def approve_strategy_review(
@@ -314,6 +375,7 @@ async def approve_strategy_review(
     version: int,
     request: GovernanceDecisionRequest,
     handler: Annotated[ApproveReviewHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyVersionStateResponse]:
     """审批策略版本."""
     cmd = ApproveReviewCommand(
@@ -321,17 +383,27 @@ async def approve_strategy_review(
         version=version,
         actor=request.actor,
         reason=request.reason,
+        idempotency=mutation_idempotency(
+            operation_id="strategies_approve_strategy_review",
+            resource_id=canonical_resource_id(
+                "strategy_version",
+                {"strategy_id": strategy_id, "version": version},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
     try:
         record = await run_blocking(handler.handle, cmd)
     except AppError as exc:
-        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+        _raise_mutation_error(exc)
     return APIResponse(data=to_version_state_response(record))
 
 
 @router.post(
     "/{strategy_id}/versions/{version}/reject",
     response_model=APIResponse[StrategyVersionStateResponse],
+    operation_id="strategies_reject_strategy_review",
 )
 @inject
 async def reject_strategy_review(
@@ -339,6 +411,7 @@ async def reject_strategy_review(
     version: int,
     request: GovernanceDecisionRequest,
     handler: Annotated[RejectReviewHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyVersionStateResponse]:
     """驳回策略版本（驳回后只能 clone 新 draft）."""
     cmd = RejectReviewCommand(
@@ -346,17 +419,27 @@ async def reject_strategy_review(
         version=version,
         actor=request.actor,
         reason=request.reason,
+        idempotency=mutation_idempotency(
+            operation_id="strategies_reject_strategy_review",
+            resource_id=canonical_resource_id(
+                "strategy_version",
+                {"strategy_id": strategy_id, "version": version},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
     try:
         record = await run_blocking(handler.handle, cmd)
     except AppError as exc:
-        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+        _raise_mutation_error(exc)
     return APIResponse(data=to_version_state_response(record))
 
 
 @router.post(
     "/{strategy_id}/versions/{version}/deprecate",
     response_model=APIResponse[StrategyVersionStateResponse],
+    operation_id="strategies_deprecate_strategy_version",
 )
 @inject
 async def deprecate_strategy_version(
@@ -364,6 +447,7 @@ async def deprecate_strategy_version(
     version: int,
     request: GovernanceDecisionRequest,
     handler: Annotated[DeprecateStrategyHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyVersionStateResponse]:
     """弃用已发布版本（弃用后不可再激活）."""
     cmd = DeprecateStrategyCommand(
@@ -371,17 +455,27 @@ async def deprecate_strategy_version(
         version=version,
         actor=request.actor,
         reason=request.reason,
+        idempotency=mutation_idempotency(
+            operation_id="strategies_deprecate_strategy_version",
+            resource_id=canonical_resource_id(
+                "strategy_version",
+                {"strategy_id": strategy_id, "version": version},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
     try:
         record = await run_blocking(handler.handle, cmd)
     except AppError as exc:
-        raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+        _raise_mutation_error(exc)
     return APIResponse(data=to_version_state_response(record))
 
 
 @router.post(
     "/{strategy_id}/versions/{version}/reactivate",
     response_model=APIResponse[StrategyActivePointerResponse],
+    operation_id="strategies_reactivate_strategy_version",
 )
 @inject
 async def reactivate_strategy_version(
@@ -389,6 +483,7 @@ async def reactivate_strategy_version(
     version: int,
     request: ReactivateStrategyRequest,
     handler: Annotated[ReactivateStrategyHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyActivePointerResponse]:
     """重新激活已发布版本（乐观指针 CAS，要求 expected_pointer_revision）."""
     cmd = ReactivateStrategyCommand(
@@ -399,10 +494,24 @@ async def reactivate_strategy_version(
         confirmation=request.confirmation,
         impact_summary=request.impact_summary,
         expected_pointer_revision=request.expected_pointer_revision,
+        idempotency=mutation_idempotency(
+            operation_id="strategies_reactivate_strategy_version",
+            resource_id=canonical_resource_id(
+                "strategy_version",
+                {"strategy_id": strategy_id, "version": version},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
     try:
         pointer = await run_blocking(handler.handle, cmd)
     except AppError as exc:
+        if exc.details.get("code") in {
+            "IDEMPOTENCY_KEY_REUSED",
+            "IDEMPOTENCY_RECEIPT_INVALID",
+        }:
+            _raise_mutation_error(exc)
         _raise_reactivate_error(exc)
     return APIResponse(data=to_active_pointer_response(pointer))
 
@@ -410,6 +519,7 @@ async def reactivate_strategy_version(
 @router.post(
     "/{strategy_id}/versions/{version}/publish",
     response_model=APIResponse[StrategyActivePointerResponse],
+    operation_id="strategies_publish_strategy_version",
 )
 @inject
 async def publish_strategy_version(
@@ -417,6 +527,7 @@ async def publish_strategy_version(
     version: int,
     request: PublishStrategyVersionRequest,
     handler: Annotated[PublishStrategyVersionHandler, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyActivePointerResponse]:
     """证据门控发布（经 StrategyPromotionProcess 验证 review packet hard gates）."""
     cmd = PublishStrategyVersionCommand(
@@ -425,10 +536,24 @@ async def publish_strategy_version(
         bundle_hash=request.bundle_hash,
         actor=request.actor,
         reason=request.reason,
+        idempotency=mutation_idempotency(
+            operation_id="strategies_publish_strategy_version",
+            resource_id=canonical_resource_id(
+                "strategy_version",
+                {"strategy_id": strategy_id, "version": version},
+            ),
+            raw_key=idempotency_key,
+            request_payload=request.model_dump(mode="json"),
+        ),
     )
     try:
         pointer = await run_blocking(handler.handle, cmd)
     except AppError as exc:
+        if exc.details.get("code") in {
+            "IDEMPOTENCY_KEY_REUSED",
+            "IDEMPOTENCY_RECEIPT_INVALID",
+        }:
+            _raise_mutation_error(exc)
         _raise_publish_error(exc)
     return APIResponse(data=to_active_pointer_response(pointer))
 

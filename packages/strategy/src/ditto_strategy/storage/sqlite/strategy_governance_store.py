@@ -24,7 +24,10 @@ from ditto_strategy.governance.models import (
     StrategyVersionStateRecord,
 )
 from ditto_strategy.models import StrategySpecRecord
-from ditto_strategy.storage.sqlite.strategy_spec_store import insert_spec_payload
+from ditto_strategy.storage.sqlite.strategy_spec_store import (
+    get_spec_payload,
+    insert_spec_payload,
+)
 
 __all__ = ["SQLiteStrategyGovernanceStore", "StrategyGovernanceCasConflict"]
 
@@ -124,6 +127,11 @@ SELECT strategy_id, version, state, review_outcome, state_revision
 FROM strategy_version_state
 WHERE strategy_id = ? AND version = ?
 """
+_GET_DECISION_EVENT = """
+SELECT event_id, strategy_id, version, decision, actor, reason, decided_at
+FROM strategy_decision_event
+WHERE event_id = ?
+"""
 _INSERT_DECISION_EVENT = """
 INSERT INTO strategy_decision_event (
     event_id, strategy_id, version, decision, actor, reason, decided_at
@@ -162,6 +170,12 @@ SELECT strategy_id, active_version, pointer_revision, activation_event_id
 FROM strategy_active_pointer
 WHERE strategy_id = ?
 """
+_GET_ACTIVATION_EVENT = """
+SELECT event_id, strategy_id, target_version, activation_kind, actor, reason,
+       activated_at
+FROM strategy_activation_event
+WHERE event_id = ?
+"""
 
 
 def _row_to_version(row: sqlite3.Row) -> StrategyVersion:
@@ -195,6 +209,32 @@ def _row_to_pointer(row: sqlite3.Row) -> StrategyActivePointer:
         active_version=int(d["active_version"]),  # type: ignore[arg-type]
         pointer_revision=int(d["pointer_revision"]),  # type: ignore[arg-type]
         activation_event_id=str(d["activation_event_id"]),
+    )
+
+
+def _row_to_decision_event(row: sqlite3.Row) -> StrategyDecisionEvent:
+    d: dict[str, object] = dict(row)
+    return StrategyDecisionEvent(
+        event_id=str(d["event_id"]),
+        strategy_id=str(d["strategy_id"]),
+        version=int(d["version"]),  # type: ignore[arg-type]
+        decision=StrategyDecision(str(d["decision"])),
+        actor=str(d["actor"]),
+        reason=str(d["reason"]),
+        decided_at=str(d["decided_at"]),
+    )
+
+
+def _row_to_activation_event(row: sqlite3.Row) -> StrategyActivationEvent:
+    d: dict[str, object] = dict(row)
+    return StrategyActivationEvent(
+        event_id=str(d["event_id"]),
+        strategy_id=str(d["strategy_id"]),
+        target_version=int(d["target_version"]),  # type: ignore[arg-type]
+        activation_kind=StrategyDecision(str(d["activation_kind"])),
+        actor=str(d["actor"]),
+        reason=str(d["reason"]),
+        activated_at=str(d["activated_at"]),
     )
 
 
@@ -238,7 +278,10 @@ class SQLiteStrategyGovernanceStore:
 
     @traced("governance.create_draft_version")
     def create_draft_version(
-        self, spec_record: StrategySpecRecord, version: StrategyVersion
+        self,
+        spec_record: StrategySpecRecord,
+        version: StrategyVersion,
+        audit_event: StrategyDecisionEvent | None = None,
     ) -> None:
         """
         Atomically persist the spec payload plus a draft governance version.
@@ -248,10 +291,38 @@ class SQLiteStrategyGovernanceStore:
         never leaves an orphan payload or a payload-less version. Rejects
         duplicate ``(strategy_id, version)`` via primary key.
         """
+        if audit_event is not None and (
+            audit_event.strategy_id != version.strategy_id
+            or audit_event.version != version.version
+            or audit_event.decision
+            not in {
+                StrategyDecision.AUDIT_CREATE_DRAFT,
+                StrategyDecision.AUDIT_UPDATE_DRAFT,
+            }
+        ):
+            raise ValueError("draft audit event must identify the created version")
         conn = self._pool.get_connection()
-        insert_spec_payload(conn, spec_record)
-        self._insert_version_rows(conn, version)
-        self._pool.commit()
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            insert_spec_payload(conn, spec_record)
+            self._insert_version_rows(conn, version)
+            if audit_event is not None:
+                conn.execute(
+                    _INSERT_DECISION_EVENT,
+                    (
+                        audit_event.event_id,
+                        audit_event.strategy_id,
+                        audit_event.version,
+                        audit_event.decision.value,
+                        audit_event.actor,
+                        audit_event.reason,
+                        audit_event.decided_at,
+                    ),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         logger.debug(
             "governance draft version created",
             event="governance_draft_created",
@@ -293,6 +364,14 @@ class SQLiteStrategyGovernanceStore:
         row = conn.execute(_GET_VERSION, (strategy_id, version)).fetchone()
         return None if row is None else _row_to_version(row)
 
+    def get_spec_record(
+        self,
+        strategy_id: str,
+        version: int,
+    ) -> StrategySpecRecord | None:
+        """Return the immutable payload cross-linked by a governance version."""
+        return get_spec_payload(self._pool.get_connection(), strategy_id, version)
+
     @traced("governance.list_versions")
     def list_versions(self, strategy_id: str) -> tuple[StrategyVersion, ...]:
         """List every immutable version for a strategy, newest first."""
@@ -325,6 +404,13 @@ class SQLiteStrategyGovernanceStore:
         row = conn.execute(_GET_STATE, (strategy_id, version)).fetchone()
         return None if row is None else _row_to_state(row)
 
+    @traced("governance.get_decision_event")
+    def get_decision_event(self, event_id: str) -> StrategyDecisionEvent | None:
+        """Return one immutable lifecycle/audit event by primary key."""
+        conn = self._pool.get_connection()
+        row = conn.execute(_GET_DECISION_EVENT, (event_id,)).fetchone()
+        return None if row is None else _row_to_decision_event(row)
+
     @traced("governance.append_decision")
     def append_decision(
         self,
@@ -341,35 +427,39 @@ class SQLiteStrategyGovernanceStore:
         insert is rolled back so history stays consistent.
         """
         conn = self._pool.get_connection()
-        conn.execute(
-            _INSERT_DECISION_EVENT,
-            (
-                event.event_id,
-                event.strategy_id,
-                event.version,
-                event.decision.value,
-                event.actor,
-                event.reason,
-                event.decided_at,
-            ),
-        )
-        cursor = conn.execute(
-            _CAS_STATE,
-            (
-                new_state.value,
-                new_review.value,
-                event.strategy_id,
-                event.version,
-                expected_revision,
-            ),
-        )
-        if cursor.rowcount == 0:
-            self._pool.rollback()
-            raise StrategyGovernanceCasConflict(
-                "state CAS missed revision "
-                + f"{expected_revision} for {event.strategy_id}/{event.version}"
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            conn.execute(
+                _INSERT_DECISION_EVENT,
+                (
+                    event.event_id,
+                    event.strategy_id,
+                    event.version,
+                    event.decision.value,
+                    event.actor,
+                    event.reason,
+                    event.decided_at,
+                ),
             )
-        self._pool.commit()
+            cursor = conn.execute(
+                _CAS_STATE,
+                (
+                    new_state.value,
+                    new_review.value,
+                    event.strategy_id,
+                    event.version,
+                    expected_revision,
+                ),
+            )
+            if cursor.rowcount == 0:
+                raise StrategyGovernanceCasConflict(
+                    "state CAS missed revision "
+                    + f"{expected_revision} for {event.strategy_id}/{event.version}"
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         record = self.get_state(event.strategy_id, event.version)
         if record is None:
             raise RuntimeError("governance state projection missing after CAS advance")
@@ -498,46 +588,51 @@ class SQLiteStrategyGovernanceStore:
         activation must supply the current revision or conflict.
         """
         conn = self._pool.get_connection()
-        conn.execute(
-            _INSERT_ACTIVATION_EVENT,
-            (
-                event.event_id,
-                event.strategy_id,
-                event.target_version,
-                event.activation_kind.value,
-                event.actor,
-                event.reason,
-                event.activated_at,
-            ),
-        )
-        if expected_pointer_revision == 0:
-            try:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            conn.execute(
+                _INSERT_ACTIVATION_EVENT,
+                (
+                    event.event_id,
+                    event.strategy_id,
+                    event.target_version,
+                    event.activation_kind.value,
+                    event.actor,
+                    event.reason,
+                    event.activated_at,
+                ),
+            )
+            if expected_pointer_revision == 0:
                 conn.execute(
                     _INSERT_ACTIVE_POINTER,
                     (strategy_id, target_version, 1, event.event_id),
                 )
-            except sqlite3.IntegrityError:
-                self._pool.rollback()
+            else:
+                cursor = conn.execute(
+                    _CAS_ACTIVE_POINTER,
+                    (
+                        target_version,
+                        event.event_id,
+                        strategy_id,
+                        expected_pointer_revision,
+                    ),
+                )
+                if cursor.rowcount == 0:
+                    raise StrategyGovernanceCasConflict(
+                        "pointer CAS missed revision "
+                        + f"{expected_pointer_revision} for {strategy_id}"
+                    )
+            conn.commit()
+        except sqlite3.IntegrityError as exc:
+            conn.rollback()
+            if expected_pointer_revision == 0:
                 raise StrategyGovernanceCasConflict(
                     f"active pointer already exists for {strategy_id}"
-                ) from None
-        else:
-            cursor = conn.execute(
-                _CAS_ACTIVE_POINTER,
-                (
-                    target_version,
-                    event.event_id,
-                    strategy_id,
-                    expected_pointer_revision,
-                ),
-            )
-            if cursor.rowcount == 0:
-                self._pool.rollback()
-                raise StrategyGovernanceCasConflict(
-                    "pointer CAS missed revision "
-                    + f"{expected_pointer_revision} for {strategy_id}"
-                )
-        self._pool.commit()
+                ) from exc
+            raise
+        except Exception:
+            conn.rollback()
+            raise
         pointer = self.get_active_pointer(strategy_id)
         if pointer is None:
             raise RuntimeError("governance active pointer missing after activation")
@@ -549,3 +644,10 @@ class SQLiteStrategyGovernanceStore:
         conn = self._pool.get_connection()
         row = conn.execute(_GET_ACTIVE_POINTER, (strategy_id,)).fetchone()
         return None if row is None else _row_to_pointer(row)
+
+    @traced("governance.get_activation_event")
+    def get_activation_event(self, event_id: str) -> StrategyActivationEvent | None:
+        """Return one immutable activation event by primary key."""
+        conn = self._pool.get_connection()
+        row = conn.execute(_GET_ACTIVATION_EVENT, (event_id,)).fetchone()
+        return None if row is None else _row_to_activation_event(row)

@@ -5,11 +5,19 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import datetime
 
+from ditto_application.mutation_idempotency import MutationIdempotency
 from ditto_application.processes.experiments._coordinator_contract import (
     ExperimentControlReceipt,
+    RetryFoldControlRequest,
 )
 from ditto_application.processes.experiments._coordinator_snapshot import (
     scheduler_error,
+)
+from ditto_application.processes.experiments._mutation_receipts import (
+    OperatorControlIntent,
+    control_receipt_detail,
+    persist_operator_control,
+    replay_control_receipt,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     AttemptId,
@@ -71,14 +79,19 @@ class ExperimentRecoveryOrchestrator:
         experiment_id: str,
         expected_revision: int,
         occurred_at: datetime,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentControlReceipt:
-        return self._operator_transition(
-            experiment_id,
-            expected_revision=expected_revision,
-            occurred_at=occurred_at,
-            target_status=ExperimentStatus.PAUSE_REQUESTED,
-            target_desired_state=ExperimentDesiredState.PAUSE,
-            reason_code="operator_pause",
+        return persist_operator_control(
+            self._store,
+            idempotency,
+            experiment_id=experiment_id,
+            intent=OperatorControlIntent(
+                expected_revision=expected_revision,
+                occurred_at=occurred_at,
+                target_status=ExperimentStatus.PAUSE_REQUESTED,
+                target_desired_state=ExperimentDesiredState.PAUSE,
+                reason_code="operator_pause",
+            ),
         )
 
     def cancel(
@@ -87,14 +100,19 @@ class ExperimentRecoveryOrchestrator:
         experiment_id: str,
         expected_revision: int,
         occurred_at: datetime,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentControlReceipt:
-        return self._operator_transition(
-            experiment_id,
-            expected_revision=expected_revision,
-            occurred_at=occurred_at,
-            target_status=ExperimentStatus.CANCEL_REQUESTED,
-            target_desired_state=ExperimentDesiredState.CANCEL,
-            reason_code="operator_cancel",
+        return persist_operator_control(
+            self._store,
+            idempotency,
+            experiment_id=experiment_id,
+            intent=OperatorControlIntent(
+                expected_revision=expected_revision,
+                occurred_at=occurred_at,
+                target_status=ExperimentStatus.CANCEL_REQUESTED,
+                target_desired_state=ExperimentDesiredState.CANCEL,
+                reason_code="operator_cancel",
+            ),
         )
 
     def resume(
@@ -103,33 +121,43 @@ class ExperimentRecoveryOrchestrator:
         experiment_id: str,
         expected_revision: int,
         occurred_at: datetime,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentControlReceipt:
-        return self._operator_transition(
-            experiment_id,
-            expected_revision=expected_revision,
-            occurred_at=occurred_at,
-            target_status=ExperimentStatus.QUEUED,
-            target_desired_state=ExperimentDesiredState.RUN,
-            reason_code="operator_resume",
+        return persist_operator_control(
+            self._store,
+            idempotency,
+            experiment_id=experiment_id,
+            intent=OperatorControlIntent(
+                expected_revision=expected_revision,
+                occurred_at=occurred_at,
+                target_status=ExperimentStatus.QUEUED,
+                target_desired_state=ExperimentDesiredState.RUN,
+                reason_code="operator_resume",
+            ),
         )
 
     def retry_fold(
         self,
+        request: RetryFoldControlRequest,
         *,
-        experiment_id: str,
-        candidate_id: str,
-        fold_id: str,
-        expected_revision: int,
-        occurred_at: datetime,
         lease: SchedulerLease,
         now_epoch_us: int,
     ) -> ExperimentControlReceipt:
-        snapshot = self._store.load_snapshot(ExperimentId(experiment_id))
+        replay = replay_control_receipt(
+            self._store,
+            request.idempotency,
+            experiment_id=request.experiment_id,
+            candidate_id=request.candidate_id,
+            fold_id=request.fold_id,
+        )
+        if replay is not None:
+            return replay
+        snapshot = self._store.load_snapshot(ExperimentId(request.experiment_id))
         self.validate_attempt_lineage(snapshot)
         key = FoldKey(
-            ExperimentId(experiment_id),
-            CandidateId(candidate_id),
-            FoldId(fold_id),
+            ExperimentId(request.experiment_id),
+            CandidateId(request.candidate_id),
+            FoldId(request.fold_id),
         )
         fold = _find_fold(snapshot, key)
         retryable_role = self._retryable_stage_roles.get(
@@ -140,7 +168,7 @@ class ExperimentRecoveryOrchestrator:
                 "SPEC_INVALID",
                 "terminal_fold_retry_stage_closed",
             )
-        if fold.projection.revision != expected_revision:
+        if fold.projection.revision != request.expected_revision:
             raise scheduler_error("SPEC_INVALID", "stale_fold_revision")
         if fold.projection.status is not ExperimentStatus.FAILED:
             raise scheduler_error(
@@ -148,15 +176,40 @@ class ExperimentRecoveryOrchestrator:
                 "terminal_fold_retry_requires_failed_fold",
             )
         parent = _latest_attempt(snapshot, key)
-        self._store.retry_terminal_fold(
-            fold,
-            parent,
-            lease,
-            now_epoch_us=now_epoch_us,
-            occurred_at=occurred_at,
+        expected_receipt = _receipt(snapshot.projection, request.occurred_at, ())
+        detail = (
+            {}
+            if request.idempotency is None
+            else control_receipt_detail(request.idempotency, expected_receipt)
         )
+        try:
+            self._store.retry_terminal_fold(
+                fold,
+                parent,
+                lease,
+                now_epoch_us=now_epoch_us,
+                occurred_at=request.occurred_at,
+                detail=detail,
+            )
+        except Exception:
+            replay = replay_control_receipt(
+                self._store,
+                request.idempotency,
+                experiment_id=request.experiment_id,
+                candidate_id=request.candidate_id,
+                fold_id=request.fold_id,
+            )
+            if replay is not None:
+                return replay
+            raise
         projection = self._store.load_snapshot(key.experiment_id).projection
-        return _receipt(projection, occurred_at, ())
+        result = _receipt(projection, request.occurred_at, ())
+        if request.idempotency is not None and result != expected_receipt:
+            raise scheduler_error(
+                "IDEMPOTENCY_RECEIPT_INVALID",
+                "idempotency_receipt_invalid",
+            )
+        return result
 
     def poll_directive(
         self,
@@ -588,37 +641,6 @@ class ExperimentRecoveryOrchestrator:
                 "attempt_fold_not_owned_by_lease",
             )
         return fold
-
-    def _operator_transition(
-        self,
-        experiment_id: str,
-        *,
-        expected_revision: int,
-        occurred_at: datetime,
-        target_status: ExperimentStatus,
-        target_desired_state: ExperimentDesiredState,
-        reason_code: str,
-    ) -> ExperimentControlReceipt:
-        snapshot = self._store.load_snapshot(ExperimentId(experiment_id))
-        live_run_ids = tuple(
-            sorted(
-                {
-                    str(item.projection.backtest_run_id)
-                    for item in snapshot.attempts
-                    if item.projection.status in _LIVE
-                    and item.projection.backtest_run_id is not None
-                }
-            )
-        )
-        projection = self._store.transition_operator_experiment(
-            snapshot.projection,
-            target_status=target_status,
-            target_desired_state=target_desired_state,
-            expected_revision=expected_revision,
-            occurred_at=occurred_at,
-            reason_code=reason_code,
-        )
-        return _receipt(projection, occurred_at, live_run_ids)
 
     def _reconcile_live_checkpoint(
         self,

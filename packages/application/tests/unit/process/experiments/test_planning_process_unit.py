@@ -39,6 +39,10 @@ from ditto_analysis.experiments.trial_ledger import (
     PromotionObjective,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.mutation_idempotency import (
+    build_mutation_idempotency,
+    canonical_resource_id,
+)
 from ditto_application.processes.experiments import (
     _launch_material as launch_material_module,
 )
@@ -47,6 +51,9 @@ from ditto_application.processes.experiments import (
 )
 from ditto_application.processes.experiments import (
     planning_process as planning_process_module,
+)
+from ditto_application.processes.experiments._creation_identity import (
+    compile_creation_identity,
 )
 from ditto_application.processes.experiments._launch_saga import (
     PreparedExperimentLaunch,
@@ -2861,6 +2868,92 @@ def test_committed_enqueue_retry_replays_before_every_planning_probe() -> None:
     ).launch(request, confirmed_plan_hash=report.plan_hash)
 
     assert replay == receipt
+    assert certification.calls == []
+    assert executor.calls == 0
+    assert authority.calls == 0
+    assert store.calls == []
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["corrupt", "corrupt-internal", "transplanted"],
+)
+def test_idempotent_committed_replay_rejects_invalid_creation_fence_before_probes(
+    mutation: str,
+) -> None:
+    store = _Store()
+    request = _request()
+    process = _process(store)
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    identity = build_mutation_idempotency(
+        operation_id="research_launch_experiment",
+        resource_id=canonical_resource_id(
+            "experiment",
+            {"experiment_id": request.experiment_id},
+        ),
+        raw_key="planning-unit.launch-001",
+        request_payload={},
+        request_hash=planning_request_hash(request),
+    )
+    process.launch(
+        request,
+        confirmed_plan_hash=report.plan_hash,
+        idempotency=identity,
+    )
+    assert store.creation_event is not None
+    if mutation == "transplanted":
+        other_identity = build_mutation_idempotency(
+            operation_id="research_launch_experiment",
+            resource_id=canonical_resource_id(
+                "experiment",
+                {"experiment_id": f"{request.experiment_id}-other"},
+            ),
+            raw_key="planning-unit.launch-001",
+            request_payload={},
+            request_hash=planning_request_hash(request),
+        )
+        detail, payload = compile_creation_identity(
+            request_hash=planning_request_hash(request),
+            plan_hash=report.plan_hash,
+            idempotency=other_identity,
+        )
+        store.creation_event = replace(
+            store.creation_event,
+            detail=detail,
+            detail_hash=payload.content_hash,
+        )
+    else:
+        detail = dict(store.creation_event.detail)
+        fence = dict(cast("Mapping[str, object]", detail["mutation_idempotency_fence"]))
+        fence["fence_hash"] = "0" * 64
+        detail["mutation_idempotency_fence"] = fence
+        store.creation_event = replace(
+            store.creation_event,
+            detail=detail,
+            detail_hash=canonical_payload(detail).content_hash,
+        )
+    certification = _BombCertificationProbe()
+    executor = _BombExecutorProbe()
+    authority = _BombAuthorityProbe()
+    store.calls.clear()
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _process(
+            store,
+            certification=certification,
+            executor=executor,
+            authority=authority,
+        ).launch(
+            request,
+            confirmed_plan_hash=report.plan_hash,
+            idempotency=None if mutation == "corrupt-internal" else identity,
+        )
+
+    assert exc_info.value.details["code"] in {
+        "EXPERIMENT_LAUNCH_CONFLICT",
+        "IDEMPOTENCY_RECEIPT_INVALID",
+    }
     assert certification.calls == []
     assert executor.calls == 0
     assert authority.calls == 0

@@ -18,6 +18,7 @@ seed/system fast-path lives in ``commands.strategy.PublishStrategyHandler``.
 
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
@@ -43,11 +44,24 @@ from ditto_strategy.storage.sqlite.strategy_governance_store import (
     StrategyGovernanceCasConflict,
 )
 
+from ditto_application.commands.strategy_governance_receipts import (
+    invalid_strategy_receipt,
+    pointer_receipt,
+    replay_strategy_activation,
+    replay_strategy_decision,
+    replay_strategy_publish,
+    state_receipt,
+)
 from ditto_application.contracts import (
     StrategyActivePointerInfo,
     StrategyVersionStateInfo,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.mutation_idempotency import (
+    MutationIdempotency,
+    mutation_event_id,
+    mutation_receipt_reason,
+)
 from ditto_application.processes.strategy.promotion import (
     PromotionRequest,
     StrategyPromotionProcess,
@@ -73,6 +87,7 @@ __all__ = [
 _UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
 #: Governance failures mapped at this boundary into one typed AppCommandError.
 _GOVERNANCE_FAILURES = (
+    sqlite3.IntegrityError,
     StrategyGovernanceError,
     StrategyGovernanceCasConflict,
     ValueError,
@@ -187,6 +202,7 @@ class SubmitReviewCommand:
     version: int
     actor: str
     reason: str
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,6 +213,7 @@ class ApproveReviewCommand:
     version: int
     actor: str
     reason: str
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,6 +224,7 @@ class RejectReviewCommand:
     version: int
     actor: str
     reason: str
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,6 +235,7 @@ class DeprecateStrategyCommand:
     version: int
     actor: str
     reason: str
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,6 +249,7 @@ class ReactivateStrategyCommand:
     confirmation: str
     impact_summary: str
     expected_pointer_revision: int
+    idempotency: MutationIdempotency | None = None
 
 
 class SubmitReviewHandler:
@@ -240,23 +260,59 @@ class SubmitReviewHandler:
 
     def handle(self, command: SubmitReviewCommand) -> StrategyVersionStateInfo:
         """Forward the submit-review decision with minted provenance."""
+        replay = replay_strategy_decision(
+            self._governance,
+            command.idempotency,
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        if replay is not None:
+            return replay
         decided_at = _utc_now_iso()
+        expected = StrategyVersionStateInfo(
+            command.strategy_id, command.version, "review", "pending"
+        )
+        reason = command.reason
+        if command.idempotency is not None:
+            reason = mutation_receipt_reason(
+                command.idempotency,
+                response=state_receipt(expected),
+                human_reason=command.reason,
+            )
         try:
             record = self._governance.submit_review(
                 command.strategy_id,
                 command.version,
-                event_id=_event_id(
-                    command.strategy_id, command.version, "submit_review", decided_at
+                event_id=(
+                    mutation_event_id(command.idempotency)
+                    if command.idempotency is not None
+                    else _event_id(
+                        command.strategy_id,
+                        command.version,
+                        "submit_review",
+                        decided_at,
+                    )
                 ),
                 actor=command.actor,
-                reason=command.reason,
+                reason=reason,
                 decided_at=decided_at,
             )
         except _GOVERNANCE_FAILURES as exc:
+            replay = replay_strategy_decision(
+                self._governance,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+                version=command.version,
+            )
+            if replay is not None:
+                return replay
             raise _map_governance_error(
                 command.strategy_id, command.version, exc
             ) from exc
-        return _to_state_info(record)
+        result = _to_state_info(record)
+        if command.idempotency is not None and result != expected:
+            raise invalid_strategy_receipt()
+        return result
 
 
 class ApproveReviewHandler:
@@ -267,23 +323,56 @@ class ApproveReviewHandler:
 
     def handle(self, command: ApproveReviewCommand) -> StrategyVersionStateInfo:
         """Forward the approval decision with minted provenance."""
+        replay = replay_strategy_decision(
+            self._governance,
+            command.idempotency,
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        if replay is not None:
+            return replay
         decided_at = _utc_now_iso()
+        expected = StrategyVersionStateInfo(
+            command.strategy_id, command.version, "review", "approved"
+        )
+        reason = command.reason
+        if command.idempotency is not None:
+            reason = mutation_receipt_reason(
+                command.idempotency,
+                response=state_receipt(expected),
+                human_reason=command.reason,
+            )
         try:
             record = self._governance.approve(
                 command.strategy_id,
                 command.version,
-                event_id=_event_id(
-                    command.strategy_id, command.version, "approve", decided_at
+                event_id=(
+                    mutation_event_id(command.idempotency)
+                    if command.idempotency is not None
+                    else _event_id(
+                        command.strategy_id, command.version, "approve", decided_at
+                    )
                 ),
                 actor=command.actor,
-                reason=command.reason,
+                reason=reason,
                 decided_at=decided_at,
             )
         except _GOVERNANCE_FAILURES as exc:
+            replay = replay_strategy_decision(
+                self._governance,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+                version=command.version,
+            )
+            if replay is not None:
+                return replay
             raise _map_governance_error(
                 command.strategy_id, command.version, exc
             ) from exc
-        return _to_state_info(record)
+        result = _to_state_info(record)
+        if command.idempotency is not None and result != expected:
+            raise invalid_strategy_receipt()
+        return result
 
 
 class RejectReviewHandler:
@@ -294,23 +383,56 @@ class RejectReviewHandler:
 
     def handle(self, command: RejectReviewCommand) -> StrategyVersionStateInfo:
         """Forward the rejection decision with minted provenance."""
+        replay = replay_strategy_decision(
+            self._governance,
+            command.idempotency,
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        if replay is not None:
+            return replay
         decided_at = _utc_now_iso()
+        expected = StrategyVersionStateInfo(
+            command.strategy_id, command.version, "review", "rejected"
+        )
+        reason = command.reason
+        if command.idempotency is not None:
+            reason = mutation_receipt_reason(
+                command.idempotency,
+                response=state_receipt(expected),
+                human_reason=command.reason,
+            )
         try:
             record = self._governance.reject(
                 command.strategy_id,
                 command.version,
-                event_id=_event_id(
-                    command.strategy_id, command.version, "reject", decided_at
+                event_id=(
+                    mutation_event_id(command.idempotency)
+                    if command.idempotency is not None
+                    else _event_id(
+                        command.strategy_id, command.version, "reject", decided_at
+                    )
                 ),
                 actor=command.actor,
-                reason=command.reason,
+                reason=reason,
                 decided_at=decided_at,
             )
         except _GOVERNANCE_FAILURES as exc:
+            replay = replay_strategy_decision(
+                self._governance,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+                version=command.version,
+            )
+            if replay is not None:
+                return replay
             raise _map_governance_error(
                 command.strategy_id, command.version, exc
             ) from exc
-        return _to_state_info(record)
+        result = _to_state_info(record)
+        if command.idempotency is not None and result != expected:
+            raise invalid_strategy_receipt()
+        return result
 
 
 class DeprecateStrategyHandler:
@@ -321,23 +443,56 @@ class DeprecateStrategyHandler:
 
     def handle(self, command: DeprecateStrategyCommand) -> StrategyVersionStateInfo:
         """Forward the deprecation decision with minted provenance."""
+        replay = replay_strategy_decision(
+            self._governance,
+            command.idempotency,
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        if replay is not None:
+            return replay
         decided_at = _utc_now_iso()
+        expected = StrategyVersionStateInfo(
+            command.strategy_id, command.version, "deprecated", "approved"
+        )
+        reason = command.reason
+        if command.idempotency is not None:
+            reason = mutation_receipt_reason(
+                command.idempotency,
+                response=state_receipt(expected),
+                human_reason=command.reason,
+            )
         try:
             record = self._governance.deprecate(
                 command.strategy_id,
                 command.version,
-                event_id=_event_id(
-                    command.strategy_id, command.version, "deprecate", decided_at
+                event_id=(
+                    mutation_event_id(command.idempotency)
+                    if command.idempotency is not None
+                    else _event_id(
+                        command.strategy_id, command.version, "deprecate", decided_at
+                    )
                 ),
                 actor=command.actor,
-                reason=command.reason,
+                reason=reason,
                 decided_at=decided_at,
             )
         except _GOVERNANCE_FAILURES as exc:
+            replay = replay_strategy_decision(
+                self._governance,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+                version=command.version,
+            )
+            if replay is not None:
+                return replay
             raise _map_governance_error(
                 command.strategy_id, command.version, exc
             ) from exc
-        return _to_state_info(record)
+        result = _to_state_info(record)
+        if command.idempotency is not None and result != expected:
+            raise invalid_strategy_receipt()
+        return result
 
 
 class ReactivateStrategyHandler:
@@ -348,6 +503,14 @@ class ReactivateStrategyHandler:
 
     def handle(self, command: ReactivateStrategyCommand) -> StrategyActivePointerInfo:
         """Forward the optimistic-pointer CAS decision with typed error mapping."""
+        replay = replay_strategy_activation(
+            self._governance,
+            command.idempotency,
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        if replay is not None:
+            return replay
         reason = _required_reactivation_text(
             command.reason,
             field_name="reason",
@@ -377,13 +540,31 @@ class ReactivateStrategyHandler:
                 },
             )
         decided_at = _utc_now_iso()
+        expected = StrategyActivePointerInfo(
+            strategy_id=command.strategy_id,
+            active_version=command.version,
+            pointer_revision=command.expected_pointer_revision + 1,
+        )
+        audit_reason = _reactivation_audit_reason(reason, impact_summary)
+        if command.idempotency is not None:
+            audit_reason = mutation_receipt_reason(
+                command.idempotency,
+                response=pointer_receipt(expected),
+                human_reason=audit_reason,
+            )
         event = StrategyActivationEvent(
-            _event_id(command.strategy_id, command.version, "reactivate", decided_at),
+            (
+                mutation_event_id(command.idempotency)
+                if command.idempotency is not None
+                else _event_id(
+                    command.strategy_id, command.version, "reactivate", decided_at
+                )
+            ),
             command.strategy_id,
             command.version,
             StrategyDecision.REACTIVATE,
             command.actor,
-            _reactivation_audit_reason(reason, impact_summary),
+            audit_reason,
             decided_at,
         )
         try:
@@ -394,10 +575,21 @@ class ReactivateStrategyHandler:
                 expected_pointer_revision=command.expected_pointer_revision,
             )
         except _GOVERNANCE_FAILURES as exc:
+            replay = replay_strategy_activation(
+                self._governance,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+                version=command.version,
+            )
+            if replay is not None:
+                return replay
             raise _map_governance_error(
                 command.strategy_id, command.version, exc
             ) from exc
-        return _to_pointer_info(pointer)
+        result = _to_pointer_info(pointer)
+        if command.idempotency is not None and result != expected:
+            raise invalid_strategy_receipt()
+        return result
 
 
 class ReviewPacketReader(Protocol):
@@ -423,6 +615,7 @@ class PublishStrategyVersionCommand:
     bundle_hash: str
     actor: str
     reason: str
+    idempotency: MutationIdempotency | None = None
 
 
 class PublishStrategyVersionHandler:
@@ -440,6 +633,14 @@ class PublishStrategyVersionHandler:
         self, command: PublishStrategyVersionCommand
     ) -> StrategyActivePointerInfo:
         """Load the packet, run evidence gates, and switch the active pointer."""
+        replay = replay_strategy_publish(
+            self._process,
+            command.idempotency,
+            strategy_id=command.strategy_id,
+            version=command.version,
+        )
+        if replay is not None:
+            return replay
         packet = self._reader.get_review_packet(command.bundle_hash)
         if packet is None:
             raise AppCommandError(
@@ -494,16 +695,33 @@ class PublishStrategyVersionHandler:
             decided_at=decided_at,
             expected_bundle_hash=command.bundle_hash,
             expected_strategy_spec_hash=str(launch.strategy_spec_hash),
+            idempotency=command.idempotency,
         )
         try:
             result = self._process.promote(request)
         except AppProcessError as exc:
+            replay = replay_strategy_publish(
+                self._process,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+                version=command.version,
+            )
+            if replay is not None:
+                return replay
             details = dict(exc.details)
             details.update(
                 {"strategy_id": command.strategy_id, "version": command.version}
             )
             raise AppCommandError(str(exc), details=details) from exc
         except _GOVERNANCE_FAILURES as exc:
+            replay = replay_strategy_publish(
+                self._process,
+                command.idempotency,
+                strategy_id=command.strategy_id,
+                version=command.version,
+            )
+            if replay is not None:
+                return replay
             raise _map_governance_error(
                 command.strategy_id,
                 command.version,

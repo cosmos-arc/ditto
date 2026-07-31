@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
+from ditto_application.mutation_idempotency import MutationIdempotency
 from ditto_application.processes.experiments._coordinator_snapshot import (
     scheduler_error,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "ExperimentDispatch",
     "ExperimentProgress",
     "PersistedAttemptStart",
+    "RetryFoldControlRequest",
     "SchedulerTickResult",
     "SchedulerTickState",
 ]
@@ -64,6 +66,19 @@ class ExperimentControlReceipt:
     revision: int
     occurred_at: datetime
     live_run_ids: tuple[str, ...] = ()
+    replayed: bool = field(default=False, compare=False, repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class RetryFoldControlRequest:
+    """One operator-initiated terminal fold retry request."""
+
+    experiment_id: str
+    candidate_id: str
+    fold_id: str
+    expected_revision: int
+    occurred_at: datetime
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)

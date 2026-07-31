@@ -21,10 +21,22 @@ from ditto_analysis.experiments import (
     ReviewPacket,
     review_blocked_by_hard_gates,
 )
-from ditto_strategy.governance.models import StrategyActivePointer
-from ditto_strategy.governance.service import GovernanceService
+from ditto_strategy.governance.models import (
+    StrategyActivationEvent,
+    StrategyActivePointer,
+    StrategyDecisionEvent,
+)
+from ditto_strategy.governance.service import (
+    GovernanceService,
+    PublishReviewedActivationRequest,
+)
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.mutation_idempotency import (
+    MutationIdempotency,
+    mutation_event_id,
+    mutation_receipt_reason,
+)
 
 __all__ = ["PromotionRequest", "PromotionResult", "StrategyPromotionProcess"]
 
@@ -41,6 +53,7 @@ class PromotionRequest:
     decided_at: str
     expected_bundle_hash: str
     expected_strategy_spec_hash: str
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +92,14 @@ class StrategyPromotionProcess:
 
     def __init__(self, governance: GovernanceService) -> None:
         self._governance = governance
+
+    def get_decision_event(self, event_id: str) -> StrategyDecisionEvent | None:
+        """Expose the narrow durable receipt read needed before evidence probes."""
+        return self._governance.get_decision_event(event_id)
+
+    def get_activation_event(self, event_id: str) -> StrategyActivationEvent | None:
+        """Expose the paired activation receipt read for atomic replay validation."""
+        return self._governance.get_activation_event(event_id)
 
     def promote(self, request: PromotionRequest) -> PromotionResult:
         """Validate the evidence bundle, publish, and switch the active pointer."""
@@ -128,20 +149,61 @@ class StrategyPromotionProcess:
                 version=request.version,
             )
         publish_event_id = (
-            f"{request.strategy_id}:{request.version}:publish:{request.decided_at}"
+            mutation_event_id(request.idempotency)
+            if request.idempotency is not None
+            else f"{request.strategy_id}:{request.version}:publish:{request.decided_at}"
         )
         activate_event_id = (
-            f"{request.strategy_id}:{request.version}:activate:{request.decided_at}"
+            f"{mutation_event_id(request.idempotency)}:activate"
+            if request.idempotency is not None
+            else (
+                f"{request.strategy_id}:{request.version}:activate:{request.decided_at}"
+            )
         )
+        reason = request.reason
+        expected_pointer: StrategyActivePointer | None = None
+        if request.idempotency is not None:
+            current_pointer = self._governance.get_active_pointer(request.strategy_id)
+            current_revision = (
+                0 if current_pointer is None else current_pointer.pointer_revision
+            )
+            expected_pointer = StrategyActivePointer(
+                strategy_id=request.strategy_id,
+                active_version=request.version,
+                pointer_revision=current_revision + 1,
+                activation_event_id=activate_event_id,
+            )
+            reason = mutation_receipt_reason(
+                request.idempotency,
+                response={
+                    "strategy_id": expected_pointer.strategy_id,
+                    "active_version": expected_pointer.active_version,
+                    "pointer_revision": expected_pointer.pointer_revision,
+                },
+                human_reason=request.reason,
+            )
         pointer = self._governance.publish_reviewed_and_activate(
-            request.strategy_id,
-            request.version,
-            publish_event_id=publish_event_id,
-            activate_event_id=activate_event_id,
-            actor=request.actor,
-            reason=request.reason,
-            decided_at=request.decided_at,
+            PublishReviewedActivationRequest(
+                strategy_id=request.strategy_id,
+                version=request.version,
+                publish_event_id=publish_event_id,
+                activate_event_id=activate_event_id,
+                actor=request.actor,
+                reason=reason,
+                decided_at=request.decided_at,
+                expected_pointer_revision=(
+                    None
+                    if expected_pointer is None
+                    else expected_pointer.pointer_revision - 1
+                ),
+            ),
         )
+        if expected_pointer is not None and pointer != expected_pointer:
+            raise AppProcessError(
+                "promotion receipt does not match committed pointer",
+                reason="idempotency_receipt_invalid",
+                code="IDEMPOTENCY_RECEIPT_INVALID",
+            )
         return PromotionResult(
             strategy_id=request.strategy_id,
             version=request.version,

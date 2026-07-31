@@ -16,6 +16,7 @@ from ditto_strategy.governance.models import (
 )
 from ditto_strategy.governance.service import (
     GovernanceService,
+    PublishReviewedActivationRequest,
     StrategyGovernanceError,
 )
 from ditto_strategy.models import StrategySpecRecord
@@ -88,13 +89,15 @@ def test_publish_reviewed_and_activate_switches_pointer_atomically(
     )
 
     pointer = service.publish_reviewed_and_activate(
-        "strategy-1",
-        1,
-        publish_event_id="e3",
-        activate_event_id="a1",
-        actor="publisher",
-        reason="evidence passed",
-        decided_at="t3",
+        PublishReviewedActivationRequest(
+            strategy_id="strategy-1",
+            version=1,
+            publish_event_id="e3",
+            activate_event_id="a1",
+            actor="publisher",
+            reason="evidence passed",
+            decided_at="t3",
+        )
     )
 
     state = service._store.get_state("strategy-1", 1)

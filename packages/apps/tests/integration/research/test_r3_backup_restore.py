@@ -115,7 +115,10 @@ from ditto_strategy.governance.models import (
     StrategyActivePointer,
     StrategyVersion,
 )
-from ditto_strategy.governance.service import GovernanceService
+from ditto_strategy.governance.service import (
+    GovernanceService,
+    PublishReviewedActivationRequest,
+)
 from ditto_strategy.storage.sqlite.strategy_governance_store import (
     SQLiteStrategyGovernanceStore,
 )
@@ -282,13 +285,15 @@ def _seed_governance(
         decided_at=NOW.isoformat(),
     )
     pointer = service.publish_reviewed_and_activate(
-        "stock-selection",
-        1,
-        publish_event_id="decision-publish",
-        activate_event_id="activation-publish",
-        actor="publisher",
-        reason="promotion gates passed",
-        decided_at=NOW.isoformat(),
+        PublishReviewedActivationRequest(
+            strategy_id="stock-selection",
+            version=1,
+            publish_event_id="decision-publish",
+            activate_event_id="activation-publish",
+            actor="publisher",
+            reason="promotion gates passed",
+            decided_at=NOW.isoformat(),
+        )
     )
     decisions = _decision_history(metadata_database)
     pool.close_all()

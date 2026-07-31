@@ -5,7 +5,7 @@
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `6174cedb38f948f6cf7f882a96b04330089fd1fdc91aee2104bf1b3764386964`
+> JSON canonical SHA-256: `cb3195b6a448963cd9b86159a189386607e041bcc8e3f8115c54b6b555e4c17c`
 
 Task 4 classification 已由用户批准；批准 reference 为
 `user-message:2026-07-31:final-task4-classification-approved`。Candidate evidence

@@ -31,13 +31,24 @@ class StrategyGovernanceStoreProtocol(Protocol):
         ...
 
     def create_draft_version(
-        self, spec_record: StrategySpecRecord, version: StrategyVersion
+        self,
+        spec_record: StrategySpecRecord,
+        version: StrategyVersion,
+        audit_event: StrategyDecisionEvent | None = None,
     ) -> None:
-        """Atomically persist spec payload + draft governance version in one tx."""
+        """Persist payload/version/state and an optional audit receipt atomically."""
         ...
 
     def get_version(self, strategy_id: str, version: int) -> StrategyVersion | None:
         """Return one immutable version, or None if absent."""
+        ...
+
+    def get_spec_record(
+        self,
+        strategy_id: str,
+        version: int,
+    ) -> StrategySpecRecord | None:
+        """Return the immutable spec payload for one governance version."""
         ...
 
     def list_versions(self, strategy_id: str) -> tuple[StrategyVersion, ...]:
@@ -48,6 +59,10 @@ class StrategyGovernanceStoreProtocol(Protocol):
         self, strategy_id: str, version: int
     ) -> StrategyVersionStateRecord | None:
         """Return the rebuildable lifecycle projection for one version."""
+        ...
+
+    def get_decision_event(self, event_id: str) -> StrategyDecisionEvent | None:
+        """Return one immutable decision/audit event by primary key."""
         ...
 
     def append_decision(
@@ -83,6 +98,10 @@ class StrategyGovernanceStoreProtocol(Protocol):
 
     def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
         """Return the single active pointer for a strategy, or None."""
+        ...
+
+    def get_activation_event(self, event_id: str) -> StrategyActivationEvent | None:
+        """Return one immutable activation event by primary key."""
         ...
 
 

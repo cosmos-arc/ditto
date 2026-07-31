@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import cast
 from unittest.mock import Mock
@@ -48,6 +49,17 @@ def _receipt() -> ExperimentLaunchReceipt:
         fold_count=6,
         plan_hash="a" * 64,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class _ReplayAwareControlReceipt:
+    experiment_id: str
+    status: str
+    desired_state: str
+    revision: int
+    occurred_at: datetime
+    live_run_ids: tuple[str, ...]
+    replayed: bool = field(compare=False, repr=False)
 
 
 class _ProcessDouble:
@@ -323,6 +335,60 @@ def test_pause_and_cancel_persist_before_notifying_exact_live_runs(
             desired_state,
             NOW,
         ),
+    ]
+
+
+def test_exact_control_replay_does_not_repeat_post_commit_notification() -> None:
+    timeline: list[tuple[object, ...]] = []
+    receipts = iter(
+        (
+            _ReplayAwareControlReceipt(
+                "experiment-1",
+                "pause_requested",
+                "pause",
+                8,
+                NOW,
+                ("run-1",),
+                False,
+            ),
+            _ReplayAwareControlReceipt(
+                "experiment-1",
+                "pause_requested",
+                "pause",
+                8,
+                NOW,
+                ("run-1",),
+                True,
+            ),
+        )
+    )
+
+    class ReplayProcess:
+        def pause(self, **values: object) -> _ReplayAwareControlReceipt:
+            timeline.append(("process", values))
+            return next(receipts)
+
+    handler = PauseExperimentHandler(
+        process=cast("ExperimentControlProcess", ReplayProcess()),
+        notifier=cast(
+            "ExperimentControlNotifier",
+            _ControlNotifierDouble(timeline=timeline),
+        ),
+    )
+    command = PauseExperimentCommand("experiment-1", 7, NOW)
+
+    first = handler.handle(command)
+    replay = handler.handle(command)
+
+    assert first == replay
+    assert [item for item in timeline if item[0] == "notify_run_stop"] == [
+        (
+            "notify_run_stop",
+            "experiment-1",
+            "run-1",
+            "pause",
+            NOW,
+        )
     ]
 
 

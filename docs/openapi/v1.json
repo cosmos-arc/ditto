@@ -18111,6 +18111,17 @@
       "post": {
         "description": "Rebuild and launch one exact operator-confirmed planning document.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "research_launch_experiment",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -18196,7 +18207,7 @@
     },
     "/api/v1/research/experiments/{experiment_id}/artifacts": {
       "get": {
-        "description": "列出实验的 immutable indexed artifacts（lineage order）.\n\nMaturity: experimental — R3 research control-plane surface.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "列出实验的 immutable indexed artifacts（lineage order）.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "research_list_experiment_artifacts",
         "parameters": [
           {
@@ -18249,6 +18260,15 @@
             "required": true,
             "schema": {
               "title": "Experiment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
               "type": "string"
             }
           }
@@ -18437,6 +18457,15 @@
               "title": "Experiment Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -18545,6 +18574,15 @@
               "title": "Experiment Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -18597,6 +18635,15 @@
             "required": true,
             "schema": {
               "title": "Experiment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
               "type": "string"
             }
           }
@@ -18686,7 +18733,7 @@
     },
     "/api/v1/research/experiments/{experiment_id}/selection-evidence": {
       "get": {
-        "description": "读取实验已发布并验证的 selection-evidence ledger.\n\nMaturity: experimental — R3 research control-plane surface.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "读取实验已发布并验证的 selection-evidence ledger.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "research_get_experiment_selection_evidence",
         "parameters": [
           {
@@ -19016,6 +19063,17 @@
       "post": {
         "description": "创建策略.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "strategies_create_strategy",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -19108,6 +19166,15 @@
             "required": true,
             "schema": {
               "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
               "type": "string"
             }
           }
@@ -19261,6 +19328,15 @@
               "title": "Version",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -19323,6 +19399,15 @@
             "schema": {
               "title": "Version",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
             }
           }
         ],
@@ -19440,6 +19525,15 @@
               "title": "Version",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -19502,6 +19596,15 @@
             "schema": {
               "title": "Version",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
             }
           }
         ],
@@ -19566,6 +19669,15 @@
               "title": "Version",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -19628,6 +19740,15 @@
             "schema": {
               "title": "Version",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
             }
           }
         ],

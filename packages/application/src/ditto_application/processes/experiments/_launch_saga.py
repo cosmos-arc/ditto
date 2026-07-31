@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
 from typing import cast
 
 import orjson
@@ -20,9 +19,7 @@ from ditto_analysis.experiments import (
     ExperimentStage,
     ExperimentStatus,
     ExperimentWriterProtocol,
-    FoldPersistenceSpec,
     FoldProjection,
-    GateEvaluationRecord,
     ResearchCycleIdentity,
     StatusEventRecord,
     StatusSubjectType,
@@ -31,18 +28,26 @@ from ditto_analysis.experiments import (
 )
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 
-from ditto_application.exceptions import AppProcessError
+from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.mutation_idempotency import (
+    MutationIdempotency,
+    find_mutation_receipt,
+    without_validated_mutation_receipt,
+)
 from ditto_application.processes.experiments._creation_identity import (
-    compile_creation_identity,
     fence_durable_draft_launch,
     verify_creation_identity_payload,
+    verify_durable_creation_identity,
+)
+from ditto_application.processes.experiments._launch_contracts import (
+    DurableLaunchReplay,
+    PreparedExperimentLaunch,
+)
+from ditto_application.processes.experiments._launch_durable_reconstruction import (
+    reconstruct_prepared_launch,
 )
 from ditto_application.processes.experiments._launch_reconstruction import (
     validate_prepared_launch_rows,
-)
-from ditto_application.processes.experiments._preflight_codec import (
-    DecodedPreflightReport,
-    decode_preflight_report,
 )
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
@@ -52,46 +57,13 @@ __all__ = [
     "DurableLaunchReplay",
     "PreparedExperimentLaunch",
     "persist_prepared_launch",
+    "replay_verified_durable_enqueue",
     "try_replay_durable_launch",
+    "verify_prepared_launch",
 ]
 
 _STABLE_ROOT_READ_ATTEMPTS = 3
 _STABLE_AGGREGATE_READ_ATTEMPTS = 3
-
-
-@dataclass(frozen=True, slots=True)
-class PreparedExperimentLaunch:
-    """All immutable values checked before the launch's first writer call."""
-
-    cycle: ResearchCycleIdentity
-    spec: ExperimentLaunchSpec
-    initial_record: ExperimentRecord
-    gates: tuple[GateEvaluationRecord, ...]
-    folds: tuple[FoldPersistenceSpec, ...]
-    launch_spec_json: bytes
-    launch_spec_hash: ContentHash
-    gate_payload_hashes: tuple[ContentHash, ...]
-    fold_payload_hashes: tuple[ContentHash, ...]
-    preflight_json: bytes
-    preflight_hash: ContentHash
-    plan_preimage_json: bytes
-    plan_hash: str
-    creation_detail: Mapping[str, object]
-    creation_detail_json: bytes
-    creation_detail_hash: ContentHash
-    enqueue_detail: Mapping[str, object]
-    enqueue_detail_json: bytes
-    enqueue_detail_hash: ContentHash
-
-
-@dataclass(frozen=True, slots=True)
-class DurableLaunchReplay:
-    """Verified original enqueue receipt reconstructed without planning probes."""
-
-    projection: ExperimentProjection
-    candidate_count: int
-    fold_count: int
-    plan_hash: str
 
 
 def _saga_error(reason: str, **details: object) -> AppProcessError:
@@ -117,21 +89,6 @@ def _canonical_decoded_mapping(payload: bytes) -> Mapping[str, object]:
 
 def _content_hash(payload: bytes) -> ContentHash:
     return ContentHash(hashlib.sha256(payload).hexdigest())
-
-
-def _exact_mapping(value: object, field_name: str) -> dict[str, object]:
-    if type(value) is not dict:
-        raise _saga_error("durable_enqueue_detail_invalid", field=field_name)
-    return cast("dict[str, object]", value)
-
-
-def _exact_string_list(value: object, field_name: str) -> tuple[str, ...]:
-    if type(value) is not list:
-        raise _saga_error("durable_enqueue_detail_invalid", field=field_name)
-    items = cast("list[object]", value)
-    if not all(type(item) is str for item in items):
-        raise _saga_error("durable_enqueue_detail_invalid", field=field_name)
-    return tuple(cast("list[str]", items))
 
 
 def _verify_prepared_payloads(prepared: PreparedExperimentLaunch) -> None:
@@ -163,6 +120,7 @@ def _verify_prepared_payloads(prepared: PreparedExperimentLaunch) -> None:
         detail_hash=prepared.creation_detail_hash,
         expected_request_hash=plan_preimage.get("request_hash"),
         expected_plan_hash=prepared.plan_hash,
+        expected_idempotency=prepared.idempotency,
     )
     enqueue_detail = _canonical_decoded_mapping(prepared.enqueue_detail_json)
     preflight_from_detail = enqueue_detail.get("preflight")
@@ -189,7 +147,18 @@ def _verify_prepared_payloads(prepared: PreparedExperimentLaunch) -> None:
         != prepared.enqueue_detail_json
     ):
         raise experiment_process_error("enqueue_detail")
-    validate_prepared_launch_rows(prepared, enqueue_detail)
+    reconstruction_detail = without_validated_mutation_receipt(enqueue_detail)
+    if prepared.idempotency is not None:
+        try:
+            receipt = find_mutation_receipt(
+                (enqueue_detail,),
+                prepared.idempotency,
+            )
+        except AppCommandError as exc:
+            raise AppProcessError(str(exc), details=exc.details) from exc
+        if receipt is None:
+            raise experiment_process_error("enqueue_idempotency_receipt")
+    validate_prepared_launch_rows(prepared, reconstruction_detail)
 
 
 def _verify_prepared_initial_record(prepared: PreparedExperimentLaunch) -> None:
@@ -216,6 +185,11 @@ def _verify_prepared_identity(prepared: PreparedExperimentLaunch) -> None:
             experiment_id=str(prepared.spec.experiment_id),
             identity_component=str(exc),
         ) from exc
+
+
+def verify_prepared_launch(prepared: PreparedExperimentLaunch) -> None:
+    """Public narrow verifier used by the orthogonal idempotency binder."""
+    _verify_prepared_identity(prepared)
 
 
 def _verify_immutable_root(
@@ -515,160 +489,35 @@ def _first_enqueue_event(
     return events[0]
 
 
-def _confirmed_durable_detail(
-    event: StatusEventRecord,
-    *,
-    confirmed_plan_hash: str,
-    request_hash: str,
-) -> tuple[dict[str, object], DecodedPreflightReport]:
-    encoded = canonical_payload(event.detail)
-    decoded_detail = _exact_mapping(
-        cast("object", orjson.loads(encoded.json_bytes)),
-        "enqueue_detail",
-    )
-    durable_plan_hash = decoded_detail.get("plan_hash")
-    if type(durable_plan_hash) is str and durable_plan_hash != confirmed_plan_hash:
-        raise AppProcessError(
-            "confirmed experiment plan hash is stale",
-            details={
-                "code": "PLAN_HASH_MISMATCH",
-                "expected_plan_hash": durable_plan_hash,
-                "confirmed_plan_hash": confirmed_plan_hash,
-            },
-        )
-    report = decode_preflight_report(
-        decoded_detail,
-        expected_policy_version="r3-experiment-preflight-v1",
-    )
-    preflight = _exact_mapping(decoded_detail.get("preflight"), "preflight")
-    identities = _exact_mapping(preflight.get("identities"), "identities")
-    if report.plan_hash != confirmed_plan_hash:
-        raise AppProcessError(
-            "confirmed experiment plan hash is stale",
-            details={
-                "code": "PLAN_HASH_MISMATCH",
-                "expected_plan_hash": report.plan_hash,
-                "confirmed_plan_hash": confirmed_plan_hash,
-            },
-        )
-    if identities.get("request_hash") != request_hash:
-        raise AppProcessError(
-            "experiment already exists with a different planning request",
-            details={
-                "code": "EXPERIMENT_ALREADY_EXISTS",
-                "reason": "durable_launch_request_mismatch",
-                "durable_request_hash": identities.get("request_hash"),
-                "caller_request_hash": request_hash,
-            },
-        )
-    return decoded_detail, report
-
-
-def _ordered_durable_gates(
-    reader: ExperimentReaderProtocol,
-    experiment_id: ExperimentId,
-    hashes: tuple[str, ...],
-) -> tuple[GateEvaluationRecord, ...]:
-    actual = reader.list_gate_evaluations(experiment_id)
-    by_hash = {str(item.payload_hash): item for item in actual}
-    if len(by_hash) != len(actual) or not set(hashes).issubset(by_hash):
-        raise _saga_error(
-            "gate_readback_set_mismatch",
-            expected_gate_count=len(hashes),
-            actual_gate_count=len(actual),
-        )
-    return tuple(by_hash[value] for value in hashes)
-
-
-def _ordered_durable_folds(
-    reader: ExperimentReaderProtocol,
-    experiment_id: ExperimentId,
-    hashes: tuple[str, ...],
-) -> tuple[FoldPersistenceSpec, ...]:
-    actual = tuple(view.spec for view in reader.list_folds(experiment_id))
-    by_hash = {str(item.payload_hash): item for item in actual}
-    if (
-        len(by_hash) != len(actual)
-        or len(actual) != len(hashes)
-        or set(hashes) != set(by_hash)
-    ):
-        raise _saga_error(
-            "fold_readback_set_mismatch",
-            expected_fold_count=len(hashes),
-            actual_fold_count=len(actual),
-        )
-    return tuple(by_hash[value] for value in hashes)
-
-
-def _prepared_from_durable_enqueue(
+def replay_verified_durable_enqueue(
     *,
     reader: ExperimentReaderProtocol,
-    experiment_id: ExperimentId,
     event: StatusEventRecord,
     confirmed_plan_hash: str,
     request_hash: str,
-) -> tuple[PreparedExperimentLaunch, DecodedPreflightReport]:
-    detail, report = _confirmed_durable_detail(
-        event,
+    idempotency: MutationIdempotency | None = None,
+) -> DurableLaunchReplay:
+    """Reconstruct and strictly verify the complete durable launch aggregate."""
+    verify_durable_creation_identity(
+        events=reader.list_status_events(event.experiment_id),
+        experiment_id=event.experiment_id,
+        expected_request_hash=request_hash,
+        expected_plan_hash=confirmed_plan_hash,
+        expected_idempotency=idempotency,
+    )
+    prepared, report = reconstruct_prepared_launch(
+        reader=reader,
+        event=event,
         confirmed_plan_hash=confirmed_plan_hash,
         request_hash=request_hash,
     )
-    cycle = reader.get_research_cycle_identity(experiment_id)
-    spec = reader.get_launch_spec(experiment_id)
-    if cycle is None or spec is None:
-        raise _saga_error(
-            "partial_experiment_root",
-            experiment_id=str(experiment_id),
-        )
-    plan_preimage = _exact_mapping(detail.get("plan_preimage"), "plan_preimage")
-    gate_hashes = _exact_string_list(
-        plan_preimage.get("gate_payload_hashes"),
-        "plan_preimage.gate_payload_hashes",
-    )
-    fold_hashes = _exact_string_list(
-        plan_preimage.get("fold_payload_hashes"),
-        "plan_preimage.fold_payload_hashes",
-    )
-    gates = _ordered_durable_gates(reader, experiment_id, gate_hashes)
-    folds = _ordered_durable_folds(reader, experiment_id, fold_hashes)
-    launch_spec = encode_launch_spec(spec)
-    preflight = _exact_mapping(detail.get("preflight"), "preflight")
-    preflight_payload = canonical_payload(preflight)
-    plan_preimage_payload = canonical_payload(plan_preimage)
-    detail_payload = canonical_payload(detail)
-    creation_detail, creation_detail_payload = compile_creation_identity(
-        request_hash=request_hash,
-        plan_hash=report.plan_hash,
-    )
-    prepared = PreparedExperimentLaunch(
-        cycle=cycle,
-        spec=spec,
-        initial_record=ExperimentRecord(
-            experiment_id,
-            ExperimentStatus.DRAFT,
-            ExperimentDesiredState.RUN,
-            ExperimentStage.PREFLIGHT,
-            spec.created_at,
-        ),
-        gates=gates,
-        folds=folds,
-        launch_spec_json=launch_spec.json_bytes,
-        launch_spec_hash=launch_spec.content_hash,
-        gate_payload_hashes=tuple(item.payload_hash for item in gates),
-        fold_payload_hashes=tuple(item.payload_hash for item in folds),
-        preflight_json=preflight_payload.json_bytes,
-        preflight_hash=preflight_payload.content_hash,
-        plan_preimage_json=plan_preimage_payload.json_bytes,
-        plan_hash=report.plan_hash,
-        creation_detail=creation_detail,
-        creation_detail_json=creation_detail_payload.json_bytes,
-        creation_detail_hash=creation_detail_payload.content_hash,
-        enqueue_detail=detail,
-        enqueue_detail_json=detail_payload.json_bytes,
-        enqueue_detail_hash=detail_payload.content_hash,
-    )
     _verify_prepared_identity(prepared)
-    return prepared, report
+    return DurableLaunchReplay(
+        projection=_replay_progressed_aggregate(reader, prepared),
+        candidate_count=report.candidate_count,
+        fold_count=report.planned_fold_count,
+        plan_hash=report.plan_hash,
+    )
 
 
 def try_replay_durable_launch(
@@ -677,6 +526,7 @@ def try_replay_durable_launch(
     experiment_id: str,
     confirmed_plan_hash: str,
     request_hash_factory: Callable[[], str],
+    idempotency: MutationIdempotency | None = None,
 ) -> DurableLaunchReplay | None:
     """Replay a committed enqueue before any external planning probe is called."""
     typed_experiment_id = ExperimentId(experiment_id)
@@ -693,6 +543,7 @@ def try_replay_durable_launch(
                 experiment_id=experiment_id,
                 confirmed_plan_hash=confirmed_plan_hash,
                 request_hash=request_hash,
+                idempotency=idempotency,
             ):
                 return None
             continue
@@ -706,23 +557,17 @@ def try_replay_durable_launch(
         if request_hash is None:
             request_hash = request_hash_factory()
         event = _first_enqueue_event(reader, typed_experiment_id)
-        prepared, report = _prepared_from_durable_enqueue(
+        replay = replay_verified_durable_enqueue(
             reader=reader,
-            experiment_id=typed_experiment_id,
             event=event,
             confirmed_plan_hash=confirmed_plan_hash,
             request_hash=request_hash,
+            idempotency=idempotency,
         )
         after = reader.get_experiment_projection(typed_experiment_id)
         if after is None or after != before:
             continue
-        projection = _replay_progressed_aggregate(reader, prepared)
-        return DurableLaunchReplay(
-            projection=projection,
-            candidate_count=report.candidate_count,
-            fold_count=report.planned_fold_count,
-            plan_hash=report.plan_hash,
-        )
+        return replay
     raise _saga_error(
         "concurrent_experiment_update",
         experiment_id=experiment_id,

@@ -7,7 +7,6 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import cast
 
-from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments import (
     ExperimentReaderProtocol,
     ExperimentWriterProtocol,
@@ -15,19 +14,20 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments.preflight_authority import canonical_research_cycle_hash
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.mutation_idempotency import MutationIdempotency
 from ditto_application.processes.experiments._executor_probe import probe_executor
+from ditto_application.processes.experiments._launch_contracts import (
+    PreparedExperimentLaunch,
+)
 from ditto_application.processes.experiments._launch_material import (
     LaunchMaterialInput,
     compile_launch_material,
 )
-from ditto_application.processes.experiments._launch_saga import (
-    DurableLaunchReplay,
-    PreparedExperimentLaunch,
-    persist_prepared_launch,
-    try_replay_durable_launch,
+from ditto_application.processes.experiments._planning_launch import (
+    ExperimentLaunchReceipt,
+    execute_planning_launch,
 )
 from ditto_application.processes.experiments._planning_request_identity import (
-    planning_request_hash,
     validate_planning_request_graph,
 )
 from ditto_application.processes.experiments._preflight_checks import (
@@ -137,19 +137,6 @@ class ExperimentPreflightReport:
     isolation_width_sessions: int
     validation_plan: ValidationProtocolPlan | None
     work_plan: ExperimentWorkPlan | None
-
-
-@dataclass(frozen=True, slots=True)
-class ExperimentLaunchReceipt:
-    """Stable result returned after durable readback and final enqueue."""
-
-    experiment_id: str
-    status: str
-    queue_ordinal: int
-    revision: int
-    candidate_count: int
-    fold_count: int
-    plan_hash: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,84 +250,17 @@ class ExperimentPlanningProcess:
         request: ExperimentPlanningRequest,
         *,
         confirmed_plan_hash: str,
+        idempotency: MutationIdempotency | None = None,
     ) -> ExperimentLaunchReceipt:
         """Recompute, confirm, assemble DRAFT, read back, and enqueue last."""
-        self._validate_request(request)
-        request = replace(
-            request,
-            dataset_requirements=tuple(
-                sorted(request.dataset_requirements, key=lambda item: item.dataset_id)
-            ),
-        )
-        durable = try_replay_durable_launch(
+        return execute_planning_launch(
             reader=self._reader,
-            experiment_id=request.experiment_id,
+            writer=self._writer,
+            request=request,
             confirmed_plan_hash=confirmed_plan_hash,
-            request_hash_factory=lambda: planning_request_hash(request),
-        )
-        if durable is not None:
-            return self._durable_receipt(request, durable)
-        prepared = self._prepare(request)
-        failed = next(
-            (
-                check
-                for check in prepared.report.checks
-                if check.outcome is PreflightOutcome.FAIL
-            ),
-            None,
-        )
-        if failed is not None or prepared.launch is None:
-            raise AppProcessError(
-                "experiment preflight is blocked",
-                details={
-                    "code": "HARD_GATE_FAILED" if failed is None else failed.code,
-                    "reason": None if failed is None else failed.reason,
-                    "experiment_id": request.experiment_id,
-                },
-            )
-        if confirmed_plan_hash != prepared.report.plan_hash:
-            raise AppProcessError(
-                "confirmed experiment plan hash is stale",
-                details={
-                    "code": "PLAN_HASH_MISMATCH",
-                    "expected_plan_hash": prepared.report.plan_hash,
-                    "confirmed_plan_hash": confirmed_plan_hash,
-                },
-            )
-        try:
-            projection = persist_prepared_launch(
-                reader=self._reader,
-                writer=self._writer,
-                prepared=prepared.launch,
-            )
-        except AnalysisError as exc:
-            raise AppProcessError(
-                "experiment launch persistence failed",
-                details={"code": "EXPERIMENT_PERSISTENCE_FAILED", **exc.details},
-            ) from exc
-        return ExperimentLaunchReceipt(
-            experiment_id=request.experiment_id,
-            status=projection.record.status.value,
-            queue_ordinal=cast("int", projection.queue_ordinal),
-            revision=projection.revision,
-            candidate_count=prepared.report.candidate_count,
-            fold_count=prepared.report.planned_fold_count,
-            plan_hash=cast("str", prepared.report.plan_hash),
-        )
-
-    @staticmethod
-    def _durable_receipt(
-        request: ExperimentPlanningRequest,
-        replay: DurableLaunchReplay,
-    ) -> ExperimentLaunchReceipt:
-        return ExperimentLaunchReceipt(
-            experiment_id=request.experiment_id,
-            status=replay.projection.record.status.value,
-            queue_ordinal=cast("int", replay.projection.queue_ordinal),
-            revision=replay.projection.revision,
-            candidate_count=replay.candidate_count,
-            fold_count=replay.fold_count,
-            plan_hash=replay.plan_hash,
+            idempotency=idempotency,
+            validate_request=self._validate_request,
+            prepare=self._prepare,
         )
 
     def _prepare_executor(

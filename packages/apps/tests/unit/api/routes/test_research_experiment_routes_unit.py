@@ -511,7 +511,11 @@ async def _call_launch(
         _LaunchRoute,
         getattr(launch_experiment, "__dishka_orig_func__", launch_experiment),
     )
-    return await route(request=request, handler=handler)
+    return await route(
+        request=request,
+        idempotency_key="unit.launch-001",
+        handler=handler,
+    )
 
 
 async def test_launch_rebuilds_same_document_and_returns_exact_receipt(
@@ -896,7 +900,12 @@ async def _call_pause(
         _ControlRoute,
         getattr(pause_experiment, "__dishka_orig_func__", pause_experiment),
     )
-    return await route(experiment_id="exp-1", request=request, handler=handler)
+    return await route(
+        experiment_id="exp-1",
+        request=request,
+        idempotency_key="unit.pause-001",
+        handler=handler,
+    )
 
 
 async def test_pause_experiment_returns_receipt() -> None:
@@ -942,6 +951,7 @@ async def test_retry_fold_experiment_passes_fold_fields() -> None:
         request=ExperimentRetryFoldRequest(
             candidate_id="cand-1", fold_id="fold-1", expected_revision=3
         ),
+        idempotency_key="unit.retry-001",
         handler=handler,
     )
 
