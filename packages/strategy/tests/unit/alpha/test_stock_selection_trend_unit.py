@@ -321,9 +321,9 @@ class TestPipelineE2E:
 
         MultiFactorSignal 对 momentum 排名 (descending=False):
         STK001(0.15)→rank 1.0, STK005(-0.02)→rank 0.2.
-        Scoring(ascending=False) 再排名 (descending=True),
-        所以 STK005(rank 0.2)→score 1.0 是最高的。
-        SelectionStage 取 score 最高的 2 个: STK005 和 STK004。
+        Scoring(ascending=False) 保持 larger-is-better，
+        所以 STK001(rank 1.0)→score 1.0 是最高的。
+        SelectionStage 取 score 最高的 2 个: STK001 和 STK002。
         """
         config = StockSelectionTrendConfig(
             signal_factors=("momentum",),
@@ -335,12 +335,10 @@ class TestPipelineE2E:
         pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, multi_factor_bundle)
         assert len(target.positions) == 2
-        # ascending=False inverts: STK005 (rank 0.2→score 1.0)
-        # and STK004 (rank 0.4→score 0.8)
-        assert InstrumentId(4) in target.positions
-        assert InstrumentId(5) in target.positions
-        assert "STK004" not in target.positions
-        assert "STK005" not in target.positions
+        assert InstrumentId(1) in target.positions
+        assert InstrumentId(2) in target.positions
+        assert "STK001" not in target.positions
+        assert "STK002" not in target.positions
 
     def test_e2e_trend_filter_excludes_low_rank(
         self,
@@ -784,7 +782,7 @@ class TestMultiFactorContributionEvidence:
         )
         snapshot = collector.snapshot()
 
-        assert target.positions == {"A": 0.5, "B": 0.5}
+        assert target.positions == {"B": 0.5, "C": 0.5}
         contributions = snapshot.factor_contributions
         assert [item.instrument_id for item in contributions] == ["A", "B", "C"]
         assert [
@@ -805,9 +803,9 @@ class TestMultiFactorContributionEvidence:
             ],
         )
         assert [(item.rank, item.selected) for item in contributions] == [
-            (1, True),
-            (2, True),
             (3, False),
+            (2, True),
+            (1, True),
         ]
 
     def test_sink_path_preserves_exact_factor_output_and_drops_temp_columns(
