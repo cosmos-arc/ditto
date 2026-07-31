@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import stat
 from pathlib import Path
 from types import ModuleType
 
@@ -64,6 +65,7 @@ def test_exporter_writes_canonical_bytes_through_real_entrypoint(
     )
     assert exported_path == output_path
     assert output_path.read_bytes() == expected
+    assert stat.S_IMODE(output_path.stat().st_mode) == 0o644
 
 
 def test_exporter_failure_preserves_old_file_and_cleans_temp(

@@ -40,6 +40,7 @@ def export_openapi(output_path: Path = _DEFAULT_OUTPUT_PATH) -> Path:
         with os.fdopen(file_descriptor, "wb") as temporary_file:
             temporary_file.write(payload)
             temporary_file.flush()
+            os.fchmod(temporary_file.fileno(), 0o644)
             os.fsync(temporary_file.fileno())
         os.replace(temporary_path, output_path)  # noqa: PTH105
         _fsync_directory(output_path.parent)
