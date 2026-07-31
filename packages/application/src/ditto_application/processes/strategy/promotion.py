@@ -166,6 +166,7 @@ def load_verified_promotion_target(
             f"Strategy version not found: {strategy_id} v{version}",
             details={
                 "code": "STRATEGY_VERSION_NOT_FOUND",
+                "reason": "strategy_version_not_found",
                 "strategy_id": strategy_id,
                 "version": version,
             },
@@ -174,8 +175,8 @@ def load_verified_promotion_target(
         raise AppCommandError(
             "Review packet strategy spec does not match promotion target",
             details={
-                "code": "REVIEW_PACKET_TARGET_MISMATCH",
-                "reason": "evidence_target_mismatch",
+                "code": "STRATEGY_SPEC_HASH_MISMATCH",
+                "reason": "strategy_spec_hash_mismatch",
                 "strategy_id": strategy_id,
                 "version": version,
                 "governance_spec_hash": governance_version.spec_hash,

@@ -133,6 +133,7 @@ def _raise_submit_review_error(exc: AppError) -> Never:
         "REVIEW_PACKET_EXPERIMENT_NOT_FOUND",
         "REVIEW_PACKET_SCHEMA_UNSUPPORTED",
         "REVIEW_PACKET_TARGET_MISMATCH",
+        "STRATEGY_SPEC_HASH_MISMATCH",
         "STRATEGY_VERSION_NOT_FOUND",
     }:
         raise UnprocessableEntityError(str(exc), error_code="EVIDENCE_STALE") from exc

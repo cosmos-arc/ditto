@@ -218,3 +218,38 @@ def test_publish_strategy_version_handler_rejects_launch_spec_hash_drift() -> No
 
     assert info.value.details["reason"] == "evidence_target_mismatch"
     process.promote.assert_not_called()
+
+
+def test_publish_strategy_version_handler_preserves_missing_target_reason() -> None:
+    reader = _reader(packet=_packet())
+    process = _process()
+    process.get_version.return_value = None
+    handler = PublishStrategyVersionHandler(process=process, reader=reader)
+
+    with pytest.raises(AppCommandError) as info:
+        handler.handle(_command())
+
+    assert info.value.details["code"] == "STRATEGY_VERSION_NOT_FOUND"
+    assert info.value.details["reason"] == "strategy_version_not_found"
+    process.promote.assert_not_called()
+
+
+def test_publish_strategy_version_handler_preserves_spec_mismatch_reason() -> None:
+    reader = _reader(packet=_packet())
+    process = _process()
+    process.get_version.return_value = GovernanceStrategyVersion(
+        strategy_id="s1",
+        version=1,
+        parent_version=None,
+        schema_version=1,
+        spec_hash="9" * 64,
+        created_at="2026-07-31T00:00:00Z",
+    )
+    handler = PublishStrategyVersionHandler(process=process, reader=reader)
+
+    with pytest.raises(AppCommandError) as info:
+        handler.handle(_command())
+
+    assert info.value.details["code"] == "STRATEGY_SPEC_HASH_MISMATCH"
+    assert info.value.details["reason"] == "strategy_spec_hash_mismatch"
+    process.promote.assert_not_called()

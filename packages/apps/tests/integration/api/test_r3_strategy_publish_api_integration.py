@@ -505,6 +505,50 @@ async def test_http_submit_review_rejects_missing_or_stale_evidence_zero_write(
         await harness.close()
 
 
+@pytest.mark.parametrize(
+    "target_issue",
+    ["missing_version", "spec_hash_drift"],
+)
+async def test_http_submit_review_normalizes_governance_target_errors_to_stale(
+    tmp_path: Path,
+    target_issue: str,
+) -> None:
+    harness = _build_harness(
+        tmp_path,
+        r2_live_gate=True,
+        prepare_candidate_review=False,
+    )
+    try:
+        _invalidate_governance_target(harness, issue=target_issue)
+        state_before = harness.governance_store.get_state(
+            harness.strategy_id, harness.candidate_version
+        )
+        history_before = _governance_history(
+            harness.governance_pool, harness.strategy_id
+        )
+
+        response = await _submit_review(
+            harness,
+            bundle_hash=str(harness.packet.bundle_hash),
+            idempotency_key=f"submit-{target_issue}",
+        )
+
+        assert response.status_code == 422
+        assert response.json()["error_code"] == "EVIDENCE_STALE"
+        assert (
+            harness.governance_store.get_state(
+                harness.strategy_id, harness.candidate_version
+            )
+            == state_before
+        )
+        assert (
+            _governance_history(harness.governance_pool, harness.strategy_id)
+            == history_before
+        )
+    finally:
+        await harness.close()
+
+
 async def test_http_submit_review_allows_soft_metric_failure_and_replays_exactly(
     tmp_path: Path,
 ) -> None:
@@ -568,6 +612,28 @@ def _governance_history(
         tuple(tuple(row) for row in decisions),
         tuple(tuple(row) for row in activations),
     )
+
+
+def _invalidate_governance_target(
+    harness: _PublishHarness,
+    *,
+    issue: str,
+) -> None:
+    connection = harness.governance_pool.get_connection()
+    if issue == "missing_version":
+        cursor = connection.execute(
+            "DELETE FROM strategy_version WHERE strategy_id = ? AND version = ?",
+            (harness.strategy_id, harness.candidate_version),
+        )
+    else:
+        assert issue == "spec_hash_drift"
+        cursor = connection.execute(
+            "UPDATE strategy_version SET spec_hash = ? "
+            "WHERE strategy_id = ? AND version = ?",
+            ("9" * 64, harness.strategy_id, harness.candidate_version),
+        )
+    assert cursor.rowcount == 1
+    connection.commit()
 
 
 async def _assert_typed_zero_write_rejection(
@@ -658,6 +724,36 @@ async def test_http_publish_rejects_packet_launch_identity_drift_without_writes(
             harness,
             expected_status=422,
             expected_error_code="evidence_target_mismatch",
+        )
+    finally:
+        await harness.close()
+
+
+async def test_http_publish_preserves_missing_governance_version_error(
+    tmp_path: Path,
+) -> None:
+    harness = _build_harness(tmp_path, r2_live_gate=True)
+    try:
+        _invalidate_governance_target(harness, issue="missing_version")
+        await _assert_typed_zero_write_rejection(
+            harness,
+            expected_status=422,
+            expected_error_code="strategy_version_not_found",
+        )
+    finally:
+        await harness.close()
+
+
+async def test_http_publish_preserves_governance_spec_hash_mismatch_error(
+    tmp_path: Path,
+) -> None:
+    harness = _build_harness(tmp_path, r2_live_gate=True)
+    try:
+        _invalidate_governance_target(harness, issue="spec_hash_drift")
+        await _assert_typed_zero_write_rejection(
+            harness,
+            expected_status=422,
+            expected_error_code="strategy_spec_hash_mismatch",
         )
     finally:
         await harness.close()
