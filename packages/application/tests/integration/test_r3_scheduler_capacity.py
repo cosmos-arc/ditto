@@ -1,4 +1,4 @@
-"""Task 22 acceptance for bounded, durable R3 scheduler capacity and recovery."""
+"""Acceptance for bounded, durable R3 scheduler capacity and recovery."""
 
 from __future__ import annotations
 
@@ -37,6 +37,7 @@ from ditto_analysis.experiments import (
     FoldProtocolSpec,
     FoldRole,
     FoldView,
+    LeaseFence,
     LogicalTrialIdentity,
     ResearchCycleIdentity,
     ResearchMetricDirection,
@@ -51,8 +52,13 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments.artifact_manifest import ArtifactPublicationSpec
 from ditto_analysis.experiments.enqueue_fence import ExperimentEnqueueFence
 from ditto_analysis.experiments.trial_ledger import (
+    MetricEvidenceLineage,
     ObjectiveMetric,
     PromotionObjective,
+    ResearchMetricValue,
+    TrialOutcome,
+    TrialStatus,
+    build_trial_ledger,
 )
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.storage.sqlite.experiments import (
@@ -63,7 +69,12 @@ from ditto_analysis.storage.sqlite.experiments import (
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     build_successor_queued_attempt,
 )
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
+    SelectionEvidencePublisher,
+)
 from ditto_application.processes.experiments.coordinator import (
+    ExperimentDispatch,
     ExperimentExecutionCoordinator,
     SchedulerTickState,
 )
@@ -80,9 +91,11 @@ from ditto_application.processes.experiments.planning_process import (
     ExperimentPreflightStatus,
 )
 from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentSchedulerSnapshot,
     ExperimentSchedulerStore,
     FirstAttempt,
     QueuedAttempt,
+    ResearchExecutionDirective,
 )
 from packages.application.tests.integration import (
     r3_evidence_closure_support as golden_support,
@@ -140,7 +153,7 @@ class _AttemptLineageFactory:
         )
         fingerprint = canonical_payload(
             {
-                "fixture_contract": "task22_scheduler_attempt_lineage_v1",
+                "fixture_contract": "scheduler_capacity_attempt_lineage_v1",
                 "fold_key": {
                     "experiment_id": str(fold.spec.key.experiment_id),
                     "candidate_id": str(fold.spec.key.candidate_id),
@@ -192,9 +205,9 @@ def _launch(
     experiment = ExperimentId(experiment_id)
     return ExperimentLaunchSpec(
         experiment_id=experiment,
-        strategy_version=StrategyVersion("strategy@task22"),
+        strategy_version=StrategyVersion("strategy@scheduler-capacity"),
         strategy_spec_hash=ContentHash("a" * 64),
-        snapshot_id=SnapshotId("snapshot-task22"),
+        snapshot_id=SnapshotId("snapshot-scheduler-capacity"),
         candidates=candidates,
         execution_bindings=tuple(
             CandidateExecutionBinding(
@@ -215,7 +228,7 @@ def _launch(
             candidates[0].candidate_id,
             "Bound scheduler capacity without duplicate work.",
             TrialFamilyDeclaration(
-                f"task22-family-{experiment_id}",
+                f"scheduler-capacity-family-{experiment_id}",
                 tuple(
                     LogicalTrialIdentity(
                         experiment,
@@ -273,9 +286,50 @@ def _folds(spec: ExperimentLaunchSpec) -> tuple[FoldPersistenceSpec, ...]:
     return tuple(folds)
 
 
+def _minimal_preselection_folds_per_candidate(
+    spec: ExperimentLaunchSpec,
+) -> tuple[FoldPersistenceSpec, ...]:
+    """Build the smallest real protocol that reaches candidate selection."""
+    folds: list[FoldPersistenceSpec] = []
+    for candidate in spec.candidates:
+        folds.extend(
+            (
+                FoldPersistenceSpec.create(
+                    FoldKey(
+                        spec.experiment_id,
+                        candidate.candidate_id,
+                        FoldId(f"fold-{candidate.ordinal}-exploration"),
+                    ),
+                    1,
+                    FoldRole.EXPLORATION,
+                    None,
+                    DateWindow(date(2025, 1, 1), date(2025, 1, 31)),
+                    2,
+                    1,
+                ),
+                FoldPersistenceSpec.create(
+                    FoldKey(
+                        spec.experiment_id,
+                        candidate.candidate_id,
+                        FoldId(f"fold-{candidate.ordinal}-walk-forward"),
+                    ),
+                    2,
+                    FoldRole.WALK_FORWARD,
+                    DateWindow(date(2020, 1, 1), date(2024, 12, 31)),
+                    DateWindow(date(2025, 2, 1), date(2025, 2, 28)),
+                    2,
+                    1,
+                ),
+            )
+        )
+    return tuple(folds)
+
+
 def _persist_enqueued(
     writer: SQLiteExperimentWriter,
     launch: ExperimentLaunchSpec,
+    *,
+    folds: tuple[FoldPersistenceSpec, ...] | None = None,
 ) -> None:
     writer.create_experiment(
         ResearchCycleIdentity(
@@ -291,8 +345,8 @@ def _persist_enqueued(
             NOW,
         ),
     )
-    folds = _folds(launch)
-    for fold in folds:
+    persisted_folds = _folds(launch) if folds is None else folds
+    for fold in persisted_folds:
         writer.add_fold(
             fold,
             FoldProjection(
@@ -310,7 +364,7 @@ def _persist_enqueued(
         occurred_at=NOW,
         reason_code="preflight_passed",
         detail={},
-        launch_fence=ExperimentEnqueueFence.create(gates=(), folds=folds),
+        launch_fence=ExperimentEnqueueFence.create(gates=(), folds=persisted_folds),
     )
 
 
@@ -337,6 +391,7 @@ def _coordinator(
     clock: datetime,
     lease_duration: timedelta = timedelta(minutes=5),
     checkpoints: set[str] | None = None,
+    selection_evidence_publisher: SelectionEvidencePublisher | None = None,
 ) -> ExperimentExecutionCoordinator:
     available = set() if checkpoints is None else checkpoints
     return ExperimentExecutionCoordinator(
@@ -350,7 +405,76 @@ def _coordinator(
         clock=lambda: clock,
         checkpoint_available=available.__contains__,
         checkpoint_resumable=available.__contains__,
+        selection_evidence_publisher=selection_evidence_publisher,
     )
+
+
+class _SelectionEvidencePublisherProbe:
+    """Make reaching candidate-selection observable without widening Task 10."""
+
+    def __init__(self, launch: ExperimentLaunchSpec) -> None:
+        self.calls = 0
+        lineage = MetricEvidenceLineage(
+            ("scheduler-capacity://selection-probe",),
+            (ContentHash("6" * 64),),
+        )
+        ledger = build_trial_ledger(
+            launch.promotion_objective,
+            tuple(
+                TrialOutcome(
+                    trial=launch.promotion_objective.trial_family.current_members[
+                        candidate.ordinal - 1
+                    ],
+                    status=TrialStatus.COMPLETED,
+                    metrics={
+                        ResearchMetricId.NET_RETURN: ResearchMetricValue(
+                            ResearchMetricId.NET_RETURN,
+                            float(candidate.ordinal),
+                        )
+                    },
+                    holdout_metrics={},
+                    source_projection_hash=ContentHash("7" * 64),
+                    metric_evidence={ResearchMetricId.NET_RETURN: lineage},
+                )
+                for candidate in launch.candidates
+            ),
+        )
+        self.evidence = PublishedSelectionEvidence(
+            ArtifactRecord(
+                artifact_id=f"selection-evidence-{ledger.content_hash}",
+                experiment_id=launch.experiment_id,
+                candidate_id=None,
+                fold_id=None,
+                attempt_id=None,
+                artifact_kind="selection_evidence",
+                relative_path=(
+                    f"experiments/{launch.experiment_id}/selection-evidence.json"
+                ),
+                content_hash=ledger.content_hash,
+                schema_hash=ContentHash("8" * 64),
+                row_count=1,
+                byte_size=1,
+                reproduction_fingerprint=ContentHash("9" * 64),
+                manifest={},
+                is_pinned=False,
+                pinned_at=None,
+                created_at=NOW,
+                revision=0,
+            ),
+            ledger,
+        )
+
+    def publish_selection_evidence(
+        self,
+        _snapshot: ExperimentSchedulerSnapshot,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> PublishedSelectionEvidence:
+        assert lease_fence.owner_token
+        assert now_epoch_us > 0
+        self.calls += 1
+        return self.evidence
 
 
 def _attempts(
@@ -378,7 +502,7 @@ def _publish_checkpoint_artifact(
     lease: SchedulerLease,
 ) -> _ArtifactProof:
     fold_key = attempt.spec.fold_key
-    artifact_id = f"artifact-task22-{attempt.spec.attempt_id}"
+    artifact_id = f"artifact-scheduler-capacity-{attempt.spec.attempt_id}"
     relative_path = (
         f"experiments/{fold_key.experiment_id}/"
         f"candidates/{fold_key.candidate_id}/folds/{fold_key.fold_id}/"
@@ -528,7 +652,7 @@ def test_sqlite_tick_dispatches_exact_capacity_and_excludes_second_owner(
 ) -> None:
     database, reader, writer = _open(tmp_path)
     launch = _launch(
-        f"experiment-task22-capacity-{worker_count}",
+        f"experiment-scheduler-capacity-{worker_count}",
         worker_count=worker_count,
         candidate_count=6,
     )
@@ -570,12 +694,12 @@ def test_two_queued_experiments_enter_singleton_slot_only_in_queue_order(
 ) -> None:
     database, reader, writer = _open(tmp_path)
     queue_head = _launch(
-        "experiment-task22-queue-head",
+        "experiment-scheduler-capacity-queue-head",
         worker_count=2,
         candidate_count=1,
     )
     successor = _launch(
-        "experiment-task22-queue-successor",
+        "experiment-scheduler-capacity-queue-successor",
         worker_count=2,
         candidate_count=1,
     )
@@ -639,7 +763,7 @@ def test_reopen_reclaims_expired_lease_and_preserves_checkpoint_lineage(
 ) -> None:
     database, reader, writer = _open(tmp_path)
     launch = _launch(
-        "experiment-task22-reopen",
+        "experiment-scheduler-capacity-reopen",
         worker_count=2,
         candidate_count=2,
     )
@@ -741,7 +865,7 @@ def test_pause_resume_retains_queue_and_never_duplicates_a_fold_claim(
 ) -> None:
     database, reader, writer = _open(tmp_path)
     launch = _launch(
-        "experiment-task22-pause-resume",
+        "experiment-scheduler-capacity-pause-resume",
         worker_count=2,
         candidate_count=3,
     )
@@ -808,3 +932,370 @@ def test_pause_resume_retains_queue_and_never_duplicates_a_fold_claim(
         == 1
     )
     database.close_all()
+
+
+@dataclass(frozen=True, slots=True)
+class _InterruptedCapacityRun:
+    launch: ExperimentLaunchSpec
+    queued_successor: ExperimentLaunchSpec
+    launch_folds: tuple[FoldPersistenceSpec, ...]
+    checkpointed: AttemptView
+    checkpoint_run_id: BacktestRunId
+    artifact_proof: _ArtifactProof
+    original_lease: SchedulerLease
+    paused_revision: int
+    first_attempt_ids: frozenset[AttemptId]
+    first_claim_generations: frozenset[tuple[FoldKey, int]]
+    checkpoints: set[str]
+    original_owner: str
+
+
+@dataclass(frozen=True, slots=True)
+class _ResumedCapacityRun:
+    database: ResearchExperimentDatabase
+    reader: SQLiteExperimentReader
+    writer: SQLiteExperimentWriter
+    coordinator: ExperimentExecutionCoordinator
+    durable_artifact: ArtifactRecord
+    selection_probe: _SelectionEvidencePublisherProbe
+    replacement_owner: str
+
+
+def _prepare_interrupted_capacity_run(
+    data_root: Path,
+    worker_count: int,
+) -> _InterruptedCapacityRun:
+    database, reader, writer = _open(data_root)
+    try:
+        return _prepare_interrupted_capacity_run_open(
+            database,
+            reader,
+            writer,
+            worker_count,
+        )
+    finally:
+        database.close_all()
+
+
+def _prepare_interrupted_capacity_run_open(
+    database: ResearchExperimentDatabase,
+    reader: SQLiteExperimentReader,
+    writer: SQLiteExperimentWriter,
+    worker_count: int,
+) -> _InterruptedCapacityRun:
+    launch = _launch(
+        f"experiment-task10-restart-{worker_count}",
+        worker_count=worker_count,
+        candidate_count=128,
+    )
+    successor = _launch(
+        f"experiment-task10-second-{worker_count}",
+        worker_count=worker_count,
+        candidate_count=1,
+    )
+    launch_folds = _minimal_preselection_folds_per_candidate(launch)
+    _persist_enqueued(writer, launch, folds=launch_folds)
+    _persist_enqueued(
+        writer,
+        successor,
+        folds=_minimal_preselection_folds_per_candidate(successor),
+    )
+    checkpoints: set[str] = set()
+    original_owner = f"task10-owner-before-restart-{worker_count}"
+    coordinator = _coordinator(
+        database,
+        owner=original_owner,
+        clock=NOW + timedelta(seconds=1),
+        lease_duration=timedelta(seconds=2),
+        checkpoints=checkpoints,
+    )
+    first = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
+    assert first.state is SchedulerTickState.DISPATCHED
+    assert len(first.dispatches) == worker_count
+    assert _attempts(reader, successor.experiment_id) == ()
+    first_attempt_ids = frozenset(
+        dispatch.attempt.spec.attempt_id for dispatch in first.dispatches
+    )
+    first_generations = frozenset(
+        (dispatch.fold.spec.key, dispatch.attempt.spec.ordinal)
+        for dispatch in first.dispatches
+    )
+    assert len(first_attempt_ids) == len(first_generations) == worker_count
+    checkpointed = coordinator.start_attempt(
+        first.dispatches[0],
+        occurred_at=NOW + timedelta(seconds=2),
+    ).attempt
+    run_id = checkpointed.projection.backtest_run_id
+    assert run_id is not None
+    checkpoints.add(str(run_id))
+    coordinator.record_checkpoint(
+        checkpointed.spec.attempt_id,
+        CheckpointRef(str(run_id)),
+        occurred_at=NOW + timedelta(seconds=2),
+    )
+    original_lease = coordinator.renew_lease()
+    proof = _publish_checkpoint_artifact(
+        database,
+        reader,
+        writer,
+        checkpointed,
+        run_id,
+        original_lease,
+    )
+    running = reader.get_experiment_projection(launch.experiment_id)
+    assert running is not None
+    coordinator.pause(
+        experiment_id=str(launch.experiment_id),
+        expected_revision=running.revision,
+        occurred_at=NOW + timedelta(seconds=3),
+    )
+    coordinator.tick(occurred_at=NOW + timedelta(seconds=4))
+    coordinator.cooperative_stop_attempt(
+        checkpointed.spec.attempt_id,
+        ResearchExecutionDirective.PAUSE,
+        occurred_at=NOW + timedelta(seconds=5),
+    )
+    paused = reader.get_experiment_projection(launch.experiment_id)
+    assert paused is not None
+    _assert_paused_capacity_state(reader, launch, worker_count)
+    return _InterruptedCapacityRun(
+        launch,
+        successor,
+        launch_folds,
+        checkpointed,
+        run_id,
+        proof,
+        original_lease,
+        paused.revision,
+        first_attempt_ids,
+        first_generations,
+        checkpoints,
+        original_owner,
+    )
+
+
+def _assert_paused_capacity_state(
+    reader: SQLiteExperimentReader,
+    launch: ExperimentLaunchSpec,
+    worker_count: int,
+) -> None:
+    paused = reader.get_experiment_projection(launch.experiment_id)
+    assert paused is not None
+    assert paused.record.status is ExperimentStatus.PAUSED
+    attempts = _attempts(reader, launch.experiment_id)
+    assert len(attempts) == worker_count
+    assert all(
+        attempt.projection.status is ExperimentStatus.CANCELLED for attempt in attempts
+    )
+    assert all(
+        fold.projection.status is ExperimentStatus.QUEUED
+        for fold in reader.list_folds(launch.experiment_id)
+    )
+
+
+def _resume_capacity_run(
+    data_root: Path,
+    interrupted: _InterruptedCapacityRun,
+    worker_count: int,
+) -> _ResumedCapacityRun:
+    database, reader, writer = _open(data_root)
+    try:
+        return _resume_capacity_run_open(
+            database,
+            reader,
+            writer,
+            interrupted,
+            worker_count,
+        )
+    except BaseException:
+        database.close_all()
+        raise
+
+
+def _resume_capacity_run_open(
+    database: ResearchExperimentDatabase,
+    reader: SQLiteExperimentReader,
+    writer: SQLiteExperimentWriter,
+    interrupted: _InterruptedCapacityRun,
+    worker_count: int,
+) -> _ResumedCapacityRun:
+    artifact = _assert_reopened_artifact(
+        database,
+        reader,
+        writer,
+        interrupted.checkpointed,
+        interrupted.artifact_proof,
+    )
+    replacement_owner = f"task10-owner-after-restart-{worker_count}"
+    probe = _SelectionEvidencePublisherProbe(interrupted.launch)
+    coordinator = _coordinator(
+        database,
+        owner=replacement_owner,
+        clock=NOW + timedelta(seconds=10),
+        lease_duration=timedelta(minutes=5),
+        checkpoints=interrupted.checkpoints,
+        selection_evidence_publisher=probe,
+    )
+    coordinator.resume(
+        experiment_id=str(interrupted.launch.experiment_id),
+        expected_revision=interrupted.paused_revision,
+        occurred_at=NOW + timedelta(seconds=10),
+    )
+    return _ResumedCapacityRun(
+        database,
+        reader,
+        writer,
+        coordinator,
+        artifact,
+        probe,
+        replacement_owner,
+    )
+
+
+def _drain_capacity_run(
+    resumed: _ResumedCapacityRun,
+    interrupted: _InterruptedCapacityRun,
+    worker_count: int,
+) -> int:
+    seen_attempt_ids = set(interrupted.first_attempt_ids)
+    seen_generations = set(interrupted.first_claim_generations)
+    max_live = 0
+    tick_offset = 11
+    for _ in range(140):
+        result = resumed.coordinator.tick(
+            occurred_at=NOW + timedelta(seconds=tick_offset)
+        )
+        tick_offset += 1
+        if result.state is SchedulerTickState.CANDIDATE_SELECTION:
+            assert resumed.selection_probe.calls == 1
+            return max_live
+        if result.state is SchedulerTickState.WAITING:
+            continue
+        assert result.state is SchedulerTickState.DISPATCHED
+        assert 1 <= len(result.dispatches) <= worker_count
+        assert result.experiment_id == interrupted.launch.experiment_id
+        assert (
+            _attempts(resumed.reader, interrupted.queued_successor.experiment_id) == ()
+        )
+        _assert_new_claim_batch(result.dispatches, seen_attempt_ids, seen_generations)
+        for dispatch in result.dispatches:
+            resumed.coordinator.start_attempt(
+                dispatch,
+                occurred_at=NOW + timedelta(seconds=tick_offset),
+            )
+            tick_offset += 1
+        live = _live_attempts(resumed.reader, interrupted.launch.experiment_id)
+        max_live = max(max_live, len(live))
+        assert len(live) <= worker_count
+        assert len({attempt.spec.fold_key for attempt in live}) == len(live)
+        for dispatch in result.dispatches:
+            resumed.coordinator.complete_attempt(
+                dispatch.attempt.spec.attempt_id,
+                occurred_at=NOW + timedelta(seconds=tick_offset),
+            )
+            tick_offset += 1
+    pytest.fail("literal 128-candidate scheduler did not reach selection")
+
+
+def _assert_new_claim_batch(
+    dispatches: tuple[ExperimentDispatch, ...],
+    seen_attempt_ids: set[AttemptId],
+    seen_generations: set[tuple[FoldKey, int]],
+) -> None:
+    attempt_ids = {dispatch.attempt.spec.attempt_id for dispatch in dispatches}
+    fold_keys = {dispatch.fold.spec.key for dispatch in dispatches}
+    generations = {
+        (
+            dispatch.fold.spec.key,
+            dispatch.attempt.spec.ordinal,
+        )
+        for dispatch in dispatches
+    }
+    assert len(attempt_ids) == len(fold_keys) == len(dispatches)
+    assert seen_attempt_ids.isdisjoint(attempt_ids)
+    assert seen_generations.isdisjoint(generations)
+    seen_attempt_ids.update(attempt_ids)
+    seen_generations.update(generations)
+
+
+def _live_attempts(
+    reader: SQLiteExperimentReader,
+    experiment_id: ExperimentId,
+) -> tuple[AttemptView, ...]:
+    return tuple(
+        attempt
+        for attempt in _attempts(reader, experiment_id)
+        if attempt.projection.status
+        in (ExperimentStatus.QUEUED, ExperimentStatus.RUNNING)
+    )
+
+
+def _assert_completed_capacity_run(
+    resumed: _ResumedCapacityRun,
+    interrupted: _InterruptedCapacityRun,
+    worker_count: int,
+    max_live: int,
+) -> None:
+    attempts = _attempts(resumed.reader, interrupted.launch.experiment_id)
+    completed = tuple(
+        attempt
+        for attempt in attempts
+        if attempt.projection.status is ExperimentStatus.COMPLETED
+    )
+    cancelled = tuple(
+        attempt
+        for attempt in attempts
+        if attempt.projection.status is ExperimentStatus.CANCELLED
+    )
+    folds = resumed.reader.list_folds(interrupted.launch.experiment_id)
+    assert max_live == worker_count
+    assert len(interrupted.launch.candidates) == 128
+    assert len({item.candidate_id for item in interrupted.launch.candidates}) == 128
+    assert len(folds) == len(completed) == len(interrupted.launch_folds) == 256
+    assert len(cancelled) == worker_count
+    assert len(attempts) == len(interrupted.launch_folds) + worker_count
+    assert all(fold.projection.status is ExperimentStatus.COMPLETED for fold in folds)
+    assert {item.spec.fold_key.candidate_id for item in completed} == {
+        item.candidate_id for item in interrupted.launch.candidates
+    }
+    assert not _live_attempts(resumed.reader, interrupted.launch.experiment_id)
+    successors = tuple(
+        attempt
+        for attempt in attempts
+        if attempt.spec.parent_attempt_id == interrupted.checkpointed.spec.attempt_id
+    )
+    assert len(successors) == 1
+    assert successors[0].spec.resume_from_run_id == interrupted.checkpoint_run_id
+    assert (
+        successors[0].spec.reproduction_fingerprint
+        == resumed.durable_artifact.reproduction_fingerprint
+    )
+    slot = resumed.reader.get_scheduler_slot()
+    assert slot.experiment_id == interrupted.launch.experiment_id
+    assert slot.owner_token is not None
+    assert not slot.owner_token.startswith(f"{interrupted.original_owner}:")
+    assert slot.owner_token.startswith(f"{resumed.replacement_owner}:")
+    assert slot.lease_until_epoch_us is not None
+    assert slot.lease_until_epoch_us > NOW_US + 10_000_000
+    with pytest.raises(ExperimentLeaseLostError):
+        resumed.writer.renew_lease(
+            interrupted.original_lease.fence,
+            now_epoch_us=NOW_US + 11_000_000,
+            new_lease_until_epoch_us=NOW_US + 20_000_000,
+        )
+    assert _attempts(resumed.reader, interrupted.queued_successor.experiment_id) == ()
+
+
+@pytest.mark.parametrize("worker_count", [2, 4])
+def test_128_candidates_survive_restart_without_duplicate_claims(
+    tmp_path: Path,
+    worker_count: int,
+) -> None:
+    """Prove the literal Task 10 ceiling across pause, restart, and reclaim."""
+    interrupted = _prepare_interrupted_capacity_run(tmp_path, worker_count)
+    resumed = _resume_capacity_run(tmp_path, interrupted, worker_count)
+    try:
+        max_live = _drain_capacity_run(resumed, interrupted, worker_count)
+        _assert_completed_capacity_run(resumed, interrupted, worker_count, max_live)
+    finally:
+        resumed.database.close_all()
