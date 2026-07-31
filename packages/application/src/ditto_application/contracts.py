@@ -126,6 +126,34 @@ class StrategyVersionInfo:
     experiment_id: str | None = None
 
 
+@dataclass(frozen=True)
+class StrategyVersionDetailInfo:
+    """Immutable canonical payload joined with its governance lifecycle state."""
+
+    strategy_id: str
+    version: int
+    canonical_spec: dict[str, object]
+    spec_hash: str
+    parent_version: int | None
+    state: str
+    review_outcome: str
+    created_at: str
+
+
+@dataclass(frozen=True)
+class StrategyGovernanceEventInfo:
+    """Application projection of one exact append-only governance event row."""
+
+    event_id: str
+    strategy_id: str
+    event_type: str
+    target_version: int
+    decision_or_activation_kind: str
+    actor: str
+    reason: str
+    occurred_at: str
+
+
 class ExperimentIdResolver(Protocol):
     """
     Narrow read port bridging a strategy spec hash to its experiment identity.
@@ -211,8 +239,10 @@ __all__ = [
     "SpecChange",
     "StrategyActiveInfo",
     "StrategyActivePointerInfo",
+    "StrategyGovernanceEventInfo",
     "StrategySpecInfo",
     "StrategySpecValidationInfo",
+    "StrategyVersionDetailInfo",
     "StrategyVersionDiffInfo",
     "StrategyVersionInfo",
     "StrategyVersionStateInfo",

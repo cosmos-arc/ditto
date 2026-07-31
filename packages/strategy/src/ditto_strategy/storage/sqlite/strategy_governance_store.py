@@ -19,9 +19,14 @@ from ditto_strategy.governance.models import (
     StrategyActivePointer,
     StrategyDecision,
     StrategyDecisionEvent,
+    StrategyGovernanceEvent,
     StrategyVersion,
     StrategyVersionState,
     StrategyVersionStateRecord,
+)
+from ditto_strategy.governance.protocols import (
+    InvalidStrategyGovernanceEventCursor,
+    StrategyGovernanceEventStrategyNotFound,
 )
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.strategy_spec_store import (
@@ -176,6 +181,45 @@ SELECT event_id, strategy_id, target_version, activation_kind, actor, reason,
 FROM strategy_activation_event
 WHERE event_id = ?
 """
+_STRATEGY_EXISTS = """
+SELECT 1 FROM strategy_version WHERE strategy_id = ? LIMIT 1
+"""
+_MAX_GOVERNANCE_EVENTS_PAGE_SIZE = 100
+_GOVERNANCE_EVENTS_UNION = """
+SELECT event_id, strategy_id, 'decision' AS event_type,
+       version AS target_version, decision AS decision_or_activation_kind,
+       actor, reason, decided_at AS occurred_at
+FROM strategy_decision_event
+WHERE strategy_id = ?
+UNION ALL
+SELECT event_id, strategy_id, 'activation' AS event_type,
+       target_version, activation_kind AS decision_or_activation_kind,
+       actor, reason, activated_at AS occurred_at
+FROM strategy_activation_event
+WHERE strategy_id = ?
+"""
+_LIST_GOVERNANCE_EVENTS = "".join(
+    (
+        "SELECT * FROM (",
+        _GOVERNANCE_EVENTS_UNION,
+        ") ORDER BY occurred_at, event_id LIMIT ?",
+    )
+)
+_GET_GOVERNANCE_EVENT_CURSOR = "".join(
+    (
+        "SELECT occurred_at FROM (",
+        _GOVERNANCE_EVENTS_UNION,
+        ") WHERE event_id = ?",
+    )
+)
+_LIST_GOVERNANCE_EVENTS_AFTER = "".join(
+    (
+        "SELECT * FROM (",
+        _GOVERNANCE_EVENTS_UNION,
+        ") WHERE occurred_at > ? OR (occurred_at = ? AND event_id > ?) ",
+        "ORDER BY occurred_at, event_id LIMIT ?",
+    )
+)
 
 
 def _row_to_version(row: sqlite3.Row) -> StrategyVersion:
@@ -235,6 +279,20 @@ def _row_to_activation_event(row: sqlite3.Row) -> StrategyActivationEvent:
         actor=str(d["actor"]),
         reason=str(d["reason"]),
         activated_at=str(d["activated_at"]),
+    )
+
+
+def _row_to_governance_event(row: sqlite3.Row) -> StrategyGovernanceEvent:
+    d: dict[str, object] = dict(row)
+    return StrategyGovernanceEvent(
+        event_id=str(d["event_id"]),
+        strategy_id=str(d["strategy_id"]),
+        event_type=str(d["event_type"]),
+        target_version=int(d["target_version"]),  # type: ignore[arg-type]
+        decision_or_activation_kind=str(d["decision_or_activation_kind"]),
+        actor=str(d["actor"]),
+        reason=str(d["reason"]),
+        occurred_at=str(d["occurred_at"]),
     )
 
 
@@ -663,3 +721,47 @@ class SQLiteStrategyGovernanceStore:
         conn = self._pool.get_connection()
         row = conn.execute(_GET_ACTIVATION_EVENT, (event_id,)).fetchone()
         return None if row is None else _row_to_activation_event(row)
+
+    @traced("governance.list_events")
+    def list_governance_events(
+        self,
+        strategy_id: str,
+        *,
+        after_event_id: str | None,
+        limit: int,
+    ) -> tuple[StrategyGovernanceEvent, ...]:
+        """Merge exact decision/activation rows at a stable exclusive cursor."""
+        if not 1 <= limit <= _MAX_GOVERNANCE_EVENTS_PAGE_SIZE:
+            raise ValueError("governance event limit must be between 1 and 100")
+        conn = self._pool.get_connection()
+        if conn.execute(_STRATEGY_EXISTS, (strategy_id,)).fetchone() is None:
+            raise StrategyGovernanceEventStrategyNotFound(
+                f"STRATEGY_NOT_FOUND: {strategy_id}"
+            )
+        if after_event_id is None:
+            rows = conn.execute(
+                _LIST_GOVERNANCE_EVENTS,
+                (strategy_id, strategy_id, limit),
+            ).fetchall()
+        else:
+            cursor = conn.execute(
+                _GET_GOVERNANCE_EVENT_CURSOR,
+                (strategy_id, strategy_id, after_event_id),
+            ).fetchone()
+            if cursor is None:
+                raise InvalidStrategyGovernanceEventCursor(
+                    f"INVALID_EVENT_CURSOR: {after_event_id}"
+                )
+            occurred_at = str(cursor["occurred_at"])
+            rows = conn.execute(
+                _LIST_GOVERNANCE_EVENTS_AFTER,
+                (
+                    strategy_id,
+                    strategy_id,
+                    occurred_at,
+                    occurred_at,
+                    after_event_id,
+                    limit,
+                ),
+            ).fetchall()
+        return tuple(_row_to_governance_event(row) for row in rows)

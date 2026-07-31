@@ -19,6 +19,7 @@ __all__ = [
     "StrategyActivePointer",
     "StrategyDecision",
     "StrategyDecisionEvent",
+    "StrategyGovernanceEvent",
     "StrategyVersion",
     "StrategyVersionState",
     "StrategyVersionStateRecord",
@@ -131,6 +132,20 @@ class StrategyActivationEvent:
     actor: str
     reason: str
     activated_at: str
+
+
+@dataclass(frozen=True, slots=True)
+class StrategyGovernanceEvent:
+    """One exact row projected from either append-only governance stream."""
+
+    event_id: str
+    strategy_id: str
+    event_type: str
+    target_version: int
+    decision_or_activation_kind: str
+    actor: str
+    reason: str
+    occurred_at: str
 
 
 def _illegal(decision: StrategyDecision, reason: str) -> ValueError:

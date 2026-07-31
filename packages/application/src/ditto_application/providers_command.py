@@ -412,9 +412,10 @@ class AppCommandProvider(Provider):
     def submit_review_handler(
         self,
         governance_service: GovernanceService,
+        reader: ReviewPacketReader,
     ) -> SubmitReviewHandler:
         """策略版本提交审查 Handler（governance submit_review）."""
-        return SubmitReviewHandler(governance=governance_service)
+        return SubmitReviewHandler(governance=governance_service, reader=reader)
 
     @provide
     def approve_review_handler(

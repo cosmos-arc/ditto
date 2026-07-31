@@ -5,7 +5,7 @@
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `cb3195b6a448963cd9b86159a189386607e041bcc8e3f8115c54b6b555e4c17c`
+> JSON canonical SHA-256: `689ccf11efc5e7651624e2ead1a42c84d745a58ffde379b3b70511a635727535`
 
 Task 4 classification 已由用户批准；批准 reference 为
 `user-message:2026-07-31:final-task4-classification-approved`。Candidate evidence
@@ -16,7 +16,7 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
 
 ## 1. 结论
 
-当前 runtime 有 31 个 R3 research/strategy operations；设计 §12.2 有 37 个。
+当前 runtime 有 33 个 R3 research/strategy operations；设计 §12.2 有 37 个。
 清单共 40 项：37 个设计 operation，加 3 个 W5/runtime-only operation。
 
 | 分类 | 数量 | 含义 |
@@ -35,7 +35,7 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
     "IMPLEMENT/IMPLEMENTED": 15,
     "IMPLEMENT/PLANNED": 18
   },
-  "runtime_contract_count": 31,
+  "runtime_contract_count": 33,
   "defer_operation_ids": [
     "design_research_experiment_launch_alias"
   ],

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -471,6 +472,103 @@ def test_list_versions_by_state_returns_empty_when_no_match(tmp_path: Path) -> N
 
     reviews = store.list_versions_by_state(StrategyVersionState.REVIEW)
     assert reviews == ()
+
+
+def test_list_governance_events_merges_append_only_streams_with_stable_cursor(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+    store.append_decision(
+        StrategyDecisionEvent(
+            event_id="decision-b",
+            strategy_id="strategy-1",
+            version=1,
+            decision=StrategyDecision.SUBMIT_REVIEW,
+            actor="alice",
+            reason="review",
+            decided_at="2026-07-23T00:00:01Z",
+        ),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+    store.activate(
+        "strategy-1",
+        1,
+        StrategyActivationEvent(
+            event_id="activation-a",
+            strategy_id="strategy-1",
+            target_version=1,
+            activation_kind=StrategyDecision.REACTIVATE,
+            actor="bob",
+            reason="switch",
+            activated_at="2026-07-23T00:00:01Z",
+        ),
+        expected_pointer_revision=0,
+    )
+
+    events = store.list_governance_events("strategy-1", after_event_id=None, limit=20)
+
+    assert [item.event_id for item in events] == ["activation-a", "decision-b"]
+    assert asdict(events[0]) == {
+        "event_id": "activation-a",
+        "strategy_id": "strategy-1",
+        "event_type": "activation",
+        "target_version": 1,
+        "decision_or_activation_kind": "reactivate",
+        "actor": "bob",
+        "reason": "switch",
+        "occurred_at": "2026-07-23T00:00:01Z",
+    }
+    forbidden = {
+        "bundle_hash",
+        "evidence_hash",
+        "previous_version",
+        "pointer_revision",
+    }
+    assert forbidden.isdisjoint(asdict(events[0]))
+    assert store.list_governance_events(
+        "strategy-1", after_event_id="activation-a", limit=1
+    ) == (events[1],)
+
+
+def test_list_governance_events_rejects_missing_or_cross_strategy_cursor(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version(strategy_id="strategy-1"))
+    store.insert_version(_version(strategy_id="strategy-2", spec_hash="b" * 64))
+    store.append_decision(
+        _decision(event_id="strategy-2:event", strategy_id="strategy-2"),
+        StrategyVersionState.REVIEW,
+        ReviewOutcome.PENDING,
+        expected_revision=0,
+    )
+
+    for cursor in ("missing", "strategy-2:event"):
+        with pytest.raises(ValueError, match="INVALID_EVENT_CURSOR"):
+            store.list_governance_events("strategy-1", after_event_id=cursor, limit=20)
+
+
+def test_list_governance_events_distinguishes_missing_strategy(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+
+    with pytest.raises(LookupError, match="STRATEGY_NOT_FOUND"):
+        store.list_governance_events("missing", after_event_id=None, limit=20)
+
+
+def test_list_governance_events_returns_empty_for_existing_strategy_without_events(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.insert_version(_version())
+
+    assert (
+        store.list_governance_events("strategy-1", after_event_id=None, limit=20) == ()
+    )
 
 
 def test_create_draft_version_writes_payload_and_governance_atomically(

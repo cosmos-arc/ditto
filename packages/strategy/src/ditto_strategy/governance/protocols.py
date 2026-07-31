@@ -9,6 +9,7 @@ from ditto_strategy.governance.models import (
     StrategyActivationEvent,
     StrategyActivePointer,
     StrategyDecisionEvent,
+    StrategyGovernanceEvent,
     StrategyVersion,
     StrategyVersionState,
     StrategyVersionStateRecord,
@@ -16,11 +17,22 @@ from ditto_strategy.governance.models import (
 from ditto_strategy.models import StrategySpecRecord
 
 __all__ = [
+    "InvalidStrategyGovernanceEventCursor",
     "StrategyActivePointerReader",
+    "StrategyGovernanceEventReader",
+    "StrategyGovernanceEventStrategyNotFound",
     "StrategyGovernanceStoreProtocol",
     "StrategyGovernanceVersionReader",
     "StrategyVersionStateReader",
 ]
+
+
+class InvalidStrategyGovernanceEventCursor(ValueError):
+    """Raised when a cursor is absent from the requested strategy stream."""
+
+
+class StrategyGovernanceEventStrategyNotFound(LookupError):
+    """Raised when the requested strategy has no immutable version identity."""
 
 
 class StrategyGovernanceStoreProtocol(Protocol):
@@ -138,4 +150,18 @@ class StrategyGovernanceVersionReader(Protocol):
 
     def get_active_pointer(self, strategy_id: str) -> StrategyActivePointer | None:
         """Return the single active pointer for a strategy, or None."""
+        ...
+
+
+class StrategyGovernanceEventReader(Protocol):
+    """Read the stable merged position of append-only governance events."""
+
+    def list_governance_events(
+        self,
+        strategy_id: str,
+        *,
+        after_event_id: str | None,
+        limit: int,
+    ) -> tuple[StrategyGovernanceEvent, ...]:
+        """Return strictly-after events ordered by ``(occurred_at, event_id)``."""
         ...

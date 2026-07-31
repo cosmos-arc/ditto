@@ -95,6 +95,7 @@ class AppStrategyQueryProvider(Provider):
             version_state_reader=strategy_governance_store,
             governance_version_reader=strategy_governance_store,
             experiment_resolver=experiment_query_facade,
+            governance_event_reader=strategy_governance_store,
         )
 
     @provide

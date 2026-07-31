@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
@@ -33,6 +35,7 @@ from ditto_application.commands.strategy_governance import (
     DeprecateStrategyHandler,
     ReactivateStrategyHandler,
     RejectReviewHandler,
+    ReviewPacketReader,
     SubmitReviewHandler,
     reactivate_confirmation_phrase,
 )
@@ -102,7 +105,21 @@ def _inline_blocking_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
         assert callable(func)
         return func(*args, **kwargs)
 
-    monkeypatch.setattr(strategy_routes, "run_blocking", run_inline)
+    monkeypatch.setattr(
+        strategy_routes,
+        "run_blocking",
+        run_inline,
+    )
+    monkeypatch.setattr(
+        "ditto_application.commands.strategy_governance.load_verified_promotion_target",
+        lambda **_kwargs: SimpleNamespace(
+            packet=SimpleNamespace(gate_evaluations=()),
+        ),
+    )
+    monkeypatch.setattr(
+        "ditto_application.commands.strategy_governance.hard_gate_contract_blocks_promotion",
+        lambda _evaluations: False,
+    )
 
 
 @dataclass(slots=True)
@@ -134,7 +151,7 @@ def _build_harness(database_path: Path) -> _Harness:
     )
     create = CreateStrategyHandler(governance)
     update = UpdateStrategyHandler(catalog, governance)
-    submit = SubmitReviewHandler(governance)
+    submit = SubmitReviewHandler(governance, MagicMock(spec=ReviewPacketReader))
     approve = ApproveReviewHandler(governance)
     reject = RejectReviewHandler(governance)
     deprecate = DeprecateStrategyHandler(governance)
@@ -412,7 +429,11 @@ async def test_governance_replay_returns_original_state_after_later_transition(
             )
         ).status_code == 200
         submit_headers = {"Idempotency-Key": "strategy.submit-001"}
-        submit_body = {"actor": "reviewer", "reason": "ready for review"}
+        submit_body = {
+            "bundle_hash": "a" * 64,
+            "actor": "reviewer",
+            "reason": "ready for review",
+        }
         submitted = await harness.client.post(
             f"/api/v1/strategies/{strategy_id}/versions/1/submit-review",
             json=submit_body,

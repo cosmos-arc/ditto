@@ -11,6 +11,9 @@ from ditto_strategy.governance.models import (
     StrategyVersionState,
 )
 from ditto_strategy.governance.protocols import (
+    InvalidStrategyGovernanceEventCursor,
+    StrategyGovernanceEventReader,
+    StrategyGovernanceEventStrategyNotFound,
     StrategyGovernanceVersionReader,
     StrategyVersionStateReader,
 )
@@ -19,13 +22,15 @@ from ditto_strategy.models import StrategySpecRecord
 from ditto_application.contracts import (
     ExperimentIdResolver,
     StrategyActiveInfo,
+    StrategyGovernanceEventInfo,
     StrategySpecInfo,
     StrategySpecValidationInfo,
+    StrategyVersionDetailInfo,
     StrategyVersionDiffInfo,
     StrategyVersionInfo,
     to_spec_info,
 )
-from ditto_application.exceptions import AppBuilderError
+from ditto_application.exceptions import AppBuilderError, AppQueryError
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
     canonical_spec_payload_for_record,
@@ -50,11 +55,13 @@ class StrategyQueryFacade:
         version_state_reader: StrategyVersionStateReader | None = None,
         governance_version_reader: StrategyGovernanceVersionReader | None = None,
         experiment_resolver: ExperimentIdResolver | None = None,
+        governance_event_reader: StrategyGovernanceEventReader | None = None,
     ) -> None:
         self._service = catalog_service
         self._version_state_reader = version_state_reader
         self._governance_version_reader = governance_version_reader
         self._experiment_resolver = experiment_resolver
+        self._governance_event_reader = governance_event_reader
 
     def list_specs(self) -> list[StrategySpecInfo]:
         """列出所有策略（最新版本）."""
@@ -76,6 +83,93 @@ class StrategyQueryFacade:
         """
         record = self._service.get_active_published(strategy_id)
         return to_spec_info(record, status="active") if record is not None else None
+
+    def get_version_detail(
+        self,
+        strategy_id: str,
+        version: int,
+    ) -> StrategyVersionDetailInfo | None:
+        """Join one immutable canonical payload with its governance state."""
+        record = self._service.get_spec(strategy_id, version)
+        if record is None or self._version_state_reader is None:
+            return None
+        state = self._version_state_reader.get_state(strategy_id, version)
+        if state is None:
+            return None
+        try:
+            canonical_spec = canonical_spec_payload_for_record(record)
+            canonical_hash = canonical_spec_hash_for_record(record)
+        except (AppBuilderError, StrategySpecError, ValueError) as exc:
+            raise AppQueryError(
+                f"Invalid immutable strategy version payload: {strategy_id} v{version}",
+                details={
+                    "code": "STRATEGY_VERSION_SPEC_INVALID",
+                    "strategy_id": strategy_id,
+                    "version": version,
+                },
+            ) from exc
+        if canonical_hash != record.spec_hash:
+            raise AppQueryError(
+                f"Immutable strategy version hash mismatch: {strategy_id} v{version}",
+                details={
+                    "code": "STRATEGY_VERSION_SPEC_HASH_MISMATCH",
+                    "strategy_id": strategy_id,
+                    "version": version,
+                },
+            )
+        return StrategyVersionDetailInfo(
+            strategy_id=record.strategy_id,
+            version=record.version,
+            canonical_spec=canonical_spec,
+            spec_hash=record.spec_hash,
+            parent_version=record.parent_version,
+            state=str(state.state),
+            review_outcome=str(state.review_outcome),
+            created_at=record.created_at,
+        )
+
+    def list_governance_events(
+        self,
+        strategy_id: str,
+        *,
+        after_event_id: str | None,
+        limit: int,
+    ) -> list[StrategyGovernanceEventInfo]:
+        """Project the stable merged governance stream through application DTOs."""
+        if self._governance_event_reader is None:
+            raise AppQueryError(
+                "strategy governance event reader is not configured",
+                details={"code": "STRATEGY_GOVERNANCE_READER_UNAVAILABLE"},
+            )
+        try:
+            events = self._governance_event_reader.list_governance_events(
+                strategy_id,
+                after_event_id=after_event_id,
+                limit=limit,
+            )
+        except InvalidStrategyGovernanceEventCursor as exc:
+            raise AppQueryError(
+                str(exc),
+                details={"code": "INVALID_EVENT_CURSOR"},
+            ) from exc
+        except StrategyGovernanceEventStrategyNotFound as exc:
+            raise AppQueryError(
+                str(exc),
+                details={"code": "STRATEGY_NOT_FOUND"},
+            ) from exc
+        return [
+            StrategyGovernanceEventInfo(
+                event_id=event.event_id,
+                strategy_id=event.strategy_id,
+                event_type=event.event_type,
+                target_version=event.target_version,
+                decision_or_activation_kind=event.decision_or_activation_kind,
+                actor=event.actor,
+                reason=event.reason,
+                occurred_at=event.occurred_at,
+            )
+            for event in events
+        ]
 
     def list_versions(self, strategy_id: str) -> list[StrategyVersionInfo]:
         """

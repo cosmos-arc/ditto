@@ -22,13 +22,15 @@ from ditto_application.contracts import (
     SpecChange,
     StrategyActiveInfo,
     StrategyActivePointerInfo,
+    StrategyGovernanceEventInfo,
     StrategySpecInfo,
     StrategySpecValidationInfo,
+    StrategyVersionDetailInfo,
     StrategyVersionDiffInfo,
     StrategyVersionInfo,
     StrategyVersionStateInfo,
 )
-from ditto_application.exceptions import AppCommandError
+from ditto_application.exceptions import AppCommandError, AppQueryError
 from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.strategy import (
@@ -36,6 +38,8 @@ from ditto_apps.api.routes.strategy import (
     deprecate_strategy_version,
     diff_strategy_version,
     get_active_strategy,
+    get_strategy_version_detail,
+    list_strategy_governance_events,
     list_strategy_versions,
     reactivate_strategy_version,
     reject_strategy_review,
@@ -44,6 +48,7 @@ from ditto_apps.api.routes.strategy import (
     update_strategy,
     validate_strategy_version,
 )
+from ditto_apps.models import strategy as strategy_models
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.strategy import (
     GovernanceDecisionRequest,
@@ -51,14 +56,18 @@ from ditto_apps.models.strategy import (
     SpecChangeResponse,
     StrategyActivePointerResponse,
     StrategyActiveResponse,
+    StrategyGovernanceEventResponse,
     StrategyResponse,
     StrategySpecValidateRequest,
     StrategySpecValidationResponse,
+    StrategyVersionDetailResponse,
     StrategyVersionDiffResponse,
     StrategyVersionResponse,
     StrategyVersionStateResponse,
+    SubmitReviewRequest,
     UpdateStrategyRequest,
 )
+from fastapi import FastAPI
 from pydantic import ValidationError
 
 pytestmark = pytest.mark.asyncio
@@ -76,11 +85,100 @@ async def test_router_registers_only_evidence_gated_publish() -> None:
     assert publish_paths == {"/strategies/{strategy_id}/versions/{version}/publish"}
 
 
+async def test_router_registers_exact_version_detail_operation() -> None:
+    """Immutable version detail is a dedicated read-only operation."""
+    matches = [
+        route
+        for route in router.routes
+        if getattr(route, "path", None)
+        == "/strategies/{strategy_id}/versions/{version}"
+        and "GET" in getattr(route, "methods", set())
+    ]
+
+    assert len(matches) == 1
+    assert matches[0].operation_id == "design_strategy_version_detail"
+
+
+async def test_router_registers_exact_governance_events_operation() -> None:
+    """Append-only governance events use the frozen read-only operation id."""
+    matches = [
+        route
+        for route in router.routes
+        if getattr(route, "path", None) == "/strategies/{strategy_id}/events"
+        and "GET" in getattr(route, "methods", set())
+    ]
+
+    assert len(matches) == 1
+    assert matches[0].operation_id == "design_strategy_events"
+
+
+async def test_governance_event_contract_has_exact_fields_and_bounded_limit() -> None:
+    """The event DTO exposes no fabricated evidence/pointer fields."""
+    response_model = getattr(strategy_models, "StrategyGovernanceEventResponse", None)
+    assert response_model is not None
+    assert tuple(response_model.model_fields) == (
+        "event_id",
+        "strategy_id",
+        "event_type",
+        "target_version",
+        "decision_or_activation_kind",
+        "actor",
+        "reason",
+        "occurred_at",
+    )
+    forbidden = {
+        "bundle_hash",
+        "evidence_hash",
+        "previous_version",
+        "pointer_revision",
+    }
+    assert forbidden.isdisjoint(response_model.model_fields)
+    assert response_model.model_config["extra"] == "forbid"
+    with pytest.raises(ValidationError):
+        response_model(
+            event_id="event-1",
+            strategy_id="s1",
+            event_type="decision",
+            target_version=1,
+            decision_or_activation_kind="approve",
+            actor="alice",
+            reason="ok",
+            occurred_at="2026-07-31T00:00:00Z",
+            bundle_hash="forbidden",
+        )
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v1")
+    operation = app.openapi()["paths"]["/api/v1/strategies/{strategy_id}/events"]["get"]
+    limit = next(item for item in operation["parameters"] if item["name"] == "limit")
+    assert limit["schema"] == {
+        "type": "integer",
+        "maximum": 100,
+        "minimum": 1,
+        "default": 20,
+        "title": "Limit",
+    }
+    detail_version = next(
+        item
+        for item in app.openapi()["paths"][
+            "/api/v1/strategies/{strategy_id}/versions/{version}"
+        ]["get"]["parameters"]
+        if item["name"] == "version"
+    )
+    assert detail_version["schema"]["minimum"] == 1
+
+
 _UpdateRoute = Callable[..., Awaitable[APIResponse[StrategyResponse]]]
 _ListVersionsRoute = Callable[
     ..., Awaitable[APIResponse[list[StrategyVersionResponse]]]
 ]
 _GetActiveRoute = Callable[..., Awaitable[APIResponse[StrategyActiveResponse]]]
+_VersionDetailRoute = Callable[
+    ..., Awaitable[APIResponse[StrategyVersionDetailResponse]]
+]
+_GovernanceEventsRoute = Callable[
+    ..., Awaitable[APIResponse[list[StrategyGovernanceEventResponse]]]
+]
 _StateRoute = Callable[..., Awaitable[APIResponse[StrategyVersionStateResponse]]]
 _ReactivateRoute = Callable[..., Awaitable[APIResponse[StrategyActivePointerResponse]]]
 
@@ -170,6 +268,31 @@ async def _call_get_active(
     return await route(strategy_id=strategy_id, facade=facade)
 
 
+async def _call_version_detail(
+    strategy_id: str,
+    version: int,
+    facade: StrategyQueryFacade,
+) -> APIResponse[StrategyVersionDetailResponse]:
+    route = cast(_VersionDetailRoute, _unwrap(get_strategy_version_detail))
+    return await route(strategy_id=strategy_id, version=version, facade=facade)
+
+
+async def _call_governance_events(
+    strategy_id: str,
+    facade: StrategyQueryFacade,
+    *,
+    after_event_id: str | None = None,
+    limit: int = 20,
+) -> APIResponse[list[StrategyGovernanceEventResponse]]:
+    route = cast(_GovernanceEventsRoute, _unwrap(list_strategy_governance_events))
+    return await route(
+        strategy_id=strategy_id,
+        facade=facade,
+        after_event_id=after_event_id,
+        limit=limit,
+    )
+
+
 def _state_info(
     *,
     strategy_id: str = "s1",
@@ -215,7 +338,7 @@ def _active_info() -> StrategyActiveInfo:
 async def _call_submit_review(
     strategy_id: str,
     version: int,
-    request: GovernanceDecisionRequest,
+    request: SubmitReviewRequest,
     handler: SubmitReviewHandler,
 ) -> APIResponse[StrategyVersionStateResponse]:
     route = cast(_StateRoute, _unwrap(submit_strategy_review))
@@ -376,6 +499,106 @@ class TestGetActiveStrategy:
         assert exc_info.value.status_code == 404
 
 
+class TestStrategyVersionDetail:
+    """GET immutable version detail maps the application DTO and exact 404."""
+
+    async def test_returns_canonical_detail(self, mock_query_facade: MagicMock) -> None:
+        mock_query_facade.get_version_detail.return_value = StrategyVersionDetailInfo(
+            strategy_id="s1",
+            version=2,
+            canonical_spec={"selector": {"top_k": 5}},
+            spec_hash="a" * 64,
+            parent_version=1,
+            state="review",
+            review_outcome="approved",
+            created_at="2026-07-31T00:00:00Z",
+        )
+
+        result = await _call_version_detail("s1", 2, mock_query_facade)
+
+        assert result.data == StrategyVersionDetailResponse(
+            strategy_id="s1",
+            version=2,
+            canonical_spec={"selector": {"top_k": 5}},
+            spec_hash="a" * 64,
+            parent_version=1,
+            state="review",
+            review_outcome="approved",
+            created_at="2026-07-31T00:00:00Z",
+        )
+
+    async def test_missing_version_is_exact_404(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.get_version_detail.return_value = None
+
+        with pytest.raises(APIError) as info:
+            await _call_version_detail("s1", 99, mock_query_facade)
+
+        assert info.value.status_code == 404
+        assert info.value.error_code == "STRATEGY_VERSION_NOT_FOUND"
+
+
+class TestStrategyGovernanceEvents:
+    """GET governance events preserves stable cursor and typed errors."""
+
+    async def test_returns_exact_append_only_projection(
+        self, mock_query_facade: MagicMock
+    ) -> None:
+        mock_query_facade.list_governance_events.return_value = [
+            StrategyGovernanceEventInfo(
+                event_id="event-1",
+                strategy_id="s1",
+                event_type="decision",
+                target_version=2,
+                decision_or_activation_kind="approve",
+                actor="alice",
+                reason="ok",
+                occurred_at="2026-07-31T00:00:00Z",
+            )
+        ]
+
+        result = await _call_governance_events(
+            "s1", mock_query_facade, after_event_id="event-0", limit=10
+        )
+
+        assert result.data == [
+            StrategyGovernanceEventResponse(
+                event_id="event-1",
+                strategy_id="s1",
+                event_type="decision",
+                target_version=2,
+                decision_or_activation_kind="approve",
+                actor="alice",
+                reason="ok",
+                occurred_at="2026-07-31T00:00:00Z",
+            )
+        ]
+        mock_query_facade.list_governance_events.assert_called_once_with(
+            "s1", after_event_id="event-0", limit=10
+        )
+
+    @pytest.mark.parametrize(
+        ("code", "status"),
+        [("INVALID_EVENT_CURSOR", 422), ("STRATEGY_NOT_FOUND", 404)],
+    )
+    async def test_maps_typed_query_errors(
+        self,
+        mock_query_facade: MagicMock,
+        code: str,
+        status: int,
+    ) -> None:
+        mock_query_facade.list_governance_events.side_effect = AppQueryError(
+            code, details={"code": code}
+        )
+
+        with pytest.raises(APIError) as info:
+            await _call_governance_events("s1", mock_query_facade)
+
+        assert info.value.status_code == status
+        assert info.value.error_code == code
+
+
 class TestSubmitStrategyReview:
     """POST /strategies/{id}/versions/{v}/submit-review — state-machine + 错误映射."""
 
@@ -385,7 +608,7 @@ class TestSubmitStrategyReview:
         result = await _call_submit_review(
             "s1",
             1,
-            GovernanceDecisionRequest(actor="alice", reason="ok"),
+            SubmitReviewRequest(bundle_hash="a" * 64, actor="alice", reason="ok"),
             mock_submit_handler,
         )
 
@@ -401,7 +624,7 @@ class TestSubmitStrategyReview:
             await _call_submit_review(
                 "s1",
                 1,
-                GovernanceDecisionRequest(actor="alice", reason="ok"),
+                SubmitReviewRequest(bundle_hash="a" * 64, actor="alice", reason="ok"),
                 mock_submit_handler,
             )
         assert exc_info.value.status_code == 404
@@ -416,7 +639,7 @@ class TestSubmitStrategyReview:
             await _call_submit_review(
                 "s1",
                 1,
-                GovernanceDecisionRequest(actor="alice", reason="ok"),
+                SubmitReviewRequest(bundle_hash="a" * 64, actor="alice", reason="ok"),
                 mock_submit_handler,
             )
         assert exc_info.value.status_code == 409
@@ -431,7 +654,7 @@ class TestSubmitStrategyReview:
             await _call_submit_review(
                 "s1",
                 1,
-                GovernanceDecisionRequest(actor="alice", reason="ok"),
+                SubmitReviewRequest(bundle_hash="a" * 64, actor="alice", reason="ok"),
                 mock_submit_handler,
             )
         assert exc_info.value.status_code == 400

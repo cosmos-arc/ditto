@@ -62,6 +62,12 @@ class GovernanceDecisionRequest(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class SubmitReviewRequest(GovernanceDecisionRequest):
+    """Evidence-bound request to move one immutable draft into review."""
+
+    bundle_hash: str = Field(min_length=1, description="持久化 review packet hash")
+
+
 class ReactivateStrategyRequest(GovernanceDecisionRequest):
     """Reactivate one published version with an optimistic pointer CAS guard."""
 
@@ -89,6 +95,36 @@ class StrategyVersionResponse(BaseModel):
     experiment_id: str | None = None
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class StrategyVersionDetailResponse(BaseModel):
+    """One immutable canonical strategy payload and governance state."""
+
+    strategy_id: str
+    version: int
+    canonical_spec: dict[str, Any]
+    spec_hash: str
+    parent_version: int | None
+    state: str
+    review_outcome: str
+    created_at: str
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class StrategyGovernanceEventResponse(BaseModel):
+    """Exact append-only decision or activation event projection."""
+
+    event_id: str
+    strategy_id: str
+    event_type: str
+    target_version: int
+    decision_or_activation_kind: str
+    actor: str
+    reason: str
+    occurred_at: str
+
+    model_config = ConfigDict(strict=True, extra="forbid")
 
 
 class StrategyVersionStateResponse(BaseModel):
@@ -177,12 +213,15 @@ __all__ = [
     "SpecChangeResponse",
     "StrategyActivePointerResponse",
     "StrategyActiveResponse",
+    "StrategyGovernanceEventResponse",
     "StrategyResponse",
     "StrategySpecValidateRequest",
     "StrategySpecValidationResponse",
+    "StrategyVersionDetailResponse",
     "StrategyVersionDiffResponse",
     "StrategyVersionResponse",
     "StrategyVersionStateResponse",
+    "SubmitReviewRequest",
     "UpdateStrategyRequest",
 ]
 

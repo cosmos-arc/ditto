@@ -12,33 +12,181 @@ bundle produced by the research control plane.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from ditto_analysis.experiments import (
     HARD_GATE_RULE_IDS,
     REVIEW_PACKET_SCHEMA_VERSION,
+    ExperimentId,
+    ExperimentLaunchSpec,
     GateEvaluation,
     GateLayer,
     ReviewPacket,
+    encode_launch_spec,
     review_blocked_by_hard_gates,
 )
 from ditto_strategy.governance.models import (
     StrategyActivationEvent,
     StrategyActivePointer,
     StrategyDecisionEvent,
+    StrategyVersion,
 )
 from ditto_strategy.governance.service import (
     GovernanceService,
     PublishReviewedActivationRequest,
 )
 
-from ditto_application.exceptions import AppProcessError
+from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.mutation_idempotency import (
     MutationIdempotency,
     mutation_event_id,
     mutation_receipt_reason,
 )
 
-__all__ = ["PromotionRequest", "PromotionResult", "StrategyPromotionProcess"]
+__all__ = [
+    "PromotionRequest",
+    "PromotionResult",
+    "ReviewPacketReader",
+    "StrategyPromotionProcess",
+    "VerifiedPromotionTarget",
+    "hard_gate_contract_blocks_promotion",
+    "load_verified_promotion_target",
+]
+
+
+class ReviewPacketReader(Protocol):
+    """Read one immutable packet and its experiment-owned launch identity."""
+
+    def get_review_packet(self, bundle_hash: str) -> ReviewPacket | None:
+        """Load one review packet or return ``None`` when it is unknown."""
+        ...
+
+    def get_launch_spec(
+        self, experiment_id: ExperimentId
+    ) -> ExperimentLaunchSpec | None:
+        """Load the persisted launch owning the packet's experiment lineage."""
+        ...
+
+
+class PromotionTargetReader(Protocol):
+    """Narrow governance read port needed to cross-link one target version."""
+
+    def get_version(self, strategy_id: str, version: int) -> StrategyVersion | None:
+        """Return one immutable governance version or ``None`` when absent."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedPromotionTarget:
+    """Packet, launch, and governance version proven to name one target."""
+
+    packet: ReviewPacket
+    launch: ExperimentLaunchSpec
+    version: StrategyVersion
+
+
+def load_verified_promotion_target(
+    *,
+    strategy_id: str,
+    version: int,
+    bundle_hash: str,
+    reader: ReviewPacketReader,
+    target_reader: PromotionTargetReader,
+) -> VerifiedPromotionTarget:
+    """Verify packet -> persisted launch -> immutable governance target identity."""
+    packet = reader.get_review_packet(bundle_hash)
+    if packet is None:
+        raise AppCommandError(
+            f"Review packet not found for bundle hash: {bundle_hash}",
+            details={
+                "code": "REVIEW_PACKET_NOT_FOUND",
+                "strategy_id": strategy_id,
+                "version": version,
+                "bundle_hash": bundle_hash,
+            },
+        )
+    if packet.schema_version != REVIEW_PACKET_SCHEMA_VERSION:
+        raise AppCommandError(
+            "review packet schema is read-only and cannot be promoted",
+            details={
+                "code": "REVIEW_PACKET_SCHEMA_UNSUPPORTED",
+                "reason": "review_packet_schema_unsupported",
+                "strategy_id": strategy_id,
+                "version": version,
+                "schema_version": packet.schema_version,
+            },
+        )
+    actual_bundle_hash = str(packet.bundle_hash)
+    if actual_bundle_hash != bundle_hash:
+        raise AppCommandError(
+            "persisted review packet hash does not match the requested bundle",
+            details={
+                "code": "REVIEW_PACKET_TARGET_MISMATCH",
+                "reason": "stale_evidence_bundle",
+                "strategy_id": strategy_id,
+                "version": version,
+                "expected": bundle_hash,
+                "actual": actual_bundle_hash,
+            },
+        )
+    launch = reader.get_launch_spec(ExperimentId(packet.lineage.experiment_id))
+    if launch is None:
+        raise AppCommandError(
+            "Review packet experiment lineage was not found",
+            details={
+                "code": "REVIEW_PACKET_EXPERIMENT_NOT_FOUND",
+                "reason": "evidence_experiment_not_found",
+                "strategy_id": strategy_id,
+                "version": version,
+                "experiment_id": packet.lineage.experiment_id,
+            },
+        )
+    expected_strategy_version = f"{strategy_id}@{version}"
+    launch_spec_hash = encode_launch_spec(launch).content_hash
+    if (
+        str(launch.strategy_version) != expected_strategy_version
+        or launch_spec_hash != packet.spec_hash
+    ):
+        raise AppCommandError(
+            "Review packet does not belong to the promotion target",
+            details={
+                "code": "REVIEW_PACKET_TARGET_MISMATCH",
+                "reason": "evidence_target_mismatch",
+                "strategy_id": strategy_id,
+                "version": version,
+                "experiment_id": packet.lineage.experiment_id,
+                "launch_strategy_version": str(launch.strategy_version),
+                "launch_spec_hash": str(launch_spec_hash),
+                "packet_launch_spec_hash": str(packet.spec_hash),
+            },
+        )
+    governance_version = target_reader.get_version(strategy_id, version)
+    if governance_version is None:
+        raise AppCommandError(
+            f"Strategy version not found: {strategy_id} v{version}",
+            details={
+                "code": "STRATEGY_VERSION_NOT_FOUND",
+                "strategy_id": strategy_id,
+                "version": version,
+            },
+        )
+    if governance_version.spec_hash != str(launch.strategy_spec_hash):
+        raise AppCommandError(
+            "Review packet strategy spec does not match promotion target",
+            details={
+                "code": "REVIEW_PACKET_TARGET_MISMATCH",
+                "reason": "evidence_target_mismatch",
+                "strategy_id": strategy_id,
+                "version": version,
+                "governance_spec_hash": governance_version.spec_hash,
+                "launch_strategy_spec_hash": str(launch.strategy_spec_hash),
+            },
+        )
+    return VerifiedPromotionTarget(
+        packet=packet,
+        launch=launch,
+        version=governance_version,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +214,7 @@ class PromotionResult:
     active_pointer: StrategyActivePointer
 
 
-def _hard_gate_contract_blocks_promotion(
+def hard_gate_contract_blocks_promotion(
     evaluations: tuple[GateEvaluation, ...],
 ) -> bool:
     """Require the canonical hard-gate sequence with no mis-layered duplicate."""
@@ -101,6 +249,10 @@ class StrategyPromotionProcess:
         """Expose the paired activation receipt read for atomic replay validation."""
         return self._governance.get_activation_event(event_id)
 
+    def get_version(self, strategy_id: str, version: int) -> StrategyVersion | None:
+        """Expose the immutable target read needed by the shared verifier."""
+        return self._governance.get_version(strategy_id, version)
+
     def promote(self, request: PromotionRequest) -> PromotionResult:
         """Validate the evidence bundle, publish, and switch the active pointer."""
         if request.packet.schema_version != REVIEW_PACKET_SCHEMA_VERSION:
@@ -134,7 +286,7 @@ class StrategyPromotionProcess:
                 expected=target.spec_hash,
                 actual=request.expected_strategy_spec_hash,
             )
-        if _hard_gate_contract_blocks_promotion(request.packet.gate_evaluations):
+        if hard_gate_contract_blocks_promotion(request.packet.gate_evaluations):
             raise AppProcessError(
                 "a hard gate blocks promotion",
                 reason="hard_gate_blocked",

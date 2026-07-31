@@ -31,7 +31,9 @@ from ditto_analysis.experiments.evidence import (
 )
 from ditto_analysis.experiments.gates import (
     HARD_GATE_RULE_IDS,
+    GateEvaluation,
     GateFact,
+    GateLayer,
     GateOutcome,
     HardGateEvidence,
     evaluate_hard_gates,
@@ -45,6 +47,7 @@ from ditto_analysis.storage.sqlite.experiments import (
 )
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionHandler,
+    SubmitReviewHandler,
 )
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
@@ -107,6 +110,7 @@ class _PublishHarness:
     governance_store: SQLiteStrategyGovernanceStore
     catalog: StrategyCatalogService
     publish_handler: PublishStrategyVersionHandler
+    submit_handler: SubmitReviewHandler
     packet: ReviewPacket
     strategy_id: str
     candidate_version: int
@@ -144,6 +148,8 @@ def _deterministic_packet(
     experiment_id: ExperimentId,
     candidate_id: str,
     launch_spec_hash: ContentHash,
+    r2_live_gate: bool | None = None,
+    soft_failure: bool = False,
 ) -> ReviewPacket:
     hard_gates = evaluate_hard_gates(
         HardGateEvidence(
@@ -157,11 +163,27 @@ def _deterministic_packet(
             trial_declaration=GateFact(True, {"verified": True}),
             holdout_claim=GateFact(True, {"verified": True}),
             artifact_completeness=GateFact(True, {"verified": True}),
-            r2_live_gate=GateFact(None, {"source": "deterministic_fixture"}),
+            r2_live_gate=GateFact(r2_live_gate, {"source": "deterministic_fixture"}),
         )
     )
     assert tuple(gate.rule_id for gate in hard_gates) == HARD_GATE_RULE_IDS
-    assert hard_gates[-1].outcome is GateOutcome.NOT_EVALUATED
+    expected_r2_outcome = {
+        True: GateOutcome.PASS,
+        False: GateOutcome.FAIL,
+        None: GateOutcome.NOT_EVALUATED,
+    }[r2_live_gate]
+    assert hard_gates[-1].outcome is expected_r2_outcome
+    evaluations = hard_gates
+    if soft_failure:
+        evaluations += (
+            GateEvaluation(
+                rule_id="preferred_sharpe",
+                layer=GateLayer.EVIDENCE,
+                outcome=GateOutcome.FAIL,
+                observed=0.8,
+                policy={"preferred_minimum": 1.0},
+            ),
+        )
     return ReviewPacket(
         schema_version=REVIEW_PACKET_SCHEMA_VERSION,
         lineage=ReviewPacketLineage(
@@ -176,7 +198,7 @@ def _deterministic_packet(
         snapshot_hash=ContentHash("3" * 64),
         registry_hash=ContentHash("4" * 64),
         objective_payload_hash=ContentHash("5" * 64),
-        gate_evaluations=hard_gates,
+        gate_evaluations=evaluations,
         comparison_payload_hash=ContentHash("6" * 64),
         r1_impact_payload_hash=ContentHash("7" * 64),
         selection_evidence_artifact_id="selection-evidence-http-acceptance",
@@ -190,6 +212,9 @@ def _build_harness(
     *,
     drift_launch_identity: bool = False,
     legacy_packet: bool = False,
+    r2_live_gate: bool | None = None,
+    soft_failure: bool = False,
+    prepare_candidate_review: bool = True,
 ) -> _PublishHarness:
     lane = golden_support.ETF_GOLDEN_LANE
     research_database = ResearchExperimentDatabase(tmp_path / "research-data")
@@ -219,6 +244,8 @@ def _build_harness(
         experiment_id=launch.experiment_id,
         candidate_id=str(candidate.candidate_id),
         launch_spec_hash=launch_spec_hash,
+        r2_live_gate=r2_live_gate,
+        soft_failure=soft_failure,
     )
     if legacy_packet:
         packet = replace(
@@ -303,22 +330,23 @@ def _build_harness(
         spec_record=candidate_record,
         created_at=candidate_record.created_at,
     )
-    governance.submit_review(
-        lane.strategy_id,
-        lane.strategy_version,
-        event_id="http-acceptance:candidate:submit",
-        actor="http-acceptance-reviewer",
-        reason="submit deterministic candidate",
-        decided_at="2026-07-28T00:00:11Z",
-    )
-    governance.approve(
-        lane.strategy_id,
-        lane.strategy_version,
-        event_id="http-acceptance:candidate:approve",
-        actor="http-acceptance-reviewer",
-        reason="approved except live gate",
-        decided_at="2026-07-28T00:00:12Z",
-    )
+    if prepare_candidate_review:
+        governance.submit_review(
+            lane.strategy_id,
+            lane.strategy_version,
+            event_id="http-acceptance:candidate:submit",
+            actor="http-acceptance-reviewer",
+            reason="submit deterministic candidate",
+            decided_at="2026-07-28T00:00:11Z",
+        )
+        governance.approve(
+            lane.strategy_id,
+            lane.strategy_version,
+            event_id="http-acceptance:candidate:approve",
+            actor="http-acceptance-reviewer",
+            reason="approved except live gate",
+            decided_at="2026-07-28T00:00:12Z",
+        )
 
     catalog = StrategyCatalogService(
         reader=SQLiteStrategySpecReader(governance_pool),
@@ -329,6 +357,7 @@ def _build_harness(
         process=StrategyPromotionProcess(governance),
         reader=research_reader,
     )
+    submit_handler = SubmitReviewHandler(governance, research_reader)
 
     class TestProvider(Provider):
         scope = Scope.APP
@@ -336,6 +365,10 @@ def _build_harness(
         @provide
         def publish_strategy_version_handler(self) -> PublishStrategyVersionHandler:
             return publish_handler
+
+        @provide
+        def submit_review_handler(self) -> SubmitReviewHandler:
+            return submit_handler
 
     container = make_async_container(TestProvider())
     app = FastAPI()
@@ -354,10 +387,165 @@ def _build_harness(
         governance_store=governance_store,
         catalog=catalog,
         publish_handler=publish_handler,
+        submit_handler=submit_handler,
         packet=packet,
         strategy_id=lane.strategy_id,
         candidate_version=lane.strategy_version,
     )
+
+
+async def _submit_review(
+    harness: _PublishHarness,
+    *,
+    bundle_hash: str,
+    idempotency_key: str,
+) -> httpx.Response:
+    return await harness.client.post(
+        (
+            f"/api/v1/strategies/{harness.strategy_id}/versions/"
+            f"{harness.candidate_version}/submit-review"
+        ),
+        headers={"Idempotency-Key": idempotency_key},
+        json={
+            "bundle_hash": bundle_hash,
+            "actor": "http-acceptance-reviewer",
+            "reason": "submit persisted candidate evidence",
+        },
+    )
+
+
+@pytest.mark.parametrize("r2_live_gate", [False, None], ids=["fail", "not_evaluated"])
+async def test_http_submit_review_blocks_nonpassing_hard_gate_without_writes(
+    tmp_path: Path,
+    r2_live_gate: bool | None,
+) -> None:
+    harness = _build_harness(
+        tmp_path,
+        r2_live_gate=r2_live_gate,
+        prepare_candidate_review=False,
+    )
+    try:
+        state_before = harness.governance_store.get_state(
+            harness.strategy_id, harness.candidate_version
+        )
+        history_before = _governance_history(
+            harness.governance_pool, harness.strategy_id
+        )
+
+        response = await _submit_review(
+            harness,
+            bundle_hash=str(harness.packet.bundle_hash),
+            idempotency_key=f"submit-hard-{r2_live_gate}",
+        )
+
+        assert response.status_code == 422
+        assert response.json()["error_code"] == "HARD_GATE_FAILED"
+        assert (
+            harness.governance_store.get_state(
+                harness.strategy_id, harness.candidate_version
+            )
+            == state_before
+        )
+        assert (
+            _governance_history(harness.governance_pool, harness.strategy_id)
+            == history_before
+        )
+    finally:
+        await harness.close()
+
+
+@pytest.mark.parametrize(
+    ("bundle_hash", "drift", "expected_code"),
+    [
+        ("f" * 64, False, "REVIEW_PACKET_NOT_FOUND"),
+        (None, True, "EVIDENCE_STALE"),
+    ],
+    ids=["packet_missing", "target_drift"],
+)
+async def test_http_submit_review_rejects_missing_or_stale_evidence_zero_write(
+    tmp_path: Path,
+    bundle_hash: str | None,
+    drift: bool,
+    expected_code: str,
+) -> None:
+    harness = _build_harness(
+        tmp_path,
+        drift_launch_identity=drift,
+        r2_live_gate=True,
+        prepare_candidate_review=False,
+    )
+    try:
+        state_before = harness.governance_store.get_state(
+            harness.strategy_id, harness.candidate_version
+        )
+        history_before = _governance_history(
+            harness.governance_pool, harness.strategy_id
+        )
+        response = await _submit_review(
+            harness,
+            bundle_hash=(
+                str(harness.packet.bundle_hash) if bundle_hash is None else bundle_hash
+            ),
+            idempotency_key=f"submit-evidence-{expected_code}",
+        )
+
+        assert response.status_code == 422
+        assert response.json()["error_code"] == expected_code
+        assert (
+            harness.governance_store.get_state(
+                harness.strategy_id, harness.candidate_version
+            )
+            == state_before
+        )
+        assert (
+            _governance_history(harness.governance_pool, harness.strategy_id)
+            == history_before
+        )
+    finally:
+        await harness.close()
+
+
+async def test_http_submit_review_allows_soft_metric_failure_and_replays_exactly(
+    tmp_path: Path,
+) -> None:
+    harness = _build_harness(
+        tmp_path,
+        r2_live_gate=True,
+        soft_failure=True,
+        prepare_candidate_review=False,
+    )
+    try:
+        bundle_hash = str(harness.packet.bundle_hash)
+        first = await _submit_review(
+            harness, bundle_hash=bundle_hash, idempotency_key="submit-pass"
+        )
+        history_after_first = _governance_history(
+            harness.governance_pool, harness.strategy_id
+        )
+        replay = await _submit_review(
+            harness, bundle_hash=bundle_hash, idempotency_key="submit-pass"
+        )
+
+        assert first.status_code == 200
+        assert replay.status_code == first.status_code
+        assert replay.json() == first.json()
+        assert (
+            _governance_history(harness.governance_pool, harness.strategy_id)
+            == history_after_first
+        )
+        state = harness.governance_store.get_state(
+            harness.strategy_id, harness.candidate_version
+        )
+        assert state is not None
+        assert state.state.value == "review"
+
+        reused = await _submit_review(
+            harness, bundle_hash="e" * 64, idempotency_key="submit-pass"
+        )
+        assert reused.status_code == 409
+        assert reused.json()["error_code"] == "IDEMPOTENCY_KEY_REUSED"
+    finally:
+        await harness.close()
 
 
 def _governance_history(

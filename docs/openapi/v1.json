@@ -1297,6 +1297,30 @@
         "title": "APIResponse[StrategySpecValidationResponse]",
         "type": "object"
       },
+      "APIResponse_StrategyVersionDetailResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StrategyVersionDetailResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[StrategyVersionDetailResponse]",
+        "type": "object"
+      },
       "APIResponse_StrategyVersionDiffResponse_": {
         "properties": {
           "data": {
@@ -2319,6 +2343,34 @@
           "data"
         ],
         "title": "APIResponse[list[RunResponse]]",
+        "type": "object"
+      },
+      "APIResponse_list_StrategyGovernanceEventResponse__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/StrategyGovernanceEventResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[StrategyGovernanceEventResponse]]",
         "type": "object"
       },
       "APIResponse_list_StrategyResponse__": {
@@ -12994,6 +13046,56 @@
         "title": "StrategyActiveResponse",
         "type": "object"
       },
+      "StrategyGovernanceEventResponse": {
+        "additionalProperties": false,
+        "description": "Exact append-only decision or activation event projection.",
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "decision_or_activation_kind": {
+            "title": "Decision Or Activation Kind",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "target_version": {
+            "title": "Target Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_id",
+          "strategy_id",
+          "event_type",
+          "target_version",
+          "decision_or_activation_kind",
+          "actor",
+          "reason",
+          "occurred_at"
+        ],
+        "title": "StrategyGovernanceEventResponse",
+        "type": "object"
+      },
       "StrategyResponse": {
         "description": "策略响应.",
         "properties": {
@@ -13103,6 +13205,64 @@
           "valid"
         ],
         "title": "StrategySpecValidationResponse",
+        "type": "object"
+      },
+      "StrategyVersionDetailResponse": {
+        "additionalProperties": false,
+        "description": "One immutable canonical strategy payload and governance state.",
+        "properties": {
+          "canonical_spec": {
+            "additionalProperties": true,
+            "title": "Canonical Spec",
+            "type": "object"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "parent_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Version"
+          },
+          "review_outcome": {
+            "title": "Review Outcome",
+            "type": "string"
+          },
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "version",
+          "canonical_spec",
+          "spec_hash",
+          "parent_version",
+          "state",
+          "review_outcome",
+          "created_at"
+        ],
+        "title": "StrategyVersionDetailResponse",
         "type": "object"
       },
       "StrategyVersionDiffResponse": {
@@ -13248,6 +13408,34 @@
           "review_outcome"
         ],
         "title": "StrategyVersionStateResponse",
+        "type": "object"
+      },
+      "SubmitReviewRequest": {
+        "description": "Evidence-bound request to move one immutable draft into review.",
+        "properties": {
+          "actor": {
+            "description": "决策执行者",
+            "title": "Actor",
+            "type": "string"
+          },
+          "bundle_hash": {
+            "description": "持久化 review packet hash",
+            "minLength": 1,
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "reason": {
+            "description": "决策原因",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor",
+          "reason",
+          "bundle_hash"
+        ],
+        "title": "SubmitReviewRequest",
         "type": "object"
       },
       "TradeIntentResponse": {
@@ -19262,6 +19450,78 @@
         "x-ditto-maturity": "initial-focus"
       }
     },
+    "/api/v1/strategies/{strategy_id}/events": {
+      "get": {
+        "description": "Return append-only decision and activation rows at a stable cursor.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "design_strategy_events",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Event Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_StrategyGovernanceEventResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Strategy Governance Events",
+        "tags": [
+          "strategies"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
     "/api/v1/strategies/{strategy_id}/versions": {
       "get": {
         "description": "列出策略的 governance 版本历史（newest first）.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
@@ -19300,6 +19560,60 @@
           }
         },
         "summary": "List Strategy Versions",
+        "tags": [
+          "strategies"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/strategies/{strategy_id}/versions/{version}": {
+      "get": {
+        "description": "Return one immutable canonical version and its governance state.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "design_strategy_version_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_StrategyVersionDetailResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Strategy Version Detail",
         "tags": [
           "strategies"
         ],
@@ -19756,7 +20070,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GovernanceDecisionRequest"
+                "$ref": "#/components/schemas/SubmitReviewRequest"
               }
             }
           },

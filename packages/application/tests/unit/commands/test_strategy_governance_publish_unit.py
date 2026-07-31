@@ -13,23 +13,26 @@ from ditto_analysis.experiments.evidence import (
     ReviewPacketLineage,
 )
 from ditto_analysis.experiments.gates import GateEvaluation, GateLayer, GateOutcome
-from ditto_application.commands import strategy_governance as governance_commands
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionCommand,
     PublishStrategyVersionHandler,
     ReviewPacketReader,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.processes.strategy import promotion as promotion_process
 from ditto_application.processes.strategy.promotion import (
     PromotionResult,
     StrategyPromotionProcess,
 )
-from ditto_strategy.governance.models import StrategyActivePointer
+from ditto_strategy.governance.models import (
+    StrategyActivePointer,
+)
+from ditto_strategy.governance.models import (
+    StrategyVersion as GovernanceStrategyVersion,
+)
 from ditto_strategy.storage.sqlite.strategy_governance_store import (
     StrategyGovernanceCasConflict,
 )
-
-_BUNDLE = "a" * 64
 
 
 def _packet() -> ReviewPacket:
@@ -64,6 +67,9 @@ def _packet() -> ReviewPacket:
     )
 
 
+_BUNDLE = str(_packet().bundle_hash)
+
+
 def _command() -> PublishStrategyVersionCommand:
     return PublishStrategyVersionCommand(
         strategy_id="s1",
@@ -91,10 +97,23 @@ def _reader(
     return reader
 
 
+def _process() -> MagicMock:
+    process = MagicMock(spec=StrategyPromotionProcess)
+    process.get_version.return_value = GovernanceStrategyVersion(
+        strategy_id="s1",
+        version=1,
+        parent_version=None,
+        schema_version=1,
+        spec_hash="b" * 64,
+        created_at="2026-07-31T00:00:00Z",
+    )
+    return process
+
+
 @pytest.fixture(autouse=True)
 def _encode_test_launch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        governance_commands,
+        promotion_process,
         "encode_launch_spec",
         lambda launch: SimpleNamespace(content_hash=launch.launch_spec_hash),
     )
@@ -102,7 +121,7 @@ def _encode_test_launch(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_publish_strategy_version_handler_promotes() -> None:
     reader = _reader(packet=_packet())
-    process = MagicMock(spec=StrategyPromotionProcess)
+    process = _process()
     process.promote.return_value = PromotionResult(
         strategy_id="s1",
         version=1,
@@ -122,7 +141,7 @@ def test_publish_strategy_version_handler_promotes() -> None:
 
 def test_publish_strategy_version_handler_packet_not_found() -> None:
     reader = _reader(packet=None)
-    process = MagicMock(spec=StrategyPromotionProcess)
+    process = _process()
     handler = PublishStrategyVersionHandler(process=process, reader=reader)
 
     with pytest.raises(AppCommandError) as info:
@@ -134,7 +153,7 @@ def test_publish_strategy_version_handler_packet_not_found() -> None:
 def test_publish_strategy_version_handler_experiment_not_found() -> None:
     reader = _reader(packet=_packet())
     reader.get_launch_spec.return_value = None
-    process = MagicMock(spec=StrategyPromotionProcess)
+    process = _process()
     handler = PublishStrategyVersionHandler(process=process, reader=reader)
 
     with pytest.raises(AppCommandError) as info:
@@ -146,7 +165,7 @@ def test_publish_strategy_version_handler_experiment_not_found() -> None:
 
 def test_publish_strategy_version_handler_maps_process_error() -> None:
     reader = _reader(packet=_packet())
-    process = MagicMock(spec=StrategyPromotionProcess)
+    process = _process()
     process.promote.side_effect = AppProcessError(
         "stale",
         details={"code": "STALE_EVIDENCE_BUNDLE", "reason": "stale_evidence_bundle"},
@@ -163,7 +182,7 @@ def test_publish_strategy_version_handler_maps_process_error() -> None:
 def test_publish_strategy_version_handler_maps_atomic_promotion_conflict() -> None:
     """A concurrent atomic CAS miss must not escape the application boundary."""
     reader = _reader(packet=_packet())
-    process = MagicMock(spec=StrategyPromotionProcess)
+    process = _process()
     process.promote.side_effect = StrategyGovernanceCasConflict(
         "active pointer revision changed"
     )
@@ -179,7 +198,7 @@ def test_publish_strategy_version_handler_maps_atomic_promotion_conflict() -> No
 
 def test_publish_strategy_version_handler_rejects_cross_version_packet() -> None:
     reader = _reader(packet=_packet(), strategy_version="s1@2")
-    process = MagicMock(spec=StrategyPromotionProcess)
+    process = _process()
     handler = PublishStrategyVersionHandler(process=process, reader=reader)
 
     with pytest.raises(AppCommandError) as info:
@@ -191,7 +210,7 @@ def test_publish_strategy_version_handler_rejects_cross_version_packet() -> None
 
 def test_publish_strategy_version_handler_rejects_launch_spec_hash_drift() -> None:
     reader = _reader(packet=_packet(), launch_spec_hash="9" * 64)
-    process = MagicMock(spec=StrategyPromotionProcess)
+    process = _process()
     handler = PublishStrategyVersionHandler(process=process, reader=reader)
 
     with pytest.raises(AppCommandError) as info:

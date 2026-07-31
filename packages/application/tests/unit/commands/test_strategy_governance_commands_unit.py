@@ -11,9 +11,11 @@ types never leak past the boundary.
 from __future__ import annotations
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_application.commands import strategy_governance as governance_commands
 from ditto_application.commands.strategy_governance import (
     ApproveReviewCommand,
     ApproveReviewHandler,
@@ -23,6 +25,7 @@ from ditto_application.commands.strategy_governance import (
     ReactivateStrategyHandler,
     RejectReviewCommand,
     RejectReviewHandler,
+    ReviewPacketReader,
     SubmitReviewCommand,
     SubmitReviewHandler,
     reactivate_confirmation_phrase,
@@ -89,6 +92,29 @@ def _pointer_info() -> StrategyActivePointerInfo:
 _ErrorFactory = Callable[[], Exception]
 
 
+def _submit_handler(
+    governance: GovernanceService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> SubmitReviewHandler:
+    """Isolate thin governance forwarding from shared verifier integration."""
+    monkeypatch.setattr(
+        governance_commands,
+        "load_verified_promotion_target",
+        lambda **_kwargs: SimpleNamespace(
+            packet=SimpleNamespace(gate_evaluations=()),
+        ),
+    )
+    monkeypatch.setattr(
+        governance_commands,
+        "hard_gate_contract_blocks_promotion",
+        lambda _evaluations: False,
+    )
+    return SubmitReviewHandler(
+        governance,
+        MagicMock(spec=ReviewPacketReader),
+    )
+
+
 @pytest.mark.parametrize(
     ("exc_factory", "keyword"),
     [
@@ -104,15 +130,22 @@ _ErrorFactory = Callable[[], Exception]
 def test_submit_review_maps_governance_errors(
     exc_factory: _ErrorFactory,
     keyword: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """All three governance failure modes become a typed AppCommandError."""
     governance = MagicMock(spec=GovernanceService)
     governance.submit_review.side_effect = exc_factory()
-    handler = SubmitReviewHandler(governance)
+    handler = _submit_handler(governance, monkeypatch)
 
     with pytest.raises(AppCommandError) as info:
         handler.handle(
-            SubmitReviewCommand(strategy_id="s1", version=1, actor="alice", reason="ok")
+            SubmitReviewCommand(
+                strategy_id="s1",
+                version=1,
+                bundle_hash="a" * 64,
+                actor="alice",
+                reason="ok",
+            )
         )
 
     assert keyword in str(info.value).lower()
@@ -121,13 +154,22 @@ def test_submit_review_maps_governance_errors(
 class TestSubmitReviewHandler:
     """submit_review forwards actor/reason with a stable event id."""
 
-    def test_success_returns_application_state_info(self) -> None:
+    def test_success_returns_application_state_info(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         governance = MagicMock(spec=GovernanceService)
         governance.submit_review.return_value = _state_record()
-        handler = SubmitReviewHandler(governance)
+        handler = _submit_handler(governance, monkeypatch)
 
         result = handler.handle(
-            SubmitReviewCommand(strategy_id="s1", version=1, actor="alice", reason="ok")
+            SubmitReviewCommand(
+                strategy_id="s1",
+                version=1,
+                bundle_hash="a" * 64,
+                actor="alice",
+                reason="ok",
+            )
         )
 
         assert result == _state_info()

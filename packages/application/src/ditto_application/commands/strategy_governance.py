@@ -21,15 +21,8 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Protocol
 
 import orjson
-from ditto_analysis.experiments import (
-    ExperimentId,
-    ExperimentLaunchSpec,
-    encode_launch_spec,
-)
-from ditto_analysis.experiments.evidence import ReviewPacket
 from ditto_strategy.governance.models import (
     StrategyActivationEvent,
     StrategyActivePointer,
@@ -64,7 +57,10 @@ from ditto_application.mutation_idempotency import (
 )
 from ditto_application.processes.strategy.promotion import (
     PromotionRequest,
+    ReviewPacketReader,
     StrategyPromotionProcess,
+    hard_gate_contract_blocks_promotion,
+    load_verified_promotion_target,
 )
 
 __all__ = [
@@ -200,6 +196,7 @@ class SubmitReviewCommand:
 
     strategy_id: str
     version: int
+    bundle_hash: str
     actor: str
     reason: str
     idempotency: MutationIdempotency | None = None
@@ -255,8 +252,13 @@ class ReactivateStrategyCommand:
 class SubmitReviewHandler:
     """Submit one draft version for review."""
 
-    def __init__(self, governance: GovernanceService) -> None:
+    def __init__(
+        self,
+        governance: GovernanceService,
+        reader: ReviewPacketReader,
+    ) -> None:
         self._governance = governance
+        self._reader = reader
 
     def handle(self, command: SubmitReviewCommand) -> StrategyVersionStateInfo:
         """Forward the submit-review decision with minted provenance."""
@@ -268,6 +270,23 @@ class SubmitReviewHandler:
         )
         if replay is not None:
             return replay
+        target = load_verified_promotion_target(
+            strategy_id=command.strategy_id,
+            version=command.version,
+            bundle_hash=command.bundle_hash,
+            reader=self._reader,
+            target_reader=self._governance,
+        )
+        if hard_gate_contract_blocks_promotion(target.packet.gate_evaluations):
+            raise AppCommandError(
+                "a hard gate blocks review submission",
+                details={
+                    "code": "HARD_GATE_FAILED",
+                    "reason": "hard_gate_blocked",
+                    "strategy_id": command.strategy_id,
+                    "version": command.version,
+                },
+            )
         decided_at = _utc_now_iso()
         expected = StrategyVersionStateInfo(
             command.strategy_id, command.version, "review", "pending"
@@ -592,20 +611,6 @@ class ReactivateStrategyHandler:
         return result
 
 
-class ReviewPacketReader(Protocol):
-    """Read one immutable packet and its experiment-owned target identity."""
-
-    def get_review_packet(self, bundle_hash: str) -> ReviewPacket | None:
-        """Load one review packet or return None if the bundle hash is unknown."""
-        ...
-
-    def get_launch_spec(
-        self, experiment_id: ExperimentId
-    ) -> ExperimentLaunchSpec | None:
-        """Load the launch identity that owns the packet's experiment lineage."""
-        ...
-
-
 @dataclass(frozen=True, slots=True)
 class PublishStrategyVersionCommand:
     """Promote one reviewed version using a frozen evidence bundle hash."""
@@ -641,60 +646,23 @@ class PublishStrategyVersionHandler:
         )
         if replay is not None:
             return replay
-        packet = self._reader.get_review_packet(command.bundle_hash)
-        if packet is None:
-            raise AppCommandError(
-                f"Review packet not found for bundle hash: {command.bundle_hash}",
-                details={
-                    "code": "REVIEW_PACKET_NOT_FOUND",
-                    "strategy_id": command.strategy_id,
-                    "version": command.version,
-                    "bundle_hash": command.bundle_hash,
-                },
-            )
-        launch = self._reader.get_launch_spec(
-            ExperimentId(packet.lineage.experiment_id)
+        target = load_verified_promotion_target(
+            strategy_id=command.strategy_id,
+            version=command.version,
+            bundle_hash=command.bundle_hash,
+            reader=self._reader,
+            target_reader=self._process,
         )
-        if launch is None:
-            raise AppCommandError(
-                "Review packet experiment lineage was not found",
-                details={
-                    "code": "REVIEW_PACKET_EXPERIMENT_NOT_FOUND",
-                    "reason": "evidence_experiment_not_found",
-                    "strategy_id": command.strategy_id,
-                    "version": command.version,
-                    "experiment_id": packet.lineage.experiment_id,
-                },
-            )
-        expected_strategy_version = f"{command.strategy_id}@{command.version}"
-        launch_spec_hash = encode_launch_spec(launch).content_hash
-        if (
-            str(launch.strategy_version) != expected_strategy_version
-            or launch_spec_hash != packet.spec_hash
-        ):
-            raise AppCommandError(
-                "Review packet does not belong to the promotion target",
-                details={
-                    "code": "REVIEW_PACKET_TARGET_MISMATCH",
-                    "reason": "evidence_target_mismatch",
-                    "strategy_id": command.strategy_id,
-                    "version": command.version,
-                    "experiment_id": packet.lineage.experiment_id,
-                    "launch_strategy_version": str(launch.strategy_version),
-                    "launch_spec_hash": str(launch_spec_hash),
-                    "packet_launch_spec_hash": str(packet.spec_hash),
-                },
-            )
         decided_at = _utc_now_iso()
         request = PromotionRequest(
             strategy_id=command.strategy_id,
             version=command.version,
-            packet=packet,
+            packet=target.packet,
             actor=command.actor,
             reason=command.reason,
             decided_at=decided_at,
             expected_bundle_hash=command.bundle_hash,
-            expected_strategy_spec_hash=str(launch.strategy_spec_hash),
+            expected_strategy_spec_hash=str(target.launch.strategy_spec_hash),
             idempotency=command.idempotency,
         )
         try:

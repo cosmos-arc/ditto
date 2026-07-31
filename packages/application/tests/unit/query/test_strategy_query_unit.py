@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
 from ditto_application.contracts import (
     StrategyActiveInfo,
     StrategySpecInfo,
@@ -13,9 +15,11 @@ from ditto_application.contracts import (
     StrategyVersionDiffInfo,
     StrategyVersionInfo,
 )
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
+    canonical_spec_payload_for_record,
 )
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.governance.models import (
@@ -24,6 +28,10 @@ from ditto_strategy.governance.models import (
     StrategyVersion,
     StrategyVersionState,
     StrategyVersionStateRecord,
+)
+from ditto_strategy.governance.protocols import (
+    InvalidStrategyGovernanceEventCursor,
+    StrategyGovernanceEventStrategyNotFound,
 )
 from ditto_strategy.models import StrategySpecRecord
 
@@ -113,6 +121,146 @@ class TestStrategyQueryFacadeGetSpec:
         facade.get_spec("s-1", version=3)
 
         service.get_spec.assert_called_once_with("s-1", 3)
+
+
+class TestStrategyQueryFacadeGetVersionDetail:
+    """get_version_detail joins immutable canonical payload and lifecycle state."""
+
+    def test_returns_canonical_payload_and_governance_identity(self) -> None:
+        spec_json, _ = _candidate_spec()
+        raw_record = StrategySpecRecord(
+            strategy_id="s-1",
+            name="immutable",
+            spec_json=spec_json,
+            version=2,
+            parent_version=1,
+            created_at="2026-07-25T00:00:00Z",
+        )
+        expected_hash = canonical_spec_hash_for_record(raw_record)
+        record = replace(raw_record, spec_hash=expected_hash)
+        catalog = MagicMock(spec=["get_spec", "list_specs", "list_versions"])
+        catalog.get_spec.return_value = record
+        state_reader = MagicMock(spec=["get_state"])
+        state_reader.get_state.return_value = _make_state(
+            2,
+            state=StrategyVersionState.REVIEW,
+            review=ReviewOutcome.APPROVED,
+        )
+        facade = StrategyQueryFacade(catalog, version_state_reader=state_reader)
+
+        result = facade.get_version_detail("s-1", 2)
+
+        assert result is not None
+        assert asdict(result) == {
+            "strategy_id": "s-1",
+            "version": 2,
+            "canonical_spec": canonical_spec_payload_for_record(record),
+            "spec_hash": expected_hash,
+            "parent_version": 1,
+            "state": "review",
+            "review_outcome": "approved",
+            "created_at": "2026-07-25T00:00:00Z",
+        }
+        catalog.get_spec.assert_called_once_with("s-1", 2)
+        state_reader.get_state.assert_called_once_with("s-1", 2)
+
+    def test_invalid_legacy_payload_raises_typed_query_error(self) -> None:
+        catalog = MagicMock(spec=["get_spec", "list_specs", "list_versions"])
+        catalog.get_spec.return_value = StrategySpecRecord(
+            strategy_id="s-1",
+            name="invalid",
+            spec_json={"template": "unknown"},
+            version=2,
+            spec_hash="a" * 64,
+        )
+        state_reader = MagicMock(spec=["get_state"])
+        state_reader.get_state.return_value = _make_state(2)
+        facade = StrategyQueryFacade(catalog, version_state_reader=state_reader)
+
+        with pytest.raises(AppQueryError) as info:
+            facade.get_version_detail("s-1", 2)
+
+        assert info.value.details["code"] == "STRATEGY_VERSION_SPEC_INVALID"
+
+    def test_returns_none_when_payload_is_missing(self) -> None:
+        catalog = MagicMock(spec=["get_spec", "list_specs", "list_versions"])
+        catalog.get_spec.return_value = None
+        state_reader = MagicMock(spec=["get_state"])
+        facade = StrategyQueryFacade(catalog, version_state_reader=state_reader)
+
+        assert facade.get_version_detail("missing", 9) is None
+        state_reader.get_state.assert_not_called()
+
+
+class TestStrategyQueryFacadeGovernanceEvents:
+    """Governance events are an application-owned append-only projection."""
+
+    def test_projects_exact_event_fields(self) -> None:
+        reader = MagicMock(spec=["list_governance_events"])
+        reader.list_governance_events.return_value = (
+            SimpleNamespace(
+                event_id="event-1",
+                strategy_id="s-1",
+                event_type="decision",
+                target_version=2,
+                decision_or_activation_kind="approve",
+                actor="alice",
+                reason="ok",
+                occurred_at="2026-07-25T00:00:00Z",
+            ),
+        )
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["get_spec", "list_specs", "list_versions"]),
+            governance_event_reader=reader,
+        )
+
+        result = facade.list_governance_events("s-1", after_event_id=None, limit=20)
+
+        assert [asdict(item) for item in result] == [
+            {
+                "event_id": "event-1",
+                "strategy_id": "s-1",
+                "event_type": "decision",
+                "target_version": 2,
+                "decision_or_activation_kind": "approve",
+                "actor": "alice",
+                "reason": "ok",
+                "occurred_at": "2026-07-25T00:00:00Z",
+            }
+        ]
+        reader.list_governance_events.assert_called_once_with(
+            "s-1", after_event_id=None, limit=20
+        )
+
+    @pytest.mark.parametrize(
+        ("error", "code"),
+        [
+            (
+                InvalidStrategyGovernanceEventCursor("bad cursor"),
+                "INVALID_EVENT_CURSOR",
+            ),
+            (
+                StrategyGovernanceEventStrategyNotFound("missing strategy"),
+                "STRATEGY_NOT_FOUND",
+            ),
+        ],
+    )
+    def test_maps_strategy_reader_errors_to_typed_application_codes(
+        self,
+        error: Exception,
+        code: str,
+    ) -> None:
+        reader = MagicMock(spec=["list_governance_events"])
+        reader.list_governance_events.side_effect = error
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["get_spec", "list_specs", "list_versions"]),
+            governance_event_reader=reader,
+        )
+
+        with pytest.raises(AppQueryError) as info:
+            facade.list_governance_events("s-1", after_event_id="bad", limit=20)
+
+        assert info.value.details["code"] == code
 
 
 def _make_version(

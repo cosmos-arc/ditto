@@ -49,16 +49,18 @@ from ditto_application.commands.strategy_governance import (
 from ditto_application.contracts import (
     StrategyActiveInfo,
     StrategyActivePointerInfo,
+    StrategyGovernanceEventInfo,
     StrategySpecInfo,
     StrategySpecValidationInfo,
+    StrategyVersionDetailInfo,
     StrategyVersionDiffInfo,
     StrategyVersionInfo,
     StrategyVersionStateInfo,
 )
-from ditto_application.exceptions import AppError
+from ditto_application.exceptions import AppError, AppQueryError
 from ditto_application.mutation_idempotency import canonical_resource_id
 from ditto_application.queries.strategy import StrategyQueryFacade
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path, Query
 
 from ditto_apps.api.deps import paginate, pagination_params
 from ditto_apps.api.errors import (
@@ -81,12 +83,15 @@ from ditto_apps.models.strategy import (
     SpecChangeResponse,
     StrategyActivePointerResponse,
     StrategyActiveResponse,
+    StrategyGovernanceEventResponse,
     StrategyResponse,
     StrategySpecValidateRequest,
     StrategySpecValidationResponse,
+    StrategyVersionDetailResponse,
     StrategyVersionDiffResponse,
     StrategyVersionResponse,
     StrategyVersionStateResponse,
+    SubmitReviewRequest,
     UpdateStrategyRequest,
 )
 
@@ -115,6 +120,23 @@ def _raise_publish_error(exc: AppError) -> Never:
     if isinstance(code, str) and code == "STRATEGY_REVISION_CONFLICT":
         raise ConflictError(str(exc), error_code=code) from exc
     raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
+
+
+def _raise_submit_review_error(exc: AppError) -> Never:
+    """Map fail-closed review evidence errors to stable HTTP semantics."""
+    code = exc.details.get("code")
+    if code in {"IDEMPOTENCY_KEY_REUSED", "IDEMPOTENCY_RECEIPT_INVALID"}:
+        _raise_mutation_error(exc)
+    if code in {"REVIEW_PACKET_NOT_FOUND", "HARD_GATE_FAILED"}:
+        raise UnprocessableEntityError(str(exc), error_code=str(code)) from exc
+    if code in {
+        "REVIEW_PACKET_EXPERIMENT_NOT_FOUND",
+        "REVIEW_PACKET_SCHEMA_UNSUPPORTED",
+        "REVIEW_PACKET_TARGET_MISMATCH",
+        "STRATEGY_VERSION_NOT_FOUND",
+    }:
+        raise UnprocessableEntityError(str(exc), error_code="EVIDENCE_STALE") from exc
+    _raise_mutation_error(exc)
 
 
 def _raise_reactivate_error(exc: AppError) -> Never:
@@ -166,6 +188,38 @@ def to_version_response(info: StrategyVersionInfo) -> StrategyVersionResponse:
         review_outcome=info.review_outcome,
         created_at=info.created_at,
         experiment_id=info.experiment_id,
+    )
+
+
+def to_version_detail_response(
+    info: StrategyVersionDetailInfo,
+) -> StrategyVersionDetailResponse:
+    """Map the immutable application detail DTO without reading storage."""
+    return StrategyVersionDetailResponse(
+        strategy_id=info.strategy_id,
+        version=info.version,
+        canonical_spec=dict(info.canonical_spec),
+        spec_hash=info.spec_hash,
+        parent_version=info.parent_version,
+        state=info.state,
+        review_outcome=info.review_outcome,
+        created_at=info.created_at,
+    )
+
+
+def to_governance_event_response(
+    info: StrategyGovernanceEventInfo,
+) -> StrategyGovernanceEventResponse:
+    """Map only fields carried by the append-only source row."""
+    return StrategyGovernanceEventResponse(
+        event_id=info.event_id,
+        strategy_id=info.strategy_id,
+        event_type=info.event_type,
+        target_version=info.target_version,
+        decision_or_activation_kind=info.decision_or_activation_kind,
+        actor=info.actor,
+        reason=info.reason,
+        occurred_at=info.occurred_at,
     )
 
 
@@ -313,6 +367,62 @@ async def list_strategy_versions(
 
 
 @router.get(
+    "/{strategy_id}/versions/{version}",
+    response_model=APIResponse[StrategyVersionDetailResponse],
+    operation_id="design_strategy_version_detail",
+)
+@inject
+async def get_strategy_version_detail(
+    strategy_id: str,
+    version: Annotated[int, Path(ge=1)],
+    facade: Annotated[StrategyQueryFacade, FromComponent()],
+) -> APIResponse[StrategyVersionDetailResponse]:
+    """Return one immutable canonical version and its governance state."""
+    detail = await run_blocking(facade.get_version_detail, strategy_id, version)
+    if detail is None:
+        raise APIError(
+            f"Strategy version not found: {strategy_id} v{version}",
+            status_code=404,
+            error_code="STRATEGY_VERSION_NOT_FOUND",
+        )
+    return APIResponse(data=to_version_detail_response(detail))
+
+
+@router.get(
+    "/{strategy_id}/events",
+    response_model=APIResponse[list[StrategyGovernanceEventResponse]],
+    operation_id="design_strategy_events",
+)
+@inject
+async def list_strategy_governance_events(
+    strategy_id: str,
+    facade: Annotated[StrategyQueryFacade, FromComponent()],
+    after_event_id: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> APIResponse[list[StrategyGovernanceEventResponse]]:
+    """Return append-only decision and activation rows at a stable cursor."""
+    try:
+        events = await run_blocking(
+            facade.list_governance_events,
+            strategy_id,
+            after_event_id=after_event_id,
+            limit=limit,
+        )
+    except AppQueryError as exc:
+        code = exc.details.get("code")
+        if code == "INVALID_EVENT_CURSOR":
+            raise UnprocessableEntityError(
+                str(exc), error_code="INVALID_EVENT_CURSOR"
+            ) from exc
+        if code == "STRATEGY_NOT_FOUND":
+            raise APIError(
+                str(exc), status_code=404, error_code="STRATEGY_NOT_FOUND"
+            ) from exc
+        raise_business_error(exc)
+    return APIResponse(data=[to_governance_event_response(event) for event in events])
+
+
+@router.get(
     "/{strategy_id}/active",
     response_model=APIResponse[StrategyActiveResponse],
 )
@@ -337,7 +447,7 @@ async def get_active_strategy(
 async def submit_strategy_review(
     strategy_id: str,
     version: int,
-    request: GovernanceDecisionRequest,
+    request: SubmitReviewRequest,
     handler: Annotated[SubmitReviewHandler, FromComponent()],
     idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[StrategyVersionStateResponse]:
@@ -345,6 +455,7 @@ async def submit_strategy_review(
     cmd = SubmitReviewCommand(
         strategy_id=strategy_id,
         version=version,
+        bundle_hash=request.bundle_hash,
         actor=request.actor,
         reason=request.reason,
         idempotency=mutation_idempotency(
@@ -360,7 +471,7 @@ async def submit_strategy_review(
     try:
         record = await run_blocking(handler.handle, cmd)
     except AppError as exc:
-        _raise_mutation_error(exc)
+        _raise_submit_review_error(exc)
     return APIResponse(data=to_version_state_response(record))
 
 
