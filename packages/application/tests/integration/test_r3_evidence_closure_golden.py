@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,7 @@ from ditto_analysis.experiments import (
     ResearchMetricId,
     encode_launch_spec,
 )
-from ditto_analysis.experiments.evidence import ReviewPacket
+from ditto_analysis.experiments.evidence import ReviewPacket, SelectionTraceArtifactRef
 from ditto_analysis.experiments.gates import GateLayer, GateOutcome
 from ditto_analysis.experiments.trial_ledger import TrialLedger
 from ditto_analysis.research.artifact_service import ResearchArtifactService
@@ -77,6 +77,7 @@ from ditto_application.processes.experiments._evidence_inputs import (
     project_snapshot_manifest,
 )
 from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
     FoldSelectionTraceArtifactIdentity,
 )
 from ditto_application.processes.experiments._report_evidence import (
@@ -100,6 +101,7 @@ from ditto_application.processes.experiments.evidence_collector import (
 )
 from ditto_application.processes.experiments.execution_bundle import (
     ResearchExecutionSemantics,
+    StrategyExecutionBinding,
 )
 from ditto_application.processes.experiments.holdout import (
     ClaimHoldoutCandidateRequest,
@@ -127,6 +129,7 @@ from ditto_backtest.statistics import (
 )
 from ditto_platform.foundation import SQLitePool
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.parameters import CandidateParameter
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.alpha.selection_evidence import (
@@ -168,6 +171,9 @@ _SemanticsTransform = Callable[
 
 def _run_stock_golden_selection_trace(
     *,
+    candidate_parameters: tuple[CandidateParameter, ...],
+    snapshot_identity: ResearchSnapshotIdentity,
+    strategy_version: int,
     trade_date: str,
     run_id: str,
 ) -> SelectionEvidenceLog:
@@ -186,13 +192,10 @@ def _run_stock_golden_selection_trace(
             strategy_id=spec.strategy_id,
             name=spec.name,
             spec_json=asdict(spec),
-            version=3,
+            version=strategy_version,
         ),
-        candidate_parameters=(),
-        snapshot_identity=ResearchSnapshotIdentity(
-            "stock-golden-factor-snapshot",
-            "8" * 64,
-        ),
+        candidate_parameters=candidate_parameters,
+        snapshot_identity=snapshot_identity,
         version_status="draft",
         evidence_sink=collector,
     )
@@ -472,6 +475,8 @@ def _publish_walk_forward_reports(
         attempts = reader.list_attempts(fold.spec.key)
         assert len(attempts) == 1
         attempt = attempts[0]
+        attempt_run_id = attempt.projection.backtest_run_id
+        assert isinstance(attempt_run_id, BacktestRunId)
         candidate = candidates[fold.spec.key.candidate_id]
         navs = _REPORT_NAVS[(candidate.is_baseline, fold.spec.ordinal)]
         adapter.publish(
@@ -482,12 +487,24 @@ def _publish_walk_forward_reports(
             lease_fence=lease.fence,
             now_epoch_us=NOW_US + 8,
         )
+        semantics = resolver.resolve(fold)
+        assert semantics.is_baseline is candidate.is_baseline
         trace = (
             _run_stock_golden_selection_trace(
+                candidate_parameters=semantics.strategy.candidate_parameters,
+                snapshot_identity=ResearchSnapshotIdentity(
+                    semantics.snapshot.exact_snapshot.snapshot_id,
+                    semantics.snapshot.exact_snapshot.manifest_hash,
+                ),
+                strategy_version=semantics.strategy.exact_strategy.version,
                 trade_date=fold.spec.test_window.start.isoformat(),
-                run_id=str(attempt.spec.attempt_id),
+                run_id=str(attempt_run_id),
             )
-            if lane.asset_lane is golden_support.ResearchAssetLane.STOCK
+            if (
+                lane.asset_lane is golden_support.ResearchAssetLane.STOCK
+                and not candidate.is_baseline
+                and isinstance(semantics.strategy, StrategyExecutionBinding)
+            )
             else SelectionEvidenceLog()
         )
         trace_adapter.publish(
@@ -1034,6 +1051,12 @@ def _assert_deterministic_promotion_is_blocked(
 def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
     """Stock evidence must come from the real scoring path, not a fabricated log."""
     log = _run_stock_golden_selection_trace(
+        candidate_parameters=(),
+        snapshot_identity=ResearchSnapshotIdentity(
+            "stock-golden-factor-snapshot",
+            "8" * 64,
+        ),
+        strategy_version=3,
         trade_date="2026-07-22",
         run_id="stock-golden-selection-trace",
     )
@@ -1080,6 +1103,65 @@ def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
             for item in log.factor_contributions
             if item.instrument_id == selection.instrument_id
         ) == pytest.approx(selection.score)
+
+
+def _assert_persisted_selection_trace_provenance(
+    *,
+    collected: CollectedWalkForwardEvidence,
+    lane: golden_support.GoldenLaneSpec,
+    launch: ExperimentLaunchSpec,
+    reader: SQLiteExperimentReader,
+) -> tuple[SelectionTraceArtifactRef, ...]:
+    """Prove each loaded trace is the exact fold-attempt publication."""
+    assert len(collected.selection_traces) == 4
+    candidates_by_id = {
+        candidate.candidate_id: candidate for candidate in launch.candidates
+    }
+    folds_by_identity = {
+        (fold.spec.key.candidate_id, fold.spec.key.fold_id): fold
+        for fold in reader.list_folds(launch.experiment_id)
+        if fold.spec.fold_role is FoldRole.WALK_FORWARD
+    }
+    for trace in collected.selection_traces:
+        candidate = candidates_by_id[trace.identity.candidate_id]
+        fold = folds_by_identity[(trace.identity.candidate_id, trace.identity.fold_id)]
+        attempts = reader.list_attempts(fold.spec.key)
+        assert len(attempts) == 1
+        assert trace.identity == _trace_identity(fold, attempts[0])
+        for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS:
+            record = trace.receipt.record(kind)
+            assert record == reader.get_artifact(trace.identity.artifact_id(kind))
+            assert record.experiment_id == trace.identity.experiment_id
+            assert record.candidate_id == trace.identity.candidate_id
+            assert record.fold_id == trace.identity.fold_id
+            assert record.attempt_id == trace.identity.attempt_id
+            assert record.artifact_kind == kind.value
+        if candidate.is_baseline:
+            assert trace.evidence == SelectionEvidenceLog()
+        elif lane.asset_lane is golden_support.ResearchAssetLane.STOCK:
+            assert trace.evidence.factor_contributions
+            for selection_item in trace.evidence.selections:
+                assert sum(
+                    item.contribution or 0.0
+                    for item in trace.evidence.factor_contributions
+                    if item.instrument_id == selection_item.instrument_id
+                ) == pytest.approx(selection_item.score)
+                assert (
+                    fold.spec.test_window.start
+                    <= date.fromisoformat(selection_item.trade_date)
+                    <= fold.spec.test_window.end
+                )
+        else:
+            assert trace.evidence == SelectionEvidenceLog()
+    return tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=kind.value,
+            artifact_id=trace.receipt.record(kind).artifact_id,
+            content_hash=trace.receipt.record(kind).content_hash,
+        )
+        for trace in collected.selection_traces
+        for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+    )
 
 
 @pytest.mark.parametrize(
@@ -1130,24 +1212,13 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
         project_snapshot_manifest(events[0].detail),
     )
     assert len(collected.source_rows) == 4
-    assert len(collected.selection_traces) == 4
-    if lane.asset_lane is golden_support.ResearchAssetLane.STOCK:
-        assert all(
-            trace.evidence.factor_contributions for trace in collected.selection_traces
-        )
-        for trace in collected.selection_traces:
-            for selection_item in trace.evidence.selections:
-                assert sum(
-                    item.contribution or 0.0
-                    for item in trace.evidence.factor_contributions
-                    if item.instrument_id == selection_item.instrument_id
-                ) == pytest.approx(selection_item.score)
-    else:
-        assert all(
-            trace.evidence == SelectionEvidenceLog()
-            for trace in collected.selection_traces
-        )
     assert collected.missing_artifact_refs == ()
+    expected_trace_refs = _assert_persisted_selection_trace_provenance(
+        collected=collected,
+        lane=lane,
+        launch=launch,
+        reader=reader,
+    )
     _assert_cost_collection_replay(
         lane=lane,
         cost_drift=cost_drift,
@@ -1252,6 +1323,7 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
         expected_declared_trial_count=selection.ledger.declared_trial_count,
         expected_cost_hashes=collected.fold_cost_config_hashes,
         expected_cost_outcome=(GateOutcome.FAIL if cost_drift else GateOutcome.PASS),
+        expected_trace_refs=expected_trace_refs,
     )
     if not cost_drift:
         _assert_deterministic_promotion_is_blocked(
@@ -1276,6 +1348,7 @@ def _assert_packet_shape(
     expected_declared_trial_count: int,
     expected_cost_hashes: tuple[ContentHash, ...],
     expected_cost_outcome: GateOutcome,
+    expected_trace_refs: tuple[SelectionTraceArtifactRef, ...],
 ) -> None:
     """Assert real metric, artifact, and lineage evidence in the frozen packet."""
     gate_by_rule = {entry.rule_id: entry for entry in packet.gate_evaluations}
@@ -1339,6 +1412,6 @@ def _assert_packet_shape(
     assert packet.comparison_payload_hash == expected_comparison_hash
     assert packet.r1_impact_payload_hash is None
     assert packet.selection_evidence_artifact_id == expected_selection_artifact_id
-    assert len(packet.selection_trace_artifact_refs) == 16
+    assert packet.selection_trace_artifact_refs == expected_trace_refs
     assert packet.candidate_rationale
     assert packet.candidate_rationale == packet.candidate_rationale.strip()

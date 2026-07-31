@@ -11,16 +11,13 @@ FactorBridge 将声明式因子表达式字符串桥接到回测引擎的信号�
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass, fields
-from datetime import date
 from math import isfinite
 from typing import Any, cast
 
 import orjson
 import polars as pl
-from ditto_backtest.data_feed import DataFeed
-from ditto_backtest.steps import StepContext
 from ditto_features.derived_types import (
     DerivedRole,
     DerivedSpec,
@@ -36,12 +33,13 @@ from ditto_features.expression.contracts import (
 from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
-from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import ExecutionPolicy
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
-from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution._factor_bundle import (
+    build_factor_aware_bundle_builder,
+    build_factor_bundle,
+)
 
 __all__ = [
     "CompiledExpressions",
@@ -584,247 +582,3 @@ class FactorBridge:
             *(factor_normalized_column(i) for i in range(len(factor_columns))),
             (weighted_sum / weight_sum).alias("signal_value"),
         )
-
-
-# ---------------------------------------------------------------------------
-# Module-level functions for backtest factor bundle building
-# ---------------------------------------------------------------------------
-
-
-def build_factor_aware_bundle_builder(
-    *,
-    bridge: FactorBridge,
-    compiled: CompiledExpressions,
-    data_feed: DataFeed,
-    strategy_id: str,
-    run_id: str,
-) -> Callable[[StepContext], StrategyInputBundle]:
-    """
-    构建含因子信号注入的 input_bundle_builder.
-
-    当 data_feed 可用时，会在 market_data 中包含历史窗口，
-    使 ts_* 时间序列表达式（如 ts_mean, shift）能正确计算。
-
-    Args:
-        bridge: 因子桥接器实例。
-        compiled: 编译后的因子表达式。
-        data_feed: 市场数据源。
-        strategy_id: 策略标识。
-        run_id: 由 run() 统一生成的运行标识，确保 bundle.run_id 与 run record 一致。
-
-    Returns:
-        接收 StepContext、返回 StrategyInputBundle 的可调用对象。
-
-    """
-    lookback_days = max(
-        (expr.analysis.lookback for expr in compiled.expressions),
-        default=REGIME_DEFAULT_LOOKBACK,
-    )
-
-    def _build(ctx: StepContext) -> StrategyInputBundle:
-        return build_factor_bundle(
-            ctx=ctx,
-            strategy_id=strategy_id,
-            run_id=run_id,
-            bridge=bridge,
-            compiled=compiled,
-            data_feed=data_feed,
-            lookback_days=lookback_days,
-        )
-
-    return _build
-
-
-def build_factor_bundle(
-    *,
-    ctx: StepContext,
-    strategy_id: str,
-    run_id: str,
-    bridge: FactorBridge,
-    compiled: CompiledExpressions,
-    data_feed: DataFeed,
-    lookback_days: int,
-) -> StrategyInputBundle:
-    """
-    构建单日因子感知的 StrategyInputBundle.
-
-    从 StepContext 提取当日行情，可选追加历史窗口数据，
-    通过 FactorBridge 计算信号值并组装完整的输入包。
-
-    Args:
-        ctx: 引擎步骤上下文（含 date 和 slice_）。
-        strategy_id: 策略标识。
-        run_id: 运行标识。
-        bridge: 因子桥接器。
-        compiled: 编译后的因子表达式。
-        data_feed: 市场数据源（需支持 get_history）。
-        lookback_days: 历史回溯天数。
-
-    """
-    slice_ = ctx.slice_
-    if slice_ is None:
-        msg = "slice_ required"
-        raise AppProcessError(msg)
-    bars = slice_.bars
-    instrument_ids = list(bars.keys())
-
-    instruments = pl.DataFrame({"instrument_id": instrument_ids})
-
-    # 构建当日 OHLCV
-    market_rows: list[dict[str, object]] = []
-    for iid, bar in bars.items():
-        market_rows.append(
-            {
-                "instrument_id": int(iid),
-                "open": bar.open,
-                "high": bar.high,
-                "low": bar.low,
-                "close": bar.close,
-                "volume": bar.volume,
-                "trade_date": ctx.time_context.trade_date,
-            },
-        )
-
-    # 追加历史窗口 — 支持 ts_* 时间序列表达式。
-    # PIT: history uses knowledge_date as the strict as_of boundary; current
-    # trade_date bars are already supplied by the slice above.
-    history_df = data_feed.get_history(
-        instrument_ids,
-        ctx.time_context.knowledge_date.isoformat(),
-        lookback_days,
-    )
-    if not history_df.is_empty():
-        hist_rows = history_df.select(
-            "instrument_id",
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-            "trade_date",
-        ).to_dicts()
-        for row in hist_rows:
-            market_rows.append(row)
-
-    market_data = pl.DataFrame(market_rows)
-    if "trade_date" in market_data.columns:
-        market_data = market_data.sort("trade_date")
-
-    # 注入基本面截面（PIT as_of = knowledge_date），供 quality_roe / value_pe 等
-    # 基本面因子引用底层列（roe / pe_ratio）。截面只 merge 到当日行。
-    market_data = _enrich_with_fundamentals(
-        market_data,
-        data_feed=data_feed,
-        instrument_ids=instrument_ids,
-        knowledge_date=ctx.time_context.knowledge_date,
-        trade_date=ctx.time_context.trade_date,
-    )
-    # 注入行业分类截面(sector_id),供 stock_sector_rotation 结构列校验与
-    # 因子中性化(neutralize_by="sector_id")使用。PIT as_of = knowledge_date。
-    market_data = _enrich_with_classification(
-        market_data,
-        data_feed=data_feed,
-        instrument_ids=instrument_ids,
-        knowledge_date=ctx.time_context.knowledge_date,
-        trade_date=ctx.time_context.trade_date,
-    )
-
-    signal_values = bridge.compute_signals(market_data, compiled)
-
-    return StrategyInputBundle(
-        trade_date=ctx.time_context.trade_date,
-        strategy_id=strategy_id,
-        run_id=run_id,
-        instruments=instruments,
-        market_data=market_data,
-        signal_values=signal_values,
-        benchmark_close=getattr(slice_, "benchmark_close", None),
-    )
-
-
-def _enrich_with_fundamentals(
-    market_data: pl.DataFrame,
-    *,
-    data_feed: DataFeed,
-    instrument_ids: list[InstrumentId],
-    knowledge_date: date,
-    trade_date: str,
-) -> pl.DataFrame:
-    """
-    注入基本面截面到当日行并补算 pe_ratio.
-
-    基本面是截面快照（1 行/instrument），仅 merge 到当日行（trade_date 匹配），
-    历史行补 null。pe_ratio 依赖当日 close + 基本面 eps，在 merge 后补算。
-    PIT as_of = knowledge_date（严格，非 trade_date），由 data_feed 透传。
-
-    无基本面数据或无当日行时原样返回。
-    """
-    if market_data.is_empty() or not instrument_ids:
-        return market_data
-
-    fundamental_df = data_feed.get_fundamental_snapshot(instrument_ids, knowledge_date)
-    if fundamental_df.is_empty():
-        return market_data
-
-    today_mask = market_data["trade_date"] == trade_date
-    today_rows = market_data.filter(today_mask)
-    if today_rows.is_empty():
-        return market_data
-
-    history_rows = market_data.filter(~today_mask)
-    today_rows = today_rows.join(fundamental_df, on="instrument_id", how="left")
-
-    # 补算 pe_ratio（当日 close / 基本面 eps）；pb_ratio 暂无数据源（无 total_shares）。
-    if "eps" in today_rows.columns and "close" in today_rows.columns:
-        today_rows = today_rows.with_columns(
-            pl.when(pl.col("eps") != 0)
-            .then(pl.col("close") / pl.col("eps"))
-            .otherwise(None)
-            .cast(pl.Float64)
-            .alias("pe_ratio"),
-        )
-
-    enriched = pl.concat([today_rows, history_rows], how="diagonal_relaxed")
-    if "trade_date" in enriched.columns:
-        enriched = enriched.sort("trade_date")
-    return enriched
-
-
-def _enrich_with_classification(
-    market_data: pl.DataFrame,
-    *,
-    data_feed: DataFeed,
-    instrument_ids: list[InstrumentId],
-    knowledge_date: date,
-    trade_date: str,
-) -> pl.DataFrame:
-    """
-    注入行业分类截面(sector_id)到当日行.
-
-    分类是截面快照(1 行/instrument),仅 merge 到当日行(trade_date 匹配),
-    历史行补 null。PIT as_of = knowledge_date(严格,非 trade_date),由 data_feed 透传。
-
-    无分类数据或无当日行时原样返回。
-    """
-    if market_data.is_empty() or not instrument_ids:
-        return market_data
-
-    classification_df = data_feed.get_classification_snapshot(
-        instrument_ids,
-        knowledge_date,
-    )
-    if classification_df.is_empty():
-        return market_data
-
-    today_mask = market_data["trade_date"] == trade_date
-    today_rows = market_data.filter(today_mask)
-    if today_rows.is_empty():
-        return market_data
-
-    history_rows = market_data.filter(~today_mask)
-    today_rows = today_rows.join(classification_df, on="instrument_id", how="left")
-
-    enriched = pl.concat([today_rows, history_rows], how="diagonal_relaxed")
-    if "trade_date" in enriched.columns:
-        enriched = enriched.sort("trade_date")
-    return enriched

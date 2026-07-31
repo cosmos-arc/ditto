@@ -673,6 +673,35 @@ class TestFilteringStage:
 
 
 class TestSelectionStage:
+    @pytest.mark.parametrize(
+        ("instrument_ids", "expected"),
+        [
+            pytest.param([3, 1, 2, 0], [1, 2], id="integer-instruments"),
+            pytest.param(["C", "A", "B", "NULL"], ["A", "B"], id="text-instruments"),
+        ],
+    )
+    def test_top_k_ties_use_canonical_instrument_order_independent_of_input(
+        self,
+        empty_context: StrategyContext,
+        instrument_ids: list[int] | list[str],
+        expected: list[int] | list[str],
+    ) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": instrument_ids,
+                "score": [0.9, 0.9, 0.9, None],
+            }
+        )
+        stage = SelectionStage(top_k=2, score_column="score")
+
+        original = stage.process(frame, empty_context)
+        reversed_input = stage.process(frame.reverse(), empty_context)
+
+        assert original["instrument_id"].to_list() == expected
+        assert reversed_input["instrument_id"].to_list() == expected
+        assert original["score"].null_count() == 0
+        assert reversed_input["score"].null_count() == 0
+
     def test_top_k_larger_than_rows_returns_all(
         self,
         sample_instruments_with_score: pl.DataFrame,

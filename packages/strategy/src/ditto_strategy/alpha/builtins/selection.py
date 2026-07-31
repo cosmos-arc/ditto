@@ -60,10 +60,10 @@ class SelectionStage:
         return sorted_frame.head(self.top_k)
 
     def _sort(self, frame: pl.DataFrame) -> pl.DataFrame:
-        """Use the original selector ordering without an evidence tie-breaker."""
+        """Order by business score, then canonical instrument identity."""
         return frame.sort(
-            by=self.score_column,
-            descending=not self.ascending,
+            by=(self.score_column, FrameCol.INSTRUMENT_ID),
+            descending=(not self.ascending, False),
             nulls_last=True,
         )
 
