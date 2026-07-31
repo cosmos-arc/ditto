@@ -330,10 +330,16 @@ git commit -m "fix(strategy): bind reactivate confirmation to server contract"
 
 - Create: `docs/contracts/r3-v1-api-surface.md`
 - Create: `docs/contracts/r3-v1-api-surface.json`
+- Create: `packages/apps/src/ditto_apps/api/app_metadata.py`
+- Create: `packages/apps/src/ditto_apps/api/routes/system.py`
+- Create: `packages/apps/src/ditto_apps/openapi_contract.py`
+- Modify: `packages/apps/src/ditto_apps/api/routes/__init__.py`
+- Modify: `packages/apps/src/ditto_apps/main.py`
 - Create: `scripts/export_openapi.py`
 - Modify: `docs/openapi/v1.json`
 - Create test: `packages/apps/tests/unit/api/test_r3_api_surface_contract_unit.py`
 - Create test: `packages/apps/tests/unit/api/test_openapi_snapshot_unit.py`
+- Modify test: `packages/apps/tests/integration/test_main_routes_integration.py`
 - ditto-app Modify: `scripts/gen-api.sh`
 - ditto-app Modify generated: `src/types/generated/api.d.ts`
 - Verify against: `docs/plans/2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md`
@@ -408,6 +414,11 @@ candidate pin max-4 semantics
 4. 刷新 machine summary/canonical hash，运行 surface contract test。任何状态
    不一致或缺 audit reference 都不得继续。
 
+`test_current_task4_checkpoint_is_approved_with_task9_proposal_pending` 额外锁定
+当前 `APPROVED/PENDING` snapshot 与 Task 4 approval reference；它不替代通用
+状态机测试。Task 9 发生合法 proposal transition 时，必须在同一变更中显式更新
+这个 checkpoint 的 expected proposal state/reference。
+
 **Step 4: 固化契约并验证**
 
 ```bash
@@ -417,12 +428,24 @@ pixi run -e dev pytest packages/apps/tests/unit/api/test_openapi_snapshot_unit.p
 git diff --check
 ```
 
-exporter 从 `ditto_apps.main.app.openapi()` 生成 canonical snapshot，不启动 server、不访问当前/production DB。contract test 直接比较 runtime schema。Expected: 每个设计 operation 均有审计结论；所有已 `IMPLEMENTED`/`EQUIVALENT` surface 能解析到 runtime OpenAPI；每个 `PLANNED` surface 有唯一 closing Task；文档、JSON 与当前 static OpenAPI 一致。
+exporter 只调用 pure
+`create_openapi_app(include_debug=False).openapi()` 与 production
+`canonical_openapi_bytes`；factory 不读 ambient `ENVIRONMENT`，不配置
+lifespan/DI/container/CORS。runtime `main.app` 显式按真实 environment 传
+`include_debug`，两者复用同一 route registration 与 system handlers，测试比较
+non-debug route parity。
+
+exporter 在目标同目录 `mkstemp`，write/flush/fsync 后 `os.replace`，finally 清理
+temp，并 fsync parent directory；失败必须保留旧 snapshot。snapshot test 不复制
+serializer，使用 production canonicalizer，在 `tmp_path` 调真实 exporter 并覆盖
+atomic failure。Expected: 每个设计 operation 均有审计结论；所有已
+`IMPLEMENTED`/`EQUIVALENT` surface 能解析到 pure non-debug OpenAPI；每个
+`PLANNED` surface 有唯一 closing Task；文档、JSON 与 static OpenAPI 一致。
 获得批准时，Step 4 还必须在 commit 前验证 classification 已完成上述
 `APPROVED` 迁移，而 bundle proposal 仍为 `PENDING`；summary/hash 必须绑定该
 状态快照。
 
-ditto-app 的 `scripts/gen-api.sh` 增加显式 `OPENAPI_FILE` 输入；提供该变量时直接读取已冻结文件，不启动 backend、不访问任何 DB，否则保留既有 `OPENAPI_URL` 行为。验证并 stage 第一次预期更新后，再运行第二次：
+ditto-app 的 `scripts/gen-api.sh` 增加显式 `OPENAPI_FILE` 输入；提供该变量时直接读取已冻结文件，不启动 backend、不访问任何 DB，否则保留既有 `OPENAPI_URL` 行为。file/URL 两种模式都先生成到 output 同目录 temp，成功后 atomic `mv`，trap 清理；unreadable/invalid JSON 不得破坏旧 output。验证并 stage 第一次预期更新后，再运行第二次：
 
 ```bash
 OPENAPI_FILE=/home/chevy/projects/ditto/docs/openapi/v1.json bun run gen:api
@@ -441,17 +464,23 @@ git add docs/contracts/r3-v1-api-surface.md \
   docs/contracts/r3-v1-api-surface.json \
   docs/plans/2026-07-30-r3-completion-and-g2-closure-implementation-plan.md \
   docs/openapi/v1.json \
+  packages/apps/src/ditto_apps/api/app_metadata.py \
+  packages/apps/src/ditto_apps/api/routes/__init__.py \
+  packages/apps/src/ditto_apps/api/routes/system.py \
+  packages/apps/src/ditto_apps/main.py \
+  packages/apps/src/ditto_apps/openapi_contract.py \
   scripts/export_openapi.py \
+  packages/apps/tests/integration/test_main_routes_integration.py \
   packages/apps/tests/unit/api/test_openapi_snapshot_unit.py \
   packages/apps/tests/unit/api/test_r3_api_surface_contract_unit.py
-git commit -m "chore(api): freeze r3 v1 surface decisions"
+git commit -m "fix(api): harden canonical OpenAPI export"
 ```
 
 ditto-app：
 
 ```bash
 git add scripts/gen-api.sh src/types/generated/api.d.ts
-git commit -m "chore(api): add file-based r3 contract generation"
+git commit -m "fix(api): make contract generation atomic"
 ```
 
 ---
@@ -1110,7 +1139,8 @@ Task 9 checkpoint 的状态迁移必须独立记录：
   generic envelope，reference 指向 schema/compatibility evidence；
 - 两种迁移都要求 classification 已为 `APPROVED`，并在写 production artifact
   前刷新 JSON/Markdown machine summary/canonical hash、运行
-  `test_r3_api_surface_contract_unit.py`。否则保持 `PENDING` 并停止。
+  `test_r3_api_surface_contract_unit.py`，并显式更新 Task 4 current-checkpoint test
+  的 proposal state/reference expectation。否则保持 `PENDING` 并停止。
 
 **Step 5: 最小实现 exposure evidence**
 

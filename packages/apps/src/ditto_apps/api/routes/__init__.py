@@ -18,6 +18,7 @@ from ditto_apps.api.routes import (
     research_review_routes,
     source,
     strategy,
+    system,
     trade,
     universe,
 )
@@ -38,6 +39,7 @@ __all__ = [
     "research_review_routes",
     "source",
     "strategy",
+    "system",
     "trade",
     "universe",
 ]

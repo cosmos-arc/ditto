@@ -6,15 +6,13 @@ Ditto FastAPI 主应用.
 
 from __future__ import annotations
 
-# Standard library imports
-import importlib.metadata
 import os
 import time
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Protocol, TypeVar, cast
+from typing import Protocol, TypeVar, cast
 
 # Third-party imports
 import granian
@@ -36,28 +34,18 @@ from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from ditto_apps.api.maturity import OPENAPI_TAGS, build_maturity_openapi_schema
-from ditto_apps.api.routes import (
-    backtest,
-    capital,
-    commodity,
-    data_products,
-    fundamental,
-    fx,
-    ingestion,
-    macro,
-    market,
-    metadata,
-    research_catalog_routes,
-    research_experiment_routes,
-    research_review_routes,
-    source,
-    strategy,
-    trade,
-    universe,
+from ditto_apps.api.app_metadata import (
+    APP_DESCRIPTION,
+    APP_TITLE,
+    APP_VERSION,
+    generate_stable_operation_id,
+)
+from ditto_apps.api.routes.system import (
+    get_status,
+    health_check,
+    root,
 )
 from ditto_apps.middleware import (
     data_error_handler,
@@ -66,6 +54,7 @@ from ditto_apps.middleware import (
     http_exception_handler,
     validation_exception_handler,
 )
+from ditto_apps.openapi_contract import configure_openapi, register_application_routes
 from ditto_apps.registry.container import make_async_app_container
 from ditto_apps.registry.infra.config import data_store_settings_type
 
@@ -75,21 +64,10 @@ project_root = Path(__file__).parent.parent.parent.parent
 T = TypeVar("T")
 
 
-def _load_app_version() -> str:
-    """Return the installed API package version, with a local-dev fallback."""
-    try:
-        return importlib.metadata.version("ditto-apps")
-    except importlib.metadata.PackageNotFoundError:
-        return "0+unknown"
+_generate_stable_operation_id = generate_stable_operation_id
+ditto_version = APP_VERSION
 
-
-def _generate_stable_operation_id(route: APIRoute) -> str:
-    """Generate tag-scoped OpenAPI operation IDs for frontend clients."""
-    tag = str(route.tags[0]) if route.tags else "system"
-    return f"{tag.replace('-', '_')}_{route.name}"
-
-
-ditto_version = _load_app_version()
+__all__ = ["app", "get_status", "health_check", "root"]
 
 
 class AsyncContainerProtocol(Protocol):
@@ -195,18 +173,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 # 创建FastAPI应用实例
 app = FastAPI(
-    title="Ditto Quant API",
-    description="量化投资系统API",
+    title=APP_TITLE,
+    description=APP_DESCRIPTION,
     version=ditto_version,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
     generate_unique_id_function=_generate_stable_operation_id,
     default_response_class=ORJSONResponse,  # 使用 orjson 提升性能
 )
 
-app.openapi = lambda: build_maturity_openapi_schema(app)
+configure_openapi(app)
 
 # 在应用启动前设置 dishka（必须在 lifespan 之外）
 # 这样中间件可以在应用启动前添加
@@ -231,30 +208,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 挂载业务路由
-app.include_router(backtest.router, prefix="/api/v1")
-app.include_router(capital.router, prefix="/api/v1")
-app.include_router(commodity.router, prefix="/api/v1")
-app.include_router(data_products.router, prefix="/api/v1")
-app.include_router(fundamental.router, prefix="/api/v1")
-app.include_router(fx.router, prefix="/api/v1")
-app.include_router(ingestion.router, prefix="/api/v1")
-app.include_router(macro.router, prefix="/api/v1")
-app.include_router(market.router, prefix="/api/v1")
-app.include_router(metadata.router, prefix="/api/v1")
-app.include_router(research_experiment_routes.router, prefix="/api/v1")
-app.include_router(research_catalog_routes.router, prefix="/api/v1")
-app.include_router(research_review_routes.router, prefix="/api/v1")
-app.include_router(source.router, prefix="/api/v1")
-app.include_router(strategy.router, prefix="/api/v1")
-app.include_router(trade.router, prefix="/api/v1")
-app.include_router(universe.router, prefix="/api/v1")
-
-# 调试路由： 条件注册（仅非生产环境）
-if not _env.is_production:
-    from ditto_apps.api.routes.debug import debug_router
-
-    app.include_router(debug_router, prefix="/api/v1", tags=["debug"])
+register_application_routes(app, include_debug=not _env.is_production)
 
 
 # Request logging middleware
@@ -308,49 +262,6 @@ async def log_requests(
     except Exception:
         # Re-raise exception to let FastAPI exception handlers process it
         raise
-
-
-@app.get("/")
-async def root() -> dict[str, str]:
-    """根路径."""
-    logger.info("Root endpoint accessed")
-    return {"message": "Ditto Quant API", "version": ditto_version}
-
-
-@app.get("/healthz")
-async def health_check() -> dict[str, Any]:
-    """健康检查端点."""
-    logger.debug("Health check endpoint accessed", event="health_check")
-    return {
-        "status": "ok",
-        "service": "ditto-api",
-        "timestamp": time.time(),
-        "features": {
-            "prefect": True,  # Prefect flows available
-            "observability": True,
-        },
-    }
-
-
-@app.get("/api/v1/status")
-async def get_status(request: Request) -> dict[str, Any]:
-    """获取系统状态."""
-    logger.info("Status endpoint accessed")
-    return {
-        "status": "running",
-        "version": ditto_version,
-        "environment": request.app.state.settings.system.environment.value,
-        "features": {
-            "data_collection": True,
-            "data_validation": True,
-            "backtest": True,
-            "trading": True,
-        },
-        "observability": {
-            "level": request.app.state.settings.observability.log_level,
-            "structured": True,
-        },
-    }
 
 
 # 注册异常处理器（顺序：从具体到通用）

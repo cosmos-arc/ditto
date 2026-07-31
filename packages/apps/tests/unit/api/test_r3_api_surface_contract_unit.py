@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ditto_apps.main import app
+from ditto_apps.openapi_contract import create_openapi_app
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SURFACE_PATH = _REPO_ROOT / "docs/contracts/r3-v1-api-surface.json"
@@ -21,6 +21,14 @@ _STATES = frozenset({"PLANNED", "IMPLEMENTED"})
 _CLASSIFICATION_APPROVAL_STATES = frozenset({"PENDING", "APPROVED"})
 _BUNDLE_PROPOSAL_STATES = frozenset({"PENDING", "APPROVED", "NOT_REQUIRED"})
 _PATH_PATTERN = re.compile(r"^/api/v1/(?:research|strategies)(?:/.*)?$")
+_TASK4_APPROVAL_REFERENCE = (
+    "user-message:2026-07-31:final-task4-classification-approved"
+)
+_TASK4_APPROVAL_DECISION = (
+    "Approved: 6 EQUIVALENT + 1 redundant launch alias DEFER + "
+    "8 full-scope IMPLEMENT + pin-max-4 session-local."
+)
+app = create_openapi_app(include_debug=False)
 
 _DESIGN_12_2_OPERATIONS = frozenset(
     {
@@ -481,6 +489,27 @@ def test_approval_state_machines_are_auditable_and_independent(
     )
     with pytest.raises(AssertionError):
         _assert_approval_state_machine(invalid)
+
+
+def test_current_task4_checkpoint_is_approved_with_task9_proposal_pending(
+    surface: dict[str, Any],
+) -> None:
+    """The checked-in checkpoint advances only through an explicit follow-up."""
+    assert surface["approval_state"] == "APPROVED"
+    approval = surface["approval_required"]
+    assert approval["status"] == "APPROVED"
+    assert approval["decision"] == _TASK4_APPROVAL_DECISION
+    assert approval["reference"] == _TASK4_APPROVAL_REFERENCE
+
+    for entry in surface["operations"]:
+        if entry["disposition"] in {"DEFER", "EQUIVALENT"}:
+            assert entry["user_approval"]["status"] == "APPROVED"
+            assert entry["user_approval"]["reference"] == _TASK4_APPROVAL_REFERENCE
+
+    proposal = surface["candidate_evidence_bundle_proposal"]
+    assert proposal["approval_state"] == "PENDING"
+    assert proposal["decision"] is None
+    assert proposal["reference"] is None
 
 
 def test_approval_projection_is_exact_and_unique(surface: dict[str, Any]) -> None:

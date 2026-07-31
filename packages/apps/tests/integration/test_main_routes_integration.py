@@ -78,6 +78,7 @@ class TestMainRoutesAssembly:
             "research_review_routes",
             "source",
             "strategy",
+            "system",
             "trade",
             "universe",
         }

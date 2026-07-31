@@ -17019,33 +17019,6 @@
         "x-ditto-maturity": "infrastructure"
       }
     },
-    "/api/v1/logs/test": {
-      "get": {
-        "description": "测试日志记录功能（仅开发/测试环境可用）.\n\nCapability maturity: `debug`. Debug-only surface; must not be exposed in production.",
-        "operationId": "debug_generate_test_logs",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Debug Generate Test Logs",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Generate Test Logs",
-        "tags": [
-          "debug"
-        ],
-        "x-ditto-maturity": "debug"
-      }
-    },
     "/api/v1/macro/indicators": {
       "post": {
         "description": "查询宏观指标数据.\n\nArgs:\n    query: 查询参数\n        - indicators: 指标 ID 或代码列表 (可选)\n        - start_date: 开始日期 (可选)\n        - end_date: 结束日期 (可选)\n        - category: 类别过滤 (economic/interest_rate/exchange_rate/money_supply)\n        - frequency: 频率过滤 (daily/monthly/quarterly)\n    facade: MacroQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含宏观指标数据列表\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
