@@ -8,7 +8,7 @@ OUTPUT_DIR="$(dirname "$OUTPUT_PATH")"
 OUTPUT_BASENAME="$(basename "$OUTPUT_PATH")"
 
 mkdir -p "$OUTPUT_DIR"
-TEMP_OUTPUT_PATH="$(mktemp "$OUTPUT_DIR/.${OUTPUT_BASENAME}.tmp.XXXXXX.d.ts")"
+TEMP_OUTPUT_PATH="$(mktemp "$OUTPUT_DIR/.${OUTPUT_BASENAME}.tmp.XXXXXX")"
 
 cleanup() {
 	if [[ -n "${TEMP_OUTPUT_PATH:-}" && -e "$TEMP_OUTPUT_PATH" ]]; then
@@ -30,5 +30,6 @@ else
 		| bunx openapi-typescript -o "$TEMP_OUTPUT_PATH"
 fi
 
+chmod 0644 "$TEMP_OUTPUT_PATH"
 mv -f -- "$TEMP_OUTPUT_PATH" "$OUTPUT_PATH"
 TEMP_OUTPUT_PATH=""
