@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from ditto_analysis.errors import ExperimentIntegrityError
@@ -27,6 +27,7 @@ from ditto_analysis.experiments import (
     FoldProjection,
     FoldRole,
     FoldView,
+    GateFact,
     GateLayer,
     GateOutcome,
     HardGateEvidenceView,
@@ -63,6 +64,10 @@ from ditto_application.processes.experiments.evidence_collector import (
     _metric_values,
     _purge_embargo_configured,
     _validate_holdout_claim_lineage,
+)
+from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    NullR2LiveGateEvidenceReader,
+    R2LiveGateEvidenceReader,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
@@ -332,6 +337,7 @@ def _collector(
     events: tuple[StatusEventRecord, ...] | None = None,
     selection_evidence: PublishedSelectionEvidence | None = None,
     selection_evidence_reader: Any | None = None,
+    r2_live_gate_evidence_reader: R2LiveGateEvidenceReader | None = None,
 ) -> tuple[ExperimentEvidenceCollector, _Writer, list[object]]:
     reconstructed: list[object] = []
 
@@ -368,6 +374,11 @@ def _collector(
             _SelectionReader(published_selection)
             if selection_evidence_reader is None
             else selection_evidence_reader
+        ),
+        r2_live_gate_evidence_reader=(
+            NullR2LiveGateEvidenceReader()
+            if r2_live_gate_evidence_reader is None
+            else r2_live_gate_evidence_reader
         ),
     )
     return collector, writer, reconstructed
@@ -452,6 +463,41 @@ def test_collect_publishes_real_selected_metrics_and_paired_lineage(
     )
     assert all(type(value) is ResearchMetricValue for value in values.values())
     assert values[ResearchMetricId.NET_RETURN].value == pytest.approx(17.6)
+    r2_gate = _gate(packet, "r2_live_gate")
+    assert r2_gate.outcome is GateOutcome.NOT_EVALUATED
+    assert r2_gate.observed == {
+        "status": "not_evaluated",
+        "reason_code": "r2_live_evidence_unavailable",
+    }
+
+
+class _BooleanR2LiveGateReader:
+    def read_verified_live_gate(self) -> object:
+        return True
+
+
+def test_unverified_boolean_live_gate_fails_before_packet_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = build_case(tmp_path)
+    collector, writer, _reconstructed = _collector(
+        monkeypatch,
+        case,
+        r2_live_gate_evidence_reader=cast(
+            "R2LiveGateEvidenceReader",
+            _BooleanR2LiveGateReader(),
+        ),
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        _collect(collector)
+
+    assert exc_info.value.details == {
+        "code": "EXPERIMENT_INTEGRITY_FAILED",
+        "reason": "r2_live_gate_reader_contract_invalid",
+    }
+    assert writer.calls == []
 
 
 def test_verified_eligible_month_count_drives_ninety_six_month_gate(
@@ -507,6 +553,7 @@ def test_split_purge_embargo_requires_isolation_on_every_fold(
             holdout_claim_id="claim-1",
             artifact_complete=True,
             artifact_missing=(),
+            r2_live_gate=GateFact(None),
         )
     )
 

@@ -13,6 +13,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
+from typing import cast
 
 from ditto_analysis.experiments.metric_schema import (
     ResearchMetricId,
@@ -39,6 +41,17 @@ __all__ = [
 ]
 
 GATE_POLICY_VERSION = "r3.v1"
+
+
+def _deep_freeze(value: object) -> object:
+    if isinstance(value, Mapping):
+        mapping = cast("Mapping[object, object]", value)
+        return MappingProxyType(
+            {key: _deep_freeze(item) for key, item in mapping.items()}
+        )
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(_deep_freeze(item) for item in cast("Sequence[object]", value))
+    return value
 
 
 class GateOutcome(StrEnum):
@@ -96,6 +109,11 @@ class GateEvaluation:
     policy: object
     artifact_id: str | None = None
 
+    def __post_init__(self) -> None:
+        """Detach nested evidence so an assembled packet remains immutable."""
+        object.__setattr__(self, "observed", _deep_freeze(self.observed))
+        object.__setattr__(self, "policy", _deep_freeze(self.policy))
+
 
 @dataclass(frozen=True, slots=True)
 class GateFact:
@@ -103,6 +121,10 @@ class GateFact:
 
     satisfied: bool | None
     detail: object = None
+
+    def __post_init__(self) -> None:
+        """Detach nested detail before it crosses into gate evaluation."""
+        object.__setattr__(self, "detail", _deep_freeze(self.detail))
 
 
 @dataclass(frozen=True, slots=True)

@@ -33,6 +33,7 @@ from ditto_analysis.experiments import (
     ExperimentWriterProtocol,
     FoldRole,
     FoldView,
+    GateFact,
     HardGateEvidence,
     HardGateEvidenceView,
     LeaseFence,
@@ -47,6 +48,7 @@ from ditto_analysis.experiments.trial_ledger import (
     promotion_objective_content_hash,
 )
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments._evidence_inputs import (
     SnapshotManifestProjection,
     project_snapshot_manifest,
@@ -81,8 +83,11 @@ from ditto_application.processes.experiments.evidence import (
     assemble_review_packet,
 )
 from ditto_application.processes.experiments.planning_process import (
-    ExperimentPreflightReport,
     reconstruct_preflight_report,
+)
+from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    R2LiveGateEvidenceReader,
+    VerifiedR2LiveGateEvidence,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
@@ -90,10 +95,32 @@ from ditto_application.processes.experiments.scheduler_store import (
 )
 from ditto_application.processes.experiments.walk_forward import WalkForwardCandidate
 
-__all__ = ["ExperimentEvidenceCollector"]
+__all__ = ["ExperimentEvidenceCollector", "project_r2_live_gate_fact"]
 
 
 _REQUIRED_SELECTED_WALK_FORWARD_FOLDS = 2
+
+
+def project_r2_live_gate_fact(reader: R2LiveGateEvidenceReader) -> GateFact:
+    """Project only reader-produced verified evidence onto the analysis gate."""
+    evidence = reader.read_verified_live_gate()
+    if evidence is None:
+        return GateFact(
+            None,
+            {
+                "status": "not_evaluated",
+                "reason_code": "r2_live_evidence_unavailable",
+            },
+        )
+    if type(evidence) is not VerifiedR2LiveGateEvidence:
+        raise AppProcessError(
+            "R2 live gate reader returned an unverified value",
+            details={
+                "code": "EXPERIMENT_INTEGRITY_FAILED",
+                "reason": "r2_live_gate_reader_contract_invalid",
+            },
+        )
+    return GateFact(evidence.status == "ready", evidence.gate_detail())
 
 
 class _SelectionEvidenceReader(Protocol):
@@ -115,6 +142,7 @@ class ExperimentEvidenceCollector:
     writer: ExperimentWriterProtocol
     walk_forward_assembler: WalkForwardEvidenceAssembler
     selection_evidence_reader: _SelectionEvidenceReader
+    r2_live_gate_evidence_reader: R2LiveGateEvidenceReader
 
     def collect(
         self,
@@ -132,7 +160,6 @@ class ExperimentEvidenceCollector:
         selected_id = _validate_holdout_claim_lineage(snapshot, claim)
         events = self.reader.list_status_events(experiment_id)
         detail = read_unique_preflight_detail(events, experiment_id)
-        preflight = reconstruct_preflight_report(detail)
         manifest = project_snapshot_manifest(detail)
         selection_evidence = self.selection_evidence_reader.read_selection_evidence(
             experiment_id,
@@ -145,14 +172,15 @@ class ExperimentEvidenceCollector:
             collected,
             selected_id,
         )
+        r2_live_gate = project_r2_live_gate_fact(self.r2_live_gate_evidence_reader)
         hard_view = _build_hard_gate_view(
             snapshot,
             detail,
             manifest,
-            preflight,
             collected,
             selected_rows,
             selection_evidence,
+            r2_live_gate,
         )
         hard_evidence = collect_hard_gate_evidence(hard_view)
         packet_input = _build_packet_input(
@@ -232,13 +260,14 @@ def _build_hard_gate_view(
     snapshot: ExperimentSchedulerSnapshot,
     detail: Mapping[str, object],
     manifest: SnapshotManifestProjection,
-    preflight: ExperimentPreflightReport,
     collected: CollectedWalkForwardEvidence,
     selected_rows: tuple[CandidateFoldEvidence, ...],
     selection_evidence: PublishedSelectionEvidence,
+    r2_live_gate: GateFact,
 ) -> HardGateEvidenceView:
     """Assemble the thirteen hard-gate view fields from persisted evidence."""
     launch_spec = snapshot.launch_spec
+    preflight = reconstruct_preflight_report(detail)
     claim = snapshot.holdout_claim
     if claim is None:
         raise experiment_process_error("evidence_requires_holdout_claim")
@@ -264,6 +293,7 @@ def _build_hard_gate_view(
             collected.missing_artifact_refs,
         ),
         artifact_missing=collected.missing_artifact_refs,
+        r2_live_gate=r2_live_gate,
     )
 
 

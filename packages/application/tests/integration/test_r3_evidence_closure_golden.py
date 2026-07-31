@@ -125,6 +125,10 @@ from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
     reconstruct_preflight_report,
 )
+from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    NullR2LiveGateEvidenceReader,
+    R2LiveGateEvidenceReader,
+)
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
     FirstAttempt,
@@ -747,6 +751,7 @@ def _coordinator_with_collector(
     launch: ExperimentLaunchSpec,
     assembler: WalkForwardEvidenceAssembler,
     artifact_service: ResearchArtifactService,
+    r2_live_gate_evidence_reader: R2LiveGateEvidenceReader | None = None,
 ) -> tuple[
     ExperimentExecutionCoordinator,
     ExperimentSchedulerStore,
@@ -772,6 +777,11 @@ def _coordinator_with_collector(
         writer=writer,
         walk_forward_assembler=assembler,
         selection_evidence_reader=selection_service,
+        r2_live_gate_evidence_reader=(
+            NullR2LiveGateEvidenceReader()
+            if r2_live_gate_evidence_reader is None
+            else r2_live_gate_evidence_reader
+        ),
     )
     coordinator = ExperimentExecutionCoordinator(
         store=store,

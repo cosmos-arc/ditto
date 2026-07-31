@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import pytest
 from ditto_analysis.experiments import (
@@ -37,6 +38,7 @@ def _all_satisfied_view() -> HardGateEvidenceView:
         holdout_claim_id="claim-001",
         artifact_complete=True,
         artifact_missing=(),
+        r2_live_gate=GateFact(None),
     )
 
 
@@ -73,8 +75,28 @@ def test_all_satisfied_view_passes_ten_gates_except_r2_live() -> None:
     assert evidence.trial_declaration.satisfied is True
     assert evidence.holdout_claim.satisfied is True
     assert evidence.artifact_completeness.satisfied is True
-    # r2_live_gate is always NOT_EVALUATED (deferred to G2 live acceptance)
+    # This fixture supplies no verified live evidence.
     assert evidence.r2_live_gate.satisfied is None
+
+
+@pytest.mark.parametrize("satisfied", [True, False, None])
+def test_r2_live_gate_projects_only_the_supplied_verified_gate_fact(
+    satisfied: bool | None,
+) -> None:
+    fact = GateFact(
+        satisfied,
+        {
+            "report_hash": "a" * 64,
+            "checked_at": "2026-07-31T12:00:00+00:00",
+            "evidence_refs": ("artifact://r2/live",),
+        },
+    )
+
+    evidence = collect_hard_gate_evidence(
+        replace(_all_satisfied_view(), r2_live_gate=fact)
+    )
+
+    assert evidence.r2_live_gate is fact
 
 
 def test_collect_is_pure_for_equal_inputs() -> None:
@@ -372,8 +394,8 @@ def test_artifact_completeness_fails_when_incomplete_with_missing() -> None:
     }
 
 
-def test_r2_live_gate_always_not_evaluated() -> None:
-    """Beta stage: r2_live_gate stays NOT_EVALUATED regardless of view state."""
+def test_r2_live_gate_is_not_evaluated_when_supplied_fact_is_unknown() -> None:
+    """An unknown application fact remains NOT_EVALUATED."""
 
     evidence = collect_hard_gate_evidence(_all_satisfied_view())
 
@@ -397,3 +419,18 @@ def test_gate_fact_default_detail_is_none() -> None:
 
     assert fact.detail is None
     assert fact.satisfied is True
+
+
+def test_gate_fact_recursively_freezes_nested_evidence() -> None:
+    """Frozen dataclass semantics extend to nested observed evidence."""
+    source = {"refs": [{"content_hash": "a" * 64}]}
+
+    fact = GateFact(True, source)
+    source["refs"] = []
+    detail = cast("dict[str, object]", fact.detail)
+    refs = cast("tuple[object, ...]", detail["refs"])
+    ref = cast("dict[str, object]", refs[0])
+
+    assert ref["content_hash"] == "a" * 64
+    with pytest.raises(TypeError):
+        ref["content_hash"] = "forged"

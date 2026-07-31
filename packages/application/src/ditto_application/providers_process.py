@@ -113,6 +113,10 @@ from ditto_application.processes.experiments.evidence_collector import (
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
+from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    NullR2LiveGateEvidenceReader,
+    R2LiveGateEvidenceReader,
+)
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
     FirstAttemptFactory,
@@ -410,6 +414,7 @@ class AppProcessProvider(Provider):
         writer: ExperimentWriterProtocol,
         walk_forward_assembler: WalkForwardEvidenceAssembler,
         selection_evidence_reader: DurableSelectionEvidenceService,
+        r2_live_gate_evidence_reader: R2LiveGateEvidenceReader,
     ) -> ExperimentEvidenceCollector:
         """Wire the R3 review-packet collector behind the durable experiment ports."""
         return ExperimentEvidenceCollector(
@@ -418,7 +423,13 @@ class AppProcessProvider(Provider):
             writer=writer,
             walk_forward_assembler=walk_forward_assembler,
             selection_evidence_reader=selection_evidence_reader,
+            r2_live_gate_evidence_reader=r2_live_gate_evidence_reader,
         )
+
+    @provide
+    def r2_live_gate_evidence_reader(self) -> R2LiveGateEvidenceReader:
+        """Fail closed until isolated live acceptance injects an exact source."""
+        return NullR2LiveGateEvidenceReader()
 
     @provide
     def persisted_ingestion_evidence_verifier(

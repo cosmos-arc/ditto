@@ -481,6 +481,9 @@ class TestAppProviderStructure:
         from ditto_application.processes.experiments.evidence_collector import (
             ExperimentEvidenceCollector,
         )
+        from ditto_application.processes.experiments.r2_live_gate_evidence import (
+            NullR2LiveGateEvidenceReader,
+        )
 
         report_reader = MagicMock()
         trace_reader = MagicMock()
@@ -494,6 +497,7 @@ class TestAppProviderStructure:
         scheduler_store = MagicMock()
         reader = MagicMock()
         artifact_service = MagicMock()
+        r2_live_gate_evidence_reader = NullR2LiveGateEvidenceReader()
         selection_service = process_provider.durable_selection_evidence_service(
             scheduler_store=scheduler_store,
             reader=reader,
@@ -506,6 +510,7 @@ class TestAppProviderStructure:
             writer=MagicMock(),
             walk_forward_assembler=assembler,
             selection_evidence_reader=selection_service,
+            r2_live_gate_evidence_reader=r2_live_gate_evidence_reader,
         )
 
         assert isinstance(assembler, WalkForwardEvidenceAssembler)
@@ -518,6 +523,7 @@ class TestAppProviderStructure:
         assert isinstance(collector, ExperimentEvidenceCollector)
         assert collector.walk_forward_assembler is assembler
         assert collector.selection_evidence_reader is selection_service
+        assert collector.r2_live_gate_evidence_reader is r2_live_gate_evidence_reader
 
     def test_replay_provider_wires_verified_schema_v1_reader(self) -> None:
         provider = AppProcessProvider()

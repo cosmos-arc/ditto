@@ -40,9 +40,9 @@ class HardGateEvidenceView:
 
     Every field is an analysis-owned primitive or value object so the view can
     be assembled without leaking store, artifact, or production-package types
-    across the analysis boundary. ``r2_live_gate`` has no field here because its
-    outcome is pinned to ``NOT_EVALUATED`` during the Beta stage (it is closed
-    only by G2 live acceptance, which is out of scope for this projection).
+    across the analysis boundary. ``r2_live_gate`` accepts only an already
+    verified :class:`GateFact`; analysis projects it without reading or parsing
+    the external R2 report.
     """
 
     certified_snapshot: bool
@@ -58,6 +58,7 @@ class HardGateEvidenceView:
     holdout_claim_id: str | None
     artifact_complete: bool
     artifact_missing: tuple[str, ...]
+    r2_live_gate: GateFact
 
 
 def _canonical_cost_config_hashes(value: object) -> tuple[str, ...]:
@@ -80,11 +81,10 @@ def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
     """
     Project typed observed facts onto the eleven hard-correctness gate facts.
 
-    The projection is total and side-effect free. ``r2_live_gate`` is pinned to
-    ``satisfied=None`` because live-acceptance closure is deferred to the G2
-    stage; every other gate derives its satisfaction from the corresponding
-    view field. The returned :class:`HardGateEvidence` is ready to be fed to
-    :func:`evaluate_hard_gates` for outcome projection.
+    The projection is total and side-effect free. Application supplies the R2
+    live fact only after content verification; every other gate derives its
+    satisfaction from the corresponding view field. The returned evidence is
+    ready to be fed to :func:`evaluate_hard_gates` for outcome projection.
     """
     cost_config_hashes = _canonical_cost_config_hashes(view.cost_config_hashes)
     unique_cost_config_hashes = tuple(sorted(set(cost_config_hashes)))
@@ -143,5 +143,5 @@ def collect_hard_gate_evidence(view: HardGateEvidenceView) -> HardGateEvidence:
             view.artifact_complete,
             {"missing": view.artifact_missing},
         ),
-        r2_live_gate=GateFact(None),
+        r2_live_gate=view.r2_live_gate,
     )
