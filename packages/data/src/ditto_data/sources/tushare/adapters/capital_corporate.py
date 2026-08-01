@@ -47,12 +47,21 @@ def _date(name: str) -> pl.Expr:
 def _normalized_repurchase(value: pl.DataFrame) -> pl.DataFrame:
     if value.is_empty():
         return _empty_corporate_actions()
+    observable_date = pl.coalesce(
+        _date("ann_date"),
+        _date("end_date"),
+        _date("exp_date"),
+    )
     return value.select(
         pl.col("ts_code").cast(pl.String).alias("source_ticker"),
         pl.lit("share_repurchase").alias("action_type"),
-        _date("ann_date").alias("action_date"),
-        _date("ann_date").alias("knowledge_date"),
-        _date("end_date").alias("effective_from"),
+        observable_date.alias("action_date"),
+        observable_date.alias("knowledge_date"),
+        pl.coalesce(
+            _date("end_date"),
+            _date("ann_date"),
+            _date("exp_date"),
+        ).alias("effective_from"),
         _date("exp_date").alias("effective_to"),
         pl.concat_str(
             pl.lit("progress="),
@@ -68,12 +77,13 @@ def _normalized_repurchase(value: pl.DataFrame) -> pl.DataFrame:
 def _normalized_share_float(value: pl.DataFrame) -> pl.DataFrame:
     if value.is_empty():
         return _empty_corporate_actions()
+    observable_date = pl.coalesce(_date("ann_date"), _date("float_date"))
     return value.select(
         pl.col("ts_code").cast(pl.String).alias("source_ticker"),
         pl.lit("restricted_share_release").alias("action_type"),
-        _date("ann_date").alias("action_date"),
-        _date("ann_date").alias("knowledge_date"),
-        _date("float_date").alias("effective_from"),
+        observable_date.alias("action_date"),
+        observable_date.alias("knowledge_date"),
+        pl.coalesce(_date("float_date"), _date("ann_date")).alias("effective_from"),
         pl.lit(None, dtype=pl.Date).alias("effective_to"),
         pl.concat_str(
             pl.lit("share_type="),

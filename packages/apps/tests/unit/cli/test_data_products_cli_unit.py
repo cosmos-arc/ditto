@@ -172,6 +172,42 @@ def test_exact_confirmation_executes_selected_operation_once(
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("operation", ["bootstrap", "repair"])
+def test_ingestion_operation_exits_nonzero_when_any_chunk_failed(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+) -> None:
+    """Automation must not mistake a rendered partial result for success."""
+    execute = MagicMock(
+        return_value={
+            "status": "completed",
+            "success_count": 2,
+            "skipped_count": 0,
+            "failed_count": 1,
+        }
+    )
+    monkeypatch.setattr(
+        "ditto_apps.cli.commands.data_products.execute_data_product_operation",
+        execute,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "data-products",
+            operation,
+            "stock_daily",
+            "--confirm",
+            f"data-product:{operation}:stock_daily:confirm",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert orjson.loads(result.output)["failed_count"] == 1
+
+
+@pytest.mark.unit
 def test_bootstrap_binds_explicit_reviewed_license_to_ingestion(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

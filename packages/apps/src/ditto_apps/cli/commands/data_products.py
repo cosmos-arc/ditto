@@ -355,6 +355,13 @@ def _run(
         typer.echo(str(exc), err=True)
         raise typer.Exit(2) from exc
     output_json_dict(result)
+    failed_count = result.get("failed_count")
+    if (
+        operation in {"bootstrap", "repair"}
+        and isinstance(failed_count, int)
+        and failed_count > 0
+    ):
+        raise typer.Exit(1)
 
 
 @app.command("bootstrap")

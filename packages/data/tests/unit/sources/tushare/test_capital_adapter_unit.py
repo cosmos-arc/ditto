@@ -329,6 +329,55 @@ class TestCapitalTushareAdapterFetchCorporateActions:
             "share_float",
         ]
 
+    def test_fetch_corporate_actions_fills_missing_provider_dates_without_lookahead(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Required event dates fall back only to dates observable on the row."""
+        repurchase = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "ann_date": ["20240101"],
+                "end_date": [None],
+                "proc": ["预案"],
+                "exp_date": ["20240630"],
+                "vol": [None],
+                "amount": [None],
+            }
+        )
+        share_float = pl.DataFrame(
+            {
+                "ts_code": ["000002.SZ"],
+                "ann_date": [None],
+                "float_date": ["20240120"],
+                "float_share": [2_000_000.0],
+                "float_ratio": [1.5],
+                "holder_name": ["holder"],
+                "share_type": ["股权分置限售股份"],
+            }
+        )
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [repurchase, share_float]
+
+        result = CapitalTushareAdapter(_client=mock_client).fetch_corporate_actions(
+            start_date="20240101",
+            end_date="20240331",
+        )
+
+        assert result["action_date"].to_list() == [
+            date(2024, 1, 1),
+            date(2024, 1, 20),
+        ]
+        assert result["knowledge_date"].to_list() == [
+            date(2024, 1, 1),
+            date(2024, 1, 20),
+        ]
+        assert result["effective_from"].to_list() == [
+            date(2024, 1, 1),
+            date(2024, 1, 20),
+        ]
+        assert result["effective_to"].to_list() == [date(2024, 6, 30), None]
+
 
 class TestCapitalTushareAdapterFetchShareBuyback:
     """Tests for fetch_share_buyback method."""
