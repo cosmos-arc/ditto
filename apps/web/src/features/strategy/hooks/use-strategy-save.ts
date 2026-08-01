@@ -11,6 +11,7 @@ export type SaveStrategyVariables = {
 	readonly spec: StrategySpec;
 	readonly name: string;
 	readonly tags: readonly string[];
+	readonly idempotencyKey: string;
 };
 
 /** 保存后失效的 query scope（版本列表、详情、列表都会因新 draft version 而变化）。 */
@@ -26,13 +27,17 @@ export function useStrategySave() {
 	const loadSpec = useStrategyStudioStore((s) => s.loadSpec);
 
 	return useMutation<StrategyDetail, Error, SaveStrategyVariables>({
-		mutationFn: ({ strategyId, version, spec, name, tags }) =>
-			updateStrategy(strategyId, {
-				name,
-				spec_json: serializeStrategySpec(spec),
-				tags: [...tags],
-				version,
-			}).then(mapStrategyDetail),
+		mutationFn: ({ strategyId, version, spec, name, tags, idempotencyKey }) =>
+			updateStrategy(
+				strategyId,
+				{
+					name,
+					spec_json: serializeStrategySpec(spec),
+					tags: [...tags],
+					version,
+				},
+				idempotencyKey,
+			).then(mapStrategyDetail),
 		onSuccess: (detail) => {
 			loadSpec(detail.spec);
 			for (const scope of SAVE_INVALIDATION_SCOPES) {

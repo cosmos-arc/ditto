@@ -40,7 +40,7 @@ export function useReviewQueue() {
 	});
 }
 
-export { useFactorAnalysis, useFactorDetail } from "./use-factor-detail";
+export { useFactorAnalysis, useFactorDetail, useFactorDiagnostics } from "./use-factor-detail";
 export { useRegimeCurrent } from "./use-regime-current";
 export { useRegimeDrivers } from "./use-regime-drivers";
 export { useRegimeHistory } from "./use-regime-history";

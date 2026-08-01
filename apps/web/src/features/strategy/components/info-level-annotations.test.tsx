@@ -92,7 +92,7 @@ describe("StrategyPage info-level annotations", () => {
 
 		expect(l1UnitNames).toContain("studio-mode-bar");
 		expect(l1UnitNames).toContain("strategy-header");
-		expect(l1UnitNames).toContain("strategy-code");
+		expect(l1UnitNames).toContain("strategy-editor");
 		expect(l1UnitNames).toContain("node-library");
 		expect(l1Units).toHaveLength(4);
 	});

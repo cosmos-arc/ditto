@@ -1,12 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { ConstraintSpec, StrategySpec } from "@/types/strategy";
-import { ConstraintsPipeline } from "./strategy-pipeline-view";
+import { mockNodeDescriptorList } from "@/mocks/fixtures/strategy-live";
+import type { StrategySpec } from "@/types/strategy";
+import { mapNodeDescriptor } from "../api/mappers";
+import { StrategyPipelineView } from "./strategy-pipeline-view";
 
-const CONSTRAINT_A: ConstraintSpec = { type: "max_weight_per_instrument", params: { max_weight: 0.3 } };
-const CONSTRAINT_B: ConstraintSpec = { type: "max_turnover", params: { max_turnover: 0.5 } };
+const DESCRIPTORS = mockNodeDescriptorList.map(mapNodeDescriptor);
 
-function baseSpec(constraints: readonly ConstraintSpec[]): StrategySpec {
+function baseSpec(constraints: StrategySpec["constraints"] = []): StrategySpec {
 	return {
 		strategyId: "s",
 		name: "n",
@@ -25,77 +26,97 @@ function baseSpec(constraints: readonly ConstraintSpec[]): StrategySpec {
 	};
 }
 
-describe("ConstraintsPipeline", () => {
-	it("renders each constraint type plus an add button", () => {
-		render(
-			<ConstraintsPipeline
-				constraints={[CONSTRAINT_A, CONSTRAINT_B]}
+describe("StrategyPipelineView", () => {
+	it("keeps fixed slots in grammar order with generated predecessor/successor rules", () => {
+		const { container } = render(
+			<StrategyPipelineView
+				spec={baseSpec()}
+				descriptors={DESCRIPTORS}
 				onChange={vi.fn()}
 				onSelect={vi.fn()}
 				selectedKey={null}
 			/>,
 		);
-		expect(screen.getByText("max_weight_per_instrument")).toBeInTheDocument();
-		expect(screen.getByText("max_turnover")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "添加约束" })).toBeInTheDocument();
+		const rows = container.querySelectorAll("[data-fixed='true']");
+		expect(Array.from(rows).map((row) => row.getAttribute("data-allowed-successor"))).toEqual([
+			"FACTOR_SET",
+			"FILTER",
+			"SELECTOR",
+			"ALLOCATOR",
+			"EXECUTION_ASSUMPTION",
+			"VALIDATION",
+			null,
+		]);
 	});
 
-	it("appends a new constraint via onChange updater", () => {
+	it("removes and reorders only registered FILTER nodes", () => {
 		const onChange = vi.fn();
-		const base = baseSpec([CONSTRAINT_A]);
+		const spec = baseSpec([
+			{ type: "builtin.trend_filter@1", params: { threshold: 0 } },
+			{ type: "builtin.trend_filter@1", params: { threshold: 1 } },
+		]);
 		render(
-			<ConstraintsPipeline constraints={base.constraints} onChange={onChange} onSelect={vi.fn()} selectedKey={null} />,
+			<StrategyPipelineView
+				spec={spec}
+				descriptors={DESCRIPTORS}
+				onChange={onChange}
+				onSelect={vi.fn()}
+				selectedKey={null}
+			/>,
 		);
-		fireEvent.click(screen.getByRole("button", { name: "添加约束" }));
+		fireEvent.click(screen.getAllByLabelText("下移 Trend Filter")[0]);
+		const move = onChange.mock.calls[0][0] as (draft: StrategySpec) => StrategySpec;
+		expect(move(spec).constraints[0].params.threshold).toBe(1);
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).constraints).toHaveLength(2);
-		expect(updater(base).constraints[1].type).toBe("new_constraint");
+		fireEvent.click(screen.getAllByLabelText("删除 Trend Filter")[0]);
+		const remove = onChange.mock.calls[1][0] as (draft: StrategySpec) => StrategySpec;
+		expect(remove(spec).constraints).toHaveLength(1);
 	});
 
-	it("removes a constraint via onChange updater", () => {
+	it("supports Alt+Arrow keyboard reorder", () => {
 		const onChange = vi.fn();
-		const base = baseSpec([CONSTRAINT_A, CONSTRAINT_B]);
+		const spec = baseSpec([
+			{ type: "builtin.trend_filter@1", params: { threshold: 0 } },
+			{ type: "builtin.trend_filter@1", params: { threshold: 1 } },
+		]);
 		render(
-			<ConstraintsPipeline constraints={base.constraints} onChange={onChange} onSelect={vi.fn()} selectedKey={null} />,
+			<StrategyPipelineView
+				spec={spec}
+				descriptors={DESCRIPTORS}
+				onChange={onChange}
+				onSelect={vi.fn()}
+				selectedKey={null}
+			/>,
 		);
-		fireEvent.click(screen.getByLabelText("删除约束 1"));
-
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).constraints).toEqual([CONSTRAINT_B]);
+		fireEvent.keyDown(screen.getAllByRole("button", { name: /Trend Filter/ })[0], { key: "ArrowDown", altKey: true });
+		expect(onChange).toHaveBeenCalledOnce();
 	});
 
-	it("moves a constraint down by swapping with the next", () => {
-		const onChange = vi.fn();
-		const base = baseSpec([CONSTRAINT_A, CONSTRAINT_B]);
+	it("renders an unknown descriptor read-only without a delete action", () => {
 		render(
-			<ConstraintsPipeline constraints={base.constraints} onChange={onChange} onSelect={vi.fn()} selectedKey={null} />,
-		);
-		fireEvent.click(screen.getByLabelText("下移约束 1"));
-
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).constraints).toEqual([CONSTRAINT_B, CONSTRAINT_A]);
-	});
-
-	it("disables move-up on the first row and move-down on the last", () => {
-		render(
-			<ConstraintsPipeline
-				constraints={[CONSTRAINT_A, CONSTRAINT_B]}
+			<StrategyPipelineView
+				spec={baseSpec([{ type: "plugin.unknown@9", params: { alpha: 1 } }])}
+				descriptors={DESCRIPTORS}
 				onChange={vi.fn()}
 				onSelect={vi.fn()}
 				selectedKey={null}
 			/>,
 		);
-		expect(screen.getByLabelText("上移约束 1")).toBeDisabled();
-		expect(screen.getByLabelText("下移约束 2")).toBeDisabled();
+		expect(screen.getByText("未知 descriptor，只读")).toBeInTheDocument();
+		expect(screen.queryByLabelText(/删除 plugin.unknown/)).not.toBeInTheDocument();
 	});
 
-	it("calls onSelect with the constraint key when a row is clicked", () => {
-		const onSelect = vi.fn();
-		render(
-			<ConstraintsPipeline constraints={[CONSTRAINT_A]} onChange={vi.fn()} onSelect={onSelect} selectedKey={null} />,
+	it("preserves every fixed slot as read-only when the registry response is incomplete", () => {
+		const { container } = render(
+			<StrategyPipelineView
+				spec={baseSpec()}
+				descriptors={[]}
+				onChange={vi.fn()}
+				onSelect={vi.fn()}
+				selectedKey={null}
+			/>,
 		);
-		fireEvent.click(screen.getByText("max_weight_per_instrument"));
-		expect(onSelect).toHaveBeenCalledWith("constraint-0");
+		expect(container.querySelectorAll("[data-fixed='true']")).toHaveLength(7);
+		expect(container.querySelectorAll("[data-read-only='true']")).toHaveLength(7);
 	});
 });

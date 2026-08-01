@@ -9,28 +9,29 @@ describe("StudioModeBar", () => {
 		render(
 			<StudioModeBar
 				modes={[
-					{ id: "form", label: "Form Builder" },
-					{ id: "code", label: "Code Editor" },
+					{ id: "form", label: "Form" },
+					{ id: "pipeline", label: "Pipeline" },
 				]}
 			/>,
 		);
 
-		expect(screen.getByRole("tab", { name: "Form Builder" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Code Editor" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Form" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Pipeline" })).toBeInTheDocument();
+		expect(screen.queryByText("Code Editor")).not.toBeInTheDocument();
 	});
 
 	it("marks first mode as active by default", () => {
 		render(
 			<StudioModeBar
 				modes={[
-					{ id: "form", label: "Form Builder" },
-					{ id: "code", label: "Code Editor" },
+					{ id: "form", label: "Form" },
+					{ id: "pipeline", label: "Pipeline" },
 				]}
 			/>,
 		);
 
-		expect(screen.getByRole("tab", { name: "Form Builder" })).toHaveAttribute("aria-selected", "true");
-		expect(screen.getByRole("tab", { name: "Code Editor" })).toHaveAttribute("aria-selected", "false");
+		expect(screen.getByRole("tab", { name: "Form" })).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByRole("tab", { name: "Pipeline" })).toHaveAttribute("aria-selected", "false");
 	});
 
 	it("switches active mode on click", async () => {
@@ -38,15 +39,15 @@ describe("StudioModeBar", () => {
 		render(
 			<StudioModeBar
 				modes={[
-					{ id: "form", label: "Form Builder" },
-					{ id: "code", label: "Code Editor" },
+					{ id: "form", label: "Form" },
+					{ id: "pipeline", label: "Pipeline" },
 				]}
 			/>,
 		);
 
-		await user.click(screen.getByRole("tab", { name: "Code Editor" }));
-		expect(screen.getByRole("tab", { name: "Code Editor" })).toHaveAttribute("aria-selected", "true");
-		expect(screen.getByRole("tab", { name: "Form Builder" })).toHaveAttribute("aria-selected", "false");
+		await user.click(screen.getByRole("tab", { name: "Pipeline" }));
+		expect(screen.getByRole("tab", { name: "Pipeline" })).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByRole("tab", { name: "Form" })).toHaveAttribute("aria-selected", "false");
 	});
 
 	it("calls onModeChange when provided", async () => {
@@ -55,15 +56,15 @@ describe("StudioModeBar", () => {
 		render(
 			<StudioModeBar
 				modes={[
-					{ id: "form", label: "Form Builder" },
-					{ id: "code", label: "Code Editor" },
+					{ id: "form", label: "Form" },
+					{ id: "pipeline", label: "Pipeline" },
 				]}
 				onModeChange={handleChange}
 			/>,
 		);
 
-		await user.click(screen.getByRole("tab", { name: "Code Editor" }));
-		expect(handleChange).toHaveBeenCalledWith("code");
+		await user.click(screen.getByRole("tab", { name: "Pipeline" }));
+		expect(handleChange).toHaveBeenCalledWith("pipeline");
 	});
 
 	it("renders breadcrumb navigation", () => {

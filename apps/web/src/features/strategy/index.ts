@@ -15,6 +15,7 @@ export { useStrategy } from "./hooks/use-strategy";
 export { useStrategyActive } from "./hooks/use-strategy-active";
 export { useStrategySave } from "./hooks/use-strategy-save";
 export { useStrategyValidation } from "./hooks/use-strategy-validation";
+export { useStrategyVersion } from "./hooks/use-strategy-version";
 export { useStrategyVersions } from "./hooks/use-strategy-versions";
 export { useVersionDiff } from "./hooks/use-version-diff";
 export type { StudioMode } from "./state/strategy-studio-store";

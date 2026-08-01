@@ -1,104 +1,114 @@
-import type { ReactElement } from "react";
+import type { KeyboardEvent, ReactElement } from "react";
 import { ContextSection } from "@/components/domain/context-section";
-import type { ConstraintSpec, StrategySpec } from "@/types/strategy";
+import type { NodeDescriptorView, StrategySpec } from "@/types/strategy";
+import {
+	buildStrategyPipeline,
+	movePipelineNode,
+	removePipelineNode,
+	type StrategyPipelineNode,
+} from "../api/pipeline-model";
 
-interface ConstraintsPipelineProps {
-	readonly constraints: readonly ConstraintSpec[];
-	/** 工作副本更新器（与 `useStrategyStudioStore.updateSpec` 同构）。 */
+interface StrategyPipelineViewProps {
+	readonly spec: StrategySpec;
+	readonly descriptors: readonly NodeDescriptorView[];
 	readonly onChange: (updater: (draft: StrategySpec) => StrategySpec) => void;
 	readonly onSelect: (key: string | null) => void;
 	readonly selectedKey: string | null;
 }
 
-const NEW_CONSTRAINT: ConstraintSpec = { type: "new_constraint", params: {} };
-
-function constraintKey(index: number): string {
-	return `constraint-${index}`;
-}
-
-/**
- * 约束流水线：`constraints` 数组的 add/remove/reorder/select。
- *
- * legacy spec 固定结构中 `constraints` 是唯一可完整 CRUD 的数组（scorer/selector/execution
- * 为单例槽位）。所有变异通过 `onChange(updater)` 上抛不可变更新；选中交给 NodeInspector
- * 编辑该约束的 `params`。
- */
-export function ConstraintsPipeline({
-	constraints,
+/** 固定语法 Universe → FactorSet → Filter* → ... → Validation 的有序编辑器。 */
+export function StrategyPipelineView({
+	spec,
+	descriptors,
 	onChange,
 	onSelect,
 	selectedKey,
-}: ConstraintsPipelineProps): ReactElement {
-	function move(from: number, to: number): void {
-		onChange((draft) => {
-			const next = [...draft.constraints];
-			[next[from], next[to]] = [next[to], next[from]];
-			return { ...draft, constraints: next };
-		});
+}: StrategyPipelineViewProps): ReactElement {
+	const nodes = buildStrategyPipeline(spec, descriptors);
+	const editableFilters = nodes.filter((node) => !node.fixed && !node.readOnly);
+
+	function move(node: StrategyPipelineNode, direction: -1 | 1): void {
+		onChange((draft) => movePipelineNode(draft, node, direction, descriptors));
 	}
 
-	function remove(index: number): void {
-		onChange((draft) => ({ ...draft, constraints: draft.constraints.filter((_, i) => i !== index) }));
+	function handleNodeKeyDown(event: KeyboardEvent<HTMLButtonElement>, node: StrategyPipelineNode): void {
+		if (!event.altKey || node.fixed || node.readOnly) return;
+		if (event.key === "ArrowUp") {
+			event.preventDefault();
+			move(node, -1);
+		}
+		if (event.key === "ArrowDown") {
+			event.preventDefault();
+			move(node, 1);
+		}
 	}
 
 	return (
-		<ContextSection title="约束流水线" count={constraints.length}>
-			<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
-				{constraints.length === 0 ? (
-					<p className="text-xs text-(--color-foreground-tertiary)">暂无约束</p>
-				) : (
-					<ul className="flex flex-col gap-1">
-						{constraints.map((constraint, index) => {
-							const key = constraintKey(index);
-							const isSelected = selectedKey === key;
-							return (
-								<li
-									key={key}
-									data-selected={isSelected}
-									className="flex items-center gap-2 rounded-sm p-(--density-panel-padding) transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-								>
-									<button type="button" className="flex-1 text-left text-sm" onClick={() => onSelect(key)}>
-										{constraint.type || `约束 ${index + 1}`}
-									</button>
-									<button
-										type="button"
-										aria-label={`上移约束 ${index + 1}`}
-										disabled={index === 0}
-										onClick={() => move(index, index - 1)}
-										className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"
-									>
-										上移
-									</button>
-									<button
-										type="button"
-										aria-label={`下移约束 ${index + 1}`}
-										disabled={index === constraints.length - 1}
-										onClick={() => move(index, index + 1)}
-										className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"
-									>
-										下移
-									</button>
-									<button
-										type="button"
-										aria-label={`删除约束 ${index + 1}`}
-										onClick={() => remove(index)}
-										className="rounded-sm px-2 py-0.5 text-xs text-(--color-led-danger) hover:bg-(--color-interaction-hover-subtle-bg)"
-									>
-										删除
-									</button>
-								</li>
-							);
-						})}
-					</ul>
-				)}
-				<button
-					type="button"
-					onClick={() => onChange((draft) => ({ ...draft, constraints: [...draft.constraints, NEW_CONSTRAINT] }))}
-					className="self-start rounded-sm bg-(--brand-accent) px-3 py-1 text-sm text-white transition-colors hover:bg-(--brand-accent-hover)"
-				>
-					添加约束
-				</button>
-			</div>
+		<ContextSection title="受约束流水线" count={nodes.length}>
+			<ol className="flex flex-col gap-1 p-(--density-panel-padding)" data-slot="strategy-pipeline">
+				{nodes.map((node) => {
+					const editableIndex = editableFilters.findIndex((item) => item.key === node.key);
+					return (
+						<li
+							key={node.key}
+							data-selected={selectedKey === node.key}
+							data-fixed={node.fixed}
+							data-read-only={node.readOnly}
+							data-allowed-predecessor={node.allowedPredecessor ?? undefined}
+							data-allowed-successor={node.allowedSuccessor ?? undefined}
+							className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 rounded-(--radius-sm) border border-(--color-border-subtle) px-2 py-2 data-[selected=true]:border-(--color-border-strong) data-[selected=true]:bg-(--color-interaction-selected-bg)"
+						>
+							<span className="font-data text-xs text-(--color-foreground-tertiary)">{node.category}</span>
+							<button
+								type="button"
+								onClick={() => onSelect(node.key)}
+								onKeyDown={(event) => handleNodeKeyDown(event, node)}
+								className="min-w-0 text-left"
+							>
+								<span className="block truncate text-sm font-medium">{node.displayName}</span>
+								<span className="block truncate font-data text-xs text-(--color-foreground-tertiary)">
+									{node.identity}
+								</span>
+								{node.readOnly && <span className="text-xs text-(--color-led-warning)">未知 descriptor，只读</span>}
+							</button>
+							<div className="flex items-center gap-1">
+								{!node.fixed && !node.readOnly && (
+									<>
+										<button
+											type="button"
+											aria-label={`上移 ${node.displayName}`}
+											disabled={editableIndex <= 0}
+											onClick={() => move(node, -1)}
+											className="rounded-(--radius-sm) px-2 py-1 text-xs disabled:opacity-40"
+										>
+											↑
+										</button>
+										<button
+											type="button"
+											aria-label={`下移 ${node.displayName}`}
+											disabled={editableIndex < 0 || editableIndex === editableFilters.length - 1}
+											onClick={() => move(node, 1)}
+											className="rounded-(--radius-sm) px-2 py-1 text-xs disabled:opacity-40"
+										>
+											↓
+										</button>
+										<button
+											type="button"
+											aria-label={`删除 ${node.displayName}`}
+											onClick={() => onChange((draft) => removePipelineNode(draft, node))}
+											className="rounded-(--radius-sm) px-2 py-1 text-xs text-(--color-led-danger)"
+										>
+											删除
+										</button>
+									</>
+								)}
+							</div>
+						</li>
+					);
+				})}
+			</ol>
 		</ContextSection>
 	);
 }
+
+export { StrategyPipelineView as ConstraintsPipeline };

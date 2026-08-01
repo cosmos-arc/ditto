@@ -6,6 +6,7 @@ interface ValidationPanelProps {
 	/** validate 端点结果（null = 尚未校验）。 */
 	readonly validation: SpecValidation | null;
 	readonly isValidating: boolean;
+	readonly isStale?: boolean;
 }
 
 /**
@@ -15,13 +16,18 @@ interface ValidationPanelProps {
  * 变更检测与错误列表。后端对非法 candidate 返 200 + `valid=false`（不抛），UI 如实
  * 反射，绝不自造通过。
  */
-export function ValidationPanel({ validation, isValidating }: ValidationPanelProps) {
+export function ValidationPanel({ validation, isValidating, isStale = false }: ValidationPanelProps) {
 	return (
 		<ContextSection title="Spec 校验">
 			{isValidating ? (
 				<p className="text-sm text-(--color-foreground-tertiary)">校验中…</p>
 			) : !validation ? (
 				<p className="text-sm text-(--color-foreground-tertiary)">编辑后点击校验，查看 canonical hash 与合法性。</p>
+			) : isStale ? (
+				<div role="status" className="flex flex-col gap-1 text-sm text-(--color-led-warning)">
+					<span>校验已过期</span>
+					<span className="text-xs text-(--color-foreground-tertiary)">working copy 已变化，请重新校验后再保存。</span>
+				</div>
 			) : (
 				<div className="flex flex-col gap-2 text-sm">
 					<div className="flex items-center gap-2">

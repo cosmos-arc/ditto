@@ -24,10 +24,12 @@ import type {
 	StrategyReviewOutcome,
 	StrategySpec,
 	StrategyVersion,
+	StrategyVersionDetail,
 } from "@/types/strategy";
 
 type StrategyResponse = components["schemas"]["StrategyResponse"];
 type StrategyVersionResponse = components["schemas"]["StrategyVersionResponse"];
+type StrategyVersionDetailResponse = components["schemas"]["StrategyVersionDetailResponse"];
 type StrategySpecValidationResponse = components["schemas"]["StrategySpecValidationResponse"];
 type StrategyVersionDiffResponse = components["schemas"]["StrategyVersionDiffResponse"];
 type SpecChangeResponse = components["schemas"]["SpecChangeResponse"];
@@ -202,6 +204,20 @@ export function mapStrategyVersion(dto: StrategyVersionResponse): StrategyVersio
 		lifecycleState: toLifecycleState(dto.state),
 		reviewOutcome: toReviewOutcome(dto.review_outcome),
 		createdAt: dto.created_at,
+	};
+}
+
+export function mapStrategyVersionDetail(dto: StrategyVersionDetailResponse): StrategyVersionDetail {
+	return {
+		strategyId: dto.strategy_id,
+		version: dto.version,
+		parentVersion: dto.parent_version,
+		specHash: dto.spec_hash,
+		state: dto.state,
+		lifecycleState: toLifecycleState(dto.state),
+		reviewOutcome: toReviewOutcome(dto.review_outcome),
+		createdAt: dto.created_at,
+		canonicalSpec: { ...dto.canonical_spec },
 	};
 }
 

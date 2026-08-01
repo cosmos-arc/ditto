@@ -38,8 +38,12 @@ beforeEach(() => {
 
 describe("useStrategySave", () => {
 	it("PUTs serialized spec, reloads the returned spec into the store, and invalidates strategy scopes", async () => {
+		let idempotencyKey = "";
 		server.use(
-			http.put("/api/v1/strategies/:id", () => HttpResponse.json({ data: { ...mockStrategyDetailDto, version: 4 } })),
+			http.put("/api/v1/strategies/:id", ({ request }) => {
+				idempotencyKey = request.headers.get("Idempotency-Key") ?? "";
+				return HttpResponse.json({ data: { ...mockStrategyDetailDto, version: 4 } });
+			}),
 		);
 		const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 		const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
@@ -53,11 +57,13 @@ describe("useStrategySave", () => {
 				spec: SAMPLE_SPEC,
 				name: "ETF 行业轮动",
 				tags: ["etf", "rotation"],
+				idempotencyKey: "save-command-1",
 			});
 		});
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(useStrategyStudioStore.getState().savedSpec?.strategyId).toBe("seed_etf_industry_rotation");
+		expect(idempotencyKey).toBe("save-command-1");
 		expect(invalidateSpy).toHaveBeenCalledWith(
 			expect.objectContaining({ queryKey: expect.arrayContaining(["strategy", "versions"]) }),
 		);

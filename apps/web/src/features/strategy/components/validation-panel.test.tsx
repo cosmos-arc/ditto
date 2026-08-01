@@ -42,4 +42,10 @@ describe("ValidationPanel", () => {
 		render(<ValidationPanel validation={null} isValidating={true} />);
 		expect(screen.getByText("校验中…")).toBeInTheDocument();
 	});
+
+	it("marks a prior validation stale after the working payload changes", () => {
+		render(<ValidationPanel validation={baseValidation} isValidating={false} isStale />);
+		expect(screen.getByText("校验已过期")).toBeInTheDocument();
+		expect(screen.queryByText("有效")).not.toBeInTheDocument();
+	});
 });

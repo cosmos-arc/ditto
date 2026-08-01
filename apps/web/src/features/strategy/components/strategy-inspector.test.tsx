@@ -1,11 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { ConstraintSpec, StrategySpec } from "@/types/strategy";
+import { mockNodeDescriptorList } from "@/mocks/fixtures/strategy-live";
+import type { StrategySpec } from "@/types/strategy";
+import { mapNodeDescriptor } from "../api/mappers";
 import { NodeInspector } from "./strategy-inspector";
 
-const CONSTRAINT: ConstraintSpec = { type: "max_weight_per_instrument", params: { max_weight: 0.3 } };
+const DESCRIPTORS = mockNodeDescriptorList.map(mapNodeDescriptor);
 
-function baseSpec(constraints: readonly ConstraintSpec[] = [CONSTRAINT]): StrategySpec {
+function baseSpec(type = "builtin.trend_filter@1"): StrategySpec {
 	return {
 		strategyId: "s",
 		name: "n",
@@ -16,7 +18,7 @@ function baseSpec(constraints: readonly ConstraintSpec[] = [CONSTRAINT]): Strate
 		scorer: { method: "m", params: {} },
 		selector: { method: "top_k", params: { k: 5 } },
 		execution: { frequency: "M", method: "calendar", defaultOrderType: "market" },
-		constraints,
+		constraints: [{ type, params: { direction: "long", signal_column: "signal_value", threshold: 0.3 } }],
 		params: { lookback: 252 },
 		signalExpressions: [],
 		signalWeights: [],
@@ -25,35 +27,37 @@ function baseSpec(constraints: readonly ConstraintSpec[] = [CONSTRAINT]): Strate
 }
 
 describe("NodeInspector", () => {
-	it("shows a read-only overview when no constraint is selected", () => {
-		render(<NodeInspector spec={baseSpec()} selectedKey={null} onChange={vi.fn()} />);
+	it("shows a read-only overview when no node is selected", () => {
+		render(<NodeInspector spec={baseSpec()} descriptors={DESCRIPTORS} selectedKey={null} onChange={vi.fn()} />);
 		expect(screen.getByText("策略参数")).toBeInTheDocument();
-		expect(screen.getByText("csi_etf_broad")).toBeInTheDocument();
 	});
 
-	it("shows a constraint editor when a constraint key is selected", () => {
-		render(<NodeInspector spec={baseSpec()} selectedKey="constraint-0" onChange={vi.fn()} />);
-		expect(screen.getByLabelText("约束类型")).toHaveValue("max_weight_per_instrument");
-		expect(screen.getByLabelText("max_weight")).toBeInTheDocument();
+	it("renders config fields exclusively from the selected descriptor schema", () => {
+		render(<NodeInspector spec={baseSpec()} descriptors={DESCRIPTORS} selectedKey="filter:0" onChange={vi.fn()} />);
+		expect(screen.getByLabelText("direction")).toHaveValue("long");
+		expect(screen.getByLabelText("signal_column")).toHaveValue("signal_value");
+		expect(screen.getByLabelText("threshold")).toHaveValue(0.3);
 	});
 
-	it("updates the constraint type via onChange updater", () => {
+	it("updates a schema-backed config field", () => {
 		const onChange = vi.fn();
-		const base = baseSpec();
-		render(<NodeInspector spec={base} selectedKey="constraint-0" onChange={onChange} />);
-		fireEvent.change(screen.getByLabelText("约束类型"), { target: { value: "max_turnover" } });
-
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).constraints[0].type).toBe("max_turnover");
+		const spec = baseSpec();
+		render(<NodeInspector spec={spec} descriptors={DESCRIPTORS} selectedKey="filter:0" onChange={onChange} />);
+		fireEvent.change(screen.getByLabelText("threshold"), { target: { value: "0.5" } });
+		const updater = onChange.mock.calls[0][0] as (draft: StrategySpec) => StrategySpec;
+		expect(updater(spec).constraints[0].params.threshold).toBe(0.5);
 	});
 
-	it("updates a constraint param via onChange updater", () => {
-		const onChange = vi.fn();
-		const base = baseSpec();
-		render(<NodeInspector spec={base} selectedKey="constraint-0" onChange={onChange} />);
-		fireEvent.change(screen.getByLabelText("max_weight"), { target: { value: "0.5" } });
-
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).constraints[0].params).toEqual({ max_weight: 0.5 });
+	it("shows unknown descriptor config read-only", () => {
+		render(
+			<NodeInspector
+				spec={baseSpec("plugin.unknown@9")}
+				descriptors={DESCRIPTORS}
+				selectedKey="filter:0"
+				onChange={vi.fn()}
+			/>,
+		);
+		expect(screen.getByText("未知 descriptor")).toBeInTheDocument();
+		expect(screen.getByText(/不可删除/)).toBeInTheDocument();
 	});
 });

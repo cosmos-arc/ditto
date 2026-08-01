@@ -13,7 +13,7 @@
 import { create } from "zustand";
 import type { StrategySpec } from "@/types/strategy";
 
-export type StudioMode = "form" | "code";
+export type StudioMode = "form" | "pipeline";
 
 interface StrategyStudioState {
 	readonly workingSpec: StrategySpec | null;

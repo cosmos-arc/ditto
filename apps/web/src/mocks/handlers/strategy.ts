@@ -6,6 +6,7 @@ import {
 	mockSpecValidationDto,
 	mockStrategyDetailDto,
 	mockStrategyList,
+	mockStrategyVersionDetail,
 	mockStrategyVersionList,
 	mockVersionStateDto,
 } from "../fixtures/strategy-live";
@@ -29,6 +30,9 @@ export const strategyHandlers: RequestHandler[] = [
 		return HttpResponse.json({ data: found });
 	}),
 	http.get("/api/v1/strategies/:id/versions", () => HttpResponse.json({ data: mockStrategyVersionList })),
+	http.get("/api/v1/strategies/:id/versions/:version", ({ params }) =>
+		HttpResponse.json({ data: { ...mockStrategyVersionDetail, version: Number(params.version) } }),
+	),
 	http.get("/api/v1/strategies/:id/active", () => HttpResponse.json({ data: mockActivePointerDto })),
 	http.get("/api/v1/strategies/:id/versions/:version/diff", () => HttpResponse.json({ data: mockSpecDiffDto })),
 	http.post("/api/v1/strategies/:id/versions/:version/validate", () =>

@@ -59,6 +59,24 @@ export const researchHandlers: RequestHandler[] = [
 		}),
 	),
 
+	http.get("/api/v1/research/factors/:factorId/diagnostics", ({ params, request }) => {
+		const query = new URL(request.url).searchParams;
+		return HttpResponse.json({
+			data: {
+				factor_id: String(params.factorId),
+				snapshot_id: query.get("snapshot_id") ?? "snapshot-r3",
+				snapshot_hash: "a".repeat(64),
+				registry_hash: query.get("registry_hash") ?? "f".repeat(64),
+				start_date: query.get("start_date") ?? "2024-01-01",
+				end_date: query.get("end_date") ?? "2024-12-31",
+				provenance: { dataset_id: "stock_daily" },
+				metrics: { coverage: 0.97, rank_ic: 0.08 },
+				artifact_id: "factor-diagnostic-1",
+				content_hash: "c".repeat(64),
+			},
+		});
+	}),
+
 	// === R3 review queue + review-packet live-shape（generated DTO + {data} 信封）===
 	http.get("/api/v1/research/reviews", () => HttpResponse.json({ data: mockReviewQueue })),
 	http.get("/api/v1/research/experiments/:experimentId/review-packet", ({ params }) => {

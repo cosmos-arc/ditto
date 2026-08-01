@@ -38,8 +38,14 @@ export function createStrategy(payload: CreateStrategyRequest): Promise<Strategy
 }
 
 /** 更新策略（`PUT /v1/strategies/{id}`），version 字段为乐观锁，走 governance create_draft(parent)。 */
-export function updateStrategy(strategyId: string, payload: UpdateStrategyRequest): Promise<StrategyResponse> {
-	return apiClient.put<StrategyResponse>(`/v1/strategies/${encodeURIComponent(strategyId)}`, payload);
+export function updateStrategy(
+	strategyId: string,
+	payload: UpdateStrategyRequest,
+	idempotencyKey: string,
+): Promise<StrategyResponse> {
+	return apiClient.put<StrategyResponse>(`/v1/strategies/${encodeURIComponent(strategyId)}`, payload, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }
 
 // === 治理 mutations（T20 版本治理动作面板）===

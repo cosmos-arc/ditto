@@ -48,6 +48,14 @@ describe("StrategyHeader", () => {
 		await expect(screen.findByText("etf")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("rotation")).resolves.toBeInTheDocument();
 	});
+
+	it("显示版本 hash、snapshot、eligible start 与 R2 hard-gate 上下文", async () => {
+		render(<StrategyHeader id="strat-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("h-v3")).resolves.toBeInTheDocument();
+		expect(screen.getByText("未绑定，Experiment preflight 时固定")).toBeInTheDocument();
+		expect(screen.getByText("待 preflight 计算")).toBeInTheDocument();
+		expect(screen.getByText("创建实验时按 live evidence 硬门禁")).toBeInTheDocument();
+	});
 });
 
 // StrategyEditor / NodeInspector 已迁移到独立 co-located 测试（API 改为受控 props）。

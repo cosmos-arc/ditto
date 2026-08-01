@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { mockNodeDescriptorList } from "@/mocks/fixtures/strategy-live";
 import type { StrategySpec } from "@/types/strategy";
+import { mapNodeDescriptor } from "../api/mappers";
 import { StrategyEditor } from "./strategy-editor";
 
 const SAMPLE_SPEC: StrategySpec = {
@@ -25,20 +27,49 @@ const SAMPLE_SPEC: StrategySpec = {
 	paramConstraints: [],
 };
 
+const DESCRIPTORS = mockNodeDescriptorList.map(mapNodeDescriptor);
+
 describe("StrategyEditor", () => {
 	it("renders the spec form and constraints pipeline in form mode", () => {
-		render(<StrategyEditor spec={SAMPLE_SPEC} mode="form" selectedKey={null} onChange={vi.fn()} onSelect={vi.fn()} />);
+		render(
+			<StrategyEditor
+				spec={SAMPLE_SPEC}
+				mode="form"
+				descriptors={DESCRIPTORS}
+				selectedKey={null}
+				onChange={vi.fn()}
+				onSelect={vi.fn()}
+			/>,
+		);
 		expect(screen.getByLabelText("名称")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "添加约束" })).toBeInTheDocument();
 	});
 
-	it("renders a read-only JSON preview of the serialized spec in code mode", () => {
-		render(<StrategyEditor spec={SAMPLE_SPEC} mode="code" selectedKey={null} onChange={vi.fn()} onSelect={vi.fn()} />);
-		expect(screen.getByText(/"strategy_id"/)).toBeInTheDocument();
+	it("renders the descriptor-backed ordered editor in pipeline mode", () => {
+		render(
+			<StrategyEditor
+				spec={SAMPLE_SPEC}
+				mode="pipeline"
+				descriptors={DESCRIPTORS}
+				selectedKey={null}
+				onChange={vi.fn()}
+				onSelect={vi.fn()}
+			/>,
+		);
+		expect(screen.getByText("受约束流水线")).toBeInTheDocument();
+		expect(screen.queryByText(/"strategy_id"/)).not.toBeInTheDocument();
 	});
 
 	it("renders the signal-expressions and param-constraints editors in form mode", () => {
-		render(<StrategyEditor spec={SAMPLE_SPEC} mode="form" selectedKey={null} onChange={vi.fn()} onSelect={vi.fn()} />);
+		render(
+			<StrategyEditor
+				spec={SAMPLE_SPEC}
+				mode="form"
+				descriptors={DESCRIPTORS}
+				selectedKey={null}
+				onChange={vi.fn()}
+				onSelect={vi.fn()}
+			/>,
+		);
 		expect(screen.getByRole("button", { name: "添加信号" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "添加参数约束" })).toBeInTheDocument();
 	});

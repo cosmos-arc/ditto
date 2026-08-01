@@ -134,6 +134,11 @@ export type StrategyVersion = {
 	readonly createdAt: string;
 };
 
+/** 单个 immutable 历史版本的 canonical server truth。 */
+export type StrategyVersionDetail = StrategyVersion & {
+	readonly canonicalSpec: Readonly<Record<string, unknown>>;
+};
+
 // === validate 结果（StrategySpecValidationResponse）===
 
 /** Pre-save candidate spec 校验结果（canonical hash + validity + change-detection）。 */
