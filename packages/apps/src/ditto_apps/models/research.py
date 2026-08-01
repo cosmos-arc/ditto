@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Literal
 
 from ditto_platform.foundation.json_types import JsonValue
 from pydantic import BaseModel, ConfigDict
@@ -207,7 +207,7 @@ class ExperimentCandidateResponse(BaseModel):
     candidate_id: str
     ordinal: int
     is_baseline: bool
-    parameters: dict[str, Any]
+    parameters: dict[str, JsonValue]
 
 
 class ExperimentFoldResponse(BaseModel):
@@ -278,8 +278,8 @@ class ExperimentGateResponse(BaseModel):
     policy_version: str
     layer: str
     outcome: str
-    observed: Any
-    policy: Any
+    observed: JsonValue
+    policy: JsonValue
     artifact_id: str | None
     payload_hash: str
     evaluated_at: datetime
@@ -302,7 +302,7 @@ class ExperimentArtifactResponse(BaseModel):
     row_count: int
     byte_size: int
     reproduction_fingerprint: str
-    manifest: Any
+    manifest: JsonValue
     is_pinned: bool
     pinned_at: datetime | None
     created_at: datetime
@@ -320,7 +320,7 @@ class ExperimentSelectionEvidenceResponse(BaseModel):
     byte_size: int
     is_pinned: bool
     created_at: datetime
-    payload: Any
+    payload: JsonValue
 
 
 class ExperimentComparisonResponse(BaseModel):
@@ -331,7 +331,7 @@ class ExperimentComparisonResponse(BaseModel):
     experiment_id: str
     payload_hash: str
     revision: int
-    payload: Any
+    payload: JsonValue
 
 
 class ReviewGateOutcomeResponse(BaseModel):
@@ -428,7 +428,7 @@ class NodeDescriptorResponse(BaseModel):
     display_name: str
     implementation_key: str
     config_schema: dict[str, str]
-    default_config: dict[str, Any]
+    default_config: dict[str, JsonValue]
     required_datasets: list[str]
     capability_tags: list[str]
     deterministic: bool
@@ -440,7 +440,7 @@ class FactorDescriptorResponse(BaseModel):
     """API view of one governed core-factor descriptor."""
 
     factor_id: str
-    resolved_payload: dict[str, Any]
+    resolved_payload: dict[str, JsonValue]
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -456,8 +456,8 @@ class FactorDiagnosticsResponse(BaseModel):
     registry_hash: str
     start_date: date
     end_date: date
-    provenance: dict[str, Any]
-    metrics: dict[str, Any]
+    provenance: dict[str, JsonValue]
+    metrics: dict[str, JsonValue]
     artifact_id: str
     content_hash: str
 

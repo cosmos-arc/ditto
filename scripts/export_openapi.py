@@ -4,15 +4,35 @@ from __future__ import annotations
 
 import os
 import tempfile
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
-from ditto_apps.openapi_contract import (
-    canonical_openapi_bytes,
-    create_openapi_app,
-)
+from ditto_apps.main import app
+from ditto_apps.openapi_contract import canonical_openapi_bytes
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_OUTPUT_PATH = _REPO_ROOT / "docs/openapi/v1.json"
+_NON_CONTRACT_PATHS = frozenset({"/api/v1/logs/test"})
+
+
+def runtime_openapi_schema() -> dict[str, Any]:
+    """Project the runtime schema onto the public, non-debug API contract."""
+    schema = deepcopy(app.openapi())
+    paths = schema.get("paths")
+    if not isinstance(paths, dict):
+        raise RuntimeError("runtime OpenAPI schema has no paths object")
+    schema["paths"] = {
+        path: path_item
+        for path, path_item in paths.items()
+        if path not in _NON_CONTRACT_PATHS
+    }
+    return schema
+
+
+def canonical_runtime_openapi_bytes() -> bytes:
+    """Return the one canonical byte projection used by export and tests."""
+    return canonical_openapi_bytes(runtime_openapi_schema())
 
 
 def _fsync_directory(path: Path) -> None:
@@ -28,8 +48,7 @@ def _fsync_directory(path: Path) -> None:
 def export_openapi(output_path: Path = _DEFAULT_OUTPUT_PATH) -> Path:
     """Atomically write the explicit non-debug contract without runtime setup."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    schema = create_openapi_app(include_debug=False).openapi()
-    payload = canonical_openapi_bytes(schema)
+    payload = canonical_runtime_openapi_bytes()
     file_descriptor, temporary_name = tempfile.mkstemp(
         dir=output_path.parent,
         prefix=f".{output_path.name}.",

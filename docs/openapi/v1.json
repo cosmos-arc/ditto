@@ -6609,7 +6609,9 @@
             "type": "string"
           },
           "spec_json": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
             "description": "策略定义 JSON",
             "title": "Spec Json",
             "type": "object"
@@ -9027,7 +9029,7 @@
             "type": "boolean"
           },
           "manifest": {
-            "title": "Manifest"
+            "$ref": "#/components/schemas/JsonValue-Output"
           },
           "pinned_at": {
             "anyOf": [
@@ -9100,7 +9102,9 @@
             "type": "integer"
           },
           "parameters": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
             "title": "Parameters",
             "type": "object"
           }
@@ -9122,7 +9126,7 @@
             "type": "string"
           },
           "payload": {
-            "title": "Payload"
+            "$ref": "#/components/schemas/JsonValue-Output"
           },
           "payload_hash": {
             "title": "Payload Hash",
@@ -9530,7 +9534,7 @@
             "type": "string"
           },
           "observed": {
-            "title": "Observed"
+            "$ref": "#/components/schemas/JsonValue-Output"
           },
           "outcome": {
             "title": "Outcome",
@@ -9541,7 +9545,7 @@
             "type": "string"
           },
           "policy": {
-            "title": "Policy"
+            "$ref": "#/components/schemas/JsonValue-Output"
           },
           "policy_version": {
             "title": "Policy Version",
@@ -10426,7 +10430,7 @@
             "type": "boolean"
           },
           "payload": {
-            "title": "Payload"
+            "$ref": "#/components/schemas/JsonValue-Output"
           }
         },
         "required": [
@@ -10519,7 +10523,9 @@
             "type": "string"
           },
           "resolved_payload": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
             "title": "Resolved Payload",
             "type": "object"
           }
@@ -10552,12 +10558,16 @@
             "type": "string"
           },
           "metrics": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
             "title": "Metrics",
             "type": "object"
           },
           "provenance": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
             "title": "Provenance",
             "type": "object"
           },
@@ -12277,7 +12287,9 @@
             "type": "object"
           },
           "default_config": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
             "title": "Default Config",
             "type": "object"
           },
@@ -13838,22 +13850,10 @@
         "description": "One field-level change between two canonical spec payloads.",
         "properties": {
           "new": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "New"
+            "$ref": "#/components/schemas/JsonValue-Output"
           },
           "old": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Old"
+            "$ref": "#/components/schemas/JsonValue-Output"
           },
           "op": {
             "title": "Op",
@@ -13986,7 +13986,9 @@
             "type": "string"
           },
           "spec_json": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
             "title": "Spec Json",
             "type": "object"
           },
@@ -14025,7 +14027,9 @@
         "description": "Pre-save candidate spec validation request (Strategy Studio 编辑校验).",
         "properties": {
           "spec_json": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
             "description": "candidate 策略定义 JSON",
             "title": "Spec Json",
             "type": "object"
@@ -14089,7 +14093,9 @@
         "description": "One immutable canonical strategy payload and governance state.",
         "properties": {
           "canonical_spec": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
             "title": "Canonical Spec",
             "type": "object"
           },
@@ -14529,7 +14535,9 @@
             "type": "string"
           },
           "spec_json": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
             "description": "策略定义 JSON",
             "title": "Spec Json",
             "type": "object"

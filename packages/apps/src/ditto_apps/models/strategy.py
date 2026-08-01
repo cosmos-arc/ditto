@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
+from ditto_platform.foundation.json_types import JsonValue
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 type NonBlankStr = Annotated[
@@ -17,7 +18,7 @@ class CreateStrategyRequest(BaseModel):
 
     strategy_id: str = Field(description="策略 ID")
     name: str = Field(description="策略名称")
-    spec_json: dict[str, Any] = Field(description="策略定义 JSON")
+    spec_json: dict[str, JsonValue] = Field(description="策略定义 JSON")
     tags: list[str] = Field(default_factory=list, description="标签")
 
     model_config = ConfigDict(strict=True, extra="ignore")
@@ -27,7 +28,7 @@ class UpdateStrategyRequest(BaseModel):
     """更新策略请求."""
 
     name: str = Field(description="策略名称")
-    spec_json: dict[str, Any] = Field(description="策略定义 JSON")
+    spec_json: dict[str, JsonValue] = Field(description="策略定义 JSON")
     tags: list[str] = Field(default_factory=list, description="标签")
     version: int | None = Field(default=None, description="版本号(乐观锁)")
 
@@ -39,7 +40,7 @@ class StrategyResponse(BaseModel):
 
     strategy_id: str
     name: str
-    spec_json: dict[str, Any]
+    spec_json: dict[str, JsonValue]
     version: int
     status: str
     created_at: str = ""
@@ -102,7 +103,7 @@ class StrategyVersionDetailResponse(BaseModel):
 
     strategy_id: str
     version: int
-    canonical_spec: dict[str, Any]
+    canonical_spec: dict[str, JsonValue]
     spec_hash: str
     parent_version: int | None
     state: str
@@ -162,7 +163,7 @@ class StrategyActiveResponse(BaseModel):
 class StrategySpecValidateRequest(BaseModel):
     """Pre-save candidate spec validation request (Strategy Studio 编辑校验)."""
 
-    spec_json: dict[str, Any] = Field(description="candidate 策略定义 JSON")
+    spec_json: dict[str, JsonValue] = Field(description="candidate 策略定义 JSON")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -186,8 +187,8 @@ class SpecChangeResponse(BaseModel):
 
     path: str
     op: str
-    old: Any | None = None
-    new: Any | None = None
+    old: JsonValue = None
+    new: JsonValue = None
 
     model_config = ConfigDict(strict=True, extra="ignore")
 

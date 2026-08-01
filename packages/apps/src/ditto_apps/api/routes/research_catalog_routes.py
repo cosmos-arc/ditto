@@ -29,6 +29,7 @@ from ditto_application.queries.research_catalog import (
 from fastapi import APIRouter, Query
 
 from ditto_apps.api.errors import APIError, UnprocessableEntityError
+from ditto_apps.api.json_values import to_json_mapping
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
     FactorDescriptorResponse,
@@ -55,7 +56,7 @@ def _to_node_response(info: NodeDescriptorInfo) -> NodeDescriptorResponse:
         display_name=info.display_name,
         implementation_key=info.implementation_key,
         config_schema=dict(info.config_schema),
-        default_config=dict(info.default_config),
+        default_config=to_json_mapping(info.default_config),
         required_datasets=list(info.required_datasets),
         capability_tags=list(info.capability_tags),
         deterministic=info.deterministic,
@@ -66,7 +67,7 @@ def _to_factor_response(info: FactorDescriptorInfo) -> FactorDescriptorResponse:
     """将 application read model 转 API 响应."""
     return FactorDescriptorResponse(
         factor_id=info.factor_id,
-        resolved_payload=dict(info.resolved_payload),
+        resolved_payload=to_json_mapping(info.resolved_payload),
     )
 
 
@@ -140,8 +141,8 @@ async def get_research_factor_diagnostics(
             registry_hash=view.registry_hash,
             start_date=view.start_date,
             end_date=view.end_date,
-            provenance=dict(view.provenance),
-            metrics=dict(view.metrics),
+            provenance=to_json_mapping(view.provenance),
+            metrics=to_json_mapping(view.metrics),
             artifact_id=view.artifact_id,
             content_hash=view.content_hash,
         )

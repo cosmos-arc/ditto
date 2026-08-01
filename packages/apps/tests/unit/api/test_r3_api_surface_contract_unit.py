@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from copy import deepcopy
@@ -151,16 +152,18 @@ _CONTROVERSIAL_TOPICS = frozenset(
         "candidate-pin-max-four",
     }
 )
-_FULL_SCOPE_PLANNED_OPERATIONS = {
-    "design_research_factor_diagnostics": ([9], 9),
-    "design_strategy_version_detail": ([8], 8),
-    "design_strategy_events": ([8], 8),
-    "design_research_candidate_selection": ([7, 9], 9),
-    "design_research_holdout_evaluations": ([7, 9], 9),
-    "design_research_candidate_selections": ([9], 9),
-    "design_research_candidate_exclusions": ([9], 9),
-    "design_research_candidate_factor_contributions": ([9], 9),
-}
+_FULL_SCOPE_OPERATIONS = frozenset(
+    {
+        "design_research_factor_diagnostics",
+        "design_strategy_version_detail",
+        "design_strategy_events",
+        "design_research_candidate_selection",
+        "design_research_holdout_evaluations",
+        "design_research_candidate_selections",
+        "design_research_candidate_exclusions",
+        "design_research_candidate_factor_contributions",
+    }
+)
 _CANDIDATE_EVIDENCE_PAGE_DTOS = {
     "design_research_candidate_selections": (
         "CandidateSelectionPageResponse",
@@ -386,18 +389,13 @@ def test_surface_schema_and_design_inventory_are_complete(
             assert _PATH_PATTERN.fullmatch(entry["runtime_path"])
 
 
-def test_planned_equivalent_and_deferred_records_are_auditable(
+def test_closed_equivalent_and_deferred_records_are_auditable(
     surface: dict[str, Any],
 ) -> None:
     """Closure ownership, equivalence proof, and deferred approval are explicit."""
     for entry in surface["operations"]:
-        if (
-            entry["disposition"] == "IMPLEMENT"
-            and entry["implementation_state"] == "PLANNED"
-        ):
-            assert isinstance(entry["closing_task"], int)
-            assert 5 <= entry["closing_task"] <= 16
-        else:
+        if entry["disposition"] != "DEFER":
+            assert entry["implementation_state"] == "IMPLEMENTED"
             assert entry["closing_task"] is None
 
         if entry["disposition"] == "EQUIVALENT":
@@ -562,30 +560,24 @@ def test_approval_projection_is_exact_and_unique(surface: dict[str, Any]) -> Non
 
     implement_scope = approval["implement_scope_operation_ids"]
     assert len(implement_scope) == len(set(implement_scope))
-    assert set(implement_scope) == set(_FULL_SCOPE_PLANNED_OPERATIONS)
+    assert set(implement_scope) == _FULL_SCOPE_OPERATIONS
 
 
-def test_full_scope_completion_target_has_one_defer(surface: dict[str, Any]) -> None:
-    """Planned routes can roll into runtime before Task 16 marks them complete."""
+def test_full_scope_completion_is_closed_with_one_defer(
+    surface: dict[str, Any],
+) -> None:
+    """Every approved full-scope route is exact and implemented at closure."""
     entries = {entry["operation_id"]: entry for entry in surface["operations"]}
     runtime = _runtime_operations()
-    for operation_id, (
-        implementation_tasks,
-        closing_task,
-    ) in _FULL_SCOPE_PLANNED_OPERATIONS.items():
+    for operation_id in _FULL_SCOPE_OPERATIONS:
         entry = entries[operation_id]
         assert entry["disposition"] == "IMPLEMENT"
-        assert entry["implementation_state"] == "PLANNED"
-        assert entry["implementation_tasks"] == implementation_tasks
-        assert entry["closing_task"] == closing_task
+        assert entry["implementation_state"] == "IMPLEMENTED"
+        assert entry["closing_task"] is None
         design_key = (entry["design_method"], entry["design_path"])
-        if entry["runtime_method"] is None:
-            assert entry["runtime_path"] is None
-            assert design_key not in runtime
-        else:
-            runtime_key = (entry["runtime_method"], entry["runtime_path"])
-            assert runtime_key == design_key
-            assert runtime[runtime_key] == operation_id
+        runtime_key = (entry["runtime_method"], entry["runtime_path"])
+        assert runtime_key == design_key
+        assert runtime[runtime_key] == operation_id
 
     deferred = {
         entry["operation_id"]
@@ -861,7 +853,7 @@ def test_review_detail_equivalence_exposes_latest_selection_risk(
         assert required_term in audit_text
 
 
-def test_launch_closes_only_after_durable_idempotency(
+def test_launch_is_closed_after_durable_idempotency(
     surface: dict[str, Any],
 ) -> None:
     """Route introduction is Task 6, semantic closure remains Task 7."""
@@ -871,7 +863,25 @@ def test_launch_closes_only_after_durable_idempotency(
         if item["operation_id"] == "research_launch_experiment"
     )
     assert entry["implementation_tasks"] == [6, 7]
-    assert entry["closing_task"] == 7
+    assert entry["implementation_state"] == "IMPLEMENTED"
+    assert entry["closing_task"] is None
+
+
+@pytest.mark.parametrize("model_name", ["research.py", "strategy.py"])
+def test_r3_public_dto_annotations_do_not_expose_any(model_name: str) -> None:
+    """Public R3 transport models use the recursive project JSON value type."""
+    model_path = _REPO_ROOT / "packages/apps/src/ditto_apps/models" / model_name
+    tree = ast.parse(model_path.read_text(encoding="utf-8"))
+    any_annotations = [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.AnnAssign)
+        and any(
+            isinstance(child, ast.Name) and child.id == "Any"
+            for child in ast.walk(node.annotation)
+        )
+    ]
+    assert any_annotations == []
 
 
 def test_all_controversial_topics_have_an_explicit_decision(

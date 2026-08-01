@@ -14,10 +14,9 @@
     "runtime_rolling": "An IMPLEMENT/PLANNED entry has null runtime mapping only while its exact route is absent. As soon as the route lands, set exact runtime_method/runtime_path, keep operationId equal to the entry operation_id, refresh runtime_contracts and the Markdown hash/summary, but keep implementation_state=PLANNED until Task 16 closure."
   },
   "counts": {
-    "DEFER/PLANNED": 1,
+    "IMPLEMENT/IMPLEMENTED": 33,
     "EQUIVALENT/IMPLEMENTED": 6,
-    "IMPLEMENT/IMPLEMENTED": 15,
-    "IMPLEMENT/PLANNED": 18
+    "DEFER/PLANNED": 1
   },
   "approval_required": {
     "status": "APPROVED",
@@ -69,7 +68,11 @@
       ],
       "review_packet": {
         "write_version": 3,
-        "read_versions": [1, 2, 3],
+        "read_versions": [
+          1,
+          2,
+          3
+        ],
         "migration": "NONE",
         "backfill": "NONE"
       },
@@ -133,380 +136,2956 @@
     ]
   },
   "runtime_contracts": [
-    {"operation_id":"design_research_candidate_exclusions","method":"GET","path":"/api/v1/research/candidates/{candidate_id}/exclusions","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_CandidateExclusionPageResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"candidate_id","in":"path","required":true,"schema":{"type":"string","title":"Candidate Id"}},{"name":"experiment_id","in":"query","required":true,"schema":{"type":"string","minLength":1,"title":"Experiment Id"}},{"name":"cursor","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Cursor"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","maximum":100,"minimum":1,"default":20,"title":"Limit"}}],"maturity":"experimental"},
-    {"operation_id":"design_research_candidate_factor_contributions","method":"GET","path":"/api/v1/research/candidates/{candidate_id}/factor-contributions","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_CandidateFactorContributionPageResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"candidate_id","in":"path","required":true,"schema":{"type":"string","title":"Candidate Id"}},{"name":"experiment_id","in":"query","required":true,"schema":{"type":"string","minLength":1,"title":"Experiment Id"}},{"name":"cursor","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Cursor"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","maximum":100,"minimum":1,"default":20,"title":"Limit"}}],"maturity":"experimental"},
-    {"operation_id":"design_research_candidate_selections","method":"GET","path":"/api/v1/research/candidates/{candidate_id}/selections","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_CandidateSelectionPageResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"candidate_id","in":"path","required":true,"schema":{"type":"string","title":"Candidate Id"}},{"name":"experiment_id","in":"query","required":true,"schema":{"type":"string","minLength":1,"title":"Experiment Id"}},{"name":"cursor","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Cursor"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","maximum":100,"minimum":1,"default":20,"title":"Limit"}}],"maturity":"experimental"},
-    {"operation_id":"research_list_research_experiments","method":"GET","path":"/api/v1/research/experiments","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_ExperimentSummaryResponse__"}},"parameters":[],"maturity":"experimental"},
-    {"operation_id":"research_launch_experiment","method":"POST","path":"/api/v1/research/experiments","request_body_schema":{"$ref":"#/components/schemas/ExperimentLaunchRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentLaunchResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"experimental"},
-    {"operation_id":"research_get_experiment","method":"GET","path":"/api/v1/research/experiments/{experiment_id}","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentDetailResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"research_list_experiment_artifacts","method":"GET","path":"/api/v1/research/experiments/{experiment_id}/artifacts","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_ExperimentArtifactResponse__"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"research_cancel_experiment","method":"POST","path":"/api/v1/research/experiments/{experiment_id}/cancel","request_body_schema":{"$ref":"#/components/schemas/ExperimentControlRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"experimental"},
-    {"operation_id":"design_research_candidate_selection","method":"POST","path":"/api/v1/research/experiments/{experiment_id}/candidate-selection","request_body_schema":{"$ref":"#/components/schemas/CandidateSelectionRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_CandidateSelectionReceiptResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"experimental"},
-    {"operation_id":"research_list_experiment_candidates","method":"GET","path":"/api/v1/research/experiments/{experiment_id}/candidates","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_ExperimentCandidateResponse__"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"research_get_experiment_comparison","method":"GET","path":"/api/v1/research/experiments/{experiment_id}/comparison","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentComparisonResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"research_list_experiment_gates","method":"GET","path":"/api/v1/research/experiments/{experiment_id}/gates","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_ExperimentGateResponse__"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"design_research_holdout_evaluations","method":"POST","path":"/api/v1/research/experiments/{experiment_id}/holdout-evaluations","request_body_schema":{"$ref":"#/components/schemas/HoldoutEvaluationRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_HoldoutEvaluationReceiptResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"experimental"},
-    {"operation_id":"research_pause_experiment","method":"POST","path":"/api/v1/research/experiments/{experiment_id}/pause","request_body_schema":{"$ref":"#/components/schemas/ExperimentControlRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"experimental"},
-    {"operation_id":"research_preflight_experiment","method":"POST","path":"/api/v1/research/experiments/{experiment_id}/preflight","request_body_schema":{"$ref":"#/components/schemas/ExperimentPlanningRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentPreflightResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"research_resume_experiment","method":"POST","path":"/api/v1/research/experiments/{experiment_id}/resume","request_body_schema":{"$ref":"#/components/schemas/ExperimentControlRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"experimental"},
-    {"operation_id":"research_retry_fold_experiment","method":"POST","path":"/api/v1/research/experiments/{experiment_id}/retry-fold","request_body_schema":{"$ref":"#/components/schemas/ExperimentRetryFoldRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"experimental"},
-    {"operation_id":"research_get_research_experiment_review_packet","method":"GET","path":"/api/v1/research/experiments/{experiment_id}/review-packet","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentReviewPacketResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"research_get_experiment_selection_evidence","method":"GET","path":"/api/v1/research/experiments/{experiment_id}/selection-evidence","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_ExperimentSelectionEvidenceResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"experiment_id","in":"path","required":true,"schema":{"type":"string","title":"Experiment Id"}}],"maturity":"experimental"},
-    {"operation_id":"research_list_research_factors","method":"GET","path":"/api/v1/research/factors","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_FactorDescriptorResponse__"}},"parameters":[],"maturity":"experimental"},
-    {"operation_id":"design_research_factor_diagnostics","method":"GET","path":"/api/v1/research/factors/{factor_id}/diagnostics","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_FactorDiagnosticsResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"factor_id","in":"path","required":true,"schema":{"type":"string","title":"Factor Id"}},{"name":"snapshot_id","in":"query","required":true,"schema":{"type":"string","minLength":1,"title":"Snapshot Id"}},{"name":"start_date","in":"query","required":true,"schema":{"type":"string","format":"date","title":"Start Date"}},{"name":"end_date","in":"query","required":true,"schema":{"type":"string","format":"date","title":"End Date"}},{"name":"registry_hash","in":"query","required":true,"schema":{"type":"string","minLength":64,"maxLength":64,"title":"Registry Hash"}}],"maturity":"experimental"},
-    {"operation_id":"research_list_research_node_descriptors","method":"GET","path":"/api/v1/research/node-descriptors","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_NodeDescriptorResponse__"}},"parameters":[],"maturity":"experimental"},
-    {"operation_id":"research_list_research_reviews","method":"GET","path":"/api/v1/research/reviews","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_StrategyVersionResponse__"}},"parameters":[],"maturity":"experimental"},
-    {"operation_id":"strategies_list_strategies","method":"GET","path":"/api/v1/strategies","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_StrategyResponse__"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"limit","in":"query","required":false,"schema":{"type":"integer","maximum":100,"minimum":1,"description":"每页数量","default":20,"title":"Limit"}},{"name":"offset","in":"query","required":false,"schema":{"type":"integer","minimum":0,"description":"偏移量","default":0,"title":"Offset"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_create_strategy","method":"POST","path":"/api/v1/strategies","request_body_schema":{"$ref":"#/components/schemas/CreateStrategyRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_get_strategy","method":"GET","path":"/api/v1/strategies/{strategy_id}","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_update_strategy","method":"PUT","path":"/api/v1/strategies/{strategy_id}","request_body_schema":{"$ref":"#/components/schemas/UpdateStrategyRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_get_active_strategy","method":"GET","path":"/api/v1/strategies/{strategy_id}/active","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyActiveResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}}],"maturity":"initial-focus"},
-    {"operation_id":"design_strategy_events","method":"GET","path":"/api/v1/strategies/{strategy_id}/events","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_StrategyGovernanceEventResponse__"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"after_event_id","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"After Event Id"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","maximum":100,"minimum":1,"default":20,"title":"Limit"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_list_strategy_versions","method":"GET","path":"/api/v1/strategies/{strategy_id}/versions","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_list_StrategyVersionResponse__"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}}],"maturity":"initial-focus"},
-    {"operation_id":"design_strategy_version_detail","method":"GET","path":"/api/v1/strategies/{strategy_id}/versions/{version}","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyVersionDetailResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","minimum":1,"title":"Version"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_approve_strategy_review","method":"POST","path":"/api/v1/strategies/{strategy_id}/versions/{version}/approve","request_body_schema":{"$ref":"#/components/schemas/GovernanceDecisionRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyVersionStateResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_deprecate_strategy_version","method":"POST","path":"/api/v1/strategies/{strategy_id}/versions/{version}/deprecate","request_body_schema":{"$ref":"#/components/schemas/GovernanceDecisionRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyVersionStateResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_diff_strategy_version","method":"GET","path":"/api/v1/strategies/{strategy_id}/versions/{version}/diff","request_body_schema":null,"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyVersionDiffResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_publish_strategy_version","method":"POST","path":"/api/v1/strategies/{strategy_id}/versions/{version}/publish","request_body_schema":{"$ref":"#/components/schemas/PublishStrategyVersionRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyActivePointerResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_reactivate_strategy_version","method":"POST","path":"/api/v1/strategies/{strategy_id}/versions/{version}/reactivate","request_body_schema":{"$ref":"#/components/schemas/ReactivateStrategyRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyActivePointerResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_reject_strategy_review","method":"POST","path":"/api/v1/strategies/{strategy_id}/versions/{version}/reject","request_body_schema":{"$ref":"#/components/schemas/GovernanceDecisionRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyVersionStateResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_submit_strategy_review","method":"POST","path":"/api/v1/strategies/{strategy_id}/versions/{version}/submit-review","request_body_schema":{"$ref":"#/components/schemas/SubmitReviewRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategyVersionStateResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}},{"name":"Idempotency-Key","in":"header","required":true,"schema":{"type":"string","title":"Idempotency-Key"}}],"maturity":"initial-focus"},
-    {"operation_id":"strategies_validate_strategy_version","method":"POST","path":"/api/v1/strategies/{strategy_id}/versions/{version}/validate","request_body_schema":{"$ref":"#/components/schemas/StrategySpecValidateRequest"},"responses":{"200":{"$ref":"#/components/schemas/APIResponse_StrategySpecValidationResponse_"},"422":{"$ref":"#/components/schemas/HTTPValidationError"}},"parameters":[{"name":"strategy_id","in":"path","required":true,"schema":{"type":"string","title":"Strategy Id"}},{"name":"version","in":"path","required":true,"schema":{"type":"integer","title":"Version"}}],"maturity":"initial-focus"}
+    {
+      "operation_id": "design_research_candidate_exclusions",
+      "method": "GET",
+      "path": "/api/v1/research/candidates/{candidate_id}/exclusions",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_CandidateExclusionPageResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "candidate_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Candidate Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "experiment_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "design_research_candidate_factor_contributions",
+      "method": "GET",
+      "path": "/api/v1/research/candidates/{candidate_id}/factor-contributions",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_CandidateFactorContributionPageResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "candidate_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Candidate Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "experiment_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "design_research_candidate_selections",
+      "method": "GET",
+      "path": "/api/v1/research/candidates/{candidate_id}/selections",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_CandidateSelectionPageResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "candidate_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Candidate Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "experiment_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_research_experiments",
+      "method": "GET",
+      "path": "/api/v1/research/experiments",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_ExperimentSummaryResponse__"
+        }
+      },
+      "parameters": [],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_launch_experiment",
+      "method": "POST",
+      "path": "/api/v1/research/experiments",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/ExperimentLaunchRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentLaunchResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_get_experiment",
+      "method": "GET",
+      "path": "/api/v1/research/experiments/{experiment_id}",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentDetailResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_experiment_artifacts",
+      "method": "GET",
+      "path": "/api/v1/research/experiments/{experiment_id}/artifacts",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_ExperimentArtifactResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_cancel_experiment",
+      "method": "POST",
+      "path": "/api/v1/research/experiments/{experiment_id}/cancel",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/ExperimentControlRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "design_research_candidate_selection",
+      "method": "POST",
+      "path": "/api/v1/research/experiments/{experiment_id}/candidate-selection",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/CandidateSelectionRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_CandidateSelectionReceiptResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_experiment_candidates",
+      "method": "GET",
+      "path": "/api/v1/research/experiments/{experiment_id}/candidates",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_ExperimentCandidateResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_get_experiment_comparison",
+      "method": "GET",
+      "path": "/api/v1/research/experiments/{experiment_id}/comparison",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentComparisonResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_experiment_gates",
+      "method": "GET",
+      "path": "/api/v1/research/experiments/{experiment_id}/gates",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_ExperimentGateResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "design_research_holdout_evaluations",
+      "method": "POST",
+      "path": "/api/v1/research/experiments/{experiment_id}/holdout-evaluations",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/HoldoutEvaluationRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_HoldoutEvaluationReceiptResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_pause_experiment",
+      "method": "POST",
+      "path": "/api/v1/research/experiments/{experiment_id}/pause",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/ExperimentControlRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_preflight_experiment",
+      "method": "POST",
+      "path": "/api/v1/research/experiments/{experiment_id}/preflight",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/ExperimentPlanningRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentPreflightResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_resume_experiment",
+      "method": "POST",
+      "path": "/api/v1/research/experiments/{experiment_id}/resume",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/ExperimentControlRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_retry_fold_experiment",
+      "method": "POST",
+      "path": "/api/v1/research/experiments/{experiment_id}/retry-fold",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/ExperimentRetryFoldRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_get_research_experiment_review_packet",
+      "method": "GET",
+      "path": "/api/v1/research/experiments/{experiment_id}/review-packet",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentReviewPacketResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_get_experiment_selection_evidence",
+      "method": "GET",
+      "path": "/api/v1/research/experiments/{experiment_id}/selection-evidence",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ExperimentSelectionEvidenceResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "experiment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_research_factors",
+      "method": "GET",
+      "path": "/api/v1/research/factors",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_FactorDescriptorResponse__"
+        }
+      },
+      "parameters": [],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "design_research_factor_diagnostics",
+      "method": "GET",
+      "path": "/api/v1/research/factors/{factor_id}/diagnostics",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_FactorDiagnosticsResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "factor_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Factor Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "snapshot_id",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "title": "Snapshot Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          }
+        },
+        {
+          "name": "registry_hash",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Registry Hash",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_research_node_descriptors",
+      "method": "GET",
+      "path": "/api/v1/research/node-descriptors",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_NodeDescriptorResponse__"
+        }
+      },
+      "parameters": [],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_research_reviews",
+      "method": "GET",
+      "path": "/api/v1/research/reviews",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_StrategyVersionResponse__"
+        }
+      },
+      "parameters": [],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "strategies_list_strategies",
+      "method": "GET",
+      "path": "/api/v1/strategies",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_StrategyResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "default": 20,
+            "description": "每页数量",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "description": "偏移量",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_create_strategy",
+      "method": "POST",
+      "path": "/api/v1/strategies",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/CreateStrategyRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_get_strategy",
+      "method": "GET",
+      "path": "/api/v1/strategies/{strategy_id}",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_update_strategy",
+      "method": "PUT",
+      "path": "/api/v1/strategies/{strategy_id}",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/UpdateStrategyRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_get_active_strategy",
+      "method": "GET",
+      "path": "/api/v1/strategies/{strategy_id}/active",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyActiveResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "design_strategy_events",
+      "method": "GET",
+      "path": "/api/v1/strategies/{strategy_id}/events",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_StrategyGovernanceEventResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "after_event_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Event Id"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_list_strategy_versions",
+      "method": "GET",
+      "path": "/api/v1/strategies/{strategy_id}/versions",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_StrategyVersionResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "design_strategy_version_detail",
+      "method": "GET",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyVersionDetailResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "minimum": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_approve_strategy_review",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/approve",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/GovernanceDecisionRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_deprecate_strategy_version",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/GovernanceDecisionRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_diff_strategy_version",
+      "method": "GET",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/diff",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyVersionDiffResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_publish_strategy_version",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/publish",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/PublishStrategyVersionRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyActivePointerResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_reactivate_strategy_version",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/ReactivateStrategyRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyActivePointerResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_reject_strategy_review",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/reject",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/GovernanceDecisionRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_submit_strategy_review",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/submit-review",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/SubmitReviewRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "title": "Idempotency-Key",
+            "type": "string"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_validate_strategy_version",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/validate",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/StrategySpecValidateRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategySpecValidationResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "title": "Version",
+            "type": "integer"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    }
   ],
   "operations": [
     {
       "operation_id": "research_list_research_node_descriptors",
-      "design_method": "GET", "design_path": "/api/v1/research/node-descriptors", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/node-descriptors", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [4, 5, 17], "reason": "Exact descriptor catalog required by Strategy Studio.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "No body; catalog identity is the runtime registry.", "response_dto": "APIResponse[list[NodeDescriptorResponse]]", "error_codes": "200; stable API envelope.", "idempotency": "Read-only; not applicable.", "revision_etag": "Immutable descriptor version and registry hash are payload identities; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Strategy Studio node library"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/node-descriptors",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/node-descriptors",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        5,
+        17
+      ],
+      "reason": "Exact descriptor catalog required by Strategy Studio.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "No body; catalog identity is the runtime registry.",
+        "response_dto": "APIResponse[list[NodeDescriptorResponse]]",
+        "error_codes": "200; stable API envelope.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Immutable descriptor version and registry hash are payload identities; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Strategy Studio node library"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_list_research_factors",
-      "design_method": "GET", "design_path": "/api/v1/research/factors", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/factors", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [4, 5, 10, 17], "reason": "Exact factor catalog used by Studio and research pages.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "No body; factor identity is factor_id plus version.", "response_dto": "APIResponse[list[FactorDescriptorResponse]]", "error_codes": "200; stable API envelope.", "idempotency": "Read-only; not applicable.", "revision_etag": "Immutable factor descriptor identity; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Strategy Studio factor picker", "Factor catalog"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/factors",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/factors",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        5,
+        10,
+        17
+      ],
+      "reason": "Exact factor catalog used by Studio and research pages.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "No body; factor identity is factor_id plus version.",
+        "response_dto": "APIResponse[list[FactorDescriptorResponse]]",
+        "error_codes": "200; stable API envelope.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Immutable factor descriptor identity; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Strategy Studio factor picker",
+        "Factor catalog"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_research_factor_diagnostics",
-      "design_method": "GET", "design_path": "/api/v1/research/factors/{factor_id}/diagnostics", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/factors/{factor_id}/diagnostics", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [9], "closing_task": 9, "dod": [10, 17], "reason": "Full-scope R3 completion requires a typed, provenance-bound factor diagnostics resource; Task 9 owns factor evidence semantics and adds the backend read plus real factor-page consumer.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: factor_id path plus required snapshot_id, start_date, end_date, and registry_hash query identity.", "response_dto": "Target DTO: APIResponse[FactorDiagnosticsResponse] with factor_id, snapshot_hash, registry_hash, window, metrics, artifact_id, and content_hash.", "error_codes": "Target errors: 404 FACTOR_NOT_FOUND and 422 INVALID_DIAGNOSTIC_SCOPE/SNAPSHOT_IDENTITY_MISMATCH.", "idempotency": "Read-only target contract; Idempotency-Key is not applicable.", "revision_etag": "Target identity uses immutable snapshot_hash, registry_hash, artifact_id, and content_hash; no mutable ETag.", "maturity": "experimental"},
-      "page_consumers": ["Factor detail diagnostics"], "controversy_topic": "factor-diagnostics"
+      "design_method": "GET",
+      "design_path": "/api/v1/research/factors/{factor_id}/diagnostics",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/factors/{factor_id}/diagnostics",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        9
+      ],
+      "closing_task": null,
+      "dod": [
+        10,
+        17
+      ],
+      "reason": "Exact provenance-bound factor diagnostics read implemented with immutable artifact identity.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: factor_id path plus required snapshot_id, start_date, end_date, and registry_hash query identity.",
+        "response_dto": "Target DTO: APIResponse[FactorDiagnosticsResponse] with factor_id, snapshot_hash, registry_hash, window, metrics, artifact_id, and content_hash.",
+        "error_codes": "Target errors: 404 FACTOR_NOT_FOUND and 422 INVALID_DIAGNOSTIC_SCOPE/SNAPSHOT_IDENTITY_MISMATCH.",
+        "idempotency": "Read-only target contract; Idempotency-Key is not applicable.",
+        "revision_etag": "Target identity uses immutable snapshot_hash, registry_hash, artifact_id, and content_hash; no mutable ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Factor detail diagnostics"
+      ],
+      "controversy_topic": "factor-diagnostics"
     },
     {
       "operation_id": "strategies_create_strategy",
-      "design_method": "POST", "design_path": "/api/v1/strategies", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/strategies", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 7, "dod": [4, 14, 17], "reason": "Route exists; Task 7 must extend durable Idempotency-Key coverage to strategy creation before semantic closure.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "CreateStrategyRequest.strategy_id plus canonical spec hash; Idempotency-Key after Task 7.", "response_dto": "APIResponse[StrategyResponse]", "error_codes": "409 identity/idempotency conflict; 422 SPEC_INVALID/UNKNOWN_NODE/validation.", "idempotency": "PLANNED Task 7 durable replay; missing/blank/oversized key is 422.", "revision_etag": "Created version=1; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy Studio create"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        14,
+        17
+      ],
+      "reason": "Exact validated strategy creation implemented with durable Idempotency-Key replay.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "CreateStrategyRequest.strategy_id plus canonical spec hash; Idempotency-Key after Task 7.",
+        "response_dto": "APIResponse[StrategyResponse]",
+        "error_codes": "409 identity/idempotency conflict; 422 SPEC_INVALID/UNKNOWN_NODE/validation.",
+        "idempotency": "Durable replay implemented in Task 7; missing/blank/oversized key is 422.",
+        "revision_etag": "Created version=1; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy Studio create"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_strategy_create_version",
-      "design_method": "POST", "design_path": "/api/v1/strategies/{strategy_id}/versions", "disposition": "EQUIVALENT",
-      "runtime_method": "PUT", "runtime_path": "/api/v1/strategies/{strategy_id}", "equivalent_operation_id": "strategies_update_strategy",
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [4, 14, 17], "reason": "PUT creates a new immutable child draft and never overwrites the stored version; approval is required for the method/resource-shape replacement.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id path plus UpdateStrategyRequest.version as parent optimistic lock.", "response_dto": "APIResponse[StrategyResponse] containing the newly created version.", "error_codes": "409 stale parent/idempotency conflict; 422 SPEC_INVALID/validation.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "Body version is expected parent revision; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy Studio save new draft"], "controversy_topic": "strategy-update-vs-version-create",
-      "user_approval": {"status": "APPROVED", "decision": "Approved the recorded replacement of POST /api/v1/strategies/{strategy_id}/versions with PUT /api/v1/strategies/{strategy_id}.", "reference": "user-message:2026-07-31:final-task4-classification-approved"},
-      "equivalence": {"replacement": "PUT /api/v1/strategies/{strategy_id}", "runtime_operations": [{"method": "PUT", "path": "/api/v1/strategies/{strategy_id}", "operation_id": "strategies_update_strategy"}], "proof": {"request_identity": "Path strategy_id is unchanged; body version identifies the immutable parent.", "response_dto": "StrategyResponse returns the new version and canonical spec.", "error_codes": "Both require stale-parent conflict and schema errors.", "idempotency": "Task 7 closes the same durable replay contract.", "revision_etag": "Expected parent version replaces a versions collection POST precondition.", "maturity": "Both are initial-focus strategy governance.", "audit_evidence": "Governance create_draft appends an immutable version; no row overwrite."}}
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions",
+      "disposition": "EQUIVALENT",
+      "runtime_method": "PUT",
+      "runtime_path": "/api/v1/strategies/{strategy_id}",
+      "equivalent_operation_id": "strategies_update_strategy",
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        14,
+        17
+      ],
+      "reason": "PUT creates a new immutable child draft and never overwrites the stored version; approval is required for the method/resource-shape replacement.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id path plus UpdateStrategyRequest.version as parent optimistic lock.",
+        "response_dto": "APIResponse[StrategyResponse] containing the newly created version.",
+        "error_codes": "409 stale parent/idempotency conflict; 422 SPEC_INVALID/validation.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "Body version is expected parent revision; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy Studio save new draft"
+      ],
+      "controversy_topic": "strategy-update-vs-version-create",
+      "user_approval": {
+        "status": "APPROVED",
+        "decision": "Approved the recorded replacement of POST /api/v1/strategies/{strategy_id}/versions with PUT /api/v1/strategies/{strategy_id}.",
+        "reference": "user-message:2026-07-31:final-task4-classification-approved"
+      },
+      "equivalence": {
+        "replacement": "PUT /api/v1/strategies/{strategy_id}",
+        "runtime_operations": [
+          {
+            "method": "PUT",
+            "path": "/api/v1/strategies/{strategy_id}",
+            "operation_id": "strategies_update_strategy"
+          }
+        ],
+        "proof": {
+          "request_identity": "Path strategy_id is unchanged; body version identifies the immutable parent.",
+          "response_dto": "StrategyResponse returns the new version and canonical spec.",
+          "error_codes": "Both require stale-parent conflict and schema errors.",
+          "idempotency": "The same durable replay contract is implemented.",
+          "revision_etag": "Expected parent version replaces a versions collection POST precondition.",
+          "maturity": "Both are initial-focus strategy governance.",
+          "audit_evidence": "Governance create_draft appends an immutable version; no row overwrite."
+        }
+      }
     },
     {
       "operation_id": "strategies_list_strategy_versions",
-      "design_method": "GET", "design_path": "/api/v1/strategies/{strategy_id}/versions", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/strategies/{strategy_id}/versions", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [11, 14, 17], "reason": "Exact immutable version-list projection.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id path.", "response_dto": "APIResponse[list[StrategyVersionResponse]]", "error_codes": "200; 404/422 stable envelope where applicable.", "idempotency": "Read-only; not applicable.", "revision_etag": "Each item has immutable version/spec_hash; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy detail versions", "Review queue join"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        11,
+        14,
+        17
+      ],
+      "reason": "Exact immutable version-list projection.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id path.",
+        "response_dto": "APIResponse[list[StrategyVersionResponse]]",
+        "error_codes": "200; 404/422 stable envelope where applicable.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Each item has immutable version/spec_hash; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy detail versions",
+        "Review queue join"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_strategy_version_detail",
-      "design_method": "GET", "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [8], "closing_task": 8, "dod": [4, 11, 17], "reason": "Full-scope R3 completion requires arbitrary immutable version payload reads; Task 8 extends the existing strategy query/read-model and route used by Studio and governance review.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: strategy_id plus immutable version path identity.", "response_dto": "Target DTO: APIResponse[StrategyVersionDetailResponse] with canonical spec, spec_hash, parent_version, lifecycle state, review outcome, and created_at.", "error_codes": "Target errors: 404 STRATEGY_VERSION_NOT_FOUND and 422 path validation.", "idempotency": "Read-only target contract; Idempotency-Key is not applicable.", "revision_etag": "Immutable version and spec_hash are the target identities; no mutable ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy Studio historical version detail", "Governance review target"], "controversy_topic": "strategy-version-detail-events"
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        8
+      ],
+      "closing_task": null,
+      "dod": [
+        4,
+        11,
+        17
+      ],
+      "reason": "Exact arbitrary immutable version payload read implemented for Studio and governance consumers.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: strategy_id plus immutable version path identity.",
+        "response_dto": "Target DTO: APIResponse[StrategyVersionDetailResponse] with canonical spec, spec_hash, parent_version, lifecycle state, review outcome, and created_at.",
+        "error_codes": "Target errors: 404 STRATEGY_VERSION_NOT_FOUND and 422 path validation.",
+        "idempotency": "Read-only target contract; Idempotency-Key is not applicable.",
+        "revision_etag": "Immutable version and spec_hash are the target identities; no mutable ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy Studio historical version detail",
+        "Governance review target"
+      ],
+      "controversy_topic": "strategy-version-detail-events"
     },
     {
       "operation_id": "strategies_diff_strategy_version",
-      "design_method": "GET", "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/diff", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/diff", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [4, 11, 17], "reason": "Exact canonical version-versus-parent diff.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id plus immutable version.", "response_dto": "APIResponse[StrategyVersionDiffResponse]", "error_codes": "404 version; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "Immutable target and parent spec hashes; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy versions", "Review spec diff"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/diff",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/diff",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        11,
+        17
+      ],
+      "reason": "Exact canonical version-versus-parent diff.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id plus immutable version.",
+        "response_dto": "APIResponse[StrategyVersionDiffResponse]",
+        "error_codes": "404 version; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Immutable target and parent spec hashes; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy versions",
+        "Review spec diff"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "strategies_validate_strategy_version",
-      "design_method": "POST", "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/validate", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/validate", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [4, 5, 17], "reason": "Exact zero-write candidate-spec validation operation.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id/version plus candidate spec_json.", "response_dto": "APIResponse[StrategySpecValidationResponse]", "error_codes": "200 with valid=false for invalid spec; 404 version; 422 transport validation.", "idempotency": "Zero-write validation; Idempotency-Key not required.", "revision_etag": "Candidate canonical hash and changed flag; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy Studio validation panel"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/validate",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/validate",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        5,
+        17
+      ],
+      "reason": "Exact zero-write candidate-spec validation operation.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id/version plus candidate spec_json.",
+        "response_dto": "APIResponse[StrategySpecValidationResponse]",
+        "error_codes": "200 with valid=false for invalid spec; 404 version; 422 transport validation.",
+        "idempotency": "Zero-write validation; Idempotency-Key not required.",
+        "revision_etag": "Candidate canonical hash and changed flag; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy Studio validation panel"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "strategies_submit_strategy_review",
-      "design_method": "POST", "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/submit-review", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/submit-review", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 8, "dod": [12, 13, 14, 17], "reason": "Route exists; Task 8 adds bundle identity and fail-closed hard-gate validation after Task 7 idempotency.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id/version, actor/reason, bundle_hash, Idempotency-Key.", "response_dto": "APIResponse[StrategyVersionStateResponse]", "error_codes": "409 state/idempotency; 422 REVIEW_PACKET_NOT_FOUND/HARD_GATE_FAILED/EVIDENCE_STALE.", "idempotency": "Task 7 durable replay; Task 8 exact duplicate remains zero-write.", "revision_etag": "Immutable version and packet bundle hash; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Review decision panel"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/submit-review",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/submit-review",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        12,
+        13,
+        14,
+        17
+      ],
+      "reason": "Exact bundle-bound submit-review command implemented with fail-closed hard-gate validation and durable replay.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id/version, actor/reason, bundle_hash, Idempotency-Key.",
+        "response_dto": "APIResponse[StrategyVersionStateResponse]",
+        "error_codes": "409 state/idempotency; 422 REVIEW_PACKET_NOT_FOUND/HARD_GATE_FAILED/EVIDENCE_STALE.",
+        "idempotency": "Task 7 durable replay; Task 8 exact duplicate remains zero-write.",
+        "revision_etag": "Immutable version and packet bundle hash; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Review decision panel"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_strategy_review_decisions",
-      "design_method": "POST", "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/review-decisions", "disposition": "EQUIVALENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/approve", "equivalent_operation_id": "strategies_approve_strategy_review",
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [12, 13, 14, 17], "reason": "APPROVE and REJECT are separate explicit commands rather than a discriminator body; state/audit effects are otherwise the same.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id/version plus action-specific path, actor/reason, Idempotency-Key.", "response_dto": "APIResponse[StrategyVersionStateResponse] for both actions.", "error_codes": "409 illegal state/idempotency; 422 validation.", "idempotency": "PLANNED Task 7 durable replay per action operation_id.", "revision_etag": "Immutable version state transition; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Review approve/reject controls"], "controversy_topic": "review-decisions-vs-approve-reject",
-      "user_approval": {"status": "APPROVED", "decision": "Approved the recorded replacement of review-decisions with the separate approve and reject operations.", "reference": "user-message:2026-07-31:final-task4-classification-approved"},
-      "equivalence": {"replacement": "POST .../approve and POST .../reject", "runtime_operations": [{"method": "POST", "path": "/api/v1/strategies/{strategy_id}/versions/{version}/approve", "operation_id": "strategies_approve_strategy_review"}, {"method": "POST", "path": "/api/v1/strategies/{strategy_id}/versions/{version}/reject", "operation_id": "strategies_reject_strategy_review"}], "proof": {"request_identity": "Decision action moves from a body discriminator to an unambiguous action path.", "response_dto": "Both return the same lifecycle projection.", "error_codes": "Both preserve illegal-state and validation categories.", "idempotency": "Action-specific operation_id prevents approve/reject key aliasing.", "revision_etag": "The immutable version remains the transition target.", "maturity": "All operations are initial-focus governance.", "audit_evidence": "Approve/reject append distinct typed review decision events."}}
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/review-decisions",
+      "disposition": "EQUIVALENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/approve",
+      "equivalent_operation_id": "strategies_approve_strategy_review",
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        12,
+        13,
+        14,
+        17
+      ],
+      "reason": "APPROVE and REJECT are separate explicit commands rather than a discriminator body; state/audit effects are otherwise the same.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id/version plus action-specific path, actor/reason, Idempotency-Key.",
+        "response_dto": "APIResponse[StrategyVersionStateResponse] for both actions.",
+        "error_codes": "409 illegal state/idempotency; 422 validation.",
+        "idempotency": "Durable replay implemented in Task 7 per action operation_id.",
+        "revision_etag": "Immutable version state transition; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Review approve/reject controls"
+      ],
+      "controversy_topic": "review-decisions-vs-approve-reject",
+      "user_approval": {
+        "status": "APPROVED",
+        "decision": "Approved the recorded replacement of review-decisions with the separate approve and reject operations.",
+        "reference": "user-message:2026-07-31:final-task4-classification-approved"
+      },
+      "equivalence": {
+        "replacement": "POST .../approve and POST .../reject",
+        "runtime_operations": [
+          {
+            "method": "POST",
+            "path": "/api/v1/strategies/{strategy_id}/versions/{version}/approve",
+            "operation_id": "strategies_approve_strategy_review"
+          },
+          {
+            "method": "POST",
+            "path": "/api/v1/strategies/{strategy_id}/versions/{version}/reject",
+            "operation_id": "strategies_reject_strategy_review"
+          }
+        ],
+        "proof": {
+          "request_identity": "Decision action moves from a body discriminator to an unambiguous action path.",
+          "response_dto": "Both return the same lifecycle projection.",
+          "error_codes": "Both preserve illegal-state and validation categories.",
+          "idempotency": "Action-specific operation_id prevents approve/reject key aliasing.",
+          "revision_etag": "The immutable version remains the transition target.",
+          "maturity": "All operations are initial-focus governance.",
+          "audit_evidence": "Approve/reject append distinct typed review decision events."
+        }
+      }
     },
     {
       "operation_id": "strategies_publish_strategy_version",
-      "design_method": "POST", "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/publish", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/publish", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 7, "dod": [11, 12, 14, 17], "reason": "Exact evidence-gated publish route; durable Idempotency-Key remains Task 7 closure.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id/version, bundle_hash, actor/reason, Idempotency-Key.", "response_dto": "APIResponse[StrategyActivePointerResponse]", "error_codes": "409 state/idempotency/pointer conflict; 422 HARD_GATE_FAILED/REVIEW_NOT_APPROVED/EVIDENCE_STALE.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "Response pointer_revision; bundle hash fences evidence.", "maturity": "initial-focus"},
-      "page_consumers": ["Review publish dialog"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/publish",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/publish",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        11,
+        12,
+        14,
+        17
+      ],
+      "reason": "Exact evidence-gated publish command implemented with durable replay and active-pointer evidence fencing.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id/version, bundle_hash, actor/reason, Idempotency-Key.",
+        "response_dto": "APIResponse[StrategyActivePointerResponse]",
+        "error_codes": "409 state/idempotency/pointer conflict; 422 HARD_GATE_FAILED/REVIEW_NOT_APPROVED/EVIDENCE_STALE.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "Response pointer_revision; bundle hash fences evidence.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Review publish dialog"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "strategies_deprecate_strategy_version",
-      "design_method": "POST", "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 7, "dod": [11, 14], "reason": "Exact append-only lifecycle transition; Task 7 must include durable idempotency.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "strategy_id/version, actor/reason, Idempotency-Key.", "response_dto": "APIResponse[StrategyVersionStateResponse]", "error_codes": "409 state/idempotency; 422 validation.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "Immutable target version; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy governance actions"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        11,
+        14
+      ],
+      "reason": "Exact append-only deprecation transition implemented with durable replay.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id/version, actor/reason, Idempotency-Key.",
+        "response_dto": "APIResponse[StrategyVersionStateResponse]",
+        "error_codes": "409 state/idempotency; 422 validation.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "Immutable target version; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy governance actions"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "strategies_get_active_strategy",
-      "design_method": "GET", "design_path": "/api/v1/strategies/{strategy_id}/active", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/strategies/{strategy_id}/active", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [11, 14, 17], "reason": "Exact active-pointer read model.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id path.", "response_dto": "APIResponse[StrategyActiveResponse]", "error_codes": "404 no active pointer; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "pointer_revision is the CAS identity; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy detail", "Publish/reactivate dialogs"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies/{strategy_id}/active",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/active",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        11,
+        14,
+        17
+      ],
+      "reason": "Exact active-pointer read model.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id path.",
+        "response_dto": "APIResponse[StrategyActiveResponse]",
+        "error_codes": "404 no active pointer; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "pointer_revision is the CAS identity; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy detail",
+        "Publish/reactivate dialogs"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_strategy_reactivate",
-      "design_method": "POST", "design_path": "/api/v1/strategies/{strategy_id}/reactivate", "disposition": "EQUIVALENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate", "equivalent_operation_id": "strategies_reactivate_strategy_version",
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [11, 14, 17], "reason": "Target version moves from body/implicit identity into the resource path; confirmation binds the same target and pointer revision.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "strategy_id/version path, actor/reason/impact/confirmation, expected_pointer_revision, Idempotency-Key.", "response_dto": "APIResponse[StrategyActivePointerResponse]", "error_codes": "409 ACTIVE_POINTER_CONFLICT/idempotency/state; 422 exact confirmation/validation.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "expected_pointer_revision CAS; response pointer_revision.", "maturity": "initial-focus"},
-      "page_consumers": ["Historical version reactivate dialog"], "controversy_topic": "strategy-version-detail-events",
-      "user_approval": {"status": "APPROVED", "decision": "Approved the recorded replacement of root reactivate with the explicit version-targeted reactivate operation.", "reference": "user-message:2026-07-31:final-task4-classification-approved"},
-      "equivalence": {"replacement": "POST /api/v1/strategies/{strategy_id}/versions/{version}/reactivate", "runtime_operations": [{"method": "POST", "path": "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate", "operation_id": "strategies_reactivate_strategy_version"}], "proof": {"request_identity": "Explicit target version path is stronger than an implicit/body target.", "response_dto": "Both return the new active pointer and revision.", "error_codes": "Pointer conflict and confirmation validation are preserved.", "idempotency": "Task 7 keys the exact target-version operation.", "revision_etag": "Expected pointer revision is unchanged.", "maturity": "Both are initial-focus governance.", "audit_evidence": "Only a new activation event and pointer CAS are written."}}
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/reactivate",
+      "disposition": "EQUIVALENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate",
+      "equivalent_operation_id": "strategies_reactivate_strategy_version",
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        11,
+        14,
+        17
+      ],
+      "reason": "Target version moves from body/implicit identity into the resource path; confirmation binds the same target and pointer revision.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id/version path, actor/reason/impact/confirmation, expected_pointer_revision, Idempotency-Key.",
+        "response_dto": "APIResponse[StrategyActivePointerResponse]",
+        "error_codes": "409 ACTIVE_POINTER_CONFLICT/idempotency/state; 422 exact confirmation/validation.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "expected_pointer_revision CAS; response pointer_revision.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Historical version reactivate dialog"
+      ],
+      "controversy_topic": "strategy-version-detail-events",
+      "user_approval": {
+        "status": "APPROVED",
+        "decision": "Approved the recorded replacement of root reactivate with the explicit version-targeted reactivate operation.",
+        "reference": "user-message:2026-07-31:final-task4-classification-approved"
+      },
+      "equivalence": {
+        "replacement": "POST /api/v1/strategies/{strategy_id}/versions/{version}/reactivate",
+        "runtime_operations": [
+          {
+            "method": "POST",
+            "path": "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate",
+            "operation_id": "strategies_reactivate_strategy_version"
+          }
+        ],
+        "proof": {
+          "request_identity": "Explicit target version path is stronger than an implicit/body target.",
+          "response_dto": "Both return the new active pointer and revision.",
+          "error_codes": "Pointer conflict and confirmation validation are preserved.",
+          "idempotency": "Task 7 keys the exact target-version operation.",
+          "revision_etag": "Expected pointer revision is unchanged.",
+          "maturity": "Both are initial-focus governance.",
+          "audit_evidence": "Only a new activation event and pointer CAS are written."
+        }
+      }
     },
     {
       "operation_id": "design_strategy_events",
-      "design_method": "GET", "design_path": "/api/v1/strategies/{strategy_id}/events", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/strategies/{strategy_id}/events", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [8], "closing_task": 8, "dod": [11, 14, 15, 17], "reason": "Full-scope R3 completion requires the append-only decision/activation audit stream; Task 8 extends the strategy-owned store reader, application projection, and governance audit UI.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: strategy_id plus after_event_id cursor and bounded limit.", "response_dto": "Target DTO: APIResponse[list[StrategyGovernanceEventResponse]] projected only from existing append-only rows with event_id, strategy_id, event_type, target_version, decision_or_activation_kind, actor, reason, and occurred_at.", "error_codes": "Target errors: 404 STRATEGY_NOT_FOUND and 422 INVALID_EVENT_CURSOR.", "idempotency": "Read-only target contract; Idempotency-Key is not applicable.", "revision_etag": "Append-only event_id is the target audit/cursor identity; this read adds no schema and does not claim event-level evidence or pointer revision identity.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy governance audit timeline", "Review detail audit context"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies/{strategy_id}/events",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/events",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        8
+      ],
+      "closing_task": null,
+      "dod": [
+        11,
+        14,
+        15,
+        17
+      ],
+      "reason": "Exact append-only decision and activation audit stream implemented.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: strategy_id plus after_event_id cursor and bounded limit.",
+        "response_dto": "Target DTO: APIResponse[list[StrategyGovernanceEventResponse]] projected only from existing append-only rows with event_id, strategy_id, event_type, target_version, decision_or_activation_kind, actor, reason, and occurred_at.",
+        "error_codes": "Target errors: 404 STRATEGY_NOT_FOUND and 422 INVALID_EVENT_CURSOR.",
+        "idempotency": "Read-only target contract; Idempotency-Key is not applicable.",
+        "revision_etag": "Append-only event_id is the target audit/cursor identity; this read adds no schema and does not claim event-level evidence or pointer revision identity.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy governance audit timeline",
+        "Review detail audit context"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_launch_experiment",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [6, 7], "closing_task": 7, "dod": [3, 6, 7, 15, 17], "reason": "Task 6 adds create-launch at the designed collection path; Task 7 is the unique semantic closing task because all mutation durable Idempotency-Key replay is mandatory.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "Canonical planning document with experiment_id plus confirmed_plan_hash and Idempotency-Key.", "response_dto": "APIResponse[ExperimentLaunchResponse]", "error_codes": "409 PLAN_HASH_MISMATCH/EXPERIMENT_ALREADY_EXISTS/IDEMPOTENCY_KEY_REUSED; 422 hard preflight and schema codes.", "idempotency": "Durable replay finalized by Task 7.", "revision_etag": "Launch response revision and plan_hash; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment create flow"], "controversy_topic": "experiment-preflight-create-launch"
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        6,
+        7
+      ],
+      "closing_task": null,
+      "dod": [
+        3,
+        6,
+        7,
+        15,
+        17
+      ],
+      "reason": "Exact create-launch command implemented at the designed collection path with durable replay.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "Canonical planning document with experiment_id plus confirmed_plan_hash and Idempotency-Key.",
+        "response_dto": "APIResponse[ExperimentLaunchResponse]",
+        "error_codes": "409 PLAN_HASH_MISMATCH/EXPERIMENT_ALREADY_EXISTS/IDEMPOTENCY_KEY_REUSED; 422 hard preflight and schema codes.",
+        "idempotency": "Durable replay finalized by Task 7.",
+        "revision_etag": "Launch response revision and plan_hash; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment create flow"
+      ],
+      "controversy_topic": "experiment-preflight-create-launch"
     },
     {
       "operation_id": "research_list_research_experiments",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [6, 15, 17], "reason": "Exact durable experiment catalog projection.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "No body; newest-first local catalog.", "response_dto": "APIResponse[list[ExperimentSummaryResponse]]", "error_codes": "200 stable envelope.", "idempotency": "Read-only; not applicable.", "revision_etag": "Each summary has revision; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment catalog"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        6,
+        15,
+        17
+      ],
+      "reason": "Exact durable experiment catalog projection.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "No body; newest-first local catalog.",
+        "response_dto": "APIResponse[list[ExperimentSummaryResponse]]",
+        "error_codes": "200 stable envelope.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Each summary has revision; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment catalog"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_get_experiment",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments/{experiment_id}", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [3, 6, 15, 17], "reason": "Exact experiment server-truth detail projection.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id path.", "response_dto": "APIResponse[ExperimentDetailResponse]", "error_codes": "404 experiment; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "Response revision drives polling/control CAS; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment detail and polling"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments/{experiment_id}",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        3,
+        6,
+        15,
+        17
+      ],
+      "reason": "Exact experiment server-truth detail projection.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id path.",
+        "response_dto": "APIResponse[ExperimentDetailResponse]",
+        "error_codes": "404 experiment; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Response revision drives polling/control CAS; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment detail and polling"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_preflight_experiment",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/preflight", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments/{experiment_id}/preflight", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 6, "dod": [3, 6, 8, 17], "reason": "Task 6 implements an exact zero-write preflight over a complete canonical planning document.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "Path experiment_id must equal canonical planning document experiment_id.", "response_dto": "APIResponse[ExperimentPreflightResponse]", "error_codes": "409 conflicting existing identity where applicable; 422 SPEC_INVALID/MATRIX_TOO_LARGE/BUDGET_EXCEEDED/SNAPSHOT_NOT_CERTIFIED/INSUFFICIENT_HISTORY/WINDOW_LEAKAGE.", "idempotency": "Zero-write deterministic operation; Idempotency-Key not required.", "revision_etag": "plan_hash is the launch precondition; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment create preflight panel"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/preflight",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/preflight",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        3,
+        6,
+        8,
+        17
+      ],
+      "reason": "Exact zero-write preflight implemented over the complete canonical planning document.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "Path experiment_id must equal canonical planning document experiment_id.",
+        "response_dto": "APIResponse[ExperimentPreflightResponse]",
+        "error_codes": "409 conflicting existing identity where applicable; 422 SPEC_INVALID/MATRIX_TOO_LARGE/BUDGET_EXCEEDED/SNAPSHOT_NOT_CERTIFIED/INSUFFICIENT_HISTORY/WINDOW_LEAKAGE.",
+        "idempotency": "Zero-write deterministic operation; Idempotency-Key not required.",
+        "revision_etag": "plan_hash is the launch precondition; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment create preflight panel"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_research_experiment_launch_alias",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/launch", "disposition": "DEFER",
-      "runtime_method": null, "runtime_path": null, "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": null, "dod": [3, 6, 17], "reason": "The approved completion plan implements launch at POST /research/experiments; keeping a second launch alias would duplicate one mutation identity and idempotency namespace.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Would duplicate collection launch document/confirmed_plan_hash identity.", "response_dto": "Would duplicate ExperimentLaunchResponse.", "error_codes": "Would duplicate launch 409/422 semantics.", "idempotency": "A second operation_id risks divergent replay namespaces; therefore deferred.", "revision_etag": "Would duplicate plan_hash/revision.", "maturity": "experimental"},
-      "page_consumers": ["None; Experiment create uses collection create-launch"], "controversy_topic": null,
-      "user_approval": {"status": "APPROVED", "decision": "Approved deferring only the redundant launch alias; POST /api/v1/research/experiments collection create-launch retains the launch capability.", "reference": "user-message:2026-07-31:final-task4-classification-approved", "affected_dod": [3, 6, 17]}
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/launch",
+      "disposition": "DEFER",
+      "runtime_method": null,
+      "runtime_path": null,
+      "equivalent_operation_id": null,
+      "implementation_state": "PLANNED",
+      "closing_task": null,
+      "dod": [
+        3,
+        6,
+        17
+      ],
+      "reason": "The approved completion plan implements launch at POST /research/experiments; keeping a second launch alias would duplicate one mutation identity and idempotency namespace.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Would duplicate collection launch document/confirmed_plan_hash identity.",
+        "response_dto": "Would duplicate ExperimentLaunchResponse.",
+        "error_codes": "Would duplicate launch 409/422 semantics.",
+        "idempotency": "A second operation_id risks divergent replay namespaces; therefore deferred.",
+        "revision_etag": "Would duplicate plan_hash/revision.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "None; Experiment create uses collection create-launch"
+      ],
+      "controversy_topic": null,
+      "user_approval": {
+        "status": "APPROVED",
+        "decision": "Approved deferring only the redundant launch alias; POST /api/v1/research/experiments collection create-launch retains the launch capability.",
+        "reference": "user-message:2026-07-31:final-task4-classification-approved",
+        "affected_dod": [
+          3,
+          6,
+          17
+        ]
+      }
     },
     {
       "operation_id": "research_pause_experiment",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/pause", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments/{experiment_id}/pause", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 7, "dod": [6, 15, 17], "reason": "Exact revision-fenced control route; Task 7 adds durable replay.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id, expected_revision, Idempotency-Key.", "response_dto": "APIResponse[ExperimentControlReceiptResponse]", "error_codes": "404 experiment; 409 stale/illegal state/idempotency; 422 key/transport validation.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "Body expected_revision; receipt revision.", "maturity": "experimental"},
-      "page_consumers": ["Experiment run controls"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/pause",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/pause",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        6,
+        15,
+        17
+      ],
+      "reason": "Exact revision-fenced pause command implemented with durable replay.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id, expected_revision, Idempotency-Key.",
+        "response_dto": "APIResponse[ExperimentControlReceiptResponse]",
+        "error_codes": "404 experiment; 409 stale/illegal state/idempotency; 422 key/transport validation.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "Body expected_revision; receipt revision.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment run controls"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_resume_experiment",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/resume", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments/{experiment_id}/resume", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 7, "dod": [6, 15, 17], "reason": "Exact revision-fenced control route; Task 7 adds durable replay.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id, expected_revision, Idempotency-Key.", "response_dto": "APIResponse[ExperimentControlReceiptResponse]", "error_codes": "404 experiment; 409 stale/illegal state/idempotency; 422 key/transport validation.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "Body expected_revision; receipt revision.", "maturity": "experimental"},
-      "page_consumers": ["Experiment run controls"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/resume",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/resume",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        6,
+        15,
+        17
+      ],
+      "reason": "Exact revision-fenced resume command implemented with durable replay.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id, expected_revision, Idempotency-Key.",
+        "response_dto": "APIResponse[ExperimentControlReceiptResponse]",
+        "error_codes": "404 experiment; 409 stale/illegal state/idempotency; 422 key/transport validation.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "Body expected_revision; receipt revision.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment run controls"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_cancel_experiment",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/cancel", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments/{experiment_id}/cancel", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 7, "dod": [6, 15, 17], "reason": "Exact revision-fenced terminal control; Task 7 adds durable replay.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id, expected_revision, Idempotency-Key.", "response_dto": "APIResponse[ExperimentControlReceiptResponse]", "error_codes": "404 experiment; 409 stale/illegal state/idempotency; 422 key/transport validation.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "Body expected_revision; receipt revision.", "maturity": "experimental"},
-      "page_consumers": ["Experiment run controls"], "controversy_topic": null
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/cancel",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/cancel",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        6,
+        15,
+        17
+      ],
+      "reason": "Exact revision-fenced terminal cancel command implemented with durable replay.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id, expected_revision, Idempotency-Key.",
+        "response_dto": "APIResponse[ExperimentControlReceiptResponse]",
+        "error_codes": "404 experiment; 409 stale/illegal state/idempotency; 422 key/transport validation.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "Body expected_revision; receipt revision.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment run controls"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_list_experiment_candidates",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments/{experiment_id}/candidates", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}/candidates", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [6, 9, 17], "reason": "Exact immutable candidate list.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id path.", "response_dto": "APIResponse[list[ExperimentCandidateResponse]]", "error_codes": "404 experiment; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "Candidates are immutable under experiment plan hash; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Candidate comparison"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/candidates",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/candidates",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        6,
+        9,
+        17
+      ],
+      "reason": "Exact immutable candidate list.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id path.",
+        "response_dto": "APIResponse[list[ExperimentCandidateResponse]]",
+        "error_codes": "404 experiment; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Candidates are immutable under experiment plan hash; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Candidate comparison"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_get_experiment_comparison",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments/{experiment_id}/comparison", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}/comparison", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [7, 8, 13, 17], "reason": "Exact walk-forward candidate comparison projection; UI pins are presentation-only.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id path; immutable candidate IDs in payload.", "response_dto": "APIResponse[ExperimentComparisonResponse]", "error_codes": "404 experiment; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "Content-addressed comparison payload; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Candidate comparison"], "controversy_topic": "candidate-pin-max-four",
-      "local_ui_semantics": {"max_pins": 4, "persistence": "session-local", "server_write": false, "not_equivalent_to": ["candidate-selection", "holdout-evaluations"]}
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/comparison",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/comparison",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        7,
+        8,
+        13,
+        17
+      ],
+      "reason": "Exact walk-forward candidate comparison projection; UI pins are presentation-only.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id path; immutable candidate IDs in payload.",
+        "response_dto": "APIResponse[ExperimentComparisonResponse]",
+        "error_codes": "404 experiment; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Content-addressed comparison payload; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Candidate comparison"
+      ],
+      "controversy_topic": "candidate-pin-max-four",
+      "local_ui_semantics": {
+        "max_pins": 4,
+        "persistence": "session-local",
+        "server_write": false,
+        "not_equivalent_to": [
+          "candidate-selection",
+          "holdout-evaluations"
+        ]
+      }
     },
     {
       "operation_id": "research_list_experiment_gates",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments/{experiment_id}/gates", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}/gates", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [8, 12, 13, 17], "reason": "Exact persisted gate-evaluation list.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id path.", "response_dto": "APIResponse[list[ExperimentGateResponse]]", "error_codes": "200 empty/list; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "Evaluation IDs and payload hashes; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment validation", "Review hard gates"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/gates",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/gates",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        8,
+        12,
+        13,
+        17
+      ],
+      "reason": "Exact persisted gate-evaluation list.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id path.",
+        "response_dto": "APIResponse[list[ExperimentGateResponse]]",
+        "error_codes": "200 empty/list; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Evaluation IDs and payload hashes; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment validation",
+        "Review hard gates"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_research_experiment_report",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments/{experiment_id}/report", "disposition": "EQUIVALENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}", "equivalent_operation_id": "research_get_experiment",
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [3, 6, 7, 8, 10, 17], "reason": "W5 deliberately composes immutable/revisioned detail, comparison, gates, artifacts, and selection evidence rather than adding a second report DTO.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "Same experiment_id fan-out.", "response_dto": "ExperimentDetailResponse + ExperimentComparisonResponse + gate/artifact/selection-evidence responses.", "error_codes": "404 per missing resource; typed partial failure remains visible instead of one aggregate status.", "idempotency": "Read-only; not applicable.", "revision_etag": "Detail revision plus content hashes provide component identities; no atomic report ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment detail report sections"], "controversy_topic": "experiment-report",
-      "user_approval": {"status": "APPROVED", "decision": "Approved the recorded replacement of the aggregate experiment report with the W5 experiment detail fan-out.", "reference": "user-message:2026-07-31:final-task4-classification-approved"},
-      "equivalence": {"replacement": "W5 experiment detail fan-out", "runtime_operations": [{"method": "GET", "path": "/api/v1/research/experiments/{experiment_id}", "operation_id": "research_get_experiment"}, {"method": "GET", "path": "/api/v1/research/experiments/{experiment_id}/comparison", "operation_id": "research_get_experiment_comparison"}, {"method": "GET", "path": "/api/v1/research/experiments/{experiment_id}/gates", "operation_id": "research_list_experiment_gates"}, {"method": "GET", "path": "/api/v1/research/experiments/{experiment_id}/artifacts", "operation_id": "research_list_experiment_artifacts"}, {"method": "GET", "path": "/api/v1/research/experiments/{experiment_id}/selection-evidence", "operation_id": "research_get_experiment_selection_evidence"}], "proof": {"request_identity": "Every component is keyed by the same immutable experiment_id.", "response_dto": "The fan-out covers status/folds, comparison, gates, artifacts, and selection evidence without a lossy aggregate.", "error_codes": "Component-level typed errors preserve partial-failure truth.", "idempotency": "All components are reads.", "revision_etag": "Experiment revision and content hashes expose staleness per component.", "maturity": "All components are experimental research resources.", "audit_evidence": "Artifacts and evidence are content addressed; UI does not synthesize results."}}
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/report",
+      "disposition": "EQUIVALENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}",
+      "equivalent_operation_id": "research_get_experiment",
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        3,
+        6,
+        7,
+        8,
+        10,
+        17
+      ],
+      "reason": "W5 deliberately composes immutable/revisioned detail, comparison, gates, artifacts, and selection evidence rather than adding a second report DTO.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "Same experiment_id fan-out.",
+        "response_dto": "ExperimentDetailResponse + ExperimentComparisonResponse + gate/artifact/selection-evidence responses.",
+        "error_codes": "404 per missing resource; typed partial failure remains visible instead of one aggregate status.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Detail revision plus content hashes provide component identities; no atomic report ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment detail report sections"
+      ],
+      "controversy_topic": "experiment-report",
+      "user_approval": {
+        "status": "APPROVED",
+        "decision": "Approved the recorded replacement of the aggregate experiment report with the W5 experiment detail fan-out.",
+        "reference": "user-message:2026-07-31:final-task4-classification-approved"
+      },
+      "equivalence": {
+        "replacement": "W5 experiment detail fan-out",
+        "runtime_operations": [
+          {
+            "method": "GET",
+            "path": "/api/v1/research/experiments/{experiment_id}",
+            "operation_id": "research_get_experiment"
+          },
+          {
+            "method": "GET",
+            "path": "/api/v1/research/experiments/{experiment_id}/comparison",
+            "operation_id": "research_get_experiment_comparison"
+          },
+          {
+            "method": "GET",
+            "path": "/api/v1/research/experiments/{experiment_id}/gates",
+            "operation_id": "research_list_experiment_gates"
+          },
+          {
+            "method": "GET",
+            "path": "/api/v1/research/experiments/{experiment_id}/artifacts",
+            "operation_id": "research_list_experiment_artifacts"
+          },
+          {
+            "method": "GET",
+            "path": "/api/v1/research/experiments/{experiment_id}/selection-evidence",
+            "operation_id": "research_get_experiment_selection_evidence"
+          }
+        ],
+        "proof": {
+          "request_identity": "Every component is keyed by the same immutable experiment_id.",
+          "response_dto": "The fan-out covers status/folds, comparison, gates, artifacts, and selection evidence without a lossy aggregate.",
+          "error_codes": "Component-level typed errors preserve partial-failure truth.",
+          "idempotency": "All components are reads.",
+          "revision_etag": "Experiment revision and content hashes expose staleness per component.",
+          "maturity": "All components are experimental research resources.",
+          "audit_evidence": "Artifacts and evidence are content addressed; UI does not synthesize results."
+        }
+      }
     },
     {
       "operation_id": "research_list_experiment_artifacts",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments/{experiment_id}/artifacts", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}/artifacts", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [7, 10, 16, 17, 23], "reason": "Exact immutable artifact index projection.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id path.", "response_dto": "APIResponse[list[ExperimentArtifactResponse]]", "error_codes": "404 experiment; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "artifact_id/content_hash/revision; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment evidence", "Review lineage"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/artifacts",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/artifacts",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        7,
+        10,
+        16,
+        17,
+        23
+      ],
+      "reason": "Exact immutable artifact index projection.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id path.",
+        "response_dto": "APIResponse[list[ExperimentArtifactResponse]]",
+        "error_codes": "404 experiment; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "artifact_id/content_hash/revision; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment evidence",
+        "Review lineage"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_research_retry_fold",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/folds/{fold_id}/retry", "disposition": "EQUIVALENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments/{experiment_id}/retry-fold", "equivalent_operation_id": "research_retry_fold_experiment",
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [6, 15, 17, 22], "reason": "fold_id and candidate_id are in a strict body because fold identity is candidate-scoped; retry still appends a successor attempt.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "experiment_id path plus candidate_id/fold_id/expected fold revision body and Idempotency-Key.", "response_dto": "APIResponse[ExperimentControlReceiptResponse]", "error_codes": "404 experiment/fold; 409 stale/terminal/idempotency; 422 validation.", "idempotency": "PLANNED Task 7 durable replay.", "revision_etag": "expected_revision is fold projection revision.", "maturity": "experimental"},
-      "page_consumers": ["Partial fold failure recovery"], "controversy_topic": "failed-fold-retry",
-      "user_approval": {"status": "APPROVED", "decision": "Approved the recorded replacement of the fold-in-path retry with the retry-fold operation carrying candidate and fold identity.", "reference": "user-message:2026-07-31:final-task4-classification-approved"},
-      "equivalence": {"replacement": "POST /api/v1/research/experiments/{experiment_id}/retry-fold", "runtime_operations": [{"method": "POST", "path": "/api/v1/research/experiments/{experiment_id}/retry-fold", "operation_id": "research_retry_fold_experiment"}], "proof": {"request_identity": "Body carries candidate_id and fold_id, avoiding globally unique fold assumptions.", "response_dto": "Both return the experiment control receipt.", "error_codes": "Stale fold, terminal fold, not-found and validation are preserved.", "idempotency": "Task 7 keys experiment/candidate/fold and canonical body.", "revision_etag": "Expected fold projection revision is explicit.", "maturity": "Both are experimental controls.", "audit_evidence": "Retry creates a new attempt; prior attempt evidence is never overwritten."}}
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/folds/{fold_id}/retry",
+      "disposition": "EQUIVALENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/retry-fold",
+      "equivalent_operation_id": "research_retry_fold_experiment",
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        6,
+        15,
+        17,
+        22
+      ],
+      "reason": "fold_id and candidate_id are in a strict body because fold identity is candidate-scoped; retry still appends a successor attempt.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id path plus candidate_id/fold_id/expected fold revision body and Idempotency-Key.",
+        "response_dto": "APIResponse[ExperimentControlReceiptResponse]",
+        "error_codes": "404 experiment/fold; 409 stale/terminal/idempotency; 422 validation.",
+        "idempotency": "Durable replay implemented in Task 7.",
+        "revision_etag": "expected_revision is fold projection revision.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Partial fold failure recovery"
+      ],
+      "controversy_topic": "failed-fold-retry",
+      "user_approval": {
+        "status": "APPROVED",
+        "decision": "Approved the recorded replacement of the fold-in-path retry with the retry-fold operation carrying candidate and fold identity.",
+        "reference": "user-message:2026-07-31:final-task4-classification-approved"
+      },
+      "equivalence": {
+        "replacement": "POST /api/v1/research/experiments/{experiment_id}/retry-fold",
+        "runtime_operations": [
+          {
+            "method": "POST",
+            "path": "/api/v1/research/experiments/{experiment_id}/retry-fold",
+            "operation_id": "research_retry_fold_experiment"
+          }
+        ],
+        "proof": {
+          "request_identity": "Body carries candidate_id and fold_id, avoiding globally unique fold assumptions.",
+          "response_dto": "Both return the experiment control receipt.",
+          "error_codes": "Stale fold, terminal fold, not-found and validation are preserved.",
+          "idempotency": "Task 7 keys experiment/candidate/fold and canonical body.",
+          "revision_etag": "Expected fold projection revision is explicit.",
+          "maturity": "Both are experimental controls.",
+          "audit_evidence": "Retry creates a new attempt; prior attempt evidence is never overwritten."
+        }
+      }
     },
     {
       "operation_id": "design_research_candidate_selection",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/candidate-selection", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments/{experiment_id}/candidate-selection", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [7, 9], "closing_task": 9, "dod": [9, 12, 17], "reason": "Full-scope R3 completion needs a durable server-side promotion preselection distinct from local comparison pins; Task 7 supplies mutation replay and Task 9 closes selection/evidence semantics and Experiment UI wiring.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: experiment_id path plus candidate_id, rationale, comparison_payload_hash, expected_revision, and Idempotency-Key.", "response_dto": "Target DTO: APIResponse[CandidateSelectionReceiptResponse] with selection_id, experiment_id, candidate_id, evidence hashes, revision, and event_id.", "error_codes": "Target errors: 409 CANDIDATE_SELECTION_CONFLICT/IDEMPOTENCY_KEY_REUSED and 422 CANDIDATE_NOT_ELIGIBLE/EVIDENCE_STALE.", "idempotency": "Target mutation requires durable operation/resource/key/request replay with no duplicate selection event.", "revision_etag": "Target request uses expected_revision and response returns the durable selection ledger revision.", "maturity": "experimental"},
-      "page_consumers": ["Experiment candidate promotion selection", "Holdout eligibility panel"], "controversy_topic": "candidate-selection"
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/candidate-selection",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/candidate-selection",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        7,
+        9
+      ],
+      "closing_task": null,
+      "dod": [
+        9,
+        12,
+        17
+      ],
+      "reason": "Durable server-side promotion preselection implemented independently from session-local comparison pins.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: experiment_id path plus candidate_id, rationale, comparison_payload_hash, expected_revision, and Idempotency-Key.",
+        "response_dto": "Target DTO: APIResponse[CandidateSelectionReceiptResponse] with selection_id, experiment_id, candidate_id, evidence hashes, revision, and event_id.",
+        "error_codes": "Target errors: 409 CANDIDATE_SELECTION_CONFLICT/IDEMPOTENCY_KEY_REUSED and 422 CANDIDATE_NOT_ELIGIBLE/EVIDENCE_STALE.",
+        "idempotency": "Target mutation requires durable operation/resource/key/request replay with no duplicate selection event.",
+        "revision_etag": "Target request uses expected_revision and response returns the durable selection ledger revision.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment candidate promotion selection",
+        "Holdout eligibility panel"
+      ],
+      "controversy_topic": "candidate-selection"
     },
     {
       "operation_id": "design_research_holdout_evaluations",
-      "design_method": "POST", "design_path": "/api/v1/research/experiments/{experiment_id}/holdout-evaluations", "disposition": "IMPLEMENT",
-      "runtime_method": "POST", "runtime_path": "/api/v1/research/experiments/{experiment_id}/holdout-evaluations", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [7, 9], "closing_task": 9, "dod": [3, 9, 12, 17], "reason": "Full-scope R3 completion must expose the existing atomic holdout authority through a typed, idempotent HTTP command; Task 7 supplies replay and Task 9 closes claim/evidence semantics and Experiment UI wiring.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: experiment_id path plus preselected candidate_id, selection_id, evidence hashes, expected_revision, and Idempotency-Key.", "response_dto": "Target DTO: APIResponse[HoldoutEvaluationReceiptResponse] with claim_id, candidate_id, state, artifact hashes, revision, and event_id.", "error_codes": "Target errors: 409 HOLDOUT_ALREADY_CLAIMED/IDEMPOTENCY_KEY_REUSED and 422 CANDIDATE_NOT_PRESELECTED/EVIDENCE_STALE.", "idempotency": "Target mutation requires durable replay of the same one-shot claim without creating a second claim.", "revision_etag": "Target request uses expected_revision and response returns immutable claim_id plus ledger revision.", "maturity": "experimental"},
-      "page_consumers": ["Experiment holdout action and consumed/blocked state", "Review evidence"], "controversy_topic": "holdout-evaluations"
+      "design_method": "POST",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/holdout-evaluations",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/holdout-evaluations",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        7,
+        9
+      ],
+      "closing_task": null,
+      "dod": [
+        3,
+        9,
+        12,
+        17
+      ],
+      "reason": "Typed idempotent HTTP command implemented over the existing atomic holdout authority.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: experiment_id path plus preselected candidate_id, selection_id, evidence hashes, expected_revision, and Idempotency-Key.",
+        "response_dto": "Target DTO: APIResponse[HoldoutEvaluationReceiptResponse] with claim_id, candidate_id, state, artifact hashes, revision, and event_id.",
+        "error_codes": "Target errors: 409 HOLDOUT_ALREADY_CLAIMED/IDEMPOTENCY_KEY_REUSED and 422 CANDIDATE_NOT_PRESELECTED/EVIDENCE_STALE.",
+        "idempotency": "Target mutation requires durable replay of the same one-shot claim without creating a second claim.",
+        "revision_etag": "Target request uses expected_revision and response returns immutable claim_id plus ledger revision.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment holdout action and consumed/blocked state",
+        "Review evidence"
+      ],
+      "controversy_topic": "holdout-evaluations"
     },
     {
       "operation_id": "design_research_candidate_selections",
-      "design_method": "GET", "design_path": "/api/v1/research/candidates/{candidate_id}/selections", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/candidates/{candidate_id}/selections", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [9], "closing_task": 9, "dod": [10, 17], "reason": "Full-scope R3 completion requires arbitrary candidate drill-down, not only the selected aggregate; Task 9 adds a typed opaque-cursor page over the separately approved candidate immutable bundle proposal.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: candidate_id path plus experiment_id required query, cursor optional opaque query, and limit bounded to 1..100 with default 20; no-cursor resolution uses the bundle referenced by current comparison revision.", "response_dto": "Target DTO: APIResponse[CandidateSelectionPageResponse] with candidate_id, experiment_id, candidate_bundle_artifact_id as artifact_id, candidate bundle content_hash, items: list[CandidateSelectionEventResponse], and next_cursor; typed item fields are validation_fold_ordinal, fold_id, trade_date, instrument_id, score, rank, selected, and evidence_hash.", "error_codes": "Target errors: 404 CANDIDATE_EVIDENCE_NOT_FOUND; 422 CANDIDATE_EXPERIMENT_MISMATCH or INVALID_CANDIDATE_EVIDENCE_CURSOR, including cross-kind reuse; 409 EVIDENCE_STALE when cursor content_hash differs from the bundle referenced by current comparison.", "idempotency": "Read-only target contract; Idempotency-Key is not applicable.", "revision_etag": "Target revision identity: opaque next_cursor encodes candidate bundle content_hash plus resource_kind=selections plus offset; next_cursor is null at the end; current-comparison bundle drift fails 409 EVIDENCE_STALE.", "maturity": "experimental"},
-      "page_consumers": ["Experiment candidate selection drill-down"], "controversy_topic": "candidate-selection-ledger-reads"
+      "design_method": "GET",
+      "design_path": "/api/v1/research/candidates/{candidate_id}/selections",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/candidates/{candidate_id}/selections",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        9
+      ],
+      "closing_task": null,
+      "dod": [
+        10,
+        17
+      ],
+      "reason": "Typed opaque-cursor candidate selection drill-down implemented over the approved immutable bundle.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: candidate_id path plus experiment_id required query, cursor optional opaque query, and limit bounded to 1..100 with default 20; no-cursor resolution uses the bundle referenced by current comparison revision.",
+        "response_dto": "Target DTO: APIResponse[CandidateSelectionPageResponse] with candidate_id, experiment_id, candidate_bundle_artifact_id as artifact_id, candidate bundle content_hash, items: list[CandidateSelectionEventResponse], and next_cursor; typed item fields are validation_fold_ordinal, fold_id, trade_date, instrument_id, score, rank, selected, and evidence_hash.",
+        "error_codes": "Target errors: 404 CANDIDATE_EVIDENCE_NOT_FOUND; 422 CANDIDATE_EXPERIMENT_MISMATCH or INVALID_CANDIDATE_EVIDENCE_CURSOR, including cross-kind reuse; 409 EVIDENCE_STALE when cursor content_hash differs from the bundle referenced by current comparison.",
+        "idempotency": "Read-only target contract; Idempotency-Key is not applicable.",
+        "revision_etag": "Target revision identity: opaque next_cursor encodes candidate bundle content_hash plus resource_kind=selections plus offset; next_cursor is null at the end; current-comparison bundle drift fails 409 EVIDENCE_STALE.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment candidate selection drill-down"
+      ],
+      "controversy_topic": "candidate-selection-ledger-reads"
     },
     {
       "operation_id": "design_research_candidate_exclusions",
-      "design_method": "GET", "design_path": "/api/v1/research/candidates/{candidate_id}/exclusions", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/candidates/{candidate_id}/exclusions", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [9], "closing_task": 9, "dod": [10, 17], "reason": "Full-scope R3 completion requires arbitrary candidate exclusion drill-down; Task 9 adds a typed opaque-cursor page over the separately approved candidate immutable bundle proposal.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: candidate_id path plus experiment_id required query, cursor optional opaque query, and limit bounded to 1..100 with default 20; no-cursor resolution uses the bundle referenced by current comparison revision.", "response_dto": "Target DTO: APIResponse[CandidateExclusionPageResponse] with candidate_id, experiment_id, candidate_bundle_artifact_id as artifact_id, candidate bundle content_hash, items: list[CandidateExclusionEventResponse], and next_cursor; typed item fields are validation_fold_ordinal, fold_id, trade_date, instrument_id, stage, reason_code, details, and evidence_hash.", "error_codes": "Target errors: 404 CANDIDATE_EVIDENCE_NOT_FOUND; 422 CANDIDATE_EXPERIMENT_MISMATCH or INVALID_CANDIDATE_EVIDENCE_CURSOR, including cross-kind reuse; 409 EVIDENCE_STALE when cursor content_hash differs from the bundle referenced by current comparison.", "idempotency": "Read-only target contract; Idempotency-Key is not applicable.", "revision_etag": "Target revision identity: opaque next_cursor encodes candidate bundle content_hash plus resource_kind=exclusions plus offset; next_cursor is null at the end; current-comparison bundle drift fails 409 EVIDENCE_STALE.", "maturity": "experimental"},
-      "page_consumers": ["Experiment candidate exclusion drill-down"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/candidates/{candidate_id}/exclusions",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/candidates/{candidate_id}/exclusions",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        9
+      ],
+      "closing_task": null,
+      "dod": [
+        10,
+        17
+      ],
+      "reason": "Typed opaque-cursor candidate exclusion drill-down implemented over the approved immutable bundle.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: candidate_id path plus experiment_id required query, cursor optional opaque query, and limit bounded to 1..100 with default 20; no-cursor resolution uses the bundle referenced by current comparison revision.",
+        "response_dto": "Target DTO: APIResponse[CandidateExclusionPageResponse] with candidate_id, experiment_id, candidate_bundle_artifact_id as artifact_id, candidate bundle content_hash, items: list[CandidateExclusionEventResponse], and next_cursor; typed item fields are validation_fold_ordinal, fold_id, trade_date, instrument_id, stage, reason_code, details, and evidence_hash.",
+        "error_codes": "Target errors: 404 CANDIDATE_EVIDENCE_NOT_FOUND; 422 CANDIDATE_EXPERIMENT_MISMATCH or INVALID_CANDIDATE_EVIDENCE_CURSOR, including cross-kind reuse; 409 EVIDENCE_STALE when cursor content_hash differs from the bundle referenced by current comparison.",
+        "idempotency": "Read-only target contract; Idempotency-Key is not applicable.",
+        "revision_etag": "Target revision identity: opaque next_cursor encodes candidate bundle content_hash plus resource_kind=exclusions plus offset; next_cursor is null at the end; current-comparison bundle drift fails 409 EVIDENCE_STALE.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment candidate exclusion drill-down"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_research_candidate_factor_contributions",
-      "design_method": "GET", "design_path": "/api/v1/research/candidates/{candidate_id}/factor-contributions", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/candidates/{candidate_id}/factor-contributions", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "implementation_tasks": [9], "closing_task": 9, "dod": [10, 17], "reason": "Full-scope R3 completion requires arbitrary candidate factor-contribution drill-down; Task 9 adds a typed opaque-cursor page over the separately approved candidate immutable bundle proposal.",
-      "origins": ["DESIGN_12_2"], "contracts": {"request_identity": "Target contract: candidate_id path plus experiment_id required query, cursor optional opaque query, and limit bounded to 1..100 with default 20; no-cursor resolution uses the bundle referenced by current comparison revision.", "response_dto": "Target DTO: APIResponse[CandidateFactorContributionPageResponse] with candidate_id, experiment_id, candidate_bundle_artifact_id as artifact_id, candidate bundle content_hash, items: list[CandidateFactorContributionResponse], and next_cursor; typed item fields are validation_fold_ordinal, fold_id, trade_date, instrument_id, factor_id, contribution, rank, selected, and evidence_hash.", "error_codes": "Target errors: 404 CANDIDATE_EVIDENCE_NOT_FOUND; 422 CANDIDATE_EXPERIMENT_MISMATCH or INVALID_CANDIDATE_EVIDENCE_CURSOR, including cross-kind reuse; 409 EVIDENCE_STALE when cursor content_hash differs from the bundle referenced by current comparison.", "idempotency": "Read-only target contract; Idempotency-Key is not applicable.", "revision_etag": "Target revision identity: opaque next_cursor encodes candidate bundle content_hash plus resource_kind=factor_contributions plus offset; next_cursor is null at the end; current-comparison bundle drift fails 409 EVIDENCE_STALE.", "maturity": "experimental"},
-      "page_consumers": ["Experiment candidate factor-contribution drill-down"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/candidates/{candidate_id}/factor-contributions",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/candidates/{candidate_id}/factor-contributions",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "implementation_tasks": [
+        9
+      ],
+      "closing_task": null,
+      "dod": [
+        10,
+        17
+      ],
+      "reason": "Typed opaque-cursor factor-contribution drill-down implemented over the approved immutable bundle.",
+      "origins": [
+        "DESIGN_12_2"
+      ],
+      "contracts": {
+        "request_identity": "Target contract: candidate_id path plus experiment_id required query, cursor optional opaque query, and limit bounded to 1..100 with default 20; no-cursor resolution uses the bundle referenced by current comparison revision.",
+        "response_dto": "Target DTO: APIResponse[CandidateFactorContributionPageResponse] with candidate_id, experiment_id, candidate_bundle_artifact_id as artifact_id, candidate bundle content_hash, items: list[CandidateFactorContributionResponse], and next_cursor; typed item fields are validation_fold_ordinal, fold_id, trade_date, instrument_id, factor_id, contribution, rank, selected, and evidence_hash.",
+        "error_codes": "Target errors: 404 CANDIDATE_EVIDENCE_NOT_FOUND; 422 CANDIDATE_EXPERIMENT_MISMATCH or INVALID_CANDIDATE_EVIDENCE_CURSOR, including cross-kind reuse; 409 EVIDENCE_STALE when cursor content_hash differs from the bundle referenced by current comparison.",
+        "idempotency": "Read-only target contract; Idempotency-Key is not applicable.",
+        "revision_etag": "Target revision identity: opaque next_cursor encodes candidate bundle content_hash plus resource_kind=factor_contributions plus offset; next_cursor is null at the end; current-comparison bundle drift fails 409 EVIDENCE_STALE.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment candidate factor-contribution drill-down"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_list_research_reviews",
-      "design_method": "GET", "design_path": "/api/v1/research/reviews", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/reviews", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [12, 13, 17], "reason": "Exact cross-strategy review queue projection.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "No body; current local review queue.", "response_dto": "APIResponse[list[StrategyVersionResponse]]", "error_codes": "200 stable envelope.", "idempotency": "Read-only; not applicable.", "revision_etag": "Immutable version/spec hash; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Review queue"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/research/reviews",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/reviews",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        12,
+        13,
+        17
+      ],
+      "reason": "Exact cross-strategy review queue projection.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "No body; current local review queue.",
+        "response_dto": "APIResponse[list[StrategyVersionResponse]]",
+        "error_codes": "200 stable envelope.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Immutable version/spec hash; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Review queue"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "design_research_review_detail",
-      "design_method": "GET", "design_path": "/api/v1/research/reviews/{review_id}", "disposition": "EQUIVALENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}/review-packet", "equivalent_operation_id": "research_get_research_experiment_review_packet",
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [9, 10, 12, 13, 17], "reason": "This is an approval-required resource-identity change: one spec_hash may map one-to-many to rerun experiments, and the queue resolver selects the latest packet-bearing experiment at query time. A refreshed queue can therefore navigate to a different experiment after a rerun; experiment_id is a latest-selection navigation result, while bundle_hash is the final immutable audit identity and stale bundle submissions must fail closed.",
-      "origins": ["DESIGN_12_2", "W5"], "contracts": {"request_identity": "Queue lookup is one-to-many by spec_hash and selects the latest packet-bearing experiment_id; clients must carry that resolved experiment_id and the displayed bundle_hash, and must not treat the mapping as stable across queue refreshes.", "response_dto": "APIResponse[ExperimentReviewPacketResponse] whose experiment_id identifies the selected rerun and bundle_hash identifies the immutable packet.", "error_codes": "404 packet; 422 path validation; mutation consumers must return EVIDENCE_STALE when the submitted bundle_hash no longer matches the intended review packet.", "idempotency": "Read-only lookup is not idempotency-keyed; latest selection can change after a rerun even though each returned packet is immutable.", "revision_etag": "bundle_hash, not spec_hash or queue position, is the final immutable audit identity; stale bundle_hash must be rejected by submit/publish.", "maturity": "experimental"},
-      "page_consumers": ["Review detail"], "controversy_topic": "review-detail-vs-review-packet",
-      "user_approval": {"status": "APPROVED", "decision": "Approved the recorded replacement of review_id detail with the latest packet-bearing experiment review-packet, with bundle_hash as immutable audit identity.", "reference": "user-message:2026-07-31:final-task4-classification-approved"},
-      "equivalence": {"replacement": "GET /api/v1/research/experiments/{experiment_id}/review-packet", "runtime_operations": [{"method": "GET", "path": "/api/v1/research/experiments/{experiment_id}/review-packet", "operation_id": "research_get_research_experiment_review_packet"}], "proof": {"request_identity": "This is not one-to-one: spec_hash has a one-to-many relationship with rerun experiments, and the queue resolver selects the latest packet-bearing experiment at each query.", "response_dto": "The selected packet contains hard gates, evidence hashes, rationale, selection refs, R1 impact hash, experiment_id, and immutable bundle_hash.", "error_codes": "Missing selected packet is 404; later submit/publish must reject a stale bundle_hash as EVIDENCE_STALE.", "idempotency": "The read has no mutation replay, and a repeated read after a rerun may resolve a newer experiment; each returned bundle remains immutable.", "revision_etag": "bundle_hash is the final audit identity and stale guard; spec_hash alone cannot fence rerun selection.", "maturity": "Both are experimental research review surfaces.", "audit_evidence": "The latest-selection delta requires user approval; audit trails bind the chosen experiment_id and bundle_hash, never only spec_hash."}}
+      "design_method": "GET",
+      "design_path": "/api/v1/research/reviews/{review_id}",
+      "disposition": "EQUIVALENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/review-packet",
+      "equivalent_operation_id": "research_get_research_experiment_review_packet",
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        9,
+        10,
+        12,
+        13,
+        17
+      ],
+      "reason": "This is an approval-required resource-identity change: one spec_hash may map one-to-many to rerun experiments, and the queue resolver selects the latest packet-bearing experiment at query time. A refreshed queue can therefore navigate to a different experiment after a rerun; experiment_id is a latest-selection navigation result, while bundle_hash is the final immutable audit identity and stale bundle submissions must fail closed.",
+      "origins": [
+        "DESIGN_12_2",
+        "W5"
+      ],
+      "contracts": {
+        "request_identity": "Queue lookup is one-to-many by spec_hash and selects the latest packet-bearing experiment_id; clients must carry that resolved experiment_id and the displayed bundle_hash, and must not treat the mapping as stable across queue refreshes.",
+        "response_dto": "APIResponse[ExperimentReviewPacketResponse] whose experiment_id identifies the selected rerun and bundle_hash identifies the immutable packet.",
+        "error_codes": "404 packet; 422 path validation; mutation consumers must return EVIDENCE_STALE when the submitted bundle_hash no longer matches the intended review packet.",
+        "idempotency": "Read-only lookup is not idempotency-keyed; latest selection can change after a rerun even though each returned packet is immutable.",
+        "revision_etag": "bundle_hash, not spec_hash or queue position, is the final immutable audit identity; stale bundle_hash must be rejected by submit/publish.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Review detail"
+      ],
+      "controversy_topic": "review-detail-vs-review-packet",
+      "user_approval": {
+        "status": "APPROVED",
+        "decision": "Approved the recorded replacement of review_id detail with the latest packet-bearing experiment review-packet, with bundle_hash as immutable audit identity.",
+        "reference": "user-message:2026-07-31:final-task4-classification-approved"
+      },
+      "equivalence": {
+        "replacement": "GET /api/v1/research/experiments/{experiment_id}/review-packet",
+        "runtime_operations": [
+          {
+            "method": "GET",
+            "path": "/api/v1/research/experiments/{experiment_id}/review-packet",
+            "operation_id": "research_get_research_experiment_review_packet"
+          }
+        ],
+        "proof": {
+          "request_identity": "This is not one-to-one: spec_hash has a one-to-many relationship with rerun experiments, and the queue resolver selects the latest packet-bearing experiment at each query.",
+          "response_dto": "The selected packet contains hard gates, evidence hashes, rationale, selection refs, R1 impact hash, experiment_id, and immutable bundle_hash.",
+          "error_codes": "Missing selected packet is 404; later submit/publish must reject a stale bundle_hash as EVIDENCE_STALE.",
+          "idempotency": "The read has no mutation replay, and a repeated read after a rerun may resolve a newer experiment; each returned bundle remains immutable.",
+          "revision_etag": "bundle_hash is the final audit identity and stale guard; spec_hash alone cannot fence rerun selection.",
+          "maturity": "Both are experimental research review surfaces.",
+          "audit_evidence": "The latest-selection delta requires user approval; audit trails bind the chosen experiment_id and bundle_hash, never only spec_hash."
+        }
+      }
     },
     {
       "operation_id": "strategies_list_strategies",
-      "design_method": "GET", "design_path": "/api/v1/strategies", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/strategies", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [17], "reason": "W5/runtime-only strategy catalog operation audited explicitly.",
-      "origins": ["W5", "RUNTIME_ONLY"], "contracts": {"request_identity": "limit/offset query.", "response_dto": "APIResponse[list[StrategyResponse]]", "error_codes": "200; 422 pagination validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "Each strategy includes current version; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy catalog"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        17
+      ],
+      "reason": "W5/runtime-only strategy catalog operation audited explicitly.",
+      "origins": [
+        "W5",
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "limit/offset query.",
+        "response_dto": "APIResponse[list[StrategyResponse]]",
+        "error_codes": "200; 422 pagination validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Each strategy includes current version; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy catalog"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "strategies_get_strategy",
-      "design_method": "GET", "design_path": "/api/v1/strategies/{strategy_id}", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/strategies/{strategy_id}", "equivalent_operation_id": null,
-      "implementation_state": "IMPLEMENTED", "closing_task": null, "dod": [4, 17], "reason": "W5/runtime-only current strategy detail operation audited explicitly; it is not historical version detail.",
-      "origins": ["W5", "RUNTIME_ONLY"], "contracts": {"request_identity": "strategy_id path.", "response_dto": "APIResponse[StrategyResponse]", "error_codes": "404 strategy; 422 path validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "Current version and canonical spec; no ETag.", "maturity": "initial-focus"},
-      "page_consumers": ["Strategy detail", "Strategy Studio"], "controversy_topic": null
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies/{strategy_id}",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies/{strategy_id}",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        17
+      ],
+      "reason": "W5/runtime-only current strategy detail operation audited explicitly; it is not historical version detail.",
+      "origins": [
+        "W5",
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id path.",
+        "response_dto": "APIResponse[StrategyResponse]",
+        "error_codes": "404 strategy; 422 path validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Current version and canonical spec; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy detail",
+        "Strategy Studio"
+      ],
+      "controversy_topic": null
     },
     {
       "operation_id": "research_get_experiment_selection_evidence",
-      "design_method": "GET", "design_path": "/api/v1/research/experiments/{experiment_id}/selection-evidence", "disposition": "IMPLEMENT",
-      "runtime_method": "GET", "runtime_path": "/api/v1/research/experiments/{experiment_id}/selection-evidence", "equivalent_operation_id": null,
-      "implementation_state": "PLANNED", "closing_task": 9, "dod": [10, 17, 23], "reason": "W5/runtime-only aggregate selected-candidate ledger; Task 9 closes non-empty contributions and industry/size exposure.",
-      "origins": ["W5", "RUNTIME_ONLY"], "contracts": {"request_identity": "experiment_id resolves the selected/published evidence artifact.", "response_dto": "APIResponse[ExperimentSelectionEvidenceResponse], typed payload finalized by Tasks 9/16.", "error_codes": "404 evidence; 422 path/typed payload validation.", "idempotency": "Read-only; not applicable.", "revision_etag": "artifact_id/content_hash and pinned state; no ETag.", "maturity": "experimental"},
-      "page_consumers": ["Experiment evidence", "Review selection/exposure evidence"], "controversy_topic": "aggregate-selection-evidence"
+      "design_method": "GET",
+      "design_path": "/api/v1/research/experiments/{experiment_id}/selection-evidence",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/experiments/{experiment_id}/selection-evidence",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        10,
+        17,
+        23
+      ],
+      "reason": "Aggregate selected-candidate ledger implemented with contributions and industry/size exposure evidence.",
+      "origins": [
+        "W5",
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "experiment_id resolves the selected/published evidence artifact.",
+        "response_dto": "APIResponse[ExperimentSelectionEvidenceResponse], typed payload finalized by Tasks 9/16.",
+        "error_codes": "404 evidence; 422 path/typed payload validation.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "artifact_id/content_hash and pinned state; no ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Experiment evidence",
+        "Review selection/exposure evidence"
+      ],
+      "controversy_topic": "aggregate-selection-evidence"
     }
-  ]
+  ],
+  "contract_rules": {
+    "runtime_rolling": "Closure mode: every non-DEFER entry resolves to an exact runtime method, path, operationId, request, response, status, parameters, and maturity projection; any PLANNED non-DEFER entry is a contract failure."
+  }
 }

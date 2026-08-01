@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Mapping, Sequence
-from typing import Annotated, Never, ParamSpec, TypeVar, cast
+from collections.abc import Callable
+from typing import Annotated, Never, ParamSpec, TypeVar
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
@@ -63,6 +63,7 @@ from ditto_apps.api.errors import (
     NotFoundError,
     UnprocessableEntityError,
 )
+from ditto_apps.api.json_values import to_json_mapping, to_json_value
 from ditto_apps.api.mutation_idempotency import (
     IdempotencyKeyHeader,
 )
@@ -103,8 +104,6 @@ router = APIRouter(prefix="/research/experiments", tags=["research"])
 
 P = ParamSpec("P")
 R = TypeVar("R")
-type JsonScalar = str | bool | int | float | None
-type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 
 _PLANNING_CONFLICT_CODES = frozenset(
     {
@@ -139,28 +138,6 @@ async def run_blocking[**P, R](
     return await asyncio.to_thread(func, *args, **kwargs)
 
 
-def _to_json_value(value: object) -> JsonValue:
-    """Thaw application read values into JSON-native containers."""
-    if isinstance(value, Mapping):
-        return _to_json_mapping(cast("Mapping[object, object]", value))
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        sequence = cast("Sequence[object]", value)
-        return [_to_json_value(item) for item in sequence]
-    if value is None or isinstance(value, (str, bool, int, float)):
-        return value
-    raise TypeError("research read value must be JSON-compatible")
-
-
-def _to_json_mapping[K, V](value: Mapping[K, V]) -> dict[str, JsonValue]:
-    """Preserve typed string keys and fail closed on read-contract drift."""
-    result: dict[str, JsonValue] = {}
-    for key, item in value.items():
-        if not isinstance(key, str):
-            raise TypeError("research read value mapping key must be str")
-        result[key] = _to_json_value(item)
-    return result
-
-
 def to_candidate_response(
     candidate: ExperimentCandidateReadModel,
 ) -> ExperimentCandidateResponse:
@@ -169,7 +146,7 @@ def to_candidate_response(
         candidate_id=candidate.candidate_id,
         ordinal=candidate.ordinal,
         is_baseline=candidate.is_baseline,
-        parameters=_to_json_mapping(candidate.parameters),
+        parameters=to_json_mapping(candidate.parameters),
     )
 
 
@@ -241,8 +218,8 @@ def to_gate_response(gate: ExperimentGateReadModel) -> ExperimentGateResponse:
         policy_version=gate.policy_version,
         layer=gate.layer,
         outcome=gate.outcome,
-        observed=_to_json_value(gate.observed),
-        policy=_to_json_value(gate.policy),
+        observed=to_json_value(gate.observed),
+        policy=to_json_value(gate.policy),
         artifact_id=gate.artifact_id,
         payload_hash=gate.payload_hash,
         evaluated_at=gate.evaluated_at,
@@ -266,7 +243,7 @@ def to_artifact_response(
         row_count=artifact.row_count,
         byte_size=artifact.byte_size,
         reproduction_fingerprint=artifact.reproduction_fingerprint,
-        manifest=_to_json_value(artifact.manifest),
+        manifest=to_json_value(artifact.manifest),
         is_pinned=artifact.is_pinned,
         pinned_at=artifact.pinned_at,
         created_at=artifact.created_at,
@@ -285,7 +262,7 @@ def to_selection_evidence_response(
         byte_size=view.byte_size,
         is_pinned=view.is_pinned,
         created_at=view.created_at,
-        payload=_to_json_value(dict(view.payload)),
+        payload=to_json_value(dict(view.payload)),
     )
 
 
@@ -297,7 +274,7 @@ def to_comparison_response(
         experiment_id=view.experiment_id,
         payload_hash=view.payload_hash,
         revision=view.revision,
-        payload=_to_json_value(dict(view.payload)),
+        payload=to_json_value(dict(view.payload)),
     )
 
 
@@ -328,8 +305,8 @@ def _to_preflight_check_response(
         code=check.code,
         reason=check.reason,
         remediation=check.remediation,
-        observed=_to_json_mapping(check.observed),
-        policy=_to_json_mapping(check.policy),
+        observed=to_json_mapping(check.observed),
+        policy=to_json_mapping(check.policy),
     )
 
 

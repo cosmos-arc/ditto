@@ -43,13 +43,12 @@ def _operation_signatures(app: FastAPI) -> set[tuple[str, str, str]]:
     }
 
 
-def test_static_openapi_matches_pure_non_debug_contract() -> None:
-    """Static OpenAPI is exactly the pure deterministic projection."""
-    contract_app = create_openapi_app(include_debug=False)
-    expected = canonical_openapi_bytes(contract_app.openapi())
+def test_static_openapi_matches_canonical_runtime_contract() -> None:
+    """Static OpenAPI is exactly the exporter's runtime projection."""
+    expected = exporter.canonical_runtime_openapi_bytes()
 
     assert _SNAPSHOT_PATH.read_bytes() == expected
-    assert _DEBUG_PATH not in contract_app.openapi()["paths"]
+    assert _DEBUG_PATH not in exporter.runtime_openapi_schema()["paths"]
 
 
 def test_exporter_writes_canonical_bytes_through_real_entrypoint(
@@ -60,9 +59,7 @@ def test_exporter_writes_canonical_bytes_through_real_entrypoint(
 
     exported_path = exporter.export_openapi(output_path)
 
-    expected = canonical_openapi_bytes(
-        create_openapi_app(include_debug=False).openapi()
-    )
+    expected = exporter.canonical_runtime_openapi_bytes()
     assert exported_path == output_path
     assert output_path.read_bytes() == expected
     assert stat.S_IMODE(output_path.stat().st_mode) == 0o644

@@ -70,6 +70,11 @@ from ditto_apps.api.errors import (
     UnprocessableEntityError,
     raise_business_error,
 )
+from ditto_apps.api.json_values import (
+    to_json_mapping,
+    to_json_value,
+    to_object_mapping,
+)
 from ditto_apps.api.mutation_idempotency import (
     IdempotencyKeyHeader,
     mutation_idempotency,
@@ -178,7 +183,7 @@ def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
     return StrategyResponse(
         strategy_id=info.strategy_id,
         name=info.name,
-        spec_json=dict(info.spec_json),
+        spec_json=to_json_mapping(info.spec_json),
         version=info.version,
         status=info.status,
         created_at=info.created_at,
@@ -207,7 +212,7 @@ def to_version_detail_response(
     return StrategyVersionDetailResponse(
         strategy_id=info.strategy_id,
         version=info.version,
-        canonical_spec=dict(info.canonical_spec),
+        canonical_spec=to_json_mapping(info.canonical_spec),
         spec_hash=info.spec_hash,
         parent_version=info.parent_version,
         state=info.state,
@@ -280,7 +285,7 @@ async def create_strategy(
     cmd = CreateStrategyCommand(
         strategy_id=request.strategy_id,
         name=request.name,
-        spec_json=request.spec_json,
+        spec_json=to_object_mapping(request.spec_json),
         tags=tuple(request.tags),
         idempotency=mutation_idempotency(
             operation_id="strategies_create_strategy",
@@ -339,7 +344,7 @@ async def update_strategy(
     cmd = UpdateStrategyCommand(
         strategy_id=strategy_id,
         name=request.name,
-        spec_json=request.spec_json,
+        spec_json=to_object_mapping(request.spec_json),
         version=request.version,
         tags=tuple(request.tags),
         idempotency=mutation_idempotency(
@@ -714,8 +719,8 @@ def to_diff_response(
             SpecChangeResponse(
                 path=change.path,
                 op=change.op,
-                old=change.old_value,
-                new=change.new_value,
+                old=to_json_value(change.old_value),
+                new=to_json_value(change.new_value),
             )
             for change in info.changes
         ],
@@ -735,7 +740,10 @@ async def validate_strategy_version(
 ) -> APIResponse[StrategySpecValidationResponse]:
     """校验 candidate spec_json（pre-save），返回 canonical hash + 合法性 + 变更检测."""
     info = await run_blocking(
-        facade.validate_spec, strategy_id, version, request.spec_json
+        facade.validate_spec,
+        strategy_id,
+        version,
+        to_object_mapping(request.spec_json),
     )
     if info is None:
         raise NotFoundError(f"Strategy version not found: {strategy_id} v{version}")
