@@ -261,9 +261,15 @@ export function validateLiveRuntime(environment: Readonly<Record<string, string 
 export function buildLiveAcceptancePlan(): readonly LiveAcceptancePlanStep[] {
 	return [
 		{ id: "studio-preflight-launch", description: "Studio identity, read-only preflight, confirmation, and launch" },
-		{ id: "experiment-polling-control", description: "Live experiment polling and pause/resume control when available" },
+		{
+			id: "experiment-polling-control",
+			description: "Live experiment polling and pause/resume control through the candidate-selection gate",
+		},
 		{ id: "candidate-comparison-evidence", description: "Candidate pinning, comparison, and evidence drill-down" },
-		{ id: "one-shot-holdout", description: "Candidate selection and one-shot holdout evaluation" },
+		{
+			id: "one-shot-holdout",
+			description: "Candidate selection, one-shot holdout evaluation, and successful terminal state",
+		},
 		{ id: "duplicate-holdout-blocked", description: "Holdout action remains disabled after the immutable claim" },
 		{ id: "review-approve-publish", description: "Submit review, approve the packet, and evidence-gated publish" },
 		{ id: "r1-active-version", description: "Browser observes the published R1 active pointer" },
@@ -656,10 +662,10 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				}
 				await page
 					.locator('[data-contract-slot="experiment-meta"]')
-					.getByText(/completed|succeeded/iu)
+					.getByText(/candidate_selection/iu)
 					.waitFor();
 				await page.reload({ waitUntil: "domcontentloaded" });
-				return `polling reached a successful terminal state; control=${control}`;
+				return `polling reached the candidate-selection gate; control=${control}`;
 			}),
 		);
 
@@ -686,7 +692,12 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await holdout.click();
 				const claim = page.getByText(/^claim /u);
 				await claim.waitFor();
-				return (await claim.textContent()) ?? "holdout claim persisted";
+				const claimDetail = (await claim.textContent()) ?? "holdout claim persisted";
+				await page
+					.locator('[data-contract-slot="experiment-meta"]')
+					.getByText(/completed|succeeded/iu)
+					.waitFor();
+				return `${claimDetail}; experiment reached a successful terminal state`;
 			}),
 		);
 

@@ -141,8 +141,9 @@ describe("R3 research deterministic acceptance contract", () => {
 	it("binds every approved live browser checkpoint without request interception", async () => {
 		const { buildLiveAcceptancePlan } = await loadAcceptance();
 		const source = readFileSync(acceptanceScript, "utf8");
+		const plan = buildLiveAcceptancePlan();
 
-		expect(buildLiveAcceptancePlan().map((step) => step.id)).toEqual([
+		expect(plan.map((step) => step.id)).toEqual([
 			"studio-preflight-launch",
 			"experiment-polling-control",
 			"candidate-comparison-evidence",
@@ -153,6 +154,8 @@ describe("R3 research deterministic acceptance contract", () => {
 			"historical-reactivate",
 			"refresh-recovery",
 		]);
+		expect(plan[1]?.description).toContain("candidate-selection gate");
+		expect(plan[3]?.description).toContain("successful terminal state");
 		expect(source).not.toContain("page.route(");
 		expect(source).not.toContain("route.fulfill(");
 	});
