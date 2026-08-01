@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
-from time import sleep
-
 import polars as pl
 
 from ditto_data.config import DataSourceSettings
-from ditto_data.errors import SourceFetchError
+from ditto_data.sources.tushare._announcement_range import (
+    fetch_corporate_actions_range as _fetch_corporate_actions_range,
+)
+from ditto_data.sources.tushare._announcement_range import (
+    fetch_dividend_range as _fetch_dividend_range,
+)
 from ditto_data.sources.tushare._market_facades import (
     EtfIndexFacade as _EtfIndexFacade,
 )
@@ -59,58 +61,6 @@ from ditto_data.sources.tushare.stock_source import (
     fetch_stock_limit,
     fetch_stock_status,
 )
-
-_DIVIDEND_ANNOUNCEMENT_ATTEMPTS = 3
-_DIVIDEND_ANNOUNCEMENT_RETRY_DELAY_SECONDS = 61.0
-
-
-def _fetch_dividend_announcement_date(
-    adapter: FundamentalTushareAdapter,
-    announcement_date: str,
-) -> pl.DataFrame:
-    """Retry one exact announcement date after the client's bounded retries."""
-    for attempt in range(1, _DIVIDEND_ANNOUNCEMENT_ATTEMPTS + 1):
-        try:
-            return adapter.fetch_dividend(ann_date=announcement_date)
-        except SourceFetchError:
-            if attempt == _DIVIDEND_ANNOUNCEMENT_ATTEMPTS:
-                raise
-            # Tushare reports business-level quota errors in a successful HTTP
-            # response.  The client's short transport retry therefore remains
-            # inside the same provider minute window; cross that boundary before
-            # retrying the exact natural-date request.
-            sleep(_DIVIDEND_ANNOUNCEMENT_RETRY_DELAY_SECONDS)
-    raise AssertionError("unreachable dividend retry state")
-
-
-def _fetch_dividend_announcement_range(
-    adapter: FundamentalTushareAdapter,
-    start_date: str,
-    end_date: str,
-) -> pl.DataFrame:
-    """Fetch a bounded dividend interval through documented exact ann_date calls."""
-    start = date.fromisoformat(start_date)
-    end = date.fromisoformat(end_date)
-    if end < start:
-        raise ValueError("dividend range end_date precedes start_date")
-    frames: list[pl.DataFrame] = []
-    current = start
-    while current <= end:
-        frames.append(
-            _fetch_dividend_announcement_date(
-                adapter,
-                current.strftime("%Y%m%d"),
-            )
-        )
-        current += timedelta(days=1)
-    non_empty = [frame for frame in frames if not frame.is_empty()]
-    if non_empty:
-        # The provider can repeat an identical plan/implementation row.  Collapse
-        # only byte-equivalent business rows; distinct amounts or states remain
-        # visible to the append-only downstream contract.
-        return pl.concat(non_empty, how="diagonal_relaxed").unique(maintain_order=True)
-    return frames[0]
-
 
 # ── 内部 Facade 类 ───────────────────────────────────────────────────
 
@@ -287,7 +237,7 @@ class _FundamentalFacade:
 
     def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
         """Fetch dividend announcements in one bounded natural-day interval."""
-        return _fetch_dividend_announcement_range(
+        return _fetch_dividend_range(
             self._fundamental,
             start_date,
             end_date,
@@ -296,10 +246,11 @@ class _FundamentalFacade:
     def fetch_corporate_actions_range(
         self, start_date: str, end_date: str
     ) -> pl.DataFrame:
-        """Fetch corporate-action events in one bounded interval."""
-        return self._fundamental.fetch_corporate_actions(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
+        """Fetch corporate actions in a bounded announcement-date interval."""
+        return _fetch_corporate_actions_range(
+            self._fundamental,
+            start_date,
+            end_date,
         )
 
 
@@ -716,7 +667,7 @@ class TushareSource:
 
     def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
         """Fetch dividend announcements in a bounded natural-day interval."""
-        return _fetch_dividend_announcement_range(
+        return _fetch_dividend_range(
             self._fundamental,
             start_date,
             end_date,
@@ -725,10 +676,11 @@ class TushareSource:
     def fetch_corporate_actions_range(
         self, start_date: str, end_date: str
     ) -> pl.DataFrame:
-        """Fetch corporate-action events in a bounded interval."""
-        return self._fundamental.fetch_corporate_actions(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
+        """Fetch corporate actions in a bounded announcement-date interval."""
+        return _fetch_corporate_actions_range(
+            self._fundamental,
+            start_date,
+            end_date,
         )
 
     # ── Macro + FX + Metal + Commodity（向后兼容委托）────────────────

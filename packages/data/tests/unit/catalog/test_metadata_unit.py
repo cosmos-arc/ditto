@@ -210,6 +210,16 @@ class TestDefaultMetadataScheduleAssignments:
 
         assert registry["dividend"].schema_version == "fundamental.dividend.v2"
 
+    def test_corporate_action_schema_versions_announcement_query_semantics(
+        self,
+    ) -> None:
+        registry = default_dataset_metadata()
+
+        assert (
+            registry["corporate_actions"].schema_version
+            == "fundamental.corporate_actions.v2"
+        )
+
 
 class TestDefaultMetadataMaturityAssignments:
     """Verify maturity assignments match capability-maturity manifest."""

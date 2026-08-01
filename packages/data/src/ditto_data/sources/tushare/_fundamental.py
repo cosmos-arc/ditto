@@ -250,7 +250,5 @@ def fetch_corporate_actions(
     """
     compact_date = to_compact_date(trade_date)
     return fundamental.fetch_corporate_actions(
-        ts_code=None,
-        start_date=compact_date,
-        end_date=compact_date,
+        ann_date=compact_date,
     )

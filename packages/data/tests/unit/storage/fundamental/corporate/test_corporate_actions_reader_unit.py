@@ -470,6 +470,30 @@ class TestCorporateActionsReaderPIT:
         # Assert
         assert len(result) == 0
 
+    def test_as_of_date_excludes_fact_announced_after_cutoff(
+        self,
+        corporate_actions_reader: CorporateActionsReader,
+        in_memory_db: SQLitePool,
+    ) -> None:
+        """A malformed early validity date must not bypass knowledge-time PIT."""
+        _insert_row(
+            in_memory_db,
+            instrument_id=600000,
+            action_type="RESTRICTED_SHARE_RELEASE",
+            action_date=date(2024, 2, 9),
+            knowledge_date=date(2024, 5, 29),
+            effective_from=date(2024, 2, 9),
+            effective_to=None,
+            description="announced after the event",
+        )
+
+        result = corporate_actions_reader.query(
+            600000,
+            as_of_date=date(2024, 3, 31),
+        )
+
+        assert result.is_empty()
+
     def test_as_of_date_combined_with_date_range(
         self,
         corporate_actions_reader: CorporateActionsReader,

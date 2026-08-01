@@ -150,12 +150,18 @@ class TestSqliteTableReader:
         params = mock_client.fetchall.call_args[0][1]
 
         assert "balance_sheet" in sql
+        assert "knowledge_date <= ?" in sql
         assert "effective_from <= ?" in sql
         assert "effective_to IS NULL OR effective_to > ?" in sql
         assert "report_date DESC" in sql
         assert "total_assets" in sql
         assert "knowledge_date" in sql
-        assert params == [1, date(2024, 6, 1), date(2024, 6, 1)]
+        assert params == [
+            1,
+            date(2024, 6, 1),
+            date(2024, 6, 1),
+            date(2024, 6, 1),
+        ]
 
     def test_get_delegates_with_trade_date(
         self, valuation_spec: SqliteTableSpec, mock_client: MagicMock
@@ -258,10 +264,16 @@ class TestSqliteTableReader:
         params = mock_client.fetchall.call_args[0][1]
 
         assert "effective_from <= ?" in sql
+        assert "knowledge_date <= ?" in sql
         assert "effective_to IS NULL OR effective_to > ?" in sql
         assert "report_date >=" not in sql
         assert "report_date <=" not in sql
-        assert params == [1, date(2024, 6, 1), date(2024, 6, 1)]
+        assert params == [
+            1,
+            date(2024, 6, 1),
+            date(2024, 6, 1),
+            date(2024, 6, 1),
+        ]
 
     def test_get_range_with_all_params(
         self, balance_sheet_spec: SqliteTableSpec, mock_client: MagicMock
@@ -283,7 +295,7 @@ class TestSqliteTableReader:
         assert "report_date <= ?" in sql
         assert "effective_from <= ?" in sql
         assert "effective_to IS NULL OR effective_to > ?" in sql
-        assert len(params) == 5
+        assert len(params) == 6
 
     def test_get_range_with_no_filters(
         self, balance_sheet_spec: SqliteTableSpec, mock_client: MagicMock

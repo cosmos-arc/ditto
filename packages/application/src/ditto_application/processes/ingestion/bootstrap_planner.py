@@ -29,7 +29,10 @@ type SourceScheduleResolver = Callable[[str, str, str, str], tuple[str, ...]]
 _EFFECTIVE_DATED_SNAPSHOT_DATASETS = frozenset(
     {"stock_basic", "etf_basic", "index_basic"}
 )
-_QUERY_CONTRACT_VERSIONS = {"dividend": "ann-date-v2"}
+_QUERY_CONTRACT_VERSIONS = {
+    "corporate_actions": "ann-date-v2",
+    "dividend": "ann-date-v2",
+}
 
 
 class _TradingCalendar(Protocol):

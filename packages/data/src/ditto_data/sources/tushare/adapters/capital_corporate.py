@@ -47,22 +47,23 @@ def _date(name: str) -> pl.Expr:
 def _normalized_repurchase(value: pl.DataFrame) -> pl.DataFrame:
     if value.is_empty():
         return _empty_corporate_actions()
-    observable_date = pl.coalesce(
+    knowledge_date = pl.coalesce(
         _date("ann_date"),
         _date("end_date"),
+        _date("exp_date"),
+    )
+    action_date = pl.coalesce(
+        _date("end_date"),
+        _date("ann_date"),
         _date("exp_date"),
     )
     return value.select(
         pl.col("ts_code").cast(pl.String).alias("source_ticker"),
         pl.lit("share_repurchase").alias("action_type"),
-        observable_date.alias("action_date"),
-        observable_date.alias("knowledge_date"),
-        pl.coalesce(
-            _date("end_date"),
-            _date("ann_date"),
-            _date("exp_date"),
-        ).alias("effective_from"),
-        _date("exp_date").alias("effective_to"),
+        action_date.alias("action_date"),
+        knowledge_date.alias("knowledge_date"),
+        knowledge_date.alias("effective_from"),
+        pl.lit(None, dtype=pl.Date).alias("effective_to"),
         pl.concat_str(
             pl.lit("progress="),
             pl.col("proc").cast(pl.String).fill_null("unknown"),
@@ -77,13 +78,14 @@ def _normalized_repurchase(value: pl.DataFrame) -> pl.DataFrame:
 def _normalized_share_float(value: pl.DataFrame) -> pl.DataFrame:
     if value.is_empty():
         return _empty_corporate_actions()
-    observable_date = pl.coalesce(_date("ann_date"), _date("float_date"))
+    knowledge_date = pl.coalesce(_date("ann_date"), _date("float_date"))
+    action_date = pl.coalesce(_date("float_date"), _date("ann_date"))
     return value.select(
         pl.col("ts_code").cast(pl.String).alias("source_ticker"),
         pl.lit("restricted_share_release").alias("action_type"),
-        observable_date.alias("action_date"),
-        observable_date.alias("knowledge_date"),
-        pl.coalesce(_date("float_date"), _date("ann_date")).alias("effective_from"),
+        action_date.alias("action_date"),
+        knowledge_date.alias("knowledge_date"),
+        knowledge_date.alias("effective_from"),
         pl.lit(None, dtype=pl.Date).alias("effective_to"),
         pl.concat_str(
             pl.lit("share_type="),
@@ -130,6 +132,7 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
     def fetch_corporate_actions(
         self,
         ts_code: str | None = None,
+        ann_date: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
@@ -138,6 +141,7 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
 
         Args:
             ts_code: 股票代码 (e.g., "000001.SZ")
+            ann_date: 精确公告日期 (YYYYMMDD)
             start_date: 开始日期 (YYYYMMDD)
             end_date: 结束日期 (YYYYMMDD)
 
@@ -171,6 +175,7 @@ class CapitalCorporateTushareAdapter(BaseTushareAdapter):
                 key: value
                 for key, value in {
                     "ts_code": ts_code,
+                    "ann_date": ann_date,
                     "start_date": start_date,
                     "end_date": end_date,
                 }.items()

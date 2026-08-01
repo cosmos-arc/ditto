@@ -158,12 +158,14 @@ class CapitalTushareAdapter(BaseTushareAdapter):
     def fetch_corporate_actions(
         self,
         ts_code: str | None = None,
+        ann_date: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取公司行为数据."""
         return self._corporate.fetch_corporate_actions(
             ts_code=ts_code,
+            ann_date=ann_date,
             start_date=start_date,
             end_date=end_date,
         )

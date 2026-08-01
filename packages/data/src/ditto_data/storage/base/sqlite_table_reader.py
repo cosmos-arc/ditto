@@ -15,6 +15,7 @@ class SqliteTableReader:
     """通用 SQLite PIT 表读取器，通过 spec 参数化表结构和查询逻辑."""
 
     _MIN_PIT_COLUMNS = 2
+    _KNOWLEDGE_PIT_COLUMNS = 3
 
     def __init__(self, spec: SqliteTableSpec, client: SQLiteClient) -> None:
         self._spec = spec
@@ -25,12 +26,18 @@ class SqliteTableReader:
         cols = ", ".join(spec.all_columns)
         pit_from = spec.pit_columns[-self._MIN_PIT_COLUMNS]
         pit_to = spec.pit_columns[-1]
+        knowledge_clause = (
+            f"AND {spec.pit_columns[-self._KNOWLEDGE_PIT_COLUMNS]} <= ? "
+            if len(spec.pit_columns) >= self._KNOWLEDGE_PIT_COLUMNS
+            else ""
+        )
         order_col = spec.order_by_column or spec.date_column
         order_clause = f"ORDER BY {order_col} DESC" if order_col else ""
         self._sql = (
             f"SELECT {cols} "  # noqa: S608
             f"FROM {spec.table} "
             f"WHERE {spec.id_column} = ? "
+            f"{knowledge_clause}"
             f"AND {pit_from} <= ? "
             f"AND ({pit_to} IS NULL OR {pit_to} > ?) "
             f"{order_clause}"
@@ -38,7 +45,11 @@ class SqliteTableReader:
 
     def get(self, id_value: int | str, as_of_date: date) -> pl.DataFrame:
         """PIT 查询：获取指定时间点的有效记录。"""
-        rows = self._client.fetchall(self._sql, [id_value, as_of_date, as_of_date])
+        params: list[Any] = [id_value]
+        if len(self._spec.pit_columns) >= self._KNOWLEDGE_PIT_COLUMNS:
+            params.append(as_of_date)
+        params.extend((as_of_date, as_of_date))
+        rows = self._client.fetchall(self._sql, params)
         return pl.DataFrame(rows) if rows else pl.DataFrame()
 
     def get_range(
@@ -61,6 +72,10 @@ class SqliteTableReader:
             params.append(end_date)
 
         if as_of_date is not None:
+            if len(self._spec.pit_columns) >= self._KNOWLEDGE_PIT_COLUMNS:
+                knowledge_column = self._spec.pit_columns[-self._KNOWLEDGE_PIT_COLUMNS]
+                conditions.append(f"{knowledge_column} <= ?")
+                params.append(as_of_date)
             pit_from = self._spec.pit_columns[-2]
             pit_to = self._spec.pit_columns[-1]
             conditions.append(f"{pit_from} <= ?")

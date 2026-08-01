@@ -124,6 +124,24 @@ class TestBootstrapPlannerSchedules:
         assert plan.chunks[0].chunk_key.endswith(":query:ann-date-v2")
         assert plan.chunks[0].chunk_id.endswith(":query:ann-date-v2")
 
+    def test_corporate_action_chunk_identity_binds_announcement_query_contract(
+        self, mocker
+    ) -> None:
+        planner = BootstrapPlanner(metadata_service=_metadata_service(mocker))
+
+        plan = planner.plan(
+            dataset_id="corporate_actions",
+            source="tushare",
+            start_date="2026-01-01",
+            end_date="2026-03-31",
+        )
+
+        assert len(plan.chunks) == 1
+        assert plan.chunks[0].partition_dates[0] == "2026-01-01"
+        assert plan.chunks[0].partition_dates[-1] == "2026-03-31"
+        assert plan.chunks[0].chunk_key.endswith(":query:ann-date-v2")
+        assert plan.chunks[0].chunk_id.endswith(":query:ann-date-v2")
+
     def test_source_defined_schedule_uses_provider_release_dates(self, mocker) -> None:
         resolver = mocker.Mock(return_value=("2026-01-15", "2026-02-20"))
         planner = BootstrapPlanner(

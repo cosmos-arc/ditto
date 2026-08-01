@@ -203,6 +203,11 @@ class TestDateScheduleField:
 
         assert registration.date_schedule is DateScheduleType.NATURAL_DAYS
 
+    def test_corporate_actions_uses_natural_days_schedule(self) -> None:
+        registration = default_dataset_registry().require(Dataset.CORPORATE_ACTIONS)
+
+        assert registration.date_schedule is DateScheduleType.NATURAL_DAYS
+
     def test_fx_daily_has_natural_days_schedule(self) -> None:
         registration = default_dataset_registry().require(Dataset.FX_DAILY)
 

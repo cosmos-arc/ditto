@@ -305,13 +305,18 @@ class TestCapitalTushareAdapterFetchCorporateActions:
             "restricted_share_release",
         ]
         assert result["action_date"].to_list() == [
+            date(2024, 1, 15),
+            date(2024, 1, 20),
+        ]
+        assert result["knowledge_date"].to_list() == [
             date(2024, 1, 1),
             date(2024, 1, 2),
         ]
         assert result["effective_from"].to_list() == [
-            date(2024, 1, 15),
-            date(2024, 1, 20),
+            date(2024, 1, 1),
+            date(2024, 1, 2),
         ]
+        assert result["effective_to"].to_list() == [None, None]
         assert result.columns == [
             "source_ticker",
             "action_type",
@@ -376,7 +381,35 @@ class TestCapitalTushareAdapterFetchCorporateActions:
             date(2024, 1, 1),
             date(2024, 1, 20),
         ]
-        assert result["effective_to"].to_list() == [date(2024, 6, 30), None]
+        assert result["effective_to"].to_list() == [None, None]
+
+    def test_fetch_corporate_actions_exact_announcement_date_uses_documented_filter(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Both constituent APIs are bounded by the same exact knowledge date."""
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [pl.DataFrame(), pl.DataFrame()]
+
+        CapitalTushareAdapter(_client=mock_client).fetch_corporate_actions(
+            ann_date="20240102"
+        )
+
+        assert [item.kwargs for item in mock_client.query.call_args_list] == [
+            {
+                "api_name": "repurchase",
+                "fields": "ts_code,ann_date,end_date,proc,exp_date,vol,amount",
+                "ann_date": "20240102",
+            },
+            {
+                "api_name": "share_float",
+                "fields": (
+                    "ts_code,ann_date,float_date,float_share,float_ratio,"
+                    "holder_name,share_type"
+                ),
+                "ann_date": "20240102",
+            },
+        ]
 
 
 class TestCapitalTushareAdapterFetchShareBuyback:

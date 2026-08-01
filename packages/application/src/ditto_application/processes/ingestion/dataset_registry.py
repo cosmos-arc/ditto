@@ -410,6 +410,7 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     DatasetRegistration(
         dataset=Dataset.CORPORATE_ACTIONS,
         write_kind=WriteKind.FUNDAMENTAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_daily_fetch("fundamental", "fetch_corporate_actions"),
     ),
 )

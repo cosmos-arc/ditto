@@ -241,8 +241,8 @@ class TestDividendDelegate:
 class TestCorporateActionsDelegate:
     """Corporate-action delegate behavior."""
 
-    def test_trade_date_queries_single_compact_date_range(self) -> None:
-        """Corporate actions query uses compact trade date as start and end."""
+    def test_trade_date_queries_exact_compact_announcement_date(self) -> None:
+        """Corporate actions query uses the compact announcement date."""
         fundamental = MagicMock()
         fundamental.fetch_corporate_actions.return_value = _frame("actions")
 
@@ -251,8 +251,4 @@ class TestCorporateActionsDelegate:
         )
 
         assert result["dataset"].item() == "actions"
-        fundamental.fetch_corporate_actions.assert_called_once_with(
-            ts_code=None,
-            start_date="20240506",
-            end_date="20240506",
-        )
+        fundamental.fetch_corporate_actions.assert_called_once_with(ann_date="20240506")
