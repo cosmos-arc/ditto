@@ -52,6 +52,7 @@ __all__ = [
     "certify_live_products",
     "load_passing_recovery_evidence",
     "probe_consumer_payload",
+    "resolve_coverage_target_from",
     "resolve_reusable_certification",
     "select_current_snapshot_ids",
 ]
@@ -339,6 +340,24 @@ def _literal_target_from(dataset_id: str) -> date:
         return _DEFAULT_TARGET_FROM
 
 
+def resolve_coverage_target_from(
+    dataset_id: str,
+    expected_dates: tuple[date, ...],
+) -> date:
+    """Resolve the frozen coverage start for literal and symbolic contracts."""
+    contract = default_dataset_metadata()[dataset_id].product_contract
+    if contract is None or contract.raw_target_from is None:
+        raise ValueError(f"dataset has no R2 raw target: {dataset_id}")
+    try:
+        return date.fromisoformat(contract.raw_target_from)
+    except ValueError:
+        if not expected_dates:
+            raise ValueError(
+                f"symbolic coverage target requires expected dates: {dataset_id}"
+            ) from None
+        return min(expected_dates)
+
+
 def load_passing_recovery_evidence(path: Path) -> tuple[Path, str]:
     """Validate the exact addressed recoverability group emitted by R2 acceptance."""
     resolved = path.expanduser().resolve(strict=True)
@@ -589,11 +608,14 @@ def certify_live_products(
                     target_to=target_to,
                     trading_days_provider=query_context.metadata.list_trading_days,
                 )
+                coverage_target_from = resolve_coverage_target_from(
+                    dataset_id, expected_dates
+                )
                 frozen, consumer_path, consumer_hash = _freeze_or_resume_product(
                     _LiveCertificationRequest(
                         dataset_id=dataset_id,
                         profile=R2_ACCEPTANCE_CERTIFICATION_PROFILE,
-                        target_from=target_from,
+                        target_from=coverage_target_from,
                         target_to=target_to,
                         expected_dates=expected_dates,
                         snapshot_ids=snapshot_ids,

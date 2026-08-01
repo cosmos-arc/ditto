@@ -15,6 +15,7 @@ from ditto_apps.scripts.r2_live_certification import (
     build_expected_dates,
     load_passing_recovery_evidence,
     probe_consumer_payload,
+    resolve_coverage_target_from,
     resolve_reusable_certification,
     select_current_snapshot_ids,
 )
@@ -211,6 +212,14 @@ def test_build_expected_dates_uses_trading_and_natural_schedules() -> None:
         date(2026, 8, 1),
     )
     assert source_defined == natural
+
+
+@pytest.mark.unit
+def test_resolve_coverage_target_from_honors_literal_and_symbolic_contracts() -> None:
+    expected = (date(2015, 1, 5), date(2015, 1, 6))
+
+    assert resolve_coverage_target_from("calendar", expected) == date(2015, 1, 1)
+    assert resolve_coverage_target_from("index_weight", expected) == date(2015, 1, 5)
 
 
 @pytest.mark.unit
