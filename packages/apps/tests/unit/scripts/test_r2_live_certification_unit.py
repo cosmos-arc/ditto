@@ -5,14 +5,17 @@ from __future__ import annotations
 import hashlib
 import sqlite3
 from datetime import UTC, date, datetime
+from types import SimpleNamespace
 
 import orjson
 import polars as pl
 import pytest
 from ditto_apps.scripts.r2_live_certification import (
+    ReusableCertificationRequest,
     build_expected_dates,
     load_passing_recovery_evidence,
     probe_consumer_payload,
+    resolve_reusable_certification,
     select_current_snapshot_ids,
 )
 from ditto_data.catalog import (
@@ -254,3 +257,105 @@ def test_load_passing_recovery_evidence_rejects_blocked_group(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="passing recoverability"):
         load_passing_recovery_evidence(path)
+
+
+@pytest.mark.unit
+def test_resolve_reusable_certification_requires_exact_addressed_inputs(
+    tmp_path,
+) -> None:
+    data_root = tmp_path / "live-data"
+    evidence_root = tmp_path / "evidence"
+    snapshot_ids = ("snapshot:tushare:dividend:sha256:current",)
+    payload = {
+        "schema": "ditto.r2-live-consumer-evidence.v1",
+        "dataset_id": "dividend",
+        "data_root": str(data_root.resolve()),
+        "generated_at": _NOW.isoformat(),
+        "probe": {"kind": "sqlite", "object": "dividend", "row_count": 5},
+        "snapshot_ids": list(snapshot_ids),
+    }
+    content = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+    digest = hashlib.sha256(content).hexdigest()
+    consumer_path = (
+        evidence_root
+        / "products"
+        / "dividend"
+        / f"consumer-read-smoke.sha256-{digest}.json"
+    )
+    consumer_path.parent.mkdir(parents=True)
+    consumer_path.write_bytes(content)
+    recovery_uri = "artifact+sha256://recovery/current"
+    active = SimpleNamespace(
+        dataset_id="dividend",
+        profile="r2-modern-a-share-v1",
+        coverage=SimpleNamespace(
+            target_from=date(2015, 1, 1),
+            target_to=date(2026, 7, 31),
+            is_complete=True,
+        ),
+        evidence=SimpleNamespace(
+            snapshot_ids=snapshot_ids,
+            recovery_results=(
+                SimpleNamespace(
+                    name="isolated_backup_restore_hash_parity",
+                    evidence_uri=recovery_uri,
+                    passed=True,
+                ),
+            ),
+            consumer_results=(
+                SimpleNamespace(
+                    name="production_consumer_read_smoke",
+                    evidence_uri=(
+                        "artifact+sha256://r2-live/consumer/dividend/" + digest
+                    ),
+                    passed=True,
+                ),
+            ),
+        ),
+    )
+
+    resolved_path, resolved_hash = resolve_reusable_certification(
+        active_report=active,
+        request=ReusableCertificationRequest(
+            dataset_id="dividend",
+            profile="r2-modern-a-share-v1",
+            target_from=date(2015, 1, 1),
+            target_to=date(2026, 7, 31),
+            snapshot_ids=snapshot_ids,
+            recovery_evidence_uri=recovery_uri,
+            data_root=data_root,
+            evidence_root=evidence_root,
+        ),
+    )
+
+    assert resolved_path == consumer_path.resolve()
+    assert resolved_hash == digest
+
+
+@pytest.mark.unit
+def test_resolve_reusable_certification_rejects_snapshot_drift(tmp_path) -> None:
+    active = SimpleNamespace(
+        dataset_id="dividend",
+        profile="r2-modern-a-share-v1",
+        coverage=SimpleNamespace(
+            target_from=date(2015, 1, 1),
+            target_to=date(2026, 7, 31),
+            is_complete=True,
+        ),
+        evidence=SimpleNamespace(snapshot_ids=("snapshot:stale",)),
+    )
+
+    with pytest.raises(ValueError, match="snapshot binding drift"):
+        resolve_reusable_certification(
+            active_report=active,
+            request=ReusableCertificationRequest(
+                dataset_id="dividend",
+                profile="r2-modern-a-share-v1",
+                target_from=date(2015, 1, 1),
+                target_to=date(2026, 7, 31),
+                snapshot_ids=("snapshot:current",),
+                recovery_evidence_uri="artifact+sha256://recovery/current",
+                data_root=tmp_path / "live-data",
+                evidence_root=tmp_path / "evidence",
+            ),
+        )
