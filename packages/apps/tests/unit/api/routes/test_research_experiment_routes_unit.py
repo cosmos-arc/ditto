@@ -844,6 +844,8 @@ async def test_get_experiment_selection_evidence_raises_not_found_when_absent() 
 def _comparison_view() -> CandidateComparisonView:
     return CandidateComparisonView(
         experiment_id="exp-1",
+        payload_hash="a" * 64,
+        revision=7,
         payload=MappingProxyType(
             {"baseline": MappingProxyType({"candidate_id": "candidate-1"}), "folds": ()}
         ),
@@ -855,6 +857,8 @@ def test_to_comparison_response_maps_payload() -> None:
 
     assert response.model_dump(mode="json") == {
         "experiment_id": "exp-1",
+        "payload_hash": "a" * 64,
+        "revision": 7,
         "payload": {"baseline": {"candidate_id": "candidate-1"}, "folds": []},
     }
 

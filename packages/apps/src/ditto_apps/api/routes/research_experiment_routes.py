@@ -295,6 +295,8 @@ def to_comparison_response(
     """将 CandidateComparisonView 转 API 响应."""
     return ExperimentComparisonResponse(
         experiment_id=view.experiment_id,
+        payload_hash=view.payload_hash,
+        revision=view.revision,
         payload=_to_json_value(dict(view.payload)),
     )
 

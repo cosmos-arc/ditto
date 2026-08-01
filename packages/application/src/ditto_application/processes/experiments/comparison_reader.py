@@ -37,6 +37,8 @@ class CandidateComparisonView:
     """Application read model for one experiment's candidate comparison."""
 
     experiment_id: str
+    payload_hash: str
+    revision: int
     payload: Mapping[str, object]
 
 
@@ -51,7 +53,8 @@ class ExperimentComparisonReader:
     def load_comparison(self, experiment_id: str) -> CandidateComparisonView | None:
         """Return the candidate comparison, or ``None`` if the experiment is absent."""
         typed_id = ExperimentId(experiment_id)
-        if self.reader.get_experiment_projection(typed_id) is None:
+        projection = self.reader.get_experiment_projection(typed_id)
+        if projection is None:
             return None
         snapshot = self.scheduler_store.load_snapshot(typed_id)
         events = self.reader.list_status_events(typed_id)
@@ -60,5 +63,7 @@ class ExperimentComparisonReader:
         collected = self.walk_forward_assembler.assemble(snapshot, manifest)
         return CandidateComparisonView(
             experiment_id=experiment_id,
+            payload_hash=str(collected.comparison.content_hash),
+            revision=projection.revision,
             payload=MappingProxyType(collected.comparison.canonical_payload()),
         )

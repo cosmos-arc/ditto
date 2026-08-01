@@ -329,6 +329,8 @@ class ExperimentComparisonResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     experiment_id: str
+    payload_hash: str
+    revision: int
     payload: Any
 
 

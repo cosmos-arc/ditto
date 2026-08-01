@@ -9123,10 +9123,20 @@
           },
           "payload": {
             "title": "Payload"
+          },
+          "payload_hash": {
+            "title": "Payload Hash",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
           }
         },
         "required": [
           "experiment_id",
+          "payload_hash",
+          "revision",
           "payload"
         ],
         "title": "ExperimentComparisonResponse",

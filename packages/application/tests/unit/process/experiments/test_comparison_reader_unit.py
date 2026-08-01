@@ -16,7 +16,7 @@ from ditto_application.processes.experiments.comparison_reader import (
 
 def _reader(assembled: SimpleNamespace) -> ExperimentComparisonReader:
     reader = MagicMock(spec=ExperimentReaderProtocol)
-    reader.get_experiment_projection.return_value = SimpleNamespace()
+    reader.get_experiment_projection.return_value = SimpleNamespace(revision=7)
     reader.list_status_events.return_value = ()
     scheduler_store = MagicMock()
     scheduler_store.load_snapshot.return_value = SimpleNamespace()
@@ -34,7 +34,10 @@ def test_load_comparison_projects_canonical_payload(
 ) -> None:
     payload = {"baseline": {"candidate_id": "candidate-1"}, "folds": []}
     assembled = SimpleNamespace(
-        comparison=SimpleNamespace(canonical_payload=lambda: payload)
+        comparison=SimpleNamespace(
+            canonical_payload=lambda: payload,
+            content_hash="a" * 64,
+        )
     )
     monkeypatch.setattr(module, "read_unique_preflight_detail", lambda events, eid: {})
     monkeypatch.setattr(module, "project_snapshot_manifest", lambda detail: object())
@@ -44,6 +47,8 @@ def test_load_comparison_projects_canonical_payload(
 
     assert view is not None
     assert view.experiment_id == "exp-1"
+    assert view.payload_hash == "a" * 64
+    assert view.revision == 7
     assert dict(view.payload) == payload
 
 
