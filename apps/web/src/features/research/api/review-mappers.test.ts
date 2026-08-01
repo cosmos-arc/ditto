@@ -70,6 +70,7 @@ describe("mapReviewPacket", () => {
 			comparison_payload_hash: "4".repeat(64),
 			r1_impact_payload_hash: null,
 			selection_evidence_artifact_id: "artifact-1",
+			selection_exposure: null,
 			holdout_claim_id: "holdout-1",
 			candidate_rationale: "baseline net return stable",
 			selection_trace_artifact_refs: [

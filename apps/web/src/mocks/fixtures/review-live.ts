@@ -75,6 +75,7 @@ export const mockReviewPacket: ExperimentReviewPacketResponse = {
 	comparison_payload_hash: "4".repeat(64),
 	r1_impact_payload_hash: "5".repeat(64),
 	selection_evidence_artifact_id: "artifact-selection-1",
+	selection_exposure: null,
 	holdout_claim_id: "holdout-claim-1",
 	candidate_rationale: "基线候选在 walk-forward 窗口净收益稳定、回撤可控，成本调整后仍优于阈值。",
 	selection_trace_artifact_refs: [

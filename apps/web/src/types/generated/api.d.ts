@@ -1545,6 +1545,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/candidates/{candidate_id}/exclusions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Candidate Exclusions
+         * @description Read exclusion events from the current candidate bundle.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_candidate_exclusions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/candidates/{candidate_id}/factor-contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Candidate Factor Contributions
+         * @description Read factor contributions from the current candidate bundle.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_candidate_factor_contributions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/candidates/{candidate_id}/selections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Candidate Selections
+         * @description Read selected-instrument decisions from the current candidate bundle.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_candidate_selections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/experiments": {
         parameters: {
             query?: never;
@@ -1560,7 +1626,13 @@ export interface paths {
          */
         get: operations["research_list_research_experiments"];
         put?: never;
-        post?: never;
+        /**
+         * Launch Experiment
+         * @description Rebuild and launch one exact operator-confirmed planning document.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_launch_experiment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1600,8 +1672,6 @@ export interface paths {
          * List Experiment Artifacts
          * @description 列出实验的 immutable indexed artifacts（lineage order）.
          *
-         *     Maturity: experimental — R3 research control-plane surface.
-         *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         get: operations["research_list_experiment_artifacts"];
@@ -1631,6 +1701,28 @@ export interface paths {
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         post: operations["research_cancel_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/candidate-selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Select Experiment Candidate
+         * @description Persist one server-side preselection distinct from local comparison pins.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["design_research_candidate_selection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1705,6 +1797,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/experiments/{experiment_id}/holdout-evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim Experiment Holdout
+         * @description Claim the one candidate referenced by a durable preselection event.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["design_research_holdout_evaluations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/experiments/{experiment_id}/pause": {
         parameters: {
             query?: never;
@@ -1723,6 +1837,28 @@ export interface paths {
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         post: operations["research_pause_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preflight Experiment
+         * @description Compute deterministic experiment eligibility without writing.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_preflight_experiment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1814,8 +1950,6 @@ export interface paths {
          * Get Experiment Selection Evidence
          * @description 读取实验已发布并验证的 selection-evidence ledger.
          *
-         *     Maturity: experimental — R3 research control-plane surface.
-         *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         get: operations["research_get_experiment_selection_evidence"];
@@ -1841,6 +1975,28 @@ export interface paths {
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
         get: operations["research_list_research_factors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/factors/{factor_id}/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Research Factor Diagnostics
+         * @description Read one provenance-bound factor diagnostic artifact by exact scope.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_factor_diagnostics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2038,6 +2194,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/strategies/{strategy_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Strategy Governance Events
+         * @description Return append-only decision and activation rows at a stable cursor.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["design_strategy_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/strategies/{strategy_id}/versions": {
         parameters: {
             query?: never;
@@ -2052,6 +2230,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["strategies_list_strategy_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Strategy Version Detail
+         * @description Return one immutable canonical version and its governance state.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["design_strategy_version_detail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2745,6 +2945,34 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[CandidateExclusionPageResponse] */
+        APIResponse_CandidateExclusionPageResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateExclusionPageResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[CandidateFactorContributionPageResponse] */
+        APIResponse_CandidateFactorContributionPageResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateFactorContributionPageResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[CandidateSelectionPageResponse] */
+        APIResponse_CandidateSelectionPageResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateSelectionPageResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[CandidateSelectionReceiptResponse] */
+        APIResponse_CandidateSelectionReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateSelectionReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[CatalogAssetResponse] */
         APIResponse_CatalogAssetResponse_: {
             /** @description 响应数据 */
@@ -2920,6 +3148,20 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[ExperimentLaunchResponse] */
+        APIResponse_ExperimentLaunchResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentLaunchResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentPreflightResponse] */
+        APIResponse_ExperimentPreflightResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentPreflightResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[ExperimentReviewPacketResponse] */
         APIResponse_ExperimentReviewPacketResponse_: {
             /** @description 响应数据 */
@@ -2934,6 +3176,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[FactorDiagnosticsResponse] */
+        APIResponse_FactorDiagnosticsResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["FactorDiagnosticsResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[FillAdjustmentResponse] */
         APIResponse_FillAdjustmentResponse_: {
             /** @description 响应数据 */
@@ -2945,6 +3194,13 @@ export interface components {
         APIResponse_FillResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["FillResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[HoldoutEvaluationReceiptResponse] */
+        APIResponse_HoldoutEvaluationReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["HoldoutEvaluationReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3071,6 +3327,13 @@ export interface components {
         APIResponse_StrategySpecValidationResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["StrategySpecValidationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyVersionDetailResponse] */
+        APIResponse_StrategyVersionDetailResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyVersionDetailResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3429,6 +3692,16 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["RunResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[StrategyGovernanceEventResponse]] */
+        APIResponse_list_StrategyGovernanceEventResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["StrategyGovernanceEventResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -4014,6 +4287,171 @@ export interface components {
              * @default cancelled
              */
             status: string;
+        };
+        /**
+         * CandidateExclusionEventResponse
+         * @description One candidate exclusion event from an immutable candidate bundle.
+         */
+        CandidateExclusionEventResponse: {
+            /** Evidence Hash */
+            evidence_hash: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Instrument Id */
+            instrument_id: number | string;
+            /** Message */
+            message: string | null;
+            /** Reason Code */
+            reason_code: string;
+            /** Stage */
+            stage: string;
+            /** Trade Date */
+            trade_date: string;
+            /** Validation Fold Ordinal */
+            validation_fold_ordinal: number;
+        };
+        /**
+         * CandidateExclusionPageResponse
+         * @description Typed exclusions page over one immutable candidate bundle.
+         */
+        CandidateExclusionPageResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Items */
+            items: components["schemas"]["CandidateExclusionEventResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /**
+         * CandidateFactorContributionPageResponse
+         * @description Typed contribution page over one immutable candidate bundle.
+         */
+        CandidateFactorContributionPageResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Items */
+            items: components["schemas"]["CandidateFactorContributionResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /**
+         * CandidateFactorContributionResponse
+         * @description One factor contribution bound to a fold decision and evidence hash.
+         */
+        CandidateFactorContributionResponse: {
+            /** Contribution */
+            contribution: number | null;
+            /** Evidence Hash */
+            evidence_hash: string;
+            /** Factor Id */
+            factor_id: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Instrument Id */
+            instrument_id: number | string;
+            /** Rank */
+            rank: number | null;
+            /** Selected */
+            selected: boolean | null;
+            /** Trade Date */
+            trade_date: string;
+            /** Validation Fold Ordinal */
+            validation_fold_ordinal: number;
+        };
+        /**
+         * CandidateSelectionEventResponse
+         * @description One candidate selection event from an immutable candidate bundle.
+         */
+        CandidateSelectionEventResponse: {
+            /** Evidence Hash */
+            evidence_hash: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Instrument Id */
+            instrument_id: number | string;
+            /** Rank */
+            rank: number;
+            /** Score */
+            score: number | null;
+            /** Selected */
+            selected: boolean;
+            /** Trade Date */
+            trade_date: string;
+            /** Validation Fold Ordinal */
+            validation_fold_ordinal: number;
+        };
+        /**
+         * CandidateSelectionPageResponse
+         * @description Typed selections page over one immutable candidate bundle.
+         */
+        CandidateSelectionPageResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Items */
+            items: components["schemas"]["CandidateSelectionEventResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /**
+         * CandidateSelectionReceiptResponse
+         * @description API projection of one append-only candidate preselection event.
+         */
+        CandidateSelectionReceiptResponse: {
+            /** Candidate Evidence Artifact Id */
+            candidate_evidence_artifact_id: string;
+            /** Candidate Evidence Content Hash */
+            candidate_evidence_content_hash: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string;
+            /** Event Id */
+            event_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Revision */
+            revision: number;
+            /** Selection Evidence Content Hash */
+            selection_evidence_content_hash: string;
+            /** Selection Id */
+            selection_id: string;
+        };
+        /**
+         * CandidateSelectionRequest
+         * @description Body for one durable server-side promotion preselection.
+         */
+        CandidateSelectionRequest: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Rationale */
+            rationale: string;
         };
         /**
          * CatalogAssetRefResponse
@@ -7189,6 +7627,266 @@ export interface components {
             rule_id: string;
         };
         /**
+         * ExperimentLaunchRequest
+         * @description Canonical planning document plus the operator-confirmed plan identity.
+         */
+        ExperimentLaunchRequest: {
+            budget: components["schemas"]["ExperimentPlanningBudgetRequest"];
+            /** Confirmed Plan Hash */
+            confirmed_plan_hash: string;
+            cost_model: components["schemas"]["ExperimentPlanningCostModelRequest"];
+            /** Created At */
+            created_at: string;
+            /** Dataset Requirements */
+            dataset_requirements: components["schemas"]["ExperimentPlanningDatasetRequirementRequest"][];
+            /** Experiment Id */
+            experiment_id: string;
+            /**
+             * Failure Policy
+             * @enum {string}
+             */
+            failure_policy: "continue_candidate_failures" | "fail_fast";
+            matrix: components["schemas"]["ExperimentPlanningMatrixRequest"];
+            /** Promotion Objective */
+            promotion_objective: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Research Cycle Hash */
+            research_cycle_hash: string;
+            /** Research Cycle Id */
+            research_cycle_id: string;
+            /** Seed */
+            seed: number;
+            snapshot: components["schemas"]["ExperimentPlanningSnapshotRequest"];
+            strategy: components["schemas"]["ExperimentPlanningStrategyRequest"];
+            /** Validation */
+            validation: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Worker Count */
+            worker_count: number;
+        };
+        /**
+         * ExperimentLaunchResponse
+         * @description Durable server truth returned after launch or exact replay.
+         */
+        ExperimentLaunchResponse: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Fold Count */
+            fold_count: number;
+            /** Plan Hash */
+            plan_hash: string;
+            /** Queue Ordinal */
+            queue_ordinal: number;
+            /** Revision */
+            revision: number;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ExperimentPlanningBaselineRequest
+         * @description Typed baseline descriptor envelope for the candidate matrix.
+         */
+        ExperimentPlanningBaselineRequest: {
+            /** Descriptor Type */
+            descriptor_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Schema Version */
+            schema_version: number;
+        };
+        /**
+         * ExperimentPlanningBudgetRequest
+         * @description Pre-registered hard resource ceilings.
+         */
+        ExperimentPlanningBudgetRequest: {
+            /** Candidate Limit */
+            candidate_limit: number;
+            /** Disk Byte Limit */
+            disk_byte_limit: number;
+            /** Fold Run Limit */
+            fold_run_limit: number;
+            /** Trading Session Limit */
+            trading_session_limit: number;
+        };
+        /**
+         * ExperimentPlanningCostModelRequest
+         * @description Deterministic resource-estimation coefficients.
+         */
+        ExperimentPlanningCostModelRequest: {
+            /** Bytes Per Run */
+            bytes_per_run: number;
+            /** Bytes Per Trading Session */
+            bytes_per_trading_session: number;
+        };
+        /**
+         * ExperimentPlanningDatasetRequirementRequest
+         * @description One exact certified dataset binding.
+         */
+        ExperimentPlanningDatasetRequirementRequest: {
+            /** Certified From */
+            certified_from: string | null;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Expected Snapshot Ids */
+            expected_snapshot_ids: string[];
+            /** Requires Pit Universe */
+            requires_pit_universe: boolean;
+        };
+        /**
+         * ExperimentPlanningMatrixRequest
+         * @description Complete candidate matrix preimage.
+         */
+        ExperimentPlanningMatrixRequest: {
+            /** Axes */
+            axes: components["schemas"]["ExperimentPlanningParameterAxisRequest"][];
+            baseline: components["schemas"]["ExperimentPlanningBaselineRequest"];
+            /** Candidate Limit */
+            candidate_limit: number;
+        };
+        /**
+         * ExperimentPlanningParameterAxisRequest
+         * @description One ordered candidate-matrix parameter axis.
+         */
+        ExperimentPlanningParameterAxisRequest: {
+            /** Name */
+            name: string;
+            /** Values */
+            values: components["schemas"]["ExperimentPlanningParameterValueRequest"][];
+        };
+        /**
+         * ExperimentPlanningParameterValueRequest
+         * @description One tagged scalar matrix value.
+         */
+        ExperimentPlanningParameterValueRequest: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "bool" | "int" | "float" | "string";
+            /** Value */
+            value: boolean | number | string;
+        };
+        /**
+         * ExperimentPlanningRequest
+         * @description Complete transport-only document passed unchanged to the builder.
+         */
+        ExperimentPlanningRequest: {
+            budget: components["schemas"]["ExperimentPlanningBudgetRequest"];
+            cost_model: components["schemas"]["ExperimentPlanningCostModelRequest"];
+            /** Created At */
+            created_at: string;
+            /** Dataset Requirements */
+            dataset_requirements: components["schemas"]["ExperimentPlanningDatasetRequirementRequest"][];
+            /** Experiment Id */
+            experiment_id: string;
+            /**
+             * Failure Policy
+             * @enum {string}
+             */
+            failure_policy: "continue_candidate_failures" | "fail_fast";
+            matrix: components["schemas"]["ExperimentPlanningMatrixRequest"];
+            /** Promotion Objective */
+            promotion_objective: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Research Cycle Hash */
+            research_cycle_hash: string;
+            /** Research Cycle Id */
+            research_cycle_id: string;
+            /** Seed */
+            seed: number;
+            snapshot: components["schemas"]["ExperimentPlanningSnapshotRequest"];
+            strategy: components["schemas"]["ExperimentPlanningStrategyRequest"];
+            /** Validation */
+            validation: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Worker Count */
+            worker_count: number;
+        };
+        /**
+         * ExperimentPlanningSnapshotRequest
+         * @description Exact certified research snapshot identity supplied to planning.
+         */
+        ExperimentPlanningSnapshotRequest: {
+            /** Manifest Hash */
+            manifest_hash: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+        };
+        /**
+         * ExperimentPlanningStrategyRequest
+         * @description Exact strategy-version content identity supplied to planning.
+         */
+        ExperimentPlanningStrategyRequest: {
+            /** Spec Hash */
+            spec_hash: string;
+            /** Spec Json */
+            spec_json: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * ExperimentPreflightCheckResponse
+         * @description Transport view of one deterministic planning gate result.
+         */
+        ExperimentPreflightCheckResponse: {
+            /** Code */
+            code: string | null;
+            /** Observed */
+            observed: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Outcome */
+            outcome: string;
+            /** Policy */
+            policy: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Reason */
+            reason: string | null;
+            /** Remediation */
+            remediation: string | null;
+            /** Rule Id */
+            rule_id: string;
+        };
+        /**
+         * ExperimentPreflightResponse
+         * @description Complete operator confirmation surface returned by read-only preflight.
+         */
+        ExperimentPreflightResponse: {
+            /** Budget Run Count */
+            budget_run_count: number;
+            /** Candidate Count */
+            candidate_count: number;
+            /** Checks */
+            checks: components["schemas"]["ExperimentPreflightCheckResponse"][];
+            /** Eligible Month Count */
+            eligible_month_count: number;
+            /** Estimated Disk Bytes */
+            estimated_disk_bytes: number;
+            /** Estimated Trading Sessions */
+            estimated_trading_sessions: number;
+            /** Isolation Width Sessions */
+            isolation_width_sessions: number;
+            /** Plan Hash */
+            plan_hash: string | null;
+            /** Planned Fold Count */
+            planned_fold_count: number;
+            /** Status */
+            status: string;
+        };
+        /**
          * ExperimentRetryFoldRequest
          * @description Body for one revision-fenced terminal fold retry.
          *
@@ -7241,6 +7939,7 @@ export interface components {
             schema_version: number;
             /** Selection Evidence Artifact Id */
             selection_evidence_artifact_id: string | null;
+            selection_exposure: components["schemas"]["ReviewSelectionExposureResponse"] | null;
             /** Selection Trace Artifact Refs */
             selection_trace_artifact_refs: components["schemas"]["ReviewSelectionTraceRefResponse"][];
             /** Snapshot Hash */
@@ -7312,6 +8011,42 @@ export interface components {
             resolved_payload: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * FactorDiagnosticsResponse
+         * @description Typed immutable factor diagnostics and their complete read identity.
+         */
+        FactorDiagnosticsResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Factor Id */
+            factor_id: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Provenance */
+            provenance: {
+                [key: string]: unknown;
+            };
+            /** Registry Hash */
+            registry_hash: string;
+            /** Snapshot Hash */
+            snapshot_hash: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
         };
         /**
          * FillAdjustmentResponse
@@ -7574,6 +8309,75 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * HoldoutEvaluationReceiptResponse
+         * @description API projection of one committed or exactly replayed holdout claim.
+         */
+        HoldoutEvaluationReceiptResponse: {
+            /** Candidate Evidence Content Hash */
+            candidate_evidence_content_hash: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Claim Id */
+            claim_id: string;
+            /** Claim Payload Hash */
+            claim_payload_hash: string;
+            /** Event Id */
+            event_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Logical Run Id */
+            logical_run_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Reproduction Fingerprint */
+            reproduction_fingerprint: string;
+            /** Revision */
+            revision: number;
+            /** Selection Evidence Content Hash */
+            selection_evidence_content_hash: string;
+            /** Selection Id */
+            selection_id: string;
+            /**
+             * State
+             * @constant
+             */
+            state: "claimed";
+        };
+        /**
+         * HoldoutEvaluationRequest
+         * @description Body for the one-shot holdout claim of a persisted preselection.
+         */
+        HoldoutEvaluationRequest: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Expected Candidate Evidence Content Hash */
+            expected_candidate_evidence_content_hash: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Expected Selection Evidence Hash */
+            expected_selection_evidence_hash: string;
+            /** Operator Confirmation */
+            operator_confirmation: string;
+            /** Selection Id */
+            selection_id: string;
+            selection_reason: components["schemas"]["HoldoutSelectionReasonRequest"];
+        };
+        /**
+         * HoldoutSelectionReasonRequest
+         * @description Operator-authored reason bound into the immutable holdout claim.
+         */
+        HoldoutSelectionReasonRequest: {
+            /** Code */
+            code: string;
+            /** Summary */
+            summary: string;
+        };
+        /**
          * ImpactModel
          * @description 冲击成本模型枚举。
          * @enum {string}
@@ -7827,6 +8631,13 @@ export interface components {
             ticker: string;
         };
         IsoCalendarDateStr: string;
+        JsonPrimitive: boolean | number | string | null;
+        "JsonValue-Input": components["schemas"]["JsonPrimitive"] | components["schemas"]["JsonValue-Input"][] | {
+            [key: string]: components["schemas"]["JsonValue-Input"];
+        };
+        "JsonValue-Output": components["schemas"]["JsonPrimitive"] | components["schemas"]["JsonValue-Output"][] | {
+            [key: string]: components["schemas"]["JsonValue-Output"];
+        };
         /**
          * LineageResponse
          * @description 运行血统链响应.
@@ -9111,6 +9922,16 @@ export interface components {
             status: string;
         };
         /**
+         * ReviewExposureWeightResponse
+         * @description One canonical exposure dimension and aggregate selected weight.
+         */
+        ReviewExposureWeightResponse: {
+            /** Key */
+            key: string;
+            /** Weight */
+            weight: number;
+        };
+        /**
          * ReviewGateOutcomeResponse
          * @description API view of one gate rule's identity and outcome in a review packet.
          */
@@ -9121,6 +9942,22 @@ export interface components {
             outcome: string;
             /** Rule Id */
             rule_id: string;
+        };
+        /**
+         * ReviewSelectionExposureResponse
+         * @description Explicit stock exposure or ETF not-applicable review evidence.
+         */
+        ReviewSelectionExposureResponse: {
+            /** Applicability */
+            applicability: string;
+            /** Artifact Refs */
+            artifact_refs: components["schemas"]["ReviewSelectionTraceRefResponse"][];
+            /** Industry Weights */
+            industry_weights: components["schemas"]["ReviewExposureWeightResponse"][];
+            /** Lane */
+            lane: string;
+            /** Size Bucket Weights */
+            size_bucket_weights: components["schemas"]["ReviewExposureWeightResponse"][];
         };
         /**
          * ReviewSelectionTraceRefResponse
@@ -9332,6 +10169,28 @@ export interface components {
             strategy_id: string;
         };
         /**
+         * StrategyGovernanceEventResponse
+         * @description Exact append-only decision or activation event projection.
+         */
+        StrategyGovernanceEventResponse: {
+            /** Actor */
+            actor: string;
+            /** Decision Or Activation Kind */
+            decision_or_activation_kind: string;
+            /** Event Id */
+            event_id: string;
+            /** Event Type */
+            event_type: string;
+            /** Occurred At */
+            occurred_at: string;
+            /** Reason */
+            reason: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Target Version */
+            target_version: number;
+        };
+        /**
          * StrategyResponse
          * @description 策略响应.
          */
@@ -9396,6 +10255,30 @@ export interface components {
             version: number;
         };
         /**
+         * StrategyVersionDetailResponse
+         * @description One immutable canonical strategy payload and governance state.
+         */
+        StrategyVersionDetailResponse: {
+            /** Canonical Spec */
+            canonical_spec: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at: string;
+            /** Parent Version */
+            parent_version: number | null;
+            /** Review Outcome */
+            review_outcome: string;
+            /** Spec Hash */
+            spec_hash: string;
+            /** State */
+            state: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+        };
+        /**
          * StrategyVersionDiffResponse
          * @description Field-level canonical spec diff of one version against its parent.
          */
@@ -9453,6 +10336,27 @@ export interface components {
             strategy_id: string;
             /** Version */
             version: number;
+        };
+        /**
+         * SubmitReviewRequest
+         * @description Evidence-bound request to move one immutable draft into review.
+         */
+        SubmitReviewRequest: {
+            /**
+             * Actor
+             * @description 决策执行者
+             */
+            actor: string;
+            /**
+             * Bundle Hash
+             * @description 持久化 review packet hash
+             */
+            bundle_hash: string;
+            /**
+             * Reason
+             * @description 决策原因
+             */
+            reason: string;
         };
         /**
          * TradeIntentResponse
@@ -12003,6 +12907,111 @@ export interface operations {
             };
         };
     };
+    design_research_candidate_exclusions: {
+        parameters: {
+            query: {
+                experiment_id: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateExclusionPageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_candidate_factor_contributions: {
+        parameters: {
+            query: {
+                experiment_id: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateFactorContributionPageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_candidate_selections: {
+        parameters: {
+            query: {
+                experiment_id: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateSelectionPageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     research_list_research_experiments: {
         parameters: {
             query?: never;
@@ -12019,6 +13028,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_ExperimentSummaryResponse__"];
+                };
+            };
+        };
+    };
+    research_launch_experiment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentLaunchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentLaunchResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -12088,7 +13132,9 @@ export interface operations {
     research_cancel_experiment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 experiment_id: string;
             };
@@ -12107,6 +13153,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_candidate_selection: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidateSelectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateSelectionReceiptResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -12213,10 +13296,49 @@ export interface operations {
             };
         };
     };
+    design_research_holdout_evaluations: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoldoutEvaluationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_HoldoutEvaluationReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     research_pause_experiment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 experiment_id: string;
             };
@@ -12248,10 +13370,47 @@ export interface operations {
             };
         };
     };
-    research_resume_experiment: {
+    research_preflight_experiment: {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentPlanningRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentPreflightResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_resume_experiment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 experiment_id: string;
             };
@@ -12286,7 +13445,9 @@ export interface operations {
     research_retry_fold_experiment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 experiment_id: string;
             };
@@ -12396,6 +13557,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_FactorDescriptorResponse__"];
+                };
+            };
+        };
+    };
+    design_research_factor_diagnostics: {
+        parameters: {
+            query: {
+                snapshot_id: string;
+                start_date: string;
+                end_date: string;
+                registry_hash: string;
+            };
+            header?: never;
+            path: {
+                factor_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FactorDiagnosticsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -12540,7 +13737,9 @@ export interface operations {
     strategies_create_strategy: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -12604,7 +13803,9 @@ export interface operations {
     strategies_update_strategy: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
             };
@@ -12667,6 +13868,40 @@ export interface operations {
             };
         };
     };
+    design_strategy_events: {
+        parameters: {
+            query?: {
+                after_event_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_StrategyGovernanceEventResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     strategies_list_strategy_versions: {
         parameters: {
             query?: never;
@@ -12698,10 +13933,44 @@ export interface operations {
             };
         };
     };
-    strategies_approve_strategy_review: {
+    design_strategy_version_detail: {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionDetailResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_approve_strategy_review: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
                 version: number;
@@ -12737,7 +14006,9 @@ export interface operations {
     strategies_deprecate_strategy_version: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
                 version: number;
@@ -12805,7 +14076,9 @@ export interface operations {
     strategies_publish_strategy_version: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
                 version: number;
@@ -12841,7 +14114,9 @@ export interface operations {
     strategies_reactivate_strategy_version: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
                 version: number;
@@ -12877,7 +14152,9 @@ export interface operations {
     strategies_reject_strategy_review: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
                 version: number;
@@ -12913,7 +14190,9 @@ export interface operations {
     strategies_submit_strategy_review: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
                 version: number;
@@ -12922,7 +14201,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GovernanceDecisionRequest"];
+                "application/json": components["schemas"]["SubmitReviewRequest"];
             };
         };
         responses: {
