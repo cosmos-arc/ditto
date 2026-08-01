@@ -13,6 +13,28 @@ import { ResearchPage } from "./research-page";
 import { ResearchPulseStrip } from "./research-pulse-strip";
 import { UniverseListPage } from "./universe-list-page";
 
+vi.mock("@tanstack/react-router", async () => {
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
+	return {
+		...actual,
+		Link: ({
+			to,
+			params,
+			children,
+			className,
+		}: {
+			readonly to: string;
+			readonly params?: Readonly<Record<string, string>>;
+			readonly children: ReactNode;
+			readonly className?: string;
+		}) => (
+			<a href={params?.id ? to.replace("$id", params.id) : to} className={className}>
+				{children}
+			</a>
+		),
+	};
+});
+
 function createQueryClient(): QueryClient {
 	return new QueryClient({
 		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },

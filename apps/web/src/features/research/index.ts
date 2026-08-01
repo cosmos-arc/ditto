@@ -1,3 +1,4 @@
+export { ExperimentCreatePage } from "./components/experiment-create-page";
 export { ExperimentListPage } from "./components/experiment-list-page";
 export { FactorListPage } from "./components/factor-list-page";
 export { FactorOverview } from "./components/factor-overview";

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useExperiments } from "@/features/research/hooks";
 import { OpsConsoleLayout, Panel, PanelBody, PanelHeader, StatusBar } from "@/features/shell";
 
@@ -18,18 +19,34 @@ export function ExperimentListPage() {
 				}
 				main={
 					<Panel className="m-4">
-						<PanelHeader title="Experiments" count={experiments.length} />
+						<PanelHeader
+							title="Experiments"
+							count={experiments.length}
+							actions={
+								<Link
+									to="/research/experiments/new"
+									className="rounded-(--radius-sm) bg-(--brand-accent) px-2 py-1 text-xs text-(--brand-accent-fg)"
+								>
+									创建实验
+								</Link>
+							}
+						/>
 						<PanelBody>
 							<div className="divide-y divide-(--color-border-subtle)">
 								{isLoading && experiments.length === 0 ? (
 									<p className="px-3 py-2 text-sm text-(--color-foreground-tertiary)">加载中…</p>
 								) : (
 									experiments.map((e) => (
-										<div key={e.experimentId} className="grid grid-cols-[7rem_1fr_6rem] items-center px-3 py-2 text-sm">
+										<Link
+											key={e.experimentId}
+											to="/research/experiments/$id"
+											params={{ id: e.experimentId }}
+											className="grid grid-cols-[7rem_1fr_6rem] items-center px-3 py-2 text-sm hover:bg-(--color-interaction-hover-bg)"
+										>
 											<span className="font-data text-(--color-foreground-tertiary)">{e.experimentId}</span>
 											<span className="text-(--color-foreground)">{e.stage}</span>
 											<span className="font-data text-(--color-foreground-secondary)">{e.status}</span>
-										</div>
+										</Link>
 									))
 								)}
 							</div>

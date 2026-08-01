@@ -9,3 +9,9 @@ export const reviewKeys = {
 	list: () => [...reviewKeys.all, "list"] as const,
 	packet: (experimentId: string) => [...reviewKeys.all, "packet", experimentId] as const,
 } as const;
+
+export const experimentKeys = {
+	all: ["research", "experiments"] as const,
+	list: () => [...experimentKeys.all, "list"] as const,
+	detail: (experimentId: string) => [...experimentKeys.all, "detail", experimentId] as const,
+} as const;

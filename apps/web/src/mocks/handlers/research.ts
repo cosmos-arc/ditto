@@ -58,6 +58,36 @@ export const researchHandlers: RequestHandler[] = [
 			pagination: { total: mockExperimentSummaryList.length, limit: 50, offset: 0, has_more: false },
 		}),
 	),
+	http.post("/api/v1/research/experiments/:experimentId/preflight", () =>
+		HttpResponse.json({
+			data: {
+				status: "ready",
+				plan_hash: "d".repeat(64),
+				checks: [],
+				candidate_count: 3,
+				planned_fold_count: 12,
+				budget_run_count: 12,
+				estimated_trading_sessions: 2048,
+				estimated_disk_bytes: 4096,
+				eligible_month_count: 96,
+				isolation_width_sessions: 6,
+			},
+		}),
+	),
+	http.post("/api/v1/research/experiments", async ({ request }) => {
+		const body = (await request.json()) as { experiment_id?: string; confirmed_plan_hash?: string };
+		return HttpResponse.json({
+			data: {
+				experiment_id: body.experiment_id ?? "r3-experiment",
+				status: "queued",
+				queue_ordinal: 1,
+				revision: 1,
+				plan_hash: body.confirmed_plan_hash ?? "d".repeat(64),
+				candidate_count: 3,
+				fold_count: 12,
+			},
+		});
+	}),
 
 	http.get("/api/v1/research/factors/:factorId/diagnostics", ({ params, request }) => {
 		const query = new URL(request.url).searchParams;
