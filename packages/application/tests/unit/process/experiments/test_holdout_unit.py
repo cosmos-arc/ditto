@@ -368,6 +368,9 @@ def test_request_boundary_accepts_only_operator_selection_fields() -> None:
         "operator_confirmation",
         "selection_reason",
         "occurred_at",
+        "selection_id",
+        "expected_candidate_evidence_content_hash",
+        "idempotency",
     }
     for forbidden in (
         "cycle_id",
@@ -423,6 +426,7 @@ def test_process_resolves_real_fingerprint_before_atomic_store_command() -> None
         ),
         "resolved_reproduction_fingerprint": "b" * 64,
         "occurred_at": NOW,
+        "event_detail_extension": None,
     }
     assert store.calls[0]["lease"] == _lease()
     assert store.calls[0]["now_epoch_us"] == 2

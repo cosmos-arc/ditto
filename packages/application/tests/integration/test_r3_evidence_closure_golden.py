@@ -66,6 +66,10 @@ from ditto_application.builders.research_runtime_builder import (
     ResearchSnapshotIdentity,
     ResearchStrategyRuntime,
 )
+from ditto_application.commands.candidate_selection import (
+    CandidateSelectionProcess,
+    CandidateSelectionRequest,
+)
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionCommand,
     PublishStrategyVersionHandler,
@@ -73,7 +77,8 @@ from ditto_application.commands.strategy_governance import (
     ReactivateStrategyHandler,
     reactivate_confirmation_phrase,
 )
-from ditto_application.exceptions import AppCommandError
+from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.mutation_idempotency import build_mutation_idempotency
 from ditto_application.processes.execution.factor_bridge import (
     FactorBridge,
     build_factor_bundle,
@@ -96,6 +101,9 @@ from ditto_application.processes.experiments._selection_evidence_artifact import
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     CollectedWalkForwardEvidence,
     WalkForwardEvidenceAssembler,
+)
+from ditto_application.processes.experiments.candidate_evidence_reader import (
+    CandidateEvidenceReader,
 )
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
@@ -154,6 +162,8 @@ from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.alpha.selection_evidence import (
     SelectionEvidenceCollector,
     SelectionEvidenceLog,
+    SelectionExposureApplicability,
+    SelectionExposureLane,
 )
 from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.models import StrategySpecRecord
@@ -267,9 +277,20 @@ def _run_stock_golden_selection_trace(
             "instrument_id": instrument_ids,
             "roe": [0.05 + instrument_id * 0.005 for instrument_id in instrument_ids],
             "eps": [0.50 + instrument_id * 0.05 for instrument_id in instrument_ids],
+            "market_cap": [
+                5_000_000_000.0 + instrument_id * 5_000_000_000.0
+                for instrument_id in instrument_ids
+            ],
         }
     )
-    data_feed.get_classification_snapshot.return_value = pl.DataFrame()
+    data_feed.get_classification_snapshot.return_value = pl.DataFrame(
+        {
+            "instrument_id": instrument_ids,
+            "sector_id": [
+                f"sector-{instrument_id % 3}" for instrument_id in instrument_ids
+            ],
+        },
+    )
     bridge = FactorBridge()
     bundle = build_factor_bundle(
         ctx=step_context,
@@ -284,6 +305,103 @@ def _run_stock_golden_selection_trace(
         StrategyContext(),
         bundle,
     )
+    return runtime, collector.snapshot()
+
+
+def _run_etf_golden_selection_trace(
+    *,
+    candidate_parameters: tuple[CandidateParameter, ...],
+    snapshot_identity: ResearchSnapshotIdentity,
+    strategy_version: int,
+    trade_date: str,
+    run_id: str,
+) -> tuple[ResearchStrategyRuntime, SelectionEvidenceLog]:
+    """Run the ETF golden through the real compiler, factor bridge, and pipeline."""
+    spec = SEED_STRATEGY_SPECS["seed_etf_industry_rotation"]
+    collector = SelectionEvidenceCollector()
+    runtime = ResearchRuntimeBuilder().build(
+        record=StrategySpecRecord(
+            strategy_id=spec.strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=strategy_version,
+        ),
+        candidate_parameters=candidate_parameters,
+        snapshot_identity=snapshot_identity,
+        version_status="draft",
+        evidence_sink=collector,
+    )
+    compiled = runtime.compiled_expressions
+    assert compiled is not None
+    trade_day = date.fromisoformat(trade_date)
+    knowledge_date = trade_day - timedelta(days=1)
+    instrument_ids = list(range(1, 7))
+    bars: dict[InstrumentId, MagicMock] = {}
+    history_rows: list[dict[str, object]] = []
+    for instrument_id in instrument_ids:
+        base = 20.0 + instrument_id
+        growth = 0.001 + instrument_id * 0.0001
+        for offset in range(26, 1, -1):
+            historical_close = base * (1 + growth * (26 - offset))
+            history_rows.append(
+                {
+                    "instrument_id": instrument_id,
+                    "trade_date": (trade_day - timedelta(days=offset)).isoformat(),
+                    "open": historical_close * 0.99,
+                    "high": historical_close * 1.01,
+                    "low": historical_close * 0.98,
+                    "close": historical_close,
+                    "volume": 1_000_000.0,
+                }
+            )
+        close = base * (1 + growth * 25)
+        bar = MagicMock()
+        bar.open = close * 0.99
+        bar.high = close * 1.01
+        bar.low = close * 0.98
+        bar.close = close
+        bar.volume = 1_000_000.0
+        bars[InstrumentId(instrument_id)] = bar
+
+    slice_ = MagicMock(spec=Slice)
+    slice_.bars = bars
+    slice_.benchmark_close = None
+    step_context = StepContext(
+        time_context=TimeContext(
+            decision_time=datetime.combine(
+                trade_day,
+                datetime.min.time(),
+                tzinfo=UTC,
+            ),
+            knowledge_date=knowledge_date,
+            trade_date=trade_date,
+        ),
+        is_rebalance_day=True,
+        bars=bars,
+        slice_=slice_,
+    )
+    data_feed = MagicMock()
+    data_feed.get_history.return_value = pl.DataFrame(history_rows)
+    data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
+        {
+            "instrument_id": instrument_ids,
+            "volatility_20": [
+                0.03 + instrument_id * 0.001 for instrument_id in instrument_ids
+            ],
+        },
+    )
+    data_feed.get_classification_snapshot.return_value = pl.DataFrame()
+    bridge = FactorBridge()
+    bundle = build_factor_bundle(
+        ctx=step_context,
+        strategy_id=spec.strategy_id,
+        run_id=run_id,
+        bridge=bridge,
+        compiled=compiled,
+        data_feed=data_feed,
+        lookback_days=25,
+    )
+    runtime.pipeline.run(StrategyContext(), bundle)
     return runtime, collector.snapshot()
 
 
@@ -570,7 +688,24 @@ def _publish_walk_forward_reports(
                 and not candidate.is_baseline
                 and isinstance(semantics.strategy, StrategyExecutionBinding)
             )
-            else SelectionEvidenceLog()
+            else (
+                _run_etf_golden_selection_trace(
+                    candidate_parameters=semantics.strategy.candidate_parameters,
+                    snapshot_identity=ResearchSnapshotIdentity(
+                        semantics.snapshot.exact_snapshot.snapshot_id,
+                        semantics.snapshot.exact_snapshot.manifest_hash,
+                    ),
+                    strategy_version=semantics.strategy.exact_strategy.version,
+                    trade_date=fold.spec.test_window.start.isoformat(),
+                    run_id=str(attempt_run_id),
+                )
+                if (
+                    lane.asset_lane is golden_support.ResearchAssetLane.ETF
+                    and not candidate.is_baseline
+                    and isinstance(semantics.strategy, StrategyExecutionBinding)
+                )
+                else SelectionEvidenceLog()
+            )
         )
         if isinstance(trace_run, tuple):
             runtime, trace = trace_run
@@ -727,6 +862,8 @@ def _application_request(
     *,
     expected_revision: int = 4,
     occurred_at: datetime = NOW,
+    selection_id: str | None = None,
+    candidate_evidence_content_hash: str | None = None,
 ) -> ClaimHoldoutCandidateRequest:
     selected = next(
         candidate for candidate in launch.candidates if not candidate.is_baseline
@@ -742,6 +879,26 @@ def _application_request(
             "Candidate won the registered objective review.",
         ),
         occurred_at=occurred_at,
+        selection_id=selection_id,
+        expected_candidate_evidence_content_hash=candidate_evidence_content_hash,
+        idempotency=(
+            None
+            if selection_id is None
+            else build_mutation_idempotency(
+                operation_id="design_research_holdout_evaluations",
+                resource_id=str(launch.experiment_id),
+                raw_key="golden-holdout-key",
+                request_payload={
+                    "candidate_id": str(selected.candidate_id),
+                    "candidate_evidence_content_hash": (
+                        candidate_evidence_content_hash
+                    ),
+                    "expected_revision": expected_revision,
+                    "selection_id": selection_id,
+                    "selection_evidence_content_hash": str(ledger.content_hash),
+                },
+            )
+        ),
     )
 
 
@@ -771,6 +928,15 @@ def _coordinator_with_collector(
         artifact_service=artifact_service,
         walk_forward_assembler=assembler,
     )
+    candidate_evidence_reader = CandidateEvidenceReader(
+        scheduler_store=store,
+        walk_forward_assembler=assembler,
+        artifact_service=artifact_service,
+    )
+    candidate_selection_process = CandidateSelectionProcess(
+        store=store,
+        candidate_evidence_reader=candidate_evidence_reader,
+    )
     collector = ExperimentEvidenceCollector(
         scheduler_store=store,
         reader=reader,
@@ -792,6 +958,7 @@ def _coordinator_with_collector(
         clock=lambda: NOW + timedelta(minutes=2),
         evidence_collector=collector,
         selection_evidence_publisher=selection_service,
+        candidate_selection_process=candidate_selection_process,
     )
     assert (
         coordinator.tick(occurred_at=NOW).state
@@ -1144,11 +1311,31 @@ def test_stock_golden_real_runtime_emits_reviewable_selection_trace() -> None:
     assert log.exclusions
     assert log.selections
     assert log.factor_contributions
+    assert log.exposure_declarations
+    assert log.exposures
     assert len(log.initial_universe) == 21
     assert len(log.selections) == 21
     assert sum(item.selected for item in log.selections) == 20
     assert len(log.exclusions) == 1
     assert len(log.factor_contributions) == 21 * 3
+    assert len(log.exposures) == 20
+    assert log.exposure_declarations[0].applicability is (
+        SelectionExposureApplicability.APPLICABLE
+    )
+    assert log.exposure_declarations[0].lane is SelectionExposureLane.STOCK_LANE
+    industry_weights: dict[int | str, float] = {}
+    size_bucket_weights: dict[str, float] = {}
+    for item in log.exposures:
+        industry_weights[item.industry_id] = (
+            industry_weights.get(item.industry_id, 0.0) + item.selected_weight
+        )
+        size_bucket_weights[item.size_bucket.value] = (
+            size_bucket_weights.get(item.size_bucket.value, 0.0) + item.selected_weight
+        )
+    assert industry_weights
+    assert size_bucket_weights
+    assert sum(industry_weights.values()) == pytest.approx(1.0)
+    assert sum(size_bucket_weights.values()) == pytest.approx(1.0)
     assert tuple(item.factor_name for item in log.factor_contributions) == (
         *("quality_roe" for _ in range(21)),
         *("value_pe" for _ in range(21)),
@@ -1352,7 +1539,14 @@ def _assert_persisted_selection_trace_provenance(
                     <= fold.spec.test_window.end
                 )
         else:
-            assert trace.evidence == SelectionEvidenceLog()
+            assert len(trace.evidence.exposure_declarations) == 1
+            declaration = trace.evidence.exposure_declarations[0]
+            assert (
+                declaration.applicability
+                is SelectionExposureApplicability.NOT_APPLICABLE
+            )
+            assert declaration.lane is SelectionExposureLane.ETF_LANE
+            assert trace.evidence.exposures == ()
     return tuple(
         SelectionTraceArtifactRef(
             artifact_kind=kind.value,
@@ -1370,7 +1564,7 @@ def _assert_persisted_selection_trace_provenance(
     ids=lambda lane: lane.lane_id,
 )
 @pytest.mark.parametrize("cost_drift", [False, True], ids=["cost-match", "cost-drift"])
-def test_r3_evidence_closure_drives_review_packet_and_completed_status(
+def test_r3_evidence_closure_drives_review_packet_and_completed_status(  # noqa: PLR0915
     tmp_path: Path,
     lane: golden_support.GoldenLaneSpec,
     cost_drift: bool,
@@ -1469,13 +1663,83 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(
     # Holdout claim moves the experiment into HOLDOUT stage under the selected
     # candidate; the subsequent tick dispatches the one QUEUED holdout fold.
     selection_projection = store.load_snapshot(launch.experiment_id).projection
-    coordinator.claim_holdout_candidate(
-        _application_request(
-            launch,
-            selection.ledger,
-            expected_revision=selection_projection.revision,
-            occurred_at=NOW + timedelta(seconds=40),
+    selection_request_payload = {
+        "candidate_id": str(selected.candidate_id),
+        "comparison_payload_hash": str(collected.comparison.content_hash),
+        "expected_revision": selection_projection.revision,
+        "rationale": "Candidate won the registered objective review.",
+    }
+    selection_request = CandidateSelectionRequest(
+        experiment_id=str(launch.experiment_id),
+        candidate_id=str(selected.candidate_id),
+        comparison_payload_hash=str(collected.comparison.content_hash),
+        expected_revision=selection_projection.revision,
+        rationale="Candidate won the registered objective review.",
+        occurred_at=NOW + timedelta(seconds=35),
+        idempotency=build_mutation_idempotency(
+            operation_id="design_research_candidate_selection",
+            resource_id=str(launch.experiment_id),
+            raw_key="golden-candidate-selection-key",
+            request_payload=selection_request_payload,
         ),
+    )
+    candidate_selection = coordinator.select_candidate(selection_request)
+    assert coordinator.select_candidate(selection_request) == candidate_selection
+    assert (
+        len(
+            tuple(
+                event
+                for event in reader.list_status_events(launch.experiment_id)
+                if event.reason_code == "candidate_preselected"
+            )
+        )
+        == 1
+    )
+    holdout_request = _application_request(
+        launch,
+        selection.ledger,
+        expected_revision=candidate_selection.experiment_revision,
+        occurred_at=NOW + timedelta(seconds=40),
+        selection_id=candidate_selection.selection_id,
+        candidate_evidence_content_hash=(
+            candidate_selection.candidate_evidence_content_hash
+        ),
+    )
+    holdout_claim = coordinator.claim_holdout_candidate(holdout_request)
+    assert coordinator.claim_holdout_candidate(holdout_request) == holdout_claim
+    assert holdout_claim.selection_id == candidate_selection.selection_id
+    with pytest.raises(AppProcessError) as second_claim:
+        coordinator.claim_holdout_candidate(
+            replace(
+                holdout_request,
+                idempotency=build_mutation_idempotency(
+                    operation_id="design_research_holdout_evaluations",
+                    resource_id=str(launch.experiment_id),
+                    raw_key="golden-second-holdout-key",
+                    request_payload={
+                        "candidate_id": str(selected.candidate_id),
+                        "candidate_evidence_content_hash": (
+                            candidate_selection.candidate_evidence_content_hash
+                        ),
+                        "expected_revision": candidate_selection.experiment_revision,
+                        "selection_id": candidate_selection.selection_id,
+                        "selection_evidence_content_hash": str(
+                            selection.ledger.content_hash
+                        ),
+                    },
+                ),
+            )
+        )
+    assert second_claim.value.details["code"] == "HOLDOUT_ALREADY_CLAIMED"
+    assert (
+        len(
+            tuple(
+                event
+                for event in reader.list_status_events(launch.experiment_id)
+                if event.reason_code == "holdout_candidate_claimed"
+            )
+        )
+        == 1
     )
     dispatch = coordinator.tick(occurred_at=NOW + timedelta(seconds=41)).dispatches[0]
     coordinator.start_attempt(dispatch, occurred_at=NOW + timedelta(seconds=42))

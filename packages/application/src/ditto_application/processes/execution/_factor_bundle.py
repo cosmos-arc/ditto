@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import date
 from typing import Protocol
 
 import polars as pl
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.steps import StepContext
+from ditto_backtest.steps.input_bundle import build_input_bundle
 from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
@@ -16,7 +18,11 @@ from ditto_strategy.alpha.pipeline import StrategyInputBundle
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppProcessError
 
-__all__ = ["build_factor_aware_bundle_builder", "build_factor_bundle"]
+__all__ = [
+    "build_exposure_aware_bundle_builder",
+    "build_factor_aware_bundle_builder",
+    "build_factor_bundle",
+]
 
 
 class _CompiledExpressionSet(Protocol):
@@ -34,6 +40,56 @@ class _FactorSignalComputer[CompiledT: _CompiledExpressionSet](Protocol):
         df: pl.DataFrame,
         compiled: CompiledT,
     ) -> pl.DataFrame: ...
+
+
+def build_exposure_aware_bundle_builder(
+    *,
+    data_feed: DataFeed,
+    strategy_id: str,
+    run_id: str,
+) -> Callable[[StepContext], StrategyInputBundle]:
+    """Build the default price signal bundle plus current PIT exposure sources."""
+
+    def _build(ctx: StepContext) -> StrategyInputBundle:
+        slice_ = ctx.slice_
+        if slice_ is None:
+            raise AppProcessError("slice_ required")
+        bundle = build_input_bundle(
+            ctx.time_context.trade_date,
+            strategy_id,
+            run_id,
+            slice_.bars,
+            getattr(slice_, "benchmark_close", None),
+        )
+        instrument_ids = list(slice_.bars)
+        market_data = bundle.market_data.with_columns(
+            pl.lit(ctx.time_context.trade_date).alias("trade_date"),
+        )
+        market_data = _enrich_with_fundamentals(
+            market_data,
+            data_feed=data_feed,
+            instrument_ids=instrument_ids,
+            knowledge_date=ctx.time_context.knowledge_date,
+            trade_date=ctx.time_context.trade_date,
+        )
+        market_data = _enrich_with_classification(
+            market_data,
+            data_feed=data_feed,
+            instrument_ids=instrument_ids,
+            knowledge_date=ctx.time_context.knowledge_date,
+            trade_date=ctx.time_context.trade_date,
+        )
+        return replace(
+            bundle,
+            instruments=_exposure_source_instruments(
+                bundle.instruments,
+                market_data=market_data,
+                trade_date=ctx.time_context.trade_date,
+            ),
+            market_data=market_data,
+        )
+
+    return _build
 
 
 def build_factor_aware_bundle_builder[CompiledT: _CompiledExpressionSet](
@@ -133,6 +189,11 @@ def build_factor_bundle[CompiledT: _CompiledExpressionSet](
         knowledge_date=ctx.time_context.knowledge_date,
         trade_date=ctx.time_context.trade_date,
     )
+    instruments = _exposure_source_instruments(
+        instruments,
+        market_data=market_data,
+        trade_date=ctx.time_context.trade_date,
+    )
 
     return StrategyInputBundle(
         trade_date=ctx.time_context.trade_date,
@@ -143,6 +204,29 @@ def build_factor_bundle[CompiledT: _CompiledExpressionSet](
         signal_values=bridge.compute_signals(market_data, compiled),
         benchmark_close=getattr(slice_, "benchmark_close", None),
     )
+
+
+def _exposure_source_instruments(
+    instruments: pl.DataFrame,
+    *,
+    market_data: pl.DataFrame,
+    trade_date: str,
+) -> pl.DataFrame:
+    """Carry current PIT exposure columns through every strategy stage."""
+    exposure_columns = tuple(
+        column
+        for column in ("sector_id", "market_cap")
+        if column in market_data.columns
+    )
+    if not exposure_columns or "trade_date" not in market_data.columns:
+        return instruments
+    current = market_data.filter(pl.col("trade_date") == trade_date).select(
+        "instrument_id",
+        *exposure_columns,
+    )
+    if current.is_empty():
+        return instruments
+    return instruments.join(current, on="instrument_id", how="left")
 
 
 def _enrich_with_fundamentals(

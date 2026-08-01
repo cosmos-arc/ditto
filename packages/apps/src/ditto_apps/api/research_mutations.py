@@ -20,13 +20,16 @@ from ditto_apps.api.errors import (
     BadRequestError,
     ConflictError,
     NotFoundError,
+    UnprocessableEntityError,
 )
 from ditto_apps.api.mutation_idempotency import mutation_idempotency
 from ditto_apps.models.research import (
+    CandidateSelectionRequest,
     ExperimentControlReceiptResponse,
     ExperimentControlRequest,
     ExperimentLaunchRequest,
     ExperimentRetryFoldRequest,
+    HoldoutEvaluationRequest,
 )
 
 _CONTROL_NOT_FOUND_REASONS = frozenset({"experiment_not_found"})
@@ -111,6 +114,64 @@ def retry_fold_mutation_idempotency(
     )
 
 
+def candidate_selection_mutation_idempotency(
+    experiment_id: str,
+    request: CandidateSelectionRequest,
+    raw_key: str,
+) -> MutationIdempotency:
+    """Bind one key to the experiment's durable preselection resource."""
+    return mutation_idempotency(
+        operation_id="design_research_candidate_selection",
+        resource_id=canonical_resource_id(
+            "candidate_selection",
+            {"experiment_id": experiment_id},
+        ),
+        raw_key=raw_key,
+        request_payload=request.model_dump(mode="json"),
+    )
+
+
+def holdout_evaluation_mutation_idempotency(
+    experiment_id: str,
+    request: HoldoutEvaluationRequest,
+    raw_key: str,
+) -> MutationIdempotency:
+    """Bind one key to the experiment's one-shot holdout authority."""
+    return mutation_idempotency(
+        operation_id="design_research_holdout_evaluations",
+        resource_id=canonical_resource_id(
+            "holdout_evaluation",
+            {"experiment_id": experiment_id},
+        ),
+        raw_key=raw_key,
+        request_payload=request.model_dump(mode="json"),
+    )
+
+
+def raise_selection_holdout_error(exc: AppError) -> Never:
+    """Map exact Task 9 mutation codes without string-based inference."""
+    code = exc.details.get("code")
+    error_code = code if isinstance(code, str) else "INTERNAL_ERROR"
+    if error_code in {
+        "CANDIDATE_SELECTION_CONFLICT",
+        "HOLDOUT_ALREADY_CLAIMED",
+        "IDEMPOTENCY_KEY_REUSED",
+    }:
+        raise ConflictError(str(exc), error_code=error_code) from exc
+    if (
+        error_code
+        in {
+            "CANDIDATE_NOT_ELIGIBLE",
+            "CANDIDATE_NOT_PRESELECTED",
+            "EVIDENCE_STALE",
+            "IDEMPOTENCY_KEY_INVALID",
+        }
+        or error_code == "SPEC_INVALID"
+    ):
+        raise UnprocessableEntityError(str(exc), error_code=error_code) from exc
+    raise APIError(str(exc), status_code=500, error_code=error_code) from exc
+
+
 def raise_research_control_error(exc: AppError) -> Never:
     """Map control errors while preserving integrity failures as server errors."""
     reason = str(exc.details.get("reason", ""))
@@ -162,10 +223,13 @@ async def run_research_control[C](
 
 
 __all__ = [
+    "candidate_selection_mutation_idempotency",
     "control_mutation_idempotency",
+    "holdout_evaluation_mutation_idempotency",
     "launch_mutation_idempotency",
     "mutation_occurred_at",
     "raise_research_control_error",
+    "raise_selection_holdout_error",
     "retry_fold_mutation_idempotency",
     "run_research_control",
     "to_control_receipt_response",

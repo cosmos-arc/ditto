@@ -1,4 +1,4 @@
-"""Indexed publisher for the four attempt-scoped fold selection traces."""
+"""Indexed publisher for the five attempt-scoped fold selection traces."""
 
 from __future__ import annotations
 
@@ -16,6 +16,11 @@ from ditto_strategy.alpha.selection_evidence import (
     InitialUniverseEvidence,
     SelectionEvidence,
     SelectionEvidenceLog,
+    SelectionExposureApplicability,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposureLane,
+    SelectionExposureSizeBucket,
 )
 from ditto_strategy.errors import StrategySpecError
 
@@ -94,8 +99,21 @@ class _SelectionTraceDecodeError(ValueError):
 
 
 def _decode_instrument_id(row: dict[str, object]) -> int | str:
-    raw_value = row["instrument_id"]
-    raw_kind = row["instrument_id_kind"]
+    return _decode_typed_id(
+        row,
+        value_field="instrument_id",
+        kind_field="instrument_id_kind",
+    )
+
+
+def _decode_typed_id(
+    row: dict[str, object],
+    *,
+    value_field: str,
+    kind_field: str,
+) -> int | str:
+    raw_value = row[value_field]
+    raw_kind = row[kind_field]
     if type(raw_value) is not str or not raw_value:
         raise _SelectionTraceDecodeError("instrument_id must be a non-empty string")
     if raw_kind == "string":
@@ -177,11 +195,65 @@ def _decode_evidence(
             ].iter_rows(named=True)
             if not _require_run_id(row, identity)
         )
+        exposure_declarations_by_date: dict[str, SelectionExposureDeclaration] = {}
+        exposures: list[SelectionExposureEvidence] = []
+        for row in frames[FoldSelectionTraceArtifactKind.EXPOSURES].iter_rows(
+            named=True
+        ):
+            _require_run_id(row, identity)
+            declaration = SelectionExposureDeclaration(
+                trade_date=str(row["trade_date"]),
+                applicability=SelectionExposureApplicability(row["applicability"]),
+                lane=SelectionExposureLane(row["lane"]),
+                industry_column=row["industry_column"],
+                size_column=row["size_column"],
+                size_bucket_method=row["size_bucket_method"],
+            )
+            existing = exposure_declarations_by_date.setdefault(
+                declaration.trade_date,
+                declaration,
+            )
+            if existing != declaration:
+                raise _SelectionTraceDecodeError(
+                    "exposure declaration changed within one trade_date",
+                )
+            if row["instrument_id"] is None:
+                if any(
+                    row[field] is not None
+                    for field in (
+                        "instrument_id_kind",
+                        "selected_weight",
+                        "industry_id",
+                        "industry_id_kind",
+                        "size_value",
+                        "size_bucket",
+                    )
+                ):
+                    raise _SelectionTraceDecodeError(
+                        "not-applicable exposure sentinel is malformed",
+                    )
+                continue
+            exposures.append(
+                SelectionExposureEvidence(
+                    trade_date=declaration.trade_date,
+                    instrument_id=_decode_instrument_id(row),
+                    selected_weight=row["selected_weight"],
+                    industry_id=_decode_typed_id(
+                        row,
+                        value_field="industry_id",
+                        kind_field="industry_id_kind",
+                    ),
+                    size_value=row["size_value"],
+                    size_bucket=SelectionExposureSizeBucket(row["size_bucket"]),
+                ),
+            )
         evidence = SelectionEvidenceLog(
             initial_universe=initial_universe,
             exclusions=exclusions,
             selections=selections,
             factor_contributions=contributions,
+            exposure_declarations=tuple(exposure_declarations_by_date.values()),
+            exposures=tuple(exposures),
         )
         encoded = serialize_selection_evidence(str(identity.run_id), evidence)
     except (
@@ -209,7 +281,7 @@ def _decode_evidence(
 
 
 class IndexedFoldSelectionTraceArtifactAdapter:
-    """Publish and read all four traces through the immutable indexed service."""
+    """Publish and read all five traces through the immutable indexed service."""
 
     def __init__(
         self,
@@ -228,7 +300,7 @@ class IndexedFoldSelectionTraceArtifactAdapter:
         lease_fence: LeaseFence,
         now_epoch_us: int,
     ) -> FoldSelectionTraceArtifactReceipt:
-        """Publish/replay four Parquet facts and verify each index binding."""
+        """Publish/replay five Parquet facts and verify each index binding."""
         typed_identity = _require_identity(identity)
         typed_evidence = _require_evidence(typed_identity, evidence)
         tables = serialize_selection_evidence(
@@ -281,7 +353,7 @@ class IndexedFoldSelectionTraceArtifactAdapter:
         self,
         identity: FoldSelectionTraceArtifactIdentity,
     ) -> LoadedFoldSelectionTraceArtifacts | None:
-        """Read one exact all-four trace bundle through verified indexed APIs."""
+        """Read one exact all-five trace bundle through verified indexed APIs."""
         typed_identity = _require_identity(identity)
         records: list[ArtifactRecord] = []
         frames: dict[FoldSelectionTraceArtifactKind, pl.DataFrame] = {}

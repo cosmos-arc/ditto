@@ -73,6 +73,7 @@ def _read_model() -> ExperimentReviewPacketReadModel:
                 content_hash="1" * 64,
             ),
         ),
+        selection_exposure=None,
     )
 
 
@@ -118,6 +119,7 @@ async def test_get_review_packet_returns_response() -> None:
                 content_hash="1" * 64,
             )
         ],
+        selection_exposure=None,
     )
     facade.get_review_packet.assert_called_once_with("exp-1")
 

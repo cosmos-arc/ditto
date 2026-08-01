@@ -31,6 +31,7 @@ from ditto_application.processes.experiments._fold_selection_trace_artifacts imp
     FoldSelectionTraceArtifactIdentity,
     FoldSelectionTraceArtifactKind,
     LoadedFoldSelectionTraceArtifacts,
+    fold_selection_trace_table_name,
 )
 from ditto_strategy.alpha.selection_evidence import (
     ExclusionEvidence,
@@ -39,6 +40,10 @@ from ditto_strategy.alpha.selection_evidence import (
     InitialUniverseEvidence,
     SelectionEvidence,
     SelectionEvidenceLog,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
 )
 
 NOW = datetime(2026, 7, 28, 1, 2, 3, 456789, tzinfo=UTC)
@@ -216,6 +221,22 @@ def _evidence() -> SelectionEvidenceLog:
                 selected=True,
             ),
         ),
+        exposure_declarations=(
+            SelectionExposureDeclaration.from_policy(
+                "2026-07-28",
+                SelectionExposurePolicy.stock(),
+            ),
+        ),
+        exposures=(
+            SelectionExposureEvidence(
+                trade_date="2026-07-28",
+                instrument_id=1,
+                selected_weight=1.0,
+                industry_id="bank",
+                size_value=50_000_000_000.0,
+                size_bucket=SelectionExposureSizeBucket.MID,
+            ),
+        ),
     )
 
 
@@ -272,22 +293,7 @@ def _publish_raw_tables(
                 audit=identity.audit(kind),
                 created_at=identity.attempt_created_at,
             ),
-            tables[
-                {
-                    FoldSelectionTraceArtifactKind.CANDIDATE_UNIVERSE: (
-                        "initial_universe_evidence"
-                    ),
-                    FoldSelectionTraceArtifactKind.CANDIDATE_EXCLUSIONS: (
-                        "exclusion_evidence"
-                    ),
-                    FoldSelectionTraceArtifactKind.CANDIDATE_SELECTIONS: (
-                        "selection_evidence"
-                    ),
-                    FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS: (
-                        "factor_contribution_evidence"
-                    ),
-                }[kind]
-            ],
+            tables[fold_selection_trace_table_name(kind)],
             lease_fence=FENCE,
             now_epoch_us=NOW_US,
         )
@@ -297,7 +303,7 @@ def _publish_raw_tables(
     )
 
 
-def test_adapter_publishes_four_empty_tables_as_existing_indexed_parquet(
+def test_adapter_publishes_five_empty_tables_as_existing_indexed_parquet(
     tmp_path: Path,
 ) -> None:
     adapter, index = _adapter(tmp_path)
@@ -309,12 +315,12 @@ def test_adapter_publishes_four_empty_tables_as_existing_indexed_parquet(
         now_epoch_us=NOW_US,
     )
 
-    assert len(receipt.records) == 4
+    assert len(receipt.records) == 5
     assert tuple(record.artifact_kind for record in receipt.records) == tuple(
         kind.value for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
     )
     assert all(record.row_count == 0 for record in receipt.records)
-    assert len(index.records) == 4
+    assert len(index.records) == 5
     assert all(
         (tmp_path / record.relative_path).is_file() for record in receipt.records
     )
@@ -380,8 +386,8 @@ def test_adapter_recovers_exactly_from_partial_index_replay(
         lease_fence=FENCE,
         now_epoch_us=NOW_US,
     )
-    assert len(receipt.records) == 4
-    assert len(index.records) == 4
+    assert len(receipt.records) == 5
+    assert len(index.records) == 5
 
 
 def test_adapter_rejects_receipt_not_visible_by_both_id_and_path(
@@ -414,7 +420,7 @@ def test_adapter_read_returns_none_only_when_all_four_id_and_path_refs_are_missi
 @pytest.mark.parametrize(
     "evidence",
     [SelectionEvidenceLog(), _evidence()],
-    ids=("four-real-zero-row-files", "populated"),
+    ids=("five-real-zero-row-files", "populated"),
 )
 def test_adapter_read_rebuilds_verified_selection_evidence_exactly(
     tmp_path: Path,
@@ -437,7 +443,7 @@ def test_adapter_read_rebuilds_verified_selection_evidence_exactly(
     assert loaded.evidence == evidence
 
 
-def test_adapter_read_rejects_partial_four_kind_presence(
+def test_adapter_read_rejects_partial_five_kind_presence(
     tmp_path: Path,
 ) -> None:
     adapter, index = _adapter(tmp_path)

@@ -72,6 +72,7 @@ from ditto_application.builders.research_validation_authority import (
     ProductionResearchValidationAuthorityProbe as _ValidationAuthorityProbe,
 )
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+from ditto_application.commands.candidate_selection import CandidateSelectionProcess
 from ditto_application.commands.experiments import ExperimentControlNotifier
 from ditto_application.commands.strategy_governance import ReviewPacketReader
 from ditto_application.processes.execution.factor_bridge import FactorBridge
@@ -343,6 +344,7 @@ class AppProcessProvider(Provider):
         first_attempt_factory: FirstAttemptFactory,
         evidence_collector: ExperimentEvidenceCollector,
         selection_evidence: DurableSelectionEvidenceService,
+        candidate_selection_process: CandidateSelectionProcess,
     ) -> ExperimentExecutionCoordinator:
         """
         Wire the R3 coordinator with the real execution bundle factory.
@@ -362,6 +364,7 @@ class AppProcessProvider(Provider):
             selection_evidence_provider=selection_evidence,
             evidence_collector=evidence_collector,
             selection_evidence_publisher=selection_evidence,
+            candidate_selection_process=candidate_selection_process,
         )
 
     @provide

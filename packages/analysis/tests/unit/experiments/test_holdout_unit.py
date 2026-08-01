@@ -56,6 +56,7 @@ def test_authority_command_accepts_no_caller_supplied_derived_identity() -> None
         "selection_reason",
         "resolved_reproduction_fingerprint",
         "occurred_at",
+        "event_detail_extension",
     }
     assert not hasattr(command, "research_cycle_id")
     assert not hasattr(command, "snapshot_id")

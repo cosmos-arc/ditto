@@ -393,6 +393,46 @@ class TestFactorBundleFundamentalInjection:
         assert bundle.signal_values.height == 3
         assert "signal_value" in bundle.signal_values.columns
 
+    def test_carries_pit_industry_and_market_cap_into_instrument_frame(self) -> None:
+        """The final strategy frame retains exact exposure source values."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("quality_roe",),
+            weights=(1.0,),
+        )
+        data_feed = MagicMock()
+        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "roe": [0.15, 0.10, 0.20],
+                "eps": [1.5, 2.0, 2.5],
+                "market_cap": [8.0, 30.0, 90.0],
+            },
+        )
+        data_feed.get_classification_snapshot.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "sector_id": ["bank", "tech", "bank"],
+            },
+        )
+
+        bundle = build_factor_bundle(
+            ctx=_make_step_context("2024-01-02", _make_slice_with_bars()),
+            strategy_id="t",
+            run_id="t",
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=20,
+        )
+
+        assert bundle.instruments.sort("instrument_id").to_dict(as_series=False) == {
+            "instrument_id": [1, 2, 3],
+            "sector_id": ["bank", "tech", "bank"],
+            "market_cap": [8.0, 30.0, 90.0],
+        }
+
     def test_fundamental_snapshot_uses_knowledge_date(self) -> None:
         """get_fundamental_snapshot 的 as_of = knowledge_date（PIT，非 trade_date）."""
         bridge = FactorBridge()

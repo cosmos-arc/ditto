@@ -259,6 +259,31 @@ def _frames() -> FrozenResearchDataFrames:
                 }
             ),
         ),
+        fundamental=_verified(
+            ResearchFrameKind.FUNDAMENTAL,
+            pl.DataFrame(
+                {
+                    "instrument_id": [_MEMBER_ID, _MEMBER_ID],
+                    "known_at": ["2025-12-31", "2026-01-04"],
+                    "roe": [0.12, 0.13],
+                    "net_margin": [0.08, 0.09],
+                    "eps": [1.0, 1.1],
+                    "market_cap": [1_000_000_000.0, 1_100_000_000.0],
+                    "source_snapshot_id": [_SOURCE, _SOURCE],
+                }
+            ),
+        ),
+        classification=_verified(
+            ResearchFrameKind.CLASSIFICATION,
+            pl.DataFrame(
+                {
+                    "instrument_id": [_MEMBER_ID, _MEMBER_ID],
+                    "known_at": ["2025-12-31", "2026-01-04"],
+                    "sector_id": ["bank", "bank"],
+                    "source_snapshot_id": [_SOURCE, _SOURCE],
+                }
+            ),
+        ),
     )
 
 
@@ -908,6 +933,8 @@ def test_factory_builds_real_service_and_attests_constructed_objects() -> None:
     assert {item.artifact_kind for item in loader.frame_calls} == {
         "bars",
         "calendar",
+        "classification",
+        "fundamental",
         "membership",
     }
     assert loader.rules_calls == [

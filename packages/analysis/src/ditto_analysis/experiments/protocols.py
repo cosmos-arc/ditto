@@ -18,6 +18,7 @@ from ditto_analysis.experiments.holdout import (
 from ditto_analysis.experiments.models import (
     AttemptId,
     BacktestRunId,
+    CandidateId,
     CheckpointRef,
     ExperimentDesiredState,
     ExperimentFailureCode,
@@ -307,6 +308,18 @@ class ExperimentWriterProtocol(Protocol):
     ) -> ArtifactRecord: ...
 
     def add_gate_evaluation(self, record: GateEvaluationRecord) -> None: ...
+
+    def record_candidate_selection(
+        self,
+        experiment_id: ExperimentId,
+        candidate_id: CandidateId,
+        *,
+        expected_revision: int,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> ExperimentProjection: ...
 
     def claim_holdout_candidate(
         self,

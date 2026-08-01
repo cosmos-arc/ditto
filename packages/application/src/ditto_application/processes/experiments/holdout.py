@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import NoReturn, Protocol, cast
 
+from ditto_application.candidate_selection import CandidateSelectionReceipt
 from ditto_application.exceptions import AppProcessError
+from ditto_application.mutation_idempotency import (
+    MutationIdempotency,
+    find_mutation_fence,
+    mutation_fence_detail,
+)
 from ditto_application.processes.experiments._holdout_contract import (
     HoldoutClaimPersistenceRequest,
     PersistedHoldoutClaim,
@@ -44,6 +51,28 @@ def _holdout_error(reason: str, **details: object) -> NoReturn:
     raise AppProcessError(
         "holdout candidate claim is invalid",
         details={"code": "SPEC_INVALID", "reason": reason, **details},
+    )
+
+
+def _holdout_already_claimed(**details: object) -> NoReturn:
+    raise AppProcessError(
+        "holdout candidate has already been claimed",
+        details={
+            "code": "HOLDOUT_ALREADY_CLAIMED",
+            "reason": "holdout_already_claimed",
+            **details,
+        },
+    )
+
+
+def _holdout_selection_error(
+    code: str,
+    reason: str,
+    **details: object,
+) -> NoReturn:
+    raise AppProcessError(
+        "holdout candidate selection evidence is invalid",
+        details={"code": code, "reason": reason, **details},
     )
 
 
@@ -97,6 +126,9 @@ class ClaimHoldoutCandidateRequest:
     operator_confirmation: str
     selection_reason: HoldoutSelectionReason
     occurred_at: datetime
+    selection_id: str | None = None
+    expected_candidate_evidence_content_hash: str | None = None
+    idempotency: MutationIdempotency | None = None
 
     def __post_init__(self) -> None:
         """Validate canonical request values without accepting derived identity."""
@@ -115,6 +147,23 @@ class ClaimHoldoutCandidateRequest:
         if type(self.selection_reason) is not HoldoutSelectionReason:
             _holdout_error("holdout_selection_reason_invalid")
         _require_utc(cast("object", self.occurred_at), "occurred_at")
+        optional = (
+            self.selection_id,
+            self.expected_candidate_evidence_content_hash,
+            self.idempotency,
+        )
+        if any(value is not None for value in optional):
+            if self.selection_id is None:
+                _holdout_error("holdout_selection_id_required")
+            _canonical_text(self.selection_id, "selection_id")
+            if self.expected_candidate_evidence_content_hash is None:
+                _holdout_error("holdout_candidate_evidence_hash_required")
+            _content_hash(
+                self.expected_candidate_evidence_content_hash,
+                "expected_candidate_evidence_content_hash",
+            )
+            if type(self.idempotency) is not MutationIdempotency:
+                _holdout_error("holdout_idempotency_required")
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +181,8 @@ class HoldoutClaimReceipt:
     experiment_revision: int
     event_id: str
     occurred_at: datetime
+    selection_id: str | None = None
+    candidate_evidence_content_hash: str | None = None
 
     def __post_init__(self) -> None:
         """Reject malformed persistence acknowledgements at the app boundary."""
@@ -153,6 +204,13 @@ class HoldoutClaimReceipt:
         if type(self.experiment_revision) is not int or self.experiment_revision < 0:
             _holdout_error("holdout_claim_receipt_revision_invalid")
         _require_utc(cast("object", self.occurred_at), "occurred_at")
+        if self.selection_id is not None:
+            _canonical_text(cast("object", self.selection_id), "selection_id")
+        if self.candidate_evidence_content_hash is not None:
+            _content_hash(
+                cast("object", self.candidate_evidence_content_hash),
+                "candidate_evidence_content_hash",
+            )
 
 
 class HoldoutSelectionEvidenceProvider(Protocol):
@@ -167,6 +225,16 @@ class HoldoutSelectionEvidenceProvider(Protocol):
         ...
 
 
+class HoldoutCandidateSelectionProvider(Protocol):
+    """Read the durable preselection event required by the HTTP holdout path."""
+
+    def read_selection(
+        self,
+        experiment_id: str,
+        selection_id: str,
+    ) -> CandidateSelectionReceipt | None: ...
+
+
 class _HoldoutSchedulerSnapshot(Protocol):
     @property
     def launch_spec(self) -> ExperimentLaunchSpec: ...
@@ -176,6 +244,11 @@ class _HoldoutSchedulerSnapshot(Protocol):
 
     @property
     def holdout_claim(self) -> PersistedHoldoutClaim | None: ...
+
+
+class _StatusEvent(Protocol):
+    @property
+    def detail(self) -> Mapping[str, object]: ...
 
 
 class _HoldoutClaimStore(Protocol):
@@ -193,6 +266,11 @@ class _HoldoutClaimStore(Protocol):
         """Persist or exactly replay the atomic holdout claim."""
         ...
 
+    def list_status_events(
+        self,
+        experiment_id: ExperimentId,
+    ) -> tuple[_StatusEvent, ...]: ...
+
 
 class HoldoutClaimProcess:
     """Verify selection evidence and resolve execution identity before commit."""
@@ -203,12 +281,14 @@ class HoldoutClaimProcess:
         store: _HoldoutClaimStore,
         first_attempt_factory: FirstAttemptFactory,
         selection_evidence_provider: HoldoutSelectionEvidenceProvider | None,
+        candidate_selection_provider: HoldoutCandidateSelectionProvider | None = None,
     ) -> None:
         self._store = store
         self._first_attempt_factory = first_attempt_factory
         self._selection_evidence_provider = selection_evidence_provider
+        self._candidate_selection_provider = candidate_selection_provider
 
-    def claim_candidate(
+    def claim_candidate(  # noqa: C901
         self,
         request: ClaimHoldoutCandidateRequest,
         *,
@@ -221,12 +301,22 @@ class HoldoutClaimProcess:
         experiment_id = ExperimentId(request.experiment_id)
         candidate_id = CandidateId(request.candidate_id)
         evidence_hash = ContentHash(request.expected_selection_evidence_hash)
+        replay = self._idempotent_replay(request, experiment_id)
+        if replay is not None:
+            return replay
         snapshot = self._store.load_snapshot(experiment_id)
         existing = getattr(snapshot, "holdout_claim", _MISSING)
         if existing is _MISSING:
             _holdout_error("holdout_claim_snapshot_contract_invalid")
         if existing is not None:
+            persisted_existing = cast("PersistedHoldoutClaim", existing)
+            if request.idempotency is not None:
+                _holdout_already_claimed(
+                    experiment_id=request.experiment_id,
+                    candidate_id=str(persisted_existing.candidate_id),
+                )
             return self.replay_candidate(request)
+        self._verify_candidate_selection(request)
         if (
             type(lease) is not SchedulerLease
             or lease.experiment_id != experiment_id
@@ -342,6 +432,11 @@ class HoldoutClaimProcess:
                 else str(reproduction_fingerprint)
             ),
             occurred_at=request.occurred_at,
+            event_detail_extension=(
+                None
+                if request.idempotency is None
+                else mutation_fence_detail(request.idempotency)
+            ),
         )
         persisted = self._store.claim_holdout_candidate(
             persistence_request,
@@ -360,4 +455,79 @@ class HoldoutClaimProcess:
             experiment_revision=persisted.experiment_revision,
             event_id=persisted.event_id,
             occurred_at=persisted.claimed_at,
+            selection_id=request.selection_id,
+            candidate_evidence_content_hash=(
+                request.expected_candidate_evidence_content_hash
+            ),
+        )
+
+    def _verify_candidate_selection(
+        self,
+        request: ClaimHoldoutCandidateRequest,
+    ) -> None:
+        """Verify the optional HTTP preselection contract before claim authority."""
+        if request.selection_id is None:
+            return
+        provider = self._candidate_selection_provider
+        if provider is None:
+            _holdout_error("candidate_selection_provider_unavailable")
+        selected = provider.read_selection(request.experiment_id, request.selection_id)
+        if selected is None:
+            _holdout_selection_error(
+                "CANDIDATE_NOT_PRESELECTED",
+                "candidate_not_preselected",
+            )
+        if (
+            selected.candidate_id != request.candidate_id
+            or selected.selection_evidence_content_hash
+            != request.expected_selection_evidence_hash
+            or selected.candidate_evidence_content_hash
+            != request.expected_candidate_evidence_content_hash
+            or selected.experiment_revision != request.expected_revision
+            or request.occurred_at < selected.occurred_at
+        ):
+            _holdout_selection_error(
+                "EVIDENCE_STALE",
+                "candidate_selection_evidence_stale",
+            )
+
+    def _idempotent_replay(
+        self,
+        request: ClaimHoldoutCandidateRequest,
+        experiment_id: ExperimentId,
+    ) -> HoldoutClaimReceipt | None:
+        identity = request.idempotency
+        if identity is None:
+            return None
+        events = self._store.list_status_events(experiment_id)
+        if not find_mutation_fence(
+            tuple(event.detail for event in events),
+            identity,
+        ):
+            return None
+        snapshot = self._store.load_snapshot(experiment_id)
+        persisted = snapshot.holdout_claim
+        if (
+            persisted is None
+            or persisted.candidate_id != request.candidate_id
+            or persisted.selection_evidence_hash
+            != request.expected_selection_evidence_hash
+        ):
+            _holdout_error("holdout_idempotency_replay_drift")
+        return HoldoutClaimReceipt(
+            claim_id=persisted.claim_id,
+            experiment_id=persisted.experiment_id,
+            candidate_id=persisted.candidate_id,
+            fold_id=persisted.fold_id,
+            logical_run_id=persisted.logical_run_id,
+            reproduction_fingerprint=persisted.reproduction_fingerprint,
+            claim_payload_hash=persisted.claim_payload_hash,
+            selection_evidence_hash=persisted.selection_evidence_hash,
+            experiment_revision=persisted.experiment_revision,
+            event_id=persisted.event_id,
+            occurred_at=persisted.claimed_at,
+            selection_id=request.selection_id,
+            candidate_evidence_content_hash=(
+                request.expected_candidate_evidence_content_hash
+            ),
         )

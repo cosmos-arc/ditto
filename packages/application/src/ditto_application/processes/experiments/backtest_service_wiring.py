@@ -62,6 +62,9 @@ from ditto_application.processes.experiments.execution_bundle import (
     ResearchFillMode,
     StrategyExecutionBinding,
 )
+from ditto_application.processes.experiments.execution_contracts import (
+    ResearchAssetLane,
+)
 from ditto_application.processes.experiments.research_backtest_checkpoint import (
     ResearchBacktestCheckpointControl,
     ResearchBacktestResumeState,
@@ -419,19 +422,16 @@ def _require_audit_bound_config(
 
 def _require_pipeline_state(graph: ClosedBacktestServiceGraph) -> None:
     pipeline = graph.pipeline
-    _require_exact_state_keys(
-        pipeline,
-        {"_stages", "_evidence_sink"},
-        "constructed_strategy_pipeline_state_drift",
-    )
     stages = pipeline.stages
     collector = graph.selection_evidence_collector
+    strategy = graph.audit.semantics.strategy
     _selection_evidence_graph.require_pristine_selection_evidence_graph(
         pipeline=pipeline,
         collector=collector,
         stages=stages,
+        is_baseline=type(strategy) is BaselineExecutorBinding,
+        is_stock_lane=graph.audit.semantics.policy.lane is ResearchAssetLane.STOCK,
     )
-    strategy = graph.audit.semantics.strategy
     if type(strategy) is BaselineExecutorBinding:
         if graph.pipeline_attestation is not None or stages != ():
             raise _error("synthetic_baseline_execution_drift")

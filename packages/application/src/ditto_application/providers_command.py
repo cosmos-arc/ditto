@@ -55,6 +55,9 @@ from ditto_application.commands.backtest import (
     ResumeRunHandler,
     RetryRunHandler,
 )
+from ditto_application.commands.candidate_selection import (
+    CandidateSelectionHandler,
+)
 from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
     RevokeDatasetMaturityPromotionHandler,
@@ -138,6 +141,14 @@ class AppCommandProvider(Provider):
     """App Command 层 DI Provider — Command Handler 注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def candidate_selection_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+    ) -> CandidateSelectionHandler:
+        """Expose durable server-side preselection through the coordinator lease."""
+        return CandidateSelectionHandler(process)
 
     @provide
     def launch_experiment_handler(

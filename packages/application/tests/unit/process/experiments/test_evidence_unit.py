@@ -19,7 +19,9 @@ from ditto_analysis.experiments import (
     ResearchMetricDirection,
     ResearchMetricId,
     ResearchMetricValue,
+    ReviewExposureWeight,
     ReviewPacket,
+    ReviewSelectionExposure,
     SelectionTraceArtifactRef,
 )
 from ditto_analysis.experiments.trial_family import (
@@ -99,6 +101,20 @@ def _selection_trace_refs() -> tuple[SelectionTraceArtifactRef, ...]:
     )
 
 
+def _selection_exposure() -> ReviewSelectionExposure:
+    return ReviewSelectionExposure(
+        applicability="APPLICABLE",
+        lane="STOCK_LANE",
+        industry_weights=(ReviewExposureWeight("bank", 1.0),),
+        size_bucket_weights=(ReviewExposureWeight("LARGE", 1.0),),
+        artifact_refs=tuple(
+            ref
+            for ref in _selection_trace_refs()
+            if ref.artifact_kind == "fold_selection_trace_exposures_v1"
+        ),
+    )
+
+
 def _input(**overrides: object) -> ReviewPacketInput:
     base = ReviewPacketInput(
         experiment_id="experiment-1",
@@ -127,6 +143,7 @@ def _input(**overrides: object) -> ReviewPacketInput:
         holdout_claim_id="claim-1",
         candidate_rationale="Captures durable net return after costs.",
         selection_trace_artifact_refs=_selection_trace_refs(),
+        selection_exposure=_selection_exposure(),
     )
     return replace(base, **overrides) if overrides else base
 
@@ -157,6 +174,7 @@ def test_assemble_maps_lineage_and_hashes() -> None:
     assert packet.comparison_payload_hash == ContentHash("9" * 64)
     assert packet.holdout_claim_id == "claim-1"
     assert packet.selection_trace_artifact_refs == _selection_trace_refs()
+    assert packet.selection_exposure == _selection_exposure()
 
 
 def test_assemble_bundle_hash_is_stable() -> None:

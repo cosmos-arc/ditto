@@ -1,4 +1,4 @@
-"""No-I/O validation for the four durable fold selection-trace artifacts."""
+"""No-I/O validation for the five durable fold selection-trace artifacts."""
 
 from __future__ import annotations
 
@@ -197,7 +197,7 @@ def validate_fold_selection_trace_artifacts(
     evidence: object,
     receipt: object,
 ) -> FoldSelectionTraceArtifactReceipt:
-    """Validate exactly four indexed records against canonical trace frames."""
+    """Validate exactly five indexed records against canonical trace frames."""
     typed_identity = _require_identity(identity)
     typed_evidence = _require_evidence(evidence)
     typed_receipt = _require_receipt(receipt)
@@ -243,7 +243,7 @@ def require_fold_selection_trace_artifact_receipt(
     evidence: SelectionEvidenceLog,
     receipt: object,
 ) -> FoldSelectionTraceArtifactReceipt:
-    """Require the complete four-record receipt before attempt completion."""
+    """Require the complete five-record receipt before attempt completion."""
     try:
         return validate_fold_selection_trace_artifacts(
             identity,
@@ -262,7 +262,7 @@ def publish_verified_fold_selection_trace_artifacts(
     lease_fence: LeaseFence,
     now_epoch_us: int,
 ) -> FoldSelectionTraceArtifactReceipt:
-    """Publish and verify all four records inside one lease callback."""
+    """Publish and verify all five records inside one lease callback."""
     if publisher is None:
         raise _receipt_integrity(identity, "fold_selection_trace_publisher_missing")
     receipt = publisher.publish(

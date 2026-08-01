@@ -8,6 +8,7 @@ from ditto_application.processes.experiments._coordinator_snapshot import (
 )
 from ditto_application.processes.experiments.holdout import (
     ClaimHoldoutCandidateRequest,
+    HoldoutCandidateSelectionProvider,
     HoldoutClaimProcess,
     HoldoutClaimReceipt,
     HoldoutSelectionEvidenceProvider,
@@ -40,12 +41,14 @@ class HoldoutCoordinatorAuthority:
         first_attempt_factory: FirstAttemptFactory,
         selection_evidence_provider: HoldoutSelectionEvidenceProvider | None,
         authority: LeaseAuthority,
+        candidate_selection_provider: HoldoutCandidateSelectionProvider | None = None,
     ) -> None:
         self._store = store
         self._process = HoldoutClaimProcess(
             store=store,
             first_attempt_factory=first_attempt_factory,
             selection_evidence_provider=selection_evidence_provider,
+            candidate_selection_provider=candidate_selection_provider,
         )
         self._authority = authority
 
@@ -59,7 +62,11 @@ class HoldoutCoordinatorAuthority:
         )
         if snapshot.holdout_claim is not None:
             return run_unfenced_scheduler_operation(
-                lambda: self._process.replay_candidate(request)
+                lambda: self._process.claim_candidate(
+                    request,
+                    lease=None,
+                    now_epoch_us=None,
+                )
             )
         try:
             return run_unfenced_scheduler_operation(

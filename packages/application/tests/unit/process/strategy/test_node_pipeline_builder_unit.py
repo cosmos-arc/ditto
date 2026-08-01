@@ -28,7 +28,10 @@ from ditto_strategy.alpha.node_registry import (
 from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceCollector,
+    SelectionExposurePolicy,
+)
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.alpha.templates import TrailingStopStage
@@ -165,6 +168,7 @@ def test_stock_runtime_wires_one_evidence_sink_to_pipeline_and_stages() -> None:
     )
 
     assert pipeline._evidence_sink is collector
+    assert pipeline._exposure_policy == SelectionExposurePolicy.stock()
     evidence_stages = tuple(
         stage
         for stage in pipeline._stages

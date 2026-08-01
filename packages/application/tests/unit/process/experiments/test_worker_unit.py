@@ -1409,8 +1409,9 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
     assert evidence == _report_evidence()
     assert fence.revision == 17
     assert now_epoch_us == int(_NOW.timestamp() * 1_000_000)
-    assert len(trace_index.records) == 4
+    assert len(trace_index.records) == 5
     assert trace_index.add_calls == [
+        (fence, now_epoch_us),
         (fence, now_epoch_us),
         (fence, now_epoch_us),
         (fence, now_epoch_us),

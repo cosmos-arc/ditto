@@ -13,13 +13,17 @@ from unittest.mock import MagicMock
 
 from ditto_analysis.experiments import (
     REVIEW_PACKET_SCHEMA_VERSION,
+    REVIEW_PACKET_SELECTION_TRACE_KINDS,
     ContentHash,
     ExperimentId,
     GateEvaluation,
     GateLayer,
     GateOutcome,
+    ReviewExposureWeight,
     ReviewPacket,
     ReviewPacketLineage,
+    ReviewSelectionExposure,
+    SelectionTraceArtifactRef,
 )
 from ditto_application.queries.experiments import (
     ExperimentQueryFacade,
@@ -28,6 +32,14 @@ from ditto_application.queries.experiments import (
 
 
 def _packet() -> ReviewPacket:
+    refs = tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=kind,
+            artifact_id=f"trace-{index}",
+            content_hash=ContentHash(f"{index}" * 64),
+        )
+        for index, kind in enumerate(REVIEW_PACKET_SELECTION_TRACE_KINDS, start=1)
+    )
     return ReviewPacket(
         schema_version=REVIEW_PACKET_SCHEMA_VERSION,
         lineage=ReviewPacketLineage(
@@ -56,6 +68,14 @@ def _packet() -> ReviewPacket:
         selection_evidence_artifact_id=None,
         holdout_claim_id=None,
         candidate_rationale="Captures durable net return after costs.",
+        selection_trace_artifact_refs=refs,
+        selection_exposure=ReviewSelectionExposure(
+            applicability="APPLICABLE",
+            lane="STOCK_LANE",
+            industry_weights=(ReviewExposureWeight("bank", 1.0),),
+            size_bucket_weights=(ReviewExposureWeight("LARGE", 1.0),),
+            artifact_refs=(refs[-1],),
+        ),
     )
 
 

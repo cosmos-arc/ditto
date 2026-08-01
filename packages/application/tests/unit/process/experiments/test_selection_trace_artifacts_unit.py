@@ -114,10 +114,15 @@ def _receipt(
             FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS,
             tables["factor_contribution_evidence"],
         ),
+        exposures=_record(
+            identity,
+            FoldSelectionTraceArtifactKind.EXPOSURES,
+            tables["selection_exposure_evidence"],
+        ),
     )
 
 
-def test_selection_trace_identity_derives_four_unique_versioned_artifacts() -> None:
+def test_selection_trace_identity_derives_five_unique_versioned_artifacts() -> None:
     identity = _identity()
     artifact_ids = tuple(
         identity.artifact_id(kind) for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
@@ -126,9 +131,9 @@ def test_selection_trace_identity_derives_four_unique_versioned_artifacts() -> N
         identity.relative_path(kind) for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
     )
 
-    assert len(FOLD_SELECTION_TRACE_ARTIFACT_KINDS) == 4
-    assert len(set(artifact_ids)) == 4
-    assert len(set(paths)) == 4
+    assert len(FOLD_SELECTION_TRACE_ARTIFACT_KINDS) == 5
+    assert len(set(artifact_ids)) == 5
+    assert len(set(paths)) == 5
     assert all(
         kind.value.startswith("fold_selection_trace_") and kind.value.endswith("_v1")
         for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
@@ -173,7 +178,7 @@ def test_selection_trace_identity_binds_run_time_and_reproduction() -> None:
     }
 
 
-def test_empty_selection_trace_is_four_existing_verified_artifacts() -> None:
+def test_empty_selection_trace_is_five_existing_verified_artifacts() -> None:
     identity = _identity()
     receipt = _receipt(identity, SelectionEvidenceLog())
 
@@ -184,7 +189,7 @@ def test_empty_selection_trace_is_four_existing_verified_artifacts() -> None:
     )
 
     assert validated is receipt
-    assert len(validated.records) == 4
+    assert len(validated.records) == 5
     assert all(record.row_count == 0 for record in validated.records)
 
 

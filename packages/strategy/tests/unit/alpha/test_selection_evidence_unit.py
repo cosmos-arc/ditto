@@ -26,6 +26,12 @@ from ditto_strategy.alpha.selection_evidence import (
     SelectionEvidence,
     SelectionEvidenceCollector,
     SelectionEvidenceLog,
+    SelectionExposureApplicability,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposureLane,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
 )
 from ditto_strategy.errors import StrategySpecError
 from polars.testing import assert_frame_equal
@@ -49,6 +55,12 @@ def test_selection_evidence_contract_surface_is_explicit() -> None:
         "SelectionEvidenceCollector",
         "SelectionEvidenceLog",
         "SelectionEvidenceSink",
+        "SelectionExposureApplicability",
+        "SelectionExposureDeclaration",
+        "SelectionExposureEvidence",
+        "SelectionExposureLane",
+        "SelectionExposurePolicy",
+        "SelectionExposureSizeBucket",
     }
 
     assert expected_names <= set(evidence.__dict__)
@@ -61,10 +73,74 @@ def test_every_evidence_record_has_an_explicit_trade_date() -> None:
         ExclusionEvidence,
         FactorContributionEvidence,
         SelectionEvidence,
+        SelectionExposureDeclaration,
+        SelectionExposureEvidence,
     )
 
     for event_type in event_types:
         assert "trade_date" in {field.name for field in fields(event_type)}
+
+
+def test_stock_exposure_policy_freezes_source_columns_and_bucket_semantics() -> None:
+    policy = SelectionExposurePolicy.stock()
+
+    assert policy.applicability is SelectionExposureApplicability.APPLICABLE
+    assert policy.lane is SelectionExposureLane.STOCK_LANE
+    assert policy.industry_column == "sector_id"
+    assert policy.size_column == "market_cap"
+    assert policy.size_bucket_method == "selected_market_cap_tertiles_v1"
+
+
+def test_etf_exposure_policy_is_explicitly_not_applicable() -> None:
+    policy = SelectionExposurePolicy.etf()
+
+    assert policy.applicability is SelectionExposureApplicability.NOT_APPLICABLE
+    assert policy.lane is SelectionExposureLane.ETF_LANE
+    assert policy.industry_column is None
+    assert policy.size_column is None
+    assert policy.size_bucket_method is None
+
+
+def test_log_rejects_exposure_without_same_date_applicable_declaration() -> None:
+    with pytest.raises(StrategySpecError) as exc_info:
+        SelectionEvidenceLog(
+            exposures=(
+                SelectionExposureEvidence(
+                    trade_date=_TRADE_DATE,
+                    instrument_id=1,
+                    selected_weight=1.0,
+                    industry_id="bank",
+                    size_value=50_000_000_000.0,
+                    size_bucket=SelectionExposureSizeBucket.LARGE,
+                ),
+            ),
+        )
+
+    assert exc_info.value.details["reason"] == "exposure_declaration_missing"
+
+
+def test_log_rejects_rows_for_not_applicable_etf_declaration() -> None:
+    with pytest.raises(StrategySpecError) as exc_info:
+        SelectionEvidenceLog(
+            exposure_declarations=(
+                SelectionExposureDeclaration.from_policy(
+                    _TRADE_DATE,
+                    SelectionExposurePolicy.etf(),
+                ),
+            ),
+            exposures=(
+                SelectionExposureEvidence(
+                    trade_date=_TRADE_DATE,
+                    instrument_id="510300.SH",
+                    selected_weight=1.0,
+                    industry_id="ETF",
+                    size_value=1.0,
+                    size_bucket=SelectionExposureSizeBucket.LARGE,
+                ),
+            ),
+        )
+
+    assert exc_info.value.details["reason"] == "not_applicable_exposure_has_rows"
 
 
 def test_factor_contribution_names_its_additive_score_scope() -> None:

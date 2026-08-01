@@ -38,7 +38,15 @@ from ditto_application.processes.experiments._evidence_inputs import (
     read_unique_preflight_detail,
 )
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    CollectedWalkForwardEvidence,
     WalkForwardEvidenceAssembler,
+)
+from ditto_application.processes.experiments.candidate_evidence_reader import (
+    CANDIDATE_EVIDENCE_ARTIFACT_KIND,
+    CANDIDATE_EVIDENCE_SCHEMA_ID,
+    CANDIDATE_EVIDENCE_SCHEMA_VERSION,
+    build_candidate_evidence_bundle,
+    candidate_evidence_bundle_relative_path,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
@@ -166,6 +174,7 @@ class _RebuiltSelectionEvidence:
     created_at: datetime
     selection_stage_event_id: str
     selection_stage_subject_revision: int
+    collected: CollectedWalkForwardEvidence
 
     @property
     def artifact_id(self) -> str:
@@ -236,7 +245,6 @@ class PublishedSelectionEvidence:
         )
         if (
             type(self.record) is not ArtifactRecord
-            or type(self.ledger) is not TrialLedger
             or experiment_id is None
             or self.record.experiment_id != experiment_id
             or self.record.candidate_id is not None
@@ -250,6 +258,69 @@ class PublishedSelectionEvidence:
             != f"selection-evidence-{self.ledger.content_hash}"
         ):
             _selection_integrity("selection_evidence_published_pair_mismatch")
+
+
+@dataclass(frozen=True, slots=True)
+class _CandidateEvidenceBundlePublisher:
+    """Publish every candidate bundle through the existing generic envelope."""
+
+    artifact_service: ResearchArtifactService
+    artifact_reader: _SelectionEvidenceReader
+
+    def publish(
+        self,
+        collected: CollectedWalkForwardEvidence,
+        snapshot: ExperimentSchedulerSnapshot,
+        *,
+        comparison_revision: int,
+        created_at: datetime,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+    ) -> tuple[ArtifactRecord, ...]:
+        records: list[ArtifactRecord] = []
+        for candidate in snapshot.launch_spec.candidates:
+            bundle = build_candidate_evidence_bundle(
+                collected,
+                candidate_id=str(candidate.candidate_id),
+                comparison_revision=comparison_revision,
+            )
+            fingerprint = canonical_payload(
+                {
+                    "fold_sources": list(bundle.fold_sources),
+                    "manifest": dict(bundle.manifest),
+                    "schema_id": CANDIDATE_EVIDENCE_SCHEMA_ID,
+                    "schema_version": CANDIDATE_EVIDENCE_SCHEMA_VERSION,
+                }
+            ).content_hash
+            spec = ArtifactPublicationSpec(
+                artifact_id=bundle.artifact_id,
+                experiment_id=snapshot.projection.record.experiment_id,
+                candidate_id=candidate.candidate_id,
+                fold_id=None,
+                attempt_id=None,
+                artifact_kind=CANDIDATE_EVIDENCE_ARTIFACT_KIND,
+                relative_path=candidate_evidence_bundle_relative_path(bundle),
+                reproduction_fingerprint=fingerprint,
+                audit={
+                    **dict(bundle.manifest),
+                    "artifact_kind": CANDIDATE_EVIDENCE_ARTIFACT_KIND,
+                    "created_at": created_at.isoformat(),
+                    "reproduction_fingerprint": str(fingerprint),
+                    "schema_id": CANDIDATE_EVIDENCE_SCHEMA_ID,
+                    "schema_version": CANDIDATE_EVIDENCE_SCHEMA_VERSION,
+                },
+                created_at=created_at,
+            )
+            record = self.artifact_service.publish_indexed_json(
+                spec,
+                bundle.payload,
+                lease_fence=lease_fence,
+                now_epoch_us=now_epoch_us,
+            )
+            if self.artifact_reader.get_artifact(record.artifact_id) != record:
+                _selection_integrity("candidate_evidence_artifact_index_drift")
+            records.append(record)
+        return tuple(records)
 
 
 @dataclass(frozen=True, slots=True)
@@ -280,6 +351,17 @@ class DurableSelectionEvidenceService:
         ):
             _selection_integrity("selection_evidence_publish_snapshot_drift")
         rebuilt = self._rebuild(authoritative, require_publish_stage=True)
+        _CandidateEvidenceBundlePublisher(
+            artifact_service=self.artifact_service,
+            artifact_reader=self.reader,
+        ).publish(
+            rebuilt.collected,
+            authoritative,
+            comparison_revision=rebuilt.selection_stage_subject_revision,
+            created_at=rebuilt.created_at,
+            lease_fence=lease_fence,
+            now_epoch_us=now_epoch_us,
+        )
         record = self.artifact_service.publish_indexed_json(
             rebuilt.publication_spec,
             rebuilt.ledger.canonical_payload(),
@@ -385,6 +467,7 @@ class DurableSelectionEvidenceService:
             selection_event.occurred_at,
             selection_event.event_id,
             selection_event.subject_revision,
+            collected,
         )
 
     def _read_rebuilt(

@@ -35,6 +35,10 @@ from ditto_strategy.alpha.selection_evidence import (
     InitialUniverseEvidence,
     SelectionEvidence,
     SelectionEvidenceLog,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
 )
 
 # ---------------------------------------------------------------------------
@@ -473,9 +477,27 @@ class TestSelectionEvidenceTables:
                 "selected": pl.Boolean,
             },
         ),
+        "selection_exposure_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "trade_date": pl.String,
+                "applicability": pl.String,
+                "lane": pl.String,
+                "industry_column": pl.String,
+                "size_column": pl.String,
+                "size_bucket_method": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "selected_weight": pl.Float64,
+                "industry_id": pl.String,
+                "industry_id_kind": pl.String,
+                "size_value": pl.Float64,
+                "size_bucket": pl.String,
+            },
+        ),
     }
 
-    def test_public_serializer_emits_exactly_four_empty_existing_tables(
+    def test_public_serializer_emits_exactly_five_empty_existing_tables(
         self,
     ) -> None:
         from ditto_application.processes.execution.backtest_serialization import (
@@ -491,6 +513,77 @@ class TestSelectionEvidenceTables:
         for table_name, expected_schema in self._EXPECTED_SCHEMAS.items():
             assert tables[table_name].is_empty()
             assert tables[table_name].schema == expected_schema
+
+    def test_exposure_table_serializes_stock_rows_and_etf_not_applicable_sentinel(
+        self,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        stock_date = "2026-03-22"
+        etf_date = "2026-03-23"
+        log = SelectionEvidenceLog(
+            exposure_declarations=(
+                SelectionExposureDeclaration.from_policy(
+                    stock_date,
+                    SelectionExposurePolicy.stock(),
+                ),
+                SelectionExposureDeclaration.from_policy(
+                    etf_date,
+                    SelectionExposurePolicy.etf(),
+                ),
+            ),
+            exposures=(
+                SelectionExposureEvidence(
+                    trade_date=stock_date,
+                    instrument_id=1,
+                    selected_weight=1.0,
+                    industry_id="bank",
+                    size_value=50_000_000_000.0,
+                    size_bucket=SelectionExposureSizeBucket.MID,
+                ),
+            ),
+        )
+
+        table = serialize_selection_evidence("run-exposure", log)[
+            "selection_exposure_evidence"
+        ]
+
+        assert table.to_dicts() == [
+            {
+                "run_id": "run-exposure",
+                "trade_date": stock_date,
+                "applicability": "APPLICABLE",
+                "lane": "STOCK_LANE",
+                "industry_column": "sector_id",
+                "size_column": "market_cap",
+                "size_bucket_method": "selected_market_cap_tertiles_v1",
+                "instrument_id": "1",
+                "instrument_id_kind": "integer",
+                "selected_weight": 1.0,
+                "industry_id": "bank",
+                "industry_id_kind": "string",
+                "size_value": 50_000_000_000.0,
+                "size_bucket": "MID",
+            },
+            {
+                "run_id": "run-exposure",
+                "trade_date": etf_date,
+                "applicability": "NOT_APPLICABLE",
+                "lane": "ETF_LANE",
+                "industry_column": None,
+                "size_column": None,
+                "size_bucket_method": None,
+                "instrument_id": None,
+                "instrument_id_kind": None,
+                "selected_weight": None,
+                "industry_id": None,
+                "industry_id_kind": None,
+                "size_value": None,
+                "size_bucket": None,
+            },
+        ]
 
     @staticmethod
     def _single_event_log(
@@ -800,6 +893,13 @@ class TestSelectionEvidenceTables:
                     factor_signal_score=0.5,
                     rank=2,
                     selected=False,
+                )
+                for trade_date in trade_dates
+            ),
+            exposure_declarations=tuple(
+                SelectionExposureDeclaration.from_policy(
+                    trade_date,
+                    SelectionExposurePolicy.etf(),
                 )
                 for trade_date in trade_dates
             ),

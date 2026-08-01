@@ -42,12 +42,13 @@ _ARTIFACT_ID_PREFIX = "fold-selection-trace-v1"
 
 
 class FoldSelectionTraceArtifactKind(StrEnum):
-    """Four independent Schema-v1 Parquet facts for one completed fold."""
+    """Five independent Schema-v1 Parquet facts for one completed fold."""
 
     CANDIDATE_UNIVERSE = "fold_selection_trace_candidate_universe_v1"
     CANDIDATE_EXCLUSIONS = "fold_selection_trace_candidate_exclusions_v1"
     CANDIDATE_SELECTIONS = "fold_selection_trace_candidate_selections_v1"
     FACTOR_CONTRIBUTIONS = "fold_selection_trace_factor_contributions_v1"
+    EXPOSURES = "fold_selection_trace_exposures_v1"
 
 
 FOLD_SELECTION_TRACE_ARTIFACT_KINDS = (
@@ -55,6 +56,7 @@ FOLD_SELECTION_TRACE_ARTIFACT_KINDS = (
     FoldSelectionTraceArtifactKind.CANDIDATE_EXCLUSIONS,
     FoldSelectionTraceArtifactKind.CANDIDATE_SELECTIONS,
     FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS,
+    FoldSelectionTraceArtifactKind.EXPOSURES,
 )
 
 _LOGICAL_NAMES = {
@@ -62,6 +64,7 @@ _LOGICAL_NAMES = {
     FoldSelectionTraceArtifactKind.CANDIDATE_EXCLUSIONS: "candidate_exclusions",
     FoldSelectionTraceArtifactKind.CANDIDATE_SELECTIONS: "candidate_selections",
     FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS: "factor_contributions",
+    FoldSelectionTraceArtifactKind.EXPOSURES: "exposures",
 }
 _SERIALIZED_TABLE_NAMES = {
     FoldSelectionTraceArtifactKind.CANDIDATE_UNIVERSE: ("initial_universe_evidence"),
@@ -70,6 +73,7 @@ _SERIALIZED_TABLE_NAMES = {
     FoldSelectionTraceArtifactKind.FACTOR_CONTRIBUTIONS: (
         "factor_contribution_evidence"
     ),
+    FoldSelectionTraceArtifactKind.EXPOSURES: "selection_exposure_evidence",
 }
 
 
@@ -187,12 +191,13 @@ class FoldSelectionTraceArtifactIdentity:
 
 @dataclass(frozen=True, slots=True)
 class FoldSelectionTraceArtifactReceipt:
-    """Fixed four-record publication receipt; zero rows remain present facts."""
+    """Fixed five-record publication receipt; zero rows remain present facts."""
 
     candidate_universe: ArtifactRecord
     candidate_exclusions: ArtifactRecord
     candidate_selections: ArtifactRecord
     factor_contributions: ArtifactRecord
+    exposures: ArtifactRecord
 
     def __post_init__(self) -> None:
         """Keep partial or structurally erased receipts out of the contract."""
@@ -207,6 +212,7 @@ class FoldSelectionTraceArtifactReceipt:
             self.candidate_exclusions,
             self.candidate_selections,
             self.factor_contributions,
+            self.exposures,
         )
 
     def record(
@@ -223,7 +229,7 @@ class FoldSelectionTraceArtifactReceipt:
 
 @dataclass(frozen=True, slots=True)
 class LoadedFoldSelectionTraceArtifacts:
-    """One all-four verified read with its exact attempt identity and evidence."""
+    """One all-five verified read with its exact attempt identity and evidence."""
 
     identity: FoldSelectionTraceArtifactIdentity
     receipt: FoldSelectionTraceArtifactReceipt
@@ -243,7 +249,7 @@ class LoadedFoldSelectionTraceArtifacts:
 
 
 class FoldSelectionTraceArtifactPublisher(Protocol):
-    """Worker port for one all-four fold trace publication."""
+    """Worker port for one all-five fold trace publication."""
 
     def publish(
         self,
@@ -253,7 +259,7 @@ class FoldSelectionTraceArtifactPublisher(Protocol):
         lease_fence: LeaseFence,
         now_epoch_us: int,
     ) -> FoldSelectionTraceArtifactReceipt:
-        """Publish all four trace tables using the same renewed lease fence."""
+        """Publish all five trace tables using the same renewed lease fence."""
         ...
 
 
@@ -264,7 +270,7 @@ class FoldSelectionTraceArtifactReader(Protocol):
         self,
         identity: FoldSelectionTraceArtifactIdentity,
     ) -> LoadedFoldSelectionTraceArtifacts | None:
-        """Return four verified files, or ``None`` only when all four are absent."""
+        """Return five verified files, or ``None`` only when all five are absent."""
         ...
 
 

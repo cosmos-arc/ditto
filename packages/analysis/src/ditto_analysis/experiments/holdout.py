@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import cast
@@ -65,6 +66,7 @@ class HoldoutClaimAuthorityCommand:
     selection_reason: HoldoutSelectionReason
     resolved_reproduction_fingerprint: ContentHash | None
     occurred_at: datetime
+    event_detail_extension: Mapping[str, object] | None = None
 
     def __post_init__(self) -> None:
         """Require exact nominal identities and canonical operator input."""
@@ -106,6 +108,14 @@ class HoldoutClaimAuthorityCommand:
                 "invalid_holdout_reproduction_fingerprint",
             )
         require_utc_datetime(cast("object", self.occurred_at), "occurred_at")
+        if self.event_detail_extension is not None and not isinstance(
+            cast("object", self.event_detail_extension),
+            Mapping,
+        ):
+            raise _holdout_error(
+                "event_detail_extension must be a mapping or None",
+                "invalid_holdout_event_detail_extension",
+            )
 
 
 @dataclass(frozen=True, slots=True)

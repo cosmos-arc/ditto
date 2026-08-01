@@ -9,9 +9,13 @@ from ditto_analysis.experiments import ContentHash
 from ditto_analysis.experiments.evidence import (
     REVIEW_PACKET_SCHEMA_VERSION,
     REVIEW_PACKET_SCHEMA_VERSION_V1,
+    REVIEW_PACKET_SCHEMA_VERSION_V2,
     REVIEW_PACKET_SELECTION_TRACE_KINDS,
+    REVIEW_PACKET_SELECTION_TRACE_KINDS_V2,
+    ReviewExposureWeight,
     ReviewPacket,
     ReviewPacketLineage,
+    ReviewSelectionExposure,
     SelectionTraceArtifactRef,
     review_packet_from_payload,
 )
@@ -63,6 +67,7 @@ def _packet(**overrides: object) -> ReviewPacket:
 def _trace_refs(
     *,
     attempt_count: int = 1,
+    kinds: tuple[str, ...] = REVIEW_PACKET_SELECTION_TRACE_KINDS,
 ) -> tuple[SelectionTraceArtifactRef, ...]:
     return tuple(
         SelectionTraceArtifactRef(
@@ -72,7 +77,7 @@ def _trace_refs(
         )
         for attempt_ordinal in range(1, attempt_count + 1)
         for kind_ordinal, kind in enumerate(
-            REVIEW_PACKET_SELECTION_TRACE_KINDS,
+            kinds,
             start=1,
         )
     )
@@ -80,8 +85,41 @@ def _trace_refs(
 
 def _v2_packet(**overrides: object) -> ReviewPacket:
     values: dict[str, object] = {
+        "schema_version": REVIEW_PACKET_SCHEMA_VERSION_V2,
+        "selection_trace_artifact_refs": _trace_refs(
+            kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2,
+        ),
+    }
+    values.update(overrides)
+    return _packet(**values)
+
+
+def _selection_exposure() -> ReviewSelectionExposure:
+    return ReviewSelectionExposure(
+        applicability="APPLICABLE",
+        lane="STOCK_LANE",
+        industry_weights=(
+            ReviewExposureWeight("bank", 0.6),
+            ReviewExposureWeight("tech", 0.4),
+        ),
+        size_bucket_weights=(
+            ReviewExposureWeight("SMALL", 0.2),
+            ReviewExposureWeight("MID", 0.3),
+            ReviewExposureWeight("LARGE", 0.5),
+        ),
+        artifact_refs=tuple(
+            ref
+            for ref in _trace_refs()
+            if ref.artifact_kind == "fold_selection_trace_exposures_v1"
+        ),
+    )
+
+
+def _v3_packet(**overrides: object) -> ReviewPacket:
+    values: dict[str, object] = {
         "schema_version": REVIEW_PACKET_SCHEMA_VERSION,
         "selection_trace_artifact_refs": _trace_refs(),
+        "selection_exposure": _selection_exposure(),
     }
     values.update(overrides)
     return _packet(**values)
@@ -212,8 +250,9 @@ def test_v2_round_trip_binds_positive_trace_refs_into_bundle_hash() -> None:
     restored = review_packet_from_payload(original.canonical_payload())
 
     assert restored == original
-    assert restored.selection_trace_artifact_refs == _trace_refs()
-    drifted_refs = list(_trace_refs())
+    v2_refs = _trace_refs(kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2)
+    assert restored.selection_trace_artifact_refs == v2_refs
+    drifted_refs = list(v2_refs)
     drifted_refs[0] = replace(
         drifted_refs[0],
         content_hash=ContentHash("0" * 64),
@@ -226,10 +265,15 @@ def test_v2_round_trip_binds_positive_trace_refs_into_bundle_hash() -> None:
 
 def test_v2_allows_trace_blocks_for_complete_family_beyond_selected_lineage() -> None:
     """The packet lineage is selected-only; trace refs cover every source row."""
-    packet = _v2_packet(selection_trace_artifact_refs=_trace_refs(attempt_count=2))
+    packet = _v2_packet(
+        selection_trace_artifact_refs=_trace_refs(
+            attempt_count=2,
+            kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2,
+        ),
+    )
 
     assert len(packet.selection_trace_artifact_refs) == (
-        2 * len(REVIEW_PACKET_SELECTION_TRACE_KINDS)
+        2 * len(REVIEW_PACKET_SELECTION_TRACE_KINDS_V2)
     )
 
 
@@ -247,9 +291,13 @@ def test_v2_allows_zero_positive_refs_when_completeness_gate_records_missing() -
 @pytest.mark.parametrize(
     "trace_refs",
     [
-        _trace_refs()[:-1],
-        tuple(reversed(_trace_refs())),
-        (_trace_refs()[0], *_trace_refs()[1:-1], _trace_refs()[0]),
+        _trace_refs(kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2)[:-1],
+        tuple(reversed(_trace_refs(kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2))),
+        (
+            _trace_refs(kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2)[0],
+            *_trace_refs(kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2)[1:-1],
+            _trace_refs(kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2)[0],
+        ),
     ],
     ids=["incomplete-block", "wrong-kind-order", "duplicate-id"],
 )
@@ -274,7 +322,78 @@ def test_v2_rejects_fold_attempt_lineage_count_drift() -> None:
 
 def test_v1_rejects_v2_trace_refs() -> None:
     with pytest.raises(ValueError):
-        _packet(selection_trace_artifact_refs=_trace_refs())
+        _packet(
+            selection_trace_artifact_refs=_trace_refs(
+                kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2,
+            ),
+        )
+
+
+def test_v3_round_trip_binds_exposure_summary_and_five_kind_blocks() -> None:
+    original = _v3_packet()
+
+    restored = review_packet_from_payload(original.canonical_payload())
+
+    assert restored == original
+    assert restored.schema_version == 3
+    assert restored.selection_exposure == _selection_exposure()
+    assert len(restored.selection_trace_artifact_refs) == 5
+    assert restored.canonical_payload()["selection_exposure"] == {
+        "applicability": "APPLICABLE",
+        "lane": "STOCK_LANE",
+        "industry_weights": [
+            {"key": "bank", "weight": 0.6},
+            {"key": "tech", "weight": 0.4},
+        ],
+        "size_bucket_weights": [
+            {"key": "SMALL", "weight": 0.2},
+            {"key": "MID", "weight": 0.3},
+            {"key": "LARGE", "weight": 0.5},
+        ],
+        "artifact_refs": [
+            ref.canonical_payload() for ref in _selection_exposure().artifact_refs
+        ],
+    }
+
+
+def test_v3_etf_exposure_is_explicit_not_applicable_without_fake_weights() -> None:
+    exposure = ReviewSelectionExposure(
+        applicability="NOT_APPLICABLE",
+        lane="ETF_LANE",
+        industry_weights=(),
+        size_bucket_weights=(),
+        artifact_refs=tuple(
+            ref
+            for ref in _trace_refs()
+            if ref.artifact_kind == "fold_selection_trace_exposures_v1"
+        ),
+    )
+
+    packet = _v3_packet(selection_exposure=exposure)
+
+    assert packet.selection_exposure == exposure
+
+
+def test_v3_preserves_absent_exposure_without_synthesizing_weights() -> None:
+    packet = _v3_packet(selection_exposure=None)
+
+    restored = review_packet_from_payload(packet.canonical_payload())
+
+    assert packet.canonical_payload()["selection_exposure"] is None
+    assert restored.selection_exposure is None
+
+
+def test_v3_rejects_empty_applicable_exposure() -> None:
+    with pytest.raises(ValueError):
+        _v3_packet(
+            selection_exposure=ReviewSelectionExposure(
+                applicability="APPLICABLE",
+                lane="STOCK_LANE",
+                industry_weights=(),
+                size_bucket_weights=(),
+                artifact_refs=(),
+            ),
+        )
 
 
 @pytest.mark.parametrize(

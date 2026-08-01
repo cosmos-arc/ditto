@@ -21,6 +21,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 from ditto_analysis.experiments import ExperimentReaderProtocol
 from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_features.factors.core_daily_catalog import R3_CORE_FACTOR_CATALOG
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -47,6 +48,7 @@ from ditto_application.builders.research_execution_resolver import (
     DurableResearchExecutionResolver,
     ResearchExecutionRuntimeBuilders,
 )
+from ditto_application.commands.candidate_selection import CandidateSelectionProcess
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     FrozenResearchInputsResolver,
 )
@@ -61,11 +63,21 @@ from ditto_application.processes.experiments._report_evidence import (
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
 )
+from ditto_application.processes.experiments.candidate_evidence_reader import (
+    CandidateEvidenceReader,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
 )
 from ditto_application.processes.experiments.execution_bundle import CodeEnvironmentLock
-from ditto_application.processes.experiments.scheduler_store import FirstAttemptFactory
+from ditto_application.processes.experiments.factor_diagnostics_reader import (
+    FactorDiagnosticsReader,
+    PersistedFactorDiagnosticsSource,
+)
+from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentSchedulerStore,
+    FirstAttemptFactory,
+)
 from ditto_application.processes.experiments.worker import (
     ExecutionBundleFirstAttemptFactory,
     ExistingBacktestResearchFoldRunner,
@@ -169,6 +181,55 @@ class AppResearchExecutionProvider(Provider):
             report_reader=report_reader,
             fold_selection_trace_reader=fold_selection_trace_reader,
             semantics_resolver=semantics_resolver,
+        )
+
+    @provide
+    def candidate_evidence_reader(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
+        research_artifact_service: ResearchArtifactService,
+    ) -> CandidateEvidenceReader:
+        """Bind drill-down pages to current comparison and verified artifacts."""
+        return CandidateEvidenceReader(
+            scheduler_store=scheduler_store,
+            walk_forward_assembler=walk_forward_assembler,
+            artifact_service=research_artifact_service,
+        )
+
+    @provide
+    def candidate_selection_process(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        candidate_evidence_reader: CandidateEvidenceReader,
+    ) -> CandidateSelectionProcess:
+        """Bind candidate preselection to the scheduler's fenced event store."""
+        return CandidateSelectionProcess(
+            store=scheduler_store,
+            candidate_evidence_reader=candidate_evidence_reader,
+        )
+
+    @provide
+    def factor_diagnostics_source(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
+    ) -> PersistedFactorDiagnosticsSource:
+        """Reuse verified comparison assembly for factor diagnostics lookup."""
+        return PersistedFactorDiagnosticsSource(
+            scheduler_store=scheduler_store,
+            walk_forward_assembler=walk_forward_assembler,
+        )
+
+    @provide
+    def factor_diagnostics_reader(
+        self,
+        source: PersistedFactorDiagnosticsSource,
+    ) -> FactorDiagnosticsReader:
+        """Bind diagnostics to the governed core-factor registry hash."""
+        return FactorDiagnosticsReader(
+            source=source,
+            expected_registry_hash=R3_CORE_FACTOR_CATALOG.payload_hash,
         )
 
     @provide

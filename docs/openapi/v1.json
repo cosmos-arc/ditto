@@ -121,6 +121,102 @@
         "title": "APIResponse[CancelRunResponse]",
         "type": "object"
       },
+      "APIResponse_CandidateExclusionPageResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CandidateExclusionPageResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[CandidateExclusionPageResponse]",
+        "type": "object"
+      },
+      "APIResponse_CandidateFactorContributionPageResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CandidateFactorContributionPageResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[CandidateFactorContributionPageResponse]",
+        "type": "object"
+      },
+      "APIResponse_CandidateSelectionPageResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CandidateSelectionPageResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[CandidateSelectionPageResponse]",
+        "type": "object"
+      },
+      "APIResponse_CandidateSelectionReceiptResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CandidateSelectionReceiptResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[CandidateSelectionReceiptResponse]",
+        "type": "object"
+      },
       "APIResponse_CatalogAssetResponse_": {
         "properties": {
           "data": {
@@ -817,6 +913,30 @@
         "title": "APIResponse[ExperimentSelectionEvidenceResponse]",
         "type": "object"
       },
+      "APIResponse_FactorDiagnosticsResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FactorDiagnosticsResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[FactorDiagnosticsResponse]",
+        "type": "object"
+      },
       "APIResponse_FillAdjustmentResponse_": {
         "properties": {
           "data": {
@@ -863,6 +983,30 @@
           "data"
         ],
         "title": "APIResponse[FillResponse]",
+        "type": "object"
+      },
+      "APIResponse_HoldoutEvaluationReceiptResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HoldoutEvaluationReceiptResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[HoldoutEvaluationReceiptResponse]",
         "type": "object"
       },
       "APIResponse_IngestionStatusResponse_": {
@@ -3273,6 +3417,450 @@
           "run_id"
         ],
         "title": "CancelRunResponse",
+        "type": "object"
+      },
+      "CandidateExclusionEventResponse": {
+        "description": "One candidate exclusion event from an immutable candidate bundle.",
+        "properties": {
+          "evidence_hash": {
+            "title": "Evidence Hash",
+            "type": "string"
+          },
+          "fold_id": {
+            "title": "Fold Id",
+            "type": "string"
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Instrument Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "validation_fold_ordinal": {
+            "title": "Validation Fold Ordinal",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "validation_fold_ordinal",
+          "fold_id",
+          "trade_date",
+          "instrument_id",
+          "stage",
+          "reason_code",
+          "message",
+          "evidence_hash"
+        ],
+        "title": "CandidateExclusionEventResponse",
+        "type": "object"
+      },
+      "CandidateExclusionPageResponse": {
+        "description": "Typed exclusions page over one immutable candidate bundle.",
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateExclusionEventResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "experiment_id",
+          "artifact_id",
+          "content_hash",
+          "items",
+          "next_cursor"
+        ],
+        "title": "CandidateExclusionPageResponse",
+        "type": "object"
+      },
+      "CandidateFactorContributionPageResponse": {
+        "description": "Typed contribution page over one immutable candidate bundle.",
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateFactorContributionResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "experiment_id",
+          "artifact_id",
+          "content_hash",
+          "items",
+          "next_cursor"
+        ],
+        "title": "CandidateFactorContributionPageResponse",
+        "type": "object"
+      },
+      "CandidateFactorContributionResponse": {
+        "description": "One factor contribution bound to a fold decision and evidence hash.",
+        "properties": {
+          "contribution": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contribution"
+          },
+          "evidence_hash": {
+            "title": "Evidence Hash",
+            "type": "string"
+          },
+          "factor_id": {
+            "title": "Factor Id",
+            "type": "string"
+          },
+          "fold_id": {
+            "title": "Fold Id",
+            "type": "string"
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Instrument Id"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "selected": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "validation_fold_ordinal": {
+            "title": "Validation Fold Ordinal",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "validation_fold_ordinal",
+          "fold_id",
+          "trade_date",
+          "instrument_id",
+          "factor_id",
+          "contribution",
+          "rank",
+          "selected",
+          "evidence_hash"
+        ],
+        "title": "CandidateFactorContributionResponse",
+        "type": "object"
+      },
+      "CandidateSelectionEventResponse": {
+        "description": "One candidate selection event from an immutable candidate bundle.",
+        "properties": {
+          "evidence_hash": {
+            "title": "Evidence Hash",
+            "type": "string"
+          },
+          "fold_id": {
+            "title": "Fold Id",
+            "type": "string"
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Instrument Id"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "selected": {
+            "title": "Selected",
+            "type": "boolean"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "validation_fold_ordinal": {
+            "title": "Validation Fold Ordinal",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "validation_fold_ordinal",
+          "fold_id",
+          "trade_date",
+          "instrument_id",
+          "score",
+          "rank",
+          "selected",
+          "evidence_hash"
+        ],
+        "title": "CandidateSelectionEventResponse",
+        "type": "object"
+      },
+      "CandidateSelectionPageResponse": {
+        "description": "Typed selections page over one immutable candidate bundle.",
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateSelectionEventResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "experiment_id",
+          "artifact_id",
+          "content_hash",
+          "items",
+          "next_cursor"
+        ],
+        "title": "CandidateSelectionPageResponse",
+        "type": "object"
+      },
+      "CandidateSelectionReceiptResponse": {
+        "description": "API projection of one append-only candidate preselection event.",
+        "properties": {
+          "candidate_evidence_artifact_id": {
+            "title": "Candidate Evidence Artifact Id",
+            "type": "string"
+          },
+          "candidate_evidence_content_hash": {
+            "title": "Candidate Evidence Content Hash",
+            "type": "string"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "comparison_payload_hash": {
+            "title": "Comparison Payload Hash",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "selection_evidence_content_hash": {
+            "title": "Selection Evidence Content Hash",
+            "type": "string"
+          },
+          "selection_id": {
+            "title": "Selection Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "selection_id",
+          "experiment_id",
+          "candidate_id",
+          "comparison_payload_hash",
+          "candidate_evidence_artifact_id",
+          "candidate_evidence_content_hash",
+          "selection_evidence_content_hash",
+          "revision",
+          "event_id",
+          "occurred_at"
+        ],
+        "title": "CandidateSelectionReceiptResponse",
+        "type": "object"
+      },
+      "CandidateSelectionRequest": {
+        "description": "Body for one durable server-side promotion preselection.",
+        "properties": {
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "comparison_payload_hash": {
+            "title": "Comparison Payload Hash",
+            "type": "string"
+          },
+          "expected_revision": {
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "rationale",
+          "comparison_payload_hash",
+          "expected_revision"
+        ],
+        "title": "CandidateSelectionRequest",
         "type": "object"
       },
       "CatalogAssetRefResponse": {
@@ -9747,6 +10335,16 @@
             ],
             "title": "Selection Evidence Artifact Id"
           },
+          "selection_exposure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewSelectionExposureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "selection_trace_artifact_refs": {
             "items": {
               "$ref": "#/components/schemas/ReviewSelectionTraceRefResponse"
@@ -9783,7 +10381,8 @@
           "selection_evidence_artifact_id",
           "holdout_claim_id",
           "candidate_rationale",
-          "selection_trace_artifact_refs"
+          "selection_trace_artifact_refs",
+          "selection_exposure"
         ],
         "title": "ExperimentReviewPacketResponse",
         "type": "object"
@@ -9920,6 +10519,69 @@
           "resolved_payload"
         ],
         "title": "FactorDescriptorResponse",
+        "type": "object"
+      },
+      "FactorDiagnosticsResponse": {
+        "description": "Typed immutable factor diagnostics and their complete read identity.",
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "factor_id": {
+            "title": "Factor Id",
+            "type": "string"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "registry_hash": {
+            "title": "Registry Hash",
+            "type": "string"
+          },
+          "snapshot_hash": {
+            "title": "Snapshot Hash",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "factor_id",
+          "snapshot_id",
+          "snapshot_hash",
+          "registry_hash",
+          "start_date",
+          "end_date",
+          "provenance",
+          "metrics",
+          "artifact_id",
+          "content_hash"
+        ],
+        "title": "FactorDiagnosticsResponse",
         "type": "object"
       },
       "FillAdjustmentResponse": {
@@ -10263,6 +10925,149 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HoldoutEvaluationReceiptResponse": {
+        "description": "API projection of one committed or exactly replayed holdout claim.",
+        "properties": {
+          "candidate_evidence_content_hash": {
+            "title": "Candidate Evidence Content Hash",
+            "type": "string"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "claim_payload_hash": {
+            "title": "Claim Payload Hash",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "fold_id": {
+            "title": "Fold Id",
+            "type": "string"
+          },
+          "logical_run_id": {
+            "title": "Logical Run Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "reproduction_fingerprint": {
+            "title": "Reproduction Fingerprint",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "selection_evidence_content_hash": {
+            "title": "Selection Evidence Content Hash",
+            "type": "string"
+          },
+          "selection_id": {
+            "title": "Selection Id",
+            "type": "string"
+          },
+          "state": {
+            "const": "claimed",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "selection_id",
+          "experiment_id",
+          "candidate_id",
+          "state",
+          "fold_id",
+          "logical_run_id",
+          "reproduction_fingerprint",
+          "claim_payload_hash",
+          "selection_evidence_content_hash",
+          "candidate_evidence_content_hash",
+          "revision",
+          "event_id",
+          "occurred_at"
+        ],
+        "title": "HoldoutEvaluationReceiptResponse",
+        "type": "object"
+      },
+      "HoldoutEvaluationRequest": {
+        "description": "Body for the one-shot holdout claim of a persisted preselection.",
+        "properties": {
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "expected_candidate_evidence_content_hash": {
+            "title": "Expected Candidate Evidence Content Hash",
+            "type": "string"
+          },
+          "expected_revision": {
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "expected_selection_evidence_hash": {
+            "title": "Expected Selection Evidence Hash",
+            "type": "string"
+          },
+          "operator_confirmation": {
+            "title": "Operator Confirmation",
+            "type": "string"
+          },
+          "selection_id": {
+            "title": "Selection Id",
+            "type": "string"
+          },
+          "selection_reason": {
+            "$ref": "#/components/schemas/HoldoutSelectionReasonRequest"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "selection_id",
+          "expected_selection_evidence_hash",
+          "expected_candidate_evidence_content_hash",
+          "expected_revision",
+          "operator_confirmation",
+          "selection_reason"
+        ],
+        "title": "HoldoutEvaluationRequest",
+        "type": "object"
+      },
+      "HoldoutSelectionReasonRequest": {
+        "description": "Operator-authored reason bound into the immutable holdout claim.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "summary"
+        ],
+        "title": "HoldoutSelectionReasonRequest",
         "type": "object"
       },
       "ImpactModel": {
@@ -12655,6 +13460,25 @@
         "title": "RetryRunResponse",
         "type": "object"
       },
+      "ReviewExposureWeightResponse": {
+        "description": "One canonical exposure dimension and aggregate selected weight.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "weight"
+        ],
+        "title": "ReviewExposureWeightResponse",
+        "type": "object"
+      },
       "ReviewGateOutcomeResponse": {
         "description": "API view of one gate rule's identity and outcome in a review packet.",
         "properties": {
@@ -12677,6 +13501,49 @@
           "outcome"
         ],
         "title": "ReviewGateOutcomeResponse",
+        "type": "object"
+      },
+      "ReviewSelectionExposureResponse": {
+        "description": "Explicit stock exposure or ETF not-applicable review evidence.",
+        "properties": {
+          "applicability": {
+            "title": "Applicability",
+            "type": "string"
+          },
+          "artifact_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewSelectionTraceRefResponse"
+            },
+            "title": "Artifact Refs",
+            "type": "array"
+          },
+          "industry_weights": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewExposureWeightResponse"
+            },
+            "title": "Industry Weights",
+            "type": "array"
+          },
+          "lane": {
+            "title": "Lane",
+            "type": "string"
+          },
+          "size_bucket_weights": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewExposureWeightResponse"
+            },
+            "title": "Size Bucket Weights",
+            "type": "array"
+          }
+        },
+        "required": [
+          "applicability",
+          "lane",
+          "industry_weights",
+          "size_bucket_weights",
+          "artifact_refs"
+        ],
+        "title": "ReviewSelectionExposureResponse",
         "type": "object"
       },
       "ReviewSelectionTraceRefResponse": {
@@ -18274,6 +19141,252 @@
         "x-ditto-maturity": "initial-focus"
       }
     },
+    "/api/v1/research/candidates/{candidate_id}/exclusions": {
+      "get": {
+        "description": "Read exclusion events from the current candidate bundle.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "design_research_candidate_exclusions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_CandidateExclusionPageResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Candidate Exclusions",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/research/candidates/{candidate_id}/factor-contributions": {
+      "get": {
+        "description": "Read factor contributions from the current candidate bundle.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "design_research_candidate_factor_contributions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_CandidateFactorContributionPageResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Candidate Factor Contributions",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/research/candidates/{candidate_id}/selections": {
+      "get": {
+        "description": "Read selected-instrument decisions from the current candidate bundle.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "design_research_candidate_selections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_CandidateSelectionPageResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Candidate Selections",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/research/experiments": {
       "get": {
         "description": "列出研究实验（newest first，不含候选/fold 展开）.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
@@ -18500,6 +19613,69 @@
         "x-ditto-maturity": "experimental"
       }
     },
+    "/api/v1/research/experiments/{experiment_id}/candidate-selection": {
+      "post": {
+        "description": "Persist one server-side preselection distinct from local comparison pins.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "design_research_candidate_selection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateSelectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_CandidateSelectionReceiptResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Select Experiment Candidate",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/research/experiments/{experiment_id}/candidates": {
       "get": {
         "description": "列出同一持久实验详情中的 immutable candidates.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
@@ -18626,6 +19802,69 @@
           }
         },
         "summary": "List Experiment Gates",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/research/experiments/{experiment_id}/holdout-evaluations": {
+      "post": {
+        "description": "Claim the one candidate referenced by a durable preselection event.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "design_research_holdout_evaluations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldoutEvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_HoldoutEvaluationReceiptResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Claim Experiment Holdout",
         "tags": [
           "research"
         ],
@@ -18980,6 +20219,91 @@
           }
         },
         "summary": "List Research Factors",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/research/factors/{factor_id}/diagnostics": {
+      "get": {
+        "description": "Read one provenance-bound factor diagnostic artifact by exact scope.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "design_research_factor_diagnostics",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factor_id",
+            "required": true,
+            "schema": {
+              "title": "Factor Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "registry_hash",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 64,
+              "title": "Registry Hash",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_FactorDiagnosticsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Research Factor Diagnostics",
         "tags": [
           "research"
         ],

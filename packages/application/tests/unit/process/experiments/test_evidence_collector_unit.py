@@ -435,6 +435,16 @@ def test_collect_publishes_real_selected_metrics_and_paired_lineage(
         for bundle in expected.selection_traces
         for record in bundle.receipt.records
     )
+    assert packet.selection_exposure is not None
+    assert packet.selection_exposure.applicability == "APPLICABLE"
+    assert packet.selection_exposure.lane == "STOCK_LANE"
+    assert tuple(
+        (item.key, item.weight) for item in packet.selection_exposure.industry_weights
+    ) == (("bank", 1.0),)
+    assert tuple(
+        (item.key, item.weight)
+        for item in packet.selection_exposure.size_bucket_weights
+    ) == (("MID", 1.0),)
     assert _gate(packet, "trial_declaration").outcome is GateOutcome.PASS
     assert _gate(packet, "trial_declaration").observed == {
         "trial_count": 2,
@@ -711,7 +721,7 @@ def test_missing_baseline_report_is_included_in_all_family_missing_refs(
     assert len(writer.calls) == 1
 
 
-def test_missing_four_selection_trace_files_fail_completeness_but_keep_metrics(
+def test_missing_five_selection_trace_files_fail_completeness_but_keep_metrics(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -742,7 +752,7 @@ def test_missing_four_selection_trace_files_fail_completeness_but_keep_metrics(
         missing_identity.artifact_id(kind)
         for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
     }
-    assert len(packet.selection_trace_artifact_refs) == 12
+    assert len(packet.selection_trace_artifact_refs) == 15
     assert missing_ids.isdisjoint(
         ref.artifact_id for ref in packet.selection_trace_artifact_refs
     )

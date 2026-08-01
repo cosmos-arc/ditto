@@ -55,6 +55,11 @@ from ditto_strategy.alpha.protocols import DecisionStage
 from ditto_strategy.alpha.selection_evidence import (
     InitialUniverseEvidence,
     SelectionEvidenceSink,
+    SelectionExposureApplicability,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
 )
 from ditto_strategy.alpha.specs import StrategyKind
 from ditto_strategy.errors import StrategySpecError
@@ -327,9 +332,18 @@ class StrategyPipeline:
         stages: Sequence[DecisionStage],
         *,
         evidence_sink: SelectionEvidenceSink | None = None,
+        exposure_policy: SelectionExposurePolicy | None = None,
     ) -> None:
+        if (
+            exposure_policy is not None
+            and type(cast("object", exposure_policy)) is not SelectionExposurePolicy
+        ):
+            raise TypeError("exposure_policy must be SelectionExposurePolicy or None")
+        if exposure_policy is not None and evidence_sink is None:
+            raise ValueError("exposure_policy requires evidence_sink")
         self._stages = tuple(stages)
         self._evidence_sink = evidence_sink
+        self._exposure_policy = exposure_policy
 
     @property
     def stages(self) -> tuple[DecisionStage, ...]:
@@ -359,6 +373,7 @@ class StrategyPipeline:
 
         self._evidence_sink.begin_rebalance(input_bundle.trade_date)
         try:
+            self._emit_exposure_declaration(input_bundle.trade_date)
             target = self._run_pipeline(context, input_bundle)
             self._evidence_sink.commit_rebalance()
         except BaseException as error:
@@ -371,6 +386,17 @@ class StrategyPipeline:
                 )
             raise
         return target
+
+    def _emit_exposure_declaration(self, trade_date: str) -> None:
+        """Bind the configured lane and source semantics to this rebalance."""
+        if self._evidence_sink is None or self._exposure_policy is None:
+            return
+        self._evidence_sink.emit(
+            SelectionExposureDeclaration.from_policy(
+                trade_date,
+                self._exposure_policy,
+            ),
+        )
 
     def _run_pipeline(
         self,
@@ -499,6 +525,7 @@ class StrategyPipeline:
         """
         n_rows = frame.height
         if n_rows == 0:
+            self._emit_selection_exposures(frame, input_bundle)
             return TargetPortfolio(
                 trade_date=input_bundle.trade_date,
                 strategy_id=input_bundle.strategy_id,
@@ -535,9 +562,152 @@ class StrategyPipeline:
                 boundary="target_portfolio",
             )
 
+        self._emit_selection_exposures(frame, input_bundle)
+
         return TargetPortfolio(
             trade_date=input_bundle.trade_date,
             strategy_id=input_bundle.strategy_id,
             run_id=input_bundle.run_id,
             positions=positions,
         )
+
+    def _emit_selection_exposures(
+        self,
+        frame: pl.DataFrame,
+        input_bundle: StrategyInputBundle,
+    ) -> None:
+        """Emit exact final weights plus stock industry/size source values."""
+        policy = self._exposure_policy
+        sink = self._evidence_sink
+        if policy is None or sink is None:
+            return
+        if policy.applicability is SelectionExposureApplicability.NOT_APPLICABLE:
+            return
+        if frame.is_empty():
+            raise StrategySpecError(
+                "applicable stock exposure requires a non-empty target",
+                details={
+                    "reason": "applicable_exposure_empty",
+                    "trade_date": input_bundle.trade_date,
+                },
+            )
+        rows, has_weight = self._selection_exposure_rows(
+            frame,
+            input_bundle,
+            policy,
+        )
+        equal_weight = 1.0 / len(rows)
+        normalized_rows: list[tuple[object, object, float, float]] = []
+        for row in rows:
+            instrument_id, industry_id, size_value = row[:3]
+            if industry_id is None or size_value is None:
+                raise StrategySpecError(
+                    "selection exposure source value is missing",
+                    details={
+                        "reason": "selection_exposure_value_missing",
+                        "trade_date": input_bundle.trade_date,
+                        "instrument_id": instrument_id,
+                    },
+                )
+            if isinstance(size_value, bool) or not isinstance(size_value, int | float):
+                raise StrategySpecError(
+                    "selection exposure size value must be numeric",
+                    details={
+                        "reason": "selection_exposure_size_invalid",
+                        "trade_date": input_bundle.trade_date,
+                        "instrument_id": instrument_id,
+                    },
+                )
+            selected_weight = equal_weight
+            if has_weight:
+                weight_value = row[3]
+                if isinstance(weight_value, bool) or not isinstance(
+                    weight_value,
+                    int | float,
+                ):
+                    raise StrategySpecError(
+                        "selection exposure weight must be numeric",
+                        details={
+                            "reason": "selection_exposure_weight_invalid",
+                            "trade_date": input_bundle.trade_date,
+                            "instrument_id": instrument_id,
+                        },
+                    )
+                selected_weight = float(weight_value)
+            normalized_rows.append(
+                (instrument_id, industry_id, float(size_value), selected_weight),
+            )
+        buckets = _selection_exposure_size_buckets(normalized_rows)
+        for row_index, (instrument_id, industry_id, size_value, weight) in enumerate(
+            normalized_rows,
+        ):
+            sink.emit(
+                SelectionExposureEvidence(
+                    trade_date=input_bundle.trade_date,
+                    instrument_id=cast("int | str", instrument_id),
+                    selected_weight=weight,
+                    industry_id=cast("int | str", industry_id),
+                    size_value=size_value,
+                    size_bucket=buckets[row_index],
+                ),
+            )
+
+    @staticmethod
+    def _selection_exposure_rows(
+        frame: pl.DataFrame,
+        input_bundle: StrategyInputBundle,
+        policy: SelectionExposurePolicy,
+    ) -> tuple[list[tuple[object, ...]], bool]:
+        """Join final target weights to their original PIT exposure sources."""
+        required_columns = (
+            FrameCol.INSTRUMENT_ID,
+            cast(str, policy.industry_column),
+            cast(str, policy.size_column),
+        )
+        missing = tuple(
+            column
+            for column in required_columns
+            if column not in input_bundle.instruments.columns
+        )
+        if missing:
+            raise StrategySpecError(
+                "selection exposure source column is missing",
+                details={
+                    "reason": "selection_exposure_column_missing",
+                    "trade_date": input_bundle.trade_date,
+                    "missing_columns": missing,
+                },
+            )
+        has_weight = FrameCol.WEIGHT in frame.columns
+        target_columns = [FrameCol.INSTRUMENT_ID]
+        if has_weight:
+            target_columns.append(FrameCol.WEIGHT)
+        exposure_frame = frame.select(target_columns).join(
+            input_bundle.instruments.select(required_columns),
+            on=FrameCol.INSTRUMENT_ID,
+            how="left",
+        )
+        columns = list(required_columns)
+        if has_weight:
+            columns.append(FrameCol.WEIGHT)
+        return exposure_frame.select(columns).rows(), has_weight
+
+
+def _selection_exposure_size_buckets(
+    rows: Sequence[tuple[object, object, float, float]],
+) -> dict[int, SelectionExposureSizeBucket]:
+    """Assign deterministic equal-count market-cap tertiles with stable ties."""
+    ordered_indexes = sorted(
+        range(len(rows)),
+        key=lambda index: (rows[index][2], str(rows[index][0])),
+    )
+    bucket_values = (
+        SelectionExposureSizeBucket.SMALL,
+        SelectionExposureSizeBucket.MID,
+        SelectionExposureSizeBucket.LARGE,
+    )
+    count = len(ordered_indexes)
+    return {
+        row_index: bucket_values[min(2, ordinal * 3 // count)]
+        for ordinal, row_index in enumerate(ordered_indexes)
+    }

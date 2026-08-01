@@ -9,6 +9,14 @@ from enum import StrEnum
 from math import isfinite
 from typing import Protocol, cast
 
+from ditto_strategy.alpha.selection_exposure import (
+    SelectionExposureApplicability,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposureLane,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
+)
 from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
@@ -20,6 +28,12 @@ __all__ = [
     "SelectionEvidenceCollector",
     "SelectionEvidenceLog",
     "SelectionEvidenceSink",
+    "SelectionExposureApplicability",
+    "SelectionExposureDeclaration",
+    "SelectionExposureEvidence",
+    "SelectionExposureLane",
+    "SelectionExposurePolicy",
+    "SelectionExposureSizeBucket",
 ]
 
 type EvidenceInstrumentId = int | str
@@ -250,6 +264,8 @@ type SelectionEvidenceEvent = (
     | ExclusionEvidence
     | FactorContributionEvidence
     | SelectionEvidence
+    | SelectionExposureDeclaration
+    | SelectionExposureEvidence
 )
 
 
@@ -286,6 +302,8 @@ class SelectionEvidenceLog:
     exclusions: tuple[ExclusionEvidence, ...] = ()
     factor_contributions: tuple[FactorContributionEvidence, ...] = ()
     selections: tuple[SelectionEvidence, ...] = ()
+    exposure_declarations: tuple[SelectionExposureDeclaration, ...] = ()
+    exposures: tuple[SelectionExposureEvidence, ...] = ()
 
     def __post_init__(self) -> None:
         """Defensively copy every ordered event sequence into tuples."""
@@ -325,8 +343,28 @@ class SelectionEvidenceLog:
                 field_name="selections",
             ),
         )
+        object.__setattr__(
+            self,
+            "exposure_declarations",
+            _copy_ordered_events(
+                self.exposure_declarations,
+                event_type=SelectionExposureDeclaration,
+                field_name="exposure_declarations",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "exposures",
+            _copy_ordered_events(
+                self.exposures,
+                event_type=SelectionExposureEvidence,
+                field_name="exposures",
+            ),
+        )
         _validate_event_invariants(
             (
+                *self.exposure_declarations,
+                *self.exposures,
                 *self.initial_universe,
                 *self.exclusions,
                 *self.factor_contributions,
@@ -343,6 +381,8 @@ class SelectionEvidenceCollector:
         "_current_trade_date",
         "_events",
         "_exclusion_keys",
+        "_exposure_declarations",
+        "_exposure_keys",
         "_initial_keys",
         "_pending_events",
         "_selections",
@@ -356,6 +396,8 @@ class SelectionEvidenceCollector:
         self._exclusion_keys: set[EvidenceKey] = set()
         self._contribution_keys: set[tuple[str, EvidenceInstrumentId, str]] = set()
         self._selections: dict[EvidenceKey, SelectionEvidence] = {}
+        self._exposure_declarations: dict[str, SelectionExposureDeclaration] = {}
+        self._exposure_keys: set[EvidenceKey] = set()
 
     @property
     def is_pristine(self) -> bool:
@@ -374,6 +416,10 @@ class SelectionEvidenceCollector:
             and not self._contribution_keys
             and type(self._selections) is dict
             and not self._selections
+            and type(self._exposure_declarations) is dict
+            and not self._exposure_declarations
+            and type(self._exposure_keys) is set
+            and not self._exposure_keys
         )
 
     def begin_rebalance(self, trade_date: str) -> None:
@@ -427,7 +473,9 @@ class SelectionEvidenceCollector:
             InitialUniverseEvidence
             | ExclusionEvidence
             | FactorContributionEvidence
-            | SelectionEvidence,
+            | SelectionEvidence
+            | SelectionExposureDeclaration
+            | SelectionExposureEvidence,
         ):
             raise TypeError("event must be an immutable selection evidence record")
         active_trade_date = self.current_trade_date
@@ -442,8 +490,45 @@ class SelectionEvidenceCollector:
         self._add_to_indexes(event)
         self._pending_events.append(event)
 
-    def _validate_incremental_event(self, event: SelectionEvidenceEvent) -> None:
+    def _validate_incremental_event(  # noqa: C901
+        self,
+        event: SelectionEvidenceEvent,
+    ) -> None:
         """Validate one event against date-keyed O(1) indexes."""
+        if isinstance(event, SelectionExposureDeclaration):
+            if event.trade_date in self._exposure_declarations:
+                raise _evidence_error(
+                    "duplicate exposure declaration for one trade_date",
+                    reason="duplicate_exposure_declaration",
+                    trade_date=event.trade_date,
+                )
+            return
+        if isinstance(event, SelectionExposureEvidence):
+            key = (event.trade_date, event.instrument_id)
+            if key in self._exposure_keys:
+                raise _evidence_error(
+                    "duplicate selection exposure for one instrument and trade_date",
+                    reason="duplicate_selection_exposure_evidence",
+                    trade_date=event.trade_date,
+                    instrument_id=event.instrument_id,
+                )
+            declaration = self._exposure_declarations.get(event.trade_date)
+            if declaration is None:
+                raise _evidence_error(
+                    "selection exposure requires a same-date declaration",
+                    reason="exposure_declaration_missing",
+                    trade_date=event.trade_date,
+                )
+            if (
+                declaration.applicability
+                is SelectionExposureApplicability.NOT_APPLICABLE
+            ):
+                raise _evidence_error(
+                    "not-applicable exposure declaration cannot contain rows",
+                    reason="not_applicable_exposure_has_rows",
+                    trade_date=event.trade_date,
+                )
+            return
         key = (event.trade_date, event.instrument_id)
         if isinstance(event, InitialUniverseEvidence):
             _require_unique_key(
@@ -476,6 +561,12 @@ class SelectionEvidenceCollector:
             raise _contradictory_exclusion_error(key)
 
     def _add_to_indexes(self, event: SelectionEvidenceEvent) -> None:
+        if isinstance(event, SelectionExposureDeclaration):
+            self._exposure_declarations[event.trade_date] = event
+            return
+        if isinstance(event, SelectionExposureEvidence):
+            self._exposure_keys.add((event.trade_date, event.instrument_id))
+            return
         key = (event.trade_date, event.instrument_id)
         if isinstance(event, InitialUniverseEvidence):
             self._initial_keys.add(key)
@@ -487,6 +578,12 @@ class SelectionEvidenceCollector:
             self._selections[key] = event
 
     def _remove_from_indexes(self, event: SelectionEvidenceEvent) -> None:
+        if isinstance(event, SelectionExposureDeclaration):
+            del self._exposure_declarations[event.trade_date]
+            return
+        if isinstance(event, SelectionExposureEvidence):
+            self._exposure_keys.remove((event.trade_date, event.instrument_id))
+            return
         key = (event.trade_date, event.instrument_id)
         if isinstance(event, InitialUniverseEvidence):
             self._initial_keys.remove(key)
@@ -518,11 +615,23 @@ class SelectionEvidenceCollector:
             for event in self._events
             if isinstance(event, FactorContributionEvidence)
         )
+        exposure_declarations = tuple(
+            event
+            for event in self._events
+            if isinstance(event, SelectionExposureDeclaration)
+        )
+        exposures = tuple(
+            event
+            for event in self._events
+            if isinstance(event, SelectionExposureEvidence)
+        )
         return SelectionEvidenceLog(
             initial_universe=initial_universe,
             exclusions=exclusions,
             factor_contributions=factor_contributions,
             selections=selections,
+            exposure_declarations=exposure_declarations,
+            exposures=exposures,
         )
 
 
@@ -536,13 +645,53 @@ def _enrich_contribution(
     return replace(event, rank=selection.rank, selected=selection.selected)
 
 
-def _validate_event_invariants(events: Sequence[SelectionEvidenceEvent]) -> None:
+def _validate_event_invariants(  # noqa: C901, PLR0912
+    events: Sequence[SelectionEvidenceEvent],
+) -> None:
     """Reject ambiguous same-day evidence before enrichment or serialization."""
     initial_keys: set[EvidenceKey] = set()
     exclusion_keys: set[EvidenceKey] = set()
     contribution_keys: set[tuple[str, EvidenceInstrumentId, str]] = set()
     selections: dict[EvidenceKey, SelectionEvidence] = {}
+    exposure_declarations: dict[str, SelectionExposureDeclaration] = {}
+    exposure_keys: set[EvidenceKey] = set()
     for event in events:
+        if isinstance(event, SelectionExposureDeclaration):
+            if event.trade_date in exposure_declarations:
+                raise _evidence_error(
+                    "duplicate exposure declaration for one trade_date",
+                    reason="duplicate_exposure_declaration",
+                    trade_date=event.trade_date,
+                )
+            exposure_declarations[event.trade_date] = event
+            continue
+        if isinstance(event, SelectionExposureEvidence):
+            key = (event.trade_date, event.instrument_id)
+            if key in exposure_keys:
+                raise _evidence_error(
+                    "duplicate selection exposure for one instrument and trade_date",
+                    reason="duplicate_selection_exposure_evidence",
+                    trade_date=event.trade_date,
+                    instrument_id=event.instrument_id,
+                )
+            declaration = exposure_declarations.get(event.trade_date)
+            if declaration is None:
+                raise _evidence_error(
+                    "selection exposure requires a same-date declaration",
+                    reason="exposure_declaration_missing",
+                    trade_date=event.trade_date,
+                )
+            if (
+                declaration.applicability
+                is SelectionExposureApplicability.NOT_APPLICABLE
+            ):
+                raise _evidence_error(
+                    "not-applicable exposure declaration cannot contain rows",
+                    reason="not_applicable_exposure_has_rows",
+                    trade_date=event.trade_date,
+                )
+            exposure_keys.add(key)
+            continue
         key = (event.trade_date, event.instrument_id)
         if isinstance(event, InitialUniverseEvidence):
             _require_unique_key(
@@ -577,6 +726,17 @@ def _validate_event_invariants(events: Sequence[SelectionEvidenceEvent]) -> None
         if event.selected and key in exclusion_keys:
             raise _contradictory_exclusion_error(key)
         selections[key] = event
+    exposure_dates = {trade_date for trade_date, _instrument_id in exposure_keys}
+    for trade_date, declaration in exposure_declarations.items():
+        if (
+            declaration.applicability is SelectionExposureApplicability.APPLICABLE
+            and trade_date not in exposure_dates
+        ):
+            raise _evidence_error(
+                "applicable stock exposure must contain selected rows",
+                reason="applicable_exposure_empty",
+                trade_date=trade_date,
+            )
 
 
 def _require_unique_key(

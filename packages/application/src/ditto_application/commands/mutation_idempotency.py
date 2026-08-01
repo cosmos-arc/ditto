@@ -15,6 +15,7 @@ from ditto_application.mutation_idempotency import (
     mutation_receipt_reason,
     validate_mutation_fence_detail,
     without_mutation_receipt,
+    without_validated_mutation_fence,
     without_validated_mutation_receipt,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "mutation_receipt_reason",
     "validate_mutation_fence_detail",
     "without_mutation_receipt",
+    "without_validated_mutation_fence",
     "without_validated_mutation_receipt",
 ]

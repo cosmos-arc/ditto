@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
+from ditto_application.mutation_idempotency import (
+    without_validated_mutation_fence,
+)
 from ditto_application.processes.experiments._process_error import (
     experiment_process_error,
 )
@@ -137,6 +140,7 @@ class HoldoutClaimPersistenceRequest:
     selection_reason_summary: str
     resolved_reproduction_fingerprint: str | None
     occurred_at: datetime
+    event_detail_extension: Mapping[str, object] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,7 +243,7 @@ def persisted_holdout_history(
         and str(event.stage) == "holdout"
         and event.failure_code is None
         and event.reason_code == "holdout_candidate_claimed"
-        and event.detail == expected_detail
+        and without_validated_mutation_fence(event.detail) == expected_detail
         and event.occurred_at == claim.claimed_at
     )
     if len(matches) != 1:

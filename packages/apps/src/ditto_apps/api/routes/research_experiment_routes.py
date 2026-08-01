@@ -93,7 +93,9 @@ from ditto_apps.models.research import (
     ExperimentReviewPacketResponse,
     ExperimentSelectionEvidenceResponse,
     ExperimentSummaryResponse,
+    ReviewExposureWeightResponse,
     ReviewGateOutcomeResponse,
+    ReviewSelectionExposureResponse,
     ReviewSelectionTraceRefResponse,
 )
 
@@ -604,6 +606,26 @@ def to_review_packet_response(
             to_selection_trace_ref_response(ref)
             for ref in packet.selection_trace_artifact_refs
         ],
+        selection_exposure=(
+            None
+            if packet.selection_exposure is None
+            else ReviewSelectionExposureResponse(
+                applicability=packet.selection_exposure.applicability,
+                lane=packet.selection_exposure.lane,
+                industry_weights=[
+                    ReviewExposureWeightResponse(key=item.key, weight=item.weight)
+                    for item in packet.selection_exposure.industry_weights
+                ],
+                size_bucket_weights=[
+                    ReviewExposureWeightResponse(key=item.key, weight=item.weight)
+                    for item in packet.selection_exposure.size_bucket_weights
+                ],
+                artifact_refs=[
+                    to_selection_trace_ref_response(ref)
+                    for ref in packet.selection_exposure.artifact_refs
+                ],
+            )
+        ),
     )
 
 

@@ -1,11 +1,11 @@
 # R3 v1 API Surface 分类（已批准）
 
 > 状态：`APPROVED`
-> runtime 事实源：`ditto_apps.main.app.openapi()`（2026-07-31 当前分支，只读生成）
+> runtime 事实源：`ditto_apps.main.app.openapi()`（2026-08-01 当前分支，只读生成）
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `34c36ebc893cacc16e8b09baf1297a36890f7ead2a7c188e43f8aaa7ddb9a4c7`
+> JSON canonical SHA-256: `2316aa5fcdc2188acf2460999a73307a84670dd3f6f73dc409e5020e28003a47`
 
 Task 4 classification 已由用户批准；批准 reference 为
 `user-message:2026-07-31:final-task4-classification-approved`。Task 9 candidate
@@ -17,7 +17,7 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
 
 ## 1. 结论
 
-当前 runtime 有 33 个 R3 research/strategy operations；设计 §12.2 有 37 个。
+当前 runtime 有 39 个 R3 research/strategy operations；设计 §12.2 有 37 个。
 清单共 40 项：37 个设计 operation，加 3 个 W5/runtime-only operation。
 
 | 分类 | 数量 | 含义 |
@@ -36,7 +36,7 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
     "IMPLEMENT/IMPLEMENTED": 15,
     "IMPLEMENT/PLANNED": 18
   },
-  "runtime_contract_count": 33,
+  "runtime_contract_count": 39,
   "defer_operation_ids": [
     "design_research_experiment_launch_alias"
   ],
@@ -263,13 +263,13 @@ cursor 还必须绑定 resource kind，不能跨三类 evidence page 复用。
 ## 4. Runtime reconciliation 与 closure 规则
 
 - Contract test 直接读取 `app.openapi()`，不启动 server、不访问 DB。
-- JSON `runtime_contracts` 保存当前 29 个 operation 的 exact observed projection：
+- JSON `runtime_contracts` 保存当前 39 个 operation 的 exact observed projection：
   `operationId`、method/path、request body schema（无 body 为 `null`）、全部
   response status/schema、全部 path/query/header parameter 的
-  name/in/required/schema，以及 `x-ditto-maturity`。当前 mutation 的
-  `parameters` 只有 path 参数、没有 header 项，是当前真实观测值，明确证明
-  Idempotency-Key 仍为 PLANNED，而不是伪造未来 header。
-- runtime 的 29 个 R3 operation 必须全部被 exact entry 或
+  name/in/required/schema，以及 `x-ditto-maturity`。Task 9 的 candidate-selection
+  与 holdout-evaluations 已观测到 required `Idempotency-Key` string header；其余
+  operation 同样只记录当前 OpenAPI 真实值，不伪造未来状态。
+- runtime 的 39 个 R3 operation 必须全部被 exact entry 或
   `equivalence.runtime_operations` 覆盖；多一个或少一个都会失败。
 - `IMPLEMENT / PLANNED` 必须唯一绑定 Task 5–16；当前为 Task 6、7、8、9。
 - `IMPLEMENT / PLANNED` 允许随 route 落地滚动写入 primary runtime mapping：

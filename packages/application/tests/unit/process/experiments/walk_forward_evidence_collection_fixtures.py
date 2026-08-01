@@ -111,7 +111,13 @@ from ditto_backtest.statistics import (
     empty_aggregated_trade_statistics,
     empty_alpha_statistics,
 )
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceLog
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceLog,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
+)
 
 __all__ = [
     "BASELINE_ID",
@@ -684,9 +690,27 @@ class EvidenceCase:
 
     def publish_trace(self, fold: FoldView, attempt: AttemptView) -> None:
         fence = LeaseFence(EXPERIMENT_ID, "evidence-owner", 1, NOW_US + 1_000_000)
+        trade_date = fold.spec.test_window.start.isoformat()
         self.trace_adapter.publish(
             trace_identity(fold, attempt),
-            SelectionEvidenceLog(),
+            SelectionEvidenceLog(
+                exposure_declarations=(
+                    SelectionExposureDeclaration.from_policy(
+                        trade_date,
+                        SelectionExposurePolicy.stock(),
+                    ),
+                ),
+                exposures=(
+                    SelectionExposureEvidence(
+                        trade_date=trade_date,
+                        instrument_id=1,
+                        selected_weight=1.0,
+                        industry_id="bank",
+                        size_value=50_000_000_000.0,
+                        size_bucket=SelectionExposureSizeBucket.MID,
+                    ),
+                ),
+            ),
             lease_fence=fence,
             now_epoch_us=NOW_US,
         )

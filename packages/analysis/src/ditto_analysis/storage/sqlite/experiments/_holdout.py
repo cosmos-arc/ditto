@@ -184,8 +184,11 @@ def _logical_run_id(
     return f"holdout-run:{identity.content_hash}"
 
 
-def _event_detail(record: HoldoutClaimRecord) -> Mapping[str, object]:
-    return {
+def _event_detail(
+    record: HoldoutClaimRecord,
+    extension: Mapping[str, object] | None = None,
+) -> Mapping[str, object]:
+    detail: dict[str, object] = {
         "schema_version": 1,
         "claim_id": record.claim_id,
         "claim_payload_hash": str(record.claim_payload_hash),
@@ -196,6 +199,16 @@ def _event_detail(record: HoldoutClaimRecord) -> Mapping[str, object]:
         "operator_confirmation": record.operator_confirmation,
         "selection_request": record.selection_reason,
     }
+    if extension is not None:
+        overlap = set(detail).intersection(extension)
+        if overlap:
+            raise _spec(
+                "holdout event detail extension overlaps canonical fields",
+                "holdout_event_detail_extension_conflict",
+            )
+        detail.update(extension)
+    canonical_payload(detail)
+    return detail
 
 
 def _resolved_holdout_rows(
@@ -389,7 +402,7 @@ class SQLiteHoldoutClaimMixin:
                 stage=ExperimentStage.HOLDOUT,
                 failure_code=None,
                 reason_code="holdout_candidate_claimed",
-                detail=_event_detail(record),
+                detail=_event_detail(record, command.event_detail_extension),
                 occurred_at=command.occurred_at,
             )
             self._cancel_unselected(connection, record, unselected)
@@ -535,7 +548,7 @@ class SQLiteHoldoutClaimMixin:
             stage=ExperimentStage.HOLDOUT,
             failure_code=None,
             reason_code="holdout_candidate_claimed",
-            detail=_event_detail(record),
+            detail=_event_detail(record, command.event_detail_extension),
             occurred_at_epoch_us=_epoch_us(command.occurred_at),
         )
         event = connection.execute(

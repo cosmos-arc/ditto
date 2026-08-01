@@ -9,7 +9,12 @@ from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_application.commands.candidate_selection import (
+    CandidateSelectionHandler,
+    CandidateSelectionReceipt,
+)
 from ditto_application.commands.experiments import (
+    ClaimHoldoutCandidateHandler,
     LaunchExperimentCommand,
     LaunchExperimentHandler,
     PauseExperimentHandler,
@@ -23,6 +28,7 @@ from ditto_application.processes.experiments.comparison_reader import (
     CandidateComparisonView,
     ExperimentComparisonReader,
 )
+from ditto_application.processes.experiments.holdout import HoldoutClaimReceipt
 from ditto_application.processes.experiments.planning_contracts import (
     ExperimentPreflightCheck,
     PreflightOutcome,
@@ -67,8 +73,14 @@ from ditto_apps.api.routes.research_experiment_routes import (
     to_gate_response,
     to_selection_evidence_response,
 )
+from ditto_apps.api.routes.research_selection_routes import (
+    claim_experiment_holdout,
+    select_experiment_candidate,
+)
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
+    CandidateSelectionReceiptResponse,
+    CandidateSelectionRequest,
     ExperimentArtifactResponse,
     ExperimentCandidateResponse,
     ExperimentComparisonResponse,
@@ -81,6 +93,9 @@ from ditto_apps.models.research import (
     ExperimentPreflightResponse,
     ExperimentRetryFoldRequest,
     ExperimentSelectionEvidenceResponse,
+    HoldoutEvaluationReceiptResponse,
+    HoldoutEvaluationRequest,
+    HoldoutSelectionReasonRequest,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -97,6 +112,10 @@ _ComparisonRoute = Callable[..., Awaitable[APIResponse[ExperimentComparisonRespo
 _ControlRoute = Callable[..., Awaitable[APIResponse[ExperimentControlReceiptResponse]]]
 _PreflightRoute = Callable[..., Awaitable[APIResponse[ExperimentPreflightResponse]]]
 _LaunchRoute = Callable[..., Awaitable[APIResponse[ExperimentLaunchResponse]]]
+_CandidateSelectionRoute = Callable[
+    ..., Awaitable[APIResponse[CandidateSelectionReceiptResponse]]
+]
+_HoldoutRoute = Callable[..., Awaitable[APIResponse[HoldoutEvaluationReceiptResponse]]]
 
 
 @pytest.fixture(autouse=True)
@@ -974,3 +993,118 @@ async def test_retry_fold_experiment_passes_fold_fields() -> None:
     assert command.candidate_id == "cand-1"
     assert command.fold_id == "fold-1"
     assert command.expected_revision == 3
+
+
+async def test_candidate_selection_route_builds_idempotent_command_and_receipt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    occurred_at = datetime(2026, 8, 1, 1, 2, 3, tzinfo=UTC)
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "mutation_occurred_at",
+        lambda: occurred_at,
+    )
+    handler = MagicMock(spec=CandidateSelectionHandler)
+    handler.handle.return_value = CandidateSelectionReceipt(
+        selection_id="candidate-selection:one",
+        experiment_id="exp-1",
+        candidate_id="candidate-1",
+        comparison_payload_hash="a" * 64,
+        candidate_evidence_artifact_id="candidate-evidence-1",
+        candidate_evidence_content_hash="b" * 64,
+        selection_evidence_content_hash="c" * 64,
+        experiment_revision=8,
+        event_id="status:selection",
+        occurred_at=occurred_at,
+    )
+    route = cast(
+        _CandidateSelectionRoute,
+        getattr(
+            select_experiment_candidate,
+            "__dishka_orig_func__",
+            select_experiment_candidate,
+        ),
+    )
+
+    response = await route(
+        experiment_id="exp-1",
+        request=CandidateSelectionRequest(
+            candidate_id="candidate-1",
+            rationale="selected after objective review",
+            comparison_payload_hash="a" * 64,
+            expected_revision=7,
+        ),
+        handler=handler,
+        idempotency_key="selection-key-1",
+    )
+
+    command = handler.handle.call_args.args[0]
+    assert command.request.experiment_id == "exp-1"
+    assert command.request.expected_revision == 7
+    assert command.request.idempotency.operation_id == (
+        "design_research_candidate_selection"
+    )
+    assert response.data.selection_id == "candidate-selection:one"
+    assert response.data.revision == 8
+
+
+async def test_holdout_route_binds_persisted_selection_and_evidence_hashes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    occurred_at = datetime(2026, 8, 1, 1, 3, 0, tzinfo=UTC)
+    monkeypatch.setattr(
+        research_experiment_routes,
+        "mutation_occurred_at",
+        lambda: occurred_at,
+    )
+    handler = MagicMock(spec=ClaimHoldoutCandidateHandler)
+    handler.handle.return_value = HoldoutClaimReceipt(
+        claim_id="holdout-claim-1",
+        experiment_id="exp-1",
+        candidate_id="candidate-1",
+        fold_id="holdout-candidate-1",
+        logical_run_id="holdout-run-1",
+        reproduction_fingerprint="d" * 64,
+        claim_payload_hash="e" * 64,
+        selection_evidence_hash="c" * 64,
+        experiment_revision=9,
+        event_id="status:holdout",
+        occurred_at=occurred_at,
+        selection_id="candidate-selection:one",
+        candidate_evidence_content_hash="b" * 64,
+    )
+    route = cast(
+        _HoldoutRoute,
+        getattr(
+            claim_experiment_holdout,
+            "__dishka_orig_func__",
+            claim_experiment_holdout,
+        ),
+    )
+
+    response = await route(
+        experiment_id="exp-1",
+        request=HoldoutEvaluationRequest(
+            candidate_id="candidate-1",
+            selection_id="candidate-selection:one",
+            expected_selection_evidence_hash="c" * 64,
+            expected_candidate_evidence_content_hash="b" * 64,
+            expected_revision=8,
+            operator_confirmation="operator reviewed immutable evidence",
+            selection_reason=HoldoutSelectionReasonRequest(
+                code="objective_review",
+                summary="candidate won the registered objective",
+            ),
+        ),
+        handler=handler,
+        idempotency_key="holdout-key-1",
+    )
+
+    command = handler.handle.call_args.args[0]
+    assert command.request.selection_id == "candidate-selection:one"
+    assert command.request.expected_candidate_evidence_content_hash == "b" * 64
+    assert command.request.idempotency.operation_id == (
+        "design_research_holdout_evaluations"
+    )
+    assert response.data.claim_id == "holdout-claim-1"
+    assert response.data.state == "claimed"

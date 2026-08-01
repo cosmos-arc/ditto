@@ -9,6 +9,14 @@ from ditto_platform.foundation.json_types import JsonValue
 from pydantic import BaseModel, ConfigDict
 
 __all__ = [
+    "CandidateExclusionEventResponse",
+    "CandidateExclusionPageResponse",
+    "CandidateFactorContributionPageResponse",
+    "CandidateFactorContributionResponse",
+    "CandidateSelectionEventResponse",
+    "CandidateSelectionPageResponse",
+    "CandidateSelectionReceiptResponse",
+    "CandidateSelectionRequest",
     "ExperimentArtifactResponse",
     "ExperimentCandidateResponse",
     "ExperimentComparisonResponse",
@@ -27,8 +35,13 @@ __all__ = [
     "ExperimentSelectionEvidenceResponse",
     "ExperimentSummaryResponse",
     "FactorDescriptorResponse",
+    "FactorDiagnosticsResponse",
+    "HoldoutEvaluationReceiptResponse",
+    "HoldoutEvaluationRequest",
     "NodeDescriptorResponse",
+    "ReviewExposureWeightResponse",
     "ReviewGateOutcomeResponse",
+    "ReviewSelectionExposureResponse",
     "ReviewSelectionTraceRefResponse",
 ]
 
@@ -339,6 +352,27 @@ class ReviewSelectionTraceRefResponse(BaseModel):
     content_hash: str
 
 
+class ReviewExposureWeightResponse(BaseModel):
+    """One canonical exposure dimension and aggregate selected weight."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: str
+    weight: float
+
+
+class ReviewSelectionExposureResponse(BaseModel):
+    """Explicit stock exposure or ETF not-applicable review evidence."""
+
+    model_config = ConfigDict(frozen=True)
+
+    applicability: str
+    lane: str
+    industry_weights: list[ReviewExposureWeightResponse]
+    size_bucket_weights: list[ReviewExposureWeightResponse]
+    artifact_refs: list[ReviewSelectionTraceRefResponse]
+
+
 class ExperimentReviewPacketResponse(BaseModel):
     """API view of one immutable promotion review packet."""
 
@@ -364,6 +398,7 @@ class ExperimentReviewPacketResponse(BaseModel):
     holdout_claim_id: str | None
     candidate_rationale: str
     selection_trace_artifact_refs: list[ReviewSelectionTraceRefResponse]
+    selection_exposure: ReviewSelectionExposureResponse | None
 
 
 class ExperimentSummaryResponse(BaseModel):
@@ -406,6 +441,180 @@ class FactorDescriptorResponse(BaseModel):
     resolved_payload: dict[str, Any]
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class FactorDiagnosticsResponse(BaseModel):
+    """Typed immutable factor diagnostics and their complete read identity."""
+
+    model_config = ConfigDict(frozen=True)
+
+    factor_id: str
+    snapshot_id: str
+    snapshot_hash: str
+    registry_hash: str
+    start_date: date
+    end_date: date
+    provenance: dict[str, Any]
+    metrics: dict[str, Any]
+    artifact_id: str
+    content_hash: str
+
+
+class CandidateSelectionRequest(BaseModel):
+    """Body for one durable server-side promotion preselection."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    rationale: str
+    comparison_payload_hash: str
+    expected_revision: int
+
+
+class CandidateSelectionReceiptResponse(BaseModel):
+    """API projection of one append-only candidate preselection event."""
+
+    model_config = ConfigDict(frozen=True)
+
+    selection_id: str
+    experiment_id: str
+    candidate_id: str
+    comparison_payload_hash: str
+    candidate_evidence_artifact_id: str
+    candidate_evidence_content_hash: str
+    selection_evidence_content_hash: str
+    revision: int
+    event_id: str
+    occurred_at: datetime
+
+
+class HoldoutSelectionReasonRequest(BaseModel):
+    """Operator-authored reason bound into the immutable holdout claim."""
+
+    model_config = ConfigDict(frozen=True)
+
+    code: str
+    summary: str
+
+
+class HoldoutEvaluationRequest(BaseModel):
+    """Body for the one-shot holdout claim of a persisted preselection."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    selection_id: str
+    expected_selection_evidence_hash: str
+    expected_candidate_evidence_content_hash: str
+    expected_revision: int
+    operator_confirmation: str
+    selection_reason: HoldoutSelectionReasonRequest
+
+
+class HoldoutEvaluationReceiptResponse(BaseModel):
+    """API projection of one committed or exactly replayed holdout claim."""
+
+    model_config = ConfigDict(frozen=True)
+
+    claim_id: str
+    selection_id: str
+    experiment_id: str
+    candidate_id: str
+    state: Literal["claimed"]
+    fold_id: str
+    logical_run_id: str
+    reproduction_fingerprint: str
+    claim_payload_hash: str
+    selection_evidence_content_hash: str
+    candidate_evidence_content_hash: str
+    revision: int
+    event_id: str
+    occurred_at: datetime
+
+
+class CandidateSelectionEventResponse(BaseModel):
+    """One candidate selection event from an immutable candidate bundle."""
+
+    model_config = ConfigDict(frozen=True)
+
+    validation_fold_ordinal: int
+    fold_id: str
+    trade_date: str
+    instrument_id: int | str
+    score: float | None
+    rank: int
+    selected: bool
+    evidence_hash: str
+
+
+class CandidateExclusionEventResponse(BaseModel):
+    """One candidate exclusion event from an immutable candidate bundle."""
+
+    model_config = ConfigDict(frozen=True)
+
+    validation_fold_ordinal: int
+    fold_id: str
+    trade_date: str
+    instrument_id: int | str
+    stage: str
+    reason_code: str
+    message: str | None
+    evidence_hash: str
+
+
+class CandidateFactorContributionResponse(BaseModel):
+    """One factor contribution bound to a fold decision and evidence hash."""
+
+    model_config = ConfigDict(frozen=True)
+
+    validation_fold_ordinal: int
+    fold_id: str
+    trade_date: str
+    instrument_id: int | str
+    factor_id: str
+    contribution: float | None
+    rank: int | None
+    selected: bool | None
+    evidence_hash: str
+
+
+class CandidateSelectionPageResponse(BaseModel):
+    """Typed selections page over one immutable candidate bundle."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    experiment_id: str
+    artifact_id: str
+    content_hash: str
+    items: list[CandidateSelectionEventResponse]
+    next_cursor: str | None
+
+
+class CandidateExclusionPageResponse(BaseModel):
+    """Typed exclusions page over one immutable candidate bundle."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    experiment_id: str
+    artifact_id: str
+    content_hash: str
+    items: list[CandidateExclusionEventResponse]
+    next_cursor: str | None
+
+
+class CandidateFactorContributionPageResponse(BaseModel):
+    """Typed contribution page over one immutable candidate bundle."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    experiment_id: str
+    artifact_id: str
+    content_hash: str
+    items: list[CandidateFactorContributionResponse]
+    next_cursor: str | None
 
 
 class ExperimentControlRequest(BaseModel):

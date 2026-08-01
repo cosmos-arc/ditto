@@ -11,20 +11,28 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from datetime import date
 from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments.factor_diagnostics_reader import (
+    FactorDiagnosticsReader,
+    FactorDiagnosticsScope,
+)
 from ditto_application.queries.research_catalog import (
     FactorDescriptorInfo,
     NodeDescriptorInfo,
     ResearchCatalogQueryFacade,
 )
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
+from ditto_apps.api.errors import APIError, UnprocessableEntityError
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
     FactorDescriptorResponse,
+    FactorDiagnosticsResponse,
     NodeDescriptorResponse,
 )
 
@@ -86,3 +94,55 @@ async def list_research_factors(
     """列出 R3 受控核心因子目录（governed catalog order）."""
     factors = await run_blocking(facade.list_factors)
     return APIResponse(data=[_to_factor_response(factor) for factor in factors])
+
+
+@router.get(
+    "/factors/{factor_id}/diagnostics",
+    response_model=APIResponse[FactorDiagnosticsResponse],
+    operation_id="design_research_factor_diagnostics",
+)
+@inject
+async def get_research_factor_diagnostics(
+    factor_id: str,
+    reader: Annotated[FactorDiagnosticsReader, FromComponent()],
+    snapshot_id: Annotated[str, Query(min_length=1)],
+    start_date: date,
+    end_date: date,
+    registry_hash: Annotated[str, Query(min_length=64, max_length=64)],
+) -> APIResponse[FactorDiagnosticsResponse]:
+    """Read one provenance-bound factor diagnostic artifact by exact scope."""
+    try:
+        view = await run_blocking(
+            reader.read,
+            FactorDiagnosticsScope(
+                factor_id=factor_id,
+                snapshot_id=snapshot_id,
+                start_date=start_date,
+                end_date=end_date,
+                registry_hash=registry_hash,
+            ),
+        )
+    except AppProcessError as exc:
+        code = exc.details.get("code")
+        error_code = code if isinstance(code, str) else "INVALID_DIAGNOSTIC_SCOPE"
+        raise UnprocessableEntityError(str(exc), error_code=error_code) from exc
+    if view is None:
+        raise APIError(
+            f"Factor diagnostics not found: {factor_id}",
+            status_code=404,
+            error_code="FACTOR_NOT_FOUND",
+        )
+    return APIResponse(
+        data=FactorDiagnosticsResponse(
+            factor_id=view.factor_id,
+            snapshot_id=view.snapshot_id,
+            snapshot_hash=view.snapshot_hash,
+            registry_hash=view.registry_hash,
+            start_date=view.start_date,
+            end_date=view.end_date,
+            provenance=dict(view.provenance),
+            metrics=dict(view.metrics),
+            artifact_id=view.artifact_id,
+            content_hash=view.content_hash,
+        )
+    )

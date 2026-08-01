@@ -72,6 +72,7 @@ from ditto_application.processes.execution.backtest_process_types import (
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
+    build_backtest_input_bundle_builder,
     build_factor_aware_bundle_builder,
 )
 from ditto_application.processes.execution.strategy_input import (
@@ -553,11 +554,12 @@ class BacktestService:
         collector: ExecutionAuditCollector,
     ) -> EngineOptions:
         """构建 EngineOptions — 含 event_bus/cancel/progress 回调。"""
-        compiled = self._options.compiled_expressions
-        input_bundle_builder = (
-            self._build_factor_aware_bundle_builder(compiled, run_id=run_id)
-            if compiled is not None
-            else None
+        input_bundle_builder = build_backtest_input_bundle_builder(
+            compiled=self._options.compiled_expressions,
+            pipeline=self._pipeline,
+            data_feed=self._data_feed,
+            strategy_id=self._config.strategy_id,
+            run_id=run_id,
         )
         run_svc = self._options.run_service
         should_stop: Callable[[], bool] | None = None
@@ -682,14 +684,7 @@ class BacktestService:
         *,
         run_id: str,
     ) -> Callable[[StepContext], StrategyInputBundle]:
-        """
-        构建含因子信号注入的 input_bundle_builder。委托给 factor_bridge 模块。
-
-        Args:
-            compiled: 编译后的因子表达式。
-            run_id: 由 run() 统一生成的运行标识，确保 bundle.run_id 与 run record 一致。
-
-        """
+        """构建含因子信号注入的 input bundle，供兼容调用与测试使用。"""
         return build_factor_aware_bundle_builder(
             bridge=FactorBridge(),
             compiled=compiled,

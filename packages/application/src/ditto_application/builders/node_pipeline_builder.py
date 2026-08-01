@@ -16,7 +16,6 @@ import orjson
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha._canonical_values import canonical_json_value
-from ditto_strategy.alpha.builtins.filtering import TrendFilterStage
 from ditto_strategy.alpha.builtins.scoring import FactorScoreColumnBinding
 from ditto_strategy.alpha.node_registry import NodeRegistry
 from ditto_strategy.alpha.nodes import PipelineSpec
@@ -27,7 +26,10 @@ from ditto_strategy.alpha.pipeline import (
     compile_node_pipeline,
 )
 from ditto_strategy.alpha.protocols import DecisionStage
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceSink,
+    SelectionExposurePolicy,
+)
 from ditto_strategy.alpha.specs import (
     ConstraintSpec,
     CostModelSpec,
@@ -46,6 +48,10 @@ from ditto_application.builders._spec_deserializer import (
     read_int,
     read_optional_str,
     read_str_value,
+)
+from ditto_application.builders.builtin_stages import build_trend_filter
+from ditto_application.builders.selection_evidence_pipeline import (
+    build_selection_evidence_pipeline,
 )
 from ditto_application.builders.template_builders import (
     build_legacy_node_stage_groups,
@@ -97,6 +103,7 @@ class AttestedNodePipeline:
     _compiled: CompiledNodePipeline
     _execution_hash: str
     _evidence_sink: SelectionEvidenceSink | None
+    _exposure_policy: SelectionExposurePolicy | None
     _evidence_stage_indexes: tuple[int, ...]
 
     @property
@@ -143,6 +150,7 @@ class AttestedNodePipeline:
         evidence_stage_indexes = _selection_evidence_stage_indexes(stages)
         if (
             vars(self._pipeline).get("_evidence_sink") is not self._evidence_sink
+            or vars(self._pipeline).get("_exposure_policy") != self._exposure_policy
             or evidence_stage_indexes != self._evidence_stage_indexes
             or any(
                 getattr(stages[index], "evidence_sink", object())
@@ -165,11 +173,13 @@ def _seal_attested_pipeline(
     stages = pipeline.stages
     execution_hash = _pipeline_execution_hash(compiled, stages)
     evidence_sink = vars(pipeline).get("_evidence_sink")
+    exposure_policy = vars(pipeline).get("_exposure_policy")
     attested = object.__new__(AttestedNodePipeline)
     object.__setattr__(attested, "_pipeline", pipeline)
     object.__setattr__(attested, "_compiled", compiled)
     object.__setattr__(attested, "_execution_hash", execution_hash)
     object.__setattr__(attested, "_evidence_sink", evidence_sink)
+    object.__setattr__(attested, "_exposure_policy", exposure_policy)
     object.__setattr__(
         attested,
         "_evidence_stage_indexes",
@@ -661,30 +671,6 @@ def _build_legacy_runtime_view(
     )
 
 
-def _build_trend_filter(
-    config: Mapping[str, object],
-    *,
-    evidence_sink: SelectionEvidenceSink | None,
-) -> tuple[DecisionStage, ...]:
-    return (
-        TrendFilterStage(
-            threshold=read_float(
-                config["threshold"],
-                field_name="node.config.threshold",
-            ),
-            direction=read_str_value(
-                config["direction"],
-                field_name="node.config.direction",
-            ),
-            signal_column=read_str_value(
-                config["signal_column"],
-                field_name="node.config.signal_column",
-            ),
-            evidence_sink=evidence_sink,
-        ),
-    )
-
-
 class NodePipelineBuilder:
     """只解析显式 builtin implementation key，不做 import/discovery。"""
 
@@ -752,7 +738,11 @@ class NodePipelineBuilder:
                 for stage in resolved
             )
         return _seal_attested_pipeline(
-            pipeline=StrategyPipeline(stages, evidence_sink=evidence_sink),
+            pipeline=build_selection_evidence_pipeline(
+                stages,
+                evidence_sink=evidence_sink,
+                strategy_kind=strategy_kind,
+            ),
             compiled=compiled,
         )
 
@@ -771,7 +761,7 @@ class NodePipelineBuilder:
         if implementation_key in metadata_configs:
             return ()
         if implementation_key == "builtin.trend_filter.v1":
-            return _build_trend_filter(
+            return build_trend_filter(
                 node.config,
                 evidence_sink=evidence_sink,
             )

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timedelta
+from typing import Protocol
 
 from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments import (
@@ -21,6 +22,10 @@ from ditto_analysis.experiments import (
     SchedulerLease,
 )
 
+from ditto_application.candidate_selection import (
+    CandidateSelectionReceipt,
+    CandidateSelectionRequest,
+)
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import (
     _coordinator_snapshot as _snapshot_rules,
@@ -70,6 +75,7 @@ from ditto_application.processes.experiments.holdout import (
 from ditto_application.processes.experiments.lease_authority import (
     LeaseAuthority,
     require_utc_event_time,
+    run_unfenced_scheduler_operation,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerSnapshot,
@@ -169,6 +175,31 @@ _SNAPSHOT_VOCABULARY = _snapshot_rules.SnapshotVocabulary(
         },
     ),
 )
+
+
+class _CandidateSelectionProcess(Protocol):
+    """Structural candidate-selection seam without reversing package direction."""
+
+    def replay(
+        self,
+        request: CandidateSelectionRequest,
+    ) -> CandidateSelectionReceipt | None: ...
+
+    def read_selection(
+        self,
+        experiment_id: str,
+        selection_id: str,
+    ) -> CandidateSelectionReceipt | None: ...
+
+    def select(
+        self,
+        request: CandidateSelectionRequest,
+        *,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+    ) -> CandidateSelectionReceipt: ...
+
+
 _scheduler_error = _snapshot_rules.scheduler_error
 _require_utc_event_time = require_utc_event_time
 _RESULT_BUILDER = CoordinatorResultBuilder(_SNAPSHOT_VOCABULARY)
@@ -196,6 +227,7 @@ class ExperimentExecutionCoordinator(
         checkpoint_resumable: Callable[[str], bool] | None = None,
         evidence_collector: ExperimentEvidenceCollector | None = None,
         selection_evidence_publisher: SelectionEvidencePublisher | None = None,
+        candidate_selection_process: _CandidateSelectionProcess | None = None,
     ) -> None:
         self._store = store
         self._authority = LeaseAuthority(
@@ -208,6 +240,7 @@ class ExperimentExecutionCoordinator(
             store=store,
             first_attempt_factory=first_attempt_factory,
             selection_evidence_provider=selection_evidence_provider,
+            candidate_selection_provider=candidate_selection_process,
             authority=self._authority,
         )
         self._recovery = ExperimentRecoveryOrchestrator(
@@ -220,6 +253,7 @@ class ExperimentExecutionCoordinator(
         )
         self._evidence_collector = evidence_collector
         self._selection_evidence_publisher = selection_evidence_publisher
+        self._candidate_selection_process = candidate_selection_process
 
     def tick(self, *, occurred_at: datetime) -> SchedulerTickResult:
         """Acquire the queue head and dispatch at most DB-derived capacity."""
@@ -247,6 +281,28 @@ class ExperimentExecutionCoordinator(
     ) -> HoldoutClaimReceipt:
         """Commit or exactly replay the sole candidate allowed into holdout."""
         return self._holdout.claim_candidate(request)
+
+    def select_candidate(
+        self,
+        request: CandidateSelectionRequest,
+    ) -> CandidateSelectionReceipt:
+        """Commit or exactly replay one durable pre-holdout selection event."""
+        process = self._candidate_selection_process
+        if process is None:
+            raise _scheduler_error(
+                "SPEC_INVALID",
+                "candidate_selection_process_unavailable",
+            )
+        replay = run_unfenced_scheduler_operation(lambda: process.replay(request))
+        if replay is not None:
+            return replay
+        return self._authority.execute_operator(
+            lambda lease, now_epoch_us: process.select(
+                request,
+                lease=lease,
+                now_epoch_us=now_epoch_us(),
+            )
+        )
 
     def poll_execution_directive(
         self,

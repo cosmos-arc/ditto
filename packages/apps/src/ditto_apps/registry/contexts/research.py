@@ -5,12 +5,20 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import contextmanager
 
+from ditto_application.commands.candidate_selection import CandidateSelectionHandler
 from ditto_application.commands.experiments import (
     CancelExperimentHandler,
+    ClaimHoldoutCandidateHandler,
     LaunchExperimentHandler,
     PauseExperimentHandler,
     ResumeExperimentHandler,
     RetryExperimentFoldHandler,
+)
+from ditto_application.processes.experiments.candidate_evidence_reader import (
+    CandidateEvidenceReader,
+)
+from ditto_application.processes.experiments.factor_diagnostics_reader import (
+    FactorDiagnosticsReader,
 )
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
@@ -34,6 +42,10 @@ def create_research_bundle() -> Generator[ResearchBundle]:
             cancel_handler=container.get(CancelExperimentHandler),
             resume_handler=container.get(ResumeExperimentHandler),
             retry_fold_handler=container.get(RetryExperimentFoldHandler),
+            candidate_selection_handler=container.get(CandidateSelectionHandler),
+            holdout_claim_handler=container.get(ClaimHoldoutCandidateHandler),
+            candidate_evidence_reader=container.get(CandidateEvidenceReader),
+            factor_diagnostics_reader=container.get(FactorDiagnosticsReader),
         )
     finally:
         container.close()

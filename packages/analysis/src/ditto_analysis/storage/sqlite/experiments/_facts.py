@@ -17,8 +17,17 @@ from ditto_analysis.errors import (
     ExperimentSpecError,
 )
 from ditto_analysis.experiments._time import epoch_us
+from ditto_analysis.experiments.models import (
+    CandidateId,
+    ExperimentDesiredState,
+    ExperimentId,
+    ExperimentRecord,
+    ExperimentStage,
+    ExperimentStatus,
+)
 from ditto_analysis.experiments.persistence import (
     ArtifactRecord,
+    ExperimentProjection,
     GateEvaluationRecord,
     LeaseFence,
     canonical_payload,
@@ -69,6 +78,7 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
     """Persist immutable artifacts and gate evaluations."""
 
     _reader: SQLiteExperimentReader
+    _insert_event: Callable[..., None]
 
     @property
     def artifact_root(self) -> Path:
@@ -192,6 +202,140 @@ class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
             self._validate_lease(
                 connection, lease_fence, now_epoch_us, record.experiment_id
             )
+
+    def record_candidate_selection(
+        self,
+        experiment_id: ExperimentId,
+        candidate_id: CandidateId,
+        *,
+        expected_revision: int,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> ExperimentProjection:
+        """Append one revision-fenced preselection event without a new table."""
+        connection = self._database.get_connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            self._validate_lease(
+                connection,
+                lease_fence,
+                now_epoch_us,
+                experiment_id,
+            )
+            row = connection.execute(
+                "SELECT * FROM experiment WHERE experiment_id=?",
+                (str(experiment_id),),
+            ).fetchone()
+            if row is None:
+                raise _integrity("experiment does not exist", "experiment_not_found")
+            if row["revision"] != expected_revision:
+                raise _conflict(
+                    "candidate selection revision is stale",
+                    "stale_projection_revision",
+                )
+            if (
+                row["status"] != ExperimentStatus.RUNNING.value
+                or row["desired_state"] != ExperimentDesiredState.RUN.value
+                or row["stage"] != ExperimentStage.CANDIDATE_SELECTION.value
+                or row["failure_code"] is not None
+            ):
+                raise ExperimentSpecError(
+                    "candidate selection requires the live candidate-selection stage",
+                    details={"reason_code": "candidate_selection_stage_invalid"},
+                )
+            candidate = connection.execute(
+                """
+                SELECT is_baseline FROM experiment_candidate
+                WHERE experiment_id=? AND candidate_id=?
+                """,
+                (str(experiment_id), str(candidate_id)),
+            ).fetchone()
+            if candidate is None or candidate["is_baseline"]:
+                raise ExperimentSpecError(
+                    "candidate is not eligible for preselection",
+                    details={"reason_code": "candidate_not_eligible"},
+                )
+            existing = connection.execute(
+                """
+                SELECT event_id FROM experiment_status_event
+                WHERE experiment_id=? AND reason_code='candidate_preselected'
+                """,
+                (str(experiment_id),),
+            ).fetchall()
+            if existing:
+                raise _conflict(
+                    "candidate preselection already exists",
+                    "candidate_selection_conflict",
+                )
+            new_revision = expected_revision + 1
+            cursor = connection.execute(
+                """
+                UPDATE experiment
+                SET updated_at_epoch_us=?, revision=?
+                WHERE experiment_id=? AND revision=? AND status='running'
+                  AND desired_state='run' AND stage='candidate_selection'
+                """,
+                (
+                    _epoch_us(occurred_at),
+                    new_revision,
+                    str(experiment_id),
+                    expected_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise _conflict(
+                    "candidate selection CAS lost",
+                    "stale_projection_revision",
+                )
+            self._insert_event(
+                connection,
+                subject_type="experiment",
+                experiment_id=str(experiment_id),
+                candidate_id=None,
+                fold_id=None,
+                attempt_id=None,
+                revision=new_revision,
+                previous_status=ExperimentStatus.RUNNING,
+                status=ExperimentStatus.RUNNING,
+                desired_state=ExperimentDesiredState.RUN,
+                stage=ExperimentStage.CANDIDATE_SELECTION,
+                failure_code=None,
+                reason_code="candidate_preselected",
+                detail=detail,
+                occurred_at=occurred_at,
+            )
+            connection.commit()
+            return ExperimentProjection(
+                ExperimentRecord(
+                    experiment_id,
+                    ExperimentStatus.RUNNING,
+                    ExperimentDesiredState.RUN,
+                    ExperimentStage.CANDIDATE_SELECTION,
+                    datetime.fromtimestamp(
+                        row["created_at_epoch_us"] / 1_000_000,
+                        tz=occurred_at.tzinfo,
+                    ),
+                ),
+                row["queue_ordinal"],
+                new_revision,
+                occurred_at,
+            )
+        except (
+            ExperimentConflictError,
+            ExperimentIntegrityError,
+            ExperimentLeaseLostError,
+            ExperimentSpecError,
+        ):
+            connection.rollback()
+            raise
+        except sqlite3.Error as exc:
+            connection.rollback()
+            raise _persistence_error(
+                "candidate selection event failed",
+                "candidate_selection_event_failed",
+            ) from exc
 
     def pin_artifact(
         self,

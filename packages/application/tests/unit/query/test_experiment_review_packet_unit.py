@@ -6,17 +6,22 @@ from dataclasses import replace
 
 from ditto_analysis.experiments import (
     REVIEW_PACKET_SCHEMA_VERSION,
+    REVIEW_PACKET_SELECTION_TRACE_KINDS,
     ContentHash,
     GateEvaluation,
     GateLayer,
     GateOutcome,
+    ReviewExposureWeight,
     ReviewPacket,
     ReviewPacketLineage,
+    ReviewSelectionExposure,
     SelectionTraceArtifactRef,
 )
 from ditto_application.queries.experiments import (
     ExperimentReviewPacketReadModel,
+    ReviewExposureWeightReadModel,
     ReviewGateOutcome,
+    ReviewSelectionExposureReadModel,
     ReviewSelectionTraceRef,
     build_review_packet_read_model,
 )
@@ -37,6 +42,14 @@ def _gate(
 
 
 def _packet(gate_evaluations: tuple[GateEvaluation, ...] = (_gate(),)) -> ReviewPacket:
+    refs = tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=kind,
+            artifact_id=f"trace-{index}",
+            content_hash=ContentHash(f"{index + 1}" * 64),
+        )
+        for index, kind in enumerate(REVIEW_PACKET_SELECTION_TRACE_KINDS)
+    )
     return ReviewPacket(
         schema_version=REVIEW_PACKET_SCHEMA_VERSION,
         lineage=ReviewPacketLineage(
@@ -57,6 +70,14 @@ def _packet(gate_evaluations: tuple[GateEvaluation, ...] = (_gate(),)) -> Review
         selection_evidence_artifact_id="artifact-1",
         holdout_claim_id="claim-1",
         candidate_rationale="Captures durable net return after costs.",
+        selection_trace_artifact_refs=refs,
+        selection_exposure=ReviewSelectionExposure(
+            applicability="APPLICABLE",
+            lane="STOCK_LANE",
+            industry_weights=(ReviewExposureWeight("bank", 1.0),),
+            size_bucket_weights=(ReviewExposureWeight("LARGE", 1.0),),
+            artifact_refs=(refs[-1],),
+        ),
     )
 
 
@@ -147,15 +168,23 @@ def test_read_model_exposes_evidence_and_rationale() -> None:
     assert read_model.selection_evidence_artifact_id == "artifact-1"
     assert read_model.holdout_claim_id == "claim-1"
     assert read_model.candidate_rationale == "Captures durable net return after costs."
+    assert read_model.selection_exposure == ReviewSelectionExposureReadModel(
+        applicability="APPLICABLE",
+        lane="STOCK_LANE",
+        industry_weights=(ReviewExposureWeightReadModel("bank", 1.0),),
+        size_bucket_weights=(ReviewExposureWeightReadModel("LARGE", 1.0),),
+        artifact_refs=(
+            ReviewSelectionTraceRef(
+                artifact_kind="fold_selection_trace_exposures_v1",
+                artifact_id="trace-4",
+                content_hash="5" * 64,
+            ),
+        ),
+    )
 
 
 def test_read_model_exposes_selection_trace_refs() -> None:
-    kinds = (
-        "fold_selection_trace_candidate_universe_v1",
-        "fold_selection_trace_candidate_exclusions_v1",
-        "fold_selection_trace_candidate_selections_v1",
-        "fold_selection_trace_factor_contributions_v1",
-    )
+    kinds = REVIEW_PACKET_SELECTION_TRACE_KINDS
     refs = tuple(
         SelectionTraceArtifactRef(
             artifact_kind=kind,
@@ -164,7 +193,17 @@ def test_read_model_exposes_selection_trace_refs() -> None:
         )
         for index, kind in enumerate(kinds)
     )
-    packet = replace(_packet(), selection_trace_artifact_refs=refs)
+    packet = replace(
+        _packet(),
+        selection_trace_artifact_refs=refs,
+        selection_exposure=ReviewSelectionExposure(
+            applicability="APPLICABLE",
+            lane="STOCK_LANE",
+            industry_weights=(ReviewExposureWeight("bank", 1.0),),
+            size_bucket_weights=(ReviewExposureWeight("LARGE", 1.0),),
+            artifact_refs=(refs[-1],),
+        ),
+    )
     read_model = build_review_packet_read_model(packet)
 
     assert read_model.selection_trace_artifact_refs == tuple(

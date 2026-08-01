@@ -11,7 +11,13 @@ from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
-from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionEvidenceCollector,
+    SelectionExposureApplicability,
+    SelectionExposureLane,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
+)
 from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
@@ -295,6 +301,137 @@ class TestStrategyInputBundle:
 
 
 class TestStrategyPipeline:
+    def test_stock_exposure_uses_final_selected_weights_and_source_values(
+        self,
+        empty_context: StrategyContext,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(
+            stages=(_AddWeightStage({1: 0.6, 2: 0.3, 3: 0.1}),),
+            evidence_sink=collector,
+            exposure_policy=SelectionExposurePolicy.stock(),
+        )
+        instruments = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "sector_id": ["bank", "tech", "bank"],
+                "market_cap": [8_000_000_000.0, 30_000_000_000.0, 90_000_000_000.0],
+            },
+        )
+
+        pipeline.run(
+            empty_context,
+            _make_input_bundle(
+                instruments=instruments,
+                market_data=sample_market_data,
+            ),
+        )
+
+        log = collector.snapshot()
+        assert len(log.exposure_declarations) == 1
+        declaration = log.exposure_declarations[0]
+        assert declaration.applicability is SelectionExposureApplicability.APPLICABLE
+        assert declaration.lane is SelectionExposureLane.STOCK_LANE
+        assert [
+            (
+                item.instrument_id,
+                item.selected_weight,
+                item.industry_id,
+                item.size_value,
+                item.size_bucket,
+            )
+            for item in log.exposures
+        ] == [
+            (1, 0.6, "bank", 8_000_000_000.0, SelectionExposureSizeBucket.SMALL),
+            (2, 0.3, "tech", 30_000_000_000.0, SelectionExposureSizeBucket.MID),
+            (3, 0.1, "bank", 90_000_000_000.0, SelectionExposureSizeBucket.LARGE),
+        ]
+
+    def test_stock_exposure_missing_source_data_fails_closed_and_aborts(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(
+            stages=(),
+            evidence_sink=collector,
+            exposure_policy=SelectionExposurePolicy.stock(),
+        )
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            pipeline.run(
+                empty_context,
+                _make_input_bundle(
+                    instruments=sample_instruments,
+                    market_data=sample_market_data,
+                ),
+            )
+
+        assert exc_info.value.details["reason"] == "selection_exposure_column_missing"
+        assert collector.snapshot().exposure_declarations == ()
+        assert collector.snapshot().exposures == ()
+
+    def test_stock_exposure_empty_target_fails_closed_and_aborts(
+        self,
+        empty_context: StrategyContext,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(
+            stages=(),
+            evidence_sink=collector,
+            exposure_policy=SelectionExposurePolicy.stock(),
+        )
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            pipeline.run(
+                empty_context,
+                _make_input_bundle(
+                    instruments=pl.DataFrame(
+                        schema={
+                            "instrument_id": pl.Int64,
+                            "sector_id": pl.String,
+                            "market_cap": pl.Float64,
+                        },
+                    ),
+                    market_data=sample_market_data,
+                ),
+            )
+
+        assert exc_info.value.details["reason"] == "applicable_exposure_empty"
+        assert collector.snapshot().exposure_declarations == ()
+
+    def test_etf_exposure_commits_explicit_not_applicable_declaration(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        pipeline = StrategyPipeline(
+            stages=(),
+            evidence_sink=collector,
+            exposure_policy=SelectionExposurePolicy.etf(),
+        )
+
+        pipeline.run(
+            empty_context,
+            _make_input_bundle(
+                instruments=sample_instruments,
+                market_data=sample_market_data,
+            ),
+        )
+
+        declaration = collector.snapshot().exposure_declarations[0]
+        assert (
+            declaration.applicability is SelectionExposureApplicability.NOT_APPLICABLE
+        )
+        assert declaration.lane is SelectionExposureLane.ETF_LANE
+        assert collector.snapshot().exposures == ()
+
     def test_initial_universe_evidence_is_pending_until_target_build_succeeds(
         self,
         empty_context: StrategyContext,

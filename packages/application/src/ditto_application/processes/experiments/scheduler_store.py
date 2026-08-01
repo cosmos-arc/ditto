@@ -10,6 +10,7 @@ from typing import Protocol, cast
 
 from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -184,6 +185,18 @@ class ExperimentSchedulerSnapshot:
 
 
 class ExperimentSchedulerStoreProtocol(Protocol):
+    def list_experiments(self) -> tuple[ExperimentProjection, ...]: ...
+
+    def get_launch_spec(
+        self,
+        experiment_id: ExperimentId,
+    ) -> ExperimentLaunchSpec | None: ...
+
+    def list_experiment_artifacts(
+        self,
+        experiment_id: ExperimentId,
+    ) -> tuple[ArtifactRecord, ...]: ...
+
     def list_dispatchable_experiments(self) -> tuple[ExperimentProjection, ...]: ...
 
     def get_scheduler_slot(self) -> SchedulerSlot: ...
@@ -228,6 +241,18 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         lease: SchedulerLease | None,
         now_epoch_us: int | None,
     ) -> PersistedHoldoutClaim: ...
+
+    def record_candidate_selection(
+        self,
+        experiment_id: ExperimentId,
+        candidate_id: CandidateId,
+        *,
+        expected_revision: int,
+        lease: SchedulerLease,
+        now_epoch_us: int,
+        occurred_at: datetime,
+        detail: Mapping[str, object],
+    ) -> ExperimentProjection: ...
 
     def transition_to_running(
         self,
@@ -472,6 +497,7 @@ class ExperimentSchedulerStore(ExperimentMutationStoreMixin):
                     else ContentHash(request.resolved_reproduction_fingerprint)
                 ),
                 occurred_at=request.occurred_at,
+                event_detail_extension=request.event_detail_extension,
             ),
             lease_fence=None if lease is None else lease.fence,
             now_epoch_us=now_epoch_us,

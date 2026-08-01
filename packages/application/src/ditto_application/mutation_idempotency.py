@@ -463,6 +463,16 @@ def validate_mutation_fence_detail(
         _parse_fence(detail[_FENCE_KEY], identity=None)
 
 
+def without_validated_mutation_fence(
+    detail: Mapping[str, object],
+) -> dict[str, object]:
+    """Validate and remove the optional request fence from an event detail."""
+    validate_mutation_fence_detail(detail)
+    result = dict(detail)
+    result.pop(_FENCE_KEY, None)
+    return result
+
+
 def find_mutation_fence(
     details: Sequence[Mapping[str, object]],
     identity: MutationIdempotency,
@@ -507,5 +517,6 @@ __all__ = [
     "mutation_receipt_reason",
     "validate_mutation_fence_detail",
     "without_mutation_receipt",
+    "without_validated_mutation_fence",
     "without_validated_mutation_receipt",
 ]

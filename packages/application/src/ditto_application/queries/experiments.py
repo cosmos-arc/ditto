@@ -34,7 +34,9 @@ __all__ = [
     "ExperimentQueryFacade",
     "ExperimentReviewPacketReadModel",
     "ExperimentSummaryReadModel",
+    "ReviewExposureWeightReadModel",
     "ReviewGateOutcome",
+    "ReviewSelectionExposureReadModel",
     "ReviewSelectionTraceRef",
     "build_review_packet_read_model",
 ]
@@ -255,6 +257,25 @@ class ReviewSelectionTraceRef:
 
 
 @dataclass(frozen=True, slots=True)
+class ReviewExposureWeightReadModel:
+    """One plain exposure dimension weight for application consumers."""
+
+    key: str
+    weight: float
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewSelectionExposureReadModel:
+    """Plain v3 selection exposure summary; absent for persisted v1/v2 packets."""
+
+    applicability: str
+    lane: str
+    industry_weights: tuple[ReviewExposureWeightReadModel, ...]
+    size_bucket_weights: tuple[ReviewExposureWeightReadModel, ...]
+    artifact_refs: tuple[ReviewSelectionTraceRef, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ExperimentReviewPacketReadModel:
     """Application view of one immutable promotion review packet."""
 
@@ -278,6 +299,7 @@ class ExperimentReviewPacketReadModel:
     holdout_claim_id: str | None
     candidate_rationale: str
     selection_trace_artifact_refs: tuple[ReviewSelectionTraceRef, ...]
+    selection_exposure: ReviewSelectionExposureReadModel | None
 
 
 def build_review_packet_read_model(
@@ -318,6 +340,30 @@ def build_review_packet_read_model(
                 content_hash=str(ref.content_hash),
             )
             for ref in packet.selection_trace_artifact_refs
+        ),
+        selection_exposure=(
+            None
+            if packet.selection_exposure is None
+            else ReviewSelectionExposureReadModel(
+                applicability=packet.selection_exposure.applicability,
+                lane=packet.selection_exposure.lane,
+                industry_weights=tuple(
+                    ReviewExposureWeightReadModel(item.key, item.weight)
+                    for item in packet.selection_exposure.industry_weights
+                ),
+                size_bucket_weights=tuple(
+                    ReviewExposureWeightReadModel(item.key, item.weight)
+                    for item in packet.selection_exposure.size_bucket_weights
+                ),
+                artifact_refs=tuple(
+                    ReviewSelectionTraceRef(
+                        artifact_kind=ref.artifact_kind,
+                        artifact_id=ref.artifact_id,
+                        content_hash=str(ref.content_hash),
+                    )
+                    for ref in packet.selection_exposure.artifact_refs
+                ),
+            )
         ),
     )
 

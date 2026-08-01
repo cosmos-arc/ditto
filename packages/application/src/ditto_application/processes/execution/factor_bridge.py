@@ -30,9 +30,16 @@ from ditto_features.expression.contracts import (
 from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import (
+    SelectionExposureApplicability,
+    SelectionExposurePolicy,
+)
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution._factor_bundle import (
+    build_exposure_aware_bundle_builder as _build_exposure_aware_bundle_builder,
+)
 from ditto_application.processes.execution._factor_bundle import (
     build_factor_aware_bundle_builder as _build_factor_aware_bundle_builder,
 )
@@ -48,6 +55,8 @@ from ditto_application.processes.execution._factor_signal_spec import (
 __all__ = [
     "CompiledExpressions",
     "FactorBridge",
+    "build_backtest_input_bundle_builder",
+    "build_exposure_aware_bundle_builder",
     "build_factor_aware_bundle_builder",
     "build_factor_bundle",
     "build_signal_spec",
@@ -56,6 +65,38 @@ __all__ = [
     "factor_normalized_column",
     "factor_value_column",
 ]
+
+build_exposure_aware_bundle_builder = _build_exposure_aware_bundle_builder
+
+
+def build_backtest_input_bundle_builder(
+    *,
+    compiled: CompiledExpressions | None,
+    pipeline: StrategyPipeline,
+    data_feed: DataFeed,
+    strategy_id: str,
+    run_id: str,
+) -> Callable[[StepContext], StrategyInputBundle] | None:
+    """Select the factor, stock-exposure, or engine-default bundle path."""
+    if compiled is not None:
+        return build_factor_aware_bundle_builder(
+            bridge=FactorBridge(),
+            compiled=compiled,
+            data_feed=data_feed,
+            strategy_id=strategy_id,
+            run_id=run_id,
+        )
+    policy = vars(pipeline).get("_exposure_policy")
+    if (
+        type(policy) is SelectionExposurePolicy
+        and policy.applicability is SelectionExposureApplicability.APPLICABLE
+    ):
+        return build_exposure_aware_bundle_builder(
+            data_feed=data_feed,
+            strategy_id=strategy_id,
+            run_id=run_id,
+        )
+    return None
 
 
 def _validate_factor_weight(value: object, *, index: int) -> None:

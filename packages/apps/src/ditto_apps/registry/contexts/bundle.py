@@ -2,11 +2,13 @@
 
 from dataclasses import dataclass
 
+from ditto_application.commands.candidate_selection import CandidateSelectionHandler
 from ditto_application.commands.data_product_certification import (
     DataProductCertificationCommands,
 )
 from ditto_application.commands.experiments import (
     CancelExperimentHandler,
+    ClaimHoldoutCandidateHandler,
     LaunchExperimentHandler,
     PauseExperimentHandler,
     ResumeExperimentHandler,
@@ -19,8 +21,14 @@ from ditto_application.processes.execution.manual_sizing import (
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.candidate_evidence_reader import (
+    CandidateEvidenceReader,
+)
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
+)
+from ditto_application.processes.experiments.factor_diagnostics_reader import (
+    FactorDiagnosticsReader,
 )
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
@@ -111,6 +119,10 @@ class ResearchBundle:
     cancel_handler: CancelExperimentHandler
     resume_handler: ResumeExperimentHandler
     retry_fold_handler: RetryExperimentFoldHandler
+    candidate_selection_handler: CandidateSelectionHandler
+    holdout_claim_handler: ClaimHoldoutCandidateHandler
+    candidate_evidence_reader: CandidateEvidenceReader
+    factor_diagnostics_reader: FactorDiagnosticsReader
 
 
 @dataclass(frozen=True)

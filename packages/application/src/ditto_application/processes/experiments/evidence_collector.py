@@ -39,7 +39,9 @@ from ditto_analysis.experiments import (
     LeaseFence,
     ResearchMetricId,
     ResearchMetricValue,
+    ReviewExposureWeight,
     ReviewPacket,
+    ReviewSelectionExposure,
     SelectionTraceArtifactRef,
     collect_hard_gate_evidence,
     encode_launch_spec,
@@ -60,6 +62,7 @@ from ditto_application.processes.experiments._fold_selection_trace_artifact_vali
 )
 from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
     FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
+    FoldSelectionTraceArtifactKind,
 )
 from ditto_application.processes.experiments._holdout_contract import (
     PersistedHoldoutClaim,
@@ -445,13 +448,17 @@ def _build_packet_input(
             claim.candidate_id,
         ),
         selection_trace_artifact_refs=_selection_trace_artifact_refs(collected),
+        selection_exposure=_selection_exposure_summary(
+            collected,
+            selected_candidate_id=selected_id,
+        ),
     )
 
 
 def _selection_trace_artifact_refs(
     collected: CollectedWalkForwardEvidence,
 ) -> tuple[SelectionTraceArtifactRef, ...]:
-    """Project only complete verified four-kind blocks into packet v2 refs."""
+    """Project only complete verified five-kind blocks into packet v3 refs."""
     refs: list[SelectionTraceArtifactRef] = []
     for bundle in collected.selection_traces:
         try:
@@ -477,6 +484,110 @@ def _selection_trace_artifact_refs(
                 },
             ) from error
     return tuple(refs)
+
+
+def _selection_exposure_summary(
+    collected: CollectedWalkForwardEvidence,
+    *,
+    selected_candidate_id: CandidateId,
+) -> ReviewSelectionExposure | None:
+    """Aggregate the selected candidate's per-rebalance exposure weights."""
+    bundles = tuple(
+        bundle
+        for bundle in collected.selection_traces
+        if bundle.identity.candidate_id == selected_candidate_id
+    )
+    if not bundles:
+        return None
+    if any(not bundle.evidence.exposure_declarations for bundle in bundles):
+        raise ExperimentIntegrityError(
+            "selected candidate exposure evidence is unavailable",
+            details={
+                "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                "reason": "selected_candidate_exposure_missing",
+            },
+        )
+    declarations = tuple(
+        declaration
+        for bundle in bundles
+        for declaration in bundle.evidence.exposure_declarations
+    )
+    applicability_lanes = {
+        (declaration.applicability.value, declaration.lane.value)
+        for declaration in declarations
+    }
+    if len(applicability_lanes) != 1:
+        raise ExperimentIntegrityError(
+            "selected candidate exposure applicability drifted",
+            details={
+                "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                "reason": "selected_candidate_exposure_applicability_drift",
+            },
+        )
+    applicability, lane = next(iter(applicability_lanes))
+    artifact_refs = tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=FoldSelectionTraceArtifactKind.EXPOSURES.value,
+            artifact_id=bundle.receipt.exposures.artifact_id,
+            content_hash=bundle.receipt.exposures.content_hash,
+        )
+        for bundle in bundles
+    )
+    if applicability == "NOT_APPLICABLE":
+        if any(bundle.evidence.exposures for bundle in bundles):
+            raise ExperimentIntegrityError(
+                "ETF exposure evidence contains stock rows",
+                details={
+                    "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                    "reason": "not_applicable_exposure_has_rows",
+                },
+            )
+        return ReviewSelectionExposure(
+            applicability=applicability,
+            lane=lane,
+            industry_weights=(),
+            size_bucket_weights=(),
+            artifact_refs=artifact_refs,
+        )
+    group_keys = {
+        (str(bundle.identity.fold_id), exposure.trade_date)
+        for bundle in bundles
+        for exposure in bundle.evidence.exposures
+    }
+    if not group_keys:
+        raise ExperimentIntegrityError(
+            "stock exposure evidence is empty",
+            details={
+                "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                "reason": "applicable_exposure_empty",
+            },
+        )
+    industry_totals: dict[str, float] = {}
+    size_totals: dict[str, float] = {}
+    for bundle in bundles:
+        for exposure in bundle.evidence.exposures:
+            industry_key = str(exposure.industry_id)
+            industry_totals[industry_key] = (
+                industry_totals.get(industry_key, 0.0) + exposure.selected_weight
+            )
+            size_key = exposure.size_bucket.value
+            size_totals[size_key] = (
+                size_totals.get(size_key, 0.0) + exposure.selected_weight
+            )
+    divisor = float(len(group_keys))
+    return ReviewSelectionExposure(
+        applicability=applicability,
+        lane=lane,
+        industry_weights=tuple(
+            ReviewExposureWeight(key, total / divisor)
+            for key, total in sorted(industry_totals.items())
+        ),
+        size_bucket_weights=tuple(
+            ReviewExposureWeight(key, total / divisor)
+            for key, total in sorted(size_totals.items())
+        ),
+        artifact_refs=artifact_refs,
+    )
 
 
 def _candidate_rationale(

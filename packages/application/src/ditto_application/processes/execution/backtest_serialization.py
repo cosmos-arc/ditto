@@ -23,6 +23,9 @@ from ditto_strategy.alpha.selection_evidence import (
     InitialUniverseEvidence,
     SelectionEvidence,
     SelectionEvidenceLog,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposureSizeBucket,
 )
 from ditto_strategy.errors import StrategySpecError
 
@@ -76,6 +79,24 @@ _FACTOR_CONTRIBUTION_SCHEMA = pl.Schema(
         "factor_signal_score": pl.Float64,
         "rank": pl.Int64,
         "selected": pl.Boolean,
+    },
+)
+_SELECTION_EXPOSURE_SCHEMA = pl.Schema(
+    {
+        "run_id": pl.String,
+        "trade_date": pl.String,
+        "applicability": pl.String,
+        "lane": pl.String,
+        "industry_column": pl.String,
+        "size_column": pl.String,
+        "size_bucket_method": pl.String,
+        "instrument_id": pl.String,
+        "instrument_id_kind": pl.String,
+        "selected_weight": pl.Float64,
+        "industry_id": pl.String,
+        "industry_id_kind": pl.String,
+        "size_value": pl.Float64,
+        "size_bucket": pl.String,
     },
 )
 
@@ -296,6 +317,30 @@ def serialize_selection_evidence(
             },
         )
 
+    exposure_rows: list[dict[str, object]] = []
+    exposures_by_date: dict[str, list[SelectionExposureEvidence]] = {}
+    for event in trusted_log.exposures:
+        exposures_by_date.setdefault(event.trade_date, []).append(event)
+    for declaration in trusted_log.exposure_declarations:
+        date_exposures = exposures_by_date.get(declaration.trade_date, [])
+        if not date_exposures:
+            exposure_rows.append(
+                _selection_exposure_row(
+                    run_id=run_id,
+                    declaration=declaration,
+                    event=None,
+                ),
+            )
+            continue
+        exposure_rows.extend(
+            _selection_exposure_row(
+                run_id=run_id,
+                declaration=declaration,
+                event=event,
+            )
+            for event in date_exposures
+        )
+
     return {
         "initial_universe_evidence": _frame_with_schema(
             initial_rows,
@@ -313,6 +358,43 @@ def serialize_selection_evidence(
             contribution_rows,
             _FACTOR_CONTRIBUTION_SCHEMA,
         ),
+        "selection_exposure_evidence": _frame_with_schema(
+            exposure_rows,
+            _SELECTION_EXPOSURE_SCHEMA,
+        ),
+    }
+
+
+def _selection_exposure_row(
+    *,
+    run_id: str,
+    declaration: SelectionExposureDeclaration,
+    event: SelectionExposureEvidence | None,
+) -> dict[str, object]:
+    instrument_id: str | None = None
+    instrument_id_kind: str | None = None
+    industry_id: str | None = None
+    industry_id_kind: str | None = None
+    if event is not None:
+        instrument_id, instrument_id_kind = _serialize_instrument_id(
+            event.instrument_id,
+        )
+        industry_id, industry_id_kind = _serialize_instrument_id(event.industry_id)
+    return {
+        "run_id": run_id,
+        "trade_date": declaration.trade_date,
+        "applicability": declaration.applicability.value,
+        "lane": declaration.lane.value,
+        "industry_column": declaration.industry_column,
+        "size_column": declaration.size_column,
+        "size_bucket_method": declaration.size_bucket_method,
+        "instrument_id": instrument_id,
+        "instrument_id_kind": instrument_id_kind,
+        "selected_weight": None if event is None else event.selected_weight,
+        "industry_id": industry_id,
+        "industry_id_kind": industry_id_kind,
+        "size_value": None if event is None else event.size_value,
+        "size_bucket": None if event is None else event.size_bucket.value,
     }
 
 
@@ -404,11 +486,41 @@ def _rebuild_selection_evidence_log(
                 FactorContributionEvidence,
             )
         )
+        exposure_declarations = tuple(
+            SelectionExposureDeclaration(
+                trade_date=event.trade_date,
+                applicability=event.applicability,
+                lane=event.lane,
+                industry_column=event.industry_column,
+                size_column=event.size_column,
+                size_bucket_method=event.size_bucket_method,
+            )
+            for event in _require_exact_events(
+                value.exposure_declarations,
+                SelectionExposureDeclaration,
+            )
+        )
+        exposures = tuple(
+            SelectionExposureEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                selected_weight=event.selected_weight,
+                industry_id=event.industry_id,
+                size_value=event.size_value,
+                size_bucket=SelectionExposureSizeBucket(event.size_bucket),
+            )
+            for event in _require_exact_events(
+                value.exposures,
+                SelectionExposureEvidence,
+            )
+        )
         return SelectionEvidenceLog(
             initial_universe=initial_universe,
             exclusions=exclusions,
             selections=selections,
             factor_contributions=factor_contributions,
+            exposure_declarations=exposure_declarations,
+            exposures=exposures,
         )
     except (AttributeError, StrategySpecError, TypeError, ValueError) as error:
         _invalid_selection_evidence_log(error)
