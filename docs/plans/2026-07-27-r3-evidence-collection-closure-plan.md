@@ -20,6 +20,15 @@ launch 的 exact `strategy_id@version`/launch hash 绑定到 governance spec has
 >
 > **计划状态**:READY FOR EXECUTION
 >
+> **当前状态（2026-08-01）**：本计划的 deterministic engineering scope 已由
+> `39e2b752` runner 与 `a135899c` 内容寻址制品闭环。报告
+> `artifacts/acceptance/r3-report.json` SHA-256 为
+> `f005425c2428e0e9e01f746281ba2bd74b752089e3cdf202577576bf67c35f76`，stock/ETF、
+> governance recovery、hard-gate zero-write、literal 128、隔离 fixture restore 与
+> OpenAPI zero-diff 八项命令全部通过。该报告仍明确
+> `release_status=RELEASE_ACCEPTANCE_BLOCKED`、`r2_live_gate=NOT_EVALUATED`；真实
+> provider/certified 数据与 production recovery 不在其证明范围，等待 Task 18 单独授权。
+>
 > **跨仓库**:全部在后端 `/home/chevy/projects/ditto`,分支 `docs/r3-research-governance-design`。
 
 ## 实施规则

@@ -11,8 +11,9 @@
 ---
 
 > **设计事实源**：[2026-07-19 R3 design](2026-07-19-r3-a-share-research-strategy-governance-design.md)<br>
-> **计划状态**：READY FOR EXECUTION；数据库 schema、新依赖、架构边界和环境配置仍须在对应 task 前单独批准<br>
-> **实施核实状态（2026-07-28 全量源码核实 + arch 修复）**：后端 17/17 Task 完整完成（Task 15 Step 4 legacy migration 标记 N/A——未上线无历史数据，用户决策不实现），evidence collection closure Task 1-4 + 5a-5f 全部 ✅，核心价值链闭合（EVIDENCE→collector→review packet 11 hard gate→publish→COMPLETED→governance promote 三层 identity binding）。架构门禁已修复（`_worker_attestation.py` 拆分 worker.py 882→770 行 + 3 个 fold-selection-trace 文件加入 `PRODUCTION_ANALYSIS_WIRING_ALLOWANCES` + `research_backtest_factory` leaf-direct；`pixi run -e dev arch-check` 0 issues、37 contracts kept、type/ruff 全过、1160 相关测试 GREEN）。**剩余阻断项**：🔴 **前端 W5（Task 18-22 ditto-app）完全未开始**（main 分支零 R3 接线，plan 估 3-5 人周）⚫ **R2 live gate 未关闭**（release blocker，独立于 R3 工程）。详见 `memory/r3-research-governance-progress.md` 2026-07-28 段。<br>
+> **计划状态（历史基线）**：READY FOR EXECUTION；数据库 schema、新依赖、架构边界和环境配置仍须在对应 task 前单独批准。<br>
+> **2026-07-28 实施核实快照（已被下述当前状态取代）**：当时后端 17/17 Task 与 evidence collection closure Task 1-4 + 5a-5f 已完成，但前端 W5 尚未开始；该段仅保留为历史进度，不再代表当前仓库事实。<br>
+> **当前状态（2026-08-01）**：R3 后端、W5 前端、冻结 OpenAPI 与 deterministic 双黄金验收已完成。后端实现/契约/验收分别绑定 `a4607be3`、`a6720e8a`、`39e2b752`，确定性制品提交为 `a135899c`；前端契约接线/验收/制品分别绑定 `246fc5f`、`7f4d277`、`6da94e1`。后端报告 SHA-256 为 `f005425c2428e0e9e01f746281ba2bd74b752089e3cdf202577576bf67c35f76`，前端报告 SHA-256 为 `2aae6a908f5993e11f0125c1ac4732326dc71312293725bed1a99053be7e7f40`。确定性状态是 **R3 ENGINEERING COMPLETE / G2 BLOCKED**：`r2_live_gate=NOT_EVALUATED`，真实 provider、certified 96 月数据、live backup/restore 与真实浏览器验收仍须 Task 18 单独授权，不能由 fixture 关闭。<br>
 > **跨仓库规则**：后端路径相对 `/home/chevy/projects/ditto`；标记为 `ditto-app` 的路径相对 `/home/chevy/projects/ditto-app`；两个仓库分别建分支、分别提交和验证。
 
 ## 实施规则

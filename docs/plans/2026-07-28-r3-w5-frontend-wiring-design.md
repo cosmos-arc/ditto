@@ -3,6 +3,15 @@
 > **设计事实源**：[R3 主计划](2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md) Task 18-22 · [Wave 1 接线设计](archive/2026-07-02-wave1-frontend-wiring-design.md) · 2026-07-28 三 agent 调研（前端资产 / 后端 API 契约 / Wave 1 经验）
 >
 > **跨仓库**：后端 `/home/chevy/projects/ditto`（分支 `docs/r3-research-governance-design` 或继任）；前端 `/home/chevy/projects/ditto-app`（新建分支 `feat/r3-research-wiring`）。
+>
+> **当前状态（2026-08-01；取代本文内 2026-07-28～30 的阶段性“下一步/剩余”描述）**：
+> W5 工程接线、production live boundary、冻结 OpenAPI codegen 与 deterministic UI
+> acceptance 已完成。后端 frozen OpenAPI 为 `a6720e8a`（snapshot SHA-256
+> `97119bbb1ff6ff9f01c1f7cb8ac6a14522ad5b31417c3816c82c0aa18ac4e221`）；前端契约
+> 接线为 `246fc5f`，UI 验收 runner/制品为 `7f4d277`/`6da94e1`，报告 SHA-256 为
+> `2aae6a908f5993e11f0125c1ac4732326dc71312293725bed1a99053be7e7f40`。jsdom + MSW
+> 结果只能证明确定性 UI 契约，不能证明 `VITE_USE_MOCK=false` 的真实浏览器、真实
+> provider 或 production recovery；这些 live 项仍等待 Task 18 单独授权。
 
 ## 决策摘要（已对齐）
 
