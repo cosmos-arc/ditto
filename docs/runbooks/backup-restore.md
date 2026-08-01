@@ -14,6 +14,23 @@
 命令不会覆盖既有 backup 或 restore 目标。任一步失败时，只清理由本次命令新建的
 partial root；已有备份、源 data root 和历史证据均不会删除。
 
+## Deterministic acceptance 边界
+
+Task 17 runner 只在 pytest 提供的任务专用 `tmp_path` 内执行联合 backup/restore：
+
+```bash
+pixi run -e dev pytest \
+  packages/apps/tests/e2e/test_r3_governance_recovery.py::\
+test_fixture_backup_restore_preserves_domain_identity \
+  -q --no-cov
+```
+
+该演练会验证 metadata DB、Research DB、pinned artifacts、active pointer、review
+decisions、holdout claim、review packet / artifact hash 和 reproduction fingerprint，
+但不会读取或改写当前/生产 data root。它只能证明恢复实现的确定性工程闭环，不能
+证明 production recovery。真实 data root、backup target、restore target 与 cutover
+必须等待 Task 18 的独立授权，并严格执行下文停写与路径检查。
+
 ## 一致性边界
 
 `sqlite_backup` 为每个 SQLite 文件生成独立 online snapshot，

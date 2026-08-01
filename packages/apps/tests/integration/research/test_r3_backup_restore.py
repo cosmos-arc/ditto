@@ -282,7 +282,7 @@ def _seed_governance(
         event_id="decision-approve",
         actor="reviewer",
         reason="evidence accepted",
-        decided_at=NOW.isoformat(),
+        decided_at=(NOW + timedelta(seconds=1)).isoformat(),
     )
     pointer = service.publish_reviewed_and_activate(
         PublishReviewedActivationRequest(
@@ -292,7 +292,7 @@ def _seed_governance(
             activate_event_id="activation-publish",
             actor="publisher",
             reason="promotion gates passed",
-            decided_at=NOW.isoformat(),
+            decided_at=(NOW + timedelta(seconds=2)).isoformat(),
         )
     )
     decisions = _decision_history(metadata_database)
