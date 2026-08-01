@@ -68,15 +68,17 @@ export function ReviewDetailPage({ experimentId, strategyId, version }: ReviewDe
 	const packet = packetQuery.data;
 
 	return (
-		<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
-			<ReviewDecisionBanner
-				strategyId={strategyId}
-				version={version}
-				experimentId={experimentId}
-				state={state}
-				reviewOutcome={reviewOutcome}
-				hardReviewBlocked={packet.hardReviewBlocked}
-			/>
+		<div data-contract-slot="review-evidence" className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
+			<div data-contract-slot="review-decision-banner">
+				<ReviewDecisionBanner
+					strategyId={strategyId}
+					version={version}
+					experimentId={experimentId}
+					state={state}
+					reviewOutcome={reviewOutcome}
+					hardReviewBlocked={packet.hardReviewBlocked}
+				/>
+			</div>
 			{versionsQuery.error && (
 				<p role="alert" className="text-xs text-(--color-led-danger)">
 					{typedError(versionsQuery.error)}
@@ -100,14 +102,16 @@ export function ReviewDetailPage({ experimentId, strategyId, version }: ReviewDe
 			<SelectionExposureEvidence packet={packet} />
 			<LineagePanel packet={packet} />
 			<R1ImpactEvidence packet={packet} />
-			<ReviewDecisionPanel
-				strategyId={strategyId}
-				version={version}
-				reviewOutcome={reviewOutcome}
-				hardReviewBlocked={packet.hardReviewBlocked}
-				bundleHash={packet.bundleHash}
-				experimentId={experimentId}
-			/>
+			<div data-contract-slot="review-actions">
+				<ReviewDecisionPanel
+					strategyId={strategyId}
+					version={version}
+					reviewOutcome={reviewOutcome}
+					hardReviewBlocked={packet.hardReviewBlocked}
+					bundleHash={packet.bundleHash}
+					experimentId={experimentId}
+				/>
+			</div>
 			<StrategyGovernanceAudit strategyId={strategyId} currentPacketBundleHash={packet.bundleHash} />
 		</div>
 	);

@@ -24,6 +24,7 @@ const IA_ROUTES = [
 	"/research/backtest",
 	"/research/backtest/$id",
 	"/research/experiments",
+	"/research/experiments/new",
 	"/research/experiments/$id",
 	"/research/node-descriptors",
 	"/research/regime",

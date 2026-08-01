@@ -120,7 +120,10 @@ export function ExperimentCreatePage({ onLaunched }: ExperimentCreatePageProps) 
 								: ""}
 						</p>
 					)}
-					<div className="sticky bottom-(--height-status-bar) flex flex-wrap justify-end gap-2 border-t border-(--color-border-subtle) bg-(--color-surface-1) py-3">
+					<div
+						data-contract-slot="experiment-actions"
+						className="sticky bottom-(--height-status-bar) flex flex-wrap justify-end gap-2 border-t border-(--color-border-subtle) bg-(--color-surface-1) py-3"
+					>
 						<button
 							type="button"
 							onClick={runPreflight}

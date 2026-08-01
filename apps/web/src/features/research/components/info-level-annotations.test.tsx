@@ -9,12 +9,13 @@ import { FactorPage } from "./factor-page";
 import { RegimePage } from "./regime-page";
 import { ResearchPage } from "./research-page";
 
-// Mock TanStack Router's useParams (used by FactorPage)
+// Mock the small router boundary used by FactorPage and ResearchPage.
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
 	return {
 		...actual,
 		useParams: () => ({ id: "f-001" }),
+		Link: ({ children, to }: { readonly children: ReactNode; readonly to: string }) => <a href={to}>{children}</a>,
 	};
 });
 
@@ -33,42 +34,41 @@ function createWrapper() {
 	};
 }
 
-// ── ResearchPage: 4 L1, 1 L2 ──
+// ── ResearchPage: 3 L1, 1 L2 ──
 
 describe("ResearchPage info-level annotations", () => {
 	beforeEach(() => server.use(...researchHandlers));
 
-	it("annotates 4 L1 information units", async () => {
+	it("annotates 3 L1 information units", async () => {
 		render(<ResearchPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("因子监控");
+		await screen.findByText("研究实验");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
 		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
 
-		expect(l1UnitNames).toContain("research-pulse-strip");
-		expect(l1UnitNames).toContain("factor-table");
-		expect(l1UnitNames).toContain("recent-runs");
-		expect(l1UnitNames).toContain("experiment-queue");
-		expect(l1Units).toHaveLength(4);
+		expect(l1UnitNames).toContain("research-live-strip");
+		expect(l1UnitNames).toContain("live-experiment-catalog");
+		expect(l1UnitNames).toContain("research-governance-queue");
+		expect(l1Units).toHaveLength(3);
 	});
 
 	it("annotates 1 L2 information unit", async () => {
 		render(<ResearchPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("因子监控");
+		await screen.findByText("研究实验");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
-		expect(l2UnitNames).toContain("analysis-band");
+		expect(l2UnitNames).toContain("research-workspace-navigation");
 		expect(l2Units).toHaveLength(1);
 	});
 
 	it("annotates 0 L3 information units", async () => {
 		render(<ResearchPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("因子监控");
+		await screen.findByText("研究实验");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
 		expect(l3Units).toHaveLength(0);

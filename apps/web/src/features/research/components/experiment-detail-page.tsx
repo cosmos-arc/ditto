@@ -53,7 +53,10 @@ export function ExperimentDetailPage({ experimentId }: ExperimentDetailPageProps
 		<>
 			<main className="min-h-0 overflow-auto pb-(--height-status-bar)">
 				<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
-					<header className="flex flex-wrap items-start justify-between gap-3 border-b border-(--color-border-subtle) pb-3">
+					<header
+						data-contract-slot="experiment-meta"
+						className="flex flex-wrap items-start justify-between gap-3 border-b border-(--color-border-subtle) pb-3"
+					>
 						<div>
 							<h1 className="text-lg font-semibold">Experiment {server.experiment_id}</h1>
 							<p className="font-data text-xs">

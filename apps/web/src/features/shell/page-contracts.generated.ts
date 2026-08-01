@@ -32,7 +32,7 @@ export const PROTOTYPE_SOURCES = [
 
 export const SHELL_SLOT_MAP: Record<ShellFamily, string[]> = {
   "radar": ["strip", "main", "right-rail", "tab-band", "context-bar", "scope-strip", "bottom-tab-band"],
-  "studio": ["header", "tabs", "source", "main", "inspector", "adoption", "graph", "modes"],
+  "studio": ["header", "tabs", "source", "main", "inspector", "adoption", "graph", "actions", "modes"],
   "catalog": ["toolbar", "main", "detail", "header"],
   "object-hub": ["meta", "tabs", "main", "bottom"],
   "command-center": ["pulse", "main", "sidebar"],
@@ -110,7 +110,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/markets/components/a-shares-components.test.tsx"
       ],
@@ -214,7 +214,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/platform",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/platform/components/platform-components.test.tsx"
       ],
@@ -370,7 +370,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [],
       "reactComponentRefs": []
     },
@@ -507,7 +507,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/backtest",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/backtest/components/backtest-components.test.tsx"
       ],
@@ -557,7 +557,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/backtest",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/backtest/components/info-level-annotations.test.tsx",
         "src/features/backtest/components/backtest-components.test.tsx"
@@ -679,7 +679,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/markets/components/markets-page.test.tsx",
         "src/features/markets/components/markets-components.test.tsx"
@@ -790,6 +790,69 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     },
   },
   {
+    route: "/research/experiments/new",
+    pagePattern: "studio-builder",
+    shellFamily: "studio",
+    prototypeSource: "prototype-backed",
+    prototypeRef: "docs/contracts/pages/experiment-create.contract.json",
+    requiredSlots: ["main", "actions"],
+    requiredStates: ["loading", "empty", "error", "stale", "preflight-ready", "preflight-blocked", "launch-unknown"],
+    hasStatusBar: true,
+    landing: {
+      "reactRouteStatus": "implemented",
+      "featureModule": "src/features/research",
+      "contractStatus": "generated",
+      "overlayStatus": "none",
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/experiment-create-page.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ExperimentCreatePage"
+      ]
+    },
+    a11yRoles: {
+      "main": "main",
+      "actions": "toolbar",
+    },
+    responsiveBehavior: {
+      "actions": "reflow",
+    },
+  },
+  {
+    route: "/research/experiments/$id",
+    pagePattern: "object-hub",
+    shellFamily: "object-hub",
+    prototypeSource: "prototype-backed",
+    prototypeRef: "docs/contracts/pages/experiment-detail.contract.json",
+    requiredSlots: ["meta", "main", "bottom"],
+    requiredStates: ["loading", "empty", "error", "stale", "running", "paused", "failed", "completed", "partial-resource-error"],
+    hasStatusBar: true,
+    landing: {
+      "reactRouteStatus": "implemented",
+      "featureModule": "src/features/research",
+      "contractStatus": "generated",
+      "overlayStatus": "none",
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/experiment-detail-page.test.tsx",
+        "src/features/research/components/candidate-selection-holdout.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ExperimentDetailPage"
+      ]
+    },
+    a11yRoles: {
+      "meta": "banner",
+      "main": "main",
+      "bottom": "status",
+    },
+    responsiveBehavior: {
+      "meta": "reflow",
+      "bottom": "collapsed",
+    },
+  },
+  {
     route: "/research/experiments",
     pagePattern: "catalog-screener",
     shellFamily: "catalog",
@@ -803,7 +866,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/research/components/research-components.test.tsx"
       ],
@@ -853,7 +916,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/research/components/info-level-annotations.test.tsx",
         "src/features/research/components/factor-components.test.tsx"
@@ -957,7 +1020,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/research/components/research-components.test.tsx",
         "src/features/research/components/factor-components.test.tsx",
@@ -1010,7 +1073,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/home",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/home/components/home-components.test.tsx",
         "src/features/home/hooks/home-hooks.test.tsx"
@@ -1113,7 +1176,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/instruments",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/instruments/components/info-level-annotations.test.tsx",
         "src/features/instruments/components/instrument-components.test.tsx"
@@ -1251,7 +1314,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/markets/components/calendar-components.test.tsx"
       ],
@@ -1337,7 +1400,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/markets/components/intelligence-page.test.tsx",
         "src/features/markets/components/intelligence-components.test.tsx"
@@ -1458,7 +1521,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/screener",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/screener/components/info-level-annotations.test.tsx",
         "src/features/screener/components/screener-components.test.tsx"
@@ -1578,7 +1641,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/trading/components/orders-components.test.tsx"
       ],
@@ -1680,7 +1743,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/platform",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/platform/components/platform-components.test.tsx",
         "src/features/platform/hooks/platform-hooks.test.tsx"
@@ -1717,6 +1780,23 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-broker-test",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "platform-settings.save-config",
+        "kind": "modal",
+        "blocking": true,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "main",
+          "action": "open-overlay"
+        },
+        "prototypeSelector": "#overlay-save-config",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1766,7 +1846,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/platform",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/platform/components/platform-components.test.tsx",
         "src/features/platform/components/info-level-annotations.test.tsx",
@@ -1853,7 +1933,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/trading/components/trading-components.test.tsx",
         "src/features/trading/components/positions-summary.test.tsx"
@@ -1941,7 +2021,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/research/components/info-level-annotations.test.tsx",
         "src/features/research/components/regime-components.test.tsx"
@@ -1994,7 +2074,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/research/components/info-level-annotations.test.tsx",
         "src/features/research/components/research-components.test.tsx"
@@ -2103,6 +2183,68 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     },
   },
   {
+    route: "/research/reviews/$id",
+    pagePattern: "object-hub",
+    shellFamily: "object-hub",
+    prototypeSource: "prototype-backed",
+    prototypeRef: "docs/contracts/pages/review-detail.contract.json",
+    requiredSlots: ["meta", "main", "bottom"],
+    requiredStates: ["loading", "empty", "error", "stale", "hard-gate-blocked", "review-pending", "approved", "published", "rejected"],
+    landing: {
+      "reactRouteStatus": "implemented",
+      "featureModule": "src/features/research",
+      "contractStatus": "generated",
+      "overlayStatus": "implemented",
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/review-detail-page.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ReviewDetailPage"
+      ]
+    },
+    a11yRoles: {
+      "meta": "banner",
+      "main": "main",
+      "bottom": "region",
+    },
+    responsiveBehavior: {
+      "meta": "reflow",
+      "bottom": "overlay",
+    },
+  },
+  {
+    route: "/research/reviews",
+    pagePattern: "catalog-screener",
+    shellFamily: "catalog",
+    prototypeSource: "prototype-backed",
+    prototypeRef: "docs/contracts/pages/review-list.contract.json",
+    requiredSlots: ["toolbar", "main", "detail"],
+    requiredStates: ["loading", "empty", "error", "stale", "packet-missing", "approved-awaiting-publish"],
+    landing: {
+      "reactRouteStatus": "implemented",
+      "featureModule": "src/features/research",
+      "contractStatus": "generated",
+      "overlayStatus": "none",
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/review-queue-page.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ReviewQueuePage"
+      ]
+    },
+    a11yRoles: {
+      "toolbar": "toolbar",
+      "main": "main",
+      "detail": "complementary",
+    },
+    responsiveBehavior: {
+      "toolbar": "reflow",
+      "detail": "overlay",
+    },
+  },
+  {
     route: "/trading/risk",
     pagePattern: "analytical-overview",
     shellFamily: "analytical",
@@ -2116,7 +2258,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/trading/components/risk-components.test.tsx",
         "src/features/trading/components/risk-breach-detail.test.tsx"
@@ -2204,7 +2346,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/trading/components/signals-components.test.tsx"
       ],
@@ -2305,7 +2447,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/strategy",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/strategy/components/info-level-annotations.test.tsx",
         "src/features/strategy/components/strategy-detail-components.test.tsx"
@@ -2409,7 +2551,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/strategy",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/strategy/components/strategy-components.test.tsx"
       ],
@@ -2477,7 +2619,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/strategy",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/strategy/components/info-level-annotations.test.tsx",
         "src/features/strategy/components/strategy-components.test.tsx",
@@ -2600,7 +2742,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/trading/components/trading-components.test.tsx"
       ],
@@ -2703,7 +2845,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/research/components/research-components.test.tsx"
       ],
@@ -2770,7 +2912,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "queued",
+      "visualAuditStatus": "verified",
       "reactTestRefs": [
         "src/features/markets/components/markets-components.test.tsx"
       ],

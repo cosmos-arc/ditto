@@ -6248,7 +6248,7 @@ export interface components {
              * @description 策略定义 JSON
              */
             spec_json: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Input"];
             };
             /**
              * Strategy Id
@@ -7412,8 +7412,7 @@ export interface components {
             fold_id: string | null;
             /** Is Pinned */
             is_pinned: boolean;
-            /** Manifest */
-            manifest: unknown;
+            manifest: components["schemas"]["JsonValue-Output"];
             /** Pinned At */
             pinned_at: string | null;
             /** Relative Path */
@@ -7440,7 +7439,7 @@ export interface components {
             ordinal: number;
             /** Parameters */
             parameters: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Output"];
             };
         };
         /**
@@ -7450,8 +7449,7 @@ export interface components {
         ExperimentComparisonResponse: {
             /** Experiment Id */
             experiment_id: string;
-            /** Payload */
-            payload: unknown;
+            payload: components["schemas"]["JsonValue-Output"];
             /** Payload Hash */
             payload_hash: string;
             /** Revision */
@@ -7617,14 +7615,12 @@ export interface components {
             fold_id: string | null;
             /** Layer */
             layer: string;
-            /** Observed */
-            observed: unknown;
+            observed: components["schemas"]["JsonValue-Output"];
             /** Outcome */
             outcome: string;
             /** Payload Hash */
             payload_hash: string;
-            /** Policy */
-            policy: unknown;
+            policy: components["schemas"]["JsonValue-Output"];
             /** Policy Version */
             policy_version: string;
             /** Rule Id */
@@ -7971,8 +7967,7 @@ export interface components {
             experiment_id: string;
             /** Is Pinned */
             is_pinned: boolean;
-            /** Payload */
-            payload: unknown;
+            payload: components["schemas"]["JsonValue-Output"];
         };
         /**
          * ExperimentSummaryResponse
@@ -8013,7 +8008,7 @@ export interface components {
             factor_id: string;
             /** Resolved Payload */
             resolved_payload: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Output"];
             };
         };
         /**
@@ -8034,11 +8029,11 @@ export interface components {
             factor_id: string;
             /** Metrics */
             metrics: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Output"];
             };
             /** Provenance */
             provenance: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Output"];
             };
             /** Registry Hash */
             registry_hash: string;
@@ -9131,7 +9126,7 @@ export interface components {
             };
             /** Default Config */
             default_config: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Output"];
             };
             /** Deterministic */
             deterministic: boolean;
@@ -10138,10 +10133,8 @@ export interface components {
          * @description One field-level change between two canonical spec payloads.
          */
         SpecChangeResponse: {
-            /** New */
-            new?: unknown | null;
-            /** Old */
-            old?: unknown | null;
+            new?: components["schemas"]["JsonValue-Output"];
+            old?: components["schemas"]["JsonValue-Output"];
             /** Op */
             op: string;
             /** Path */
@@ -10208,7 +10201,7 @@ export interface components {
             name: string;
             /** Spec Json */
             spec_json: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Output"];
             };
             /** Status */
             status: string;
@@ -10232,7 +10225,7 @@ export interface components {
              * @description candidate 策略定义 JSON
              */
             spec_json: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Input"];
             };
         };
         /**
@@ -10265,7 +10258,7 @@ export interface components {
         StrategyVersionDetailResponse: {
             /** Canonical Spec */
             canonical_spec: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Output"];
             };
             /** Created At */
             created_at: string;
@@ -10525,7 +10518,7 @@ export interface components {
              * @description 策略定义 JSON
              */
             spec_json: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Input"];
             };
             /**
              * Tags
