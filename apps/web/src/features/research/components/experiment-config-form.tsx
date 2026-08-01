@@ -203,6 +203,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 						onChange={(v) => update("diskByteLimit", Number(v))}
 					/>
 					<Field label="Seed" type="number" value={draft.seed} onChange={(v) => update("seed", Number(v))} />
+					<Field label="Created at" value={draft.createdAt} onChange={(v) => update("createdAt", v)} />
 					<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
 						<span>Worker count</span>
 						<select

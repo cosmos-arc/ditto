@@ -111,16 +111,16 @@ export function createDefaultExperimentDraft(): ExperimentConfigDraft {
 		experimentId: "r3-experiment",
 		researchCycleId: "r3-cycle",
 		researchCycleHash: "a".repeat(64),
-		strategyId: "seed_stock_selection",
+		strategyId: "seed_stock_selection_rotation",
 		strategyVersion: 1,
 		strategySpecHash: "b".repeat(64),
-		strategySpecJson: JSON.stringify({ strategy_id: "seed_stock_selection" }, null, 2),
+		strategySpecJson: JSON.stringify({ strategy_id: "seed_stock_selection_rotation" }, null, 2),
 		snapshotId: "certified-snapshot-r3",
 		snapshotManifestHash: "c".repeat(64),
 		validationJson: JSON.stringify({ trading_sessions: ["2026-07-30"] }, null, 2),
 		baselineDescriptorType: "active-strategy",
 		baselineSchemaVersion: 1,
-		baselinePayloadJson: JSON.stringify({ strategy_id: "seed_stock_selection" }, null, 2),
+		baselinePayloadJson: JSON.stringify({ strategy_id: "seed_stock_selection_rotation" }, null, 2),
 		axesJson: JSON.stringify(
 			[
 				{

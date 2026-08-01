@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -25,7 +25,7 @@ describe("R3 research deterministic acceptance contract", () => {
 	it("requires fixture mode and keeps output isolated", async () => {
 		const { parseAcceptanceArgs } = await loadAcceptance();
 
-		expect(() => parseAcceptanceArgs([])).toThrow("--fixture is required");
+		expect(() => parseAcceptanceArgs([])).toThrow("exactly one");
 		expect(parseAcceptanceArgs(["--fixture"])).toEqual({
 			fixture: true,
 			outDir: "docs/review/r3-research-acceptance/deterministic",
@@ -34,6 +34,127 @@ describe("R3 research deterministic acceptance contract", () => {
 			fixture: true,
 			outDir: "tmp/r3-ui",
 		});
+	});
+
+	it("accepts an explicit live browser mode with loopback-only bases", async () => {
+		const { parseAcceptanceArgs } = await loadAcceptance();
+
+		expect(() => parseAcceptanceArgs(["--real-data"])).toThrow("--planning-file");
+		expect(parseAcceptanceArgs(["--real-data", "--planning-file", "/tmp/stock-planning.json"])).toEqual({
+			realData: true,
+			reactBase: "http://127.0.0.1:5173",
+			apiBase: "http://127.0.0.1:8000",
+			outDir: "docs/review/r3-research-acceptance/live",
+			planningFile: "/tmp/stock-planning.json",
+		});
+		expect(
+			parseAcceptanceArgs([
+				"--real-data",
+				"--planning-file",
+				"/tmp/stock-planning.json",
+				"--react-base",
+				"http://localhost:4173/",
+				"--api-base",
+				"http://[::1]:8001/",
+				"--out-dir",
+				"tmp/r3-live-ui",
+			]),
+		).toEqual({
+			realData: true,
+			reactBase: "http://localhost:4173",
+			apiBase: "http://[::1]:8001",
+			outDir: "tmp/r3-live-ui",
+			planningFile: "/tmp/stock-planning.json",
+		});
+		expect(() => parseAcceptanceArgs(["--fixture", "--real-data"])).toThrow("exactly one");
+		expect(() =>
+			parseAcceptanceArgs([
+				"--real-data",
+				"--planning-file",
+				"/tmp/stock-planning.json",
+				"--api-base",
+				"https://example.com",
+			]),
+		).toThrow(
+			"loopback",
+		);
+	});
+
+	it("loads the exact backend planning document used by live Studio", async () => {
+		const { loadLivePlanningDocument } = await loadAcceptance();
+		const root = await mkdtemp(join(tmpdir(), "ditto-r3-live-planning-"));
+		try {
+			const path = join(root, "planning.json");
+			const document = {
+				experiment_id: "r3-live-stock-browser",
+				research_cycle_id: "r3-live-cycle-stock-browser",
+				research_cycle_hash: "a".repeat(64),
+				strategy: {
+					strategy_id: "seed_stock_selection_rotation",
+					version: 3,
+					spec_hash: "b".repeat(64),
+					spec_json: { strategy_id: "seed_stock_selection_rotation" },
+				},
+				snapshot: { snapshot_id: "snapshot:r3", manifest_hash: "c".repeat(64) },
+				validation: { trading_sessions: ["2026-07-31"] },
+				matrix: {
+					baseline: { descriptor_type: "stock-universe-equal-weight", payload: {}, schema_version: 1 },
+					axes: [],
+					candidate_limit: 128,
+				},
+				promotion_objective: { schema_id: "r3-promotion-objective", schema_version: 1 },
+				dataset_requirements: [],
+				cost_model: { bytes_per_run: 100, bytes_per_trading_session: 2 },
+				budget: {
+					candidate_limit: 128,
+					fold_run_limit: 1000,
+					trading_session_limit: 1_000_000,
+					disk_byte_limit: 100_000_000,
+				},
+				seed: 42,
+				worker_count: 2,
+				failure_policy: "continue_candidate_failures",
+				created_at: "2026-08-01T01:02:03Z",
+			};
+			await writeFile(path, JSON.stringify(document), "utf8");
+
+			expect(await loadLivePlanningDocument(path)).toEqual(document);
+			await writeFile(
+				path,
+				JSON.stringify({ ...document, strategy: { ...document.strategy, strategy_id: "wrong" } }),
+				"utf8",
+			);
+			await expect(loadLivePlanningDocument(path)).rejects.toThrow("stock strategy");
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("requires the explicit live runtime opt-in and a non-mock frontend", async () => {
+		const { validateLiveRuntime } = await loadAcceptance();
+
+		expect(() => validateLiveRuntime({})).toThrow("VITE_USE_MOCK=false");
+		expect(() => validateLiveRuntime({ VITE_USE_MOCK: "true" })).toThrow("VITE_USE_MOCK=false");
+		expect(() => validateLiveRuntime({ VITE_USE_MOCK: "false" })).not.toThrow();
+	});
+
+	it("binds every approved live browser checkpoint without request interception", async () => {
+		const { buildLiveAcceptancePlan } = await loadAcceptance();
+		const source = readFileSync(acceptanceScript, "utf8");
+
+		expect(buildLiveAcceptancePlan().map((step) => step.id)).toEqual([
+			"studio-preflight-launch",
+			"experiment-polling-control",
+			"candidate-comparison-evidence",
+			"one-shot-holdout",
+			"duplicate-holdout-blocked",
+			"review-approve-publish",
+			"r1-active-version",
+			"historical-reactivate",
+			"refresh-recovery",
+		]);
+		expect(source).not.toContain("page.route(");
+		expect(source).not.toContain("route.fulfill(");
 	});
 
 	it("binds Studio, Experiment, Review, refresh, hard-gate, and live-boundary tests", async () => {
