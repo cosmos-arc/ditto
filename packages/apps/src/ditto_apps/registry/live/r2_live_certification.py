@@ -212,8 +212,7 @@ def select_current_snapshot_ids(
             and snapshot.schema_version == entry.schema.schema_version
             and snapshot.row_count == entry.schema.row_count
             and snapshot.created_at == created_at
-            and snapshot.payload_retained
-            and snapshot.payload_uri is not None
+            and _snapshot_payload_is_verifiable(snapshot)
         )
         if len(matches) != 1:
             raise ValueError(
@@ -222,6 +221,21 @@ def select_current_snapshot_ids(
             )
         selected.append(matches[0].snapshot_id)
     return tuple(sorted(selected))
+
+
+def _snapshot_payload_is_verifiable(snapshot: ProviderSnapshot) -> bool:
+    if snapshot.payload_retained:
+        return snapshot.payload_uri is not None
+    return (
+        snapshot.row_count == 0
+        and snapshot.payload_uri is None
+        and snapshot.checksum.startswith("empty:sha256:")
+        and (
+            "snapshot_layer",
+            "verified_empty_provider_observation",
+        )
+        in snapshot.response_metadata
+    )
 
 
 def build_expected_dates(

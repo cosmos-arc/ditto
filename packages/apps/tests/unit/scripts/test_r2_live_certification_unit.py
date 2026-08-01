@@ -57,6 +57,7 @@ def _snapshot(
     row_count: int,
     created_at: datetime,
     checksum: str,
+    payload_retained: bool = True,
 ) -> ProviderSnapshot:
     return ProviderSnapshot.create(
         ProviderSnapshotDraft(
@@ -68,11 +69,20 @@ def _snapshot(
             checksum=checksum,
             canonical_asset=_ASSET,
             request_parameters_hash=f"sha256:{checksum}",
-            response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
+            response_metadata=(
+                (
+                    "snapshot_layer",
+                    (
+                        "normalized_provider_payload"
+                        if payload_retained
+                        else "verified_empty_provider_observation"
+                    ),
+                ),
+            ),
             license_record_id="license:tushare:dividend:sha256:reviewed",
             row_count=row_count,
-            payload_uri="fundamental/dividend",
-            payload_retained=True,
+            payload_uri="fundamental/dividend" if payload_retained else None,
+            payload_retained=payload_retained,
             created_at=created_at,
         )
     )
@@ -146,6 +156,31 @@ def test_select_current_snapshot_ids_rejects_ambiguous_or_missing_binding() -> N
             catalog_entries=(entry,),
             snapshots=(),
         )
+
+
+@pytest.mark.unit
+def test_select_current_snapshot_ids_accepts_verified_empty_observation() -> None:
+    empty = _snapshot(
+        schema_version="fundamental.dividend.v2",
+        row_count=0,
+        created_at=_NOW,
+        checksum="empty:sha256:reviewed",
+        payload_retained=False,
+    )
+
+    selected = select_current_snapshot_ids(
+        dataset_id="dividend",
+        catalog_entries=(
+            _entry(
+                schema_version="fundamental.dividend.v2",
+                row_count=0,
+                created_at=_NOW,
+            ),
+        ),
+        snapshots=(empty,),
+    )
+
+    assert selected == (empty.snapshot_id,)
 
 
 @pytest.mark.unit
