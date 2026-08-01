@@ -2,6 +2,7 @@ import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/rea
 import { render, screen } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
+import { mockExperimentDetail } from "@/mocks/fixtures/experiment-workbench";
 import { mockReviewPacket } from "@/mocks/fixtures/review-live";
 import { server } from "@/mocks/server";
 import { QueryProvider } from "@/providers";
@@ -21,6 +22,11 @@ function renderRoute(path: string): void {
 describe("research nested routes", () => {
 	beforeEach(() => {
 		server.use(
+			http.get("/api/v1/research/experiments/exp-r3", () =>
+				HttpResponse.json({
+					data: { ...mockExperimentDetail, experiment_id: "exp-r3" },
+				}),
+			),
 			http.get("/api/v1/research/experiments/exp-r3/review-packet", () =>
 				HttpResponse.json({
 					data: { ...mockReviewPacket, experiment_id: "exp-r3" },
@@ -40,7 +46,8 @@ describe("research nested routes", () => {
 	it("renders the experiment detail instead of the experiment list", async () => {
 		renderRoute("/research/experiments/exp-r3");
 
-		expect(await screen.findByText("实验详情 · T19 接线中")).toBeInTheDocument();
+		expect(await screen.findByRole("heading", { name: "Experiment exp-r3" })).toBeInTheDocument();
+		expect(screen.getByText(/completed · finalized · revision 9/)).toBeInTheDocument();
 		expect(screen.queryByText("Experiments")).not.toBeInTheDocument();
 	});
 

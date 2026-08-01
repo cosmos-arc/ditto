@@ -10,6 +10,17 @@ import type { ExperimentListItem } from "@/types";
 import type { components, operations } from "@/types/generated/api";
 
 export type ExperimentSummaryResponse = components["schemas"]["ExperimentSummaryResponse"];
+export type ExperimentDetailResponse = components["schemas"]["ExperimentDetailResponse"];
+export type ExperimentCandidateResponse = components["schemas"]["ExperimentCandidateResponse"];
+export type ExperimentGateResponse = components["schemas"]["ExperimentGateResponse"];
+export type ExperimentComparisonResponse = components["schemas"]["ExperimentComparisonResponse"];
+export type ExperimentArtifactResponse = components["schemas"]["ExperimentArtifactResponse"];
+export type ExperimentSelectionEvidenceResponse = components["schemas"]["ExperimentSelectionEvidenceResponse"];
+export type ExperimentControlReceiptResponse = components["schemas"]["ExperimentControlReceiptResponse"];
+export type CandidateSelectionRequest = components["schemas"]["CandidateSelectionRequest"];
+export type CandidateSelectionReceiptResponse = components["schemas"]["CandidateSelectionReceiptResponse"];
+export type HoldoutEvaluationRequest = components["schemas"]["HoldoutEvaluationRequest"];
+export type HoldoutEvaluationReceiptResponse = components["schemas"]["HoldoutEvaluationReceiptResponse"];
 type ExperimentPlanningOperation = operations["research_preflight_experiment"];
 type ExperimentLaunchOperation = operations["research_launch_experiment"];
 export type ExperimentPlanningRequest = ExperimentPlanningOperation["requestBody"]["content"]["application/json"];
@@ -78,6 +89,8 @@ export type ExperimentLaunchReceipt = {
 	readonly candidateCount: number;
 	readonly foldCount: number;
 };
+
+export type ExperimentControlAction = "pause" | "cancel" | "resume";
 
 function parseRecord(value: string, label: string): Record<string, unknown> {
 	const parsed = JSON.parse(value) as unknown;
@@ -278,4 +291,85 @@ export function mapExperimentListItem(dto: ExperimentSummaryResponse): Experimen
 		createdAt: dto.created_at,
 		updatedAt: dto.updated_at,
 	};
+}
+
+export function fetchExperiment(experimentId: string): Promise<ExperimentDetailResponse> {
+	return apiClient.get<ExperimentDetailResponse>(`/v1/research/experiments/${encodeURIComponent(experimentId)}`);
+}
+
+export function fetchExperimentCandidates(experimentId: string): Promise<ExperimentCandidateResponse[]> {
+	return apiClient.get<ExperimentCandidateResponse[]>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/candidates`,
+	);
+}
+
+export function fetchExperimentGates(experimentId: string): Promise<ExperimentGateResponse[]> {
+	return apiClient.get<ExperimentGateResponse[]>(`/v1/research/experiments/${encodeURIComponent(experimentId)}/gates`);
+}
+
+export function fetchExperimentComparison(experimentId: string): Promise<ExperimentComparisonResponse> {
+	return apiClient.get<ExperimentComparisonResponse>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/comparison`,
+	);
+}
+
+export function fetchExperimentArtifacts(experimentId: string): Promise<ExperimentArtifactResponse[]> {
+	return apiClient.get<ExperimentArtifactResponse[]>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/artifacts`,
+	);
+}
+
+export function fetchExperimentSelectionEvidence(experimentId: string): Promise<ExperimentSelectionEvidenceResponse> {
+	return apiClient.get<ExperimentSelectionEvidenceResponse>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/selection-evidence`,
+	);
+}
+
+export function controlExperiment(
+	experimentId: string,
+	action: ExperimentControlAction,
+	expectedRevision: number,
+	idempotencyKey: string,
+): Promise<ExperimentControlReceiptResponse> {
+	return apiClient.post<ExperimentControlReceiptResponse>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/${action}`,
+		{ expected_revision: expectedRevision },
+		{ headers: { "Idempotency-Key": idempotencyKey } },
+	);
+}
+
+export function retryExperimentFold(
+	experimentId: string,
+	request: components["schemas"]["ExperimentRetryFoldRequest"],
+	idempotencyKey: string,
+): Promise<ExperimentControlReceiptResponse> {
+	return apiClient.post<ExperimentControlReceiptResponse>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/retry-fold`,
+		request,
+		{ headers: { "Idempotency-Key": idempotencyKey } },
+	);
+}
+
+export function selectExperimentCandidate(
+	experimentId: string,
+	request: CandidateSelectionRequest,
+	idempotencyKey: string,
+): Promise<CandidateSelectionReceiptResponse> {
+	return apiClient.post<CandidateSelectionReceiptResponse>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/candidate-selection`,
+		request,
+		{ headers: { "Idempotency-Key": idempotencyKey } },
+	);
+}
+
+export function evaluateExperimentHoldout(
+	experimentId: string,
+	request: HoldoutEvaluationRequest,
+	idempotencyKey: string,
+): Promise<HoldoutEvaluationReceiptResponse> {
+	return apiClient.post<HoldoutEvaluationReceiptResponse>(
+		`/v1/research/experiments/${encodeURIComponent(experimentId)}/holdout-evaluations`,
+		request,
+		{ headers: { "Idempotency-Key": idempotencyKey } },
+	);
 }

@@ -7452,6 +7452,10 @@ export interface components {
             experiment_id: string;
             /** Payload */
             payload: unknown;
+            /** Payload Hash */
+            payload_hash: string;
+            /** Revision */
+            revision: number;
         };
         /**
          * ExperimentControlReceiptResponse

@@ -29,9 +29,21 @@ export function useResearchRuns() {
 	});
 }
 
+export { useCandidateEvidence } from "./use-candidate-evidence";
+export { useCandidateSelection } from "./use-candidate-selection";
+export {
+	useExperiment,
+	useExperimentArtifacts,
+	useExperimentCandidates,
+	useExperimentComparison,
+	useExperimentGates,
+	useExperimentSelectionEvidence,
+} from "./use-experiment";
 export { useExperimentLaunch } from "./use-experiment-launch";
+export { useExperimentControl, useExperimentRetryFold } from "./use-experiment-mutations";
 export { useExperimentPreflight } from "./use-experiment-preflight";
 export { useExperiments } from "./use-experiments";
+export { useHoldoutEvaluation } from "./use-holdout-evaluation";
 export { useReviewPacket } from "./use-review-packet";
 export { useReviews } from "./use-reviews";
 

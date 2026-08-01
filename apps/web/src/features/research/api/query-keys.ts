@@ -14,4 +14,12 @@ export const experimentKeys = {
 	all: ["research", "experiments"] as const,
 	list: () => [...experimentKeys.all, "list"] as const,
 	detail: (experimentId: string) => [...experimentKeys.all, "detail", experimentId] as const,
+	candidates: (experimentId: string) => [...experimentKeys.all, experimentId, "candidates"] as const,
+	gates: (experimentId: string) => [...experimentKeys.all, experimentId, "gates"] as const,
+	comparison: (experimentId: string) => [...experimentKeys.all, experimentId, "comparison"] as const,
+	artifacts: (experimentId: string) => [...experimentKeys.all, experimentId, "artifacts"] as const,
+	selectionEvidence: (experimentId: string) => [...experimentKeys.all, experimentId, "selection-evidence"] as const,
+	candidateEvidenceRoot: (experimentId: string) => [...experimentKeys.all, experimentId, "candidate-evidence"] as const,
+	candidateEvidence: (experimentId: string, candidateId: string, resourceKind: string) =>
+		[...experimentKeys.candidateEvidenceRoot(experimentId), candidateId, resourceKind] as const,
 } as const;
