@@ -58,22 +58,52 @@ __all__ = [
 
 type ConsumerProbe = dict[str, int | str]
 
+
+@dataclass(frozen=True, slots=True)
+class _SQLiteConsumerContract:
+    table: str
+    object_label: str
+    where_clause: str = ""
+    parameters: tuple[str, ...] = ()
+
+
 _DEFAULT_TARGET_FROM = date(2015, 1, 1)
 _EXPECTED_PRODUCT_COUNT = 19
 _SHA256_HEX_LENGTH = 64
 _SQLITE_CONSUMERS = {
-    "calendar": "trading_calendar",
-    "stock_basic": "instrument_stock",
-    "etf_basic": "instrument_etf",
-    "index_basic": "instrument_index",
-    "index_weight": "index_weight",
-    "corporate_actions": "corporate_actions",
-    "balance_sheet": "balance_sheet",
-    "income_statement": "income_statement",
-    "cash_flow": "cash_flow",
-    "dividend": "dividend",
-    "valuation_metrics": "valuation_metrics",
-    "macro_indicators": "macro_indicator_data",
+    "calendar": _SQLiteConsumerContract("trading_calendar", "trading_calendar"),
+    "stock_basic": _SQLiteConsumerContract(
+        "instrument",
+        "instrument[asset_class=stock]",
+        " WHERE asset_class = ?",
+        ("stock",),
+    ),
+    "etf_basic": _SQLiteConsumerContract(
+        "instrument",
+        "instrument[asset_class=etf]",
+        " WHERE asset_class = ?",
+        ("etf",),
+    ),
+    "index_basic": _SQLiteConsumerContract(
+        "instrument",
+        "instrument[asset_class=index]",
+        " WHERE asset_class = ?",
+        ("index",),
+    ),
+    "index_weight": _SQLiteConsumerContract("index_weight", "index_weight"),
+    "corporate_actions": _SQLiteConsumerContract(
+        "corporate_actions", "corporate_actions"
+    ),
+    "balance_sheet": _SQLiteConsumerContract("balance_sheet", "balance_sheet"),
+    "income_statement": _SQLiteConsumerContract("income_statement", "income_statement"),
+    "cash_flow": _SQLiteConsumerContract("cash_flow", "cash_flow"),
+    "dividend": _SQLiteConsumerContract("dividend", "dividend"),
+    "valuation_metrics": _SQLiteConsumerContract(
+        "valuation_metrics", "valuation_metrics"
+    ),
+    "macro_indicators": _SQLiteConsumerContract(
+        "macro_indicator_data", "macro_indicator_data"
+    ),
 }
 _PARQUET_CONSUMERS = {
     "stock_daily": "market/stock/bars",
@@ -227,20 +257,22 @@ def build_expected_dates(
 def probe_consumer_payload(data_root: Path, dataset_id: str) -> ConsumerProbe:
     """Read one canonical storage object through its production physical contract."""
     root = data_root.expanduser().resolve(strict=False)
-    sqlite_object = _SQLITE_CONSUMERS.get(dataset_id)
-    if sqlite_object is not None:
+    sqlite_contract = _SQLITE_CONSUMERS.get(dataset_id)
+    if sqlite_contract is not None:
         sqlite_path = root / "metadata" / "metadata.sqlite"
         if not sqlite_path.is_file():
             raise ValueError(f"consumer SQLite database is missing: {sqlite_path}")
         with sqlite3.connect(sqlite_path) as connection:
             row_count = int(
                 connection.execute(
-                    f'SELECT COUNT(*) FROM "{sqlite_object}"'  # noqa: S608
+                    f'SELECT COUNT(*) FROM "{sqlite_contract.table}"'  # noqa: S608
+                    + sqlite_contract.where_clause,
+                    sqlite_contract.parameters,
                 ).fetchone()[0]
             )
         probe: ConsumerProbe = {
             "kind": "sqlite",
-            "object": sqlite_object,
+            "object": sqlite_contract.object_label,
             "row_count": row_count,
         }
     else:

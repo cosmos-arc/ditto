@@ -205,6 +205,34 @@ def test_probe_consumer_payload_reads_sqlite_and_parquet(tmp_path) -> None:
 
 
 @pytest.mark.unit
+def test_probe_consumer_payload_reads_basic_assets_from_base_instrument(
+    tmp_path,
+) -> None:
+    sqlite_path = tmp_path / "metadata" / "metadata.sqlite"
+    sqlite_path.parent.mkdir()
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute(
+            "CREATE TABLE instrument (instrument_id INTEGER, asset_class TEXT)"
+        )
+        connection.executemany(
+            "INSERT INTO instrument VALUES (?, ?)",
+            [(1, "stock"), (2, "etf"), (3, "etf"), (4, "index")],
+        )
+        connection.execute(
+            "CREATE TABLE instrument_etf (instrument_id INTEGER PRIMARY KEY)"
+        )
+        connection.commit()
+
+    result = probe_consumer_payload(tmp_path, "etf_basic")
+
+    assert result == {
+        "kind": "sqlite",
+        "object": "instrument[asset_class=etf]",
+        "row_count": 2,
+    }
+
+
+@pytest.mark.unit
 def test_probe_consumer_payload_fails_closed_on_empty_payload(tmp_path) -> None:
     sqlite_path = tmp_path / "metadata" / "metadata.sqlite"
     sqlite_path.parent.mkdir()
