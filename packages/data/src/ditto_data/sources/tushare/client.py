@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import httpx
 import polars as pl
 from ditto_platform.foundation import logger
@@ -43,6 +45,26 @@ def _get_tushare_token(token: str | None) -> str:
         message=(
             "Tushare token not configured. Provide token via settings or parameter."
         )
+    )
+
+
+def _rate_limit_config(settings: DataSourceSettings) -> TushareRateLimitConfig:
+    """Resolve the declared provider tier without changing the free default."""
+    profile = settings.rate_limit_profile.strip().lower()
+    if profile == "free":
+        config = TushareRateLimitConfig.free()
+    elif profile in {"paid", "premium"}:
+        config = TushareRateLimitConfig.paid()
+    elif profile == "conservative":
+        config = TushareRateLimitConfig.conservative()
+    else:
+        raise SourceConfigurationError(
+            message=f"Unsupported Tushare rate limit profile: {profile!r}"
+        )
+    return replace(
+        config,
+        global_rate=(settings.rate_limit_global_rate or config.global_rate),
+        daily_rate=(settings.rate_limit_daily_rate or config.daily_rate),
     )
 
 
@@ -91,7 +113,7 @@ class TushareClient:
         self._token = _get_tushare_token(token_to_use if token_to_use else None)
 
         # 配置限流器(默认免费账户)
-        config = rate_config or TushareRateLimitConfig.free()
+        config = rate_config or _rate_limit_config(settings)
         self._limiter = TushareRateLimiter(config)
 
         # Initialize HTTP client with settings
