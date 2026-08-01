@@ -172,6 +172,7 @@ describe("strategy mappers", () => {
 			state: "approved",
 			review_outcome: "approved",
 			created_at: "2026-04-08T15:00:00Z",
+			experiment_id: "exp-v3",
 		};
 
 		it("maps snake_case version DTO to camelCase", () => {
@@ -180,6 +181,7 @@ describe("strategy mappers", () => {
 				version: 3,
 				parentVersion: 2,
 				specHash: "abc123",
+				experimentId: "exp-v3",
 			});
 		});
 

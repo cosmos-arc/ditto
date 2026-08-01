@@ -16,6 +16,7 @@ export function StrategyVersionsView({ id }: StrategyVersionsViewProps) {
 	const detail = useStrategyVersion(id, selectedVersion);
 	const active = useStrategyActive(id);
 	const pointerRevision = active.data?.pointer_revision ?? null;
+	const currentActiveVersion = active.data?.active_version ?? null;
 	const versions = data ?? [];
 
 	if (isLoading) {
@@ -38,7 +39,12 @@ export function StrategyVersionsView({ id }: StrategyVersionsViewProps) {
 											<span className="font-medium">v{ver.version}</span>
 											<span className="text-(--color-foreground-tertiary)">{ver.reviewOutcome}</span>
 										</div>
-										<GovernanceActions strategyId={id} version={ver} expectedPointerRevision={pointerRevision} />
+										<GovernanceActions
+											strategyId={id}
+											version={ver}
+											expectedPointerRevision={pointerRevision}
+											currentActiveVersion={currentActiveVersion}
+										/>
 									</div>
 									<div className="flex items-center gap-3">
 										<span className="text-xs text-(--color-foreground-tertiary)">

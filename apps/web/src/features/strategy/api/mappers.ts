@@ -204,6 +204,7 @@ export function mapStrategyVersion(dto: StrategyVersionResponse): StrategyVersio
 		lifecycleState: toLifecycleState(dto.state),
 		reviewOutcome: toReviewOutcome(dto.review_outcome),
 		createdAt: dto.created_at,
+		experimentId: dto.experiment_id ?? null,
 	};
 }
 
@@ -217,6 +218,7 @@ export function mapStrategyVersionDetail(dto: StrategyVersionDetailResponse): St
 		lifecycleState: toLifecycleState(dto.state),
 		reviewOutcome: toReviewOutcome(dto.review_outcome),
 		createdAt: dto.created_at,
+		experimentId: null,
 		canonicalSpec: { ...dto.canonical_spec },
 	};
 }

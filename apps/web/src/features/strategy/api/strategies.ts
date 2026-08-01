@@ -1,10 +1,12 @@
 import { apiClient, withQueryParams } from "@/lib/api-client";
 import type { components, operations } from "@/types/generated/api";
+import type { StrategyGovernanceEvent } from "@/types/strategy";
 
 export type StrategyResponse = components["schemas"]["StrategyResponse"];
 export type StrategyVersionResponse = components["schemas"]["StrategyVersionResponse"];
 export type StrategyVersionDetailResponse = components["schemas"]["StrategyVersionDetailResponse"];
 export type StrategyVersionDiffResponse = components["schemas"]["StrategyVersionDiffResponse"];
+export type StrategyGovernanceEventResponse = components["schemas"]["StrategyGovernanceEventResponse"];
 
 export type FetchStrategiesParams = {
 	readonly limit?: number;
@@ -52,4 +54,30 @@ export type StrategyActiveResponse = components["schemas"]["StrategyActiveRespon
 /** 读取 active pointer（`GET /v1/strategies/{id}/active`）；无 active 时后端返 404。 */
 export function fetchActive(strategyId: string): Promise<StrategyActiveResponse> {
 	return apiClient.get<StrategyActiveResponse>(`/v1/strategies/${encodeURIComponent(strategyId)}/active`);
+}
+
+export function fetchStrategyEvents(
+	strategyId: string,
+	afterEventId: string | null,
+	limit: number,
+): Promise<StrategyGovernanceEventResponse[]> {
+	return apiClient.get<StrategyGovernanceEventResponse[]>(
+		withQueryParams(`/v1/strategies/${encodeURIComponent(strategyId)}/events`, {
+			after_event_id: afterEventId,
+			limit,
+		}),
+	);
+}
+
+export function mapStrategyGovernanceEvent(dto: StrategyGovernanceEventResponse): StrategyGovernanceEvent {
+	return {
+		eventId: dto.event_id,
+		strategyId: dto.strategy_id,
+		targetVersion: dto.target_version,
+		eventType: dto.event_type,
+		kind: dto.decision_or_activation_kind,
+		actor: dto.actor,
+		reason: dto.reason,
+		occurredAt: dto.occurred_at,
+	};
 }

@@ -132,6 +132,18 @@ export type StrategyVersion = {
 	readonly lifecycleState: StrategyLifecycleState;
 	readonly reviewOutcome: StrategyReviewOutcome;
 	readonly createdAt: string;
+	readonly experimentId: string | null;
+};
+
+export type StrategyGovernanceEvent = {
+	readonly eventId: string;
+	readonly strategyId: string;
+	readonly targetVersion: number;
+	readonly eventType: string;
+	readonly kind: string;
+	readonly actor: string;
+	readonly reason: string;
+	readonly occurredAt: string;
 };
 
 /** 单个 immutable 历史版本的 canonical server truth。 */

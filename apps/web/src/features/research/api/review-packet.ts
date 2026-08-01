@@ -7,7 +7,7 @@
  */
 import { apiClient } from "@/lib/api-client";
 import type { components } from "@/types/generated/api";
-import type { ReviewGate, ReviewPacket, SelectionTraceRef } from "@/types/review";
+import type { ReviewGate, ReviewPacket, ReviewSelectionExposure, SelectionTraceRef } from "@/types/review";
 
 export type ExperimentReviewPacketResponse = components["schemas"]["ExperimentReviewPacketResponse"];
 export type ReviewGateOutcomeResponse = components["schemas"]["ReviewGateOutcomeResponse"];
@@ -32,6 +32,19 @@ function mapSelectionTraceRef(dto: ReviewSelectionTraceRefResponse): SelectionTr
 	};
 }
 
+function mapSelectionExposure(
+	dto: components["schemas"]["ReviewSelectionExposureResponse"] | null,
+): ReviewSelectionExposure | null {
+	if (!dto) return null;
+	return {
+		lane: dto.lane,
+		applicability: dto.applicability,
+		industryWeights: dto.industry_weights.map((entry) => ({ key: entry.key, weight: entry.weight })),
+		sizeBucketWeights: dto.size_bucket_weights.map((entry) => ({ key: entry.key, weight: entry.weight })),
+		artifactRefs: dto.artifact_refs.map(mapSelectionTraceRef),
+	};
+}
+
 export function mapReviewPacket(dto: ExperimentReviewPacketResponse): ReviewPacket {
 	return {
 		experimentId: dto.experiment_id,
@@ -51,6 +64,7 @@ export function mapReviewPacket(dto: ExperimentReviewPacketResponse): ReviewPack
 		comparisonPayloadHash: dto.comparison_payload_hash,
 		r1ImpactPayloadHash: dto.r1_impact_payload_hash,
 		selectionEvidenceArtifactId: dto.selection_evidence_artifact_id,
+		selectionExposure: mapSelectionExposure(dto.selection_exposure),
 		holdoutClaimId: dto.holdout_claim_id,
 		candidateRationale: dto.candidate_rationale,
 		selectionTraceArtifactRefs: dto.selection_trace_artifact_refs.map(mapSelectionTraceRef),

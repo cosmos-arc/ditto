@@ -39,6 +39,19 @@ export type SelectionTraceRef = {
 	readonly contentHash: string;
 };
 
+export type ReviewExposureWeight = {
+	readonly key: string;
+	readonly weight: number;
+};
+
+export type ReviewSelectionExposure = {
+	readonly lane: string;
+	readonly applicability: string;
+	readonly industryWeights: readonly ReviewExposureWeight[];
+	readonly sizeBucketWeights: readonly ReviewExposureWeight[];
+	readonly artifactRefs: readonly SelectionTraceRef[];
+};
+
 /** 完整 review packet read model（11 hard-gate + 证据 hash + lineage + rationale）。 */
 export type ReviewPacket = {
 	readonly experimentId: string;
@@ -59,6 +72,7 @@ export type ReviewPacket = {
 	readonly comparisonPayloadHash: string | null;
 	readonly r1ImpactPayloadHash: string | null;
 	readonly selectionEvidenceArtifactId: string | null;
+	readonly selectionExposure: ReviewSelectionExposure | null;
 	readonly holdoutClaimId: string | null;
 	readonly candidateRationale: string;
 	readonly selectionTraceArtifactRefs: readonly SelectionTraceRef[];

@@ -1,14 +1,8 @@
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ApiError } from "@/lib/api-client";
 import type { PublishVariables, ReactivateVariables } from "../hooks/use-strategy-governance";
 import { INPUT_CLASS, TextField } from "./spec-fields";
 
@@ -50,12 +44,12 @@ export function DecisionDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
-					{description ? <DialogDescription>{description}</DialogDescription> : null}
-				</DialogHeader>
+		<Sheet open={open} onOpenChange={onOpenChange}>
+			<SheetContent side="right" className="w-full overflow-y-auto p-6 sm:max-w-lg">
+				<SheetHeader>
+					<SheetTitle>{title}</SheetTitle>
+					{description ? <SheetDescription>{description}</SheetDescription> : null}
+				</SheetHeader>
 				<div className="flex flex-col gap-3">
 					<TextField label="执行者" value={actor} onChange={setActor} />
 					<label className="flex flex-col gap-1 text-(length:--text-sm)">
@@ -69,16 +63,16 @@ export function DecisionDialog({
 						/>
 					</label>
 				</div>
-				<DialogFooter>
+				<SheetFooter className="mt-auto">
 					<Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
 						取消
 					</Button>
 					<Button onClick={handleConfirm} disabled={!canConfirm}>
 						{isPending ? "处理中…" : confirmLabel}
 					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
 	);
 }
 
@@ -86,10 +80,12 @@ interface ReactivateDialogProps {
 	readonly open: boolean;
 	readonly onOpenChange: (open: boolean) => void;
 	readonly strategyId: string;
+	readonly currentActiveVersion: number | null;
 	readonly targetVersion: number;
 	readonly expectedPointerRevision: number;
 	readonly isPending: boolean;
 	readonly onConfirm: (variables: ReactivateVariables) => void;
+	readonly error?: Error | null;
 }
 
 /** 构造后端要求的、绑定策略版本与 active pointer revision 的精确确认串。 */
@@ -102,10 +98,12 @@ export function ReactivateDialog({
 	open,
 	onOpenChange,
 	strategyId,
+	currentActiveVersion,
 	targetVersion,
 	expectedPointerRevision,
 	isPending,
 	onConfirm,
+	error,
 }: ReactivateDialogProps): ReactElement {
 	const [actor, setActor] = useState("");
 	const [reason, setReason] = useState("");
@@ -145,14 +143,15 @@ export function ReactivateDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>重新激活 v{targetVersion}</DialogTitle>
-					<DialogDescription>
-						乐观指针 CAS：要求 expected_pointer_revision={expectedPointerRevision}（最后读到的 active 指针版本）。
-					</DialogDescription>
-				</DialogHeader>
+		<Sheet open={open} onOpenChange={handleOpenChange}>
+			<SheetContent side="right" className="w-full overflow-y-auto p-6 sm:max-w-lg">
+				<SheetHeader>
+					<SheetTitle>重新激活 v{targetVersion}</SheetTitle>
+					<SheetDescription>
+						current v{currentActiveVersion ?? "—"} → target v{targetVersion} · pointer revision{" "}
+						{expectedPointerRevision}
+					</SheetDescription>
+				</SheetHeader>
 				<div className="flex flex-col gap-3">
 					<TextField label="执行者" value={actor} onChange={setActor} />
 					<TextField label="原因" value={reason} onChange={setReason} />
@@ -167,16 +166,23 @@ export function ReactivateDialog({
 						/>
 					</label>
 				</div>
-				<DialogFooter>
+				{error && (
+					<p role="alert" className="text-xs text-(--color-led-danger)">
+						{error instanceof ApiError
+							? `${error.status} ${error.errorCode ?? "REACTIVATE_ERROR"}: ${error.message}`
+							: error.message}
+					</p>
+				)}
+				<SheetFooter className="mt-auto">
 					<Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
 						取消
 					</Button>
 					<Button onClick={handleConfirm} disabled={!canConfirm}>
 						{isPending ? "处理中…" : "确认重新激活"}
 					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
 	);
 }
 
@@ -224,14 +230,14 @@ export function PublishDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>发布 v{targetVersion}</DialogTitle>
-					<DialogDescription>
+		<Sheet open={open} onOpenChange={onOpenChange}>
+			<SheetContent side="right" className="w-full overflow-y-auto p-6 sm:max-w-lg">
+				<SheetHeader>
+					<SheetTitle>发布 v{targetVersion}</SheetTitle>
+					<SheetDescription>
 						evidence-gated：使用 review packet 的 bundle_hash 作为证据身份，后端重新加载 packet 并执行 hard gate。
-					</DialogDescription>
-				</DialogHeader>
+					</SheetDescription>
+				</SheetHeader>
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center justify-between gap-2 text-xs">
 						<span className="text-(--color-foreground-tertiary)">bundle_hash（证据）</span>
@@ -260,15 +266,15 @@ export function PublishDialog({
 						/>
 					</label>
 				</div>
-				<DialogFooter>
+				<SheetFooter className="mt-auto">
 					<Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
 						取消
 					</Button>
 					<Button onClick={handleConfirm} disabled={!canConfirm}>
 						{isPending ? "处理中…" : "确认发布"}
 					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
 	);
 }

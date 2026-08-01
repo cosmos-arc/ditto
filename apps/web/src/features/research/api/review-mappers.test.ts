@@ -70,7 +70,13 @@ describe("mapReviewPacket", () => {
 			comparison_payload_hash: "4".repeat(64),
 			r1_impact_payload_hash: null,
 			selection_evidence_artifact_id: "artifact-1",
-			selection_exposure: null,
+			selection_exposure: {
+				lane: "stock",
+				applicability: "applicable",
+				industry_weights: [{ key: "Technology", weight: 0.4 }],
+				size_bucket_weights: [{ key: "large", weight: 0.6 }],
+				artifact_refs: [{ artifact_kind: "stock_exposure", artifact_id: "exposure-1", content_hash: "7".repeat(64) }],
+			},
 			holdout_claim_id: "holdout-1",
 			candidate_rationale: "baseline net return stable",
 			selection_trace_artifact_refs: [
@@ -94,5 +100,12 @@ describe("mapReviewPacket", () => {
 		expect(view.selectionTraceArtifactRefs).toEqual([
 			{ artifactKind: "fold_selection_trace", artifactId: "trace-1", contentHash: "6".repeat(64) },
 		]);
+		expect(view.selectionExposure).toEqual({
+			lane: "stock",
+			applicability: "applicable",
+			industryWeights: [{ key: "Technology", weight: 0.4 }],
+			sizeBucketWeights: [{ key: "large", weight: 0.6 }],
+			artifactRefs: [{ artifactKind: "stock_exposure", artifactId: "exposure-1", contentHash: "7".repeat(64) }],
+		});
 	});
 });

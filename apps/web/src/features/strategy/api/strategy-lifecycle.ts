@@ -7,6 +7,7 @@ export type StrategySpecValidationResponse = components["schemas"]["StrategySpec
 export type CreateStrategyRequest = components["schemas"]["CreateStrategyRequest"];
 export type UpdateStrategyRequest = components["schemas"]["UpdateStrategyRequest"];
 export type GovernanceDecisionRequest = components["schemas"]["GovernanceDecisionRequest"];
+export type SubmitReviewRequest = components["schemas"]["SubmitReviewRequest"];
 export type ReactivateStrategyRequest = components["schemas"]["ReactivateStrategyRequest"];
 export type PublishStrategyVersionRequest = components["schemas"]["PublishStrategyVersionRequest"];
 export type StrategyVersionStateResponse = components["schemas"]["StrategyVersionStateResponse"];
@@ -54,9 +55,12 @@ export function updateStrategy(
 export function submitStrategyReview(
 	strategyId: string,
 	version: number,
-	body: GovernanceDecisionRequest,
+	body: SubmitReviewRequest,
+	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/submit-review`, body);
+	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/submit-review`, body, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }
 
 /** 批准审查（`POST .../approve`），review → approved。 */
@@ -64,8 +68,11 @@ export function approveStrategyReview(
 	strategyId: string,
 	version: number,
 	body: GovernanceDecisionRequest,
+	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/approve`, body);
+	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/approve`, body, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }
 
 /** 驳回审查（`POST .../reject`）；驳回后只能 clone 新 draft。 */
@@ -73,8 +80,11 @@ export function rejectStrategyReview(
 	strategyId: string,
 	version: number,
 	body: GovernanceDecisionRequest,
+	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/reject`, body);
+	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/reject`, body, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }
 
 /** 弃用版本（`POST .../deprecate`）；弃用后不可再激活。 */
@@ -82,8 +92,11 @@ export function deprecateStrategyVersion(
 	strategyId: string,
 	version: number,
 	body: GovernanceDecisionRequest,
+	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/deprecate`, body);
+	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/deprecate`, body, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }
 
 /**
@@ -95,8 +108,11 @@ export function reactivateStrategyVersion(
 	strategyId: string,
 	version: number,
 	body: ReactivateStrategyRequest,
+	idempotencyKey: string,
 ): Promise<StrategyActivePointerResponse> {
-	return apiClient.post<StrategyActivePointerResponse>(`${versionedPath(strategyId, version)}/reactivate`, body);
+	return apiClient.post<StrategyActivePointerResponse>(`${versionedPath(strategyId, version)}/reactivate`, body, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }
 
 /**
@@ -109,6 +125,9 @@ export function publishStrategyVersion(
 	strategyId: string,
 	version: number,
 	body: PublishStrategyVersionRequest,
+	idempotencyKey: string,
 ): Promise<StrategyActivePointerResponse> {
-	return apiClient.post<StrategyActivePointerResponse>(`${versionedPath(strategyId, version)}/publish`, body);
+	return apiClient.post<StrategyActivePointerResponse>(`${versionedPath(strategyId, version)}/publish`, body, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }

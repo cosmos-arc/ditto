@@ -34,6 +34,34 @@ export const strategyHandlers: RequestHandler[] = [
 		HttpResponse.json({ data: { ...mockStrategyVersionDetail, version: Number(params.version) } }),
 	),
 	http.get("/api/v1/strategies/:id/active", () => HttpResponse.json({ data: mockActivePointerDto })),
+	http.get("/api/v1/strategies/:id/events", ({ params, request }) => {
+		const afterEventId = new URL(request.url).searchParams.get("after_event_id");
+		if (afterEventId) return HttpResponse.json({ data: [] });
+		return HttpResponse.json({
+			data: [
+				{
+					event_id: "strategy-event-2",
+					strategy_id: String(params.id),
+					target_version: 3,
+					event_type: "strategy.activated",
+					decision_or_activation_kind: "publish",
+					actor: "publisher",
+					reason: "review packet accepted",
+					occurred_at: "2026-07-30T02:00:00Z",
+				},
+				{
+					event_id: "strategy-event-1",
+					strategy_id: String(params.id),
+					target_version: 3,
+					event_type: "strategy.review_decided",
+					decision_or_activation_kind: "approve",
+					actor: "reviewer",
+					reason: "hard gates clear",
+					occurred_at: "2026-07-30T01:00:00Z",
+				},
+			],
+		});
+	}),
 	http.get("/api/v1/strategies/:id/versions/:version/diff", () => HttpResponse.json({ data: mockSpecDiffDto })),
 	http.post("/api/v1/strategies/:id/versions/:version/validate", () =>
 		HttpResponse.json({ data: mockSpecValidationDto }),

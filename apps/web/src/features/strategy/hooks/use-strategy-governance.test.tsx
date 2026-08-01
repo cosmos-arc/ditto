@@ -15,13 +15,17 @@ function createWrapper(qc: QueryClient) {
 }
 
 describe("useStrategyGovernance", () => {
-	it("submitReview POSTs the decision and invalidates versions + active scopes", async () => {
+	it("submitReview sends packet identity plus idempotency key and invalidates exact governed evidence scopes", async () => {
+		let body: Record<string, unknown> = {};
+		let idempotencyKey = "";
 		server.use(
-			http.post("/api/v1/strategies/:id/versions/:v/submit-review", () =>
-				HttpResponse.json({
+			http.post("/api/v1/strategies/:id/versions/:v/submit-review", async ({ request }) => {
+				body = (await request.json()) as Record<string, unknown>;
+				idempotencyKey = request.headers.get("Idempotency-Key") ?? "";
+				return HttpResponse.json({
 					data: { strategy_id: "s", version: 1, state: "review", review_outcome: "pending" },
-				}),
-			),
+				});
+			}),
 		);
 		const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 		const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
@@ -30,16 +34,29 @@ describe("useStrategyGovernance", () => {
 		});
 
 		await act(async () => {
-			await result.current.submitReview.mutateAsync({ version: 1, actor: "analyst", reason: "提交审查" });
+			await result.current.submitReview.mutateAsync({
+				version: 1,
+				actor: "analyst",
+				reason: "提交审查",
+				bundleHash: "b".repeat(64),
+				experimentId: "exp-1",
+			});
 		});
 
 		await waitFor(() => expect(result.current.submitReview.isSuccess).toBe(true));
+		expect(body).toEqual({ actor: "analyst", reason: "提交审查", bundle_hash: "b".repeat(64) });
+		expect(idempotencyKey).toBeTruthy();
 		expect(invalidateSpy).toHaveBeenCalledWith(
-			expect.objectContaining({ queryKey: expect.arrayContaining(["strategy", "versions"]) }),
+			expect.objectContaining({ queryKey: strategyKeys.versions("seed_etf_industry_rotation") }),
 		);
 		expect(invalidateSpy).toHaveBeenCalledWith(
-			expect.objectContaining({ queryKey: expect.arrayContaining(["strategy", "active"]) }),
+			expect.objectContaining({ queryKey: strategyKeys.active("seed_etf_industry_rotation") }),
 		);
+		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["research", "reviews", "list"] });
+		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["research", "reviews", "packet", "exp-1"] });
+		expect(invalidateSpy).toHaveBeenCalledWith({
+			queryKey: ["research", "experiments", "exp-1", "candidate-evidence"],
+		});
 	});
 
 	it("invalidates and refetches only the active pointer after a typed HTTP 409", async () => {
@@ -67,6 +84,7 @@ describe("useStrategyGovernance", () => {
 					confirmation: "strategy:reactivate:s@3:pointer-revision:2:confirm",
 					impactSummary: "恢复稳定策略",
 					expectedPointerRevision: 2,
+					experimentId: "exp-3",
 				})
 				.catch(() => undefined);
 		});
@@ -79,5 +97,58 @@ describe("useStrategyGovernance", () => {
 		expect(refetchSpy).toHaveBeenCalledWith({ queryKey: strategyKeys.active("s") });
 		expect(invalidateSpy).toHaveBeenCalledTimes(1);
 		expect(refetchSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps approve and publish as separate evidence-bound commands", async () => {
+		const calls: Array<{ path: string; body: Record<string, unknown>; key: string }> = [];
+		server.use(
+			http.post(/\/api\/v1\/strategies\/s\/versions\/2\/(approve|publish)/, async ({ request }) => {
+				calls.push({
+					path: new URL(request.url).pathname,
+					body: (await request.json()) as Record<string, unknown>,
+					key: request.headers.get("Idempotency-Key") ?? "",
+				});
+				return HttpResponse.json({
+					data: {
+						strategy_id: "s",
+						version: 2,
+						state: "approved",
+						review_outcome: "approved",
+						active_version: 2,
+						pointer_revision: 3,
+					},
+				});
+			}),
+		);
+		const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+		const { result } = renderHook(() => useStrategyGovernance("s"), { wrapper: createWrapper(qc) });
+
+		await act(async () => {
+			await result.current.approve.mutateAsync({
+				version: 2,
+				actor: "reviewer",
+				reason: "approve evidence",
+				experimentId: "exp-2",
+			});
+			await result.current.publish.mutateAsync({
+				version: 2,
+				bundleHash: "c".repeat(64),
+				actor: "publisher",
+				reason: "promote approved version",
+				experimentId: "exp-2",
+			});
+		});
+
+		expect(calls).toHaveLength(2);
+		expect(calls[0]).toMatchObject({
+			path: "/api/v1/strategies/s/versions/2/approve",
+			body: { actor: "reviewer", reason: "approve evidence" },
+		});
+		expect(calls[1]).toMatchObject({
+			path: "/api/v1/strategies/s/versions/2/publish",
+			body: { actor: "publisher", reason: "promote approved version", bundle_hash: "c".repeat(64) },
+		});
+		expect(calls.every((call) => call.key.length > 0)).toBe(true);
+		expect(calls[0]?.key).not.toBe(calls[1]?.key);
 	});
 });

@@ -11,6 +11,7 @@ export const strategyKeys = {
 	versions: (strategyId: string) => [...strategyKeys.all, "versions", strategyId] as const,
 	version: (strategyId: string, version: number) => [...strategyKeys.all, "version", strategyId, version] as const,
 	active: (strategyId: string) => [...strategyKeys.all, "active", strategyId] as const,
+	events: (strategyId: string) => [...strategyKeys.all, "events", strategyId] as const,
 	diff: (strategyId: string, version: number) => [...strategyKeys.all, "diff", strategyId, version] as const,
 	nodeDescriptors: () => [...strategyKeys.all, "node-descriptors"] as const,
 } as const;

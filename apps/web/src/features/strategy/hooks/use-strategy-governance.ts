@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { ApiError } from "@/lib/api-client";
 import { strategyKeys } from "../api/query-keys";
 import {
@@ -10,15 +11,17 @@ import {
 	submitStrategyReview,
 } from "../api/strategy-lifecycle";
 
-/** 治理决策动作（submit/approve/reject/deprecate）的公共变量。 */
-export type DecisionVariables = {
+type EvidenceContext = { readonly experimentId?: string | null };
+
+export type DecisionVariables = EvidenceContext & {
 	readonly version: number;
 	readonly actor: string;
 	readonly reason: string;
 };
 
-/** reactivate 变量（含乐观指针 CAS + 确认句 + 影响摘要）。 */
-export type ReactivateVariables = {
+export type SubmitVariables = DecisionVariables & { readonly bundleHash: string };
+
+export type ReactivateVariables = EvidenceContext & {
 	readonly version: number;
 	readonly actor: string;
 	readonly reason: string;
@@ -27,29 +30,37 @@ export type ReactivateVariables = {
 	readonly expectedPointerRevision: number;
 };
 
-/** publish 变量（evidence-gated：需 review packet 的 bundle_hash）。 */
-export type PublishVariables = {
+export type PublishVariables = EvidenceContext & {
 	readonly version: number;
 	readonly bundleHash: string;
 	readonly actor: string;
 	readonly reason: string;
 };
 
-/** 治理 mutation 成功后失效的 scope（版本历史 + active pointer 都会变）。 */
-const GOVERNANCE_INVALIDATION_SCOPES = ["versions", "active"] as const;
-/** review queue 命名空间（治理决策改变队列成员；与 reviewKeys.all 同源）。 */
-const REVIEW_QUEUE_QUERY_KEY = ["research", "reviews"] as const;
+function createIdempotencyKey(): string {
+	return `strategy-governance-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+}
 
-/**
- * 版本治理 mutations（T20 动作面板数据层）。
- *
- * submit/approve/reject/deprecate 走 `GovernanceDecisionRequest`（actor+reason）；
- * reactivate 额外要求 confirmation + impact_summary + expected_pointer_revision（乐观 CAS）。
- * publish 是 evidence-gated（需 bundle_hash），UI 不直接调用，故不在此 hook 暴露。
- * 所有 mutation 成功后失效 versions + active scope。
- */
+function identity(action: string, variables: object): string {
+	return `${action}:${JSON.stringify(variables)}`;
+}
+
 export function useStrategyGovernance(strategyId: string) {
 	const queryClient = useQueryClient();
+	const attempts = useRef(new Map<string, string>());
+
+	function commandKey(action: string, variables: object): string {
+		const id = identity(action, variables);
+		const existing = attempts.current.get(id);
+		if (existing) return existing;
+		const key = createIdempotencyKey();
+		attempts.current.set(id, key);
+		return key;
+	}
+
+	function release(action: string, variables: object): void {
+		attempts.current.delete(identity(action, variables));
+	}
 
 	async function recoverActivePointerAfterConflict(error: Error): Promise<void> {
 		if (!(error instanceof ApiError) || error.status !== 409) return;
@@ -58,49 +69,111 @@ export function useStrategyGovernance(strategyId: string) {
 		await queryClient.refetchQueries({ queryKey });
 	}
 
-	function invalidateGovernedScopes() {
-		for (const scope of GOVERNANCE_INVALIDATION_SCOPES) {
-			void queryClient.invalidateQueries({ queryKey: [...strategyKeys.all, scope] });
-		}
-		void queryClient.invalidateQueries({ queryKey: REVIEW_QUEUE_QUERY_KEY });
+	function invalidateGovernedScopes(experimentId?: string | null): void {
+		void queryClient.invalidateQueries({ queryKey: strategyKeys.versions(strategyId) });
+		void queryClient.invalidateQueries({ queryKey: strategyKeys.active(strategyId) });
+		void queryClient.invalidateQueries({ queryKey: strategyKeys.events(strategyId) });
+		void queryClient.invalidateQueries({ queryKey: ["research", "reviews", "list"] });
+		if (!experimentId) return;
+		void queryClient.invalidateQueries({ queryKey: ["research", "reviews", "packet", experimentId] });
+		void queryClient.invalidateQueries({ queryKey: ["research", "experiments", "list"] });
+		void queryClient.invalidateQueries({ queryKey: ["research", "experiments", "detail", experimentId] });
+		void queryClient.invalidateQueries({ queryKey: ["research", "experiments", experimentId, "candidates"] });
+		void queryClient.invalidateQueries({ queryKey: ["research", "experiments", experimentId, "gates"] });
+		void queryClient.invalidateQueries({ queryKey: ["research", "experiments", experimentId, "comparison"] });
+		void queryClient.invalidateQueries({ queryKey: ["research", "experiments", experimentId, "artifacts"] });
+		void queryClient.invalidateQueries({
+			queryKey: ["research", "experiments", experimentId, "selection-evidence"],
+		});
+		void queryClient.invalidateQueries({
+			queryKey: ["research", "experiments", experimentId, "candidate-evidence"],
+		});
 	}
 
 	const submitReview = useMutation({
-		mutationFn: ({ version, actor, reason }: DecisionVariables) =>
-			submitStrategyReview(strategyId, version, { actor, reason }),
-		onSuccess: invalidateGovernedScopes,
+		mutationFn: (variables: SubmitVariables) =>
+			submitStrategyReview(
+				strategyId,
+				variables.version,
+				{ actor: variables.actor, reason: variables.reason, bundle_hash: variables.bundleHash },
+				commandKey("submit", variables),
+			),
+		onSuccess: (_data, variables) => {
+			release("submit", variables);
+			invalidateGovernedScopes(variables.experimentId);
+		},
 	});
 	const approve = useMutation({
-		mutationFn: ({ version, actor, reason }: DecisionVariables) =>
-			approveStrategyReview(strategyId, version, { actor, reason }),
-		onSuccess: invalidateGovernedScopes,
+		mutationFn: (variables: DecisionVariables) =>
+			approveStrategyReview(
+				strategyId,
+				variables.version,
+				{ actor: variables.actor, reason: variables.reason },
+				commandKey("approve", variables),
+			),
+		onSuccess: (_data, variables) => {
+			release("approve", variables);
+			invalidateGovernedScopes(variables.experimentId);
+		},
 	});
 	const reject = useMutation({
-		mutationFn: ({ version, actor, reason }: DecisionVariables) =>
-			rejectStrategyReview(strategyId, version, { actor, reason }),
-		onSuccess: invalidateGovernedScopes,
+		mutationFn: (variables: DecisionVariables) =>
+			rejectStrategyReview(
+				strategyId,
+				variables.version,
+				{ actor: variables.actor, reason: variables.reason },
+				commandKey("reject", variables),
+			),
+		onSuccess: (_data, variables) => {
+			release("reject", variables);
+			invalidateGovernedScopes(variables.experimentId);
+		},
 	});
 	const deprecate = useMutation({
-		mutationFn: ({ version, actor, reason }: DecisionVariables) =>
-			deprecateStrategyVersion(strategyId, version, { actor, reason }),
-		onSuccess: invalidateGovernedScopes,
+		mutationFn: (variables: DecisionVariables) =>
+			deprecateStrategyVersion(
+				strategyId,
+				variables.version,
+				{ actor: variables.actor, reason: variables.reason },
+				commandKey("deprecate", variables),
+			),
+		onSuccess: (_data, variables) => {
+			release("deprecate", variables);
+			invalidateGovernedScopes(variables.experimentId);
+		},
 	});
 	const reactivate = useMutation({
 		mutationFn: (variables: ReactivateVariables) =>
-			reactivateStrategyVersion(strategyId, variables.version, {
-				actor: variables.actor,
-				reason: variables.reason,
-				confirmation: variables.confirmation,
-				impact_summary: variables.impactSummary,
-				expected_pointer_revision: variables.expectedPointerRevision,
-			}),
-		onSuccess: invalidateGovernedScopes,
+			reactivateStrategyVersion(
+				strategyId,
+				variables.version,
+				{
+					actor: variables.actor,
+					reason: variables.reason,
+					confirmation: variables.confirmation,
+					impact_summary: variables.impactSummary,
+					expected_pointer_revision: variables.expectedPointerRevision,
+				},
+				commandKey("reactivate", variables),
+			),
+		onSuccess: (_data, variables) => {
+			release("reactivate", variables);
+			invalidateGovernedScopes(variables.experimentId);
+		},
 		onError: recoverActivePointerAfterConflict,
 	});
 	const publish = useMutation({
-		mutationFn: ({ version, bundleHash, actor, reason }: PublishVariables) =>
-			publishStrategyVersion(strategyId, version, { bundle_hash: bundleHash, actor, reason }),
-		onSuccess: invalidateGovernedScopes,
+		mutationFn: (variables: PublishVariables) =>
+			publishStrategyVersion(
+				strategyId,
+				variables.version,
+				{ bundle_hash: variables.bundleHash, actor: variables.actor, reason: variables.reason },
+				commandKey("publish", variables),
+			),
+		onSuccess: (_data, variables) => {
+			release("publish", variables);
+			invalidateGovernedScopes(variables.experimentId);
+		},
 	});
 
 	return { submitReview, approve, reject, deprecate, reactivate, publish };

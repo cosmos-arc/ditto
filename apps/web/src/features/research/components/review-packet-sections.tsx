@@ -53,7 +53,7 @@ export function ReviewDecisionBanner({
 	hardReviewBlocked,
 }: BannerProps): ReactElement {
 	return (
-		<ContextSection title="审查裁决">
+		<ContextSection title="Decision Banner">
 			<div className="flex flex-wrap items-center gap-3 p-(--density-panel-padding) text-sm">
 				<span className="font-medium text-(--color-foreground)">
 					{strategyId} · v{version}
@@ -75,7 +75,7 @@ export function ReviewDecisionBanner({
 /** 11 hard-gate 明细表（rule_id / layer / outcome 原样来自后端）。 */
 export function HardGateList({ packet }: { readonly packet: ReviewPacket }): ReactElement {
 	return (
-		<ContextSection title={`Hard Gate（${packet.gateOutcomes.length}）`}>
+		<ContextSection title="Hard Gates" count={packet.gateOutcomes.length}>
 			<div className="flex flex-col gap-1 p-(--density-panel-padding)">
 				{packet.gateOutcomes.map((gate) => (
 					<div key={gate.ruleId} className="flex items-center justify-between gap-2 text-xs">
@@ -94,11 +94,11 @@ export function HardGateList({ packet }: { readonly packet: ReviewPacket }): Rea
 /** 统计证据（内容 hash，非 metric 值）。 */
 export function EvidenceHashes({ packet }: { readonly packet: ReviewPacket }): ReactElement {
 	return (
-		<ContextSection title="统计证据（内容 hash）">
+		<ContextSection title="Statistical Evidence">
 			<div className="flex flex-col gap-1.5 p-(--density-panel-padding)">
+				<p className="text-xs text-(--color-foreground-tertiary)">Evidence only · no automatic PASS</p>
 				<HashRow label="objective" hash={packet.objectivePayloadHash} />
 				{packet.comparisonPayloadHash && <HashRow label="comparison" hash={packet.comparisonPayloadHash} />}
-				{packet.r1ImpactPayloadHash && <HashRow label="r1-impact" hash={packet.r1ImpactPayloadHash} />}
 			</div>
 		</ContextSection>
 	);
@@ -107,7 +107,7 @@ export function EvidenceHashes({ packet }: { readonly packet: ReviewPacket }): R
 /** 血统：spec/parameter/snapshot/registry hash + fold/attempt + selection-trace refs。 */
 export function LineagePanel({ packet }: { readonly packet: ReviewPacket }): ReactElement {
 	return (
-		<ContextSection title="血统与复现">
+		<ContextSection title="Lineage/Artifacts">
 			<div className="flex flex-col gap-1.5 p-(--density-panel-padding)">
 				<HashRow label="spec" hash={packet.specHash} />
 				<HashRow label="resolved_spec" hash={packet.resolvedSpecHash} />
@@ -128,7 +128,7 @@ export function LineagePanel({ packet }: { readonly packet: ReviewPacket }): Rea
 /** 候选入选理由。 */
 export function CandidateRationale({ rationale }: { readonly rationale: string }): ReactElement {
 	return (
-		<ContextSection title="入选理由">
+		<ContextSection title="Candidate Rationale">
 			<p className="p-(--density-panel-padding) text-sm text-(--color-foreground-secondary)">{rationale}</p>
 		</ContextSection>
 	);
@@ -137,7 +137,7 @@ export function CandidateRationale({ rationale }: { readonly rationale: string }
 /** 版本 vs parent 的 canonical spec diff。 */
 export function SpecDiffView({ changes }: { readonly changes: readonly SpecChange[] }): ReactElement {
 	return (
-		<ContextSection title={`Spec 变更（vs parent，${changes.length}）`}>
+		<ContextSection title="Spec Diff" count={changes.length}>
 			<div className="flex flex-col gap-1 p-(--density-panel-padding)">
 				{changes.length === 0 ? (
 					<span className="text-xs text-(--color-foreground-tertiary)">无字段变更（与 parent 同 canonical hash）</span>
@@ -151,6 +151,63 @@ export function SpecDiffView({ changes }: { readonly changes: readonly SpecChang
 							</span>
 						</div>
 					))
+				)}
+			</div>
+		</ContextSection>
+	);
+}
+
+export function SelectionExposureEvidence({ packet }: { readonly packet: ReviewPacket }): ReactElement {
+	const exposure = packet.selectionExposure;
+	return (
+		<ContextSection title="Selection/Exposure Evidence">
+			<div className="flex flex-col gap-2 p-(--density-panel-padding) text-xs">
+				<p>
+					selection artifact {packet.selectionEvidenceArtifactId ?? "—"} · holdout claim {packet.holdoutClaimId ?? "—"}
+				</p>
+				{exposure ? (
+					<>
+						<p>
+							{exposure.lane} · {exposure.applicability}
+						</p>
+						<div className="grid gap-2 sm:grid-cols-2">
+							<div>
+								<p className="text-(--color-foreground-tertiary)">Industry exposure</p>
+								{exposure.industryWeights.map((entry) => (
+									<p key={entry.key} className="font-data">
+										{entry.key} {entry.weight}
+									</p>
+								))}
+							</div>
+							<div>
+								<p className="text-(--color-foreground-tertiary)">Size exposure</p>
+								{exposure.sizeBucketWeights.map((entry) => (
+									<p key={entry.key} className="font-data">
+										{entry.key} {entry.weight}
+									</p>
+								))}
+							</div>
+						</div>
+						{exposure.artifactRefs.map((ref) => (
+							<HashRow key={ref.artifactId} label={`exposure ${ref.artifactKind}`} hash={ref.contentHash} />
+						))}
+					</>
+				) : (
+					<p className="text-(--color-foreground-tertiary)">No selection exposure payload.</p>
+				)}
+			</div>
+		</ContextSection>
+	);
+}
+
+export function R1ImpactEvidence({ packet }: { readonly packet: ReviewPacket }): ReactElement {
+	return (
+		<ContextSection title="R1 Impact">
+			<div className="p-(--density-panel-padding)">
+				{packet.r1ImpactPayloadHash ? (
+					<HashRow label="r1-impact" hash={packet.r1ImpactPayloadHash} />
+				) : (
+					<p className="text-xs text-(--color-foreground-tertiary)">No R1 impact evidence was persisted.</p>
 				)}
 			</div>
 		</ContextSection>

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { mockReviewPacket } from "@/mocks/fixtures/review-live";
 import { server } from "@/mocks/server";
 import type { StrategyLifecycleState, StrategyVersion } from "@/types/strategy";
 import { GovernanceActions } from "./governance-actions";
@@ -18,6 +19,7 @@ function makeVersion(lifecycleState: StrategyLifecycleState, version = 1): Strat
 		lifecycleState,
 		reviewOutcome: "pending",
 		createdAt: "2026-01-01T00:00:00Z",
+		experimentId: "exp-gov",
 	};
 }
 
@@ -32,12 +34,21 @@ function renderActions(
 	lifecycleState: StrategyLifecycleState,
 	expectedPointerRevision: number | null = null,
 	version = 1,
+	hardReviewBlocked = false,
 ) {
+	server.use(
+		http.get("/api/v1/research/experiments/exp-gov/review-packet", () =>
+			HttpResponse.json({
+				data: { ...mockReviewPacket, experiment_id: "exp-gov", hard_review_blocked: hardReviewBlocked },
+			}),
+		),
+	);
 	render(
 		<GovernanceActions
 			strategyId="s"
 			version={makeVersion(lifecycleState, version)}
 			expectedPointerRevision={expectedPointerRevision}
+			currentActiveVersion={4}
 		/>,
 		{ wrapper: createWrapper() },
 	);
@@ -58,10 +69,26 @@ describe("GovernanceActions", () => {
 		expect(screen.getByRole("button", { name: "提交审查" })).toBeInTheDocument();
 	});
 
+	it("hard-gate blocked draft keeps submit disabled", async () => {
+		renderActions("draft", null, 1, true);
+		expect(await screen.findByRole("button", { name: "提交审查" })).toBeDisabled();
+	});
+
 	it("review state shows approve and reject actions", () => {
 		renderActions("review");
 		expect(screen.getByRole("button", { name: "批准" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "驳回" })).toBeInTheDocument();
+	});
+
+	it("rejected review state is clone-only", () => {
+		const rejected = { ...makeVersion("review"), reviewOutcome: "rejected" as const };
+		render(
+			<GovernanceActions strategyId="s" version={rejected} expectedPointerRevision={2} currentActiveVersion={4} />,
+			{ wrapper: createWrapper() },
+		);
+		expect(screen.getByRole("link", { name: "克隆为新草稿" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "批准" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "驳回" })).not.toBeInTheDocument();
 	});
 
 	it("approved state shows deprecate only (publish lives on review-detail)", () => {
@@ -142,5 +169,6 @@ describe("GovernanceActions", () => {
 		expect(screen.getByLabelText("原因")).toHaveValue("切回已验证版本");
 		expect(screen.getByLabelText("影响摘要")).toHaveValue("恢复稳定策略");
 		expect(screen.getByLabelText("确认句")).toHaveValue("strategy:reactivate:s@3:pointer-revision:2:confirm");
+		expect(screen.getByRole("alert")).toHaveTextContent(/409 POINTER_REVISION_CONFLICT/);
 	});
 });

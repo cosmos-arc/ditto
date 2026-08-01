@@ -54,6 +54,7 @@ describe("ReactivateDialog", () => {
 				open
 				onOpenChange={onOpenChange}
 				strategyId="s"
+				currentActiveVersion={4}
 				targetVersion={3}
 				expectedPointerRevision={2}
 				isPending
@@ -73,6 +74,7 @@ describe("ReactivateDialog", () => {
 				open
 				onOpenChange={vi.fn()}
 				strategyId="s"
+				currentActiveVersion={4}
 				targetVersion={3}
 				expectedPointerRevision={2}
 				isPending={false}
@@ -98,6 +100,7 @@ describe("ReactivateDialog", () => {
 				open
 				onOpenChange={vi.fn()}
 				strategyId="s"
+				currentActiveVersion={4}
 				targetVersion={3}
 				expectedPointerRevision={2}
 				isPending={false}
@@ -119,5 +122,25 @@ describe("ReactivateDialog", () => {
 				confirmation: "strategy:reactivate:s@3:pointer-revision:2:confirm",
 			}),
 		);
+	});
+
+	it("shows current, target, impact, revision and uses a Sheet surface", () => {
+		render(
+			<ReactivateDialog
+				open
+				onOpenChange={vi.fn()}
+				strategyId="s"
+				currentActiveVersion={4}
+				targetVersion={3}
+				expectedPointerRevision={2}
+				isPending={false}
+				onConfirm={vi.fn()}
+			/>,
+		);
+		expect(screen.getByText(/current v4/)).toBeInTheDocument();
+		expect(screen.getByText(/target v3/)).toBeInTheDocument();
+		expect(screen.getByText(/pointer revision 2/)).toBeInTheDocument();
+		expect(screen.getByLabelText("影响摘要")).toBeInTheDocument();
+		expect(document.querySelector('[data-slot="sheet-content"]')).toBeInTheDocument();
 	});
 });

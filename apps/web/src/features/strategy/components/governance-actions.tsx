@@ -1,5 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { useReviewPacket } from "@/features/research/hooks/use-review-packet";
+import { ApiError } from "@/lib/api-client";
 import type { StrategyLifecycleState, StrategyVersion } from "@/types/strategy";
 import { useStrategyGovernance } from "../hooks/use-strategy-governance";
 import { DecisionDialog, ReactivateDialog } from "./governance-dialogs";
@@ -12,6 +14,7 @@ interface GovernanceActionsProps {
 	readonly version: StrategyVersion;
 	/** 当前 active pointer revision（reactivate 乐观 CAS 基线；null 时隐藏 reactivate）。 */
 	readonly expectedPointerRevision: number | null;
+	readonly currentActiveVersion: number | null;
 }
 
 interface ActionDef {
@@ -65,20 +68,25 @@ export function GovernanceActions({
 	strategyId,
 	version,
 	expectedPointerRevision,
+	currentActiveVersion,
 }: GovernanceActionsProps): ReactElement {
 	const governance = useStrategyGovernance(strategyId);
+	const packet = useReviewPacket(version.experimentId);
 	const [dialog, setDialog] = useState<DialogKind>(null);
 
-	const actions = ACTIONS_BY_STATE[version.lifecycleState] ?? [];
+	const actions = version.reviewOutcome === "rejected" ? [] : (ACTIONS_BY_STATE[version.lifecycleState] ?? []);
 	const canReactivate = version.lifecycleState === "published" && expectedPointerRevision !== null;
+	const hardReviewBlocked = packet.data?.hardReviewBlocked ?? true;
+	const bundleHash = packet.data?.bundleHash ?? null;
 	const activeDecision = dialog !== null && dialog !== "reactivate" ? dialog : null;
 	const decisionMeta = activeDecision ? DECISION_TITLES[activeDecision] : null;
 
 	function dispatchDecision(kind: DecisionKind, actor: string, reason: string): void {
-		const variables = { version: version.version, actor, reason };
+		const variables = { version: version.version, actor, reason, experimentId: version.experimentId };
 		switch (kind) {
 			case "submit":
-				governance.submitReview.mutate(variables);
+				if (!bundleHash || hardReviewBlocked) return;
+				governance.submitReview.mutate({ ...variables, bundleHash });
 				break;
 			case "approve":
 				governance.approve.mutate(variables);
@@ -97,15 +105,30 @@ export function GovernanceActions({
 		<>
 			<div className="flex items-center gap-1">
 				{actions.map((action) => (
+					// Submit and approve are fail-closed until the persisted packet proves hard gates clear.
 					<button
 						key={action.kind}
 						type="button"
+						disabled={(action.kind === "submit" || action.kind === "approve") && hardReviewBlocked}
+						title={
+							(action.kind === "submit" || action.kind === "approve") && hardReviewBlocked
+								? "review packet 缺失或 hard-gate 阻断"
+								: action.title
+						}
 						onClick={() => setDialog(action.kind)}
 						className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg)"
 					>
 						{action.label}
 					</button>
 				))}
+				{version.reviewOutcome === "rejected" && (
+					<a
+						href={`/research/strategies/${encodeURIComponent(strategyId)}/studio`}
+						className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg)"
+					>
+						克隆为新草稿
+					</a>
+				)}
 				{canReactivate && (
 					<button
 						type="button"
@@ -116,6 +139,13 @@ export function GovernanceActions({
 					</button>
 				)}
 			</div>
+			{packet.error && version.experimentId && (
+				<p role="alert" className="text-xs text-(--color-led-danger)">
+					{packet.error instanceof ApiError
+						? `${packet.error.status} ${packet.error.errorCode ?? "REVIEW_PACKET_ERROR"}: ${packet.error.message}`
+						: packet.error.message}
+				</p>
+			)}
 
 			{activeDecision && decisionMeta && (
 				<DecisionDialog
@@ -137,13 +167,18 @@ export function GovernanceActions({
 						if (!open) setDialog(null);
 					}}
 					strategyId={strategyId}
+					currentActiveVersion={currentActiveVersion}
 					targetVersion={version.version}
 					expectedPointerRevision={expectedPointerRevision}
 					isPending={governance.reactivate.isPending}
+					error={governance.reactivate.error}
 					onConfirm={(variables) => {
-						governance.reactivate.mutate(variables, {
-							onSuccess: () => setDialog(null),
-						});
+						governance.reactivate.mutate(
+							{ ...variables, experimentId: version.experimentId },
+							{
+								onSuccess: () => setDialog(null),
+							},
+						);
 					}}
 				/>
 			)}

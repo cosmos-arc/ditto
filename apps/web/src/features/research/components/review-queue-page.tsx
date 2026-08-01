@@ -9,6 +9,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
+import { ApiError } from "@/lib/api-client";
 import type { ReviewQueueEntry } from "@/types/review";
 import { useReviews } from "../hooks";
 
@@ -26,7 +27,7 @@ function QueueRow({ entry }: { readonly entry: ReviewQueueEntry }): ReactElement
 	if (entry.experimentId === null) {
 		return (
 			<div
-				className="grid grid-cols-[1fr_5rem_5rem_6rem] items-center px-3 py-2 text-sm opacity-50"
+				className="grid gap-1 px-3 py-2 text-sm opacity-50 sm:grid-cols-[1fr_5rem_5rem_6rem] sm:items-center"
 				title="尚无持久化 review packet"
 			>
 				{cells}
@@ -38,7 +39,7 @@ function QueueRow({ entry }: { readonly entry: ReviewQueueEntry }): ReactElement
 			to="/research/reviews/$id"
 			params={{ id: entry.experimentId }}
 			search={{ strategyId: entry.strategyId, version: entry.version }}
-			className="grid grid-cols-[1fr_5rem_5rem_6rem] items-center px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+			className="grid gap-1 px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg) sm:grid-cols-[1fr_5rem_5rem_6rem] sm:items-center"
 		>
 			{cells}
 		</Link>
@@ -46,7 +47,7 @@ function QueueRow({ entry }: { readonly entry: ReviewQueueEntry }): ReactElement
 }
 
 export function ReviewQueuePage(): ReactElement {
-	const { data, isLoading } = useReviews();
+	const { data, isLoading, error, refetch } = useReviews();
 	const entries = data ?? [];
 
 	return (
@@ -65,7 +66,18 @@ export function ReviewQueuePage(): ReactElement {
 					<PanelHeader title="Reviews" count={entries.length} />
 					<PanelBody>
 						<div className="divide-y divide-(--color-border-subtle)">
-							{isLoading && entries.length === 0 ? (
+							{error ? (
+								<div className="flex flex-col gap-1 px-3 py-2 text-sm text-(--color-led-danger)">
+									<p role="alert">
+										{error instanceof ApiError
+											? `${error.status} ${error.errorCode ?? "REVIEW_QUEUE_ERROR"}: ${error.message}`
+											: error.message}
+									</p>
+									<button type="button" className="self-start underline" onClick={() => void refetch()}>
+										重试审查队列
+									</button>
+								</div>
+							) : isLoading && entries.length === 0 ? (
 								<p className="px-3 py-2 text-sm text-(--color-foreground-tertiary)">加载中…</p>
 							) : entries.length === 0 ? (
 								<p className="px-3 py-2 text-sm text-(--color-foreground-tertiary)">暂无待审查版本。</p>

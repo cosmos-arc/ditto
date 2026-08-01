@@ -20,6 +20,7 @@ interface ReviewDecisionPanelProps {
 	readonly reviewOutcome: string;
 	readonly hardReviewBlocked: boolean;
 	readonly bundleHash: string;
+	readonly experimentId?: string;
 }
 
 const ACTION_BUTTON_CLASS =
@@ -31,6 +32,7 @@ export function ReviewDecisionPanel({
 	reviewOutcome,
 	hardReviewBlocked,
 	bundleHash,
+	experimentId,
 }: ReviewDecisionPanelProps): ReactElement {
 	const governance = useStrategyGovernance(strategyId);
 	const [dialog, setDialog] = useState<DialogKind>(null);
@@ -39,7 +41,7 @@ export function ReviewDecisionPanel({
 	const canPublish = reviewOutcome === "approved" && !hardReviewBlocked;
 
 	function dispatchDecision(kind: "approve" | "reject" | "deprecate", actor: string, reason: string): void {
-		const variables = { version, actor, reason };
+		const variables = { version, actor, reason, experimentId };
 		if (kind === "approve") governance.approve.mutate(variables);
 		else if (kind === "reject") governance.reject.mutate(variables);
 		else governance.deprecate.mutate(variables);
@@ -47,11 +49,17 @@ export function ReviewDecisionPanel({
 	}
 
 	return (
-		<ContextSection title="决策">
+		<ContextSection title="Decision Form">
 			<div className="flex flex-wrap items-center gap-2 p-(--density-panel-padding)">
 				{isPending && (
 					<>
-						<button type="button" className={ACTION_BUTTON_CLASS} onClick={() => setDialog("approve")}>
+						<button
+							type="button"
+							className={ACTION_BUTTON_CLASS}
+							disabled={hardReviewBlocked}
+							title={hardReviewBlocked ? "hard-gate 阻断，不可批准" : "批准审查"}
+							onClick={() => !hardReviewBlocked && setDialog("approve")}
+						>
 							批准
 						</button>
 						<button type="button" className={ACTION_BUTTON_CLASS} onClick={() => setDialog("reject")}>
@@ -75,7 +83,12 @@ export function ReviewDecisionPanel({
 						</button>
 					</>
 				)}
-				{!isPending && reviewOutcome !== "approved" && (
+				{reviewOutcome === "rejected" && (
+					<a href={`/research/strategies/${encodeURIComponent(strategyId)}/studio`} className={ACTION_BUTTON_CLASS}>
+						克隆为新草稿
+					</a>
+				)}
+				{!isPending && reviewOutcome !== "approved" && reviewOutcome !== "rejected" && (
 					<span className="text-xs text-(--color-foreground-tertiary)">当前结论 {reviewOutcome}，无可执行动作。</span>
 				)}
 			</div>
@@ -108,7 +121,7 @@ export function ReviewDecisionPanel({
 					bundleHash={bundleHash}
 					isPending={governance.publish.isPending}
 					onConfirm={(variables) => {
-						governance.publish.mutate(variables);
+						governance.publish.mutate({ ...variables, experimentId });
 						setDialog(null);
 					}}
 				/>

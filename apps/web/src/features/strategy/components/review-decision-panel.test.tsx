@@ -32,6 +32,12 @@ describe("ReviewDecisionPanel", () => {
 		expect(screen.queryByRole("button", { name: "发布" })).not.toBeInTheDocument();
 	});
 
+	it("hard-gate blocked pending outcome disables approve but preserves reject", () => {
+		renderPanel("pending", true);
+		expect(screen.getByRole("button", { name: "批准" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "驳回" })).toBeEnabled();
+	});
+
 	it("approved outcome with hard-gate passed shows publish and deprecate", () => {
 		renderPanel("approved", false);
 		expect(screen.getByRole("button", { name: "发布" })).toBeEnabled();
@@ -47,5 +53,6 @@ describe("ReviewDecisionPanel", () => {
 		renderPanel("rejected");
 		expect(screen.queryByRole("button", { name: "发布" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "批准" })).not.toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "克隆为新草稿" })).toHaveAttribute("href", "/research/strategies/s/studio");
 	});
 });
