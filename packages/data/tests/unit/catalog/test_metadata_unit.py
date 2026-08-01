@@ -183,6 +183,7 @@ class TestDefaultMetadataScheduleAssignments:
         ("dataset_id", "expected_schedule"),
         [
             ("fx_daily", "natural_days"),
+            ("dividend", "natural_days"),
             ("macro_indicators", "source_defined"),
             ("commodity_daily", "source_defined"),
             # All others should be trading_days
@@ -201,6 +202,13 @@ class TestDefaultMetadataScheduleAssignments:
     ) -> None:
         registry = default_dataset_metadata()
         assert registry[dataset_id].schedule == expected_schedule
+
+    def test_dividend_schema_versions_exact_announcement_query_semantics(
+        self,
+    ) -> None:
+        registry = default_dataset_metadata()
+
+        assert registry["dividend"].schema_version == "fundamental.dividend.v2"
 
 
 class TestDefaultMetadataMaturityAssignments:
@@ -375,7 +383,7 @@ class TestDefaultMetadataSourceCapabilities:
 
         assert meta.default_source == "tushare"
         assert meta.supported_sources == ("tushare",)
-        assert meta.ingestion_granularities == ("date",)
+        assert meta.ingestion_granularities == ("date", "instrument")
         assert meta.freshness_sla_hours is not None
 
 

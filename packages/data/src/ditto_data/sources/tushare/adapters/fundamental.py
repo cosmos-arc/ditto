@@ -6,13 +6,15 @@ import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_data.sources.tushare.adapters.capital_corporate import (
+    CapitalCorporateTushareAdapter,
+)
 from ditto_data.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
 from ditto_data.sources.tushare.processors.mappings import (
     BALANCE_SHEET_MAPPING,
     CASH_FLOW_MAPPING,
-    CORPORATE_ACTIONS_MAPPING,
     DIVIDEND_MAPPING,
     INCOME_STATEMENT_MAPPING,
 )
@@ -132,6 +134,7 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
     def fetch_dividend(
         self,
         ts_code: str | None = None,
+        ann_date: str | None = None,
         ex_date: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
@@ -141,6 +144,7 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             "Fetching Tushare dividend data",
             event="tushare_dividend_fetch_start",
             ts_code=ts_code,
+            ann_date=ann_date,
             ex_date=ex_date,
         )
 
@@ -153,6 +157,8 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
 
             if ts_code:
                 params["ts_code"] = ts_code
+            if ann_date:
+                params["ann_date"] = ann_date
             if ex_date:
                 params["ex_date"] = ex_date
             if start_date:
@@ -193,49 +199,13 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取公司行为数据."""
-        logger.info(
-            "Fetching Tushare corporate actions",
-            event="tushare_corporate_actions_fetch_start",
+        return CapitalCorporateTushareAdapter(
+            _client=self._client
+        ).fetch_corporate_actions(
             ts_code=ts_code,
             start_date=start_date,
             end_date=end_date,
         )
-
-        with tushare_fetch_error_handler("corporate_actions", "ba"):
-            params: dict[str, str] = {
-                "api_name": "ba",
-                "fields": "ts_code,ann_date,act_date,ba_type,name",
-            }
-
-            if ts_code:
-                params["ts_code"] = ts_code
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "corporate_actions", CORPORATE_ACTIONS_MAPPING
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare corporate actions fetched",
-                event="tushare_corporate_actions_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {
-                    "source": "tushare",
-                    "dataset": "corporate_actions",
-                    "status": "success",
-                },
-            )
-
-            return result
 
     # ── 标准财报方法 ────────────────────────────────────────────
 

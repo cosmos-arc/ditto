@@ -16,6 +16,7 @@ import polars as pl
 
 from ditto_analysis.errors import (
     ExperimentConflictError,
+    ExperimentIntegrityError,
     ExperimentSpecError,
     ResearchDatasetError,
 )
@@ -32,6 +33,8 @@ from ditto_analysis.research._indexed_artifacts import (
 )
 
 __all__ = ["ResearchArtifactService"]
+
+_SHA256_HEX_LENGTH = 64
 
 ExportFormat = Literal["parquet", "csv", "feather"]
 _EXPORT_WRITERS: dict[ExportFormat, str] = {
@@ -201,6 +204,114 @@ class ResearchArtifactService:
                     os.close(descriptor)
             with suppress(FileNotFoundError):
                 temporary.unlink()
+
+    def publish_frozen_research_input(
+        self,
+        artifact_id: str,
+        payload: bytes,
+    ) -> str:
+        """Publish planning input bytes before an experiment row exists."""
+        identity_path, payload_path = self._frozen_research_input_paths(artifact_id)
+        content_hash = hashlib.sha256(payload).hexdigest()
+        identity = orjson.dumps(
+            {
+                "artifact_id": artifact_id,
+                "content_hash": content_hash,
+                "schema": "ditto.frozen-research-input.v1",
+            },
+            option=orjson.OPT_SORT_KEYS,
+        )
+        self.publish_immutable_artifact(payload_path, payload)
+        self.publish_immutable_artifact(identity_path, identity)
+        return content_hash
+
+    def read_frozen_research_input_bytes(self, artifact_id: str) -> bytes:
+        """Read and verify one pre-experiment immutable planning input."""
+        identity_path, payload_path = self._frozen_research_input_paths(artifact_id)
+        try:
+            identity_target = self._path(identity_path)
+        except ExperimentSpecError as error:
+            if error.details.get("reason_code") != (
+                "indexed_artifact_requires_verified_api"
+            ):
+                raise
+            return self.read_indexed_artifact_bytes(artifact_id)
+        try:
+            identity_bytes = identity_target.read_bytes()
+        except FileNotFoundError:
+            # Existing experiment-backed fixtures and already-published evidence
+            # remain readable while new planning inputs use the independent
+            # namespace above.
+            return self.read_indexed_artifact_bytes(artifact_id)
+        try:
+            identity = orjson.loads(identity_bytes)
+        except orjson.JSONDecodeError as error:
+            raise self._frozen_research_input_integrity_error(
+                artifact_id,
+                reason="invalid_identity_json",
+            ) from error
+        if type(identity) is not dict:
+            raise self._frozen_research_input_integrity_error(
+                artifact_id,
+                reason="invalid_identity",
+            )
+        typed_identity = cast("dict[str, object]", identity)
+        content_hash = typed_identity.get("content_hash")
+        if (
+            set(typed_identity) != {"artifact_id", "content_hash", "schema"}
+            or typed_identity.get("artifact_id") != artifact_id
+            or typed_identity.get("schema") != "ditto.frozen-research-input.v1"
+            or type(content_hash) is not str
+            or len(content_hash) != _SHA256_HEX_LENGTH
+        ):
+            raise self._frozen_research_input_integrity_error(
+                artifact_id,
+                reason="invalid_identity",
+            )
+        try:
+            payload = self._path(payload_path).read_bytes()
+        except FileNotFoundError as error:
+            raise self._frozen_research_input_integrity_error(
+                artifact_id,
+                reason="payload_missing",
+            ) from error
+        actual_hash = hashlib.sha256(payload).hexdigest()
+        if actual_hash != content_hash:
+            raise self._frozen_research_input_integrity_error(
+                artifact_id,
+                reason="content_hash_mismatch",
+                expected_content_hash=content_hash,
+                actual_content_hash=actual_hash,
+            )
+        return payload
+
+    @staticmethod
+    def _frozen_research_input_integrity_error(
+        artifact_id: str,
+        *,
+        reason: str,
+        **details: object,
+    ) -> ExperimentIntegrityError:
+        return ExperimentIntegrityError(
+            "frozen research input evidence is inconsistent",
+            details={
+                "reason_code": "frozen_research_input_integrity_mismatch",
+                "reason": reason,
+                "artifact_id": artifact_id,
+                **details,
+            },
+        )
+
+    @staticmethod
+    def _frozen_research_input_paths(artifact_id: str) -> tuple[str, str]:
+        if type(artifact_id) is not str or not artifact_id:
+            raise ExperimentSpecError(
+                "frozen research input artifact_id is required",
+                details={"reason_code": "invalid_frozen_research_input_id"},
+            )
+        identity_key = hashlib.sha256(artifact_id.encode()).hexdigest()
+        root = f"frozen-research-inputs/v1/{identity_key}"
+        return f"{root}/identity.json", f"{root}/payload.bin"
 
     def publish_indexed_json(
         self,

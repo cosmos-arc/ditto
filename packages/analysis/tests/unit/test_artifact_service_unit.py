@@ -638,6 +638,57 @@ class TestImmutableArtifactPublication:
         assert service.read_json("mutable.json") == {"revision": 2}
 
 
+class TestFrozenResearchInputPublication:
+    """Planning inputs are immutable without requiring an experiment row."""
+
+    def test_publish_and_read_exact_bytes_without_experiment_index(
+        self,
+        service: ResearchArtifactService,
+    ) -> None:
+        artifact_id = "snapshot:stock-selection:v1"
+        payload = b"canonical-snapshot-manifest"
+
+        digest = service.publish_frozen_research_input(artifact_id, payload)
+
+        assert digest == hashlib.sha256(payload).hexdigest()
+        assert service.read_frozen_research_input_bytes(artifact_id) == payload
+        assert service.publish_frozen_research_input(artifact_id, payload) == digest
+
+    def test_conflicting_replay_is_rejected_by_artifact_identity(
+        self,
+        service: ResearchArtifactService,
+    ) -> None:
+        artifact_id = "bars:stock-selection:v1"
+        service.publish_frozen_research_input(artifact_id, b"first")
+
+        with pytest.raises(ExperimentConflictError):
+            service.publish_frozen_research_input(artifact_id, b"second")
+
+        assert service.read_frozen_research_input_bytes(artifact_id) == b"first"
+
+    def test_read_rejects_payload_tampering_instead_of_falling_back(
+        self,
+        service: ResearchArtifactService,
+        tmp_path: Path,
+    ) -> None:
+        artifact_id = "rules:stock-selection:v1"
+        service.publish_frozen_research_input(artifact_id, b"trusted")
+        identity_key = hashlib.sha256(artifact_id.encode()).hexdigest()
+        payload_path = (
+            tmp_path / "frozen-research-inputs" / "v1" / identity_key / "payload.bin"
+        )
+        payload_path.write_bytes(b"tampered")
+
+        with pytest.raises(ExperimentIntegrityError) as exc_info:
+            service.read_frozen_research_input_bytes(artifact_id)
+
+        assert (
+            exc_info.value.details["reason_code"]
+            == "frozen_research_input_integrity_mismatch"
+        )
+        assert exc_info.value.details["artifact_id"] == artifact_id
+
+
 class TestIndexedArtifactPublication:
     """R3 evidence publication measures final bytes before indexing them."""
 

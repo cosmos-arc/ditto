@@ -8,7 +8,7 @@ import os
 import stat
 from collections.abc import Mapping
 from dataclasses import InitVar, dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Literal, Protocol, cast
 
@@ -78,6 +78,13 @@ _REPRESENTATIVE_DATASETS = frozenset(
 _BOOTSTRAP_LIMIT_SECONDS = 24 * 60 * 60
 _INCREMENTAL_LIMIT_SECONDS = 30 * 60
 _WORKBENCH_QUERY_LIMIT_SECONDS = 5.0
+_R2_CERTIFICATION_PROFILE = "r2-modern-a-share-v1"
+_MAX_CERTIFICATION_LAG_DAYS = 7
+_R2_REQUIRED_CERTIFIED_FROM = {
+    dataset_id: "2015-01-01"
+    for dataset_id in _R2_HARD_DATASET_PROVIDER_CONTRACTS
+    if dataset_id not in {"macro_indicators", "commodity_daily", "index_weight"}
+} | {"stock_basic": "2016-01-01", "stock_status": "2016-01-01"}
 _VERIFIED_EVIDENCE_TOKEN = object()
 
 
@@ -485,13 +492,48 @@ def _ready_preflight(value: Mapping[str, object], checked_at: datetime) -> bool:
     performance = _mapping(value.get("performance"))
     return (
         type(products) is list
-        and _ready_products(cast("list[object]", products))
+        and _ready_products(cast("list[object]", products), checked_at)
         and performance is not None
         and _ready_performance(performance)
     )
 
 
-def _ready_products(products: list[object]) -> bool:
+def _iso_date(value: object) -> date | None:
+    if type(value) is not str:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _ready_product_certification(
+    product: Mapping[str, object],
+    *,
+    dataset_id: str,
+    checked_at: datetime,
+) -> bool:
+    report_id = product.get("certification_report_id")
+    content_hash = product.get("certification_content_hash")
+    certified_from = _iso_date(product.get("certified_from"))
+    certified_through = _iso_date(product.get("certified_through"))
+    required_value = _R2_REQUIRED_CERTIFIED_FROM.get(dataset_id)
+    required_from = date.fromisoformat(required_value) if required_value else None
+    return (
+        product.get("certification_profile") == _R2_CERTIFICATION_PROFILE
+        and type(report_id) is str
+        and bool(report_id)
+        and _is_content_hash(content_hash)
+        and certified_from is not None
+        and certified_through is not None
+        and certified_from <= certified_through
+        and (required_from is None or certified_from <= required_from)
+        and certified_through <= checked_at.date()
+        and (checked_at.date() - certified_through).days <= _MAX_CERTIFICATION_LAG_DAYS
+    )
+
+
+def _ready_products(products: list[object], checked_at: datetime) -> bool:
     if len(products) != _EXPECTED_CONTRACT_COUNT:
         return False
     dataset_ids: list[str] = []
@@ -518,6 +560,11 @@ def _ready_products(products: list[object]) -> bool:
             or _string_tuple(product.get("reason_codes")) != ()
             or not _string_list_is_nonempty(product.get("license_record_ids"))
             or not _string_list_is_nonempty(product.get("usable_provider_datasets"))
+            or not _ready_product_certification(
+                product,
+                dataset_id=dataset_id,
+                checked_at=checked_at,
+            )
         ):
             return False
         dataset_ids.append(dataset_id)

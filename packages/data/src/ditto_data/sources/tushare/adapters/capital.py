@@ -124,9 +124,21 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         self,
         index_code: str,
         trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取指数权重数据."""
-        return self._index.fetch_index_weight(index_code, trade_date=trade_date)
+        if start_date is None and end_date is None:
+            return self._index.fetch_index_weight(
+                index_code,
+                trade_date=trade_date,
+            )
+        return self._index.fetch_index_weight(
+            index_code,
+            trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     def fetch_index_composition(
         self,

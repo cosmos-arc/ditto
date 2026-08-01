@@ -39,8 +39,22 @@ from ditto_application.processes.experiments.planning_probes import (
     ResearchExecutorProbeResult,
 )
 from ditto_application.research_validation_contracts import RuntimeValidationEvidence
+from ditto_application.research_validation_protocol import IsolationSemantics
 
 __all__ = ["BuilderBackedResearchExecutorProbe"]
+
+_REGISTERED_ISOLATION_BY_LANE = {
+    "etf_rotation": IsolationSemantics(
+        forward_horizon_sessions=2,
+        holding_period_sessions=5,
+        execution_lag_sessions=1,
+    ),
+    "stock_selection": IsolationSemantics(
+        forward_horizon_sessions=2,
+        holding_period_sessions=5,
+        execution_lag_sessions=1,
+    ),
+}
 
 
 def _candidate_evidence(
@@ -423,6 +437,7 @@ class BuilderBackedResearchExecutorProbe:
                 if baseline_runtime is None
                 else baseline_runtime.max_lookback_sessions
             )
+            isolation = _REGISTERED_ISOLATION_BY_LANE[runtime_lane]
             runtime_validation = RuntimeValidationEvidence(
                 lane=runtime_lane,
                 universe_id=runtime_universe,
@@ -433,6 +448,9 @@ class BuilderBackedResearchExecutorProbe:
                 ),
                 requires_pit_universe=runtime_lane
                 in {"stock_selection", "etf_rotation"},
+                forward_horizon_sessions=isolation.forward_horizon_sessions,
+                holding_period_sessions=isolation.holding_period_sessions,
+                execution_lag_sessions=isolation.execution_lag_sessions,
             )
             baseline_blocker = ResearchExecutorProbeResult(
                 available=True,

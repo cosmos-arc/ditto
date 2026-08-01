@@ -219,7 +219,11 @@ def _build_coordinator(
     runtime: CoordinatorRuntimeContext,
 ) -> IngestionCoordinator:
     """Build one source-consistent ingestion coordinator."""
-    fred_source = services.source_accessor.fred
+    fred_source = (
+        services.source_accessor.fred
+        if runtime.license_record_id is None or source_key is Source.FRED
+        else None
+    )
     if fred_source is not None:
         logger.debug("FRED source available for commodity data")
 

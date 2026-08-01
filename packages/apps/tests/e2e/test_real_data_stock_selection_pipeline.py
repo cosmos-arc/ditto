@@ -352,7 +352,7 @@ def _import_designated_seed_baseline(
     with _app_env(ctx.data_root, ctx.token):
         container = make_app_container()
         try:
-            published = container.get(StrategyCatalogService).get_latest_published(
+            published = container.get(StrategyCatalogService).get_active_published(
                 REAL_ACCEPTANCE_STRATEGY_ID
             )
             assert published is not None

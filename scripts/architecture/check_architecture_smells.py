@@ -401,6 +401,79 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             "registration before runtime services start."
         ),
     ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/live/r2_live_certification.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_data.catalog",
+                "ditto_data.catalog.metadata",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        owner="apps isolated R2 live certification composition",
+        reason=(
+            "Task 18 certification binds registry-resolved catalog, provider "
+            "snapshot, and application governance ports for one isolated root."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/live/r3_live_snapshot_builder.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.artifact_service",
+                "ditto_analysis.research.catalog_service",
+                "ditto_analysis.research.records",
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        owner="apps isolated R3 live snapshot composition",
+        reason=(
+            "Task 18 freezes analysis artifacts against exact active data "
+            "certifications and provider snapshots in the isolated live root."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/live/r3_live_planning_builder.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments",
+                "ditto_analysis.experiments.promotion_objective",
+                "ditto_analysis.experiments.trial_ledger",
+                "ditto_analysis.research.artifact_service",
+                "ditto_analysis.research.catalog_service",
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.source_snapshot",
+                "ditto_strategy.alpha.seeds",
+                "ditto_strategy.models",
+                "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
+            }
+        ),
+        owner="apps isolated R3 live planning composition",
+        reason=(
+            "Task 18 composes frozen analysis planning inputs with the canonical "
+            "seed catalog and exact certified live snapshot identities."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=(
+            "packages/apps/src/ditto_apps/registry/live/r3_live_acceptance_driver.py"
+        ),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.artifact_service",
+                "ditto_analysis.research.catalog_service",
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.source_snapshot",
+                "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
+            }
+        ),
+        owner="apps isolated R3 live acceptance composition",
+        reason=(
+            "Task 18 owns the explicit production-port composition for golden "
+            "lane, governance, and recovery evidence over an isolated root."
+        ),
+    ),
 )
 
 APPS_REGISTRY_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {

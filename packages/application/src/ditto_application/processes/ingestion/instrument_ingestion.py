@@ -109,6 +109,7 @@ def ingest_by_instrument(
     force: bool,
     *,
     ctx: InstrumentIngestContext,
+    chunk_id: str | None = None,
 ) -> IngestionResult:
     """按标的 + 日期范围摄取数据."""
     try:
@@ -162,6 +163,7 @@ def ingest_by_instrument(
         source_ticker,
         params,
         ctx=ctx,
+        chunk_id=chunk_id,
     )
 
 
@@ -172,6 +174,7 @@ def _fetch_and_ingest_by_instrument(
     params: InstrumentIngestParams,
     *,
     ctx: InstrumentIngestContext,
+    chunk_id: str | None = None,
 ) -> IngestionResult:
     """按标的获取数据并执行摄取（统一错误处理）。"""
     df_or_result = _try_fetch_data_by_instrument(
@@ -202,6 +205,7 @@ def _fetch_and_ingest_by_instrument(
             evidence_committer=ctx.evidence_committer,
             license_record_id=ctx.license_record_id,
         ),
+        chunk_id=chunk_id,
     )
 
 
@@ -237,6 +241,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
     params: InstrumentIngestParams,
     *,
     ctx: InstrumentPostIngestContext,
+    chunk_id: str | None = None,
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
@@ -294,6 +299,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
         source_ticker=source_ticker,
         end_date=params.end_date,
         l1_l2_attested=ctx.quality_checker is not None,
+        chunk_id=chunk_id,
     )
     if ctx.evidence_committer is not None:
         outcome = ctx.evidence_committer.commit(

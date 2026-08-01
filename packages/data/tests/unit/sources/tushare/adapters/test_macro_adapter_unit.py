@@ -35,6 +35,28 @@ class TestMacroTushareAdapterFetchIndicators:
         expected_columns = set(MACRO_INDICATOR_SOURCE_SCHEMA.schema.keys())
         assert set(result.columns) == expected_columns
 
+    def test_shibor_range_uses_one_bounded_provider_request(self) -> None:
+        from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame(
+            {"date": ["20240102"], "on": [1.5]}
+        )
+        adapter = MacroTushareAdapter(_client=mock_client)
+
+        result = adapter.fetch_macro_indicators_range(
+            "2024-01-01",
+            "2024-12-31",
+        )
+
+        assert result.height == 1
+        mock_client.query.assert_called_once_with(
+            api_name="shibor",
+            fields="date,on",
+            start_date="20240101",
+            end_date="20241231",
+        )
+
     def test_fetch_indicators_uses_correct_api_and_field(self) -> None:
         """Uses correct API name and field from metadata."""
         from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter

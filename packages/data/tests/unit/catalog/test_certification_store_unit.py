@@ -18,6 +18,10 @@ from ditto_data.catalog.contracts import (
     DataSchemaFingerprint,
 )
 from ditto_data.catalog.coverage import CoverageCollector, CoverageException
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotDraft,
+)
 from ditto_data.catalog.store import InMemoryDataCatalog
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 
@@ -100,8 +104,99 @@ def test_schedule_aware_coverage_tracks_gap_and_approved_exception() -> None:
     assert coverage.gaps == (date(2016, 1, 5),)
     assert coverage.unapproved_gaps == ()
     assert coverage.raw_from == date(2016, 1, 4)
-    assert coverage.complete_from == date(2016, 1, 4)
+    assert coverage.complete_from == date(2016, 1, 1)
     assert coverage.is_complete is True
+
+
+def test_range_catalog_asset_proves_each_expected_partition_in_chunk() -> None:
+    catalog = InMemoryDataCatalog()
+    catalog.upsert_asset(
+        DataCatalogEntry(
+            asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=(
+                    "start_date=2015-01-05",
+                    "end_date=2015-01-07",
+                ),
+            ),
+            storage_uri="stock_daily/2015",
+            schema=DataSchemaFingerprint(
+                schema_hash="stock_daily.v1",
+                row_count=30,
+                schema_version="market.stock_daily.v1",
+            ),
+            source="tushare",
+            freshness_at=datetime(2026, 8, 1, tzinfo=UTC),
+            source_snapshot_id="snapshot:tushare:stock_daily:range",
+        )
+    )
+    expected = (date(2015, 1, 5), date(2015, 1, 6), date(2015, 1, 7))
+
+    coverage = CoverageCollector(catalog).collect(
+        "stock_daily",
+        target_to=expected[-1],
+        expected_dates=expected,
+    )
+
+    assert coverage.actual_partitions == 3
+    assert coverage.gaps == ()
+    assert coverage.complete_from == date(2015, 1, 1)
+    assert coverage.is_complete
+
+
+def test_provider_request_range_proves_point_partition_asset_coverage() -> None:
+    catalog = InMemoryDataCatalog()
+    entry = _entry("calendar", date(2015, 12, 31))
+    catalog.upsert_asset(entry)
+    snapshot = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="calendar",
+            source="tushare",
+            request_start="2015-01-01",
+            request_end="2015-12-31",
+            schema_version="market.calendar.v1",
+            checksum="sha256:calendar-2015",
+            canonical_asset=entry.asset,
+            request_parameters_hash="a" * 64,
+            response_metadata=(),
+            license_record_id="license:tushare:calendar:reviewed",
+            row_count=10,
+            payload_uri=None,
+            payload_retained=False,
+            created_at=datetime(2026, 8, 1, tzinfo=UTC),
+        )
+    )
+
+    class _Snapshots:
+        def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
+            return snapshot if snapshot_id == snapshot.snapshot_id else None
+
+        def list_snapshots(
+            self,
+            *,
+            dataset_id: str | None = None,
+            source: str | None = None,
+            canonical_asset: DataAssetRef | None = None,
+        ) -> tuple[ProviderSnapshot, ...]:
+            del source
+            if dataset_id not in {None, "calendar"}:
+                return ()
+            if canonical_asset not in {None, snapshot.canonical_asset}:
+                return ()
+            return (snapshot,)
+
+    expected = (date(2015, 1, 5), date(2015, 6, 1), date(2015, 12, 31))
+
+    coverage = CoverageCollector(catalog, _Snapshots()).collect(
+        "calendar",
+        target_to=expected[-1],
+        expected_dates=expected,
+    )
+
+    assert coverage.actual_partitions == 3
+    assert coverage.gaps == ()
+    assert coverage.complete_from == date(2015, 1, 1)
 
 
 def test_report_hash_is_frozen_and_rejects_fact_mutation() -> None:

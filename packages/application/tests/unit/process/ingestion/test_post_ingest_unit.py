@@ -750,6 +750,51 @@ def test_sparse_nonempty_fails_closed_when_catalog_evidence_cannot_persist() -> 
     assert "secret-token" not in result.message
 
 
+def test_sparse_range_resolves_pit_snapshot_at_request_end() -> None:
+    """A bounded sparse fetch attests disclosures known by the range end."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="balance_sheet/2025-Q1",
+            checksum="range-checksum",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        ),
+        expected_columns=["report_date", "knowledge_date", "total_assets"],
+    )
+    catalog = InMemoryDataCatalog()
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        catalog_reader=catalog,
+        catalog_writer=catalog,
+        quality_checker=_PassingQualityChecker(),
+        source_name="tushare",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(
+            {
+                "report_date": ["2024-12-31"],
+                "knowledge_date": ["2025-02-15"],
+                "total_assets": [100.0],
+            }
+        ),
+        "balance_sheet",
+        "2025-01-02",
+        False,
+        ctx=ctx,
+        request_end="2025-03-31",
+        chunk_id="chunk:tushare:balance_sheet:2025-Q1",
+    )
+
+    assert result.status == "success", result
+    assert result.snapshot_evidence is not None
+    assert result.snapshot_evidence.signal_date == "2025-03-31"
+    assert result.snapshot_evidence.effective_partition_date == "2025-03-31"
+
+
 def test_process_fetched_data_marks_market_empty_as_failed() -> None:
     write_result = WriteResult(
         file_path="stock_daily/2025",
@@ -777,6 +822,50 @@ def test_process_fetched_data_marks_market_empty_as_failed() -> None:
     assert result.status == "failed"
     assert result.error == "EMPTY_DATA"
     assert writer.calls == []
+
+
+def test_r2_empty_range_commits_no_payload_provider_observation() -> None:
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="unused",
+            checksum="unused",
+            rows_written=0,
+            rows_total=0,
+            blocked=False,
+        )
+    )
+    committer = _EvidenceCommitRecorder(
+        EvidenceCommitOutcome("chunk:tushare:commodity_daily:2026-01", completed=True)
+    )
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+        quality_checker=_PassingQualityChecker(),
+        evidence_committer=cast(IngestionEvidenceCommitter, committer),
+        license_record_id="license:tushare:commodity_daily:reviewed",
+    )
+
+    result = process_fetched_data(
+        pl.DataFrame(schema={"trade_date": pl.Date, "close": pl.Float64}),
+        "commodity_daily",
+        "2026-01-01",
+        False,
+        ctx=ctx,
+        request_end="2026-01-31",
+        chunk_id="chunk:tushare:commodity_daily:2026-01",
+    )
+
+    assert result.status == "success"
+    assert writer.calls == []
+    assert len(committer.requests) == 1
+    request = committer.requests[0]
+    assert request.chunk_id == "chunk:tushare:commodity_daily:2026-01"
+    assert request.provider_snapshot.row_count == 0
+    assert request.provider_snapshot.payload_retained is False
+    assert request.provider_snapshot.payload_uri is None
+    assert request.catalog_entry.schema.row_count == 0
 
 
 def test_basic_catalog_is_recorded_before_list_date_inference() -> None:

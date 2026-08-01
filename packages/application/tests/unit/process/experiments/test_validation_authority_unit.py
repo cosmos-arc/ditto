@@ -8,6 +8,7 @@ from datetime import date, timedelta
 import pytest
 from ditto_application.builders.research_validation_authority import (
     ProductionResearchValidationAuthorityProbe,
+    SnapshotValidationAuthorityFacts,
 )
 from ditto_application.research_certification_contracts import (
     ExperimentSnapshotIdentity,
@@ -183,6 +184,38 @@ def test_registered_zero_isolation_still_cannot_fake_missing_pit_universe() -> N
     assert result.ready is False
     assert result.code == "PIT_UNIVERSE_UNRESOLVED"
     assert result.evidence is None
+
+
+def test_production_authority_signs_only_snapshot_backed_facts() -> None:
+    request = _request(_runtime(forward=2, holding=5, lag=1))
+
+    class _SnapshotSource:
+        def resolve(
+            self,
+            request: ResearchValidationAuthorityRequest,
+        ) -> SnapshotValidationAuthorityFacts:
+            assert request is authority_request
+            return SnapshotValidationAuthorityFacts(
+                protocol=_protocol(),
+                universe_membership_hash="9" * 64,
+                dataset_bindings=authority_request.declared_requirements,
+            )
+
+    authority_request = request
+    result = ProductionResearchValidationAuthorityProbe(_SnapshotSource()).probe(
+        authority_request
+    )
+
+    assert result.ready is True
+    assert result.code is None
+    assert result.reason is None
+    assert result.remediation is None
+    assert result.evidence is not None
+    assert result.evidence.protocol == _protocol()
+    assert result.evidence.universe_membership_hash == "9" * 64
+    runtime = authority_request.runtime_validation
+    assert runtime is not None
+    assert result.evidence.runtime_evidence_hash == runtime.payload_hash
 
 
 def test_authority_evidence_canonicalizes_semantic_identifier_permutations() -> None:

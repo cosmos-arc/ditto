@@ -331,6 +331,9 @@ def test_production_probe_returns_exact_registered_baseline_evidence() -> None:
         required_datasets=("etf_daily",),
         max_lookback_sessions=0,
         requires_pit_universe=True,
+        forward_horizon_sessions=2,
+        holding_period_sessions=5,
+        execution_lag_sessions=1,
     )
     registry = default_baseline_registry()
     assert result.baseline_ref == "etf_current_active.v1"

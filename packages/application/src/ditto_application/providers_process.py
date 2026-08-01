@@ -17,6 +17,7 @@ from ditto_data.catalog.certification import (
     CertificationReader as DataProductCertificationReader,
 )
 from ditto_data.catalog.license import DatasetLicenseReader
+from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotWriter
 from ditto_data.config.data_source import DataSourceSettings
@@ -70,6 +71,9 @@ from ditto_application.builders.research_runtime_builder import (
 )
 from ditto_application.builders.research_validation_authority import (
     ProductionResearchValidationAuthorityProbe as _ValidationAuthorityProbe,
+)
+from ditto_application.builders.research_validation_authority_source import (
+    IndexedSnapshotValidationAuthoritySource,
 )
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
 from ditto_application.commands.candidate_selection import CandidateSelectionProcess
@@ -131,6 +135,8 @@ from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
 )
 from ditto_application.processes.ingestion.r2_preflight import (
+    R2_ACCEPTANCE_CERTIFICATION_PROFILE,
+    ProductCertificationEvidence,
     R2AcceptanceRuntimeEvidence,
 )
 from ditto_application.processes.materialization.cascade_orchestrator import (
@@ -201,6 +207,11 @@ class AppProcessProvider(Provider):
     scope = Scope.APP
 
     @provide
+    def r2_live_gate_evidence_reader(self) -> R2LiveGateEvidenceReader:
+        """Default to fail-closed evidence until the composition root overrides it."""
+        return NullR2LiveGateEvidenceReader()
+
+    @provide
     def bootstrap_planner(
         self,
         metadata_service: MetadataService,
@@ -241,6 +252,7 @@ class AppProcessProvider(Provider):
         self,
         settings: DataSourceSettings,
         license_reader: DatasetLicenseReader,
+        certification_reader: DataProductCertificationReader,
     ) -> R2AcceptanceRuntimeEvidence:
         """Resolve non-secret live acceptance inputs at the composition boundary."""
         credential_sources: set[str] = set()
@@ -250,9 +262,31 @@ class AppProcessProvider(Provider):
             credential_sources.update({"fred", "alfred"})
         if Path(settings.tdx_path).expanduser().is_dir():
             credential_sources.add("local_tdx")
+        certifications: list[ProductCertificationEvidence] = []
+        for metadata in default_dataset_metadata().values():
+            contract = metadata.product_contract
+            if contract is None or contract.r2_scope != "hard":
+                continue
+            report = certification_reader.get_active_report(
+                metadata.dataset_id,
+                R2_ACCEPTANCE_CERTIFICATION_PROFILE,
+            )
+            if report is None or report.coverage.complete_from is None:
+                continue
+            certifications.append(
+                ProductCertificationEvidence(
+                    dataset_id=metadata.dataset_id,
+                    profile=report.profile,
+                    report_id=report.report_id,
+                    content_hash=report.content_hash,
+                    certified_from=report.coverage.complete_from,
+                    certified_through=report.coverage.target_to,
+                )
+            )
         return R2AcceptanceRuntimeEvidence(
             credential_sources=frozenset(credential_sources),
             license_records=license_reader.list_licenses(),
+            certifications=tuple(certifications),
         )
 
     @provide
@@ -293,9 +327,12 @@ class AppProcessProvider(Provider):
     @provide
     def research_validation_authority_probe(
         self,
+        research_artifact_service: ResearchArtifactService,
     ) -> _ValidationAuthorityProbe:
-        """Bind planning to the production fail-closed validation authority."""
-        return _ValidationAuthorityProbe()
+        """Bind planning to exact manifest, PIT membership, and calendar bytes."""
+        return _ValidationAuthorityProbe(
+            IndexedSnapshotValidationAuthoritySource(research_artifact_service)
+        )
 
     @provide
     def experiment_planning_process(
@@ -417,7 +454,9 @@ class AppProcessProvider(Provider):
         writer: ExperimentWriterProtocol,
         walk_forward_assembler: WalkForwardEvidenceAssembler,
         selection_evidence_reader: DurableSelectionEvidenceService,
-        r2_live_gate_evidence_reader: R2LiveGateEvidenceReader,
+        r2_live_gate_evidence_reader: R2LiveGateEvidenceReader = (
+            NullR2LiveGateEvidenceReader()
+        ),
     ) -> ExperimentEvidenceCollector:
         """Wire the R3 review-packet collector behind the durable experiment ports."""
         return ExperimentEvidenceCollector(
@@ -428,11 +467,6 @@ class AppProcessProvider(Provider):
             selection_evidence_reader=selection_evidence_reader,
             r2_live_gate_evidence_reader=r2_live_gate_evidence_reader,
         )
-
-    @provide
-    def r2_live_gate_evidence_reader(self) -> R2LiveGateEvidenceReader:
-        """Fail closed until isolated live acceptance injects an exact source."""
-        return NullR2LiveGateEvidenceReader()
 
     @provide
     def persisted_ingestion_evidence_verifier(

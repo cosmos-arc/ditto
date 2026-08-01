@@ -1376,6 +1376,104 @@ class TestIngestRange:
         )
         assert mock_source.fetch_stock_daily.call_count == 3
 
+    def test_ingest_chunk_fetches_each_partition_but_writes_one_range_payload(
+        self,
+        coordinator,
+        mock_source,
+        mock_market_write_service,
+        in_memory_catalog,
+    ) -> None:
+        frames = [
+            pl.DataFrame(
+                {
+                    "source_ticker": ["000001.SZ"],
+                    "trade_date": [date(2024, 12, day)],
+                    "open": [10.0],
+                    "close": [10.2],
+                    "pre_close": [10.0],
+                    "volume": [1_000_000],
+                    "amount": [10_200_000],
+                    "pct_change": [2.0],
+                    "high": [10.5],
+                    "low": [9.8],
+                }
+            )
+            for day in (25, 26, 27)
+        ]
+        mock_source.fetch_stock_daily.side_effect = frames
+        mock_market_write_service.save_bars.return_value = 3
+
+        result = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id="chunk:tushare:stock_daily:2024-12:2024-12-25:2024-12-27",
+            request_start="2024-12-25",
+            request_end="2024-12-27",
+            partition_dates=("2024-12-25", "2024-12-26", "2024-12-27"),
+        )
+
+        assert result.status == "success"
+        assert result.trade_date == "2024-12-25"
+        assert result.row_count == 3
+        assert mock_source.fetch_stock_daily.call_count == 3
+        mock_market_write_service.save_bars.assert_called_once()
+        entry = in_memory_catalog.get_asset(
+            DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=(
+                    "start_date=2024-12-25",
+                    "end_date=2024-12-27",
+                ),
+            )
+        )
+        assert entry is not None
+        assert entry.schema.row_count == 3
+
+    def test_source_defined_chunk_uses_one_range_fetch(
+        self,
+        coordinator,
+        mock_source,
+    ) -> None:
+        expected = pl.DataFrame({"date": [date(2024, 1, 2)], "value": [1.5]})
+        mock_source.fetch_macro_indicators_range.return_value = expected
+
+        result = coordinator._fetch_source_defined_range(
+            "macro_indicators",
+            "2024-01-01",
+            "2024-12-31",
+        )
+
+        assert result is expected
+        mock_source.fetch_macro_indicators_range.assert_called_once_with(
+            "2024-01-01",
+            "2024-12-31",
+        )
+
+    def test_sparse_pit_chunk_uses_one_bounded_range_fetch(
+        self,
+        coordinator,
+        mock_source,
+    ) -> None:
+        expected = pl.DataFrame(
+            {
+                "knowledge_date": [date(2024, 1, 31)],
+                "total_assets": [100.0],
+            }
+        )
+        mock_source.fetch_balance_sheet_range.return_value = expected
+
+        result = coordinator._fetch_sparse_range(
+            "balance_sheet",
+            "2024-01-01",
+            "2024-01-31",
+        )
+
+        assert result is expected
+        mock_source.fetch_balance_sheet_range.assert_called_once_with(
+            "2024-01-01",
+            "2024-01-31",
+        )
+
     def test_ingest_range_with_skipped_dates(
         self,
         coordinator,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 import sqlite3
 import sys
@@ -19,6 +20,7 @@ from ditto_application.processes.ingestion.r2_preflight import (
     ProviderAccessEvidence,
     R2AcceptanceRuntimeEvidence,
     R2IngestionPreflight,
+    R2PreflightEvidence,
     R2PreflightReport,
 )
 from ditto_platform.foundation.storage.payload_backup import (
@@ -52,11 +54,14 @@ __all__ = [
     "run_live_acceptance",
     "verify_consecutive_idempotency",
     "verify_idempotency_snapshots",
+    "write_live_evidence_bundle",
 ]
 
 _SQLITE_NAME = "metadata.sqlite"
 _PAYLOAD_NAME = "payload"
 _MANIFEST_NAME = "manifest.json"
+_LIVE_SOURCE_SCHEMA = "ditto.r2-live-gate-source"
+_LIVE_ARTIFACT_SCHEMA = "ditto.r2-live-gate-artifact"
 
 
 class R2BackupError(RuntimeError):
@@ -267,13 +272,16 @@ def run_live_acceptance(
         ChunkBenchmark(**item.model_dump()) for item in evidence.benchmarks
     )
     preflight = R2IngestionPreflight().run(
-        provider_access=access,
-        license_records=runtime.license_records,
-        benchmarks=benchmarks,
-        incremental_elapsed_seconds=evidence.incremental_elapsed_seconds,
-        workbench_query_seconds=evidence.workbench_query_seconds,
-        as_of=now.date(),
-        checked_at=now,
+        R2PreflightEvidence(
+            provider_access=access,
+            license_records=runtime.license_records,
+            certifications=runtime.certifications,
+            benchmarks=benchmarks,
+            incremental_elapsed_seconds=evidence.incremental_elapsed_seconds,
+            workbench_query_seconds=evidence.workbench_query_seconds,
+            as_of=now.date(),
+            checked_at=now,
+        )
     )
     recoverability = _live_recoverability(
         sqlite_path=sqlite_path,
@@ -450,6 +458,97 @@ def _acceptance_report(
     )
 
 
+def _canonical_json(value: object) -> bytes:
+    return orjson.dumps(value, option=orjson.OPT_SORT_KEYS)
+
+
+def _write_json(path: Path, value: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(_canonical_json(value))
+
+
+def _content_entry(path: Path, *, root: Path) -> dict[str, str]:
+    return {
+        "relative_path": path.relative_to(root).as_posix(),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+
+
+def write_live_evidence_bundle(
+    *,
+    report: R2AcceptanceReport,
+    output: Path,
+    source_manifest: Path,
+) -> None:
+    """Write one redacted report and four exact evidence groups for Task 11."""
+    if report.mode != "live":
+        raise ValueError("R2 live evidence bundle requires a live report")
+    root = source_manifest.parent.resolve(strict=False)
+    if output.parent.resolve(strict=False) != root:
+        raise ValueError("R2 report and source manifest must share one directory")
+    evidence_root = root / "r2-live-evidence"
+    evidence_root.mkdir(parents=True, exist_ok=True)
+    artifacts: dict[str, tuple[Path, object]] = {
+        "provider_entitlement": (
+            evidence_root / "provider-entitlement.json",
+            {
+                "schema": _LIVE_ARTIFACT_SCHEMA,
+                "version": 1,
+                "kind": "provider_entitlement",
+                "checked_at": report.checked_at,
+                "contract_count": report.preflight.contract_count,
+                "products": report.preflight.products,
+                "reason_codes": report.preflight.reason_codes,
+            },
+        ),
+        "performance": (
+            evidence_root / "performance.json",
+            {
+                "schema": _LIVE_ARTIFACT_SCHEMA,
+                "version": 1,
+                "kind": "performance",
+                "checked_at": report.checked_at,
+                "performance": report.preflight.performance,
+            },
+        ),
+        "recoverability": (
+            evidence_root / "recoverability.json",
+            {
+                "schema": _LIVE_ARTIFACT_SCHEMA,
+                "version": 1,
+                "kind": "recoverability",
+                "checked_at": report.checked_at,
+                "recoverability": report.recoverability,
+            },
+        ),
+        "idempotency": (
+            evidence_root / "idempotency.json",
+            {
+                "schema": _LIVE_ARTIFACT_SCHEMA,
+                "version": 1,
+                "kind": "idempotency",
+                "checked_at": report.checked_at,
+                "idempotency": report.idempotency,
+            },
+        ),
+    }
+    _write_json(output, asdict(report))
+    for path, value in artifacts.values():
+        _write_json(path, value)
+    _write_json(
+        source_manifest,
+        {
+            "schema": _LIVE_SOURCE_SCHEMA,
+            "version": 1,
+            "report": _content_entry(output, root=root),
+            "groups": {
+                kind: [_content_entry(path, root=root)]
+                for kind, (path, _) in artifacts.items()
+            },
+        },
+    )
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("fixture", "live"), default="fixture")
@@ -458,6 +557,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--payload-root", type=Path)
     parser.add_argument("--backup-root", type=Path)
     parser.add_argument("--restore-root", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--source-manifest", type=Path)
     return parser
 
 
@@ -474,6 +575,15 @@ def main(argv: list[str] | None = None) -> int:
             backup_root=args.backup_root,
             restore_root=args.restore_root,
         )
+        if args.output is not None:
+            source_manifest = args.source_manifest or args.output.with_name(
+                f"{args.output.stem}.manifest{args.output.suffix}"
+            )
+            write_live_evidence_bundle(
+                report=report,
+                output=args.output,
+                source_manifest=source_manifest,
+            )
     sys.stdout.write(
         orjson.dumps(
             asdict(report),

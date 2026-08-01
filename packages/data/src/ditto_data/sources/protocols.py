@@ -186,6 +186,8 @@ class CapitalFetcher(Protocol):
         self,
         index_code: str,
         trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """Fetch effective index constituent weights."""
         ...

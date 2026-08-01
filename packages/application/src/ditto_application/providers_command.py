@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog import DataCatalogReader
 from ditto_data.catalog.certification import CertificationGovernanceStore
 from ditto_data.catalog.fallback_policy import (
     CatalogSourceFallbackPolicyReader,
     CatalogSourceFallbackPolicyWriter,
 )
+from ditto_data.catalog.license import DatasetLicenseReader, DatasetLicenseWriter
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionReader,
     DatasetMaturityPromotionRevoker,
@@ -19,6 +21,8 @@ from ditto_data.catalog.remediation import (
     CatalogRemediationApprovalReader,
     CatalogRemediationApprovalWriter,
 )
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
 )
@@ -76,6 +80,10 @@ from ditto_application.commands.catalog_remediation import (
 from ditto_application.commands.data_product_certification import (
     DataProductCertificationCommands,
 )
+from ditto_application.commands.data_product_certification_builder import (
+    DataProductCertificationBuilder,
+)
+from ditto_application.commands.data_product_license import DataProductLicenseCommands
 from ditto_application.commands.experiments import (
     CancelExperimentHandler,
     ClaimHoldoutCandidateHandler,
@@ -210,6 +218,30 @@ class AppCommandProvider(Provider):
     ) -> DataProductCertificationCommands:
         """R2 immutable certification review commands."""
         return DataProductCertificationCommands(store=store)
+
+    @provide
+    def data_product_license_commands(
+        self,
+        writer: DatasetLicenseWriter,
+    ) -> DataProductLicenseCommands:
+        """Append one application-validated human license review."""
+        return DataProductLicenseCommands(writer)
+
+    @provide
+    def data_product_certification_builder(
+        self,
+        catalog_reader: DataCatalogReader,
+        snapshot_reader: ProviderSnapshotReader,
+        license_reader: DatasetLicenseReader,
+        lifecycle_reader: PartitionLifecycleReader,
+    ) -> DataProductCertificationBuilder:
+        """Build reviewable R2 reports from the durable ingestion evidence chain."""
+        return DataProductCertificationBuilder(
+            catalog_reader=catalog_reader,
+            snapshot_reader=snapshot_reader,
+            license_reader=license_reader,
+            lifecycle_reader=lifecycle_reader,
+        )
 
     @provide
     def opening_baseline_resolver(

@@ -62,7 +62,9 @@ class IndexedResearchArtifactLoader:
         evidence: ContentAddressedResearchInput,
     ) -> VerifiedResearchFrame:
         """Load and verify one Parquet frame addressed by ``evidence.input_id``."""
-        artifact_bytes = self._artifacts.read_indexed_artifact_bytes(evidence.input_id)
+        artifact_bytes = self._artifacts.read_frozen_research_input_bytes(
+            evidence.input_id
+        )
         # VerifiedResearchFrame does not infer source_snapshot_ids from the
         # parsed frame; derive them here so the trust boundary stays caller-free.
         frame = pl.read_parquet(BytesIO(artifact_bytes))
@@ -80,7 +82,9 @@ class IndexedResearchArtifactLoader:
         evidence: ContentAddressedResearchInput,
     ) -> VerifiedInstrumentRulesArtifact:
         """Load and verify one instrument-rules Parquet artifact."""
-        artifact_bytes = self._artifacts.read_indexed_artifact_bytes(evidence.input_id)
+        artifact_bytes = self._artifacts.read_frozen_research_input_bytes(
+            evidence.input_id
+        )
         return VerifiedInstrumentRulesArtifact(
             input_evidence=evidence,
             artifact_bytes=artifact_bytes,

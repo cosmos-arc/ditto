@@ -228,6 +228,35 @@ class TestCapitalTushareAdapterFetchIndexComposition:
             date(2024, 12, 27),
         ]
 
+    def test_fetch_index_weight_supports_provider_date_range(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "index_code": ["000300.SH"],
+                "con_code": ["600000.SH"],
+                "trade_date": ["20241227"],
+                "weight": [100.0],
+            }
+        )
+        adapter = CapitalTushareAdapter(_client=mock_client)
+
+        adapter.fetch_index_weight(
+            "000300.SH",
+            start_date="20240101",
+            end_date="20241231",
+        )
+
+        mock_client.query.assert_called_once_with(
+            api_name="index_weight",
+            index_code="000300.SH",
+            start_date="20240101",
+            end_date="20241231",
+            fields="index_code,con_code,trade_date,weight",
+        )
+
 
 class TestCapitalTushareAdapterFetchCorporateActions:
     """Tests for fetch_corporate_actions method."""
@@ -236,33 +265,69 @@ class TestCapitalTushareAdapterFetchCorporateActions:
         self,
         mocker: pytest_mock.MockFixture,
     ) -> None:
-        """Test fetching corporate actions returns valid DataFrame."""
-        # Arrange
-        mock_response = pl.DataFrame(
+        """Normalize official repurchase and share-float endpoints together."""
+        repurchase = pl.DataFrame(
             {
                 "ts_code": ["000001.SZ"],
                 "ann_date": ["20240101"],
-                "act_date": ["20240115"],
-                "ba_type": ["分红"],
-                "name": ["2023年度分红"],
+                "end_date": ["20240115"],
+                "proc": ["完成"],
+                "exp_date": [None],
+                "vol": [1_000_000.0],
+                "amount": [10_000_000.0],
+            }
+        )
+        share_float = pl.DataFrame(
+            {
+                "ts_code": ["000002.SZ"],
+                "ann_date": ["20240102"],
+                "float_date": ["20240120"],
+                "float_share": [2_000_000.0],
+                "float_ratio": [1.5],
+                "holder_name": ["holder"],
+                "share_type": ["首发原股东限售股份"],
             }
         )
 
         mock_client = mocker.Mock()
-        mock_client.query.return_value = mock_response
+        mock_client.query.side_effect = [repurchase, share_float]
 
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
-        result = adapter.fetch_corporate_actions(ts_code="000001.SZ")
+        result = adapter.fetch_corporate_actions(
+            start_date="20240101",
+            end_date="20240331",
+        )
 
-        # Assert
-        assert len(result) > 0
-        assert "source_ticker" in result.columns
-        assert "action_type" in result.columns
-        assert "action_date" in result.columns
-        assert "knowledge_date" in result.columns
-        assert "effective_from" in result.columns
-        assert "effective_to" in result.columns
+        assert result["source_ticker"].to_list() == ["000001.SZ", "000002.SZ"]
+        assert result["action_type"].to_list() == [
+            "share_repurchase",
+            "restricted_share_release",
+        ]
+        assert result["action_date"].to_list() == [
+            date(2024, 1, 1),
+            date(2024, 1, 2),
+        ]
+        assert result["effective_from"].to_list() == [
+            date(2024, 1, 15),
+            date(2024, 1, 20),
+        ]
+        assert result.columns == [
+            "source_ticker",
+            "action_type",
+            "action_date",
+            "knowledge_date",
+            "effective_from",
+            "effective_to",
+            "description",
+        ]
+        api_names = [
+            call.kwargs["api_name"] for call in mock_client.query.call_args_list
+        ]
+        assert api_names == [
+            "repurchase",
+            "share_float",
+        ]
 
 
 class TestCapitalTushareAdapterFetchShareBuyback:

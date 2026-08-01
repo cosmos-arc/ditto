@@ -61,6 +61,11 @@ def _ready_report(*, mode: str = "live", status: str = "ready") -> dict[str, obj
             "provider_datasets": list(provider_datasets),
             "usable_provider_datasets": [provider_datasets[0]],
             "license_record_ids": [f"license:{dataset_id}"],
+            "certification_profile": "r2-modern-a-share-v1",
+            "certification_report_id": f"certification:{dataset_id}:live",
+            "certification_content_hash": "b" * 64,
+            "certified_from": "2015-01-01",
+            "certified_through": "2026-07-31",
             "ready": True,
             "reason_codes": [],
         }
@@ -262,6 +267,32 @@ def test_ready_report_rejects_provider_contract_drift(tmp_path: Path) -> None:
     products = cast("list[dict[str, object]]", preflight["products"])
     products[0]["provider_datasets"] = ["forged:provider"]
     products[0]["usable_provider_datasets"] = ["forged:provider"]
+
+    assert (
+        FileR2LiveGateEvidenceReader(
+            _source(tmp_path, report)
+        ).read_verified_live_gate()
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "certification_report_id",
+        "certification_content_hash",
+        "certified_from",
+        "certified_through",
+    ],
+)
+def test_ready_report_requires_active_certified_history(
+    tmp_path: Path,
+    field: str,
+) -> None:
+    report = _ready_report()
+    preflight = cast("dict[str, object]", report["preflight"])
+    products = cast("list[dict[str, object]]", preflight["products"])
+    products[0][field] = None
 
     assert (
         FileR2LiveGateEvidenceReader(

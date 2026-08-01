@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import Protocol
 
 from ditto_data.catalog import (
@@ -317,9 +317,9 @@ class IngestionEvidenceCommitter:
             or record.source != request.source
         ):
             return "LICENSE_EVIDENCE_MISSING"
-        request_end = date.fromisoformat(request.request_end)
-        if request_end < record.effective_from or (
-            record.effective_to is not None and request_end > record.effective_to
+        access_date = snapshot.created_at.date()
+        if access_date < record.effective_from or (
+            record.effective_to is not None and access_date > record.effective_to
         ):
             return "LICENSE_NOT_EFFECTIVE"
         if record.local_cache != "allowed" or record.derivative_compute != "allowed":

@@ -92,6 +92,7 @@ def test_live_mode_without_credentials_or_evidence_is_configuration_blocked(
     container.get.return_value = R2AcceptanceRuntimeEvidence(
         credential_sources=frozenset(),
         license_records=(),
+        certifications=(),
     )
     mocker.patch(
         "ditto_apps.scripts.r2_data_acceptance.make_app_container",

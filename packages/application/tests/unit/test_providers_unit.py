@@ -22,6 +22,9 @@ from ditto_application.builders.research_executor_probe import (
 from ditto_application.builders.research_validation_authority import (
     ProductionResearchValidationAuthorityProbe,
 )
+from ditto_application.builders.research_validation_authority_source import (
+    IndexedSnapshotValidationAuthoritySource,
+)
 from ditto_application.commands.account import ImportAccountBaselineHandler
 from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
@@ -551,10 +554,14 @@ class TestAppProviderStructure:
         self,
     ) -> None:
         provider = AppProcessProvider()
+        artifacts = MagicMock()
 
-        authority = provider.research_validation_authority_probe()
+        authority = provider.research_validation_authority_probe(
+            research_artifact_service=artifacts
+        )
 
         assert isinstance(authority, ProductionResearchValidationAuthorityProbe)
+        assert isinstance(authority._source, IndexedSnapshotValidationAuthoritySource)
 
     def test_quality_batch_coordinator_provider_wires_application_dependencies(
         self,

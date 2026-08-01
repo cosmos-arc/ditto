@@ -79,6 +79,27 @@ class TestSQLiteDatasetLicenseStore:
         finally:
             pool.close()
 
+    def test_semantic_retry_preserves_original_review_timestamp(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteDatasetLicenseStore(client)
+        record = _record()
+        retry = replace(
+            record,
+            reviewed_at=datetime(2026, 7, 18, 10, 0, tzinfo=UTC),
+        )
+
+        try:
+            store.append_license(record)
+            store.append_license(retry)
+
+            assert store.get_license(record.record_id) == record
+            assert store.list_licenses() == (record,)
+        finally:
+            pool.close()
+
 
 class TestDatasetLicenseRecordValidation:
     @pytest.mark.parametrize(

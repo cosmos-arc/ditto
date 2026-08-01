@@ -43,7 +43,7 @@ class IndexedResearchInputsResolver:
         request: FrozenResearchInputRequest,
     ) -> FrozenResearchExecutionInputs:
         """Return verified snapshot and instrument-rules bindings for one request."""
-        manifest_bytes = self._artifacts.read_indexed_artifact_bytes(
+        manifest_bytes = self._artifacts.read_frozen_research_input_bytes(
             request.snapshot.snapshot_id,
         )
         snapshot_manifest = VerifiedResearchSnapshotManifest(
@@ -51,7 +51,7 @@ class IndexedResearchInputsResolver:
             manifest_bytes=manifest_bytes,
         )
         rules_evidence = _select_single_rules_evidence(snapshot_manifest)
-        rules_bytes = self._artifacts.read_indexed_artifact_bytes(
+        rules_bytes = self._artifacts.read_frozen_research_input_bytes(
             rules_evidence.input_id,
         )
         instrument_rules = VerifiedInstrumentRulesArtifact(

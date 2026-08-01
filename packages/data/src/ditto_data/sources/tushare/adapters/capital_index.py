@@ -28,6 +28,8 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
         self,
         index_code: str,
         trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """
         获取指数权重数据.
@@ -35,6 +37,8 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
         Args:
             index_code: 指数代码 (e.g., "000001.SH").
             trade_date: 交易日期 (YYYYMMDD), None 表示最新.
+            start_date: 可选区间开始日期 (YYYYMMDD).
+            end_date: 可选区间结束日期 (YYYYMMDD).
 
         Returns:
             DataFrame with raw Tushare columns (con_code, weight, trade_date, etc.).
@@ -43,6 +47,11 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
             SourceFetchError: If fetch fails.
 
         """
+        if trade_date and (start_date or end_date):
+            raise ValueError("trade_date is mutually exclusive with start/end date")
+        if (start_date is None) != (end_date is None):
+            raise ValueError("start_date and end_date must be supplied together")
+
         params: dict[str, str] = {
             "api_name": "index_weight",
             "index_code": index_code,
@@ -50,6 +59,9 @@ class CapitalIndexTushareAdapter(BaseTushareAdapter):
         }
         if trade_date:
             params["trade_date"] = trade_date
+        if start_date is not None and end_date is not None:
+            params["start_date"] = start_date
+            params["end_date"] = end_date
 
         with tushare_fetch_error_handler("index_weight", "index_weight"):
             df = self._client.query(**params)
