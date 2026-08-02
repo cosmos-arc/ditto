@@ -372,6 +372,22 @@ class TestCompileAndValidate:
         assert result.expressions[0].derived_id == "known_factor"
         assert result.expressions[0].version == 2
 
+    def test_registered_only_mode_inlines_transitive_factor_dependencies(
+        self,
+    ) -> None:
+        """A governed factor must execute from raw leaves, not derived columns."""
+        bridge = FactorBridge(require_registered_factor_ids=True)
+
+        result = bridge.compile_and_validate(
+            expressions=("volatility_factor",),
+            weights=(1.0,),
+        )
+
+        analysis = result.expressions[0].analysis
+        assert analysis.dependencies == ("market.close",)
+        assert analysis.operator_names == ("ts_std", "ts_pct_change")
+        assert analysis.lookback == 21
+
 
 # ===========================================================================
 # FactorBridge.compute_signals — 信号合成计算
@@ -563,6 +579,29 @@ class TestComputeSignals:
         assert result["signal_value"].to_list() == pytest.approx(
             [1.0 / 3.0, 2.0 / 3.0, 1.0]
         )
+
+    def test_transitive_registered_factor_executes_from_raw_market_history(
+        self,
+    ) -> None:
+        bridge = FactorBridge(require_registered_factor_ids=True)
+        compiled = bridge.compile_and_validate(
+            expressions=("volatility_factor",),
+            weights=(1.0,),
+        )
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1] * 30 + [2] * 30,
+                "trade_date": list(range(30)) * 2,
+                "close": [10.0 + index * 0.1 for index in range(30)]
+                + [20.0 + index * 0.2 for index in range(30)],
+            }
+        )
+
+        result = bridge.compute_signals(frame, compiled)
+
+        assert result.height == 2
+        assert result["factor_0"].null_count() == 0
+        assert result["signal_value"].null_count() == 0
 
 
 # ===========================================================================

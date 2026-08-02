@@ -28,6 +28,7 @@ from ditto_features.expression.contracts import (
     CompileIdentity,
 )
 from ditto_features.expression.diagnostics import ExpressionCompileError
+from ditto_features.expression.lexer import tokenize
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_features.factors.spec import FactorSpec
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
@@ -382,17 +383,67 @@ class FactorBridge:
             return expr_or_id
         if not self._require_registered_factor_ids:
             return spec.expression
+        return self._resolve_registered_expression(expr_or_id, visiting=())
+
+    def _resolve_registered_expression(
+        self,
+        factor_id: str,
+        *,
+        visiting: tuple[str, ...],
+    ) -> str:
+        """Inline one governed factor's registered dependency closure."""
+        if factor_id in visiting:
+            dependency_path = (*visiting, factor_id)
+            raise AppProcessError(
+                f"registered factor dependency cycle: {' -> '.join(dependency_path)}",
+                details={
+                    "code": "SPEC_INVALID",
+                    "reason": "registered_factor_dependency_cycle",
+                    "factor_id": factor_id,
+                    "dependency_path": dependency_path,
+                },
+            )
+        spec = self._registry[factor_id]
         if spec.computation_type != "expression":
             raise AppProcessError(
-                f"research factor executor is unavailable: {expr_or_id}",
+                f"research factor executor is unavailable: {factor_id}",
                 details={
                     "code": "EXECUTOR_UNAVAILABLE",
                     "reason": "research_factor_executor_unavailable",
-                    "factor_id": expr_or_id,
+                    "factor_id": factor_id,
                     "computation_type": spec.computation_type,
                 },
             )
-        return spec.expression
+
+        registered_dependencies = {
+            dependency
+            for dependency in spec.dependencies
+            if dependency in self._registry
+        }
+        if not registered_dependencies:
+            return spec.expression
+
+        next_visiting = (*visiting, factor_id)
+        resolved_dependencies = {
+            dependency: self._resolve_registered_expression(
+                dependency,
+                visiting=next_visiting,
+            )
+            for dependency in sorted(registered_dependencies)
+        }
+        replacements = tuple(
+            (
+                token.span.start.offset,
+                token.span.end.offset,
+                f"({resolved_dependencies[token.value]})",
+            )
+            for token in tokenize(spec.expression)
+            if token.kind == "IDENT" and token.value in resolved_dependencies
+        )
+        resolved = spec.expression
+        for start, end, replacement in reversed(replacements):
+            resolved = f"{resolved[:start]}{replacement}{resolved[end:]}"
+        return resolved
 
     def _resolve_compilation_identity(
         self,
