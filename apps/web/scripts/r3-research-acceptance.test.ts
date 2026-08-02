@@ -46,6 +46,7 @@ describe("R3 research deterministic acceptance contract", () => {
 			apiBase: "http://127.0.0.1:8000",
 			outDir: "docs/review/r3-research-acceptance/live",
 			planningFile: "/tmp/stock-planning.json",
+			timeoutMs: 300_000,
 		});
 		expect(
 			parseAcceptanceArgs([
@@ -58,6 +59,8 @@ describe("R3 research deterministic acceptance contract", () => {
 				"http://[::1]:8001/",
 				"--out-dir",
 				"tmp/r3-live-ui",
+				"--timeout-ms",
+				"2100000",
 			]),
 		).toEqual({
 			realData: true,
@@ -65,7 +68,17 @@ describe("R3 research deterministic acceptance contract", () => {
 			apiBase: "http://[::1]:8001",
 			outDir: "tmp/r3-live-ui",
 			planningFile: "/tmp/stock-planning.json",
+			timeoutMs: 2_100_000,
 		});
+		expect(() =>
+			parseAcceptanceArgs([
+				"--real-data",
+				"--planning-file",
+				"/tmp/stock-planning.json",
+				"--timeout-ms",
+				"299999",
+			]),
+		).toThrow("between 300000 and 3600000");
 		expect(() => parseAcceptanceArgs(["--fixture", "--real-data"])).toThrow("exactly one");
 		expect(() =>
 			parseAcceptanceArgs([

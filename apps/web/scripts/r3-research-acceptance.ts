@@ -15,6 +15,7 @@ type LiveAcceptanceOptions = {
 	readonly apiBase: string;
 	readonly outDir: string;
 	readonly planningFile: string;
+	readonly timeoutMs: number;
 };
 
 type AcceptanceOptions = FixtureAcceptanceOptions | LiveAcceptanceOptions;
@@ -96,6 +97,7 @@ type LiveAcceptanceReport = {
 	readonly api_base: string;
 	readonly experiment_id: string | null;
 	readonly planning_identity: LivePlanningIdentity;
+	readonly timeout_ms: number;
 	readonly steps: readonly LiveStepResult[];
 	readonly console_errors: readonly string[];
 	readonly page_errors: readonly string[];
@@ -156,7 +158,8 @@ const DEFAULT_LIVE_OUT_DIR = "docs/review/r3-research-acceptance/live";
 const DEFAULT_REACT_BASE = "http://127.0.0.1:5173";
 const DEFAULT_API_BASE = "http://127.0.0.1:8000";
 const OUTPUT_LIMIT = 12_000;
-const LIVE_TIMEOUT_MS = 300_000;
+const DEFAULT_LIVE_TIMEOUT_MS = 300_000;
+const MAX_LIVE_TIMEOUT_MS = 3_600_000;
 
 export const ACCEPTANCE_SCOPE = {
 	mode: "deterministic_fixture",
@@ -204,6 +207,7 @@ export function parseAcceptanceArgs(args: readonly string[]): AcceptanceOptions 
 	let apiBase = DEFAULT_API_BASE;
 	let outDir: string | null = null;
 	let planningFile: string | null = null;
+	let timeoutMs = DEFAULT_LIVE_TIMEOUT_MS;
 
 	for (let index = 0; index < args.length; index += 1) {
 		const argument = args[index];
@@ -229,6 +233,18 @@ export function parseAcceptanceArgs(args: readonly string[]): AcceptanceOptions 
 			index += 1;
 			continue;
 		}
+		if (argument === "--timeout-ms") {
+			const value = args[index + 1];
+			invariant(value, "Missing value for --timeout-ms");
+			invariant(/^\d+$/u.test(value), "--timeout-ms must be an integer");
+			timeoutMs = Number.parseInt(value, 10);
+			invariant(
+				timeoutMs >= DEFAULT_LIVE_TIMEOUT_MS && timeoutMs <= MAX_LIVE_TIMEOUT_MS,
+				`--timeout-ms must be between ${DEFAULT_LIVE_TIMEOUT_MS} and ${MAX_LIVE_TIMEOUT_MS}`,
+			);
+			index += 1;
+			continue;
+		}
 		if (argument === "--react-base" || argument === "--api-base") {
 			const value = args[index + 1];
 			invariant(value, `Missing value for ${argument}`);
@@ -243,7 +259,10 @@ export function parseAcceptanceArgs(args: readonly string[]): AcceptanceOptions 
 	invariant(fixture !== realData, "exactly one of --fixture or --real-data is required");
 	if (fixture) {
 		invariant(
-			reactBase === DEFAULT_REACT_BASE && apiBase === DEFAULT_API_BASE && planningFile === null,
+				reactBase === DEFAULT_REACT_BASE &&
+					apiBase === DEFAULT_API_BASE &&
+					planningFile === null &&
+					timeoutMs === DEFAULT_LIVE_TIMEOUT_MS,
 			"live bases and planning file require --real-data",
 		);
 		return { fixture: true, outDir: outDir ?? DEFAULT_FIXTURE_OUT_DIR };
@@ -251,7 +270,7 @@ export function parseAcceptanceArgs(args: readonly string[]): AcceptanceOptions 
 	invariant(planningFile, "live acceptance requires --planning-file");
 	assertLoopbackBase(reactBase, "React base");
 	assertLoopbackBase(apiBase, "API base");
-	return { realData: true, reactBase, apiBase, outDir: outDir ?? DEFAULT_LIVE_OUT_DIR, planningFile };
+	return { realData: true, reactBase, apiBase, outDir: outDir ?? DEFAULT_LIVE_OUT_DIR, planningFile, timeoutMs };
 }
 
 export function validateLiveRuntime(environment: Readonly<Record<string, string | undefined>>): void {
@@ -594,7 +613,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 	const context = await browser.newContext({ viewport: { width: 1536, height: 960 } });
 	await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
 	const page = await context.newPage();
-	page.setDefaultTimeout(LIVE_TIMEOUT_MS);
+	page.setDefaultTimeout(options.timeoutMs);
 	page.on("console", (message) => {
 		if (message.type() === "error") consoleErrors.push(message.text().slice(0, OUTPUT_LIMIT));
 	});
@@ -808,6 +827,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 		api_base: options.apiBase,
 		experiment_id: experimentId,
 		planning_identity: planningIdentity,
+		timeout_ms: options.timeoutMs,
 		steps,
 		console_errors: consoleErrors,
 		page_errors: pageErrors,
