@@ -18,7 +18,10 @@ from ditto_application.builders import (
 )
 from ditto_application.builders import research_execution_resolver as execution_resolver
 from ditto_application.builders.research_factor_registry import ResearchFactorBinding
-from ditto_application.builders.research_runtime_builder import ResearchStrategyRuntime
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+    ResearchStrategyRuntime,
+)
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.factor_bridge import (
     FactorBridge,
@@ -52,6 +55,8 @@ from ditto_application.processes.experiments.research_snapshot_manifest import (
     VerifiedResearchSnapshotManifest,
 )
 from ditto_features.expression.contracts import CompileIdentity
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
+from ditto_strategy.models import StrategySpecRecord
 
 _RULES_SCHEMA_V1: dict[str, pl.DataType] = {
     "instrument_code": pl.String,
@@ -106,6 +111,31 @@ def test_runtime_dataset_binding_accepts_only_exact_legacy_or_addressed_id() -> 
     assert _binds_runtime_dataset_input(addressed, "stock_daily") is True
     assert _binds_runtime_dataset_input(forged, "stock_daily") is False
     assert _binds_runtime_dataset_input(addressed, "stock") is False
+
+
+def test_durable_runtime_rebuild_uses_the_observable_worker_pipeline_mode() -> None:
+    class _Builder:
+        kwargs: dict[str, object]
+
+        def build(self, **kwargs: object) -> object:
+            self.kwargs = kwargs
+            return SimpleNamespace()
+
+    builder = _Builder()
+    execution_bindings.build_research_runtime(
+        builder=cast("ResearchRuntimeBuilder", builder),
+        record=StrategySpecRecord(
+            strategy_id="strategy-1",
+            name="Strategy 1",
+            spec_json={"strategy_id": "strategy-1"},
+            version=1,
+        ),
+        version_status="draft",
+        parameters=(),
+        snapshot=ExactResearchSnapshot("snapshot-1", "a" * 64),
+    )
+
+    assert isinstance(builder.kwargs["evidence_sink"], SelectionEvidenceCollector)
 
 
 def _rules_artifact(

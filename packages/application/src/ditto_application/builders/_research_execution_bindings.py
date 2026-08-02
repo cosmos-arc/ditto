@@ -6,6 +6,7 @@ from datetime import date
 from typing import cast
 
 from ditto_strategy.alpha.parameters import CandidateParameter
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.models import StrategySpecRecord
 
 from ditto_application.builders.published_baseline_runtime_builder import (
@@ -115,6 +116,7 @@ def build_research_runtime(
                 snapshot.manifest_hash,
             ),
             version_status=version_status,
+            evidence_sink=SelectionEvidenceCollector(),
         )
     except (AppBuilderError, AppProcessError) as exc:
         raise research_execution_error(
