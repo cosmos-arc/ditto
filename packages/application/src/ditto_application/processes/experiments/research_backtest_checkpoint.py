@@ -42,6 +42,7 @@ from ditto_application.processes.experiments.execution_bundle import (
 )
 
 __all__ = [
+    "RESEARCH_CHECKPOINT_INTERVAL_DAYS",
     "ResearchBacktestCheckpointControl",
     "ResearchBacktestResumeState",
     "ResearchBacktestStrategyConfig",
@@ -50,6 +51,8 @@ __all__ = [
     "require_research_resume_runtime_state",
     "resolve_research_backtest_resume",
 ]
+
+RESEARCH_CHECKPOINT_INTERVAL_DAYS = 20
 
 
 def _error(reason: str, **details: object) -> AppProcessError:

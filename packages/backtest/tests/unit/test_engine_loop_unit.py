@@ -275,6 +275,7 @@ def _make_wired_engine_loop(
     should_stop: Callable[[], bool] | None = None,
     on_checkpoint: Callable[[object], None] | None = None,
     execution_delay: int = 0,
+    checkpoint_interval_days: int = 1,
 ) -> _WiredMocks:
     """构建完整 mock 的 EngineLoop（3 天回测 + pipeline/planner/brokerage 配置）.
 
@@ -328,6 +329,7 @@ def _make_wired_engine_loop(
             fee_model=fee_model,
             should_stop=should_stop,
             on_checkpoint=on_checkpoint,
+            checkpoint_interval_days=checkpoint_interval_days,
         ),
     )
     return _WiredMocks(
@@ -1511,6 +1513,48 @@ class TestCooperativeCancellation:
         assert result.last_checkpoint is not None
         assert result.last_checkpoint.completed_trade_date == DAYS[-1]
         assert result.last_checkpoint.can_resume is False
+
+    def test_sparse_checkpoint_skips_state_capture_until_durable_boundary(
+        self,
+    ) -> None:
+        """Sparse recovery cadence must avoid constructing discarded snapshots."""
+        checkpoints: list[BacktestCheckpoint] = []
+        wired = _make_wired_engine_loop(
+            on_checkpoint=checkpoints.append,
+            checkpoint_interval_days=2,
+        )
+        runtime_snapshot = Mock(wraps=wired.loop._runtime_state_snapshot)
+        wired.loop._runtime_state_snapshot = runtime_snapshot  # type: ignore[method-assign]
+
+        result = wired.loop.run()
+
+        assert [item.completed_trade_date for item in checkpoints] == [DAYS[1]]
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.completed_trade_date == DAYS[-1]
+        assert result.last_checkpoint.can_resume is False
+        assert runtime_snapshot.call_count == 3
+
+    def test_sparse_checkpoint_never_returns_an_unpublished_boundary(self) -> None:
+        """A stop before the first cadence boundary must restart from scratch."""
+        stop_calls = 0
+        checkpoints: list[BacktestCheckpoint] = []
+
+        def _should_stop() -> bool:
+            nonlocal stop_calls
+            stop_calls += 1
+            return stop_calls >= 2
+
+        wired = _make_wired_engine_loop(
+            should_stop=_should_stop,
+            on_checkpoint=checkpoints.append,
+            checkpoint_interval_days=20,
+        )
+
+        result = wired.loop.run()
+
+        assert result.cancelled is True
+        assert result.last_checkpoint is None
+        assert checkpoints == []
 
     def test_cancelled_result_carries_resume_checkpoint(self) -> None:
         """取消前最后完成日应产生可恢复 checkpoint，resume_from 指向下一交易日。"""

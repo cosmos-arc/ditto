@@ -66,6 +66,7 @@ from ditto_application.processes.experiments.execution_bundle import (
     VersionedExecutionComponent,
 )
 from ditto_application.processes.experiments.research_backtest_checkpoint import (
+    RESEARCH_CHECKPOINT_INTERVAL_DAYS,
     ResearchBacktestCheckpointControl,
     ResearchBacktestResumeState,
     build_research_backtest_config,
@@ -202,6 +203,7 @@ def build_research_backtest_service(
         compiled_expressions=strategy.compiled_expressions,
         external_should_stop=external_should_stop,
         checkpoint_writer=checkpoint_control.writer,
+        checkpoint_interval_days=RESEARCH_CHECKPOINT_INTERVAL_DAYS,
         restore_runtime_state=(
             None
             if checkpoint_control.resume is None

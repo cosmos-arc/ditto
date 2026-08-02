@@ -746,6 +746,7 @@ class StrategyServiceFactory:
             run_service=options.run_service or self._run_service,
             external_should_stop=options.external_should_stop,
             checkpoint_writer=options.checkpoint_writer or self._checkpoint_writer,
+            checkpoint_interval_days=options.checkpoint_interval_days,
             lineage_recorder=options.lineage_recorder or self._lineage_recorder,
             allow_experimental_data=options.allow_experimental_data,
             restore_runtime_state=options.restore_runtime_state,

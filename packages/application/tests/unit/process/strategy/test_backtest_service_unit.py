@@ -363,6 +363,25 @@ class TestBacktestServiceOptions:
         assert options.fee_model is mock_fee
         assert options.audit_service is mock_audit
 
+    @pytest.mark.parametrize("value", [0, -1, True, 1.5])
+    def test_engine_rejects_invalid_checkpoint_interval(self, value: object) -> None:
+        """Invalid cadence must fail before any execution side effect."""
+        service = BacktestService(
+            config=_make_service_config(),
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(checkpoint_interval_days=value),  # type: ignore[arg-type]
+        )
+
+        with pytest.raises(ValueError, match="checkpoint_interval_days"):
+            service._build_engine_options(
+                "run-invalid-checkpoint-interval",
+                ExecutionAuditCollector(),
+            )
+
     @pytest.mark.parametrize(
         ("external_result", "lifecycle_result", "expected"),
         [
@@ -2198,6 +2217,25 @@ class TestBacktestCheckpointPersistence:
                 runtime_state_hash=checkpoint.runtime_state_hash,
             )
         )
+
+    def test_checkpoint_interval_is_forwarded_before_engine_construction(self) -> None:
+        """Application recovery cadence must reach the engine unchanged."""
+        service = BacktestService(
+            config=_make_service_config(),
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(checkpoint_interval_days=20),
+        )
+
+        options = service._build_engine_options(
+            "run-checkpoint-interval",
+            ExecutionAuditCollector(),
+        )
+
+        assert options.checkpoint_interval_days == 20
 
     def test_resumed_child_checkpoint_accumulates_parent_progress(self) -> None:
         """Restored child checkpoints keep run-global progress and total days."""

@@ -76,6 +76,7 @@ class EngineOptions:
         should_stop: 协作式取消回调 (None = 不支持取消)
         on_progress: 进度回调 (completed_days, total_days)
         on_checkpoint: checkpoint 回调，供外层持久化恢复边界
+        checkpoint_interval_days: 构造可恢复 checkpoint 的完成交易日间隔
         restore_runtime_state: checkpoint runtime-state，用于恢复 engine 内部队列
         on_step_complete: 单步完成回调 (step_name, duration_seconds, success)
 
@@ -91,8 +92,18 @@ class EngineOptions:
     should_stop: Callable[[], bool] | None = None
     on_progress: Callable[[int, int], None] | None = None
     on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
+    checkpoint_interval_days: int = 1
     restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
     on_step_complete: Callable[[str, float, bool], None] | None = None
+
+    def __post_init__(self) -> None:
+        """Reject invalid recovery cadence before the engine starts."""
+        if (
+            type(self.checkpoint_interval_days) is not int
+            or self.checkpoint_interval_days < 1
+        ):
+            msg = "checkpoint_interval_days must be a positive integer"
+            raise ValueError(msg)
 
 
 @dataclass

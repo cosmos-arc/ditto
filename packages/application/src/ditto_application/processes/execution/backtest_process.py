@@ -247,6 +247,7 @@ class BacktestServiceOptions:
         artifact_dir: 回测产物序列化输出目录 (None = 使用默认临时目录)
         run_service: 策略运行生命周期服务 (None = 跳过生命周期管理)
         checkpoint_writer: 策略运行 checkpoint 写入端口 (None = 跳过恢复点持久化)
+        checkpoint_interval_days: 构造可恢复 checkpoint 的完成交易日间隔
         compiled_expressions: 编译后的因子表达式 (None = 使用默认信号)
         lineage_recorder: 数据血缘记录器 (None = 跳过 lineage 记录)
         allow_experimental_data: 是否显式允许 experimental 数据集进入运行时
@@ -265,6 +266,7 @@ class BacktestServiceOptions:
     run_service: RunLifecycleService | None = None
     external_should_stop: Callable[[], bool] | None = None
     checkpoint_writer: StrategyRunCheckpointWriterProtocol | None = None
+    checkpoint_interval_days: int = 1
     compiled_expressions: CompiledExpressions | None = None
     lineage_recorder: DataLineageRecorder | None = None
     allow_experimental_data: bool = False
@@ -636,6 +638,7 @@ class BacktestService:
             should_stop=should_stop,
             on_progress=on_progress,
             on_checkpoint=on_checkpoint,
+            checkpoint_interval_days=self._options.checkpoint_interval_days,
             restore_runtime_state=self._restore_runtime_state(),
             on_step_complete=_build_step_metrics_callback(),
         )

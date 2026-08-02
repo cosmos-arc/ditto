@@ -71,6 +71,9 @@ from ditto_application.processes.experiments.execution_contracts import (
     ExactUniverseIdentity,
     default_stock_execution_policy,
 )
+from ditto_application.processes.experiments.research_backtest_checkpoint import (
+    RESEARCH_CHECKPOINT_INTERVAL_DAYS,
+)
 from ditto_application.processes.experiments.research_data_feed import (
     FrozenResearchDataFrames,
     ResearchDataFeed,
@@ -921,6 +924,10 @@ def test_factory_builds_real_service_and_attests_constructed_objects() -> None:
     assert type(result.service) is BacktestService
     assert result.attestation == ResearchBacktestBuildAttestation.from_audit(audit)
     assert result.service._options.external_should_stop is _stop
+    assert (
+        result.service._options.checkpoint_interval_days
+        == RESEARCH_CHECKPOINT_INTERVAL_DAYS
+    )
     assert stop_calls == 0
     assert result.service._config.run_id == audit.backtest_run_id
     assert result.service._config.random_seed == audit.semantics.seed
@@ -2608,6 +2615,42 @@ def test_factory_rejects_same_type_service_unauthorized_option_poison(
             options=options,
         )
         object.__setattr__(options, "allow_experimental_data", True)
+
+    monkeypatch.setattr(BacktestService, "__init__", _poisoned_init)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        factory.build(audit, external_should_stop=_never_stop)
+
+    assert exc_info.value.details["reason"] == "unauthorized_backtest_service_option"
+
+
+def test_factory_rejects_research_checkpoint_cadence_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory, audit, *_ = _fixture()
+    original_init = BacktestService.__init__
+
+    def _poisoned_init(
+        self: BacktestService,
+        config: BacktestServiceConfig,
+        pipeline: StrategyPipeline,
+        planner: SimpleExecutionPlanner,
+        brokerage: BacktestBrokerage,
+        pre_trade_check: CompositePreTradeCheck,
+        data_feed: ResearchDataFeed,
+        options: BacktestServiceOptions,
+    ) -> None:
+        original_init(
+            self,
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=options,
+        )
+        object.__setattr__(options, "checkpoint_interval_days", 21)
 
     monkeypatch.setattr(BacktestService, "__init__", _poisoned_init)
 

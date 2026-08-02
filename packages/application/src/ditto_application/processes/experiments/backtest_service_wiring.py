@@ -66,6 +66,7 @@ from ditto_application.processes.experiments.execution_contracts import (
     ResearchAssetLane,
 )
 from ditto_application.processes.experiments.research_backtest_checkpoint import (
+    RESEARCH_CHECKPOINT_INTERVAL_DAYS,
     ResearchBacktestCheckpointControl,
     ResearchBacktestResumeState,
     build_research_backtest_config,
@@ -294,8 +295,13 @@ def require_closed_backtest_service(
         options.run_service,
         options.lineage_recorder,
     )
-    if any(value is not None for value in none_only) or (
-        options.allow_experimental_data is not False
+    if (
+        any(value is not None for value in none_only)
+        or (options.allow_experimental_data is not False)
+        or (
+            type(options.checkpoint_interval_days) is not int
+            or options.checkpoint_interval_days != RESEARCH_CHECKPOINT_INTERVAL_DAYS
+        )
     ):
         raise _error("unauthorized_backtest_service_option")
 

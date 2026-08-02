@@ -216,6 +216,7 @@ class EngineLoop:
         self._should_stop = options.should_stop
         self._on_progress = options.on_progress
         self._on_checkpoint = options.on_checkpoint
+        self._checkpoint_interval_days = options.checkpoint_interval_days
         self._restore_runtime_state = options.restore_runtime_state
         self._on_step_complete = options.on_step_complete
 
@@ -409,6 +410,12 @@ class EngineLoop:
         resume_from = None
         if idx is not None and idx + 1 < len(self._trading_days):
             resume_from = self._trading_days[idx + 1]
+        if (
+            resume_from is not None
+            and completed_days % self._checkpoint_interval_days != 0
+            and completed_days != total_days - 1
+        ):
+            return
 
         account_view = self._brokerage.get_account()
         checkpoint = BacktestCheckpoint(
