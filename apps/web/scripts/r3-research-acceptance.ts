@@ -158,6 +158,7 @@ const DEFAULT_LIVE_OUT_DIR = "docs/review/r3-research-acceptance/live";
 const DEFAULT_REACT_BASE = "http://127.0.0.1:5173";
 const DEFAULT_API_BASE = "http://127.0.0.1:8000";
 const OUTPUT_LIMIT = 12_000;
+const BULK_FIELD_THRESHOLD = 100_000;
 const DEFAULT_LIVE_TIMEOUT_MS = 300_000;
 const MAX_LIVE_TIMEOUT_MS = 3_600_000;
 
@@ -507,6 +508,32 @@ async function fillDecision(page: Page, action: string, confirm: string): Promis
 	await page.getByRole("button", { name: confirm, exact: true }).click();
 }
 
+/** Set one controlled text field with exactly one input/change pair. Safe to serialize into Playwright's page context. */
+export function setNativeFormValue(element: HTMLElement, value: string): void {
+	const prototype =
+		element instanceof HTMLTextAreaElement
+			? HTMLTextAreaElement.prototype
+			: element instanceof HTMLInputElement
+				? HTMLInputElement.prototype
+				: null;
+	if (prototype === null) throw new Error("bulk form value target must be an input or textarea");
+	const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+	if (setter === undefined) throw new Error("bulk form value target has no native value setter");
+	setter.call(element, value);
+	element.dispatchEvent(new Event("input", { bubbles: true }));
+	element.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+async function fillPlanningField(page: Page, label: string, value: string): Promise<void> {
+	const field = page.getByLabel(label, { exact: true });
+	if (value.length < BULK_FIELD_THRESHOLD) {
+		await field.fill(value);
+		return;
+	}
+	await field.evaluate(setNativeFormValue, value);
+	invariant((await field.inputValue()) === value, `${label} did not retain the complete canonical value`);
+}
+
 async function fillLivePlanningDocument(page: Page, document: LivePlanningDocument): Promise<void> {
 	const fields = new Map<string, string>([
 		["Experiment ID", document.experiment_id],
@@ -534,7 +561,7 @@ async function fillLivePlanningDocument(page: Page, document: LivePlanningDocume
 		["Seed", String(document.seed)],
 		["Created at", document.created_at],
 	]);
-	for (const [label, value] of fields) await page.getByLabel(label, { exact: true }).fill(value);
+	for (const [label, value] of fields) await fillPlanningField(page, label, value);
 	await page.getByLabel("Worker count", { exact: true }).selectOption(String(document.worker_count));
 	await page.getByLabel("Failure policy", { exact: true }).selectOption(document.failure_policy);
 }

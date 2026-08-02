@@ -143,6 +143,27 @@ describe("R3 research deterministic acceptance contract", () => {
 		}
 	});
 
+	it("injects large canonical form values with one input and one change event", async () => {
+		const { setNativeFormValue } = await loadAcceptance();
+		const textarea = document.createElement("textarea");
+		const value = "x".repeat(721_295);
+		let inputEvents = 0;
+		let changeEvents = 0;
+		textarea.addEventListener("input", () => {
+			inputEvents += 1;
+		});
+		textarea.addEventListener("change", () => {
+			changeEvents += 1;
+		});
+
+		setNativeFormValue(textarea, value);
+
+		expect(textarea.value).toBe(value);
+		expect(inputEvents).toBe(1);
+		expect(changeEvents).toBe(1);
+		expect(() => setNativeFormValue(document.createElement("div"), value)).toThrow("input or textarea");
+	});
+
 	it("requires the explicit live runtime opt-in and a non-mock frontend", async () => {
 		const { validateLiveRuntime } = await loadAcceptance();
 
