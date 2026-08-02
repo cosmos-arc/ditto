@@ -281,16 +281,20 @@ class BacktestBrokerage:
         ):
             return None
 
+        # Retryable partial fills must model only the still-open quantity.  The
+        # immutable ticket retains the original order for cumulative accounting.
+        remaining_order = ticket.order.with_quantity(ticket.leaves_quantity)
+
         # Compute slippage
         slippage = self._model.slippage_model.estimate(
-            ticket.order,
+            remaining_order,
             market,
             definition,
         )
 
         # Try fill
         outcome = self._model.fill_model.try_fill(
-            ticket.order,
+            remaining_order,
             market,
             definition,
             trading_rule,

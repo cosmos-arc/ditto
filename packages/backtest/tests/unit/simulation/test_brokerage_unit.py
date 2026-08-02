@@ -8,13 +8,14 @@ from ditto_backtest.result import (
     BacktestFrozenQuantitySnapshot,
     BacktestSettlementStateSnapshot,
 )
-from ditto_backtest.simulation import BrokerageModel
+from ditto_backtest.simulation import AShareFillModel, BrokerageModel
 from ditto_backtest.simulation.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )
 from ditto_backtest.simulation.slippage import FixedBpsSlippage
 from ditto_execution.brokerage import ProcessInput
+from ditto_execution.errors import FillProcessingError
 from ditto_execution.fills import Filled
 from ditto_execution.orders.book import OrderBook
 from ditto_execution.orders.ids import ClientOrderId
@@ -74,6 +75,7 @@ def _market_snapshot(
     close: float = 10.5,
     low: float = 10.0,
     high: float = 11.0,
+    volume: float = 1_000_000.0,
 ) -> MarketSnapshot:
     return MarketSnapshot(
         trade_date="2026-01-01",
@@ -83,7 +85,7 @@ def _market_snapshot(
         low=low,
         close=close,
         prev_close=close,
-        volume=1_000_000.0,
+        volume=volume,
         amount=10_000_000.0,
     )
 
@@ -355,6 +357,49 @@ class TestProcessPartialFill:
         assert ticket.status == OrderStatus.PARTIALLY_FILLED
         assert ticket.filled_quantity == 300
         assert ticket.leaves_quantity == 700
+
+    def test_participation_limited_retry_uses_only_remaining_quantity(self) -> None:
+        """A retry must model the open leaves, not the original order quantity."""
+        brk = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+            model=BrokerageModel(
+                fill_model=AShareFillModel(participation_rate=0.05),
+                slippage_model=FixedBpsSlippage(bps=0),
+            ),
+        )
+        brk.place_order(_order(quantity=600))
+        process_input = _process_input(bars={1: _market_snapshot(volume=10_000.0)})
+
+        first = brk.process_pending(process_input)
+        second = brk.process_pending(process_input)
+
+        assert [item.filled_quantity for item in first] == [500]
+        assert [item.filled_quantity for item in second] == [100]
+        assert second[0].cumulative_quantity == 600
+        assert second[0].leaves_quantity == 0
+        ticket = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket is not None
+        assert ticket.status is OrderStatus.FILLED
+
+    def test_brokerage_still_rejects_a_model_that_ignores_remaining_quantity(
+        self,
+    ) -> None:
+        """The caller-side remaining order must not weaken the fail-closed guard."""
+        brk = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+            model=BrokerageModel(
+                fill_model=_PartialFillModel(filled_quantity=300),
+                slippage_model=FixedBpsSlippage(bps=0),
+            ),
+        )
+        brk.place_order(_order(quantity=500))
+        process_input = _process_input()
+        brk.process_pending(process_input)
+
+        with pytest.raises(FillProcessingError, match="300 > leaves qty 200"):
+            brk.process_pending(process_input)
 
 
 # ---------------------------------------------------------------------------
