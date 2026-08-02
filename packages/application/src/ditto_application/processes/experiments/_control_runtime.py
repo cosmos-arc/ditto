@@ -150,15 +150,16 @@ def retry_fold_under_transient_lease(
     request: RetryFoldControlRequest,
 ) -> ExperimentControlReceipt:
     """
-    Retry one terminal fold via a transient scheduler lease (control route).
+    Retry one terminal fold via a handoff scheduler lease (control route).
 
     Control routes run outside the tick loop, so this acquires a transient
-    scheduler lease, executes the fenced retry, and releases. The durable store
+    scheduler lease, executes the fenced retry, and expires ownership for handoff
+    while retaining the active experiment's singleton slot. The durable store
     CAS (``stale_fold_revision`` + lease fence) is the correctness boundary;
     in R3 single-machine wiring there is no concurrent tick. If the slot is
     currently leased by another authority the request fails closed with
     ``LEASE_LOST``. A lease already held by this coordinator remains owned by
-    its scheduler lifecycle and is never released by this control operation.
+    its scheduler lifecycle and is never handed off by this control operation.
     """
     slot = store.get_scheduler_slot()
     return authority.execute_operator_under_transient_lease(

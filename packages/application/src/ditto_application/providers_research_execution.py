@@ -18,6 +18,8 @@ backtest factory、first attempt factory 和 fold worker 串成一条从 coordin
 
 from __future__ import annotations
 
+from functools import partial
+
 from dishka import Provider, Scope, provide
 from ditto_analysis.experiments import ExperimentReaderProtocol
 from ditto_analysis.research.artifact_service import ResearchArtifactService
@@ -49,6 +51,10 @@ from ditto_application.builders.research_execution_resolver import (
     ResearchExecutionRuntimeBuilders,
 )
 from ditto_application.commands.candidate_selection import CandidateSelectionProcess
+from ditto_application.processes.experiments._control_runtime import (
+    CONTROL_COORDINATOR_LEASE_DURATION,
+    CONTROL_COORDINATOR_OWNER_TOKEN,
+)
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     FrozenResearchInputsResolver,
 )
@@ -60,6 +66,9 @@ from ditto_application.processes.experiments._report_evidence import (
     BacktestReportArtifactPublisher,
     BacktestReportArtifactReader,
 )
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    DurableSelectionEvidenceService,
+)
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
 )
@@ -69,10 +78,17 @@ from ditto_application.processes.experiments.candidate_evidence_reader import (
 from ditto_application.processes.experiments.coordinator import (
     ExperimentExecutionCoordinator,
 )
+from ditto_application.processes.experiments.evidence_collector import (
+    ExperimentEvidenceCollector,
+)
 from ditto_application.processes.experiments.execution_bundle import CodeEnvironmentLock
 from ditto_application.processes.experiments.factor_diagnostics_reader import (
     FactorDiagnosticsReader,
     PersistedFactorDiagnosticsSource,
+)
+from ditto_application.processes.experiments.research_backtest_checkpoint import (
+    research_checkpoint_available,
+    research_checkpoint_resumable,
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
@@ -320,6 +336,36 @@ class AppResearchExecutionProvider(Provider):
         return ExecutionBundleFirstAttemptFactory(resolver=resolver)
 
     @provide
+    def experiment_execution_coordinator(
+        self,
+        store: ExperimentSchedulerStore,
+        first_attempt_factory: FirstAttemptFactory,
+        evidence_collector: ExperimentEvidenceCollector,
+        selection_evidence: DurableSelectionEvidenceService,
+        candidate_selection_process: CandidateSelectionProcess,
+        checkpoint_reader: StrategyRunCheckpointReaderProtocol,
+    ) -> ExperimentExecutionCoordinator:
+        """Wire one lease owner to execution, evidence, and checkpoint ports."""
+        return ExperimentExecutionCoordinator(
+            store=store,
+            first_attempt_factory=first_attempt_factory,
+            owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
+            lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
+            selection_evidence_provider=selection_evidence,
+            evidence_collector=evidence_collector,
+            selection_evidence_publisher=selection_evidence,
+            candidate_selection_process=candidate_selection_process,
+            checkpoint_available=partial(
+                research_checkpoint_available,
+                checkpoint_reader,
+            ),
+            checkpoint_resumable=partial(
+                research_checkpoint_resumable,
+                checkpoint_reader,
+            ),
+        )
+
+    @provide
     def research_worker_coordinator(
         self,
         coordinator: ExperimentExecutionCoordinator,
@@ -335,6 +381,7 @@ class AppResearchExecutionProvider(Provider):
         runner: ResearchFoldRunner,
         report_publisher: BacktestReportArtifactPublisher,
         trace_publisher: FoldSelectionTraceArtifactPublisher,
+        checkpoint_reader: StrategyRunCheckpointReaderProtocol,
     ) -> ResearchExperimentWorker:
         """执行 claimed fold 并持久化一个 typed terminal outcome。"""
         return ResearchExperimentWorker(
@@ -343,4 +390,8 @@ class AppResearchExecutionProvider(Provider):
             runner=runner,
             report_publisher=report_publisher,
             fold_selection_trace_publisher=trace_publisher,
+            checkpoint_available=partial(
+                research_checkpoint_available,
+                checkpoint_reader,
+            ),
         )

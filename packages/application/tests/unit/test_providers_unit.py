@@ -1142,6 +1142,35 @@ class TestAppProviderIntegration:
         worker = app_container.get(ResearchExperimentWorker)
         assert isinstance(worker, ResearchExperimentWorker)
 
+    def test_research_checkpoint_capabilities_are_wired(self, app_container) -> None:
+        """Coordinator and worker must read the durable backtest checkpoint store."""
+        from ditto_application.processes.experiments.coordinator import (
+            ExperimentExecutionCoordinator,
+        )
+        from ditto_strategy.runs.models import StrategyRunCheckpointRecord
+        from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+            StrategyRunCheckpointStore,
+        )
+
+        coordinator = app_container.get(ExperimentExecutionCoordinator)
+        worker = app_container.get(ResearchExperimentWorker)
+        checkpoint_store = app_container.get(StrategyRunCheckpointStore)
+        checkpoint_store.save_checkpoint(
+            StrategyRunCheckpointRecord(
+                run_id="provider-research-checkpoint",
+                strategy_id="provider-research-strategy",
+                completed_trade_date="2026-07-30",
+                resume_from="2026-07-31",
+            )
+        )
+        assert coordinator._recovery._checkpoint_available(
+            "provider-research-checkpoint"
+        )
+        assert coordinator._recovery._checkpoint_resumable(
+            "provider-research-checkpoint"
+        )
+        assert worker._checkpoint_available("provider-research-checkpoint")
+
     def test_coordinator_uses_execution_bundle_factory(self, app_container) -> None:
         """FirstAttemptFactory resolves to the real execution bundle factory."""
         from ditto_application.processes.experiments.worker import (

@@ -56,9 +56,9 @@ def _scheduler_error(code: str, reason: str, **details: object) -> AppProcessErr
     )
 
 
-def _transient_release_failure_note(error: BaseException) -> str:
+def _transient_handoff_failure_note(error: BaseException) -> str:
     note = (
-        "transient scheduler lease release also failed: "
+        "transient scheduler lease handoff also failed: "
         + f"{type(error).__name__}: {error}"
     )
     if isinstance(error, AppProcessError):
@@ -304,12 +304,14 @@ class LeaseAuthority:
         operation: Callable[[SchedulerLease, Callable[[], int]], _ResultT],
     ) -> _ResultT:
         """
-        Acquire, execute, and conditionally release as one authority section.
+        Acquire, execute, and conditionally hand off as one authority section.
 
         The outer reentrant lock makes the ownership decision atomic with lease
         acquisition, operator execution, and cleanup. A lease already held by
         this authority belongs to the scheduler lifecycle and is preserved.
-        Only a lease acquired by this call is released.
+        Only a lease acquired by this call is handed off: its expiry is collapsed
+        to the immediate microsecond boundary while the active experiment retains
+        its singleton scheduler slot.
         """
         with self._lock:
             acquired_transient_lease = self._lease is None
@@ -334,12 +336,12 @@ class LeaseAuthority:
                     and self._lost_reason is None
                 ):
                     try:
-                        self._release_transient_fail_closed()
-                    except BaseException as release_error:
-                        error.add_note(_transient_release_failure_note(release_error))
+                        self._handoff_transient_fail_closed()
+                    except BaseException as handoff_error:
+                        error.add_note(_transient_handoff_failure_note(handoff_error))
                 raise
             if acquired_transient_lease:
-                self._release_transient_fail_closed()
+                self._handoff_transient_fail_closed()
             return result
 
     def execute_recoverable_under_renewed_lease(
@@ -427,6 +429,36 @@ class LeaseAuthority:
             self._lease = None
             return released
 
+    def handoff(self) -> SchedulerSlot:
+        """Expire ownership but retain one active occupant for immediate handoff."""
+        with self._lock:
+            try:
+                now_epoch_us = _epoch_us(self._clock())
+                lease = self._require_live_lease(now_epoch_us)
+                handed_off = self._store.handoff_lease(
+                    lease,
+                    now_epoch_us=now_epoch_us,
+                )
+                if (
+                    handed_off.experiment_id != lease.experiment_id
+                    or handed_off.owner_token != lease.owner_token
+                    or handed_off.lease_until_epoch_us
+                    != max(now_epoch_us, lease.renewed_at_epoch_us + 1)
+                ):
+                    raise _scheduler_error(
+                        "EXPERIMENT_INTEGRITY_FAILED",
+                        "scheduler_handoff_returned_invalid_slot",
+                    )
+            except AppProcessError:
+                if self._lost_reason is None:
+                    self._invalidate("application_contract_failure")
+                raise
+            except Exception as exc:
+                self._invalidate(type(exc).__name__)
+                raise self._normalized_error(exc) from exc
+            self._lease = None
+            return handed_off
+
     def _fenced_now_epoch_us(self) -> int:
         now_epoch_us = _epoch_us(self._clock())
         self._require_live_lease(now_epoch_us)
@@ -469,9 +501,9 @@ class LeaseAuthority:
             self._invalidate("artifact_publication_interrupted")
             raise
 
-    def _release_transient_fail_closed(self) -> SchedulerSlot:
+    def _handoff_transient_fail_closed(self) -> SchedulerSlot:
         try:
-            return self.release()
+            return self.handoff()
         except BaseException as error:
             if self._lost_reason is None:
                 self._invalidate(type(error).__name__)

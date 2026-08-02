@@ -117,8 +117,6 @@ class QueuedAttempt:
 
 @dataclass(frozen=True, slots=True)
 class FirstAttempt(QueuedAttempt):
-    """Execution-owned first-attempt identity prepared before durable claim."""
-
     def __post_init__(self) -> None:
         try:
             QueuedAttempt.__post_init__(self)
@@ -218,6 +216,10 @@ class ExperimentSchedulerStoreProtocol(Protocol):
         now_epoch_us: int,
         new_lease_until_epoch_us: int,
     ) -> SchedulerLease: ...
+
+    def handoff_lease(
+        self, lease: SchedulerLease, *, now_epoch_us: int
+    ) -> SchedulerSlot: ...
 
     def release_lease(
         self,
@@ -439,6 +441,11 @@ class ExperimentSchedulerStore(ExperimentMutationStoreMixin):
             now_epoch_us=now_epoch_us,
             new_lease_until_epoch_us=new_lease_until_epoch_us,
         )
+
+    def handoff_lease(
+        self, lease: SchedulerLease, *, now_epoch_us: int
+    ) -> SchedulerSlot:
+        return self._writer.handoff_lease(lease.fence, now_epoch_us=now_epoch_us)
 
     def release_lease(
         self,

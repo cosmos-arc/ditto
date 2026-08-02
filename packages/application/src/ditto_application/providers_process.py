@@ -76,7 +76,6 @@ from ditto_application.builders.research_validation_authority_source import (
     IndexedSnapshotValidationAuthoritySource,
 )
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
-from ditto_application.commands.candidate_selection import CandidateSelectionProcess
 from ditto_application.commands.experiments import ExperimentControlNotifier
 from ditto_application.commands.strategy_governance import ReviewPacketReader
 from ditto_application.processes.execution.factor_bridge import FactorBridge
@@ -96,8 +95,6 @@ from ditto_application.processes.execution.signal_package import SignalPackagePu
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.experiments._control_runtime import (
-    CONTROL_COORDINATOR_LEASE_DURATION,
-    CONTROL_COORDINATOR_OWNER_TOKEN,
     LoggingExperimentControlNotifier,
 )
 from ditto_application.processes.experiments._selection_evidence_artifact import (
@@ -108,9 +105,6 @@ from ditto_application.processes.experiments._walk_forward_evidence_collection i
 )
 from ditto_application.processes.experiments.comparison_reader import (
     ExperimentComparisonReader,
-)
-from ditto_application.processes.experiments.coordinator import (
-    ExperimentExecutionCoordinator,
 )
 from ditto_application.processes.experiments.evidence_collector import (
     ExperimentEvidenceCollector,
@@ -124,7 +118,6 @@ from ditto_application.processes.experiments.r2_live_gate_evidence import (
 )
 from ditto_application.processes.experiments.scheduler_store import (
     ExperimentSchedulerStore,
-    FirstAttemptFactory,
 )
 from ditto_application.processes.experiments.selection_evidence_reader import (
     ExperimentSelectionEvidenceReader,
@@ -373,36 +366,6 @@ class AppProcessProvider(Provider):
     ) -> ReviewPacketReader:
         """Expose the experiment reader as the narrow review-packet port."""
         return reader
-
-    @provide
-    def experiment_execution_coordinator(
-        self,
-        store: ExperimentSchedulerStore,
-        first_attempt_factory: FirstAttemptFactory,
-        evidence_collector: ExperimentEvidenceCollector,
-        selection_evidence: DurableSelectionEvidenceService,
-        candidate_selection_process: CandidateSelectionProcess,
-    ) -> ExperimentExecutionCoordinator:
-        """
-        Wire the R3 coordinator with the real execution bundle factory.
-
-        Control routes (pause/cancel/resume/retry-fold) never dispatch attempts;
-        the injected :class:`ExecutionBundleFirstAttemptFactory` only fires when
-        a fold is actually claimed and dispatched through the worker. The
-        evidence collector closes the EVIDENCE stage by assembling and
-        publishing the immutable review packet before the coordinator
-        transitions the experiment to ``COMPLETED``.
-        """
-        return ExperimentExecutionCoordinator(
-            store=store,
-            first_attempt_factory=first_attempt_factory,
-            owner_token=CONTROL_COORDINATOR_OWNER_TOKEN,
-            lease_duration=CONTROL_COORDINATOR_LEASE_DURATION,
-            selection_evidence_provider=selection_evidence,
-            evidence_collector=evidence_collector,
-            selection_evidence_publisher=selection_evidence,
-            candidate_selection_process=candidate_selection_process,
-        )
 
     @provide
     def durable_selection_evidence_service(

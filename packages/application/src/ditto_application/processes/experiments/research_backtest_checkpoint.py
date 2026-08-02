@@ -49,10 +49,29 @@ __all__ = [
     "build_research_backtest_config",
     "build_research_backtest_strategy_config",
     "require_research_resume_runtime_state",
+    "research_checkpoint_available",
+    "research_checkpoint_resumable",
     "resolve_research_backtest_resume",
 ]
 
 RESEARCH_CHECKPOINT_INTERVAL_DAYS = 20
+
+
+def research_checkpoint_available(
+    reader: StrategyRunCheckpointReaderProtocol,
+    run_id: str,
+) -> bool:
+    """Return whether a durable strategy-run checkpoint exists for one run."""
+    return reader.get_latest_checkpoint(run_id) is not None
+
+
+def research_checkpoint_resumable(
+    reader: StrategyRunCheckpointReaderProtocol,
+    run_id: str,
+) -> bool:
+    """Return whether one durable checkpoint has a remaining resume boundary."""
+    checkpoint = reader.get_latest_checkpoint(run_id)
+    return checkpoint is not None and checkpoint.can_resume
 
 
 def _error(reason: str, **details: object) -> AppProcessError:

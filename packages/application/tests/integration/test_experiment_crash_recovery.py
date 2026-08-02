@@ -963,26 +963,38 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
             "expected_revision": failed_fold.projection.revision,
         },
     )
-    first_retry = coordinator.retry_fold(
+    control_now = NOW + timedelta(minutes=6)
+    control = _coordinator(
+        database,
+        owner="retry-control-owner",
+        clock=control_now,
+        lease_duration=timedelta(minutes=5),
+    )
+    first_retry = control.retry_fold(
         experiment_id=str(launch.experiment_id),
         candidate_id=str(parent.spec.fold_key.candidate_id),
         fold_id=str(parent.spec.fold_key.fold_id),
         expected_revision=failed_fold.projection.revision,
-        occurred_at=NOW + timedelta(seconds=5),
+        occurred_at=control_now,
         idempotency=retry_identity,
     )
+    handed_off = reader.get_scheduler_slot()
+    assert handed_off.experiment_id == launch.experiment_id
+    assert handed_off.owner_token is not None
+    assert handed_off.owner_token.startswith("retry-control-owner:")
+    assert handed_off.lease_until_epoch_us is not None
     event_count = len(reader.list_status_events(launch.experiment_id))
     replay_retry = _coordinator(
         database,
         owner="retry-restarted-owner",
-        clock=NOW + timedelta(seconds=5),
+        clock=control_now,
         lease_duration=timedelta(minutes=5),
     ).retry_fold(
         experiment_id=str(launch.experiment_id),
         candidate_id=str(parent.spec.fold_key.candidate_id),
         fold_id=str(parent.spec.fold_key.fold_id),
         expected_revision=failed_fold.projection.revision,
-        occurred_at=NOW + timedelta(seconds=5),
+        occurred_at=control_now,
         idempotency=retry_identity,
     )
 
@@ -990,7 +1002,12 @@ def test_explicit_system_retry_requeues_before_creating_one_successor(
     assert replay_retry.replayed is True
     assert len(reader.list_status_events(launch.experiment_id)) == event_count
     assert len(reader.list_attempts(parent.spec.fold_key)) == 1
-    retried = coordinator.tick(occurred_at=NOW + timedelta(seconds=6))
+    retried = _coordinator(
+        database,
+        owner="retry-scheduler-owner",
+        clock=control_now + timedelta(microseconds=1),
+        lease_duration=timedelta(minutes=5),
+    ).tick(occurred_at=control_now + timedelta(microseconds=1))
     assert retried.state is SchedulerTickState.DISPATCHED
     assert len(retried.dispatches) == 1
     successor = retried.dispatches[0].attempt

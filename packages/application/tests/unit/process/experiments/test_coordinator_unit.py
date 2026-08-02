@@ -374,6 +374,24 @@ class _SchedulerStore:
         )
         return renewed
 
+    def handoff_lease(
+        self,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+    ) -> SchedulerSlot:
+        """Expire ownership while retaining the active singleton occupant."""
+        self.slot = SchedulerSlot(
+            self.slot.slot_id,
+            lease.experiment_id,
+            lease.owner_token,
+            max(now_epoch_us, lease.renewed_at_epoch_us + 1),
+            lease.acquired_at_epoch_us,
+            lease.renewed_at_epoch_us,
+            lease.revision + 1,
+        )
+        return self.slot
+
     def load_snapshot(self, experiment_id: ExperimentId) -> ExperimentSchedulerSnapshot:
         assert experiment_id == self.launch.experiment_id
         return ExperimentSchedulerSnapshot(
@@ -2030,8 +2048,8 @@ def test_evidence_no_op_when_collector_not_configured() -> None:
     assert store.controlled_transitions == []
 
 
-def test_retry_fold_releases_transient_lease_when_fold_not_failed() -> None:
-    """Control-route retry releases the transient lease even when recovery rejects."""
+def test_retry_fold_hands_off_transient_lease_when_fold_not_failed() -> None:
+    """A rejected control retry expires its lease but retains the active slot."""
     store = _SchedulerStore()
     _set_running_stage(store, ExperimentStage.EXPLORATION)
     coordinator, _ = _coordinator(store)
@@ -2046,7 +2064,10 @@ def test_retry_fold_releases_transient_lease_when_fold_not_failed() -> None:
     details = info.value.details
     assert details["code"] == "SPEC_INVALID"
     assert details["reason"] == "terminal_fold_retry_requires_failed_fold"
-    assert store.slot.owner_token is None
+    assert store.slot.experiment_id == ExperimentId("experiment-1")
+    assert store.slot.owner_token is not None
+    assert store.slot.owner_token.startswith("coordinator-a:")
+    assert store.slot.lease_until_epoch_us == NOW_US + 1
 
 
 @pytest.mark.parametrize(
@@ -2103,4 +2124,7 @@ def test_retry_fold_rejects_a_terminal_fold_outside_the_current_stage(
 
     assert exc_info.value.details["reason"] == "terminal_fold_retry_stage_closed"
     assert store.folds[fold_index] == failed_fold
-    assert store.slot.owner_token is None
+    assert store.slot.experiment_id == ExperimentId("experiment-1")
+    assert store.slot.owner_token is not None
+    assert store.slot.owner_token.startswith("coordinator-a:")
+    assert store.slot.lease_until_epoch_us == NOW_US + 1

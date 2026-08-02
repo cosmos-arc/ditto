@@ -1367,6 +1367,51 @@ def test_active_experiment_cannot_release_its_slot(
     assert reader.get_scheduler_slot() == before_slot
 
 
+def test_active_experiment_lease_can_expire_for_immediate_handoff(
+    tmp_path: Path,
+) -> None:
+    _database, reader, writer, _api_ns = _store(tmp_path)
+    writer.enqueue_experiment(
+        ExperimentId("experiment-1"),
+        expected_revision=0,
+        occurred_at=NOW,
+        reason_code="preflight_passed",
+        detail={},
+        launch_fence=_current_enqueue_fence(writer),
+    )
+    lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-control",
+        expected_revision=0,
+        now_epoch_us=NOW_US,
+        lease_until_epoch_us=NOW_US + 100,
+    )
+    assert lease is not None
+
+    handed_off = writer.handoff_lease(
+        lease.fence,
+        now_epoch_us=NOW_US + 1,
+    )
+
+    assert handed_off.experiment_id == ExperimentId("experiment-1")
+    assert handed_off.owner_token == "owner-control"
+    assert handed_off.lease_until_epoch_us == NOW_US + 1
+    assert handed_off.acquired_at_epoch_us == NOW_US
+    assert handed_off.renewed_at_epoch_us == NOW_US
+    assert handed_off.revision == lease.revision + 1
+    assert reader.get_scheduler_slot() == handed_off
+
+    scheduler_lease = writer.try_claim_lease(
+        ExperimentId("experiment-1"),
+        "owner-scheduler",
+        expected_revision=handed_off.revision,
+        now_epoch_us=NOW_US + 2,
+        lease_until_epoch_us=NOW_US + 200,
+    )
+    assert scheduler_lease is not None
+    assert scheduler_lease.owner_token == "owner-scheduler"
+
+
 def test_free_slot_fails_closed_when_an_active_experiment_has_no_slot(
     tmp_path: Path,
 ) -> None:

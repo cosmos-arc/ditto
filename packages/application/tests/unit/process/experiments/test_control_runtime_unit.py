@@ -60,12 +60,13 @@ class _ControlStore:
     def __init__(
         self,
         *,
-        release_error: BaseException | None = None,
+        handoff_error: BaseException | None = None,
         probe: Callable[[str], None] | None = None,
     ) -> None:
         self.slot = SchedulerSlot("global", None, None, None, None, None, 0)
         self.release_calls = 0
-        self.release_error = release_error
+        self.handoff_calls = 0
+        self.handoff_error = handoff_error
         self.probe = probe
         self._lock = Lock()
 
@@ -117,10 +118,6 @@ class _ControlStore:
     ) -> SchedulerSlot:
         with self._lock:
             self.release_calls += 1
-            if self.probe is not None:
-                self.probe("release")
-            if self.release_error is not None:
-                raise self.release_error
             self.slot = SchedulerSlot(
                 "global",
                 None,
@@ -128,6 +125,29 @@ class _ControlStore:
                 None,
                 self.slot.acquired_at_epoch_us,
                 now_epoch_us,
+                lease.revision + 1,
+            )
+            return self.slot
+
+    def handoff_lease(
+        self,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: int,
+    ) -> SchedulerSlot:
+        with self._lock:
+            self.handoff_calls += 1
+            if self.probe is not None:
+                self.probe("handoff")
+            if self.handoff_error is not None:
+                raise self.handoff_error
+            self.slot = SchedulerSlot(
+                "global",
+                lease.experiment_id,
+                lease.owner_token,
+                max(now_epoch_us, lease.renewed_at_epoch_us + 1),
+                lease.acquired_at_epoch_us,
+                lease.renewed_at_epoch_us,
                 lease.revision + 1,
             )
             return self.slot
@@ -264,7 +284,7 @@ class TestLoggingExperimentControlNotifier:
 
 
 class TestRetryFoldUnderTransientLease:
-    """Release only helper-owned leases without hiding operator failures."""
+    """Hand off helper-owned leases without hiding operator failures."""
 
     def test_holds_one_outer_authority_section_across_transient_lifecycle(
         self,
@@ -290,14 +310,16 @@ class TestRetryFoldUnderTransientLease:
         assert [event for event, _depth, _section_id in events] == [
             "acquire",
             "operator",
-            "release",
+            "handoff",
         ]
         assert all(depth >= 2 for _event, depth, _section_id in events)
         assert len({section_id for _event, _depth, section_id in events}) == 1
         assert events[0][2] is not None
         assert lock.depth == 0
         assert authority.has_lease is False
-        assert store.release_calls == 1
+        assert store.handoff_calls == 1
+        assert store.release_calls == 0
+        assert store.slot.experiment_id == _EXPERIMENT_ID
 
     def test_preserves_preexisting_scheduler_lease(self) -> None:
         store = _ControlStore()
@@ -313,9 +335,10 @@ class TestRetryFoldUnderTransientLease:
 
         assert receipt is _RECEIPT
         assert store.release_calls == 0
+        assert store.handoff_calls == 0
         assert authority.has_lease is True
 
-    def test_preserves_operator_error_when_transient_release_also_fails(self) -> None:
+    def test_preserves_operator_error_when_transient_handoff_also_fails(self) -> None:
         operator_error = AppProcessError(
             "operator request rejected",
             details={"code": "SPEC_INVALID", "reason": "stale_fold_revision"},
@@ -324,7 +347,7 @@ class TestRetryFoldUnderTransientLease:
             "release rejected",
             details={"code": "SPEC_INVALID", "reason": "release_rejected"},
         )
-        store = _ControlStore(release_error=release_error)
+        store = _ControlStore(handoff_error=release_error)
         store_port = cast(ExperimentSchedulerStoreProtocol, store)
         authority = _authority(store_port)
 
@@ -336,22 +359,23 @@ class TestRetryFoldUnderTransientLease:
             )
 
         assert exc_info.value is operator_error
-        assert store.release_calls == 1
+        assert store.handoff_calls == 1
+        assert store.release_calls == 0
         notes = getattr(operator_error, "__notes__", ())
         assert any(
-            "transient scheduler lease release also failed" in note for note in notes
+            "transient scheduler lease handoff also failed" in note for note in notes
         )
         assert any(
             "code=SPEC_INVALID" in note and "reason=release_rejected" in note
             for note in notes
         )
 
-    def test_surfaces_transient_release_error_after_success(self) -> None:
+    def test_surfaces_transient_handoff_error_after_success(self) -> None:
         release_error = AppProcessError(
             "release rejected",
             details={"code": "SPEC_INVALID", "reason": "release_rejected"},
         )
-        store = _ControlStore(release_error=release_error)
+        store = _ControlStore(handoff_error=release_error)
         store_port = cast(ExperimentSchedulerStoreProtocol, store)
         authority = _authority(store_port)
 
@@ -363,9 +387,10 @@ class TestRetryFoldUnderTransientLease:
             )
 
         assert exc_info.value is release_error
-        assert store.release_calls == 1
+        assert store.handoff_calls == 1
+        assert store.release_calls == 0
 
-    def test_invalidates_authority_when_base_cleanup_follows_operator_error(
+    def test_invalidates_authority_when_handoff_interrupts_operator_error(
         self,
     ) -> None:
         operator_error = AppProcessError(
@@ -373,7 +398,7 @@ class TestRetryFoldUnderTransientLease:
             details={"code": "SPEC_INVALID", "reason": "stale_fold_revision"},
         )
         release_error = KeyboardInterrupt("release interrupted")
-        store = _ControlStore(release_error=release_error)
+        store = _ControlStore(handoff_error=release_error)
         store_port = cast(ExperimentSchedulerStoreProtocol, store)
         authority = _authority(store_port)
 
@@ -392,9 +417,9 @@ class TestRetryFoldUnderTransientLease:
             for note in getattr(operator_error, "__notes__", ())
         )
 
-    def test_invalidates_authority_when_base_cleanup_follows_success(self) -> None:
+    def test_invalidates_authority_when_handoff_interrupts_success(self) -> None:
         release_error = SystemExit(23)
-        store = _ControlStore(release_error=release_error)
+        store = _ControlStore(handoff_error=release_error)
         store_port = cast(ExperimentSchedulerStoreProtocol, store)
         authority = _authority(store_port)
 

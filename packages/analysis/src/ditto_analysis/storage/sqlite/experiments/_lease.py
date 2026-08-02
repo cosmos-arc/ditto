@@ -263,6 +263,72 @@ class SQLiteSchedulerLeaseMixin:
                 "scheduler release failed", "scheduler_release_failed"
             ) from exc
 
+    def handoff_lease(
+        self,
+        fence: LeaseFence,
+        *,
+        now_epoch_us: int,
+    ) -> SchedulerSlot:
+        """Expire active ownership while retaining the experiment's singleton slot."""
+        connection = self._database.get_connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            slot = self._validate_lease(
+                connection,
+                fence,
+                now_epoch_us,
+                fence.experiment_id,
+            )
+            occupant = self._experiment_row(connection, fence.experiment_id)
+            self._validate_active_occupant_intent(occupant)
+            new_revision = fence.revision + 1
+            handoff_until_epoch_us = max(
+                now_epoch_us,
+                slot["renewed_at_epoch_us"] + 1,
+            )
+            cursor = connection.execute(
+                """
+                UPDATE experiment_scheduler_slot
+                SET lease_until_epoch_us=?, revision=?
+                WHERE slot_id='global' AND experiment_id=? AND owner_token=?
+                  AND revision=? AND lease_until_epoch_us=?
+                  AND lease_until_epoch_us > ?
+                """,
+                (
+                    handoff_until_epoch_us,
+                    new_revision,
+                    str(fence.experiment_id),
+                    fence.owner_token,
+                    fence.revision,
+                    fence.lease_until_epoch_us,
+                    now_epoch_us,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise _lease_lost(
+                    "scheduler handoff CAS lost",
+                    "scheduler_lease_lost",
+                )
+            connection.commit()
+            return SchedulerSlot(
+                "global",
+                fence.experiment_id,
+                fence.owner_token,
+                handoff_until_epoch_us,
+                slot["acquired_at_epoch_us"],
+                slot["renewed_at_epoch_us"],
+                new_revision,
+            )
+        except AnalysisError:
+            connection.rollback()
+            raise
+        except sqlite3.Error as exc:
+            connection.rollback()
+            raise _persistence_error(
+                "scheduler handoff failed",
+                "scheduler_handoff_failed",
+            ) from exc
+
     @staticmethod
     def _validate_lease_inputs(owner_token: str, now_epoch_us: int, until: int) -> None:
         raw_owner = cast("object", owner_token)

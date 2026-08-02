@@ -837,6 +837,50 @@ def test_history_uses_frozen_pre_membership_prices_for_current_member_warmup() -
     ]
 
 
+def test_history_accepts_next_session_member_known_at_lagged_cutoff() -> None:
+    """A member effective tomorrow is usable when frozen evidence is known today."""
+    dates = ("2026-01-06", "2026-01-07", "2026-01-08")
+    membership = pl.DataFrame(
+        {
+            "trade_date": list(dates),
+            "instrument_id": [2, 2, 2],
+            "is_member": [False, False, True],
+            "known_at": ["2026-01-05", "2026-01-06", "2026-01-07"],
+            "source_snapshot_id": [
+                _source_id(ResearchFrameKind.MEMBERSHIP),
+            ]
+            * 3,
+        }
+    )
+    frames = FrozenResearchDataFrames(
+        bars=_verified(
+            ResearchFrameKind.BARS,
+            _bars(
+                (
+                    (dates[0], 2, 20.0),
+                    (dates[1], 2, 21.0),
+                    (dates[2], 2, 22.0),
+                )
+            ),
+        ),
+        calendar=_verified(ResearchFrameKind.CALENDAR, _calendar(*dates)),
+        membership=_verified(ResearchFrameKind.MEMBERSHIP, membership),
+    )
+    feed = ResearchDataFeed(
+        snapshot=_snapshot(frames),
+        frames=frames,
+        start_date=dates[2],
+        end_date=dates[2],
+        knowledge_lag_days=1,
+    )
+
+    assert set(feed.get_slice(dates[2]).bars) == {InstrumentId(2)}
+    history = feed.get_history([InstrumentId(2)], dates[1], 1)
+    assert history.select("instrument_id", "trade_date").rows() == [
+        (2, dates[0]),
+    ]
+
+
 def test_history_rejects_instrument_outside_current_pit_membership() -> None:
     feed = _history_feed()
 

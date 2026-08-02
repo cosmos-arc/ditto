@@ -598,8 +598,15 @@ class ResearchDataFeed(ResearchDataFeedVerificationMixin):
         membership = self._frames.membership.frame
         dated_membership = membership.with_columns(
             _iso_date_expr(membership, "trade_date").alias("trade_date"),
+            _iso_date_expr(membership, "known_at").alias("known_at"),
         )
-        known_membership = dated_membership.filter(pl.col("trade_date") <= as_of_date)
+        membership_cutoff = (
+            date.fromisoformat(as_of_date) + timedelta(days=self._knowledge_lag_days)
+        ).isoformat()
+        known_membership = dated_membership.filter(
+            (pl.col("trade_date") <= membership_cutoff)
+            & (pl.col("known_at") <= as_of_date),
+        )
         if known_membership.is_empty():
             raise _error(
                 "history request predates frozen PIT membership",
