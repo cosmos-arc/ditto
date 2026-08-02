@@ -26,6 +26,7 @@ from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _fundamental,
     _instrument_rules,
     _membership_with_complete_fundamentals,
+    _membership_with_instrument_lifecycle,
     _stock_membership,
 )
 from ditto_data.catalog.certification import CertificationReader
@@ -265,6 +266,39 @@ def test_stock_membership_starts_after_complete_fundamentals_are_known() -> None
     frame = _membership_with_complete_fundamentals(membership, fundamental)
 
     assert frame["trade_date"].to_list() == [date(2015, 2, 3), date(2015, 2, 4)]
+
+
+@pytest.mark.unit
+def test_membership_respects_listing_and_delisting_boundaries() -> None:
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        "CREATE TABLE instrument "
+        "(instrument_id INTEGER, list_date TEXT, delist_date TEXT)"
+    )
+    connection.execute(
+        "INSERT INTO instrument VALUES (?, ?, ?)",
+        (1, "2015-02-03", "2015-02-04"),
+    )
+    membership = pl.DataFrame(
+        {
+            "trade_date": (
+                date(2015, 2, 2),
+                date(2015, 2, 3),
+                date(2015, 2, 4),
+                date(2015, 2, 5),
+            ),
+            "instrument_id": (1, 1, 1, 1),
+            "is_member": (True,) * 4,
+            "known_at": (date(2015, 1, 30),) * 4,
+            "source_snapshot_id": ("source-1",) * 4,
+        }
+    )
+
+    frame = _membership_with_instrument_lifecycle(connection, membership)
+
+    assert frame["trade_date"].to_list() == [date(2015, 2, 3), date(2015, 2, 4)]
+    connection.close()
 
 
 @pytest.mark.unit

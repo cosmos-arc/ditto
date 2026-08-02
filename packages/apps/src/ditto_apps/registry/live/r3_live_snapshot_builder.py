@@ -60,7 +60,7 @@ type LiveLane = Literal["stock", "etf"]
 
 _START = date(2015, 2, 1)
 _END = date(2026, 7, 31)
-_BUILDER_VERSION = "r3-live-research-snapshot-v2"
+_BUILDER_VERSION = "r3-live-research-snapshot-v3"
 _STOCK_INDEX = "000300.SH"
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _ETF_IDS = (2_002_506, 2_002_571, 2_002_631)
@@ -546,6 +546,71 @@ def _membership_with_complete_fundamentals(
     )
 
 
+def _membership_with_instrument_lifecycle(
+    connection: sqlite3.Connection,
+    membership: pl.DataFrame,
+) -> pl.DataFrame:
+    """Remove index rows outside exact listed and delisted date boundaries."""
+    instrument_ids = tuple(
+        sorted(int(item) for item in membership["instrument_id"].unique())
+    )
+    if not instrument_ids:
+        raise ValueError("live membership has no instrument identities")
+    requested_ids = set(instrument_ids)
+    rows = tuple(
+        row
+        for row in connection.execute(
+            "SELECT instrument_id, list_date, delist_date FROM instrument"
+        ).fetchall()
+        if int(row["instrument_id"]) in requested_ids
+    )
+    observed_ids = {int(row["instrument_id"]) for row in rows}
+    missing = sorted(set(instrument_ids) - observed_ids)
+    if missing:
+        rendered = ", ".join(str(item) for item in missing)
+        raise ValueError(f"live membership instrument metadata is missing: {rendered}")
+    lifecycle = pl.DataFrame(
+        {
+            "instrument_id": tuple(int(row["instrument_id"]) for row in rows),
+            "_list_date": tuple(
+                None
+                if row["list_date"] is None
+                else date.fromisoformat(str(row["list_date"]))
+                for row in rows
+            ),
+            "_delist_date": tuple(
+                None
+                if row["delist_date"] is None
+                else date.fromisoformat(str(row["delist_date"]))
+                for row in rows
+            ),
+        },
+        schema={
+            "instrument_id": pl.Int64,
+            "_list_date": pl.Date,
+            "_delist_date": pl.Date,
+        },
+    )
+    aligned = (
+        membership.join(lifecycle, on="instrument_id", how="inner")
+        .filter(
+            (
+                pl.col("_list_date").is_null()
+                | (pl.col("trade_date") >= pl.col("_list_date"))
+            )
+            & (
+                pl.col("_delist_date").is_null()
+                | (pl.col("trade_date") <= pl.col("_delist_date"))
+            )
+        )
+        .drop("_list_date", "_delist_date")
+        .sort(["trade_date", "instrument_id"])
+    )
+    if aligned.is_empty():
+        raise ValueError("live membership is empty after lifecycle alignment")
+    return aligned
+
+
 def _classification(
     lane: LiveLane,
     instrument_ids: tuple[int, ...],
@@ -801,6 +866,7 @@ def build_live_research_snapshot(
             )
         )
         membership = align_live_membership(root, lane, membership)
+        membership = _membership_with_instrument_lifecycle(connection, membership)
         instrument_ids = tuple(sorted(membership["instrument_id"].unique().to_list()))
         fundamental = _fundamental(
             connection,
