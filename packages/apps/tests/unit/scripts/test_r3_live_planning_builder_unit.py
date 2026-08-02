@@ -13,6 +13,9 @@ from ditto_application.commands.strategy import (
     UpdateStrategyCommand,
     UpdateStrategyHandler,
 )
+from ditto_application.processes.experiments.execution_bundle import (
+    CodeEnvironmentLock,
+)
 from ditto_application.processes.experiments.planning import (
     ExperimentBudgetSpec,
     ResourceCostModel,
@@ -23,7 +26,7 @@ from ditto_application.processes.experiments.planning_contracts import (
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
 )
-from ditto_apps.registry.live.r3_live_planning_builder import _requirements
+from ditto_apps.registry.live.r3_live_planning_builder import _identity, _requirements
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
     LiveDatasetSnapshotBinding,
     LiveResearchSnapshotBuild,
@@ -55,6 +58,52 @@ def _seed_record(strategy_id: str, version: int) -> StrategySpecRecord:
         tags=seed.tags,
     )
     return replace(record, spec_hash=canonical_spec_hash_for_record(record))
+
+
+@pytest.mark.unit
+def test_live_experiment_identity_is_bound_to_code_environment() -> None:
+    candidate = SimpleNamespace(
+        strategy_id="strategy-1",
+        version=2,
+        spec_hash="a" * 64,
+    )
+    snapshot = SimpleNamespace(
+        snapshot_id="snapshot-1",
+        manifest_hash="b" * 64,
+    )
+    first = _identity(
+        lane="stock",
+        purpose="backend-stock",
+        candidate=cast("StrategySpecRecord", candidate),
+        snapshot=cast("LiveResearchSnapshotBuild", snapshot),
+        environment=CodeEnvironmentLock("commit-1", "c" * 64),
+    )
+
+    same = _identity(
+        lane="stock",
+        purpose="backend-stock",
+        candidate=cast("StrategySpecRecord", candidate),
+        snapshot=cast("LiveResearchSnapshotBuild", snapshot),
+        environment=CodeEnvironmentLock("commit-1", "c" * 64),
+    )
+    new_code = _identity(
+        lane="stock",
+        purpose="backend-stock",
+        candidate=cast("StrategySpecRecord", candidate),
+        snapshot=cast("LiveResearchSnapshotBuild", snapshot),
+        environment=CodeEnvironmentLock("commit-2", "c" * 64),
+    )
+    new_lock = _identity(
+        lane="stock",
+        purpose="backend-stock",
+        candidate=cast("StrategySpecRecord", candidate),
+        snapshot=cast("LiveResearchSnapshotBuild", snapshot),
+        environment=CodeEnvironmentLock("commit-1", "d" * 64),
+    )
+
+    assert same == first
+    assert new_code != first
+    assert new_lock != first
 
 
 @pytest.mark.unit

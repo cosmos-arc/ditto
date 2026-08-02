@@ -44,6 +44,9 @@ from ditto_application.commands.strategy import (
 from ditto_application.processes.experiments._planning_request_identity import (
     plain_planning_value,
 )
+from ditto_application.processes.experiments.execution_bundle import (
+    CodeEnvironmentLock,
+)
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
@@ -127,6 +130,7 @@ class LivePlanningServices:
     update_handler: UpdateStrategyHandler
     executor_probe: BuilderBackedResearchExecutorProbe
     planning_process: ExperimentPlanningProcess
+    environment: CodeEnvironmentLock
 
 
 @dataclass(frozen=True, slots=True)
@@ -368,6 +372,7 @@ def _identity(
     purpose: str,
     candidate: StrategySpecRecord,
     snapshot: LiveResearchSnapshotBuild,
+    environment: CodeEnvironmentLock,
 ) -> tuple[str, str, str]:
     digest = hashlib.sha256(
         orjson.dumps(
@@ -379,6 +384,7 @@ def _identity(
                 "strategy_spec_hash": candidate.spec_hash,
                 "snapshot_id": snapshot.snapshot_id,
                 "snapshot_manifest_hash": snapshot.manifest_hash,
+                "execution_environment": dict(environment.as_payload()),
             },
             option=orjson.OPT_SORT_KEYS,
         )
@@ -454,6 +460,7 @@ def build_live_planning_artifact(
         purpose=purpose,
         candidate=candidate,
         snapshot=snapshot,
+        environment=services.environment,
     )
     objective = _objective(
         experiment_id=experiment_id,
@@ -602,6 +609,7 @@ def main(argv: list[str] | None = None) -> int:
                 update_handler=container.get(UpdateStrategyHandler),
                 executor_probe=container.get(BuilderBackedResearchExecutorProbe),
                 planning_process=container.get(ExperimentPlanningProcess),
+                environment=container.get(CodeEnvironmentLock),
             ),
         )
     finally:

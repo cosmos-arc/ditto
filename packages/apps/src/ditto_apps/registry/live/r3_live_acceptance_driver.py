@@ -43,6 +43,9 @@ from ditto_application.mutation_idempotency import (
 from ditto_application.processes.experiments.candidate_evidence_reader import (
     CandidateEvidenceBundle,
 )
+from ditto_application.processes.experiments.execution_bundle import (
+    CodeEnvironmentLock,
+)
 from ditto_application.processes.experiments.holdout import (
     ClaimHoldoutCandidateRequest,
     HoldoutSelectionReason,
@@ -245,6 +248,7 @@ def _build_planning(
                 update_handler=container.get(UpdateStrategyHandler),
                 executor_probe=container.get(BuilderBackedResearchExecutorProbe),
                 planning_process=container.get(ExperimentPlanningProcess),
+                environment=container.get(CodeEnvironmentLock),
             ),
         )
     finally:
