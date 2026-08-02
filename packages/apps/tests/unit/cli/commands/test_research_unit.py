@@ -21,6 +21,10 @@ from ditto_application.processes.experiments.planning_process import (
     ExperimentPreflightReport,
     ExperimentPreflightStatus,
 )
+from ditto_application.queries.experiments import (
+    ExperimentCandidateReadModel,
+    ExperimentDetailReadModel,
+)
 from ditto_apps.cli.commands import research
 from ditto_apps.cli.commands.research import _receipt_payload, _to_json_value
 from typer.testing import CliRunner
@@ -215,3 +219,56 @@ def test_launch_document_uses_same_builder_and_launch_handler(
         "fold_count": 8,
         "plan_hash": "d" * 64,
     }
+
+
+def test_get_experiment_serializes_immutable_candidate_parameters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    occurred_at = datetime(2026, 8, 2, 0, 0, 0, tzinfo=UTC)
+    detail = ExperimentDetailReadModel(
+        experiment_id="exp-live",
+        research_cycle_id="cycle-live",
+        research_cycle_hash="a" * 64,
+        strategy_version="strategy@1",
+        strategy_spec_hash="b" * 64,
+        snapshot_id="snapshot-live",
+        status="running",
+        desired_state="run",
+        stage="validation",
+        failure_code=None,
+        queue_ordinal=1,
+        revision=3,
+        created_at=occurred_at,
+        updated_at=occurred_at,
+        seed=42,
+        worker_count=2,
+        failure_policy="fail_fast",
+        candidate_limit=4,
+        fold_run_limit=128,
+        fold_protocol_id="walk-forward",
+        fold_protocol_version=1,
+        fold_protocol_hash="c" * 64,
+        candidates=(
+            ExperimentCandidateReadModel(
+                candidate_id="candidate-1",
+                ordinal=0,
+                is_baseline=True,
+                parameters=MappingProxyType(
+                    {"selector": MappingProxyType({"top_k": 20})}
+                ),
+            ),
+        ),
+        folds=(),
+    )
+    bundle = MagicMock()
+    bundle.experiment_query.get.return_value = detail
+    create_bundle = MagicMock()
+    create_bundle.return_value.__enter__.return_value = bundle
+    monkeypatch.setattr(research, "create_research_bundle", create_bundle)
+
+    result = CliRunner().invoke(research.app, ["get-experiment", "exp-live"])
+
+    assert result.exit_code == 0, result.output
+    payload = orjson.loads(result.stdout)
+    assert payload["candidates"][0]["parameters"] == {"selector": {"top_k": 20}}
+    assert payload["created_at"] == "2026-08-02T00:00:00+00:00"

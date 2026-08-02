@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict
-from datetime import UTC, datetime
+from dataclasses import asdict, fields, is_dataclass
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -69,6 +69,38 @@ def _to_json_value(value: object) -> JsonValue:
     if value is None or type(value) in {str, bool, int, float}:
         return cast("JsonScalar", value)
     raise TypeError("research planning output must be JSON-compatible")
+
+
+def _to_cli_value(value: object) -> object:
+    """Serialize immutable read models without dataclasses deepcopy semantics."""
+    if is_dataclass(value) and not isinstance(value, type):
+        return {
+            field.name: _to_cli_value(getattr(value, field.name))
+            for field in fields(value)
+        }
+    if isinstance(value, Mapping):
+        mapping = cast("Mapping[object, object]", value)
+        result: dict[str, object] = {}
+        for key, item in mapping.items():
+            if type(key) is not str:
+                raise TypeError("research CLI output mapping key must be exact str")
+            result[key] = _to_cli_value(item)
+        return result
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        sequence = cast("Sequence[object]", value)
+        return [_to_cli_value(item) for item in sequence]
+    if isinstance(value, date):
+        return value.isoformat()
+    if value is None or type(value) in {str, bool, int, float}:
+        return value
+    raise TypeError("research CLI output must be JSON-compatible")
+
+
+def _read_model_payload(value: object) -> dict[str, object]:
+    payload = _to_cli_value(value)
+    if not isinstance(payload, dict):
+        raise TypeError("research CLI read model must serialize to an object")
+    return cast("dict[str, object]", payload)
 
 
 def _preflight_payload(report: ExperimentPreflightReport) -> dict[str, object]:
@@ -191,7 +223,7 @@ def get_experiment(
     if detail is None:
         typer.echo(f"Experiment not found: {experiment_id}", err=True)
         raise typer.Exit(code=1)
-    output_json_dict(asdict(detail))
+    output_json_dict(_read_model_payload(detail))
 
 
 @app.command("list-gates")
