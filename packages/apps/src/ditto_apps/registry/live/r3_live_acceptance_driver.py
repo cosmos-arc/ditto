@@ -57,6 +57,7 @@ from ditto_application.processes.experiments.planning_process import (
 from ditto_application.processes.experiments.planning_request_builder import (
     build_experiment_planning_request,
 )
+from ditto_application.processes.experiments.scheduler_store import ExperimentId
 from ditto_application.queries.experiments import (
     ExperimentDetailReadModel,
     ExperimentReviewPacketReadModel,
@@ -68,6 +69,7 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 )
 
 from ditto_apps.registry.container import make_app_container
+from ditto_apps.registry.contexts.bundle import ResearchBundle
 from ditto_apps.registry.contexts.research import create_research_bundle
 from ditto_apps.registry.contexts.strategy import create_strategy_bundle
 from ditto_apps.registry.live.r3_live_evidence_store import (
@@ -94,6 +96,7 @@ __all__ = [
     "run_live_backup_restore",
     "run_live_golden_lane",
     "run_live_governance_lifecycle",
+    "select_and_claim_with_bundle",
 ]
 
 type LiveLane = Literal["stock", "etf"]
@@ -103,6 +106,12 @@ class SchedulerTick(Protocol):
     """Injected jobs-layer scheduler entrypoint used by live acceptance."""
 
     def __call__(self, *, occurred_at: datetime) -> Mapping[str, object]: ...
+
+
+class SelectAndClaim(Protocol):
+    """Operator mutations bound to the scheduler's live lease authority."""
+
+    def __call__(self, experiment_id: str) -> tuple[str, str, str, bool]: ...
 
 
 _MAX_TICKS = 64
@@ -314,7 +323,16 @@ def _tick_until(
     for _ in range(_MAX_TICKS):
         detail = _detail(experiment_id)
         if target == "candidate_selection" and detail.stage == target:
-            return detail
+            # Re-enter the stage once so an interrupted transition can
+            # idempotently finish publishing candidate/selection evidence.
+            scheduler_tick(occurred_at=datetime.now(UTC))
+            replayed = _detail(experiment_id)
+            if replayed.stage != target:
+                raise ValueError(
+                    "live candidate-selection evidence replay changed stage: "
+                    + f"{replayed.stage}/{replayed.status}"
+                )
+            return replayed
         if target == "completed" and detail.status == target:
             return detail
         scheduler_tick(occurred_at=datetime.now(UTC))
@@ -324,119 +342,131 @@ def _tick_until(
     )
 
 
-def _select_and_claim(experiment_id: str) -> tuple[str, str, str, bool]:
-    with create_research_bundle() as bundle:
-        detail = bundle.experiment_query.get(experiment_id)
-        if detail is None or detail.stage != "candidate_selection":
-            raise ValueError("live experiment is not ready for candidate selection")
-        selected = next(item for item in detail.candidates if not item.is_baseline)
-        loaded = bundle.candidate_evidence_reader.load_current_bundle(
-            experiment_id,
-            selected.candidate_id,
+def select_and_claim_with_bundle(
+    bundle: ResearchBundle,
+    experiment_id: str,
+) -> tuple[str, str, str, bool]:
+    """Select and claim through the scheduler container's lease authority."""
+    detail = bundle.experiment_query.get(experiment_id)
+    if detail is None:
+        raise ValueError("live experiment is not ready for candidate selection")
+    if detail.stage in {"holdout", "evidence"}:
+        snapshot = bundle.candidate_evidence_reader.scheduler_store.load_snapshot(
+            ExperimentId(experiment_id)
         )
-        if loaded is None:
-            raise ValueError("live candidate evidence bundle is missing")
-        _record, evidence_bundle = loaded
-        comparison_hash = cast(
-            "str",
-            evidence_bundle.manifest["comparison_payload_hash"],
-        )
-        rationale = "Candidate won the registered live-data objective review."
-        selection_payload = {
-            "candidate_id": selected.candidate_id,
-            "comparison_payload_hash": comparison_hash,
-            "expected_revision": detail.revision,
-            "rationale": rationale,
-        }
-        selection_request = CandidateSelectionRequest(
-            experiment_id=experiment_id,
-            candidate_id=selected.candidate_id,
-            comparison_payload_hash=comparison_hash,
-            expected_revision=detail.revision,
-            rationale=rationale,
-            occurred_at=datetime.now(UTC),
-            idempotency=build_mutation_idempotency(
-                operation_id="design_research_candidate_selection",
-                resource_id=canonical_resource_id(
-                    "candidate_selection",
-                    {"experiment_id": experiment_id},
-                ),
-                raw_key=f"r3-live-{experiment_id}-candidate-selection",
-                request_payload=selection_payload,
-            ),
-        )
-        command = CandidateSelectionCommand(selection_request)
-        selection = bundle.candidate_selection_handler.handle(command)
-        if bundle.candidate_selection_handler.handle(command) != selection:
-            raise ValueError("candidate selection idempotency replay drifted")
-        reason = HoldoutSelectionReason(
-            "objective_review",
-            rationale,
-        )
-        holdout_payload = {
-            "candidate_id": selected.candidate_id,
-            "candidate_evidence_content_hash": (
-                selection.candidate_evidence_content_hash
-            ),
-            "expected_revision": selection.experiment_revision,
-            "selection_id": selection.selection_id,
-            "selection_evidence_content_hash": (
-                selection.selection_evidence_content_hash
-            ),
-        }
-        holdout_request = ClaimHoldoutCandidateRequest(
-            experiment_id=experiment_id,
-            candidate_id=selected.candidate_id,
-            expected_revision=selection.experiment_revision,
-            expected_selection_evidence_hash=(
-                selection.selection_evidence_content_hash
-            ),
-            operator_confirmation="chevy reviewed immutable live candidate evidence",
-            selection_reason=reason,
-            occurred_at=datetime.now(UTC),
-            selection_id=selection.selection_id,
-            expected_candidate_evidence_content_hash=(
-                selection.candidate_evidence_content_hash
-            ),
-            idempotency=build_mutation_idempotency(
-                operation_id="design_research_holdout_evaluations",
-                resource_id=canonical_resource_id(
-                    "holdout_evaluation",
-                    {"experiment_id": experiment_id},
-                ),
-                raw_key=f"r3-live-{experiment_id}-holdout",
-                request_payload=holdout_payload,
-            ),
-        )
-        holdout_command = ClaimHoldoutCandidateCommand(holdout_request)
-        holdout = bundle.holdout_claim_handler.handle(holdout_command)
-        if bundle.holdout_claim_handler.handle(holdout_command) != holdout:
-            raise ValueError("holdout claim idempotency replay drifted")
-        duplicate = replace(
-            holdout_request,
-            idempotency=build_mutation_idempotency(
-                operation_id="design_research_holdout_evaluations",
-                resource_id=canonical_resource_id(
-                    "holdout_evaluation",
-                    {"experiment_id": experiment_id},
-                ),
-                raw_key=f"r3-live-{experiment_id}-holdout-duplicate",
-                request_payload=holdout_payload,
-            ),
-        )
-        blocked = False
-        try:
-            bundle.holdout_claim_handler.handle(ClaimHoldoutCandidateCommand(duplicate))
-        except AppCommandError as exc:
-            blocked = exc.details.get("code") == "HOLDOUT_ALREADY_CLAIMED"
-        if not blocked:
-            raise ValueError("second live holdout claim was not blocked")
+        claim = snapshot.holdout_claim
+        if claim is None:
+            raise ValueError("live holdout stage lacks its persisted claim")
         return (
-            selected.candidate_id,
-            holdout.claim_id,
-            selection.selection_evidence_content_hash,
-            blocked,
+            claim.candidate_id,
+            claim.claim_id,
+            claim.selection_evidence_hash,
+            True,
         )
+    if detail.stage != "candidate_selection":
+        raise ValueError("live experiment is not ready for candidate selection")
+    selected = next(item for item in detail.candidates if not item.is_baseline)
+    loaded = bundle.candidate_evidence_reader.load_current_bundle(
+        experiment_id,
+        selected.candidate_id,
+    )
+    if loaded is None:
+        raise ValueError("live candidate evidence bundle is missing")
+    _record, evidence_bundle = loaded
+    comparison_hash = cast(
+        "str",
+        evidence_bundle.manifest["comparison_payload_hash"],
+    )
+    rationale = "Candidate won the registered live-data objective review."
+    selection_payload = {
+        "candidate_id": selected.candidate_id,
+        "comparison_payload_hash": comparison_hash,
+        "expected_revision": detail.revision,
+        "rationale": rationale,
+    }
+    selection_request = CandidateSelectionRequest(
+        experiment_id=experiment_id,
+        candidate_id=selected.candidate_id,
+        comparison_payload_hash=comparison_hash,
+        expected_revision=detail.revision,
+        rationale=rationale,
+        occurred_at=datetime.now(UTC),
+        idempotency=build_mutation_idempotency(
+            operation_id="design_research_candidate_selection",
+            resource_id=canonical_resource_id(
+                "candidate_selection",
+                {"experiment_id": experiment_id},
+            ),
+            raw_key=f"r3-live-{experiment_id}-candidate-selection",
+            request_payload=selection_payload,
+        ),
+    )
+    command = CandidateSelectionCommand(selection_request)
+    selection = bundle.candidate_selection_handler.handle(command)
+    if bundle.candidate_selection_handler.handle(command) != selection:
+        raise ValueError("candidate selection idempotency replay drifted")
+    reason = HoldoutSelectionReason(
+        "objective_review",
+        rationale,
+    )
+    holdout_payload = {
+        "candidate_id": selected.candidate_id,
+        "candidate_evidence_content_hash": selection.candidate_evidence_content_hash,
+        "expected_revision": selection.experiment_revision,
+        "selection_id": selection.selection_id,
+        "selection_evidence_content_hash": selection.selection_evidence_content_hash,
+    }
+    holdout_request = ClaimHoldoutCandidateRequest(
+        experiment_id=experiment_id,
+        candidate_id=selected.candidate_id,
+        expected_revision=selection.experiment_revision,
+        expected_selection_evidence_hash=(selection.selection_evidence_content_hash),
+        operator_confirmation="chevy reviewed immutable live candidate evidence",
+        selection_reason=reason,
+        occurred_at=datetime.now(UTC),
+        selection_id=selection.selection_id,
+        expected_candidate_evidence_content_hash=(
+            selection.candidate_evidence_content_hash
+        ),
+        idempotency=build_mutation_idempotency(
+            operation_id="design_research_holdout_evaluations",
+            resource_id=canonical_resource_id(
+                "holdout_evaluation",
+                {"experiment_id": experiment_id},
+            ),
+            raw_key=f"r3-live-{experiment_id}-holdout",
+            request_payload=holdout_payload,
+        ),
+    )
+    holdout_command = ClaimHoldoutCandidateCommand(holdout_request)
+    holdout = bundle.holdout_claim_handler.handle(holdout_command)
+    if bundle.holdout_claim_handler.handle(holdout_command) != holdout:
+        raise ValueError("holdout claim idempotency replay drifted")
+    duplicate = replace(
+        holdout_request,
+        idempotency=build_mutation_idempotency(
+            operation_id="design_research_holdout_evaluations",
+            resource_id=canonical_resource_id(
+                "holdout_evaluation",
+                {"experiment_id": experiment_id},
+            ),
+            raw_key=f"r3-live-{experiment_id}-holdout-duplicate",
+            request_payload=holdout_payload,
+        ),
+    )
+    blocked = False
+    try:
+        bundle.holdout_claim_handler.handle(ClaimHoldoutCandidateCommand(duplicate))
+    except AppCommandError as exc:
+        blocked = exc.details.get("code") == "HOLDOUT_ALREADY_CLAIMED"
+    if not blocked:
+        raise ValueError("second live holdout claim was not blocked")
+    return (
+        selected.candidate_id,
+        holdout.claim_id,
+        selection.selection_evidence_content_hash,
+        blocked,
+    )
 
 
 def _completed_evidence(
@@ -468,6 +498,7 @@ def run_live_golden_lane(
     evidence_root: Path,
     purpose: str,
     scheduler_tick: SchedulerTick,
+    select_and_claim: SelectAndClaim,
 ) -> LiveGoldenLaneResult:
     """Run one real-data planning, worker, selection, holdout, and packet closure."""
     root = evidence_root.expanduser().resolve(strict=False)
@@ -500,17 +531,18 @@ def run_live_golden_lane(
         )
         duplicate_blocked = True
     else:
-        _tick_until(
-            artifact.experiment_id,
-            target="candidate_selection",
-            scheduler_tick=scheduler_tick,
-        )
+        if detail.stage not in {"holdout", "evidence"}:
+            _tick_until(
+                artifact.experiment_id,
+                target="candidate_selection",
+                scheduler_tick=scheduler_tick,
+            )
         (
             candidate_id,
             holdout_claim_id,
             selection_evidence_hash,
             duplicate_blocked,
-        ) = _select_and_claim(artifact.experiment_id)
+        ) = select_and_claim(artifact.experiment_id)
         _tick_until(
             artifact.experiment_id,
             target="completed",

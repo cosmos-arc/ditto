@@ -219,6 +219,50 @@ def test_missing_nonbaseline_execution_semantics_fails_closed(tmp_path: Path) ->
     )
 
 
+def test_effective_runtime_parameter_hash_can_differ_from_candidate_hash(
+    tmp_path: Path,
+) -> None:
+    """Defaulted runtime values must not drift the frozen candidate identity."""
+    case = build_case(tmp_path, publish_indices=())
+    effective_parameter_hash = "d" * 64
+    semantics = dict(case.semantics)
+    for key, value in tuple(semantics.items()):
+        if key.candidate_id != CANDIDATE_ID:
+            continue
+        assert type(value.strategy) is StrategyExecutionBinding
+        semantics[key] = replace(
+            value,
+            strategy=replace(
+                value.strategy,
+                parameter_hash=effective_parameter_hash,
+            ),
+        )
+    attempts = tuple(
+        replace(
+            attempt,
+            spec=replace(
+                attempt.spec,
+                reproduction_fingerprint=semantics[
+                    attempt.spec.fold_key
+                ].reproduction_fingerprint,
+            ),
+        )
+        for attempt in case.attempts
+    )
+    adjusted = replace(case, attempts=attempts, semantics=semantics)
+    for fold, attempt in zip(adjusted.folds, adjusted.attempts, strict=True):
+        adjusted.publish_report(fold, attempt)
+        adjusted.publish_trace(fold, attempt)
+
+    collected = adjusted.assemble()
+
+    assert all(
+        row.parameter_hash != ContentHash(effective_parameter_hash)
+        for row in collected.source_rows
+        if row.candidate_id == CANDIDATE_ID
+    )
+
+
 @pytest.mark.parametrize(
     ("field_name", "drifted_value"),
     [

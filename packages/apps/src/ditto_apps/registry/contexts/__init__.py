@@ -5,6 +5,7 @@ from __future__ import annotations
 from ditto_apps.registry.contexts.bundle import (
     ExperimentExecutionBundle,
     IngestionBundle,
+    LiveResearchAcceptanceBundle,
     MaterializationBundle,
     ResearchBundle,
     StrategyBundle,
@@ -17,18 +18,21 @@ from ditto_apps.registry.contexts.query import QueryContext, create_query_contex
 from ditto_apps.registry.contexts.research import create_research_bundle
 from ditto_apps.registry.contexts.research_execution import (
     create_experiment_tick_bundle,
+    create_live_research_acceptance_bundle,
 )
 from ditto_apps.registry.contexts.strategy import create_strategy_bundle
 
 __all__ = [
     "ExperimentExecutionBundle",
     "IngestionBundle",
+    "LiveResearchAcceptanceBundle",
     "MaterializationBundle",
     "QueryContext",
     "ResearchBundle",
     "StrategyBundle",
     "create_experiment_tick_bundle",
     "create_ingestion_bundle",
+    "create_live_research_acceptance_bundle",
     "create_materialization_bundle",
     "create_query_context",
     "create_research_bundle",

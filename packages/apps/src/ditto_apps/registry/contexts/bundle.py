@@ -126,6 +126,15 @@ class ResearchBundle:
 
 
 @dataclass(frozen=True)
+class LiveResearchAcceptanceBundle:
+    """One lease authority shared by Task 18 scheduler and operator commands."""
+
+    coordinator: ExperimentExecutionCoordinator
+    worker: ResearchExperimentWorker
+    research: ResearchBundle
+
+
+@dataclass(frozen=True)
 class ExperimentExecutionBundle:
     """
     Experiment scheduler tick composition root bundle.

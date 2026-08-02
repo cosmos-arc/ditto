@@ -286,6 +286,8 @@ def _backtest_inputs(
 
 def _fold(
     status: ExperimentStatus = ExperimentStatus.RUNNING,
+    *,
+    role: FoldRole = FoldRole.WALK_FORWARD,
 ) -> FoldView:
     key = FoldKey(
         ExperimentId("experiment-1"),
@@ -295,7 +297,7 @@ def _fold(
     spec = FoldPersistenceSpec.create(
         key,
         2,
-        FoldRole.WALK_FORWARD,
+        role,
         DateWindow(date(2018, 1, 1), date(2023, 12, 31)),
         DateWindow(date(2024, 1, 1), date(2024, 12, 31)),
         5,
@@ -316,7 +318,10 @@ def _fold(
     )
 
 
-def _semantics() -> ResearchExecutionSemantics:
+def _semantics(
+    *,
+    role: FoldRole = FoldRole.WALK_FORWARD,
+) -> ResearchExecutionSemantics:
     bars_input = ContentAddressedResearchInput(
         input_id="bars",
         artifact_kind="bars",
@@ -361,11 +366,11 @@ def _semantics() -> ResearchExecutionSemantics:
         experiment_id="experiment-1",
         candidate_id="candidate-1",
         fold_id="fold-1",
-        fold_role="walk_forward",
+        fold_role=role.value,
         is_baseline=False,
         plan_hash=_sha("a"),
         launch_spec_hash=_sha("b"),
-        fold_spec_hash=str(_fold().spec.payload_hash),
+        fold_spec_hash=str(_fold(role=role).spec.payload_hash),
         strategy=StrategyExecutionBinding(
             exact_strategy=ExactStrategyIdentity("stock-selection", 3, _sha("d")),
             resolved_spec_hash=_sha("e"),
@@ -1281,15 +1286,19 @@ class _MemoryArtifactIndex:
         raise AssertionError("pin is outside worker publication")
 
 
-def _dispatch() -> ExperimentDispatch:
-    queued = _fold(ExperimentStatus.QUEUED)
-    first = ExecutionBundleFirstAttemptFactory(_Resolver(_semantics())).create(
+def _dispatch(
+    *,
+    stage: ExperimentStage = ExperimentStage.WALK_FORWARD,
+    role: FoldRole = FoldRole.WALK_FORWARD,
+) -> ExperimentDispatch:
+    queued = _fold(ExperimentStatus.QUEUED, role=role)
+    first = ExecutionBundleFirstAttemptFactory(_Resolver(_semantics(role=role))).create(
         queued,
         _NOW,
     )
     attempt = AttemptView(first.spec, first.projection)
-    fold = _fold()
-    return ExperimentDispatch(ExperimentStage.WALK_FORWARD, fold, attempt)
+    fold = _fold(role=role)
+    return ExperimentDispatch(stage, fold, attempt)
 
 
 def _resumed_dispatch() -> ExperimentDispatch:
@@ -1348,8 +1357,17 @@ def _replace_persisted_fold_key(
     )
 
 
+@pytest.mark.parametrize(
+    ("stage", "role"),
+    [
+        (ExperimentStage.WALK_FORWARD, FoldRole.WALK_FORWARD),
+        (ExperimentStage.HOLDOUT, FoldRole.HOLDOUT),
+    ],
+)
 def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
     tmp_path: Path,
+    stage: ExperimentStage,
+    role: FoldRole,
 ) -> None:
     from ditto_analysis.research.artifact_service import ResearchArtifactService
     from ditto_application.builders.fold_selection_trace_artifact_adapter import (
@@ -1370,19 +1388,20 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
     )
     worker = _make_worker(
         coordinator=coordinator,
-        semantics_resolver=_Resolver(_semantics()),
+        semantics_resolver=_Resolver(_semantics(role=role)),
         runner=runner,
         report_publisher=publisher,
         fold_selection_trace_publisher=trace_publisher,
         clock=lambda: _NOW,
     )
 
-    result = worker.execute(_dispatch(), occurred_at=_NOW)
+    dispatch = _dispatch(stage=stage, role=role)
+    result = worker.execute(dispatch, occurred_at=_NOW)
 
     assert result.state is ResearchWorkerState.COMPLETED
     assert result.failure_code is None
     assert result.reproduction_fingerprint == ContentHash(
-        str(_semantics().reproduction_fingerprint)
+        str(_semantics(role=role).reproduction_fingerprint)
     )
     assert [name for name, _ in coordinator.calls] == [
         "renew",
@@ -1395,7 +1414,7 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
     ]
     assert len(publisher.calls) == 1
     identity, evidence, fence, now_epoch_us = publisher.calls[0]
-    persisted = _dispatch()
+    persisted = dispatch
     assert identity.experiment_id == persisted.fold.spec.key.experiment_id
     assert identity.candidate_id == persisted.fold.spec.key.candidate_id
     assert identity.fold_id == persisted.fold.spec.key.fold_id
@@ -1418,9 +1437,9 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
         (fence, now_epoch_us),
     ]
     assert len(runner.audits) == 1
-    assert runner.audits[0].attempt_id == str(_dispatch().attempt.spec.attempt_id)
+    assert runner.audits[0].attempt_id == str(dispatch.attempt.spec.attempt_id)
     assert runner.audits[0].reproduction_fingerprint == (
-        _dispatch().attempt.spec.reproduction_fingerprint
+        dispatch.attempt.spec.reproduction_fingerprint
     )
     assert runner.audits[0].backtest_run_id == "research-run-persisted"
 

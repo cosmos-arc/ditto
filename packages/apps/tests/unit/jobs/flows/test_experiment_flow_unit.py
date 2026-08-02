@@ -290,6 +290,36 @@ def test_flow_executes_only_one_bounded_tick_and_returns_durable_results(
     }
 
 
+def test_flow_executes_one_claimed_holdout_dispatch() -> None:
+    """The jobs boundary must execute the domain coordinator's holdout work."""
+    dispatch = _dispatch(
+        0,
+        stage=ExperimentStage.HOLDOUT,
+        fold_role=FoldRole.HOLDOUT,
+    )
+    progress = replace(
+        _progress(2, live_attempt_count=1),
+        stage=ExperimentStage.HOLDOUT,
+    )
+    coordinator = _Coordinator(
+        SchedulerTickResult(
+            state=SchedulerTickState.DISPATCHED,
+            experiment_id=ExperimentId("experiment-1"),
+            dispatches=(dispatch,),
+            progress=progress,
+        )
+    )
+    worker = _Worker()
+
+    result = EXPERIMENT_TICK_FLOW_RUNNER(
+        runtime=ExperimentTickRuntime(coordinator=coordinator, worker=worker),
+        occurred_at=_NOW,
+    )
+
+    assert worker.calls == [(dispatch.attempt.spec.attempt_id, _NOW)]
+    assert result["progress_at_dispatch"]["stage"] == "holdout"
+
+
 def test_idle_flow_returns_scheduler_truth_without_starting_executor(
     mocker: MockerFixture,
 ) -> None:

@@ -107,6 +107,7 @@ _HASH_DRIFT_REASON_SUFFIXES = (
 )
 _EXECUTABLE_STAGE_ROLES = {
     ExperimentStage.EXPLORATION: FoldRole.EXPLORATION,
+    ExperimentStage.HOLDOUT: FoldRole.HOLDOUT,
     ExperimentStage.WALK_FORWARD: FoldRole.WALK_FORWARD,
 }
 

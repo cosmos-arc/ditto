@@ -183,6 +183,10 @@ def _validate_semantics_fold(
         != str(snapshot_state.launch_spec.snapshot_id)
         or snapshot.exact_snapshot.manifest_hash != str(manifest.snapshot_hash)
         or snapshot.known_at_policy != manifest.pit_policy
+        # The launch binding hashes the frozen candidate grid values, while
+        # StrategyExecutionBinding hashes canonical effective runtime values,
+        # including defaults.  The durable resolver and attempt reproduction
+        # fingerprint validate that second identity; they need not be equal.
         or (
             type(strategy) is StrategyExecutionBinding
             and (
@@ -190,11 +194,8 @@ def _validate_semantics_fold(
                 or (
                     not candidate.is_baseline
                     and (
-                        strategy.parameter_hash != str(execution.parameter_hash)
-                        or (
-                            f"{strategy.exact_strategy.strategy_id}@{strategy.exact_strategy.version}"
-                            != str(snapshot_state.launch_spec.strategy_version)
-                        )
+                        f"{strategy.exact_strategy.strategy_id}@{strategy.exact_strategy.version}"
+                        != str(snapshot_state.launch_spec.strategy_version)
                         or strategy.exact_strategy.spec_hash
                         != str(snapshot_state.launch_spec.strategy_spec_hash)
                         or strategy.node_registry_manifest_hash

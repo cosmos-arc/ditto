@@ -11,7 +11,11 @@ from ditto_application.processes.experiments.coordinator import (
 from ditto_application.processes.experiments.worker import ResearchExperimentWorker
 
 from ditto_apps.registry.container import make_app_container
-from ditto_apps.registry.contexts.bundle import ExperimentExecutionBundle
+from ditto_apps.registry.contexts.bundle import (
+    ExperimentExecutionBundle,
+    LiveResearchAcceptanceBundle,
+)
+from ditto_apps.registry.contexts.research import research_bundle_from_container
 
 
 @contextmanager
@@ -29,6 +33,20 @@ def create_experiment_tick_bundle() -> Generator[ExperimentExecutionBundle]:
         yield ExperimentExecutionBundle(
             coordinator=container.get(ExperimentExecutionCoordinator),
             worker=container.get(ResearchExperimentWorker),
+        )
+    finally:
+        container.close()
+
+
+@contextmanager
+def create_live_research_acceptance_bundle() -> Generator[LiveResearchAcceptanceBundle]:
+    """Bind live scheduler ticks and operator mutations to one lease authority."""
+    container = make_app_container()
+    try:
+        yield LiveResearchAcceptanceBundle(
+            coordinator=container.get(ExperimentExecutionCoordinator),
+            worker=container.get(ResearchExperimentWorker),
+            research=research_bundle_from_container(container),
         )
     finally:
         container.close()

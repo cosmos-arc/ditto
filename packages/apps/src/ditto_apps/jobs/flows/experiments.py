@@ -34,6 +34,7 @@ _ALLOWED_WORKER_LIMITS = frozenset({2, 4})
 _THREAD_NAME_PREFIX = "ditto-research-worker"
 _EXECUTABLE_STAGE_ROLES = {
     "exploration": "exploration",
+    "holdout": "holdout",
     "walk_forward": "walk_forward",
 }
 _WORKER_STATE_FAILURE_PAIRS = frozenset(
