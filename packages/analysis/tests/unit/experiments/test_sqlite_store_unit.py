@@ -2869,6 +2869,18 @@ def test_publish_review_packet_round_trips_through_bundle_hash(
 
     assert record.artifact_kind == "review_packet"
     assert str(record.reproduction_fingerprint) == str(packet.bundle_hash)
+    assert record.is_pinned is True
+    assert record.pinned_at == NOW
+    assert record.revision == 1
+
+    replayed = writer.publish_review_packet(
+        packet,
+        lease_fence=fence,
+        now_epoch_us=NOW_US + 2,
+        created_at=NOW,
+    )
+
+    assert replayed == record
 
     restored = reader.get_review_packet(str(packet.bundle_hash))
     assert restored is not None

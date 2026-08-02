@@ -26,7 +26,7 @@ __all__ = ["SQLiteExperimentReviewPacketMixin"]
 
 
 class SQLiteExperimentReviewPacketMixin:
-    """Publish immutable review packets as content-addressed governance artifacts."""
+    """Publish and pin content-addressed review packets for durable governance."""
 
     _database: ResearchExperimentDatabase
     _reader: SQLiteExperimentReader
@@ -39,7 +39,7 @@ class SQLiteExperimentReviewPacketMixin:
         now_epoch_us: int,
         created_at: datetime,
     ) -> ArtifactRecord:
-        """Persist one immutable review packet under its content-addressed identity."""
+        """Persist and one-way pin a review packet under its immutable identity."""
         if packet.schema_version != REVIEW_PACKET_SCHEMA_VERSION:
             raise ExperimentSpecError(
                 "legacy review packet schemas are read-only",
@@ -65,9 +65,16 @@ class SQLiteExperimentReviewPacketMixin:
             reader=self._reader,
             writer=cast("ArtifactIndexWriter", self),
         )
-        return io.publish_json(
+        published = io.publish_json(
             spec,
             packet.canonical_payload(),
             lease_fence=lease_fence,
             now_epoch_us=now_epoch_us,
+        )
+        if published.is_pinned:
+            return published
+        return io.pin(
+            published.artifact_id,
+            expected_revision=published.revision,
+            pinned_at=created_at,
         )

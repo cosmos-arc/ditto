@@ -920,11 +920,7 @@ def _seed_research(
         artifact_reader=reader,
         artifact_writer=writer,
     )
-    pinned = service.pin_indexed_artifact(
-        record.artifact_id,
-        expected_revision=record.revision,
-        pinned_at=NOW,
-    )
+    pinned = record
     payload = service.read_indexed_artifact_bytes(pinned.artifact_id)
     assert pinned.is_pinned is True
     database.close_all()
