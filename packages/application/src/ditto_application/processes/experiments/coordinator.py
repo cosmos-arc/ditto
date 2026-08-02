@@ -543,7 +543,13 @@ class ExperimentExecutionCoordinator(
                 now_epoch_us=now_epoch_us,
                 occurred_at=occurred_at,
             )
-            return _result(SchedulerTickState.WAITING, snapshot, ())
+            result = _result(SchedulerTickState.WAITING, snapshot, ())
+            if snapshot.projection.record.status in _TERMINAL_EXPERIMENT:
+                # A production flow constructs one coordinator per tick. Release
+                # the terminal occupant before returning so the next invocation
+                # does not wait for an otherwise valid long-lived lease to expire.
+                self._authority.release()
+            return result
         if status is not ExperimentStatus.RUNNING:
             return _result(SchedulerTickState.WAITING, snapshot, ())
         snapshot = self._recovery.recover_running(

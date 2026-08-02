@@ -46,6 +46,7 @@ from ditto_application.queries.research_certification import (
     DataReadinessCertificationProbe,
 )
 from ditto_application.research_validation_contracts import RuntimeValidationEvidence
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.models import StrategySpecRecord
 
 
@@ -211,6 +212,7 @@ class _Builder:
         baseline_compiled_expressions: CompiledExpressions | None = None,
     ) -> None:
         self.calls: list[int] = []
+        self.evidence_sinks: list[object] = []
         self._baseline_strategy_id = baseline_strategy_id
         self._baseline_strategy_version = baseline_strategy_version
         self._candidate_lane = candidate_lane
@@ -222,6 +224,7 @@ class _Builder:
     def build(self, **kwargs: object) -> ResearchStrategyRuntime:
         record = cast("StrategySpecRecord", kwargs["record"])
         self.calls.append(record.version)
+        self.evidence_sinks.append(kwargs.get("evidence_sink"))
         if record.version == 2:
             return cast(
                 "ResearchStrategyRuntime",
@@ -314,6 +317,10 @@ def test_production_probe_returns_exact_registered_baseline_evidence() -> None:
 
     assert candidate_builder.calls == [3]
     assert baseline_builder.calls == [2]
+    assert all(
+        isinstance(item, SelectionEvidenceCollector)
+        for item in candidate_builder.evidence_sinks + baseline_builder.evidence_sinks
+    )
     assert strategy_reader.calls == [("seed_etf_rotation", 2)]
     assert result.available is True
     assert result.code is None

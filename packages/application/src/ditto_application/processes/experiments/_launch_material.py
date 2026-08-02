@@ -75,7 +75,10 @@ from ditto_application.research_validation_protocol import (
 
 __all__ = ["LaunchMaterialInput", "compile_launch_material"]
 
-_MAX_ENQUEUE_DETAIL_BYTES = 1_048_576
+# A certified 2015-2026 live R2 binding carries every exact provider snapshot
+# identity and compiles to roughly 1.5 MiB. Preserve those audit identities while
+# retaining a bounded persistence envelope with room for normal evidence growth.
+_MAX_ENQUEUE_DETAIL_BYTES = 4 * 1_048_576
 
 
 @dataclass(frozen=True, slots=True)

@@ -27,6 +27,7 @@ from ditto_application.processes.execution.factor_bridge import (
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     DurableLaunchEvidence,
     FrozenResearchExecutionInputs,
+    _binds_runtime_dataset_input,
 )
 from ditto_application.processes.experiments.baseline_registry import (
     BaselinePlanRequest,
@@ -78,6 +79,33 @@ _RULES_SCHEMA_V1: dict[str, pl.DataType] = {
     "transfer_fee_rate": pl.Float64,
     "source_snapshot_id": pl.String,
 }
+
+
+def test_runtime_dataset_binding_accepts_only_exact_legacy_or_addressed_id() -> None:
+    content_hash = "a" * 64
+    exact = ContentAddressedResearchInput(
+        input_id="stock_daily",
+        artifact_kind="bars",
+        content_hash=content_hash,
+        schema_hash="b" * 64,
+    )
+    addressed = ContentAddressedResearchInput(
+        input_id=f"stock_daily@sha256:{content_hash}",
+        artifact_kind="bars",
+        content_hash=content_hash,
+        schema_hash="b" * 64,
+    )
+    forged = ContentAddressedResearchInput(
+        input_id=f"stock_daily@sha256:{'c' * 64}",
+        artifact_kind="bars",
+        content_hash=content_hash,
+        schema_hash="b" * 64,
+    )
+
+    assert _binds_runtime_dataset_input(exact, "stock_daily") is True
+    assert _binds_runtime_dataset_input(addressed, "stock_daily") is True
+    assert _binds_runtime_dataset_input(forged, "stock_daily") is False
+    assert _binds_runtime_dataset_input(addressed, "stock") is False
 
 
 def _rules_artifact(

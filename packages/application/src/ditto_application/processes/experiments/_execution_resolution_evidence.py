@@ -689,8 +689,17 @@ def validate_frozen_inputs(
     required_kinds = ("bars", "calendar", "membership", "instrument_rules")
     if any(len(by_kind.get(kind, ())) != 1 for kind in required_kinds):
         raise research_execution_error("required_execution_input_set_incomplete")
-    input_ids = {item.input_id for item in inputs.snapshot_binding.inputs}
-    if any(dataset_id not in input_ids for dataset_id in required_dataset_ids):
+    if any(
+        len(
+            tuple(
+                item
+                for item in inputs.snapshot_binding.inputs
+                if _binds_runtime_dataset_input(item, dataset_id)
+            )
+        )
+        != 1
+        for dataset_id in required_dataset_ids
+    ):
         raise research_execution_error("runtime_dataset_input_binding_missing")
     if inputs.instrument_rules.input_evidence != by_kind["instrument_rules"][0]:
         raise research_execution_error("instrument_rules_evidence_drift")
@@ -699,3 +708,16 @@ def validate_frozen_inputs(
     ):
         raise research_execution_error("instrument_rules_source_snapshot_drift")
     return inputs
+
+
+def _binds_runtime_dataset_input(
+    item: ContentAddressedResearchInput,
+    dataset_id: str,
+) -> bool:
+    """Accept legacy logical IDs or an exact logical-ID/content-hash binding."""
+    if type(item) is not ContentAddressedResearchInput or type(dataset_id) is not str:
+        return False
+    return item.input_id in {
+        dataset_id,
+        f"{dataset_id}@sha256:{item.content_hash}",
+    }

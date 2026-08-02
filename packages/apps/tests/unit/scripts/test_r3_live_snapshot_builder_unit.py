@@ -9,9 +9,20 @@ from typing import cast
 
 import polars as pl
 import pytest
-from ditto_apps.registry.live.r3_live_market_projection import _normalized_bars
+from ditto_application.processes.experiments.execution_bundle import (
+    ContentAddressedResearchInput,
+)
+from ditto_apps.registry.live.r3_live_market_projection import (
+    _membership_with_observed_bar_history,
+    _normalized_bars,
+)
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
+    _BENCHMARK_INSTRUMENT_ID,
     _certified_source_snapshots,
+    _dependency_evidence,
+    _ensure_live_catalog_parents,
+    _evidence,
+    _factor_evidence,
     _instrument_rules,
     _stock_membership,
 )
@@ -93,6 +104,50 @@ def test_normalized_bars_emit_numeric_price_limits_and_complete_grid() -> None:
 
 
 @pytest.mark.unit
+def test_normalized_benchmark_bars_keep_required_price_limits_non_null() -> None:
+    """Benchmark rows share the strict frozen bars schema used by the data feed."""
+    frame = _normalized_bars(
+        _raw_bars(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID, 3_500.0),)),
+        _membership(((date(2015, 2, 2), _BENCHMARK_INSTRUMENT_ID),)),
+        authority_snapshot_id="source-1",
+    )
+
+    assert frame["limit_up"].null_count() == 0
+    assert frame["limit_down"].null_count() == 0
+    assert frame["limit_up"].to_list() == pytest.approx([3_848.9])
+    assert frame["limit_down"].to_list() == pytest.approx([3_149.1])
+
+
+@pytest.mark.unit
+def test_membership_starts_at_first_observed_bar_without_future_backfill() -> None:
+    frame = _membership_with_observed_bar_history(
+        _raw_bars(((date(2015, 2, 4), 1, 10.0),)),
+        _membership(
+            (
+                (date(2015, 2, 2), 1),
+                (date(2015, 2, 3), 1),
+                (date(2015, 2, 4), 1),
+                (date(2015, 2, 5), 1),
+            )
+        ),
+    )
+
+    assert frame.rows() == [
+        (date(2015, 2, 4), 1),
+        (date(2015, 2, 5), 1),
+    ]
+
+
+@pytest.mark.unit
+def test_membership_fails_closed_when_member_has_no_observed_bar() -> None:
+    with pytest.raises(ValueError, match="live members have no observed bars: 2"):
+        _membership_with_observed_bar_history(
+            _raw_bars(((date(2015, 2, 2), 1, 10.0),)),
+            _membership(((date(2015, 2, 2), 1), (date(2015, 2, 2), 2))),
+        )
+
+
+@pytest.mark.unit
 def test_stock_membership_uses_only_strictly_prior_index_composition() -> None:
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
@@ -119,6 +174,117 @@ def test_stock_membership_uses_only_strictly_prior_index_composition() -> None:
         (date(2015, 2, 3), 1, date(2015, 1, 30)),
         (date(2015, 2, 4), 2, date(2015, 2, 3)),
     ]
+
+
+@pytest.mark.unit
+def test_live_catalog_parents_are_saved_before_dataset_snapshot(mocker) -> None:
+    catalog = mocker.Mock()
+    catalog.get_spine_spec.return_value = None
+    catalog.get_dataset_spec.return_value = None
+    catalog.get_spine_snapshot.return_value = None
+    calendar_input = ContentAddressedResearchInput(
+        input_id="r3-live-stock-calendar",
+        artifact_kind="calendar",
+        content_hash="a" * 64,
+        schema_hash="b" * 64,
+    )
+
+    spine_snapshot_id = _ensure_live_catalog_parents(
+        catalog,
+        lane="stock",
+        calendar_input=calendar_input,
+        calendar_row_count=4_200,
+        created_at="2026-08-01T00:00:00Z",
+    )
+
+    assert spine_snapshot_id.startswith("r3-live-stock-calendar-")
+    assert catalog.save_spine_spec.call_count == 1
+    assert catalog.save_dataset_spec.call_count == 1
+    assert catalog.save_spine_snapshot.call_count == 1
+    saved_spine = catalog.save_spine_snapshot.call_args.args[0]
+    assert saved_spine.spine_snapshot_id == spine_snapshot_id
+    assert saved_spine.manifest_hash == "a" * 64
+    assert saved_spine.row_count == 4_200
+
+
+@pytest.mark.unit
+def test_live_spine_identity_binds_the_content_addressed_calendar_input(mocker) -> None:
+    catalog = mocker.Mock()
+    catalog.get_spine_spec.return_value = None
+    catalog.get_dataset_spec.return_value = None
+    catalog.get_spine_snapshot.return_value = None
+
+    first = _ensure_live_catalog_parents(
+        catalog,
+        lane="stock",
+        calendar_input=ContentAddressedResearchInput(
+            input_id="calendar@sha256:first",
+            artifact_kind="calendar",
+            content_hash="a" * 64,
+            schema_hash="b" * 64,
+        ),
+        calendar_row_count=4_200,
+        created_at="2026-08-01T00:00:00Z",
+    )
+    second = _ensure_live_catalog_parents(
+        catalog,
+        lane="stock",
+        calendar_input=ContentAddressedResearchInput(
+            input_id="calendar@sha256:second",
+            artifact_kind="calendar",
+            content_hash="a" * 64,
+            schema_hash="b" * 64,
+        ),
+        calendar_row_count=4_200,
+        created_at="2026-08-01T00:00:00Z",
+    )
+
+    assert first != second
+
+
+@pytest.mark.unit
+def test_factor_evidence_freezes_every_versioned_code_registration() -> None:
+    factors = _factor_evidence()
+    evidence = {item.input_id: item for item, _payload in factors}
+
+    assert {
+        "momentum_1m@1",
+        "quality_roe@1",
+        "value_pe@1",
+        "volatility_factor@1",
+    }.issubset(evidence)
+    assert all(item.artifact_kind == "factor" for item in evidence.values())
+    assert all(len(item.content_hash) == 64 for item in evidence.values())
+    assert len({item.schema_hash for item in evidence.values()}) == 1
+
+
+@pytest.mark.unit
+def test_live_mutable_inputs_use_content_addressed_artifact_ids() -> None:
+    membership = _membership(((date(2015, 2, 2), 1),))
+    first, _ = _evidence(
+        "stock_daily",
+        "bars",
+        _normalized_bars(
+            _raw_bars(((date(2015, 2, 2), 1, 10.0),)),
+            membership,
+            authority_snapshot_id="source-1",
+        ),
+    )
+    changed, _ = _evidence(
+        "stock_daily",
+        "bars",
+        _normalized_bars(
+            _raw_bars(((date(2015, 2, 2), 1, 11.0),)),
+            membership,
+            authority_snapshot_id="source-1",
+        ),
+    )
+    dependency, _ = _dependency_evidence("adj_factor", ("snapshot-1",))
+
+    assert first.input_id == f"stock_daily@sha256:{first.content_hash}"
+    assert changed.input_id == f"stock_daily@sha256:{changed.content_hash}"
+    assert first.input_id != changed.input_id
+    assert dependency.input_id == f"adj_factor@sha256:{dependency.content_hash}"
 
 
 @pytest.mark.unit

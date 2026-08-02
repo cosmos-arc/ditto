@@ -807,7 +807,14 @@ def test_terminal_tick_releases_slot_and_dispatches_next_queued_experiment(
     assert cancelled is not None
     assert cancelled.record.status is ExperimentStatus.CANCELLED
 
-    handoff = coordinator.tick(occurred_at=NOW + timedelta(seconds=4))
+    restarted = ExperimentExecutionCoordinator(
+        store=ExperimentSchedulerStore(reader, writer),
+        first_attempt_factory=_RecoveryFactory(),
+        owner_token="release-restarted-owner",
+        lease_duration=timedelta(minutes=5),
+        clock=lambda: NOW + timedelta(seconds=4),
+    )
+    handoff = restarted.tick(occurred_at=NOW + timedelta(seconds=4))
 
     assert handoff.state is SchedulerTickState.DISPATCHED
     assert handoff.experiment_id == successor.experiment_id

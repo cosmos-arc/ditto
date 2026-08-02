@@ -21,6 +21,56 @@ def _scan_bars(data_root: Path, asset_class: str) -> pl.LazyFrame:
     return pl.scan_parquet(paths)
 
 
+def _membership_with_observed_bar_history(
+    raw: pl.DataFrame,
+    membership: pl.DataFrame,
+) -> pl.DataFrame:
+    """
+    Exclude membership dates that precede an instrument's first known bar.
+
+    A suspension that crosses the retained-data boundary has no prior close that
+    can be carried without looking into the future. Once an instrument has one
+    observed bar, later gaps remain in the grid and are handled as suspensions.
+    """
+    requested_ids = {int(item) for item in membership["instrument_id"].unique()}
+    observed_ids = {int(item) for item in raw["instrument_id"].unique()}
+    missing = sorted(requested_ids - observed_ids)
+    if missing:
+        rendered = ", ".join(str(item) for item in missing)
+        raise ValueError(f"live members have no observed bars: {rendered}")
+    first_observed = raw.group_by("instrument_id").agg(
+        pl.col("trade_date").min().alias("_first_observed_bar")
+    )
+    aligned = (
+        membership.join(first_observed, on="instrument_id", how="inner")
+        .filter(pl.col("trade_date") >= pl.col("_first_observed_bar"))
+        .drop("_first_observed_bar")
+        .sort(["trade_date", "instrument_id"])
+    )
+    if aligned.is_empty():
+        raise ValueError("live membership has no dates with observed bar history")
+    return aligned
+
+
+def align_live_membership(
+    data_root: Path,
+    lane: LiveLane,
+    membership: pl.DataFrame,
+) -> pl.DataFrame:
+    """Align a live universe to the retained point-in-time bar boundary."""
+    member_ids = membership["instrument_id"].unique().to_list()
+    source_class = "stock" if lane == "stock" else "etf"
+    raw = (
+        _scan_bars(data_root, source_class)
+        .filter(
+            (pl.col("trade_date") <= _END) & pl.col("instrument_id").is_in(member_ids)
+        )
+        .select("trade_date", "instrument_id")
+        .collect()
+    )
+    return _membership_with_observed_bar_history(raw, membership)
+
+
 def _normalized_bars(
     raw: pl.DataFrame,
     membership: pl.DataFrame,
@@ -105,16 +155,8 @@ def _normalized_bars(
         pl.when(suspended).then(0.0).otherwise(pl.col("amount")).alias("amount"),
     ).drop("_carry_close", "_seed_close")
     return normalized.with_columns(
-        pl.when(pl.col("instrument_id") == _BENCHMARK_INSTRUMENT_ID)
-        .then(None)
-        .otherwise((pl.col("prev_close") * 1.1).round(2))
-        .cast(pl.Float64)
-        .alias("limit_up"),
-        pl.when(pl.col("instrument_id") == _BENCHMARK_INSTRUMENT_ID)
-        .then(None)
-        .otherwise((pl.col("prev_close") * 0.9).round(2))
-        .cast(pl.Float64)
-        .alias("limit_down"),
+        (pl.col("prev_close") * 1.1).round(2).cast(pl.Float64).alias("limit_up"),
+        (pl.col("prev_close") * 0.9).round(2).cast(pl.Float64).alias("limit_down"),
         pl.col("volume")
         .rolling_mean(window_size=20, min_samples=1)
         .over("instrument_id")

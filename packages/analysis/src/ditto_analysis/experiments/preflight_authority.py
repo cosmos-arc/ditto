@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
@@ -31,6 +32,19 @@ PREFLIGHT_HARD_GATE_RULE_IDS = (
 )
 
 _DETAIL_KEYS = {"plan_hash", "plan_preimage", "preflight", "preflight_hash"}
+_MUTATION_RECEIPT_KEY = "mutation_idempotency"
+_MUTATION_RECEIPT_KEYS = {
+    "schema_version",
+    "kind",
+    "operation_id",
+    "resource_id",
+    "key_hash",
+    "request_hash",
+    "response",
+    "receipt_hash",
+}
+_MUTATION_RECEIPT_KIND = "ditto_mutation_receipt"
+_MUTATION_OPERATION_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,63}")
 _PREFLIGHT_KEYS = {
     "schema_version",
     "policy_version",
@@ -209,6 +223,57 @@ def _hashes(
     if not values and not allow_empty:
         raise _invalid(f"{name} must not be empty")
     return tuple(_hash(item, f"{name}[]") for item in values)
+
+
+def _detail_root(
+    detail: Mapping[str, object],
+) -> tuple[dict[str, object], ContentHash]:
+    """Validate an optional signed mutation receipt without owning app semantics."""
+    full = _mapping(cast("object", detail), "detail")
+    keys = set(full)
+    if keys == _DETAIL_KEYS:
+        return full, canonical_payload(full).content_hash
+    if keys != _DETAIL_KEYS | {_MUTATION_RECEIPT_KEY}:
+        raise _invalid("detail has an invalid shape")
+
+    receipt = _mapping(
+        full.get(_MUTATION_RECEIPT_KEY),
+        "detail.mutation_idempotency",
+        _MUTATION_RECEIPT_KEYS,
+    )
+    body = {key: value for key, value in receipt.items() if key != "receipt_hash"}
+    operation_id = _string(
+        receipt.get("operation_id"),
+        "detail.mutation_idempotency.operation_id",
+    )
+    if (
+        _integer(
+            receipt.get("schema_version"),
+            "detail.mutation_idempotency.schema_version",
+        )
+        != 1
+        or receipt.get("kind") != _MUTATION_RECEIPT_KIND
+        or _MUTATION_OPERATION_PATTERN.fullmatch(operation_id) is None
+    ):
+        raise _invalid("detail mutation receipt identity is invalid")
+    _string(
+        receipt.get("resource_id"),
+        "detail.mutation_idempotency.resource_id",
+    )
+    _hash(receipt.get("key_hash"), "detail.mutation_idempotency.key_hash")
+    _hash(receipt.get("request_hash"), "detail.mutation_idempotency.request_hash")
+    _mapping(receipt.get("response"), "detail.mutation_idempotency.response")
+    if (
+        _hash(
+            receipt.get("receipt_hash"),
+            "detail.mutation_idempotency.receipt_hash",
+        )
+        != canonical_payload(body).content_hash
+    ):
+        raise _invalid("detail mutation receipt hash does not match its payload")
+
+    root = {key: full[key] for key in _DETAIL_KEYS}
+    return root, canonical_payload(full).content_hash
 
 
 @dataclass(frozen=True, slots=True)
@@ -699,7 +764,7 @@ def decode_preflight_authority(
 ) -> DecodedPreflightAuthority:
     """Decode hashes, exact shapes, and authority cross-links without app imports."""
     try:
-        root = _mapping(cast("object", detail), "detail", _DETAIL_KEYS)
+        root, detail_hash = _detail_root(detail)
         preflight = _mapping(root.get("preflight"), "preflight", _PREFLIGHT_KEYS)
         plan = _mapping(root.get("plan_preimage"), "plan_preimage", _PLAN_PREIMAGE_KEYS)
         plan_hash = _hash(root.get("plan_hash"), "detail.plan_hash")
@@ -737,7 +802,7 @@ def decode_preflight_authority(
         _validate_certification_check_preimage(identity, checked)
         protocol = _protocol_links(consumption.validation, plan)
         return DecodedPreflightAuthority(
-            detail_hash=canonical_payload(root).content_hash,
+            detail_hash=detail_hash,
             status=status,
             policy_version=_string(preflight.get("policy_version"), "policy_version"),
             plan_hash=plan_hash,

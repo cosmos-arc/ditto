@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.models import StrategySpecRecord
 
 from ditto_application.builders.published_baseline_runtime_builder import (
@@ -201,6 +202,7 @@ def _build_exact_baseline_runtime(
             request.snapshot_identity.manifest_hash,
         ),
         version_status=version_status,
+        evidence_sink=SelectionEvidenceCollector(),
     )
     return _require_baseline_runtime_identity(
         runtime,
@@ -270,6 +272,7 @@ class BuilderBackedResearchExecutorProbe:
                                 request.snapshot_identity.manifest_hash,
                             ),
                             version_status=version_status,
+                            evidence_sink=SelectionEvidenceCollector(),
                         ),
                     )
                 )

@@ -41,6 +41,9 @@ from ditto_application.commands.strategy import (
     UpdateStrategyCommand,
     UpdateStrategyHandler,
 )
+from ditto_application.processes.experiments._planning_request_identity import (
+    plain_planning_value,
+)
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
     CandidateMatrixSpec,
@@ -263,12 +266,16 @@ def _requirements(
         raise ValueError(
             f"live snapshot lacks required certification bindings: {missing}"
         )
+    snapshot_start = date.fromisoformat(snapshot.snapshot_start)
     return tuple(
         ResearchDatasetRequirement(
             dataset_id=dataset_id,
             expected_snapshot_ids=bindings[dataset_id].snapshot_ids,
             requires_pit_universe=True,
-            certified_from=date.fromisoformat(bindings[dataset_id].certified_from),
+            certified_from=max(
+                date.fromisoformat(bindings[dataset_id].certified_from),
+                snapshot_start,
+            ),
         )
         for dataset_id in sorted(required_datasets)
     )
@@ -325,7 +332,7 @@ def planning_request_document(
             "strategy_id": request.strategy_record.strategy_id,
             "version": request.strategy_record.version,
             "spec_hash": request.strategy_record.spec_hash,
-            "spec_json": request.strategy_record.spec_json,
+            "spec_json": plain_planning_value(request.strategy_record.spec_json),
         },
         "snapshot": {
             "snapshot_id": request.snapshot_identity.snapshot_id,
@@ -348,9 +355,10 @@ def planning_request_document(
         "failure_policy": request.failure_policy.value,
         "created_at": created_at,
     }
+    plain_document = plain_planning_value(document)
     return cast(
         "dict[str, object]",
-        orjson.loads(orjson.dumps(document, option=orjson.OPT_SORT_KEYS)),
+        orjson.loads(orjson.dumps(plain_document, option=orjson.OPT_SORT_KEYS)),
     )
 
 

@@ -2211,6 +2211,68 @@ def test_persisted_preflight_roundtrip_reconstructs_the_full_report() -> None:
     assert "protocol" not in authority
 
 
+def test_idempotent_preflight_roundtrip_validates_and_strips_receipt() -> None:
+    store = _Store()
+    process = _process(store)
+    request = _request()
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    identity = build_mutation_idempotency(
+        operation_id="research_launch_experiment",
+        resource_id=canonical_resource_id(
+            "experiment",
+            {"experiment_id": request.experiment_id},
+        ),
+        raw_key="planning-unit.preflight-roundtrip-001",
+        request_payload={},
+        request_hash=planning_request_hash(request),
+    )
+
+    process.launch(
+        request,
+        confirmed_plan_hash=report.plan_hash,
+        idempotency=identity,
+    )
+
+    event = store.events[-1]
+    assert "mutation_idempotency" in event.detail
+    assert planning_process_module.reconstruct_preflight_report(event.detail) == report
+
+
+def test_idempotent_preflight_roundtrip_rejects_tampered_receipt() -> None:
+    store = _Store()
+    process = _process(store)
+    request = _request()
+    report = process.preflight(request)
+    assert report.plan_hash is not None
+    identity = build_mutation_idempotency(
+        operation_id="research_launch_experiment",
+        resource_id=canonical_resource_id(
+            "experiment",
+            {"experiment_id": request.experiment_id},
+        ),
+        raw_key="planning-unit.preflight-roundtrip-002",
+        request_payload={},
+        request_hash=planning_request_hash(request),
+    )
+    process.launch(
+        request,
+        confirmed_plan_hash=report.plan_hash,
+        idempotency=identity,
+    )
+    detail = cast(
+        "dict[str, object]",
+        orjson.loads(canonical_payload(store.events[-1].detail).json_bytes),
+    )
+    receipt = cast("dict[str, object]", detail["mutation_idempotency"])
+    receipt["receipt_hash"] = "0" * 64
+
+    with pytest.raises(AppProcessError) as exc_info:
+        planning_process_module.reconstruct_preflight_report(detail)
+
+    assert exc_info.value.details["code"] == "PREFLIGHT_DETAIL_INVALID"
+
+
 def test_persisted_preflight_tamper_cannot_detach_from_confirmed_plan_hash() -> None:
     store = _Store()
     process = _process(store)
@@ -2655,6 +2717,11 @@ def test_oversized_canonical_preflight_is_blocked_without_writes(
         process.launch(_request(), confirmed_plan_hash="0" * 64)
     assert exc_info.value.details["code"] == "PREFLIGHT_DETAIL_TOO_LARGE"
     assert store.calls == []
+
+
+def test_preflight_detail_limit_covers_exact_live_certification_evidence() -> None:
+    assert launch_material_module._MAX_ENQUEUE_DETAIL_BYTES == 4 * 1_048_576
+    assert launch_material_module._MAX_ENQUEUE_DETAIL_BYTES > 1_499_443
 
 
 def test_partial_draft_replays_exactly_and_queued_replay_is_zero_write() -> None:

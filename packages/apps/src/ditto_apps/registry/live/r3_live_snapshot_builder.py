@@ -16,7 +16,15 @@ import orjson
 import polars as pl
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
-from ditto_analysis.research.records import ResearchDatasetSnapshotRecord
+from ditto_analysis.research.records import (
+    ResearchDatasetSnapshotRecord,
+    ResearchDatasetSpecRecord,
+    ResearchSpineSnapshotRecord,
+    ResearchSpineSpecRecord,
+)
+from ditto_application.builders.research_factor_registry import (
+    ResearchFactorRegistry,
+)
 from ditto_application.processes.experiments.execution_bundle import (
     ContentAddressedResearchInput,
 )
@@ -35,7 +43,10 @@ from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 
 from ditto_apps.registry.container import make_app_container
-from ditto_apps.registry.live.r3_live_market_projection import build_live_bars
+from ditto_apps.registry.live.r3_live_market_projection import (
+    align_live_membership,
+    build_live_bars,
+)
 
 __all__ = [
     "LiveDatasetSnapshotBinding",
@@ -52,6 +63,8 @@ _BUILDER_VERSION = "r3-live-research-snapshot-v1"
 _STOCK_INDEX = "000300.SH"
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _ETF_IDS = (2_002_506, 2_002_571, 2_002_631)
+_CONTROL_PLANE_CREATED_AT = "2026-07-30T00:00:00Z"
+_FACTOR_ARTIFACT_SCHEMA = "ditto.r3-live-factor-registration.v1"
 _PRIMARY_DATASET = {"stock": "stock_daily", "etf": "etf_daily"}
 _LINEAGE_DATASETS = {
     "stock": (
@@ -106,16 +119,22 @@ def _parquet(frame: pl.DataFrame) -> bytes:
     return buffer.getvalue()
 
 
+def _content_addressed_input_id(logical_id: str, content_hash: str) -> str:
+    """Keep the logical role readable while making immutable storage append-only."""
+    return f"{logical_id}@sha256:{content_hash}"
+
+
 def _evidence(
     input_id: str,
     artifact_kind: str,
     frame: pl.DataFrame,
 ) -> tuple[ContentAddressedResearchInput, bytes]:
     payload = _parquet(frame)
+    content_hash = hashlib.sha256(payload).hexdigest()
     evidence = ContentAddressedResearchInput(
-        input_id=input_id,
+        input_id=_content_addressed_input_id(input_id, content_hash),
         artifact_kind=artifact_kind,
-        content_hash=hashlib.sha256(payload).hexdigest(),
+        content_hash=content_hash,
         schema_hash=research_frame_schema_hash(frame),
     )
     try:
@@ -139,15 +158,43 @@ def _dependency_evidence(
             "source_snapshot_ids": list(source_snapshot_ids),
         }
     )
+    content_hash = hashlib.sha256(payload).hexdigest()
     return (
         ContentAddressedResearchInput(
-            input_id=dataset_id,
+            input_id=_content_addressed_input_id(dataset_id, content_hash),
             artifact_kind=f"dependency_{dataset_id}",
-            content_hash=hashlib.sha256(payload).hexdigest(),
+            content_hash=content_hash,
             schema_hash=hashlib.sha256(b"ditto.r3-live-dependency.v1").hexdigest(),
         ),
         payload,
     )
+
+
+def _factor_evidence() -> tuple[tuple[ContentAddressedResearchInput, bytes], ...]:
+    """Freeze every versioned code registration available to live runtimes."""
+    registry = ResearchFactorRegistry()
+    schema_hash = hashlib.sha256(_FACTOR_ARTIFACT_SCHEMA.encode()).hexdigest()
+    artifacts: list[tuple[ContentAddressedResearchInput, bytes]] = []
+    for registration in registry.registrations.values():
+        payload = _canonical(
+            {
+                "schema": _FACTOR_ARTIFACT_SCHEMA,
+                "registry_manifest_hash": registry.manifest_hash,
+                "registration": registration.manifest_payload(),
+            }
+        )
+        artifacts.append(
+            (
+                ContentAddressedResearchInput(
+                    input_id=f"{registration.factor_id}@{registration.version}",
+                    artifact_kind="factor",
+                    content_hash=hashlib.sha256(payload).hexdigest(),
+                    schema_hash=schema_hash,
+                ),
+                payload,
+            )
+        )
+    return tuple(artifacts)
 
 
 def _database(data_root: Path) -> sqlite3.Connection:
@@ -628,6 +675,85 @@ def _publish_inputs(
     return tuple(sorted(published, key=lambda item: item.input_id.encode()))
 
 
+def _ensure_live_catalog_parents(
+    catalog_service: ResearchCatalogService,
+    *,
+    lane: LiveLane,
+    calendar_input: ContentAddressedResearchInput,
+    calendar_row_count: int,
+    created_at: str,
+) -> str:
+    """Persist the exact parents required by a live dataset snapshot."""
+    spine_id = f"r3-live-{lane}-spine"
+    dataset_id = f"r3-live-{lane}-golden"
+    spine_spec = ResearchSpineSpecRecord(
+        spine_id=spine_id,
+        universe_id=f"r3-live-{lane}-membership",
+        calendar="cn_stock",
+        grain="1d",
+        entity_key="instrument_id",
+        description=f"R3 live {lane} point-in-time research spine",
+        created_at=_CONTROL_PLANE_CREATED_AT,
+    )
+    existing_spine_spec = catalog_service.get_spine_spec(spine_id)
+    if existing_spine_spec is None:
+        catalog_service.save_spine_spec(spine_spec)
+    elif existing_spine_spec != spine_spec:
+        raise ValueError(f"live research spine spec replay drift: {spine_id}")
+
+    dataset_spec = ResearchDatasetSpecRecord(
+        dataset_id=dataset_id,
+        spine_id=spine_id,
+        derived_ids=(
+            f"r3-live-{lane}-classification",
+            f"r3-live-{lane}-fundamental",
+            f"r3-live-{lane}-instrument-rules",
+            _PRIMARY_DATASET[lane],
+        ),
+        join_policy="left_preserving_pit",
+        known_at_policy="sample_time",
+        late_arrival_policy="require_rebuild",
+        description=f"R3 live {lane} golden-lane dataset",
+        created_at=_CONTROL_PLANE_CREATED_AT,
+    )
+    existing_dataset_spec = catalog_service.get_dataset_spec(dataset_id)
+    if existing_dataset_spec is None:
+        catalog_service.save_dataset_spec(dataset_spec)
+    elif existing_dataset_spec != dataset_spec:
+        raise ValueError(f"live research dataset spec replay drift: {dataset_id}")
+
+    spine_identity = hashlib.sha256(
+        _canonical(
+            {
+                "calendar_content_hash": calendar_input.content_hash,
+                "calendar_input_id": calendar_input.input_id,
+                "created_at": created_at,
+                "lane": lane,
+            }
+        )
+    ).hexdigest()
+    spine_snapshot_id = f"r3-live-{lane}-calendar-{spine_identity}"
+    artifact_identity = hashlib.sha256(calendar_input.input_id.encode()).hexdigest()
+    spine_snapshot = ResearchSpineSnapshotRecord(
+        spine_snapshot_id=spine_snapshot_id,
+        spine_id=spine_id,
+        snapshot_start=_START.isoformat(),
+        snapshot_end=_END.isoformat(),
+        row_count=calendar_row_count,
+        data_path=f"frozen-research-inputs/v1/{artifact_identity}",
+        manifest_hash=calendar_input.content_hash,
+        created_at=created_at,
+    )
+    existing_spine_snapshot = catalog_service.get_spine_snapshot(spine_snapshot_id)
+    if existing_spine_snapshot is None:
+        catalog_service.save_spine_snapshot(spine_snapshot)
+    elif existing_spine_snapshot != spine_snapshot:
+        raise ValueError(
+            f"live research spine snapshot replay drift: {spine_snapshot_id}"
+        )
+    return spine_snapshot_id
+
+
 def build_live_research_snapshot(
     *,
     lane: LiveLane,
@@ -663,6 +789,7 @@ def build_live_research_snapshot(
                 authority_snapshot_id=authority_source,
             )
         )
+        membership = align_live_membership(root, lane, membership)
         instrument_ids = tuple(sorted(membership["instrument_id"].unique().to_list()))
         bars = build_live_bars(
             root,
@@ -694,6 +821,7 @@ def build_live_research_snapshot(
         if created_at is not None
         else max(datetime.fromisoformat(item.certified_at) for item in bindings)
     )
+    created_at_text = now.isoformat().replace("+00:00", "Z")
     primary = _PRIMARY_DATASET[lane]
     inputs: list[tuple[ContentAddressedResearchInput, bytes]] = [
         _evidence(primary, "bars", bars),
@@ -710,8 +838,19 @@ def build_live_research_snapshot(
         _dependency_evidence(dataset_id, by_dataset[dataset_id])
         for dataset_id in required_dependencies
     )
+    inputs.extend(_factor_evidence())
     published = _publish_inputs(artifact_service, inputs)
     dataset_id = f"r3-live-{lane}-golden"
+    calendar_input = next(
+        item for item in published if item.artifact_kind == ResearchFrameKind.CALENDAR
+    )
+    spine_snapshot_id = _ensure_live_catalog_parents(
+        catalog_service,
+        lane=lane,
+        calendar_input=calendar_input,
+        calendar_row_count=calendar.height,
+        created_at=created_at_text,
+    )
     manifest_preimage = {
         "schema_version": 1,
         "snapshot_id": "pending",
@@ -721,7 +860,14 @@ def build_live_research_snapshot(
         "builder_version": _BUILDER_VERSION,
         "inputs": [dict(item.as_payload()) for item in published],
     }
-    identity_hash = hashlib.sha256(_canonical(manifest_preimage)).hexdigest()
+    identity_hash = hashlib.sha256(
+        _canonical(
+            {
+                "created_at": created_at_text,
+                "manifest": manifest_preimage,
+            }
+        )
+    ).hexdigest()
     snapshot_id = f"r3-live-{lane}-{identity_hash}"
     manifest_preimage["snapshot_id"] = snapshot_id
     manifest = _canonical(manifest_preimage)
@@ -735,7 +881,7 @@ def build_live_research_snapshot(
         snapshot_id=snapshot_id,
         dataset_id=dataset_id,
         dataset_spec_version=1,
-        spine_snapshot_id=f"r3-live-{lane}-calendar",
+        spine_snapshot_id=spine_snapshot_id,
         snapshot_start=_START.isoformat(),
         snapshot_end=_END.isoformat(),
         row_count=bars.height,
@@ -749,7 +895,7 @@ def build_live_research_snapshot(
         ),
         source_snapshot_ids=sources,
         builder_version=_BUILDER_VERSION,
-        created_at=now.isoformat().replace("+00:00", "Z"),
+        created_at=created_at_text,
     )
     existing = catalog_service.get_dataset_snapshot(snapshot_id)
     if existing is None:
