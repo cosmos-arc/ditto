@@ -18,6 +18,8 @@ from ditto_apps.registry.live.r3_live_market_projection import (
 )
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _BENCHMARK_INSTRUMENT_ID,
+    _LINEAGE_DATASETS,
+    _REQUIRED_DEPENDENCIES,
     _certified_source_snapshots,
     _dependency_evidence,
     _ensure_live_catalog_parents,
@@ -193,6 +195,11 @@ def test_stock_fundamental_projection_keeps_only_complete_pit_rows() -> None:
         "(instrument_id INTEGER, report_date TEXT, knowledge_date TEXT, "
         "net_assets REAL)"
     )
+    connection.execute(
+        "CREATE TABLE valuation_metrics "
+        "(instrument_id INTEGER, trade_date TEXT, knowledge_date TEXT, "
+        "market_cap REAL)"
+    )
     connection.executemany(
         "INSERT INTO income_statement VALUES (?, ?, ?, ?, ?, ?)",
         (
@@ -207,6 +214,14 @@ def test_stock_fundamental_projection_keeps_only_complete_pit_rows() -> None:
             (1, "2015-03-31", "2015-05-01", None),
         ),
     )
+    connection.executemany(
+        "INSERT INTO valuation_metrics VALUES (?, ?, ?, ?)",
+        (
+            (1, "2015-01-30", "2015-01-30", 70.0),
+            (1, "2015-02-02", "2015-02-02", 80.0),
+            (1, "2015-05-04", "2015-05-04", 90.0),
+        ),
+    )
 
     frame = _fundamental(
         connection,
@@ -216,9 +231,12 @@ def test_stock_fundamental_projection_keeps_only_complete_pit_rows() -> None:
     )
 
     assert frame.select(
-        "instrument_id", "known_at", "roe", "net_margin", "eps"
-    ).rows() == [(1, date(2015, 1, 31), 0.2, 0.1, 0.5)]
-    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0)
+        "instrument_id", "known_at", "roe", "net_margin", "eps", "market_cap"
+    ).rows() == [
+        (1, date(2015, 2, 2), 0.2, 0.1, 0.5, 80.0),
+        (1, date(2015, 5, 4), 0.2, 0.1, 0.5, 90.0),
+    ]
+    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0, 0)
     connection.close()
 
 
@@ -233,12 +251,21 @@ def test_etf_fundamental_projection_uses_explicit_non_applicable_values() -> Non
         authority_snapshot_id="source-1",
     )
 
-    assert frame.select("instrument_id", "roe", "net_margin", "eps").rows() == [
-        (11, 0.0, 0.0, 0.0),
-        (12, 0.0, 0.0, 0.0),
+    assert frame.select(
+        "instrument_id", "roe", "net_margin", "eps", "market_cap"
+    ).rows() == [
+        (11, 0.0, 0.0, 0.0, 0.0),
+        (12, 0.0, 0.0, 0.0, 0.0),
     ]
-    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0)
+    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0, 0)
     connection.close()
+
+
+@pytest.mark.unit
+def test_stock_snapshot_lineage_binds_valuation_market_cap_source() -> None:
+    """Size exposure cannot exist without its certified valuation dependency."""
+    assert "valuation_metrics" in _LINEAGE_DATASETS["stock"]
+    assert "valuation_metrics" in _REQUIRED_DEPENDENCIES["stock"]
 
 
 @pytest.mark.unit

@@ -60,7 +60,7 @@ type LiveLane = Literal["stock", "etf"]
 
 _START = date(2015, 2, 1)
 _END = date(2026, 7, 31)
-_BUILDER_VERSION = "r3-live-research-snapshot-v3"
+_BUILDER_VERSION = "r3-live-research-snapshot-v4"
 _STOCK_INDEX = "000300.SH"
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _ETF_IDS = (2_002_506, 2_002_571, 2_002_631)
@@ -76,8 +76,13 @@ _LINEAGE_DATASETS = {
         "index_weight",
         "stock_basic",
         "stock_daily",
+        "valuation_metrics",
     ),
     "etf": ("calendar", "etf_basic", "etf_daily", "index_daily"),
+}
+_REQUIRED_DEPENDENCIES = {
+    "stock": ("adj_factor", "balance_sheet", "income_statement", "valuation_metrics"),
+    "etf": (),
 }
 
 
@@ -448,6 +453,7 @@ def _fundamental(
                 "roe": (0.0,) * len(instrument_ids),
                 "net_margin": (0.0,) * len(instrument_ids),
                 "eps": (0.0,) * len(instrument_ids),
+                "market_cap": (0.0,) * len(instrument_ids),
                 "source_snapshot_id": (authority_snapshot_id,) * len(instrument_ids),
             },
             schema={
@@ -456,6 +462,7 @@ def _fundamental(
                 "roe": pl.Float64,
                 "net_margin": pl.Float64,
                 "eps": pl.Float64,
+                "market_cap": pl.Float64,
                 "source_snapshot_id": pl.String,
             },
         )
@@ -510,7 +517,7 @@ def _fundamental(
                 "source_snapshot_id": authority_snapshot_id,
             }
         )
-    return (
+    financial = (
         pl.DataFrame(
             output,
             schema={
@@ -523,6 +530,60 @@ def _fundamental(
             },
         )
         .unique(subset=("instrument_id", "known_at"), keep="last")
+        .sort(["instrument_id", "known_at"])
+    )
+    if financial.is_empty():
+        return financial.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias("market_cap")
+        )
+
+    placeholders = ",".join("?" for _ in instrument_ids)
+    valuation_query = (
+        f"SELECT instrument_id, trade_date, knowledge_date, market_cap FROM "  # noqa: S608 -- placeholders only
+        f"valuation_metrics WHERE instrument_id IN ({placeholders}) "
+        "AND knowledge_date <= ? AND market_cap IS NOT NULL ORDER BY "
+        "instrument_id, knowledge_date, trade_date"
+    )
+    valuation = pl.read_database(
+        query=valuation_query,
+        connection=connection,
+        execute_options={"parameters": (*instrument_ids, _END.isoformat())},
+    )
+    if valuation.is_empty():
+        return financial.head(0).with_columns(
+            pl.lit(None, dtype=pl.Float64).alias("market_cap")
+        )
+    valuation = (
+        valuation.with_columns(
+            pl.col("trade_date").cast(pl.String).str.to_date(),
+            pl.col("knowledge_date").cast(pl.String).str.to_date().alias("known_at"),
+            pl.col("market_cap").cast(pl.Float64),
+        )
+        .filter(pl.col("market_cap").is_finite() & (pl.col("market_cap") > 0.0))
+        .sort(["instrument_id", "known_at", "trade_date"])
+        .unique(subset=("instrument_id", "known_at"), keep="last")
+        .select("instrument_id", "known_at", "market_cap")
+        .sort(["instrument_id", "known_at"])
+    )
+    return (
+        valuation.join_asof(
+            financial.drop("source_snapshot_id"),
+            on="known_at",
+            by="instrument_id",
+            strategy="backward",
+            check_sortedness=False,
+        )
+        .drop_nulls(("roe", "net_margin", "eps", "market_cap"))
+        .with_columns(pl.lit(authority_snapshot_id).alias("source_snapshot_id"))
+        .select(
+            "instrument_id",
+            "known_at",
+            "roe",
+            "net_margin",
+            "eps",
+            "market_cap",
+            "source_snapshot_id",
+        )
         .sort(["instrument_id", "known_at"])
     )
 
@@ -921,9 +982,7 @@ def build_live_research_snapshot(
         _evidence(f"r3-live-{lane}-fundamental", "fundamental", fundamental),
         _evidence(f"r3-live-{lane}-classification", "classification", classification),
     ]
-    required_dependencies = (
-        ("adj_factor", "balance_sheet", "income_statement") if lane == "stock" else ()
-    )
+    required_dependencies = _REQUIRED_DEPENDENCIES[lane]
     inputs.extend(
         _dependency_evidence(dataset_id, by_dataset[dataset_id])
         for dataset_id in required_dependencies
