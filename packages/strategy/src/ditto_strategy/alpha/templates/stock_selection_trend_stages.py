@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 import polars as pl
 
@@ -379,9 +380,10 @@ def _unused_temp_column(reserved: set[str], candidate: str) -> str:
 
 
 def _optional_float(value: object) -> float | None:
-    """Convert a Polars numeric scalar while preserving explicit missing values."""
+    """Convert finite Polars scalars and encode undefined results as missing."""
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise TypeError("factor evidence value must be a finite number or None")
-    return float(value)
+    converted = float(value)
+    return converted if isfinite(converted) else None

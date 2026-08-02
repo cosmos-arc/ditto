@@ -580,6 +580,26 @@ class TestComputeSignals:
             [1.0 / 3.0, 2.0 / 3.0, 1.0]
         )
 
+    def test_non_finite_expression_results_are_missing_before_rank(self) -> None:
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close / denominator",),
+            weights=(1.0,),
+        )
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "close": [10.0, 0.0, 10.0],
+                "denominator": [0.0, 0.0, 2.0],
+            }
+        )
+
+        result = bridge.compute_signals(frame, compiled)
+
+        assert result["factor_0"].to_list() == [None, None, 5.0]
+        assert result["rank_factor_0"].to_list() == [None, None, 1.0 / 3.0]
+        assert result["signal_value"].to_list() == [None, None, 1.0 / 3.0]
+
     def test_transitive_registered_factor_executes_from_raw_market_history(
         self,
     ) -> None:

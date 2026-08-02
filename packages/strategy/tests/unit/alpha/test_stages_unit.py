@@ -390,6 +390,43 @@ class TestScoringStage:
             event.contribution for event in collector.snapshot().factor_contributions
         ] == expected_contributions
 
+    def test_non_finite_factor_evidence_is_recorded_as_missing(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-07-22")
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "factor_0": [float("nan")],
+                "rank_factor_0": [float("inf")],
+                "signal_value": [float("-inf")],
+            }
+        )
+
+        ScoringStage(
+            method=ScoringMethod.RAW,
+            factor_bindings=(
+                FactorScoreColumnBinding(
+                    factor_id="value",
+                    raw_column="factor_0",
+                    processed_column="factor_0",
+                    normalized_column="rank_factor_0",
+                    weight=1.0,
+                ),
+            ),
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+        collector.commit_rebalance()
+
+        event = collector.snapshot().factor_contributions[0]
+        assert event.raw_value is None
+        assert event.processed_value is None
+        assert event.normalized_value is None
+        assert event.contribution is None
+        assert event.factor_signal_score is None
+
     def test_raw_mode(
         self,
         empty_context: StrategyContext,

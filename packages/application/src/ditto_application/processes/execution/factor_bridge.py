@@ -580,6 +580,19 @@ class FactorBridge:
             factor_exprs.append(pl.Expr.alias(compiled_expr.expr, col_name))
 
         enriched = df.with_columns(factor_exprs)
+        # A finite frozen input can still produce NaN/Inf (for example PE when
+        # earnings per share is zero).  Such values are undefined factor
+        # observations, not rankable extremes, so normalize them to null before
+        # the cross-sectional rank and evidence paths consume them.
+        enriched = enriched.with_columns(
+            [
+                pl.when(pl.col(column).is_finite())
+                .then(pl.col(column))
+                .otherwise(pl.lit(None))
+                .alias(column)
+                for column in factor_columns
+            ]
+        )
 
         # Step 2: rank 归一化各因子列
         # 当包含 trade_date 列（历史窗口）时，rank 只在最后一天截面上操作

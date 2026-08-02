@@ -193,9 +193,10 @@ class ScoringStage:
 
 
 def _optional_float(value: object) -> float | None:
-    """Convert a materialized Polars scalar without inventing missing values."""
+    """Convert finite Polars scalars and encode undefined results as missing."""
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise TypeError("factor evidence value must be numeric or None")
-    return float(value)
+    converted = float(value)
+    return converted if isfinite(converted) else None
