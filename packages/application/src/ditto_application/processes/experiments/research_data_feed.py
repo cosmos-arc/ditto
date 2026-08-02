@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
 
 import polars as pl
 from ditto_backtest.data_feed import Slice
@@ -13,6 +12,21 @@ from ditto_backtest.provenance import aggregate_source_snapshot_id
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot
 
+from ditto_application.processes.experiments._research_data_feed_values import (
+    date_expr as _date_expr,
+)
+from ditto_application.processes.experiments._research_data_feed_values import (
+    exact_iso_date as _exact_iso_date,
+)
+from ditto_application.processes.experiments._research_data_feed_values import (
+    iso_date_expr as _iso_date_expr,
+)
+from ditto_application.processes.experiments._research_data_feed_values import (
+    market_snapshot as _market_snapshot,
+)
+from ditto_application.processes.experiments._research_data_feed_values import (
+    valid_column_dtype as _valid_column_dtype,
+)
 from ditto_application.processes.experiments._research_data_feed_verification import (
     ResearchDataFeedVerificationMixin,
 )
@@ -21,9 +35,6 @@ from ditto_application.processes.experiments.execution_bundle import (
     ExactBenchmarkBinding,
     ResearchSnapshotBinding,
     research_data_feed_manifest_hash,
-)
-from ditto_application.processes.experiments.research_data_artifacts import (
-    BOOLEAN_COLUMNS as _BOOLEAN_COLUMNS,
 )
 from ditto_application.processes.experiments.research_data_artifacts import (
     DATE_COLUMNS as _DATE_COLUMNS,
@@ -36,9 +47,6 @@ from ditto_application.processes.experiments.research_data_artifacts import (
 )
 from ditto_application.processes.experiments.research_data_artifacts import (
     REQUIRED_COLUMNS as _REQUIRED_COLUMNS,
-)
-from ditto_application.processes.experiments.research_data_artifacts import (
-    STRING_COLUMNS as _STRING_COLUMNS,
 )
 from ditto_application.processes.experiments.research_data_artifacts import (
     FrozenResearchDataFrames,
@@ -732,81 +740,3 @@ class ResearchDataFeed(ResearchDataFeedVerificationMixin):
                 as_of_date=as_of_date.isoformat(),
             )
         return result
-
-
-def _market_snapshot(
-    trade_date: str,
-    instrument_id: InstrumentId,
-    row: dict[str, Any],
-) -> MarketSnapshot:
-    """Map one exact frozen bar row to the existing backtest market type."""
-    return MarketSnapshot(
-        trade_date=trade_date,
-        instrument_id=instrument_id,
-        open=float(row["open"]),
-        high=float(row["high"]),
-        low=float(row["low"]),
-        close=float(row["close"]),
-        prev_close=float(row["prev_close"]),
-        volume=float(row["volume"]),
-        amount=float(row["amount"]),
-        is_suspended=bool(row["is_suspended"]),
-        limit_up=float(row["limit_up"]) if row["limit_up"] is not None else None,
-        limit_down=(
-            float(row["limit_down"]) if row["limit_down"] is not None else None
-        ),
-        avg_volume_20d=(
-            float(row["avg_volume_20d"]) if row["avg_volume_20d"] is not None else None
-        ),
-    )
-
-
-def _date_expr(frame: pl.DataFrame, column: str) -> pl.Expr:
-    """Return a strict Date expression for one validated date-like column."""
-    dtype = frame.schema[column]
-    if dtype == pl.String:
-        return pl.col(column).str.to_date(strict=True)
-    if dtype == pl.Date:
-        return pl.col(column)
-    return pl.col(column).dt.date()
-
-
-def _valid_column_dtype(column: str, dtype: pl.DataType) -> bool:
-    """Return whether a required runtime column has its strict type family."""
-    if column == "instrument_id":
-        valid = dtype.is_integer()
-    elif column in _NUMERIC_COLUMNS:
-        valid = dtype.is_numeric()
-    elif column in _BOOLEAN_COLUMNS:
-        valid = dtype == pl.Boolean
-    elif column in _STRING_COLUMNS:
-        valid = dtype == pl.String
-    elif column in _DATE_COLUMNS:
-        valid = dtype == pl.String
-        if not valid:
-            valid = dtype == pl.Date
-        if not valid:
-            valid = dtype.base_type() == pl.Datetime
-    else:
-        valid = True
-    return valid
-
-
-def _iso_date_expr(frame: pl.DataFrame, column: str) -> pl.Expr:
-    """Return one canonical daily ISO-8601 expression."""
-    return _date_expr(frame, column).dt.strftime("%Y-%m-%d")
-
-
-def _exact_iso_date(value: object, field_name: str) -> str:
-    """Validate an exact ``YYYY-MM-DD`` execution boundary."""
-    if type(value) is str:
-        try:
-            if date.fromisoformat(value).isoformat() == value:
-                return value
-        except ValueError:
-            pass
-    raise _error(
-        f"{field_name} must be an exact ISO date",
-        "invalid_execution_window",
-        field=field_name,
-    )

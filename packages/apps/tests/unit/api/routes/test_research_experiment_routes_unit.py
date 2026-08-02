@@ -129,6 +129,10 @@ def _inline_experiment_route_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
         "ditto_apps.api.routes.research_experiment_routes.run_blocking",
         run_inline,
     )
+    monkeypatch.setattr(
+        "ditto_apps.api.routes.research_selection_routes.run_blocking",
+        run_inline,
+    )
 
 
 def _candidate() -> ExperimentCandidateReadModel:

@@ -406,6 +406,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog",
+                "ditto_data.catalog.certification",
                 "ditto_data.catalog.metadata",
                 "ditto_data.catalog.source_snapshot",
             }

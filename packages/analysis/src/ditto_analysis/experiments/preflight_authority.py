@@ -9,6 +9,16 @@ from datetime import date
 from typing import cast
 
 from ditto_analysis.errors import ExperimentIntegrityError
+from ditto_analysis.experiments._preflight_authority_identity import (
+    HoldoutConsumptionAuthority,
+    canonical_research_cycle_hash,
+)
+from ditto_analysis.experiments._preflight_authority_identity import (
+    canonical_string as _string,
+)
+from ditto_analysis.experiments._preflight_authority_identity import (
+    invalid_preflight_authority as _invalid,
+)
 from ditto_analysis.experiments.models import ContentHash
 from ditto_analysis.experiments.persistence import DateWindow, canonical_payload
 
@@ -141,13 +151,6 @@ _CHECK_KEYS = {
 }
 
 
-def _invalid(message: str) -> ExperimentIntegrityError:
-    return ExperimentIntegrityError(
-        message,
-        details={"reason_code": "holdout_preflight_authority_invalid"},
-    )
-
-
 def _mapping(
     value: object, name: str, keys: set[str] | None = None
 ) -> dict[str, object]:
@@ -163,12 +166,6 @@ def _list(value: object, name: str) -> list[object]:
     if type(value) is not list:
         raise _invalid(f"{name} must be an array")
     return cast("list[object]", value)
-
-
-def _string(value: object, name: str) -> str:
-    if type(value) is not str or not value or value != value.strip():
-        raise _invalid(f"{name} must be a canonical string")
-    return value
 
 
 def _integer(value: object, name: str) -> int:
@@ -277,24 +274,6 @@ def _detail_root(
 
 
 @dataclass(frozen=True, slots=True)
-class HoldoutConsumptionAuthority:
-    """Reset-resistant authority; caller labels and parameter values are excluded."""
-
-    strategy_family_id: str
-    certified_data_cutoff: date
-    oos_window: DateWindow
-
-    @property
-    def content_hash(self) -> ContentHash:
-        """Return the canonical Task 7 research-cycle consumption identity."""
-        return canonical_research_cycle_hash(
-            strategy_family_id=self.strategy_family_id,
-            certified_data_cutoff=self.certified_data_cutoff,
-            oos_window=self.oos_window,
-        )
-
-
-@dataclass(frozen=True, slots=True)
 class PreflightCheckAuthority:
     """Canonical check fields that must match one immutable hard-gate row."""
 
@@ -317,30 +296,6 @@ class PreflightFoldAuthority:
     test_window: DateWindow
     purge_sessions: int
     embargo_sessions: int
-
-
-def canonical_research_cycle_hash(
-    *,
-    strategy_family_id: str,
-    certified_data_cutoff: date,
-    oos_window: DateWindow,
-) -> ContentHash:
-    """Derive cycle identity only from family, certified cutoff, and OOS semantics."""
-    family = _string(strategy_family_id, "strategy_family_id")
-    if type(certified_data_cutoff) is not date or type(oos_window) is not DateWindow:
-        raise _invalid("research cycle authority types are invalid")
-    return canonical_payload(
-        {
-            "schema_version": 1,
-            "authority": "r3_holdout_consumption",
-            "strategy_family_id": family,
-            "certified_data_cutoff": certified_data_cutoff.isoformat(),
-            "oos": {
-                "start": oos_window.start.isoformat(),
-                "end": oos_window.end.isoformat(),
-            },
-        }
-    ).content_hash
 
 
 @dataclass(frozen=True, slots=True)
