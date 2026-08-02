@@ -763,7 +763,9 @@ def test_active_member_without_exact_bar_fails_closed() -> None:
     assert exc_info.value.details["reason"] == "missing_exact_member_bar"
 
 
-def _history_feed() -> ResearchDataFeed:
+def _history_feed(
+    *, short_history_for_second_instrument: bool = False
+) -> ResearchDataFeed:
     dates = (
         "2026-01-02",
         "2026-01-05",
@@ -775,6 +777,9 @@ def _history_feed() -> ResearchDataFeed:
         (trade_date, instrument_id, float(10 * instrument_id + ordinal))
         for ordinal, trade_date in enumerate(dates)
         for instrument_id in (1, 2)
+        if not (
+            short_history_for_second_instrument and instrument_id == 2 and ordinal < 3
+        )
     )
     membership = tuple(
         (trade_date, instrument_id, instrument_id == 1 or ordinal >= 3)
@@ -798,7 +803,7 @@ def _history_feed() -> ResearchDataFeed:
     )
 
 
-def test_history_is_strict_as_of_and_filtered_by_daily_membership() -> None:
+def test_history_is_strict_as_of_for_current_pit_members() -> None:
     feed = _history_feed()
 
     result = feed.get_history(
@@ -813,13 +818,46 @@ def test_history_is_strict_as_of_and_filtered_by_daily_membership() -> None:
     ]
 
 
-def test_history_fails_closed_when_member_lacks_full_lookback() -> None:
+def test_history_uses_frozen_pre_membership_prices_for_current_member_warmup() -> None:
+    feed = _history_feed()
+
+    result = feed.get_history(
+        [InstrumentId(1), InstrumentId(2)],
+        "2026-01-08",
+        3,
+    )
+
+    assert result.select("instrument_id", "trade_date").rows() == [
+        (1, "2026-01-05"),
+        (1, "2026-01-06"),
+        (1, "2026-01-07"),
+        (2, "2026-01-05"),
+        (2, "2026-01-06"),
+        (2, "2026-01-07"),
+    ]
+
+
+def test_history_rejects_instrument_outside_current_pit_membership() -> None:
     feed = _history_feed()
 
     with pytest.raises(AppProcessError) as exc_info:
         feed.get_history(
-            [InstrumentId(1), InstrumentId(2)],
-            "2026-01-09",
+            [InstrumentId(2)],
+            "2026-01-06",
+            1,
+        )
+
+    assert exc_info.value.details["reason"] == "history_request_outside_pit_membership"
+    assert exc_info.value.details["instrument_ids"] == [2]
+
+
+def test_history_still_fails_closed_when_frozen_prices_lack_full_lookback() -> None:
+    feed = _history_feed(short_history_for_second_instrument=True)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        feed.get_history(
+            [InstrumentId(2)],
+            "2026-01-08",
             3,
         )
 

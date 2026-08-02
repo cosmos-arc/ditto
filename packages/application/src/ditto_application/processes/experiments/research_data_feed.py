@@ -575,7 +575,7 @@ class ResearchDataFeed(ResearchDataFeedVerificationMixin):
         as_of_date: str,
         lookback_days: int,
     ) -> pl.DataFrame:
-        """Return exact pre-as-of bars after daily PIT membership filtering."""
+        """Return exact pre-as-of bars for instruments in the current PIT universe."""
         as_of_date = _exact_iso_date(as_of_date, "as_of_date")
         if type(lookback_days) is not int or lookback_days < 0:
             raise _error(
@@ -588,12 +588,35 @@ class ResearchDataFeed(ResearchDataFeedVerificationMixin):
             return bars.clear()
         requested_ids = sorted({int(item) for item in instrument_ids})
         membership = self._frames.membership.frame
-        active_pairs = membership.filter(
-            pl.col("is_member"),
-        ).select(
+        dated_membership = membership.with_columns(
             _iso_date_expr(membership, "trade_date").alias("trade_date"),
-            "instrument_id",
         )
+        known_membership = dated_membership.filter(pl.col("trade_date") <= as_of_date)
+        if known_membership.is_empty():
+            raise _error(
+                "history request predates frozen PIT membership",
+                "history_membership_date_unavailable",
+                as_of_date=as_of_date,
+            )
+        membership_date = str(known_membership["trade_date"].max())
+        current_ids = set(
+            known_membership.filter(
+                (pl.col("trade_date") == membership_date) & pl.col("is_member"),
+            )["instrument_id"].to_list()
+        )
+        outside_membership = [
+            instrument_id
+            for instrument_id in requested_ids
+            if instrument_id not in current_ids
+        ]
+        if outside_membership:
+            raise _error(
+                "history request includes instrument outside current PIT membership",
+                "history_request_outside_pit_membership",
+                instrument_ids=outside_membership,
+                as_of_date=as_of_date,
+                membership_date=membership_date,
+            )
         calendar = self._frames.calendar.frame
         open_sessions = calendar.filter(pl.col("is_open")).select(
             _iso_date_expr(calendar, "trade_date").alias("trade_date"),
@@ -601,11 +624,6 @@ class ResearchDataFeed(ResearchDataFeedVerificationMixin):
         result = (
             bars.with_columns(
                 _iso_date_expr(bars, "trade_date").alias("trade_date"),
-            )
-            .join(
-                active_pairs,
-                on=["trade_date", "instrument_id"],
-                how="semi",
             )
             .join(open_sessions, on="trade_date", how="semi")
             .filter(
@@ -628,7 +646,7 @@ class ResearchDataFeed(ResearchDataFeedVerificationMixin):
         ]
         if insufficient:
             raise _error(
-                "exact membership-filtered history is shorter than lookback",
+                "exact frozen history is shorter than lookback",
                 "insufficient_frozen_history",
                 instrument_ids=insufficient,
                 as_of_date=as_of_date,
