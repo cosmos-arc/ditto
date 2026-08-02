@@ -15,6 +15,7 @@ from ditto_application.processes.experiments.execution_bundle import (
 from ditto_apps.registry.live.r3_live_market_projection import (
     _membership_with_observed_bar_history,
     _normalized_bars,
+    build_live_bars,
 )
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _BENCHMARK_INSTRUMENT_ID,
@@ -150,6 +151,53 @@ def test_membership_fails_closed_when_member_has_no_observed_bar() -> None:
             _raw_bars(((date(2015, 2, 2), 1, 10.0),)),
             _membership(((date(2015, 2, 2), 1), (date(2015, 2, 2), 2))),
         )
+
+
+@pytest.mark.unit
+def test_live_bars_retain_pre_membership_history_for_factor_lookback(
+    tmp_path,
+) -> None:
+    """PIT membership gates slices, not the frozen price history available to them."""
+    sessions = (date(2015, 2, 2), date(2015, 2, 3), date(2015, 2, 4))
+    for asset_class, frame in (
+        (
+            "stock",
+            _raw_bars(
+                tuple(
+                    (trade_date, 1, 10.0 + ordinal)
+                    for ordinal, trade_date in enumerate(sessions)
+                )
+            ),
+        ),
+        (
+            "index",
+            _raw_bars(
+                tuple(
+                    (
+                        trade_date,
+                        _BENCHMARK_INSTRUMENT_ID,
+                        3_500.0 + ordinal,
+                    )
+                    for ordinal, trade_date in enumerate(sessions)
+                )
+            ),
+        ),
+    ):
+        path = tmp_path / "market" / asset_class / "bars" / "2015.parquet"
+        path.parent.mkdir(parents=True)
+        frame.write_parquet(path)
+
+    bars = build_live_bars(
+        tmp_path,
+        "stock",
+        _membership(((sessions[-1], 1),)),
+        sessions,
+        authority_snapshot_id="source-1",
+    )
+
+    assert bars.filter(pl.col("instrument_id") == 1)["trade_date"].to_list() == list(
+        sessions
+    )
 
 
 @pytest.mark.unit

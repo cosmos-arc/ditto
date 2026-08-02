@@ -71,6 +71,24 @@ def align_live_membership(
     return _membership_with_observed_bar_history(raw, membership)
 
 
+def _bar_history_grid(
+    raw: pl.DataFrame,
+    membership: pl.DataFrame,
+    sessions: tuple[date, ...],
+) -> pl.DataFrame:
+    """Retain pre-membership prices needed by later PIT-universe factor lookbacks."""
+    instrument_ids = membership.select("instrument_id").unique().sort("instrument_id")
+    session_frame = pl.DataFrame(
+        {"trade_date": sessions},
+        schema={"trade_date": pl.Date},
+    )
+    requested = session_frame.join(instrument_ids, how="cross").select(
+        "trade_date",
+        "instrument_id",
+    )
+    return _membership_with_observed_bar_history(raw, requested)
+
+
 def _normalized_bars(
     raw: pl.DataFrame,
     membership: pl.DataFrame,
@@ -198,9 +216,10 @@ def build_live_bars(
         )
         .collect()
     )
+    history_grid = _bar_history_grid(raw, membership, sessions)
     member_bars = _normalized_bars(
         raw,
-        membership,
+        history_grid,
         authority_snapshot_id=authority_snapshot_id,
     )
     benchmark = (

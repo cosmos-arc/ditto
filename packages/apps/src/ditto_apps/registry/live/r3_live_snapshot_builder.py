@@ -84,7 +84,7 @@ __all__ = [
     "build_live_research_snapshot",
 ]
 
-_BUILDER_VERSION = "r3-live-research-snapshot-v4"
+_BUILDER_VERSION = "r3-live-research-snapshot-v5"
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _CONTROL_PLANE_CREATED_AT = "2026-07-30T00:00:00Z"
 _FACTOR_ARTIFACT_SCHEMA = "ditto.r3-live-factor-registration.v1"
