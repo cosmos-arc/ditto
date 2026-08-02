@@ -23,7 +23,9 @@ from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _ensure_live_catalog_parents,
     _evidence,
     _factor_evidence,
+    _fundamental,
     _instrument_rules,
+    _membership_with_complete_fundamentals,
     _stock_membership,
 )
 from ditto_data.catalog.certification import CertificationReader
@@ -174,6 +176,95 @@ def test_stock_membership_uses_only_strictly_prior_index_composition() -> None:
         (date(2015, 2, 3), 1, date(2015, 1, 30)),
         (date(2015, 2, 4), 2, date(2015, 2, 3)),
     ]
+
+
+@pytest.mark.unit
+def test_stock_fundamental_projection_keeps_only_complete_pit_rows() -> None:
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        "CREATE TABLE income_statement "
+        "(instrument_id INTEGER, report_date TEXT, knowledge_date TEXT, "
+        "net_profit REAL, revenue REAL, eps REAL)"
+    )
+    connection.execute(
+        "CREATE TABLE balance_sheet "
+        "(instrument_id INTEGER, report_date TEXT, knowledge_date TEXT, "
+        "net_assets REAL)"
+    )
+    connection.executemany(
+        "INSERT INTO income_statement VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            (1, "2014-12-31", "2015-01-30", 10.0, 100.0, 0.5),
+            (1, "2015-03-31", "2015-04-30", 20.0, 200.0, 0.7),
+        ),
+    )
+    connection.executemany(
+        "INSERT INTO balance_sheet VALUES (?, ?, ?, ?)",
+        (
+            (1, "2014-12-31", "2015-01-31", 50.0),
+            (1, "2015-03-31", "2015-05-01", None),
+        ),
+    )
+
+    frame = _fundamental(
+        connection,
+        "stock",
+        (1,),
+        authority_snapshot_id="source-1",
+    )
+
+    assert frame.select(
+        "instrument_id", "known_at", "roe", "net_margin", "eps"
+    ).rows() == [(1, date(2015, 1, 31), 0.2, 0.1, 0.5)]
+    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0)
+    connection.close()
+
+
+@pytest.mark.unit
+def test_etf_fundamental_projection_uses_explicit_non_applicable_values() -> None:
+    connection = sqlite3.connect(":memory:")
+
+    frame = _fundamental(
+        connection,
+        "etf",
+        (11, 12),
+        authority_snapshot_id="source-1",
+    )
+
+    assert frame.select("instrument_id", "roe", "net_margin", "eps").rows() == [
+        (11, 0.0, 0.0, 0.0),
+        (12, 0.0, 0.0, 0.0),
+    ]
+    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0)
+    connection.close()
+
+
+@pytest.mark.unit
+def test_stock_membership_starts_after_complete_fundamentals_are_known() -> None:
+    membership = pl.DataFrame(
+        {
+            "trade_date": (date(2015, 2, 2), date(2015, 2, 3), date(2015, 2, 4)),
+            "instrument_id": (1, 1, 1),
+            "is_member": (True, True, True),
+            "known_at": (date(2015, 1, 30),) * 3,
+            "source_snapshot_id": ("source-1",) * 3,
+        }
+    )
+    fundamental = pl.DataFrame(
+        {
+            "instrument_id": (1,),
+            "known_at": (date(2015, 2, 2),),
+            "roe": (0.2,),
+            "net_margin": (0.1,),
+            "eps": (0.5,),
+            "source_snapshot_id": ("source-1",),
+        }
+    )
+
+    frame = _membership_with_complete_fundamentals(membership, fundamental)
+
+    assert frame["trade_date"].to_list() == [date(2015, 2, 3), date(2015, 2, 4)]
 
 
 @pytest.mark.unit

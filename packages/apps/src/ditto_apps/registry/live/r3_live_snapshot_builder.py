@@ -9,6 +9,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from io import BytesIO
+from math import isfinite
 from pathlib import Path
 from typing import Literal, cast
 
@@ -59,7 +60,7 @@ type LiveLane = Literal["stock", "etf"]
 
 _START = date(2015, 2, 1)
 _END = date(2026, 7, 31)
-_BUILDER_VERSION = "r3-live-research-snapshot-v1"
+_BUILDER_VERSION = "r3-live-research-snapshot-v2"
 _STOCK_INDEX = "000300.SH"
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
 _ETF_IDS = (2_002_506, 2_002_571, 2_002_631)
@@ -444,9 +445,9 @@ def _fundamental(
             {
                 "instrument_id": instrument_ids,
                 "known_at": (_START - timedelta(days=1),) * len(instrument_ids),
-                "roe": (None,) * len(instrument_ids),
-                "net_margin": (None,) * len(instrument_ids),
-                "eps": (None,) * len(instrument_ids),
+                "roe": (0.0,) * len(instrument_ids),
+                "net_margin": (0.0,) * len(instrument_ids),
+                "eps": (0.0,) * len(instrument_ids),
                 "source_snapshot_id": (authority_snapshot_id,) * len(instrument_ids),
             },
             schema={
@@ -476,10 +477,8 @@ def _fundamental(
         ).fetchall()
     )
     output: list[dict[str, object]] = []
-    observed: set[int] = set()
     for row in rows:
         instrument_id = int(row["instrument_id"])
-        observed.add(instrument_id)
         income_known = date.fromisoformat(str(row["income_known_at"]))
         balance_known = (
             income_known
@@ -489,39 +488,32 @@ def _fundamental(
         net_profit = None if row["net_profit"] is None else float(row["net_profit"])
         revenue = None if row["revenue"] is None else float(row["revenue"])
         net_assets = None if row["net_assets"] is None else float(row["net_assets"])
+        eps = None if row["eps"] is None else float(row["eps"])
+        if (
+            net_profit is None
+            or revenue in {None, 0.0}
+            or net_assets in {None, 0.0}
+            or eps is None
+        ):
+            continue
+        roe = net_profit / cast("float", net_assets)
+        net_margin = net_profit / cast("float", revenue)
+        if not all(isfinite(value) for value in (roe, net_margin, eps)):
+            continue
         output.append(
             {
                 "instrument_id": instrument_id,
                 "known_at": max(income_known, balance_known),
-                "roe": (
-                    None
-                    if net_profit is None or net_assets in {None, 0.0}
-                    else net_profit / cast("float", net_assets)
-                ),
-                "net_margin": (
-                    None
-                    if net_profit is None or revenue in {None, 0.0}
-                    else net_profit / cast("float", revenue)
-                ),
-                "eps": None if row["eps"] is None else float(row["eps"]),
-                "source_snapshot_id": authority_snapshot_id,
-            }
-        )
-    for instrument_id in sorted(set(instrument_ids) - observed):
-        output.append(
-            {
-                "instrument_id": instrument_id,
-                "known_at": _START - timedelta(days=1),
-                "roe": None,
-                "net_margin": None,
-                "eps": None,
+                "roe": roe,
+                "net_margin": net_margin,
+                "eps": eps,
                 "source_snapshot_id": authority_snapshot_id,
             }
         )
     return (
         pl.DataFrame(
             output,
-            schema_overrides={
+            schema={
                 "instrument_id": pl.Int64,
                 "known_at": pl.Date,
                 "roe": pl.Float64,
@@ -532,6 +524,25 @@ def _fundamental(
         )
         .unique(subset=("instrument_id", "known_at"), keep="last")
         .sort(["instrument_id", "known_at"])
+    )
+
+
+def _membership_with_complete_fundamentals(
+    membership: pl.DataFrame,
+    fundamental: pl.DataFrame,
+) -> pl.DataFrame:
+    """Start stock eligibility only after one complete PIT row is knowable."""
+    first_known = fundamental.group_by("instrument_id").agg(
+        pl.col("known_at").min().alias("first_fundamental_known_at")
+    )
+    return (
+        membership.join(first_known, on="instrument_id", how="left")
+        .filter(
+            pl.col("first_fundamental_known_at").is_not_null()
+            & (pl.col("first_fundamental_known_at") < pl.col("trade_date"))
+        )
+        .drop("first_fundamental_known_at")
+        .sort(["trade_date", "instrument_id"])
     )
 
 
@@ -791,17 +802,30 @@ def build_live_research_snapshot(
         )
         membership = align_live_membership(root, lane, membership)
         instrument_ids = tuple(sorted(membership["instrument_id"].unique().to_list()))
+        fundamental = _fundamental(
+            connection,
+            lane,
+            instrument_ids,
+            authority_snapshot_id=authority_source,
+        )
+        if lane == "stock":
+            membership = _membership_with_complete_fundamentals(
+                membership,
+                fundamental,
+            )
+            if membership.is_empty():
+                raise ValueError("live stock membership has no complete fundamentals")
+            instrument_ids = tuple(
+                sorted(membership["instrument_id"].unique().to_list())
+            )
+            fundamental = fundamental.filter(
+                pl.col("instrument_id").is_in(instrument_ids)
+            )
         bars = build_live_bars(
             root,
             lane,
             membership,
             sessions,
-            authority_snapshot_id=authority_source,
-        )
-        fundamental = _fundamental(
-            connection,
-            lane,
-            instrument_ids,
             authority_snapshot_id=authority_source,
         )
         classification = _classification(
