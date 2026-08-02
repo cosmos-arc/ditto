@@ -9,6 +9,7 @@ from typing import cast
 
 import polars as pl
 import pytest
+from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.experiments.execution_bundle import (
     ContentAddressedResearchInput,
 )
@@ -279,12 +280,37 @@ def test_stock_fundamental_projection_keeps_only_complete_pit_rows() -> None:
     )
 
     assert frame.select(
-        "instrument_id", "known_at", "roe", "net_margin", "eps", "market_cap"
+        "instrument_id",
+        "known_at",
+        "roe",
+        "net_margin",
+        "eps",
+        "net_income",
+        "equity",
+        "earnings_per_share",
+        "market_cap",
     ).rows() == [
-        (1, date(2015, 2, 2), 0.2, 0.1, 0.5, 80.0),
-        (1, date(2015, 5, 4), 0.2, 0.1, 0.5, 90.0),
+        (1, date(2015, 2, 2), 0.2, 0.1, 0.5, 10.0, 50.0, 0.5, 80.0),
+        (1, date(2015, 5, 4), 0.2, 0.1, 0.5, 10.0, 50.0, 0.5, 90.0),
     ]
-    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0, 0)
+    assert frame.null_count().row(0) == (0,) * len(frame.columns)
+
+    compiled = FactorBridge(require_registered_factor_ids=True).compile_and_validate(
+        expressions=("quality_roe", "value_pe"),
+        weights=(0.5, 0.5),
+    )
+    factor_input = (
+        frame.head(1)
+        .drop(
+            "known_at",
+            "source_snapshot_id",
+            "market_cap",
+        )
+        .with_columns(pl.lit(10.0).alias("close"))
+    )
+    signals = FactorBridge().compute_signals(factor_input, compiled)
+    assert signals["factor_0"].null_count() == 0
+    assert signals["factor_1"].null_count() == 0
     connection.close()
 
 
@@ -300,12 +326,19 @@ def test_etf_fundamental_projection_uses_explicit_non_applicable_values() -> Non
     )
 
     assert frame.select(
-        "instrument_id", "roe", "net_margin", "eps", "market_cap"
+        "instrument_id",
+        "roe",
+        "net_margin",
+        "eps",
+        "net_income",
+        "equity",
+        "earnings_per_share",
+        "market_cap",
     ).rows() == [
-        (11, 0.0, 0.0, 0.0, 0.0),
-        (12, 0.0, 0.0, 0.0, 0.0),
+        (11, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+        (12, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
     ]
-    assert frame.null_count().row(0) == (0, 0, 0, 0, 0, 0, 0)
+    assert frame.null_count().row(0) == (0,) * len(frame.columns)
     connection.close()
 
 

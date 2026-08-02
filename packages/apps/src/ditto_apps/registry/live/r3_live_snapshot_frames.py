@@ -161,7 +161,7 @@ def build_fundamental_frame(
     *,
     authority_snapshot_id: str,
 ) -> pl.DataFrame:
-    """Build complete PIT stock fundamentals or the neutral ETF schema."""
+    """Build PIT factor leaves plus audited convenience projections."""
     if lane == "etf":
         return pl.DataFrame(
             {
@@ -170,6 +170,9 @@ def build_fundamental_frame(
                 "roe": (0.0,) * len(instrument_ids),
                 "net_margin": (0.0,) * len(instrument_ids),
                 "eps": (0.0,) * len(instrument_ids),
+                "net_income": (0.0,) * len(instrument_ids),
+                "equity": (0.0,) * len(instrument_ids),
+                "earnings_per_share": (0.0,) * len(instrument_ids),
                 "market_cap": (0.0,) * len(instrument_ids),
                 "source_snapshot_id": (authority_snapshot_id,) * len(instrument_ids),
             },
@@ -179,6 +182,9 @@ def build_fundamental_frame(
                 "roe": pl.Float64,
                 "net_margin": pl.Float64,
                 "eps": pl.Float64,
+                "net_income": pl.Float64,
+                "equity": pl.Float64,
+                "earnings_per_share": pl.Float64,
                 "market_cap": pl.Float64,
                 "source_snapshot_id": pl.String,
             },
@@ -231,6 +237,9 @@ def build_fundamental_frame(
                 "roe": roe,
                 "net_margin": net_margin,
                 "eps": eps,
+                "net_income": net_profit,
+                "equity": net_assets,
+                "earnings_per_share": eps,
                 "source_snapshot_id": authority_snapshot_id,
             }
         )
@@ -243,6 +252,9 @@ def build_fundamental_frame(
                 "roe": pl.Float64,
                 "net_margin": pl.Float64,
                 "eps": pl.Float64,
+                "net_income": pl.Float64,
+                "equity": pl.Float64,
+                "earnings_per_share": pl.Float64,
                 "source_snapshot_id": pl.String,
             },
         )
@@ -298,6 +310,9 @@ def build_fundamental_frame(
             "roe",
             "net_margin",
             "eps",
+            "net_income",
+            "equity",
+            "earnings_per_share",
             "market_cap",
             "source_snapshot_id",
         )
