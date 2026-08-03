@@ -1,0 +1,61 @@
+{
+  "entries": [
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/idempotency.json",
+      "repository": "backend",
+      "sha256": "d98fcb2b7b70865f8dcc2867a69ab92b18ed3d4d8916d1a13f016632fd0b9b27",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/performance.json",
+      "repository": "backend",
+      "sha256": "63a54b894289d3403545fe011e661de0e9589c5514dc7e66f80e750ae1a459b8",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/provider-entitlement.json",
+      "repository": "backend",
+      "sha256": "ec98ba9c3e684557f23d67305e447b03e62c3818f0fb56638fcd845a39030021",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/recoverability.json",
+      "repository": "backend",
+      "sha256": "f1642a334b3f48891b0a619444c145428f97cdb9f5783e16ce522cd9254ec825",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-report.json",
+      "repository": "backend",
+      "sha256": "446ef1d513ce8c45580bbf00b181a24330de56aa39266b16d44443134377a49e",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/source-manifest.json",
+      "repository": "backend",
+      "sha256": "e50dd90136fcd2ecd0b8d333538cb453671edf82acd6c4415e6f507199353924",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    }
+  ],
+  "generated_at": "2026-08-03T14:25:02Z",
+  "schema": "ditto.r2-live-release-evidence-manifest",
+  "version": 1
+}

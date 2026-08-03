@@ -1,12 +1,12 @@
 {
   "entries": [
     {
-      "command": "pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --fixture --output artifacts/acceptance/r3-report.json",
-      "generated_at": "2026-08-01T02:41:11Z",
-      "mode": "deterministic_fixture",
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
       "relative_path": "artifacts/acceptance/r3-report.json",
-      "sha256": "f005425c2428e0e9e01f746281ba2bd74b752089e3cdf202577576bf67c35f76",
-      "source_commit": "39e2b752724082bd730c6d29d5c579af26d295e2"
+      "sha256": "079506a2e565440f6a3e45e90367a619d1ce6e452bc87bda7a17c0fe1c40ad4b",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
     }
   ],
   "schema": "ditto.r3-evidence-manifest",

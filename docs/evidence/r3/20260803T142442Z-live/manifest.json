@@ -1,0 +1,313 @@
+{
+  "artifacts": [
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "artifacts/acceptance/r3-report.json",
+      "repository": "backend",
+      "sha256": "079506a2e565440f6a3e45e90367a619d1ce6e452bc87bda7a17c0fe1c40ad4b",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/manifest.json",
+      "repository": "backend",
+      "sha256": "9a3d367c05217815d222d65aa64d5ab736ed347c41e3e98decacda7fb338f47e",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/idempotency.json",
+      "repository": "backend",
+      "sha256": "d98fcb2b7b70865f8dcc2867a69ab92b18ed3d4d8916d1a13f016632fd0b9b27",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/performance.json",
+      "repository": "backend",
+      "sha256": "63a54b894289d3403545fe011e661de0e9589c5514dc7e66f80e750ae1a459b8",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/provider-entitlement.json",
+      "repository": "backend",
+      "sha256": "ec98ba9c3e684557f23d67305e447b03e62c3818f0fb56638fcd845a39030021",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/recoverability.json",
+      "repository": "backend",
+      "sha256": "f1642a334b3f48891b0a619444c145428f97cdb9f5783e16ce522cd9254ec825",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-report.json",
+      "repository": "backend",
+      "sha256": "446ef1d513ce8c45580bbf00b181a24330de56aa39266b16d44443134377a49e",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live --evidence var/r3-task18-20260802/evidence/final/final-live-source.json --sqlite-path var/r3-task18-20260802/live-data/metadata/metadata.sqlite --payload-root var/r3-task18-20260802/live-data/market --backup-root var/r3-task18-20260802/evidence/final/r2-final-backup --restore-root var/r3-task18-20260802/evidence/final/r2-final-restore --output artifacts/acceptance/r2-report.json --source-manifest artifacts/acceptance/r2-report.manifest.json",
+      "generated_at": "2026-08-03T14:25:02Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r2/20260803T142442Z-live/source-manifest.json",
+      "repository": "backend",
+      "sha256": "e50dd90136fcd2ecd0b8d333538cb453671edf82acd6c4415e6f507199353924",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/governance/9ee4c7ec86b360e6ba66929db3e12d77a67c888ece694c07ecb63654af7675de.json",
+      "repository": "backend",
+      "sha256": "9ee4c7ec86b360e6ba66929db3e12d77a67c888ece694c07ecb63654af7675de",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/lanes/etf/current.json",
+      "repository": "backend",
+      "sha256": "5cd38ffdbc289a1bc4e8d14dd814de69a2c361d7e7710624257d8fbb81889d71",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/lanes/etf/results/bd8684fe3de5a17485ffb926a5ddc1dce8e3d8145aa38234abc739169990d76f.json",
+      "repository": "backend",
+      "sha256": "bd8684fe3de5a17485ffb926a5ddc1dce8e3d8145aa38234abc739169990d76f",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/lanes/stock/current.json",
+      "repository": "backend",
+      "sha256": "d9b0214701715417881b13939ec5a999fdf2621ef17dcd5f749b6dbd263ec148",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/lanes/stock/results/74597aef9c35c872c4984aa2e7e8006825c9d84f416da75272eda8dbd009630f.json",
+      "repository": "backend",
+      "sha256": "74597aef9c35c872c4984aa2e7e8006825c9d84f416da75272eda8dbd009630f",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/planning/etf/backend-etf/0f0d690d7f394f406d6c13780c758052d426f6c0a2dbf23e0f1fdc70adc14ddc.json",
+      "repository": "backend",
+      "sha256": "77e269b6f248c94300830fc6abaa2c076e808d3d26b9706e0ccf06a481c76173",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "repository": "backend",
+      "sha256": "ff2c1bb00057502a7a967367d40838c15afa0f2c5a24d263d60b3c5016c0f43f",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/evidence/r3/20260803T142442Z-live/backend-live/recovery/dc453d5b972ed092a90e01d97c2c98ba9a6e5b4a8bb89cac83040802fa3083cd.json",
+      "repository": "backend",
+      "sha256": "dc453d5b972ed092a90e01d97c2c98ba9a6e5b4a8bb89cac83040802fa3083cd",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-03T13:24:37Z",
+      "mode": "live",
+      "relative_path": "docs/openapi/v1.json",
+      "repository": "backend",
+      "sha256": "ee08a7a9bdc73f4cf83e39ef035c4f167517eb2c4893fccbd91201c035b5202f",
+      "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/candidate-comparison-evidence.png",
+      "repository": "frontend",
+      "sha256": "4d4725dbb096ad7f633eb6016232e8c2eac18d6c520e26c6d6a2611dfacba9e1",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/duplicate-holdout-blocked.png",
+      "repository": "frontend",
+      "sha256": "669ee293e2e1e162437d1e57590dd6bc73ffb0bea66095d20b69e0268cf802fe",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/experiment-polling-control.png",
+      "repository": "frontend",
+      "sha256": "e9a4f05bbc1f17ccf235abcd311ba5ac477b4c16cb6f4fa554867c3ba1448196",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/historical-reactivate.png",
+      "repository": "frontend",
+      "sha256": "6ff276b08837d90354a088277e11e81ca99cd7b663a961dab7b4b8fdd385e143",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/manifest.json",
+      "repository": "frontend",
+      "sha256": "e0f55a95c772c520afb3f9eb3248c45721170f7d0857fd01dc1dd553ff14dc3f",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/network-errors.json",
+      "repository": "frontend",
+      "sha256": "2d64518cc8d174c0726161012f9698fed088d5084ffb16326bf45f5696f80f1a",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/one-shot-holdout.png",
+      "repository": "frontend",
+      "sha256": "b9184c4945926375547ae9092a690a7654053d0fac132bb071f887143161e38e",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/r1-active-version.png",
+      "repository": "frontend",
+      "sha256": "263c2ae77f96850777e382643606f88cc85e85e6a2a72805ffa26bf6b0e67167",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/refresh-recovery.png",
+      "repository": "frontend",
+      "sha256": "0af7e4daca57b7e2facbd117de27afe9854ea32df406e0880538132f3803b27b",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/report.json",
+      "repository": "frontend",
+      "sha256": "7a5200073ef94be915fa31af4ab39a22af429bf9035760f08f9278bdff22ac89",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/review-approve-publish.png",
+      "repository": "frontend",
+      "sha256": "04d22294a75eb7b33b7b5323df8fa209b1e5553eb2854c694404ec827f8d64b0",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/studio-preflight-launch.png",
+      "repository": "frontend",
+      "sha256": "310da4ba9d6a8037a4f857c65c678580c30814226d58fdafdd3f01874e15cd7c",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    },
+    {
+      "command": "VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data --react-base http://127.0.0.1:5173 --api-base http://127.0.0.1:8000 --planning-file /home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-live/planning/stock/backend-stock/cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e.json",
+      "generated_at": "2026-08-03T14:22:18Z",
+      "mode": "live",
+      "relative_path": "docs/review/r3-research-acceptance/live/trace.zip",
+      "repository": "frontend",
+      "sha256": "5528c6814526af474590f441b59b4257527f9d938462db835bd24d874c89c65e",
+      "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8"
+    }
+  ],
+  "backend_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a",
+  "frontend_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8",
+  "generated_at": "2026-08-03T14:25:02Z",
+  "lanes": {
+    "etf": {
+      "backend_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a",
+      "cost_hash": "09ac0f70803a1fae0e3e00478a7f5b0a70366b67d6542ee25e5c9da5671e3916",
+      "frontend_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8",
+      "openapi_hash": "ee08a7a9bdc73f4cf83e39ef035c4f167517eb2c4893fccbd91201c035b5202f",
+      "packet_bundle_hash": "1d6c15047e3fbf6cfe5880755a8f202916f2a98ffd3db0eef5e7b18ce880549e",
+      "parameter_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "planning_document_hash": "0f0d690d7f394f406d6c13780c758052d426f6c0a2dbf23e0f1fdc70adc14ddc",
+      "planning_document_sha256": "77e269b6f248c94300830fc6abaa2c076e808d3d26b9706e0ccf06a481c76173",
+      "registry_hash": "961af01ff2a61c3f9bc51d4b206f3219b8fda0f0dc14cc92e86290143df98d63",
+      "seed": 17,
+      "snapshot_hash": "beebf7eaabf5a4008ea1be737adc3c77144c06bd7139b2bc99d588723da3c17a",
+      "strategy_spec_hash": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00"
+    },
+    "stock": {
+      "backend_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a",
+      "cost_hash": "09ac0f70803a1fae0e3e00478a7f5b0a70366b67d6542ee25e5c9da5671e3916",
+      "frontend_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8",
+      "openapi_hash": "ee08a7a9bdc73f4cf83e39ef035c4f167517eb2c4893fccbd91201c035b5202f",
+      "packet_bundle_hash": "a2b12e20c5d7a9f8d838038008d5583d42a426d7054de6aff9f55338367ebb61",
+      "parameter_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "planning_document_hash": "cca62efd3680a1529793deac33d068b81caae7473253ab37d4be22f3cac76f2e",
+      "planning_document_sha256": "ff2c1bb00057502a7a967367d40838c15afa0f2c5a24d263d60b3c5016c0f43f",
+      "registry_hash": "961af01ff2a61c3f9bc51d4b206f3219b8fda0f0dc14cc92e86290143df98d63",
+      "seed": 17,
+      "snapshot_hash": "c223c44e288dd2fa7a2cd6ccc5d8994b4c43d93fd9edbeadc5afc250a79c9316",
+      "strategy_spec_hash": "80dcc1d80aeeebe403aafbf524d2280ff58aadc984326dbc2e387e6fca3eece8"
+    }
+  },
+  "mode": "live",
+  "openapi_hash": "ee08a7a9bdc73f4cf83e39ef035c4f167517eb2c4893fccbd91201c035b5202f",
+  "r2_manifest_hash": "e50dd90136fcd2ecd0b8d333538cb453671edf82acd6c4415e6f507199353924",
+  "r2_report_hash": "446ef1d513ce8c45580bbf00b181a24330de56aa39266b16d44443134377a49e",
+  "schema": "ditto.r3-live-release-evidence-manifest",
+  "version": 1
+}

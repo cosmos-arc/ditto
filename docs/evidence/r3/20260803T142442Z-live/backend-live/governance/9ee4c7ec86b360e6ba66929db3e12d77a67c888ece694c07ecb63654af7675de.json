@@ -1,0 +1,33 @@
+{
+  "actor": "chevy",
+  "generated_at": "2026-08-03T13:57:20.221094+00:00",
+  "lanes": [
+    "stock",
+    "etf"
+  ],
+  "results": [
+    {
+      "bundle_hash": "a2b12e20c5d7a9f8d838038008d5583d42a426d7054de6aff9f55338367ebb61",
+      "candidate_version": 2,
+      "lane": "stock",
+      "published_active_version": 2,
+      "published_pointer_revision": 2,
+      "r1_active_spec_hash": "80dcc1d80aeeebe403aafbf524d2280ff58aadc984326dbc2e387e6fca3eece8",
+      "reactivated_active_version": 1,
+      "reactivated_pointer_revision": 3,
+      "strategy_id": "seed_stock_selection_rotation"
+    },
+    {
+      "bundle_hash": "1d6c15047e3fbf6cfe5880755a8f202916f2a98ffd3db0eef5e7b18ce880549e",
+      "candidate_version": 2,
+      "lane": "etf",
+      "published_active_version": 2,
+      "published_pointer_revision": 2,
+      "r1_active_spec_hash": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00",
+      "reactivated_active_version": 1,
+      "reactivated_pointer_revision": 3,
+      "strategy_id": "seed_etf_industry_rotation"
+    }
+  ],
+  "schema": "ditto.r3-live-governance-lifecycle.v1"
+}
