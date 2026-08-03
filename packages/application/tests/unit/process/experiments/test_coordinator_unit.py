@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from threading import Barrier, Event, Lock
+from typing import cast
 
 import pytest
 from ditto_analysis.errors import ExperimentIntegrityError, ExperimentLeaseLostError
@@ -52,6 +53,10 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments.trial_ledger import (
     ObjectiveMetric,
     PromotionObjective,
+)
+from ditto_application.candidate_selection import (
+    CandidateSelectionReceipt,
+    CandidateSelectionRequest,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments.coordinator import (
@@ -1099,14 +1104,57 @@ def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() 
     assert isinstance(fence, LeaseFence)
     assert fence.experiment_id == store.launch.experiment_id
     assert fence.owner_token == store.slot.owner_token
-    assert fence.revision == store.slot.revision
-    assert fence.lease_until_epoch_us == store.slot.lease_until_epoch_us
+    assert fence.revision + 1 == store.slot.revision
+    assert store.slot.lease_until_epoch_us == NOW_US + 1
     assert publish_call["now_epoch_us"] == NOW_US
     assert all(
         fold.projection.status is ExperimentStatus.QUEUED
         for fold in store.folds
         if fold.spec.fold_role is FoldRole.HOLDOUT
     )
+
+    receipt = cast("CandidateSelectionReceipt", object())
+
+    class _ApiSelectionProcess:
+        def replay(
+            self,
+            request: CandidateSelectionRequest,
+        ) -> CandidateSelectionReceipt | None:
+            _ = request
+            return None
+
+        def select(
+            self,
+            request: CandidateSelectionRequest,
+            *,
+            lease: SchedulerLease,
+            now_epoch_us: int,
+        ) -> CandidateSelectionReceipt:
+            _ = request
+            assert lease.experiment_id == store.launch.experiment_id
+            assert lease.owner_token.startswith("api-selection-owner:")
+            assert now_epoch_us == NOW_US + 1
+            return receipt
+
+    api_coordinator = ExperimentExecutionCoordinator(
+        store=store,
+        first_attempt_factory=_FirstAttemptFactory(),
+        owner_token="api-selection-owner",
+        lease_duration=timedelta(minutes=5),
+        clock=lambda: NOW + timedelta(microseconds=1),
+        candidate_selection_process=_ApiSelectionProcess(),
+    )
+    selection_request = cast(
+        "CandidateSelectionRequest",
+        type(
+            "_ApiSelectionRequest",
+            (),
+            {"experiment_id": str(store.launch.experiment_id)},
+        )(),
+    )
+
+    assert api_coordinator.select_candidate(selection_request) is receipt
+    assert store.slot.lease_until_epoch_us == NOW_US + 2
 
 
 def test_candidate_selection_fails_closed_without_evidence_publisher() -> None:
@@ -1138,7 +1186,13 @@ def test_candidate_selection_replays_evidence_publication_on_every_tick() -> Non
     )
 
     first = coordinator.tick(occurred_at=NOW)
-    second = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
+    replay_coordinator, _factory = _coordinator(
+        store,
+        owner_token="selection-replay-owner",
+        clock_now=NOW + timedelta(microseconds=1),
+        selection_evidence_publisher=publisher,
+    )
+    second = replay_coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
 
     assert first.state is SchedulerTickState.CANDIDATE_SELECTION
     assert second.state is SchedulerTickState.CANDIDATE_SELECTION

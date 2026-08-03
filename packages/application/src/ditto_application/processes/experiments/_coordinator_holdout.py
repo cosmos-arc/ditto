@@ -78,12 +78,15 @@ class HoldoutCoordinatorAuthority:
                 or exc.details.get("reason") != "holdout_lease_required"
             ):
                 raise
-        return self._authority.execute_operator(
-            lambda lease, now_epoch_us: self._process.claim_candidate(
+        slot = run_unfenced_scheduler_operation(self._store.get_scheduler_slot)
+        return self._authority.execute_operator_under_transient_lease(
+            ExperimentId(request.experiment_id),
+            expected_revision=slot.revision,
+            operation=lambda lease, now_epoch_us: self._process.claim_candidate(
                 request,
                 lease=lease,
                 now_epoch_us=now_epoch_us(),
-            )
+            ),
         )
 
 

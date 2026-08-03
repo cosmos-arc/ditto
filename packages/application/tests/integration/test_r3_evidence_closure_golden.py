@@ -184,6 +184,17 @@ from packages.application.tests.integration import (
 NOW = datetime(2026, 7, 22, 4, 0, tzinfo=UTC)
 NOW_US = int(NOW.timestamp() * 1_000_000)
 
+
+class _AdvancingClock:
+    def __init__(self, now: datetime) -> None:
+        self._now = now
+
+    def __call__(self) -> datetime:
+        current = self._now
+        self._now += timedelta(microseconds=1)
+        return current
+
+
 _PREFLIGHT_POLICY_VERSION = "r3-experiment-preflight-v1"
 _GATE_RULES = ("matrix", "executor", "authority", "history", "certification", "budget")
 _REPORT_NAVS = {
@@ -955,7 +966,7 @@ def _coordinator_with_collector(
         selection_evidence_provider=selection_service,
         owner_token="r3-evidence-closure-coordinator",
         lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=_AdvancingClock(NOW + timedelta(minutes=2)),
         evidence_collector=collector,
         selection_evidence_publisher=selection_service,
         candidate_selection_process=candidate_selection_process,

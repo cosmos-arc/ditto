@@ -100,6 +100,16 @@ NOW = datetime(2026, 7, 22, 4, 0, tzinfo=UTC)
 NOW_US = int(NOW.timestamp() * 1_000_000)
 
 
+class _AdvancingClock:
+    def __init__(self, now: datetime) -> None:
+        self._now = now
+
+    def __call__(self) -> datetime:
+        current = self._now
+        self._now += timedelta(microseconds=1)
+        return current
+
+
 def _holdout_api() -> SimpleNamespace:
     from ditto_analysis.experiments.holdout import (
         HoldoutClaimAuthorityCommand,
@@ -2276,7 +2286,7 @@ def _owned_coordinator(
         selection_evidence_publisher=provider,
         owner_token="holdout-acceptance-coordinator",
         lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     assert (
         coordinator.tick(occurred_at=NOW).state
@@ -2300,7 +2310,7 @@ def _coordinator_with_selection_ledger(
         selection_evidence_publisher=provider,
         owner_token="holdout-ledger-binding-coordinator",
         lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     assert (
         coordinator.tick(occurred_at=NOW).state
@@ -2417,7 +2427,7 @@ def test_failed_candidate_isolation_preserves_remaining_holdout_claim_lifecycle(
         selection_evidence_publisher=provider,
         owner_token="holdout-isolation-coordinator",
         lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
 
     advanced = coordinator.tick(occurred_at=NOW + timedelta(minutes=2))
@@ -2562,7 +2572,7 @@ def test_same_cycle_clone_conflicts_before_lease_or_moving_dependencies(
         selection_evidence_provider=None,
         owner_token="clone-without-lease",
         lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     api = _holdout_api()
     request = api.ClaimHoldoutCandidateRequest(
@@ -2599,6 +2609,7 @@ def test_coordinator_dispatches_only_claimed_holdout_after_atomic_commit(
     connection = database.get_connection()
     store = ExperimentSchedulerStore(reader, writer)
     provider = _SelectionProvider(launch)
+    clock_now = [NOW + timedelta(minutes=2)]
     coordinator = ExperimentExecutionCoordinator(
         store=store,
         first_attempt_factory=_Factory(),
@@ -2606,11 +2617,23 @@ def test_coordinator_dispatches_only_claimed_holdout_after_atomic_commit(
         selection_evidence_publisher=provider,
         owner_token="holdout-coordinator",
         lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=lambda: clock_now[0],
     )
 
     gated = coordinator.tick(occurred_at=NOW)
-    receipt = coordinator.claim_holdout_candidate(_application_request(provider.ledger))
+    clock_now[0] += timedelta(microseconds=1)
+    api_coordinator = ExperimentExecutionCoordinator(
+        store=store,
+        first_attempt_factory=_Factory(),
+        selection_evidence_provider=provider,
+        owner_token="holdout-api",
+        lease_duration=timedelta(minutes=5),
+        clock=lambda: clock_now[0],
+    )
+    receipt = api_coordinator.claim_holdout_candidate(
+        _application_request(provider.ledger)
+    )
+    clock_now[0] += timedelta(microseconds=1)
     dispatched = coordinator.tick(occurred_at=NOW + timedelta(seconds=2))
 
     assert gated.state is SchedulerTickState.CANDIDATE_SELECTION
@@ -2641,7 +2664,7 @@ def test_dispatch_fails_closed_when_resolved_fingerprint_drifts_after_claim(
         selection_evidence_publisher=provider,
         owner_token="holdout-drift-coordinator",
         lease_duration=timedelta(minutes=5),
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=_AdvancingClock(NOW + timedelta(minutes=2)),
     )
     coordinator.tick(occurred_at=NOW)
     coordinator.claim_holdout_candidate(_application_request(provider.ledger))

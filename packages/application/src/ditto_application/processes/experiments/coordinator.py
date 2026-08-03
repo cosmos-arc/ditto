@@ -296,12 +296,15 @@ class ExperimentExecutionCoordinator(
         replay = run_unfenced_scheduler_operation(lambda: process.replay(request))
         if replay is not None:
             return replay
-        return self._authority.execute_operator(
-            lambda lease, now_epoch_us: process.select(
+        slot = run_unfenced_scheduler_operation(self._store.get_scheduler_slot)
+        return self._authority.execute_operator_under_transient_lease(
+            ExperimentId(request.experiment_id),
+            expected_revision=slot.revision,
+            operation=lambda lease, now_epoch_us: process.select(
                 request,
                 lease=lease,
                 now_epoch_us=now_epoch_us(),
-            )
+            ),
         )
 
     def poll_execution_directive(
@@ -594,7 +597,9 @@ class ExperimentExecutionCoordinator(
             occurred_at=occurred_at,
         )
         if terminal_state is not None:
-            return _result(terminal_state, snapshot, ())
+            result = _result(terminal_state, snapshot, ())
+            self._handoff_operator_gate(terminal_state)
+            return result
         dispatches = self._dispatch_capacity(
             snapshot,
             lease,
@@ -606,6 +611,13 @@ class ExperimentExecutionCoordinator(
             SchedulerTickState.DISPATCHED if dispatches else SchedulerTickState.WAITING
         )
         return _result(state, refreshed, dispatches)
+
+    def _handoff_operator_gate(self, state: SchedulerTickState) -> None:
+        if state in {
+            SchedulerTickState.CANDIDATE_SELECTION,
+            SchedulerTickState.HOLDOUT_GATED,
+        }:
+            self._authority.handoff()
 
     def _advance_completed_stages(
         self,
