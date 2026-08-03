@@ -10,7 +10,6 @@ interface CandidateComparisonProps {
 	readonly revision: number;
 	readonly candidates: readonly components["schemas"]["ExperimentCandidateResponse"][];
 	readonly comparison: components["schemas"]["ExperimentComparisonResponse"] | null;
-	readonly holdoutFoldRevisions: Readonly<Record<string, number | undefined>>;
 	readonly onInspect?: (candidateId: string) => void;
 }
 
@@ -23,7 +22,6 @@ export function CandidateComparison({
 	revision,
 	candidates,
 	comparison,
-	holdoutFoldRevisions,
 	onInspect,
 }: CandidateComparisonProps) {
 	const [pinned, setPinned] = useState<string[]>([]);
@@ -71,7 +69,6 @@ export function CandidateComparison({
 		mutation.error instanceof ApiError
 			? `${mutation.error.status} ${mutation.error.errorCode ?? "CANDIDATE_SELECTION_ERROR"}: ${mutation.error.message}`
 			: mutation.error?.message;
-	const holdoutFoldRevision = selection ? holdoutFoldRevisions[selection.candidate_id] : undefined;
 	return (
 		<div className="flex flex-col gap-3">
 			<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
@@ -138,14 +135,7 @@ export function CandidateComparison({
 					{error}
 				</p>
 			)}
-			{selection && holdoutFoldRevision !== undefined && (
-				<HoldoutEvaluationPanel selection={selection} expectedFoldRevision={holdoutFoldRevision} />
-			)}
-			{selection && holdoutFoldRevision === undefined && (
-				<p role="alert" className="text-xs text-(--color-led-danger)">
-					HOLDOUT_FOLD_MISSING: selected candidate has no immutable holdout fold
-				</p>
-			)}
+			{selection && <HoldoutEvaluationPanel selection={selection} />}
 		</div>
 	);
 }

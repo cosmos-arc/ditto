@@ -25,7 +25,6 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
-				holdoutFoldRevisions={{ "candidate-2": 0 }}
 			/>,
 			{ wrapper },
 		);
@@ -90,7 +89,6 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
-				holdoutFoldRevisions={{ "candidate-2": 0 }}
 			/>,
 			{ wrapper },
 		);
@@ -111,7 +109,7 @@ describe("candidate selection and holdout", () => {
 		expect(holdoutBody).toMatchObject({
 			selection_id: "selection-1",
 			candidate_id: "candidate-2",
-			expected_revision: 0,
+			expected_revision: 10,
 		});
 	});
 
@@ -144,7 +142,6 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
-				holdoutFoldRevisions={{ "candidate-2": 0 }}
 			/>,
 			{ wrapper },
 		);
