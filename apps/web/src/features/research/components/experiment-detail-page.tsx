@@ -49,6 +49,9 @@ export function ExperimentDetailPage({ experimentId }: ExperimentDetailPageProps
 	if (detail.isLoading) return <LoadingSkeleton variant="panel" />;
 	if (!detail.data) return <ResourceError error={detail.error} />;
 	const server = detail.data;
+	const holdoutFoldRevisions = Object.fromEntries(
+		server.folds.filter((fold) => fold.role === "holdout").map((fold) => [fold.candidate_id, fold.revision]),
+	);
 	return (
 		<>
 			<main className="min-h-0 overflow-auto pb-(--height-status-bar)">
@@ -80,6 +83,7 @@ export function ExperimentDetailPage({ experimentId }: ExperimentDetailPageProps
 								revision={server.revision}
 								candidates={candidates.data ?? server.candidates}
 								comparison={comparison.data ?? null}
+								holdoutFoldRevisions={holdoutFoldRevisions}
 								onInspect={setInspectedCandidate}
 							/>
 						</div>

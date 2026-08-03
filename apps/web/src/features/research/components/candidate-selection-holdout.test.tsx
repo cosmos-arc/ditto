@@ -25,6 +25,7 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
+				holdoutFoldRevisions={{ "candidate-2": 0 }}
 			/>,
 			{ wrapper },
 		);
@@ -89,6 +90,7 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
+				holdoutFoldRevisions={{ "candidate-2": 0 }}
 			/>,
 			{ wrapper },
 		);
@@ -106,7 +108,11 @@ describe("candidate selection and holdout", () => {
 
 		await user.click(screen.getByRole("button", { name: "执行一次性 Holdout" }));
 		await expect(screen.findByText(/claim-1/)).resolves.toBeInTheDocument();
-		expect(holdoutBody).toMatchObject({ selection_id: "selection-1", candidate_id: "candidate-2" });
+		expect(holdoutBody).toMatchObject({
+			selection_id: "selection-1",
+			candidate_id: "candidate-2",
+			expected_revision: 0,
+		});
 	});
 
 	it("fails closed on a duplicate holdout claim", async () => {
@@ -138,6 +144,7 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
+				holdoutFoldRevisions={{ "candidate-2": 0 }}
 			/>,
 			{ wrapper },
 		);

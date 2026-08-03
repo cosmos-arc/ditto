@@ -5,13 +5,14 @@ import { useHoldoutEvaluation } from "../hooks";
 
 interface HoldoutEvaluationPanelProps {
 	readonly selection: CandidateSelectionReceiptResponse;
+	readonly expectedFoldRevision: number;
 }
 
 function key(): string {
 	return `holdout-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
 }
 
-export function HoldoutEvaluationPanel({ selection }: HoldoutEvaluationPanelProps) {
+export function HoldoutEvaluationPanel({ selection, expectedFoldRevision }: HoldoutEvaluationPanelProps) {
 	const mutation = useHoldoutEvaluation();
 	const commandKey = useRef<string | null>(null);
 	const [blocked, setBlocked] = useState(false);
@@ -27,7 +28,7 @@ export function HoldoutEvaluationPanel({ selection }: HoldoutEvaluationPanelProp
 					selection_id: selection.selection_id,
 					expected_selection_evidence_hash: selection.selection_evidence_content_hash,
 					expected_candidate_evidence_content_hash: selection.candidate_evidence_content_hash,
-					expected_revision: selection.revision,
+					expected_revision: expectedFoldRevision,
 					operator_confirmation: "operator reviewed immutable candidate and selection evidence",
 					selection_reason: { code: "objective_review", summary: "candidate won the registered objective review" },
 				},
