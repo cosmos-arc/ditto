@@ -671,6 +671,12 @@ async function screenshot(page: Page, outDir: string, id: LiveStepId): Promise<s
 	return relative(PROJECT_ROOT, path);
 }
 
+async function waitForPublishedReviewTruth(page: Page): Promise<void> {
+	const banner = page.locator('[data-contract-slot="review-decision-banner"]');
+	await banner.waitFor();
+	await banner.getByText(/状态 published · 结论 approved/u).waitFor();
+}
+
 async function executeLiveStep(
 	page: Page,
 	outDir: string,
@@ -1012,7 +1018,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 						{ waitUntil: "domcontentloaded" },
 					);
 					await page.locator('[data-contract-slot="review-evidence"]').waitFor();
-					await page.getByText("published", { exact: true }).waitFor();
+					await waitForPublishedReviewTruth(page);
 					return `recovered evidence-gated published truth for ${strategyId}@${promotedVersion}`;
 				}
 				invariant(governanceState === "draft", `cannot resume partial governance state ${governanceState}`);
@@ -1035,7 +1041,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await page.getByLabel("原因").fill("Task 18 evidence-gated live publish");
 				await page.getByLabel("确认句").fill(`发布 v${promotedVersion}`);
 				await page.getByRole("button", { name: "确认发布" }).click();
-				await page.getByText("published", { exact: true }).waitFor();
+				await waitForPublishedReviewTruth(page);
 				return `approved and published ${strategyId}@${promotedVersion}`;
 			}),
 		);

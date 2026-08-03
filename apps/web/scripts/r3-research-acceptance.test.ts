@@ -307,6 +307,9 @@ describe("R3 research deterministic acceptance contract", () => {
 		expect(source).toContain('await pause.waitFor({ state: "visible" })');
 		expect(source).toContain("Selection evidence is publishing; candidate promotion remains locked.");
 		expect(source).toContain("hasPersistedCandidateSelection(serverExperiment, experimentId)");
+		expect(source).toContain("waitForPublishedReviewTruth(page)");
+		expect(source).toContain("/状态 published · 结论 approved/u");
+		expect(source).not.toContain('getByText("published", { exact: true }).waitFor()');
 		expect(source).not.toContain("waitForSelectionActionReady");
 		expect(source.match(/await page\.reload\(/gu)).toHaveLength(1);
 		expect(source).not.toContain("terminal-before-control");
