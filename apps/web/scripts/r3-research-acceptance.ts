@@ -723,6 +723,25 @@ export function persistedHoldoutClaimId(
 	return stringValue(state, "holdout_claim_id");
 }
 
+type LivePlanningGovernanceIdentity = {
+	readonly strategyId: string;
+	readonly version: number;
+	readonly specHash: string;
+};
+
+/** Fail closed before treating a previously-published backend version as resumable browser truth. */
+export function livePlanningGovernanceState(
+	detail: Readonly<Record<string, unknown>>,
+	identity: LivePlanningGovernanceIdentity,
+): string {
+	invariant(
+		detail.strategy_id === identity.strategyId && detail.version === identity.version,
+		"published strategy identity did not match the live planning document",
+	);
+	invariant(detail.spec_hash === identity.specHash, "published strategy spec hash did not match the live planning document");
+	return stringValue(detail, "state");
+}
+
 async function browserApiGet(page: Page, path: string): Promise<Record<string, unknown>> {
 	const payload = await page.evaluate(async (apiPath) => {
 		const response = await fetch(apiPath);
@@ -932,6 +951,28 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 
 		steps.push(
 			await executeLiveStep(page, outDir, plan[5], async () => {
+				invariant(experimentId, "experiment identity was unavailable during governance review");
+				const versionDetail = await browserApiGet(
+					page,
+					`/api/v1/strategies/${encodeURIComponent(strategyId)}/versions/${planning.strategy.version}`,
+				);
+				const governanceState = livePlanningGovernanceState(versionDetail, {
+					strategyId,
+					version: planning.strategy.version,
+					specHash: planning.strategy.spec_hash,
+				});
+				promotedVersion = planning.strategy.version;
+				if (governanceState === "published") {
+					const search = new URLSearchParams({ strategyId, version: String(promotedVersion) });
+					await page.goto(
+						`${options.reactBase}/research/reviews/${encodeURIComponent(experimentId)}?${search.toString()}`,
+						{ waitUntil: "domcontentloaded" },
+					);
+					await page.locator('[data-contract-slot="review-evidence"]').waitFor();
+					await page.getByText("published", { exact: true }).waitFor();
+					return `recovered evidence-gated published truth for ${strategyId}@${promotedVersion}`;
+				}
+				invariant(governanceState === "draft", `cannot resume partial governance state ${governanceState}`);
 				await page.goto(`${options.reactBase}/research/strategies/${strategyId}`, { waitUntil: "domcontentloaded" });
 				await page.getByRole("tab", { name: "版本" }).click();
 				await fillDecision(page, "提交审查", "确认提交");
@@ -940,8 +981,8 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await review.waitFor();
 				const href = await review.getAttribute("href");
 				invariant(href, "review queue entry did not expose a route");
-				promotedVersion = Number.parseInt(new URL(href, options.reactBase).searchParams.get("version") ?? "0", 10);
-				invariant(promotedVersion > 0, "review queue entry had no strategy version");
+				const queuedVersion = Number.parseInt(new URL(href, options.reactBase).searchParams.get("version") ?? "0", 10);
+				invariant(queuedVersion === promotedVersion, "review queue entry did not match the planning version");
 				await review.click();
 				await fillDecision(page, "批准", "确认批准");
 				const publish = page.getByRole("button", { name: "发布", exact: true });
@@ -958,7 +999,26 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 
 		steps.push(
 			await executeLiveStep(page, outDir, plan[6], async () => {
-				const active = await browserApiGet(page, `/api/v1/strategies/${strategyId}/active`);
+				invariant(promotedVersion, "published version was not recorded");
+				let active = await browserApiGet(page, `/api/v1/strategies/${strategyId}/active`);
+				if (active.active_version !== promotedVersion) {
+					await page.goto(`${options.reactBase}/research/strategies/${strategyId}`, { waitUntil: "domcontentloaded" });
+					await page.getByRole("tab", { name: "版本" }).click();
+					const viewVersion = page.getByRole("button", { name: `查看 v${promotedVersion} canonical 版本` });
+					await viewVersion.waitFor();
+					const versionRow = viewVersion.locator("xpath=../..");
+					await versionRow.getByRole("button", { name: "重新激活" }).click();
+					await page.getByLabel("执行者").fill("chevy");
+					await page.getByLabel("原因").fill("Task 18 browser promotion verification");
+					await page.getByLabel("影响摘要").fill("Verify the published candidate through the live active pointer");
+					const confirmationText = (await page.getByText(/strategy:reactivate:.*:confirm/u).textContent()) ?? "";
+					const confirmation = confirmationText.match(/strategy:reactivate:[^」\s]+:confirm/u)?.[0];
+					invariant(confirmation, "candidate reactivate confirmation identity was not rendered");
+					await page.getByLabel("确认句").fill(confirmation);
+					await page.getByRole("button", { name: "确认重新激活" }).click();
+					await page.getByRole("heading", { name: `重新激活 v${promotedVersion}` }).waitFor({ state: "hidden" });
+					active = await browserApiGet(page, `/api/v1/strategies/${strategyId}/active`);
+				}
 				invariant(active.active_version === promotedVersion, "R1 active pointer did not select the published version");
 				invariant(typeof active.pointer_revision === "number", "R1 active pointer revision was missing");
 				return `R1 active=${String(active.active_version)} pointer_revision=${String(active.pointer_revision)}`;

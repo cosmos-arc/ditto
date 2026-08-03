@@ -243,6 +243,39 @@ describe("R3 research deterministic acceptance contract", () => {
 		).toThrow("experiment identity");
 	});
 
+	it("recovers the exact planning version after backend governance already published it", async () => {
+		const { livePlanningGovernanceState } = await loadAcceptance();
+		const identity = {
+			strategyId: "seed_stock_selection_rotation",
+			version: 2,
+			specHash: "a".repeat(64),
+		};
+
+		expect(
+			livePlanningGovernanceState(
+				{
+					strategy_id: identity.strategyId,
+					version: identity.version,
+					spec_hash: identity.specHash,
+					state: "published",
+				},
+				identity,
+			),
+		).toBe("published");
+		expect(() =>
+			livePlanningGovernanceState(
+				{
+					strategy_id: identity.strategyId,
+					version: identity.version,
+					spec_hash: "b".repeat(64),
+					state: "published",
+				},
+				identity,
+			),
+		).toThrow("spec hash");
+		expect(() => livePlanningGovernanceState({ state: "published" }, identity)).toThrow("strategy identity");
+	});
+
 	it("binds every approved live browser checkpoint without request interception", async () => {
 		const { buildLiveAcceptancePlan } = await loadAcceptance();
 		const source = readFileSync(acceptanceScript, "utf8");
