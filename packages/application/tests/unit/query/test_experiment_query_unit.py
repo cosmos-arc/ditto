@@ -38,6 +38,8 @@ from ditto_analysis.experiments import (
     ResearchMetricDirection,
     ResearchMetricId,
     SnapshotId,
+    StatusEventRecord,
+    StatusSubjectType,
     StrategyVersion,
     TrialFamilyDeclaration,
     TrialKind,
@@ -181,6 +183,8 @@ class _Reader:
         self.candidates = tuple(reversed(spec.candidates))
         self.folds = folds
         self.gate: GateEvaluationRecord | None = None
+        self.events: tuple[StatusEventRecord, ...] = ()
+        self.holdout_claim = None
         self.read_error: ExperimentPersistenceError | None = None
 
     def get_research_cycle_identity(self, experiment_id: ExperimentId):
@@ -202,6 +206,12 @@ class _Reader:
 
     def get_gate_evaluation(self, evaluation_id: str):
         return self.gate
+
+    def list_status_events(self, experiment_id: ExperimentId):
+        return self.events
+
+    def get_holdout_claim_for_experiment(self, experiment_id: ExperimentId):
+        return self.holdout_claim
 
 
 def _facade(reader: _Reader) -> ExperimentQueryFacade:
@@ -253,6 +263,62 @@ def test_detail_maps_complete_persisted_truth_in_stable_ordinal_order() -> None:
     ]
     assert detail.fold_protocol_id == "r3-complete-month-walk-forward"
     assert detail.fold_run_limit == 7
+    assert detail.selection_state is None
+
+
+def test_detail_recovers_persisted_candidate_selection_server_truth() -> None:
+    reader = _Reader()
+    assert reader.projection is not None
+    reader.projection = replace(
+        reader.projection,
+        record=replace(
+            reader.projection.record,
+            status=ExperimentStatus.RUNNING,
+            stage=ExperimentStage.CANDIDATE_SELECTION,
+        ),
+        revision=9,
+        updated_at=NOW + timedelta(minutes=1),
+    )
+    reader.events = (
+        StatusEventRecord(
+            event_id="event-selection-1",
+            experiment_id=ExperimentId("exp-query-1"),
+            candidate_id=None,
+            fold_id=None,
+            attempt_id=None,
+            subject_type=StatusSubjectType.EXPERIMENT,
+            subject_revision=9,
+            previous_status=ExperimentStatus.RUNNING,
+            status=ExperimentStatus.RUNNING,
+            desired_state=ExperimentDesiredState.RUN,
+            stage=ExperimentStage.CANDIDATE_SELECTION,
+            failure_code=None,
+            reason_code="candidate_preselected",
+            detail={
+                "candidate_evidence_artifact_id": "candidate-bundle-1",
+                "candidate_evidence_content_hash": "d" * 64,
+                "candidate_id": "candidate-default",
+                "comparison_payload_hash": "e" * 64,
+                "rationale": "objective winner",
+                "schema_version": 1,
+                "selection_evidence_content_hash": "f" * 64,
+                "selection_id": "candidate-selection:one",
+            },
+            detail_hash=ContentHash("1" * 64),
+            occurred_at=NOW + timedelta(minutes=1),
+        ),
+    )
+
+    detail = _facade(reader).get("exp-query-1")
+
+    assert detail is not None
+    assert detail.selection_state is not None
+    assert detail.selection_state.selection_id == "candidate-selection:one"
+    assert detail.selection_state.experiment_id == "exp-query-1"
+    assert detail.selection_state.candidate_id == "candidate-default"
+    assert detail.selection_state.revision == 9
+    assert detail.selection_state.event_id == "event-selection-1"
+    assert detail.selection_state.holdout_claim_id is None
 
 
 def test_detail_retries_once_after_parent_drift_and_returns_one_coherent_view() -> None:

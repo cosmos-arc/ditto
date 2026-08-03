@@ -93,6 +93,7 @@ from ditto_apps.models.research import (
     ExperimentRetryFoldRequest,
     ExperimentReviewPacketResponse,
     ExperimentSelectionEvidenceResponse,
+    ExperimentSelectionStateResponse,
     ExperimentSummaryResponse,
     ReviewExposureWeightResponse,
     ReviewGateOutcomeResponse,
@@ -174,6 +175,7 @@ def to_experiment_response(
     detail: ExperimentDetailReadModel,
 ) -> ExperimentDetailResponse:
     """将 ExperimentDetailReadModel 转 API 响应."""
+    selection = detail.selection_state
     return ExperimentDetailResponse(
         experiment_id=detail.experiment_id,
         research_cycle_id=detail.research_cycle_id,
@@ -203,6 +205,29 @@ def to_experiment_response(
             to_candidate_response(candidate) for candidate in detail.candidates
         ],
         folds=[to_fold_response(fold) for fold in detail.folds],
+        selection_state=(
+            None
+            if selection is None
+            else ExperimentSelectionStateResponse(
+                selection_id=selection.selection_id,
+                experiment_id=selection.experiment_id,
+                candidate_id=selection.candidate_id,
+                comparison_payload_hash=selection.comparison_payload_hash,
+                candidate_evidence_artifact_id=(
+                    selection.candidate_evidence_artifact_id
+                ),
+                candidate_evidence_content_hash=(
+                    selection.candidate_evidence_content_hash
+                ),
+                selection_evidence_content_hash=(
+                    selection.selection_evidence_content_hash
+                ),
+                revision=selection.revision,
+                event_id=selection.event_id,
+                occurred_at=selection.occurred_at,
+                holdout_claim_id=selection.holdout_claim_id,
+            )
+        ),
     )
 
 

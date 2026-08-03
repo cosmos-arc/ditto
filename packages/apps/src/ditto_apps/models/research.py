@@ -33,6 +33,7 @@ __all__ = [
     "ExperimentRetryFoldRequest",
     "ExperimentReviewPacketResponse",
     "ExperimentSelectionEvidenceResponse",
+    "ExperimentSelectionStateResponse",
     "ExperimentSummaryResponse",
     "FactorDescriptorResponse",
     "FactorDiagnosticsResponse",
@@ -231,6 +232,24 @@ class ExperimentFoldResponse(BaseModel):
     updated_at: datetime
 
 
+class ExperimentSelectionStateResponse(BaseModel):
+    """Persisted preselection and optional one-shot holdout consumption truth."""
+
+    model_config = ConfigDict(frozen=True)
+
+    selection_id: str
+    experiment_id: str
+    candidate_id: str
+    comparison_payload_hash: str
+    candidate_evidence_artifact_id: str
+    candidate_evidence_content_hash: str
+    selection_evidence_content_hash: str
+    revision: int
+    event_id: str
+    occurred_at: datetime
+    holdout_claim_id: str | None
+
+
 class ExperimentDetailResponse(BaseModel):
     """API view of one durable experiment's current server truth."""
 
@@ -262,6 +281,7 @@ class ExperimentDetailResponse(BaseModel):
     fold_count: int
     candidates: list[ExperimentCandidateResponse]
     folds: list[ExperimentFoldResponse]
+    selection_state: ExperimentSelectionStateResponse | None
 
 
 class ExperimentGateResponse(BaseModel):

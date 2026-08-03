@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from types import MappingProxyType
 from typing import Any, cast
@@ -50,6 +51,7 @@ from ditto_application.queries.experiments import (
     ExperimentFoldReadModel,
     ExperimentGateReadModel,
     ExperimentQueryFacade,
+    ExperimentSelectionStateReadModel,
 )
 from ditto_apps.api.errors import (
     APIError,
@@ -353,6 +355,42 @@ def test_to_experiment_response_maps_every_application_field_without_loss() -> N
                 "updated_at": "2026-07-23T01:02:03Z",
             }
         ],
+        "selection_state": None,
+    }
+
+
+def test_to_experiment_response_exposes_persisted_selection_and_holdout_truth() -> None:
+    detail = replace(
+        _detail(),
+        selection_state=ExperimentSelectionStateReadModel(
+            selection_id="candidate-selection:one",
+            experiment_id="exp-1",
+            candidate_id="candidate-1",
+            comparison_payload_hash="a" * 64,
+            candidate_evidence_artifact_id="candidate-bundle-1",
+            candidate_evidence_content_hash="b" * 64,
+            selection_evidence_content_hash="c" * 64,
+            revision=9,
+            event_id="event-selection-1",
+            occurred_at=datetime(2026, 7, 23, 1, 3, 0, tzinfo=UTC),
+            holdout_claim_id="holdout-claim-1",
+        ),
+    )
+
+    response = to_experiment_response(detail)
+
+    assert response.model_dump(mode="json")["selection_state"] == {
+        "selection_id": "candidate-selection:one",
+        "experiment_id": "exp-1",
+        "candidate_id": "candidate-1",
+        "comparison_payload_hash": "a" * 64,
+        "candidate_evidence_artifact_id": "candidate-bundle-1",
+        "candidate_evidence_content_hash": "b" * 64,
+        "selection_evidence_content_hash": "c" * 64,
+        "revision": 9,
+        "event_id": "event-selection-1",
+        "occurred_at": "2026-07-23T01:03:00Z",
+        "holdout_claim_id": "holdout-claim-1",
     }
 
 

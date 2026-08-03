@@ -33,6 +33,7 @@ __all__ = [
     "ExperimentGateReadModel",
     "ExperimentQueryFacade",
     "ExperimentReviewPacketReadModel",
+    "ExperimentSelectionStateReadModel",
     "ExperimentSummaryReadModel",
     "ReviewExposureWeightReadModel",
     "ReviewGateOutcome",
@@ -156,6 +157,23 @@ class ExperimentSummaryReadModel:
 
 
 @dataclass(frozen=True, slots=True)
+class ExperimentSelectionStateReadModel:
+    """Durable candidate preselection plus optional one-shot holdout consumption."""
+
+    selection_id: str
+    experiment_id: str
+    candidate_id: str
+    comparison_payload_hash: str
+    candidate_evidence_artifact_id: str
+    candidate_evidence_content_hash: str
+    selection_evidence_content_hash: str
+    revision: int
+    event_id: str
+    occurred_at: datetime
+    holdout_claim_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class ExperimentDetailReadModel:
     """Current durable server truth; draft fold assembly may still be partial."""
 
@@ -183,6 +201,7 @@ class ExperimentDetailReadModel:
     fold_protocol_hash: str
     candidates: tuple[ExperimentCandidateReadModel, ...]
     folds: tuple[ExperimentFoldReadModel, ...]
+    selection_state: ExperimentSelectionStateReadModel | None = None
 
     @property
     def candidate_count(self) -> int:
@@ -524,6 +543,12 @@ class ExperimentQueryFacade:
             )
             for candidate in candidates
         )
+        selection_state = self._selection_state(
+            experiment_id,
+            typed_id,
+            projection,
+            candidate_models,
+        )
         record = projection.record
         return ExperimentDetailReadModel(
             experiment_id=experiment_id,
@@ -552,6 +577,98 @@ class ExperimentQueryFacade:
             fold_protocol_hash=str(spec.fold_protocol.protocol_hash),
             candidates=candidate_models,
             folds=folds,
+            selection_state=selection_state,
+        )
+
+    def _selection_state(
+        self,
+        experiment_id: str,
+        typed_id: ExperimentId,
+        projection: ExperimentProjection,
+        candidates: tuple[ExperimentCandidateReadModel, ...],
+    ) -> ExperimentSelectionStateReadModel | None:
+        """Recover the immutable preselection event and holdout-consumed truth."""
+        events = _analysis_read(lambda: self._reader.list_status_events(typed_id))
+        selected = tuple(
+            event for event in events if event.reason_code == "candidate_preselected"
+        )
+        claim = _analysis_read(
+            lambda: self._reader.get_holdout_claim_for_experiment(typed_id)
+        )
+        if not selected:
+            if claim is not None:
+                raise _read_error(
+                    "holdout_claim_without_candidate_selection",
+                    experiment_id=experiment_id,
+                )
+            return None
+        if len(selected) != 1:
+            raise _read_error(
+                "candidate_selection_event_not_unique",
+                experiment_id=experiment_id,
+                event_count=len(selected),
+            )
+        event = selected[0]
+        detail = event.detail
+
+        def text(field: str) -> str:
+            value = detail.get(field)
+            if not isinstance(value, str) or not value:
+                raise _read_error(
+                    "candidate_selection_event_invalid",
+                    experiment_id=experiment_id,
+                    field=field,
+                )
+            return value
+
+        candidate_id = text("candidate_id")
+        matching = tuple(
+            candidate
+            for candidate in candidates
+            if candidate.candidate_id == candidate_id
+        )
+        if len(matching) != 1 or matching[0].is_baseline:
+            raise _read_error(
+                "candidate_selection_candidate_invalid",
+                experiment_id=experiment_id,
+                candidate_id=candidate_id,
+            )
+        if (
+            event.experiment_id != typed_id
+            or event.candidate_id is not None
+            or event.fold_id is not None
+            or event.attempt_id is not None
+            or event.subject_revision > projection.revision
+        ):
+            raise _read_error(
+                "candidate_selection_lineage_invalid",
+                experiment_id=experiment_id,
+                event_id=event.event_id,
+            )
+        holdout_claim_id: str | None = None
+        if claim is not None:
+            if (
+                claim.fold_key.experiment_id != typed_id
+                or str(claim.fold_key.candidate_id) != candidate_id
+            ):
+                raise _read_error(
+                    "holdout_claim_selection_mismatch",
+                    experiment_id=experiment_id,
+                    claim_id=claim.claim_id,
+                )
+            holdout_claim_id = claim.claim_id
+        return ExperimentSelectionStateReadModel(
+            selection_id=text("selection_id"),
+            experiment_id=experiment_id,
+            candidate_id=candidate_id,
+            comparison_payload_hash=text("comparison_payload_hash"),
+            candidate_evidence_artifact_id=text("candidate_evidence_artifact_id"),
+            candidate_evidence_content_hash=text("candidate_evidence_content_hash"),
+            selection_evidence_content_hash=text("selection_evidence_content_hash"),
+            revision=event.subject_revision,
+            event_id=event.event_id,
+            occurred_at=event.occurred_at,
+            holdout_claim_id=holdout_claim_id,
         )
 
     @staticmethod

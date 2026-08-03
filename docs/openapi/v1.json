@@ -9303,6 +9303,16 @@
             "title": "Seed",
             "type": "integer"
           },
+          "selection_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentSelectionStateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "snapshot_id": {
             "title": "Snapshot Id",
             "type": "string"
@@ -9359,7 +9369,8 @@
           "candidate_count",
           "fold_count",
           "candidates",
-          "folds"
+          "folds",
+          "selection_state"
         ],
         "title": "ExperimentDetailResponse",
         "type": "object"
@@ -10443,6 +10454,78 @@
           "payload"
         ],
         "title": "ExperimentSelectionEvidenceResponse",
+        "type": "object"
+      },
+      "ExperimentSelectionStateResponse": {
+        "description": "Persisted preselection and optional one-shot holdout consumption truth.",
+        "properties": {
+          "candidate_evidence_artifact_id": {
+            "title": "Candidate Evidence Artifact Id",
+            "type": "string"
+          },
+          "candidate_evidence_content_hash": {
+            "title": "Candidate Evidence Content Hash",
+            "type": "string"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "comparison_payload_hash": {
+            "title": "Comparison Payload Hash",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "holdout_claim_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holdout Claim Id"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "selection_evidence_content_hash": {
+            "title": "Selection Evidence Content Hash",
+            "type": "string"
+          },
+          "selection_id": {
+            "title": "Selection Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "selection_id",
+          "experiment_id",
+          "candidate_id",
+          "comparison_payload_hash",
+          "candidate_evidence_artifact_id",
+          "candidate_evidence_content_hash",
+          "selection_evidence_content_hash",
+          "revision",
+          "event_id",
+          "occurred_at",
+          "holdout_claim_id"
+        ],
+        "title": "ExperimentSelectionStateResponse",
         "type": "object"
       },
       "ExperimentSummaryResponse": {
