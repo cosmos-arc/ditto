@@ -244,7 +244,7 @@ describe("R3 research deterministic acceptance contract", () => {
 	});
 
 	it("recovers the exact planning version after backend governance already published it", async () => {
-		const { livePlanningGovernanceState } = await loadAcceptance();
+		const { eligibleLivePlanningMonthCount, livePlanningGovernanceState } = await loadAcceptance();
 		const identity = {
 			strategyId: "seed_stock_selection_rotation",
 			version: 2,
@@ -274,6 +274,16 @@ describe("R3 research deterministic acceptance contract", () => {
 			),
 		).toThrow("spec hash");
 		expect(() => livePlanningGovernanceState({ state: "published" }, identity)).toThrow("strategy identity");
+		expect(
+			eligibleLivePlanningMonthCount({
+				coverage_decisions: [
+					{ month: "2026-01", eligibility: "eligible" },
+					{ month: "2026-02", eligibility: "ineligible" },
+					{ month: "2026-03", eligibility: "eligible" },
+				],
+			}),
+		).toBe(2);
+		expect(() => eligibleLivePlanningMonthCount({})).toThrow("coverage_decisions");
 	});
 
 	it("binds every approved live browser checkpoint without request interception", async () => {

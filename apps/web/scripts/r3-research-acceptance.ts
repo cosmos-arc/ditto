@@ -293,7 +293,10 @@ export function validateLiveRuntime(environment: Readonly<Record<string, string 
 
 export function buildLiveAcceptancePlan(): readonly LiveAcceptancePlanStep[] {
 	return [
-		{ id: "studio-preflight-launch", description: "Studio identity, read-only preflight, confirmation, and launch" },
+		{
+			id: "studio-preflight-launch",
+			description: "Studio identity plus read-only preflight/launch or exact published experiment recovery",
+		},
 		{
 			id: "experiment-polling-control",
 			description: "Live experiment polling and pause/resume control through the candidate-selection gate",
@@ -742,6 +745,21 @@ export function livePlanningGovernanceState(
 	return stringValue(detail, "state");
 }
 
+/** Count the exact eligible complete-month decisions frozen into the live planning document. */
+export function eligibleLivePlanningMonthCount(validation: Readonly<Record<string, unknown>>): number {
+	const rawDecisions = validation.coverage_decisions;
+	invariant(Array.isArray(rawDecisions), "live planning validation omitted coverage_decisions");
+	const eligibleMonths = new Set<string>();
+	for (const [index, rawDecision] of rawDecisions.entries()) {
+		const decision = recordValue(rawDecision, `coverage_decisions[${index}]`);
+		const month = stringValue(decision, "month");
+		const eligibility = stringValue(decision, "eligibility");
+		invariant(eligibility === "eligible" || eligibility === "ineligible", "coverage decision eligibility was invalid");
+		if (eligibility === "eligible") eligibleMonths.add(month);
+	}
+	return eligibleMonths.size;
+}
+
 async function browserApiGet(page: Page, path: string): Promise<Record<string, unknown>> {
 	const payload = await page.evaluate(async (apiPath) => {
 		const response = await fetch(apiPath);
@@ -819,6 +837,31 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 					waitUntil: "domcontentloaded",
 				});
 				await page.locator('[data-info-unit="strategy-header"]').waitFor();
+				if (experimentId && (await liveExperimentExists(options.apiBase, experimentId))) {
+					const versionDetail = await browserApiGet(
+						page,
+						`/api/v1/strategies/${encodeURIComponent(strategyId)}/versions/${planning.strategy.version}`,
+					);
+					const governanceState = livePlanningGovernanceState(versionDetail, {
+						strategyId,
+						version: planning.strategy.version,
+						specHash: planning.strategy.spec_hash,
+					});
+					if (governanceState === "published") {
+						const serverExperiment = await browserApiGet(
+							page,
+							`/api/v1/research/experiments/${encodeURIComponent(experimentId)}`,
+						);
+						invariant(serverExperiment.status === "completed", "published planning experiment was not completed");
+						const eligibleMonths = eligibleLivePlanningMonthCount(planning.validation);
+						invariant(eligibleMonths >= 96, `published planning covered only ${eligibleMonths} eligible months`);
+						resumedExistingExperiment = true;
+						await page.goto(`${options.reactBase}/research/experiments/${experimentId}`, {
+							waitUntil: "domcontentloaded",
+						});
+						return `recovered completed published ${experimentId} with ${eligibleMonths} frozen eligible months`;
+					}
+				}
 				await page.goto(`${options.reactBase}/research/experiments/new`, { waitUntil: "domcontentloaded" });
 				await fillLivePlanningDocument(page, planning);
 				await page.getByRole("button", { name: "运行只读 Preflight" }).click();
