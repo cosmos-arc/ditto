@@ -834,8 +834,12 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await page.getByRole("heading", { name: /Candidate evidence/u }).waitFor();
 				await page.getByText("factor-contributions", { exact: true }).waitFor();
 				const recoveredHoldout = page.getByRole("button", { name: "执行一次性 Holdout" });
-				if (await recoveredHoldout.isVisible()) {
-					await expectEnabled(recoveredHoldout);
+				const action = await waitForSelectionActionReady(
+					async () => (await recoveredHoldout.isVisible()) && (await recoveredHoldout.isEnabled()),
+					() => select.isEnabled(),
+					(milliseconds) => page.waitForTimeout(milliseconds),
+				);
+				if (action === "recovered") {
 					return `inspected live comparison and evidence for ${await pin.getAttribute("aria-label")}; recovered persisted candidate selection`;
 				}
 				await page
@@ -1014,6 +1018,23 @@ export async function waitForEnabled(
 	const startedAt = Date.now();
 	while (!(await probe())) {
 		if (Date.now() - startedAt >= timeoutMs) throw new Error(`element did not become enabled within ${timeoutMs}ms`);
+		await pause(500);
+	}
+}
+
+export async function waitForSelectionActionReady(
+	recoveredHoldout: () => Promise<boolean>,
+	selectableCandidate: () => Promise<boolean>,
+	pause: (milliseconds: number) => Promise<unknown>,
+	timeoutMs = 300_000,
+): Promise<"recovered" | "selectable"> {
+	const startedAt = Date.now();
+	while (true) {
+		if (await recoveredHoldout()) return "recovered";
+		if (await selectableCandidate()) return "selectable";
+		if (Date.now() - startedAt >= timeoutMs) {
+			throw new Error(`selection action did not become ready within ${timeoutMs}ms`);
+		}
 		await pause(500);
 	}
 }

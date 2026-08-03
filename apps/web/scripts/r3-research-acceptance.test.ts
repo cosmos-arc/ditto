@@ -208,6 +208,26 @@ describe("R3 research deterministic acceptance contract", () => {
 		await expect(waitForEnabled(async () => false, async () => undefined, 0)).rejects.toThrow("did not become enabled");
 	});
 
+	it("waits through recovered-selection hydration before choosing the live action", async () => {
+		const { waitForSelectionActionReady } = await loadAcceptance();
+		let probes = 0;
+
+		await expect(
+			waitForSelectionActionReady(
+				async () => {
+					probes += 1;
+					return probes >= 3;
+				},
+				async () => false,
+				async () => undefined,
+				100,
+			),
+		).resolves.toBe("recovered");
+		await expect(
+			waitForSelectionActionReady(async () => false, async () => true, async () => undefined, 100),
+		).resolves.toBe("selectable");
+	});
+
 	it("binds every approved live browser checkpoint without request interception", async () => {
 		const { buildLiveAcceptancePlan } = await loadAcceptance();
 		const source = readFileSync(acceptanceScript, "utf8");
