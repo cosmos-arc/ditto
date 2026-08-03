@@ -28,6 +28,8 @@ export type ExperimentPreflightResponse = components["schemas"]["ExperimentPrefl
 export type ExperimentLaunchResponse = components["schemas"]["ExperimentLaunchResponse"];
 type ExperimentLaunchRequest = ExperimentLaunchOperation["requestBody"]["content"]["application/json"];
 
+const rawPlanningJsonByRequest = new WeakMap<object, string>();
+
 export type ExperimentConfigDraft = {
 	readonly experimentId: string;
 	readonly researchCycleId: string;
@@ -106,6 +108,39 @@ function parseArray(value: string, label: string): unknown[] {
 	return parsed;
 }
 
+function encodeScalar(value: string | number | boolean | null, label: string): string {
+	if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`${label} 必须是有限数值`);
+	const encoded = JSON.stringify(value);
+	if (encoded === undefined) throw new Error(`${label} 无法编码为 JSON`);
+	return encoded;
+}
+
+function serializeExperimentPlanningDraft(draft: ExperimentConfigDraft): string {
+	const strategySpec = draft.strategySpecJson.trim();
+	const validation = draft.validationJson.trim();
+	const baselinePayload = draft.baselinePayloadJson.trim();
+	const axes = draft.axesJson.trim();
+	const promotionObjective = draft.promotionObjectiveJson.trim();
+	const datasetRequirements = draft.datasetRequirementsJson.trim();
+	return `{${[
+		`"experiment_id":${encodeScalar(draft.experimentId.trim(), "Experiment ID")}`,
+		`"research_cycle_id":${encodeScalar(draft.researchCycleId.trim(), "Research cycle ID")}`,
+		`"research_cycle_hash":${encodeScalar(draft.researchCycleHash.trim(), "Research cycle hash")}`,
+		`"strategy":{"strategy_id":${encodeScalar(draft.strategyId.trim(), "Strategy ID")},"version":${encodeScalar(draft.strategyVersion, "Strategy version")},"spec_hash":${encodeScalar(draft.strategySpecHash.trim(), "Strategy spec hash")},"spec_json":${strategySpec}}`,
+		`"snapshot":{"snapshot_id":${encodeScalar(draft.snapshotId.trim(), "Snapshot ID")},"manifest_hash":${encodeScalar(draft.snapshotManifestHash.trim(), "Snapshot manifest hash")}}`,
+		`"validation":${validation}`,
+		`"matrix":{"baseline":{"descriptor_type":${encodeScalar(draft.baselineDescriptorType.trim(), "Baseline descriptor")},"payload":${baselinePayload},"schema_version":${encodeScalar(draft.baselineSchemaVersion, "Baseline schema version")}},"axes":${axes},"candidate_limit":${encodeScalar(draft.candidateLimit, "Candidate limit")}}`,
+		`"promotion_objective":${promotionObjective}`,
+		`"dataset_requirements":${datasetRequirements}`,
+		`"cost_model":{"bytes_per_run":${encodeScalar(draft.bytesPerRun, "Bytes per run")},"bytes_per_trading_session":${encodeScalar(draft.bytesPerTradingSession, "Bytes per trading session")}}`,
+		`"budget":{"candidate_limit":${encodeScalar(draft.candidateLimit, "Candidate limit")},"fold_run_limit":${encodeScalar(draft.foldRunLimit, "Fold run limit")},"trading_session_limit":${encodeScalar(draft.tradingSessionLimit, "Trading session limit")},"disk_byte_limit":${encodeScalar(draft.diskByteLimit, "Disk byte limit")}}`,
+		`"seed":${encodeScalar(draft.seed, "Seed")}`,
+		`"worker_count":${encodeScalar(draft.workerCount, "Worker count")}`,
+		`"failure_policy":${encodeScalar(draft.failurePolicy, "Failure policy")}`,
+		`"created_at":${encodeScalar(draft.createdAt, "Created at")}`,
+	].join(",")}}`;
+}
+
 export function createDefaultExperimentDraft(): ExperimentConfigDraft {
 	return {
 		experimentId: "r3-experiment",
@@ -178,7 +213,7 @@ export function estimateCandidateCount(axesJson: string): number | null {
 
 /** Canonical planning document construction lives here and nowhere in the component tree. */
 export function buildExperimentPlanningRequest(draft: ExperimentConfigDraft): ExperimentPlanningRequest {
-	return {
+	const request: ExperimentPlanningRequest = {
 		experiment_id: draft.experimentId.trim(),
 		research_cycle_id: draft.researchCycleId.trim(),
 		research_cycle_hash: draft.researchCycleHash.trim(),
@@ -219,12 +254,18 @@ export function buildExperimentPlanningRequest(draft: ExperimentConfigDraft): Ex
 		failure_policy: draft.failurePolicy,
 		created_at: draft.createdAt,
 	};
+	rawPlanningJsonByRequest.set(request, serializeExperimentPlanningDraft(draft));
+	return request;
+}
+
+export function planningRequestIdentity(planning: ExperimentPlanningRequest): string {
+	return rawPlanningJsonByRequest.get(planning) ?? JSON.stringify(planning);
 }
 
 export function preflightExperiment(planning: ExperimentPlanningRequest): Promise<ExperimentPreflightResponse> {
-	return apiClient.post<ExperimentPreflightResponse>(
+	return apiClient.postRawJson<ExperimentPreflightResponse>(
 		`/v1/research/experiments/${encodeURIComponent(planning.experiment_id)}/preflight`,
-		planning,
+		planningRequestIdentity(planning),
 	);
 }
 
@@ -234,7 +275,9 @@ export function launchExperiment(
 	idempotencyKey: string,
 ): Promise<ExperimentLaunchResponse> {
 	const request: ExperimentLaunchRequest = { ...planning, confirmed_plan_hash: confirmedPlanHash };
-	return apiClient.post<ExperimentLaunchResponse>("/v1/research/experiments", request, {
+	const planningJson = planningRequestIdentity(planning);
+	const rawBody = `${planningJson.slice(0, -1)},"confirmed_plan_hash":${encodeScalar(request.confirmed_plan_hash, "Confirmed plan hash")}}`;
+	return apiClient.postRawJson<ExperimentLaunchResponse>("/v1/research/experiments", rawBody, {
 		headers: { "Idempotency-Key": idempotencyKey },
 	});
 }

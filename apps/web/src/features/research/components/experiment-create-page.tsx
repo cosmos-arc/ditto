@@ -6,6 +6,7 @@ import {
 	createDefaultExperimentDraft,
 	type ExperimentConfigDraft,
 	type ExperimentPlanningRequest,
+	planningRequestIdentity,
 } from "../api/experiments";
 import { useExperimentLaunch, useExperimentPreflight } from "../hooks";
 import { ExperimentConfigForm } from "./experiment-config-form";
@@ -39,7 +40,7 @@ export function ExperimentCreatePage({ onLaunched }: ExperimentCreatePageProps) 
 	let currentIdentity: string | null = null;
 	try {
 		planning = buildExperimentPlanningRequest(draft);
-		currentIdentity = JSON.stringify(planning);
+		currentIdentity = planningRequestIdentity(planning);
 	} catch {
 		planning = null;
 	}

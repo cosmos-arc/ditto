@@ -15,6 +15,7 @@ export type ApiResponse<T> = {
 type RequestOptions = {
 	readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 	readonly body?: unknown;
+	readonly rawBody?: string;
 	readonly headers?: Record<string, string>;
 	readonly signal?: AbortSignal;
 };
@@ -128,7 +129,8 @@ function toApiError(response: Response, payload: unknown): ApiError {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-	const { method = "GET", body, headers = {}, signal } = options;
+	const { method = "GET", body, rawBody, headers = {}, signal } = options;
+	if (body !== undefined && rawBody !== undefined) throw new Error("request cannot include both body and rawBody");
 
 	const response = await fetch(buildApiUrl(path), {
 		method,
@@ -136,7 +138,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 			"Content-Type": "application/json",
 			...headers,
 		},
-		body: body !== undefined ? JSON.stringify(body) : undefined,
+		body: rawBody ?? (body !== undefined ? JSON.stringify(body) : undefined),
 		signal,
 	});
 	const payload = await parseJsonResponse(response);
@@ -153,6 +155,8 @@ export const apiClient = {
 
 	post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
 		request<T>(path, { ...options, method: "POST", body }),
+	postRawJson: <T>(path: string, rawBody: string, options?: RequestOptions) =>
+		request<T>(path, { ...options, method: "POST", rawBody }),
 
 	put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
 		request<T>(path, { ...options, method: "PUT", body }),

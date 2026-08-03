@@ -152,6 +152,19 @@ type LivePlanningIdentity = {
 	readonly seed: number;
 };
 
+type LivePlanningJsonFields = {
+	readonly strategySpec: string;
+	readonly validation: string;
+	readonly promotionObjective: string;
+	readonly baselinePayload: string;
+	readonly axes: string;
+	readonly datasetRequirements: string;
+};
+
+const RAW_JSON_NUMBER = Symbol("raw-json-number");
+type RawJsonNumber = { readonly [RAW_JSON_NUMBER]: string };
+const rawJsonFieldsByPlanning = new WeakMap<object, LivePlanningJsonFields>();
+
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const DEFAULT_FIXTURE_OUT_DIR = "docs/review/r3-research-acceptance/deterministic";
 const DEFAULT_LIVE_OUT_DIR = "docs/review/r3-research-acceptance/live";
@@ -331,6 +344,56 @@ function canonicalJson(value: unknown): string {
 	return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+function isRawJsonNumber(value: unknown): value is RawJsonNumber {
+	return typeof value === "object" && value !== null && RAW_JSON_NUMBER in value;
+}
+
+function stringifyLosslessJson(value: unknown): string {
+	if (isRawJsonNumber(value)) return value[RAW_JSON_NUMBER];
+	if (value === null || typeof value === "boolean") return JSON.stringify(value);
+	if (typeof value === "string") return JSON.stringify(value);
+	if (Array.isArray(value)) return `[${value.map(stringifyLosslessJson).join(",")}]`;
+	if (typeof value === "object") {
+		return `{${Object.entries(value)
+			.map(([key, entry]) => `${JSON.stringify(key)}:${stringifyLosslessJson(entry)}`)
+			.join(",")}}`;
+	}
+	throw new Error("lossless planning JSON contained an unsupported value");
+}
+
+function parseLosslessJson(source: string): unknown {
+	type ReviverContext = { readonly source?: string };
+	type ParseWithSource = (
+		text: string,
+		reviver: (this: unknown, key: string, value: unknown, context: ReviverContext) => unknown,
+	) => unknown;
+	const parseWithSource = JSON.parse as ParseWithSource;
+	return parseWithSource(source, (_key, value, context) => {
+		if (typeof value !== "number") return value;
+		invariant(context.source !== undefined, "JSON parser did not expose the numeric source token");
+		return { [RAW_JSON_NUMBER]: context.source } satisfies RawJsonNumber;
+	});
+}
+
+function stringifyJsonField(value: unknown): string {
+	const encoded = JSON.stringify(value);
+	invariant(encoded !== undefined, "planning JSON field could not be serialized");
+	return encoded;
+}
+
+export function livePlanningJsonFields(document: LivePlanningDocument): LivePlanningJsonFields {
+	return (
+		rawJsonFieldsByPlanning.get(document) ?? {
+			strategySpec: stringifyJsonField(document.strategy.spec_json),
+			validation: stringifyJsonField(document.validation),
+			promotionObjective: stringifyJsonField(document.promotion_objective),
+			baselinePayload: stringifyJsonField(document.matrix.baseline.payload),
+			axes: stringifyJsonField(document.matrix.axes),
+			datasetRequirements: stringifyJsonField(document.dataset_requirements),
+		}
+	);
+}
+
 function recordValue(value: unknown, label: string): Record<string, unknown> {
 	invariant(typeof value === "object" && value !== null && !Array.isArray(value), `${label} must be an object`);
 	return value as Record<string, unknown>;
@@ -357,8 +420,11 @@ function arrayValue(record: Readonly<Record<string, unknown>>, key: string): rea
 /** Load and validate the exact content-addressed backend planning document used by live Studio. */
 export async function loadLivePlanningDocument(path: string): Promise<LivePlanningDocument> {
 	let parsed: unknown;
+	let losslessParsed: unknown;
 	try {
-		parsed = JSON.parse(await readFile(resolve(path), "utf8")) as unknown;
+		const source = await readFile(resolve(path), "utf8");
+		parsed = JSON.parse(source) as unknown;
+		losslessParsed = parseLosslessJson(source);
 	} catch (error: unknown) {
 		throw new Error(`unable to read live planning document: ${browserError(error)}`);
 	}
@@ -404,7 +470,20 @@ export async function loadLivePlanningDocument(path: string): Promise<LivePlanni
 	numberValue(budget, "trading_session_limit");
 	numberValue(budget, "disk_byte_limit");
 	numberValue(root, "seed");
-	return parsed as LivePlanningDocument;
+	const document = parsed as LivePlanningDocument;
+	const losslessRoot = recordValue(losslessParsed, "lossless planning document");
+	const losslessStrategy = recordValue(losslessRoot.strategy, "lossless strategy");
+	const losslessMatrix = recordValue(losslessRoot.matrix, "lossless matrix");
+	const losslessBaseline = recordValue(losslessMatrix.baseline, "lossless matrix.baseline");
+	rawJsonFieldsByPlanning.set(document, {
+		strategySpec: stringifyLosslessJson(losslessStrategy.spec_json),
+		validation: stringifyLosslessJson(losslessRoot.validation),
+		promotionObjective: stringifyLosslessJson(losslessRoot.promotion_objective),
+		baselinePayload: stringifyLosslessJson(losslessBaseline.payload),
+		axes: stringifyLosslessJson(losslessMatrix.axes),
+		datasetRequirements: stringifyLosslessJson(losslessRoot.dataset_requirements),
+	});
+	return document;
 }
 
 export async function runFixtureAcceptance(
@@ -535,6 +614,7 @@ async function fillPlanningField(page: Page, label: string, value: string): Prom
 }
 
 async function fillLivePlanningDocument(page: Page, document: LivePlanningDocument): Promise<void> {
+	const jsonFields = livePlanningJsonFields(document);
 	const fields = new Map<string, string>([
 		["Experiment ID", document.experiment_id],
 		["Research cycle ID", document.research_cycle_id],
@@ -542,17 +622,17 @@ async function fillLivePlanningDocument(page: Page, document: LivePlanningDocume
 		["Strategy ID", document.strategy.strategy_id],
 		["Strategy version", String(document.strategy.version)],
 		["Strategy spec hash", document.strategy.spec_hash],
-		["Frozen StrategySpec JSON", JSON.stringify(document.strategy.spec_json, null, 2)],
+		["Frozen StrategySpec JSON", jsonFields.strategySpec],
 		["Snapshot ID", document.snapshot.snapshot_id],
 		["Snapshot manifest hash", document.snapshot.manifest_hash],
-		["Canonical validation JSON", JSON.stringify(document.validation, null, 2)],
-		["Promotion objective JSON", JSON.stringify(document.promotion_objective, null, 2)],
+		["Canonical validation JSON", jsonFields.validation],
+		["Promotion objective JSON", jsonFields.promotionObjective],
 		["Baseline descriptor", document.matrix.baseline.descriptor_type],
 		["Baseline schema version", String(document.matrix.baseline.schema_version)],
 		["Candidate limit", String(document.matrix.candidate_limit)],
-		["Baseline payload JSON", JSON.stringify(document.matrix.baseline.payload, null, 2)],
-		["Matrix axes JSON", JSON.stringify(document.matrix.axes, null, 2)],
-		["Dataset requirements JSON", JSON.stringify(document.dataset_requirements, null, 2)],
+		["Baseline payload JSON", jsonFields.baselinePayload],
+		["Matrix axes JSON", jsonFields.axes],
+		["Dataset requirements JSON", jsonFields.datasetRequirements],
 		["Bytes per run", String(document.cost_model.bytes_per_run)],
 		["Bytes per trading session", String(document.cost_model.bytes_per_trading_session)],
 		["Fold run limit", String(document.budget.fold_run_limit)],

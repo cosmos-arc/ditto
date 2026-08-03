@@ -94,7 +94,7 @@ describe("R3 research deterministic acceptance contract", () => {
 	});
 
 	it("loads the exact backend planning document used by live Studio", async () => {
-		const { loadLivePlanningDocument } = await loadAcceptance();
+		const { livePlanningJsonFields, loadLivePlanningDocument } = await loadAcceptance();
 		const root = await mkdtemp(join(tmpdir(), "ditto-r3-live-planning-"));
 		try {
 			const path = join(root, "planning.json");
@@ -106,7 +106,7 @@ describe("R3 research deterministic acceptance contract", () => {
 					strategy_id: "seed_stock_selection_rotation",
 					version: 3,
 					spec_hash: "b".repeat(64),
-					spec_json: { strategy_id: "seed_stock_selection_rotation" },
+					spec_json: { strategy_id: "seed_stock_selection_rotation", slippage_bps: 10 },
 				},
 				snapshot: { snapshot_id: "snapshot:r3", manifest_hash: "c".repeat(64) },
 				validation: { trading_sessions: ["2026-07-31"] },
@@ -129,9 +129,11 @@ describe("R3 research deterministic acceptance contract", () => {
 				failure_policy: "continue_candidate_failures",
 				created_at: "2026-08-01T01:02:03Z",
 			};
-			await writeFile(path, JSON.stringify(document), "utf8");
+			await writeFile(path, JSON.stringify(document).replace('"slippage_bps":10', '"slippage_bps":10.0'), "utf8");
 
-			expect(await loadLivePlanningDocument(path)).toEqual(document);
+			const loaded = await loadLivePlanningDocument(path);
+			expect(loaded).toEqual(document);
+			expect(livePlanningJsonFields(loaded).strategySpec).toContain('"slippage_bps":10.0');
 			await writeFile(
 				path,
 				JSON.stringify({ ...document, strategy: { ...document.strategy, strategy_id: "wrong" } }),

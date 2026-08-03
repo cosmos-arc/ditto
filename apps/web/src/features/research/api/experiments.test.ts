@@ -6,6 +6,7 @@ import {
 	createDefaultExperimentDraft,
 	estimateCandidateCount,
 	launchExperiment,
+	planningRequestIdentity,
 	preflightExperiment,
 } from "./experiments";
 
@@ -29,14 +30,20 @@ describe("experiment planning adapter", () => {
 	});
 
 	it("preflights without an idempotency header or launch write", async () => {
-		const draft = createDefaultExperimentDraft();
+		const draft = {
+			...createDefaultExperimentDraft(),
+			strategySpecJson: JSON.stringify({ execution: { cost_model: { slippage_bps: 10 } } }).replace("10", "10.0"),
+			promotionObjectiveJson: '{"minimum":0.0}',
+		};
 		const planning = buildExperimentPlanningRequest(draft);
 		let method = "";
 		let idempotency = "absent";
+		let rawBody = "";
 		server.use(
-			http.post("/api/v1/research/experiments/:experimentId/preflight", ({ request }) => {
+			http.post("/api/v1/research/experiments/:experimentId/preflight", async ({ request }) => {
 				method = request.method;
 				idempotency = request.headers.get("Idempotency-Key") ?? "";
+				rawBody = await request.text();
 				return HttpResponse.json({
 					data: {
 						status: "ready",
@@ -58,6 +65,9 @@ describe("experiment planning adapter", () => {
 
 		expect(method).toBe("POST");
 		expect(idempotency).toBe("");
+		expect(rawBody).toContain('"slippage_bps":10.0');
+		expect(rawBody).toContain('"minimum":0.0');
+		expect(planningRequestIdentity(planning)).toBe(rawBody);
 		expect(result.plan_hash).toBe("d".repeat(64));
 	});
 
@@ -65,10 +75,12 @@ describe("experiment planning adapter", () => {
 		const planning = buildExperimentPlanningRequest(createDefaultExperimentDraft());
 		let idempotency = "";
 		let body: Record<string, unknown> = {};
+		let rawBody = "";
 		server.use(
 			http.post("/api/v1/research/experiments", async ({ request }) => {
 				idempotency = request.headers.get("Idempotency-Key") ?? "";
-				body = (await request.json()) as Record<string, unknown>;
+				rawBody = await request.text();
+				body = JSON.parse(rawBody) as Record<string, unknown>;
 				return HttpResponse.json({
 					data: {
 						experiment_id: planning.experiment_id,
@@ -86,6 +98,7 @@ describe("experiment planning adapter", () => {
 		await launchExperiment(planning, "d".repeat(64), "launch-command-1");
 
 		expect(idempotency).toBe("launch-command-1");
+		expect(rawBody).toContain(`"confirmed_plan_hash":"${"d".repeat(64)}"`);
 		expect(body.confirmed_plan_hash).toBe("d".repeat(64));
 		expect(body.experiment_id).toBe(planning.experiment_id);
 	});
