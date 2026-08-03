@@ -834,6 +834,9 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await candidateRow.getByRole("button", { name: "查看证据" }).click();
 				await page.getByRole("heading", { name: /Candidate evidence/u }).waitFor();
 				await page.getByText("factor-contributions", { exact: true }).waitFor();
+				await page
+					.getByText("Selection evidence is publishing; candidate promotion remains locked.", { exact: true })
+					.waitFor({ state: "hidden" });
 				await expectEnabled(select);
 				return `inspected live comparison and evidence for ${await pin.getAttribute("aria-label")}`;
 			}),

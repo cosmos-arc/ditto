@@ -10,6 +10,7 @@ interface CandidateComparisonProps {
 	readonly revision: number;
 	readonly candidates: readonly components["schemas"]["ExperimentCandidateResponse"][];
 	readonly comparison: components["schemas"]["ExperimentComparisonResponse"] | null;
+	readonly selectionEvidenceReady: boolean;
 	readonly onInspect?: (candidateId: string) => void;
 }
 
@@ -22,6 +23,7 @@ export function CandidateComparison({
 	revision,
 	candidates,
 	comparison,
+	selectionEvidenceReady,
 	onInspect,
 }: CandidateComparisonProps) {
 	const [pinned, setPinned] = useState<string[]>([]);
@@ -41,7 +43,7 @@ export function CandidateComparison({
 	}
 
 	function select(candidateId: string): void {
-		if (!comparison || comparison.revision !== revision || !rationale.trim()) return;
+		if (!selectionEvidenceReady || !comparison || comparison.revision !== revision || !rationale.trim()) return;
 		const identity = `${candidateId}:${comparison.payload_hash}:${revision}:${rationale.trim()}`;
 		const idempotencyKey = attempts.current.get(identity) ?? key();
 		attempts.current.set(identity, idempotencyKey);
@@ -71,6 +73,11 @@ export function CandidateComparison({
 			: mutation.error?.message;
 	return (
 		<div className="flex flex-col gap-3">
+			{comparison && !selectionEvidenceReady && (
+				<p role="status" className="text-xs text-(--color-foreground-secondary)">
+					Selection evidence is publishing; candidate promotion remains locked.
+				</p>
+			)}
 			<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
 				<span>晋级理由</span>
 				<input
@@ -106,6 +113,7 @@ export function CandidateComparison({
 								type="button"
 								data-candidate-role={candidate.is_baseline ? "baseline" : "eligible"}
 								disabled={
+									!selectionEvidenceReady ||
 									!comparison ||
 									comparison.revision !== revision ||
 									candidate.is_baseline ||

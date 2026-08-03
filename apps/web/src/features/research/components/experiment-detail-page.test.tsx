@@ -67,6 +67,31 @@ describe("ExperimentDetailPage", () => {
 		expect(screen.getByLabelText("Pin candidate-5")).toBeDisabled();
 	});
 
+	it("keeps candidate promotion locked while aggregate selection evidence is unpublished", async () => {
+		const user = userEvent.setup();
+		useWorkbenchHandlers();
+		server.use(
+			http.get("/api/v1/research/experiments/:id", () =>
+				HttpResponse.json({ data: { ...mockExperimentDetail, status: "running", stage: "candidate_selection" } }),
+			),
+			http.get("/api/v1/research/experiments/:id/selection-evidence", () =>
+				HttpResponse.json(
+					{ detail: "selection evidence is publishing", error_code: "SELECTION_EVIDENCE_NOT_FOUND" },
+					{ status: 404 },
+				),
+			),
+		);
+		render(<ExperimentDetailPage experimentId="exp-1042" />, { wrapper });
+
+		await expect(
+			screen.findByText("Selection evidence is publishing; candidate promotion remains locked."),
+		).resolves.toBeInTheDocument();
+		await user.click(screen.getByLabelText("Pin candidate-2"));
+		await user.type(screen.getByLabelText("晋级理由"), "wait for the immutable selection ledger");
+
+		expect(screen.getByRole("button", { name: "选择为晋级候选 candidate-2" })).toBeDisabled();
+	});
+
 	it("does not request selection evidence before the candidate-selection gate", async () => {
 		let selectionRequests = 0;
 		useWorkbenchHandlers();

@@ -17,6 +17,25 @@ function wrapper({ children }: { readonly children: ReactNode }) {
 }
 
 describe("candidate selection and holdout", () => {
+	it("keeps candidate selection disabled until aggregate selection evidence is ready", async () => {
+		const user = userEvent.setup();
+		render(
+			<CandidateComparison
+				experimentId="exp-1042"
+				revision={9}
+				candidates={mockExperimentDetail.candidates}
+				comparison={mockExperimentComparison}
+				selectionEvidenceReady={false}
+			/>,
+			{ wrapper },
+		);
+
+		await user.click(screen.getByLabelText("Pin candidate-2"));
+		await user.type(screen.getByLabelText("晋级理由"), "wait for the immutable selection ledger");
+
+		expect(screen.getByRole("button", { name: "选择为晋级候选 candidate-2" })).toBeDisabled();
+	});
+
 	it("never offers the registered baseline as a promotable candidate", async () => {
 		const user = userEvent.setup();
 		render(
@@ -25,6 +44,7 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
+				selectionEvidenceReady={true}
 			/>,
 			{ wrapper },
 		);
@@ -89,6 +109,7 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
+				selectionEvidenceReady={true}
 			/>,
 			{ wrapper },
 		);
@@ -142,6 +163,7 @@ describe("candidate selection and holdout", () => {
 				revision={9}
 				candidates={mockExperimentDetail.candidates}
 				comparison={mockExperimentComparison}
+				selectionEvidenceReady={true}
 			/>,
 			{ wrapper },
 		);
