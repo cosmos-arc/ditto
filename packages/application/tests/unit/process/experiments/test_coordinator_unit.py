@@ -6,11 +6,13 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from threading import Barrier, Event, Lock
+from types import SimpleNamespace
 from typing import cast
 
 import pytest
 from ditto_analysis.errors import ExperimentIntegrityError, ExperimentLeaseLostError
 from ditto_analysis.experiments import (
+    ArtifactRecord,
     AttemptId,
     AttemptPersistenceSpec,
     AttemptProjection,
@@ -282,6 +284,7 @@ class _SchedulerStore:
         ]
         self.attempts: dict[AttemptId, AttemptView] = {}
         self.slot = SchedulerSlot("global", None, None, None, None, None, 0)
+        self.artifacts: list[ArtifactRecord] = []
         self.claimed_keys: list[FoldKey] = []
         self.write_fences: list[int] = []
         self.raise_lease_lost_on_claim = False
@@ -305,6 +308,13 @@ class _SchedulerStore:
         if self.projection.record.status is ExperimentStatus.QUEUED:
             return (self.projection,)
         return ()
+
+    def list_experiment_artifacts(
+        self,
+        experiment_id: ExperimentId,
+    ) -> tuple[ArtifactRecord, ...]:
+        assert experiment_id == self.launch.experiment_id
+        return tuple(self.artifacts)
 
     def get_scheduler_slot(self) -> SchedulerSlot:
         if self.raise_integrity_on_slot_read:
@@ -1113,6 +1123,29 @@ def test_walk_forward_completion_stops_at_candidate_selection_without_holdout() 
         if fold.spec.fold_role is FoldRole.HOLDOUT
     )
 
+    store.artifacts.append(
+        cast(
+            "ArtifactRecord",
+            SimpleNamespace(artifact_kind="selection_evidence", candidate_id=None),
+        )
+    )
+    slot_after_publication = store.slot
+    gate_observer, _ = _coordinator(
+        store,
+        owner_token="candidate-gate-observer",
+        clock_now=NOW + timedelta(microseconds=1),
+        selection_evidence_publisher=publisher,
+    )
+
+    replayed_gate = gate_observer.tick(
+        occurred_at=NOW + timedelta(seconds=6),
+    )
+
+    assert replayed_gate.state is SchedulerTickState.CANDIDATE_SELECTION
+    assert replayed_gate.dispatches == ()
+    assert store.slot == slot_after_publication
+    assert len(publisher.publish_calls) == 1
+
     receipt = cast("CandidateSelectionReceipt", object())
 
     class _ApiSelectionProcess:
@@ -1256,12 +1289,14 @@ def test_holdout_stage_is_a_hard_dispatch_boundary_for_task9() -> None:
                 ),
             )
     coordinator, _factory = _coordinator(store)
+    slot_before_gate_observation = store.slot
 
     result = coordinator.tick(occurred_at=NOW)
 
     assert result.state is SchedulerTickState.HOLDOUT_GATED
     assert result.dispatches == ()
     assert store.claimed_keys == []
+    assert store.slot == slot_before_gate_observation
 
 
 def test_candidate_failure_releases_capacity_for_other_candidates() -> None:

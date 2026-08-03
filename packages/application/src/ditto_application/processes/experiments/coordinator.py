@@ -62,6 +62,7 @@ from ditto_application.processes.experiments._execution_resolution_evidence impo
     deterministic_backtest_run_id,
 )
 from ditto_application.processes.experiments._selection_evidence_artifact import (
+    SELECTION_EVIDENCE_ARTIFACT_KIND,
     SelectionEvidencePublisher,
 )
 from ditto_application.processes.experiments.evidence_collector import (
@@ -498,6 +499,9 @@ class ExperimentExecutionCoordinator(
                     return _empty_result(SchedulerTickState.IDLE)
                 selected = self._load_snapshot(queue[0].record.experiment_id)
             _snapshot_rules.validate_worker_limit(selected)
+            operator_gate = self._replay_published_operator_gate(selected)
+            if operator_gate is not None:
+                return operator_gate
             experiment_id = selected.projection.record.experiment_id
             acquired = self._authority.acquire(
                 experiment_id,
@@ -511,6 +515,30 @@ class ExperimentExecutionCoordinator(
             return _empty_result(SchedulerTickState.LEASE_BUSY)
         return None
 
+    def _replay_published_operator_gate(
+        self,
+        snapshot: ExperimentSchedulerSnapshot,
+    ) -> SchedulerTickResult | None:
+        """Observe a durable operator gate without repeatedly stealing its lease."""
+        if snapshot.projection.record.status is not ExperimentStatus.RUNNING:
+            return None
+        stage = snapshot.projection.record.stage
+        if stage is ExperimentStage.HOLDOUT and snapshot.holdout_claim is None:
+            return _result(SchedulerTickState.HOLDOUT_GATED, snapshot, ())
+        if stage is not ExperimentStage.CANDIDATE_SELECTION:
+            return None
+        records = tuple(
+            record
+            for record in self._store.list_experiment_artifacts(
+                snapshot.projection.record.experiment_id
+            )
+            if record.artifact_kind == SELECTION_EVIDENCE_ARTIFACT_KIND
+            and record.candidate_id is None
+        )
+        if len(records) == 1:
+            return _result(SchedulerTickState.CANDIDATE_SELECTION, snapshot, ())
+        return None
+
     def _tick_owned(
         self,
         lease: SchedulerLease,
@@ -518,6 +546,10 @@ class ExperimentExecutionCoordinator(
         occurred_at: datetime,
     ) -> SchedulerTickResult | None:
         snapshot = self._load_snapshot(lease.experiment_id)
+        # A tick may capture its audit time before a concurrent operator control
+        # commits. Preserve the durable projection's monotonic event-time fence
+        # instead of turning a valid pause/resume handoff into an integrity fault.
+        occurred_at = max(occurred_at, snapshot.projection.updated_at)
         _snapshot_rules.validate_worker_limit(snapshot)
         self._recovery.validate_attempt_lineage(snapshot)
         if snapshot.projection.record.status is ExperimentStatus.QUEUED:

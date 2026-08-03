@@ -193,6 +193,16 @@ class CandidateSelectionProcess:
                 expected_revision=request.expected_revision,
                 actual_revision=snapshot.projection.revision,
             )
+        if not any(
+            candidate.candidate_id == candidate_id and not candidate.is_baseline
+            for candidate in snapshot.launch_spec.candidates
+        ):
+            _error(
+                "CANDIDATE_NOT_ELIGIBLE",
+                "candidate_not_eligible",
+                "candidate is not eligible for preselection",
+                candidate_id=request.candidate_id,
+            )
         loaded = self.candidate_evidence_reader.load_current_bundle(
             request.experiment_id,
             request.candidate_id,

@@ -287,7 +287,15 @@ def _run_stock_golden_selection_trace(
         {
             "instrument_id": instrument_ids,
             "roe": [0.05 + instrument_id * 0.005 for instrument_id in instrument_ids],
+            "net_income": [
+                (0.05 + instrument_id * 0.005) * 1_000_000_000.0
+                for instrument_id in instrument_ids
+            ],
+            "equity": [1_000_000_000.0 for _instrument_id in instrument_ids],
             "eps": [0.50 + instrument_id * 0.05 for instrument_id in instrument_ids],
+            "earnings_per_share": [
+                0.50 + instrument_id * 0.05 for instrument_id in instrument_ids
+            ],
             "market_cap": [
                 5_000_000_000.0 + instrument_id * 5_000_000_000.0
                 for instrument_id in instrument_ids

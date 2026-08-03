@@ -56,12 +56,14 @@ from ditto_application.processes.experiments.trial_evidence_bridge import (
 )
 
 __all__ = [
+    "SELECTION_EVIDENCE_ARTIFACT_KIND",
     "DurableSelectionEvidenceService",
     "PublishedSelectionEvidence",
     "SelectionEvidencePublisher",
 ]
 
-_ARTIFACT_KIND = "selection_evidence"
+SELECTION_EVIDENCE_ARTIFACT_KIND = "selection_evidence"
+_ARTIFACT_KIND = SELECTION_EVIDENCE_ARTIFACT_KIND
 _PRIOR_EVIDENCE_POLICY = "missing-is-failed-v1"
 _READABLE_STAGES = frozenset(
     {

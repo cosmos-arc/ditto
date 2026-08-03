@@ -900,7 +900,9 @@ def test_pause_resume_retains_queue_and_never_duplicates_a_fold_claim(
         expected_revision=paused.revision,
         occurred_at=NOW + timedelta(seconds=4),
     )
-    resumed = coordinator.tick(occurred_at=NOW + timedelta(seconds=5))
+    # The scheduler may begin a tick before a concurrent resume commits. The
+    # durable control event is then newer than the tick audit timestamp.
+    resumed = coordinator.tick(occurred_at=NOW + timedelta(seconds=3))
     repeated = coordinator.tick(occurred_at=NOW + timedelta(seconds=6))
 
     assert resumed.state is SchedulerTickState.DISPATCHED

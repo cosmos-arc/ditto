@@ -122,6 +122,7 @@ def _packet(source: R2LiveGateEvidenceSource):
             holdout_claim_id="claim-live",
             candidate_rationale="Exact verified R2 live evidence is attached.",
             selection_trace_artifact_refs=(),
+            selection_exposure=None,
         )
     )
 

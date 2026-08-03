@@ -149,6 +149,17 @@ async def test_http_selection_replay_and_one_shot_holdout_are_durable(  # noqa: 
         missing_key = await client.post(selection_url, json=selection_body)
         assert missing_key.status_code == 422
 
+        baseline = next(
+            candidate for candidate in launch.candidates if candidate.is_baseline
+        )
+        baseline_selection = await client.post(
+            selection_url,
+            json={**selection_body, "candidate_id": str(baseline.candidate_id)},
+            headers={"Idempotency-Key": "selection-http-baseline"},
+        )
+        assert baseline_selection.status_code == 422
+        assert baseline_selection.json()["error_code"] == "CANDIDATE_NOT_ELIGIBLE"
+
         selection_headers = {"Idempotency-Key": "selection-http-001"}
         first_selection = await client.post(
             selection_url,
