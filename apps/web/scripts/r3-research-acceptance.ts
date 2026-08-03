@@ -802,14 +802,16 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				const header = page.getByRole("heading", { name: `Experiment ${experimentId}` });
 				await header.waitFor();
 				const pause = page.getByRole("button", { name: "暂停", exact: true });
-				let control = "terminal-before-control";
-				if (!resumedExistingExperiment && (await pause.isVisible())) {
+				let control: string;
+				if (!resumedExistingExperiment) {
+					await pause.waitFor({ state: "visible" });
+					await expectEnabled(pause);
 					await pause.click();
 					const resume = page.getByRole("button", { name: "恢复", exact: true });
-					await resume.waitFor();
+					await expectEnabled(resume);
 					await resume.click();
 					control = "pause-resume";
-				} else if (resumedExistingExperiment) {
+				} else {
 					control = "resumed-existing-server-truth";
 				}
 				await page

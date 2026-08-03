@@ -226,6 +226,8 @@ describe("R3 research deterministic acceptance contract", () => {
 		]);
 		expect(plan[1]?.description).toContain("candidate-selection gate");
 		expect(plan[3]?.description).toContain("successful terminal state");
+		expect(source).toContain('await pause.waitFor({ state: "visible" })');
+		expect(source).not.toContain("terminal-before-control");
 		expect(source).not.toContain("page.route(");
 		expect(source).not.toContain("route.fulfill(");
 	});
