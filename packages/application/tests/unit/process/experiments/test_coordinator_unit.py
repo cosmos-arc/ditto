@@ -67,6 +67,7 @@ from ditto_application.processes.experiments.coordinator import (
     SchedulerTickState,
 )
 from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentExecutionControlChanged,
     ExperimentSchedulerSnapshot,
     FirstAttempt,
     QueuedAttempt,
@@ -289,6 +290,7 @@ class _SchedulerStore:
         self.write_fences: list[int] = []
         self.raise_lease_lost_on_claim = False
         self.raise_integrity_failure_on_claim = False
+        self.raise_control_changed_on_claim = False
         self.raise_lease_lost_on_fold_transition = False
         self.raise_integrity_on_slot_read = False
         self.claim_barrier: Barrier | None = None
@@ -481,6 +483,25 @@ class _SchedulerStore:
         now_epoch_us: int,
         occurred_at: datetime,
     ) -> tuple[FoldView, AttemptView]:
+        if self.raise_control_changed_on_claim:
+            self.projection = replace(
+                self.projection,
+                record=replace(
+                    self.projection.record,
+                    status=ExperimentStatus.PAUSE_REQUESTED,
+                    desired_state=ExperimentDesiredState.PAUSE,
+                ),
+                revision=self.projection.revision + 1,
+                updated_at=occurred_at,
+            )
+            raise ExperimentExecutionControlChanged(
+                "experiment execution control changed before fold claim",
+                details={
+                    "code": "CONTROL_CHANGED",
+                    "reason": "execution_control_changed_before_start",
+                    "desired_state": "pause",
+                },
+            )
         if self.raise_integrity_failure_on_claim:
             raise ExperimentIntegrityError(
                 "corrupt",
@@ -907,6 +928,25 @@ def test_repeated_tick_uses_durable_capacity_without_duplicate_claim() -> None:
     assert second.state is SchedulerTickState.WAITING
     assert second.dispatches == ()
     assert len(store.claimed_keys) == 2
+
+
+def test_pause_racing_fold_claim_returns_waiting_without_poisoning_authority() -> None:
+    store = _SchedulerStore(worker_count=2, candidate_count=3)
+    store.raise_control_changed_on_claim = True
+    coordinator, _factory = _coordinator(store)
+
+    raced = coordinator.tick(occurred_at=NOW)
+
+    assert raced.state is SchedulerTickState.WAITING
+    assert raced.dispatches == ()
+    assert raced.progress is not None
+    assert raced.progress.live_attempt_count == 0
+    assert store.claimed_keys == []
+
+    store.raise_control_changed_on_claim = False
+    drained = coordinator.tick(occurred_at=NOW + timedelta(seconds=1))
+    assert drained.state is SchedulerTickState.WAITING
+    assert drained.dispatches == ()
 
 
 def test_four_worker_spec_dispatches_four_and_never_uses_an_unbounded_default() -> None:

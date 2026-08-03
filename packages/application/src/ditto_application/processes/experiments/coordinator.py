@@ -79,6 +79,7 @@ from ditto_application.processes.experiments.lease_authority import (
     run_unfenced_scheduler_operation,
 )
 from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentExecutionControlChanged,
     ExperimentSchedulerSnapshot,
     ExperimentSchedulerStoreProtocol,
     FirstAttemptFactory,
@@ -632,7 +633,7 @@ class ExperimentExecutionCoordinator(
             result = _result(terminal_state, snapshot, ())
             self._handoff_operator_gate(terminal_state)
             return result
-        dispatches = self._dispatch_capacity(
+        dispatches = self._dispatch_capacity_respecting_control(
             snapshot,
             lease,
             now_epoch_us=now_epoch_us,
@@ -759,6 +760,29 @@ class ExperimentExecutionCoordinator(
                 )
             )
         return tuple(dispatches)
+
+    def _dispatch_capacity_respecting_control(
+        self,
+        snapshot: ExperimentSchedulerSnapshot,
+        lease: SchedulerLease,
+        *,
+        now_epoch_us: Callable[[], int],
+        occurred_at: datetime,
+    ) -> tuple[ExperimentDispatch, ...]:
+        try:
+            return self._dispatch_capacity(
+                snapshot,
+                lease,
+                now_epoch_us=now_epoch_us,
+                occurred_at=occurred_at,
+            )
+        except ExperimentExecutionControlChanged:
+            # An operator may commit pause/cancel after this tick loaded its
+            # running snapshot but before the first fold claim. The writer is
+            # correct to reject that stale dispatch. Treat the durable control
+            # change as a cooperative scheduling boundary so the next tick can
+            # drain it under the still-usable lease authority.
+            return ()
 
     def _finish_attempt(
         self,

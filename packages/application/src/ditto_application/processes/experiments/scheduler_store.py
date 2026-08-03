@@ -591,15 +591,23 @@ class ExperimentSchedulerStore(ExperimentMutationStoreMixin):
     ) -> tuple[FoldView, AttemptView]:
         if attempt.spec.fold_key != fold.spec.key:
             raise experiment_process_error("attempt_fold_lineage_mismatch")
-        fold_projection, attempt_projection = self._writer.claim_fold_and_add_attempt(
-            fold.spec.key,
-            attempt.spec,
-            attempt.projection,
-            expected_fold_revision=fold.projection.revision,
-            lease_fence=lease.fence,
-            now_epoch_us=now_epoch_us,
-            occurred_at=occurred_at,
-        )
+        try:
+            fold_projection, attempt_projection = (
+                self._writer.claim_fold_and_add_attempt(
+                    fold.spec.key,
+                    attempt.spec,
+                    attempt.projection,
+                    expected_fold_revision=fold.projection.revision,
+                    lease_fence=lease.fence,
+                    now_epoch_us=now_epoch_us,
+                    occurred_at=occurred_at,
+                )
+            )
+        except AnalysisError:
+            self._raise_if_execution_control_changed(
+                AttemptView(attempt.spec, attempt.projection)
+            )
+            raise
         return (
             FoldView(fold.spec, fold_projection),
             AttemptView(attempt.spec, attempt_projection),
