@@ -1106,9 +1106,11 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 
 		steps.push(
 			await executeLiveStep(page, outDir, plan[8], async () => {
+				await page.waitForLoadState("networkidle");
 				await page.reload({ waitUntil: "domcontentloaded" });
 				await page.getByRole("tab", { name: "版本" }).click();
 				await page.getByText("版本历史").waitFor();
+				await page.waitForLoadState("networkidle");
 				invariant(page.url().startsWith(options.reactBase), "refresh escaped the approved React origin");
 				return "hard refresh recovered the live strategy versions and active-pointer view";
 			}),

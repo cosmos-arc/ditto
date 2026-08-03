@@ -313,7 +313,7 @@ describe("R3 research deterministic acceptance contract", () => {
 		expect(source).not.toContain("waitForSelectionActionReady");
 		expect(source.match(/await page\.reload\(/gu)).toHaveLength(1);
 		expect(source).toContain(
-			'await page.reload({ waitUntil: "domcontentloaded" });\n\t\t\t\tawait page.getByRole("tab", { name: "版本" }).click();\n\t\t\t\tawait page.getByText("版本历史").waitFor();',
+			'await page.waitForLoadState("networkidle");\n\t\t\t\tawait page.reload({ waitUntil: "domcontentloaded" });\n\t\t\t\tawait page.getByRole("tab", { name: "版本" }).click();\n\t\t\t\tawait page.getByText("版本历史").waitFor();\n\t\t\t\tawait page.waitForLoadState("networkidle");',
 		);
 		expect(source).not.toContain("terminal-before-control");
 		expect(source).not.toContain("page.route(");
