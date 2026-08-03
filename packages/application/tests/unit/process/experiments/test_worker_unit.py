@@ -1408,6 +1408,7 @@ def test_worker_runs_existing_fold_runner_and_completes_under_renewed_fence(
         "start",
         "renew",
         "renew",
+        "renew",
         "publish",
         "renew",
         "complete",
@@ -1641,6 +1642,7 @@ def test_worker_turns_recoverable_publication_error_into_system_failure() -> Non
     assert [name for name, _ in coordinator.calls] == [
         "renew",
         "start",
+        "renew",
         "renew",
         "renew",
         "publish",
@@ -2304,6 +2306,94 @@ def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
     assert [name for name, _ in coordinator.calls] == ["renew", "start", "renew"]
 
 
+def test_worker_heartbeats_while_fold_runner_is_blocked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(worker_module, "_EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
+    heartbeat_observed = Event()
+
+    class _HeartbeatCoordinator(_Coordinator):
+        def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease:
+            lease = super().renew_lease(occurred_at=occurred_at)
+            if self.renew_calls >= 4:
+                heartbeat_observed.set()
+            return lease
+
+    class _BlockingRunner(_Runner):
+        def run(
+            self,
+            audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> ResearchFoldRunResult:
+            assert heartbeat_observed.wait(timeout=1)
+            return super().run(
+                audit,
+                external_should_stop=external_should_stop,
+            )
+
+    coordinator = _HeartbeatCoordinator()
+    worker = _make_worker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_BlockingRunner(),
+        report_publisher=_Publisher(),
+        clock=lambda: _NOW,
+    )
+
+    result = worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert result.state is ResearchWorkerState.COMPLETED
+    assert heartbeat_observed.is_set()
+
+
+def test_worker_fails_closed_when_background_heartbeat_loses_lease(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(worker_module, "_EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
+    heartbeat_failed = Event()
+
+    class _FailingHeartbeatCoordinator(_Coordinator):
+        def renew_lease(self, *, occurred_at: datetime) -> SchedulerLease:
+            try:
+                return super().renew_lease(occurred_at=occurred_at)
+            finally:
+                if self.renew_calls >= 4:
+                    heartbeat_failed.set()
+
+    class _BlockingRunner(_Runner):
+        def run(
+            self,
+            audit: ResearchExecutionAudit,
+            *,
+            external_should_stop: Callable[[], bool],
+        ) -> ResearchFoldRunResult:
+            assert heartbeat_failed.wait(timeout=1)
+            return super().run(
+                audit,
+                external_should_stop=external_should_stop,
+            )
+
+    coordinator = _FailingHeartbeatCoordinator(renew_error_on_call=4)
+    publisher = _Publisher()
+    worker = _make_worker(
+        coordinator=coordinator,
+        semantics_resolver=_Resolver(_semantics()),
+        runner=_BlockingRunner(),
+        report_publisher=publisher,
+        clock=lambda: _NOW,
+    )
+
+    with pytest.raises(AppProcessError) as captured:
+        worker.execute(_dispatch(), occurred_at=_NOW)
+
+    assert captured.value.details["code"] == "LEASE_LOST"
+    assert heartbeat_failed.is_set()
+    assert publisher.calls == []
+    assert "complete" not in [name for name, _ in coordinator.calls]
+    assert "fail" not in [name for name, _ in coordinator.calls]
+
+
 def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
     coordinator = _Coordinator()
     publisher = _Publisher()
@@ -2323,6 +2413,7 @@ def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
     assert [name for name, _ in coordinator.calls] == [
         "renew",
         "start",
+        "renew",
         "renew",
         "renew",
         "renew",

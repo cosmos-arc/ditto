@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from threading import Event, Thread
 from typing import Protocol, cast
 
 from ditto_analysis.experiments import (
@@ -110,6 +111,7 @@ _EXECUTABLE_STAGE_ROLES = {
     ExperimentStage.HOLDOUT: FoldRole.HOLDOUT,
     ExperimentStage.WALK_FORWARD: FoldRole.WALK_FORWARD,
 }
+_EXECUTION_HEARTBEAT_INTERVAL_SECONDS = 30.0
 
 
 def _worker_error(reason: str, **details: object) -> AppProcessError:
@@ -249,6 +251,39 @@ class ResearchCandidateExecutionError(RuntimeError):
 
 class _ResearchCooperativeStopError(RuntimeError):
     """Internal marker preventing a stopped engine from becoming completed."""
+
+
+class _ExecutionLeaseHeartbeat:
+    """Renew durable execution authority while a fold call is blocking."""
+
+    def __init__(
+        self,
+        control: ResearchExecutionControl,
+        interval_seconds: float,
+    ) -> None:
+        if interval_seconds <= 0:
+            raise ValueError("heartbeat_interval_must_be_positive")
+        self._control = control
+        self._interval_seconds = interval_seconds
+        self._stop = Event()
+        self._thread = Thread(
+            target=self._run,
+            name="ditto-research-lease-heartbeat",
+            daemon=True,
+        )
+
+    def __enter__(self) -> _ExecutionLeaseHeartbeat:
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_error: object) -> None:
+        self._stop.set()
+        self._thread.join()
+
+    def _run(self) -> None:
+        while not self._stop.wait(self._interval_seconds):
+            if self._control.should_stop():
+                return
 
 
 def _require_execution_authority(control: ResearchExecutionControl) -> None:
@@ -573,12 +608,16 @@ class ResearchExperimentWorker:
             clock=self._clock,
         )
         try:
-            run_result = self._run_fold(
-                persisted,
-                attempt,
-                run_id,
+            with _ExecutionLeaseHeartbeat(
                 execution_control,
-            )
+                _EXECUTION_HEARTBEAT_INTERVAL_SECONDS,
+            ):
+                run_result = self._run_fold(
+                    persisted,
+                    attempt,
+                    run_id,
+                    execution_control,
+                )
             report_evidence = _require_completed_report_evidence(run_result)
             _require_fold_selection_trace_contract(
                 attempt,
@@ -724,8 +763,7 @@ class ResearchExperimentWorker:
             audit,
             external_should_stop=execution_control.should_stop,
         )
-        if execution_control.failure is not None:
-            raise execution_control.failure
+        _require_execution_authority(execution_control)
         if type(cast("object", run_result)) is not ResearchFoldRunResult:
             raise _worker_error("invalid_research_fold_run_result")
         if run_result.state is ResearchFoldRunState.STOPPED:

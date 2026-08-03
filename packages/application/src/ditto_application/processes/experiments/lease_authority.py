@@ -582,41 +582,45 @@ class ResearchExecutionControl:
         self._coordinator = coordinator
         self._attempt_id = attempt_id
         self._clock = clock
+        self._lock = RLock()
         self._failure: AppProcessError | None = None
         self._directive = ResearchExecutionDirective.RUN
 
     @property
     def failure(self) -> AppProcessError | None:
         """Return the first durable authority failure, if one occurred."""
-        return self._failure
+        with self._lock:
+            return self._failure
 
     @property
     def directive(self) -> ResearchExecutionDirective:
         """Return the latest durable execution directive observed."""
-        return self._directive
+        with self._lock:
+            return self._directive
 
     def should_stop(self) -> bool:
         """Renew, read server truth, and fail closed on authority errors."""
-        if self._failure is not None:
-            return True
-        try:
-            occurred_at = self._clock()
-            self._coordinator.renew_lease(occurred_at=occurred_at)
-            self._directive = self._coordinator.poll_execution_directive(
-                self._attempt_id,
-                occurred_at=occurred_at,
-            )
-        except AppProcessError as error:
-            self._failure = error
-            return True
-        except Exception as error:  # pragma: no cover - defensive port boundary
-            self._failure = AppProcessError(
-                "research execution lease renewal failed",
-                details={
-                    "code": "SYSTEM_ERROR",
-                    "reason": "lease_renewal_failed",
-                    "error_type": type(error).__name__,
-                },
-            )
-            return True
-        return self._directive is not ResearchExecutionDirective.RUN
+        with self._lock:
+            if self._failure is not None:
+                return True
+            try:
+                occurred_at = self._clock()
+                self._coordinator.renew_lease(occurred_at=occurred_at)
+                self._directive = self._coordinator.poll_execution_directive(
+                    self._attempt_id,
+                    occurred_at=occurred_at,
+                )
+            except AppProcessError as error:
+                self._failure = error
+                return True
+            except Exception as error:  # pragma: no cover - defensive port boundary
+                self._failure = AppProcessError(
+                    "research execution lease renewal failed",
+                    details={
+                        "code": "SYSTEM_ERROR",
+                        "reason": "lease_renewal_failed",
+                        "error_type": type(error).__name__,
+                    },
+                )
+                return True
+            return self._directive is not ResearchExecutionDirective.RUN
