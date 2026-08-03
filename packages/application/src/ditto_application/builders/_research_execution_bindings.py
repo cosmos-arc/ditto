@@ -14,6 +14,7 @@ from ditto_application.builders.published_baseline_runtime_builder import (
 )
 from ditto_application.builders.research_factor_registry import ResearchFactorBinding
 from ditto_application.builders.research_runtime_builder import (
+    ResearchEvidenceReplayRuntimeBuilder,
     ResearchRuntimeBuilder,
     ResearchSnapshotIdentity,
     ResearchStrategyRuntime,
@@ -101,7 +102,11 @@ def read_exact_strategy_record(
 
 def build_research_runtime(
     *,
-    builder: ResearchRuntimeBuilder | PublishedBaselineRuntimeBuilder,
+    builder: (
+        ResearchRuntimeBuilder
+        | ResearchEvidenceReplayRuntimeBuilder
+        | PublishedBaselineRuntimeBuilder
+    ),
     record: StrategySpecRecord,
     version_status: str,
     parameters: tuple[CandidateParameter, ...],

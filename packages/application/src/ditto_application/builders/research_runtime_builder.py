@@ -34,6 +34,7 @@ from ditto_application.processes.execution.factor_bridge import (
 )
 
 __all__ = [
+    "ResearchEvidenceReplayRuntimeBuilder",
     "ResearchRuntimeBuilder",
     "ResearchSnapshotIdentity",
     "ResearchStrategyRuntime",
@@ -428,6 +429,57 @@ ConstrainedResearchRuntimeCompiler = _ConstrainedResearchRuntimeCompiler
 research_runtime_error = _builder_error
 require_exact_research_record = _require_research_record
 require_research_snapshot_identity = _require_snapshot_identity
+
+
+class ResearchEvidenceReplayRuntimeBuilder:
+    """Rebuild immutable candidate evidence after governance has closed research."""
+
+    _ALLOWED_STATUSES = frozenset({"deprecated", "published"})
+
+    def __init__(
+        self,
+        *,
+        node_registry: NodeRegistry | None = None,
+        node_pipeline_builder: NodePipelineBuilder | None = None,
+        factor_registry: ResearchFactorRegistry | None = None,
+        factor_compiler: ExpressionCompiler | None = None,
+    ) -> None:
+        self._compiler = _ConstrainedResearchRuntimeCompiler(
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+            factor_registry=factor_registry,
+            factor_compiler=factor_compiler,
+        )
+
+    def build(
+        self,
+        *,
+        record: StrategySpecRecord,
+        candidate_parameters: tuple[CandidateParameter, ...],
+        snapshot_identity: ResearchSnapshotIdentity,
+        version_status: str,
+        evidence_sink: SelectionEvidenceSink | None = None,
+    ) -> ResearchStrategyRuntime:
+        """Compile one exact terminal version solely for durable evidence replay."""
+        record = _require_research_record(record)
+        snapshot_identity = _require_snapshot_identity(snapshot_identity)
+        if version_status not in self._ALLOWED_STATUSES:
+            raise _builder_error(
+                "strategy version is not eligible for evidence replay",
+                reason="research_evidence_replay_status_invalid",
+                path="version_status",
+                strategy_id=record.strategy_id,
+                strategy_version=record.version,
+                version_status=version_status,
+                allowed_statuses=tuple(sorted(self._ALLOWED_STATUSES)),
+            )
+        return self._compiler.compile(
+            record=record,
+            candidate_parameters=candidate_parameters,
+            snapshot_identity=snapshot_identity,
+            version_status=version_status,
+            evidence_sink=evidence_sink,
+        )
 
 
 class ResearchRuntimeBuilder:

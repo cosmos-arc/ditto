@@ -2416,6 +2416,5 @@ def test_worker_never_completes_a_cooperatively_stopped_engine() -> None:
         "renew",
         "renew",
         "renew",
-        "renew",
         "fail",
     ]

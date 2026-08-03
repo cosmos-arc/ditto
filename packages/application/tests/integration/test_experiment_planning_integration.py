@@ -60,6 +60,7 @@ from ditto_application.builders.research_execution_resolver import (
 )
 from ditto_application.builders.research_factor_registry import ResearchFactorBinding
 from ditto_application.builders.research_runtime_builder import (
+    ResearchEvidenceReplayRuntimeBuilder,
     ResearchRuntimeBuilder,
     ResearchStrategyRuntime,
 )
@@ -780,6 +781,7 @@ def test_invalid_promotion_objective_is_rejected_before_probe_or_sql_write(
 class _ExactStrategyReader:
     def __init__(self) -> None:
         self.calls: list[tuple[str, int]] = []
+        self.candidate_status = "draft"
 
     def get_spec(self, strategy_id: str, version: int) -> StrategySpecRecord | None:
         self.calls.append((strategy_id, version))
@@ -795,7 +797,7 @@ class _ExactStrategyReader:
     def get_version_state(self, strategy_id: str, version: int) -> str | None:
         if strategy_id != "seed_etf_rotation" or version not in {2, 3}:
             return None
-        return "published" if version == 2 else "draft"
+        return "published" if version == 2 else self.candidate_status
 
 
 def _exact_factor_binding() -> ResearchFactorBinding:
@@ -893,9 +895,14 @@ class _ExactRuntimeBuilder:
 def _runtime_builders(
     candidate: _ExactRuntimeBuilder,
     published_baseline: _ExactRuntimeBuilder,
+    candidate_replay: _ExactRuntimeBuilder | None = None,
 ) -> ResearchExecutionRuntimeBuilders:
     return ResearchExecutionRuntimeBuilders(
         candidate=cast("ResearchRuntimeBuilder", candidate),
+        candidate_replay=cast(
+            "ResearchEvidenceReplayRuntimeBuilder",
+            candidate_replay or _ExactRuntimeBuilder(),
+        ),
         published_baseline=cast(
             "PublishedBaselineRuntimeBuilder",
             published_baseline,
@@ -1093,18 +1100,25 @@ def _resolver_with_distinct_runtime_lanes(
     DurableResearchExecutionResolver,
     _ExactRuntimeBuilder,
     _ExactRuntimeBuilder,
+    _ExactRuntimeBuilder,
 ]:
     candidate = _ExactRuntimeBuilder()
+    candidate_replay = _ExactRuntimeBuilder()
     published_baseline = _ExactRuntimeBuilder()
     return (
         DurableResearchExecutionResolver(
             experiment_reader=reader,
             strategy_reader=strategy_reader,
-            runtime_builders=_runtime_builders(candidate, published_baseline),
+            runtime_builders=_runtime_builders(
+                candidate,
+                published_baseline,
+                candidate_replay,
+            ),
             input_resolver=input_resolver,
             environment=CodeEnvironmentLock("git:test", "7" * 64),
         ),
         candidate,
+        candidate_replay,
         published_baseline,
     )
 
@@ -1155,6 +1169,30 @@ def _assert_exact_baseline_required_datasets_drift_is_rejected(
     assert exc_info.value.details["reason"] == (
         "baseline_runtime_validation_evidence_drift"
     )
+
+
+def _assert_terminal_candidate_evidence_replay(
+    *,
+    resolver: DurableResearchExecutionResolver,
+    strategy_reader: _ExactStrategyReader,
+    binder_fold: FoldView,
+    binder: ResearchExecutionSemantics,
+    candidate_runtime_builder: _ExactRuntimeBuilder,
+    candidate_replay_runtime_builder: _ExactRuntimeBuilder,
+    input_resolver: _ExactInputsResolver,
+) -> None:
+    initial_candidate_calls = tuple(candidate_runtime_builder.calls)
+    assert len(input_resolver.calls) == 3
+    strategy_reader.candidate_status = "published"
+    try:
+        historical_replay = resolver.resolve(binder_fold)
+    finally:
+        strategy_reader.candidate_status = "draft"
+    assert historical_replay.reproduction_fingerprint == binder.reproduction_fingerprint
+    assert tuple(candidate_runtime_builder.calls) == initial_candidate_calls
+    assert candidate_replay_runtime_builder.calls == [(3, "published")]
+    assert strategy_reader.calls[-1] == ("seed_etf_rotation", 3)
+    assert len(input_resolver.calls) == 4
 
 
 def _assert_exact_baseline_runtime_is_frozen(
@@ -1220,12 +1258,15 @@ def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identi
             if item.spec.key.candidate_id == baseline_id
             and item.spec.fold_role is FoldRole.EXPLORATION
         )
-        resolver, candidate_runtime_builder, published_baseline_builder = (
-            _resolver_with_distinct_runtime_lanes(
-                reader,
-                strategy_reader,
-                input_resolver,
-            )
+        (
+            resolver,
+            candidate_runtime_builder,
+            candidate_replay_runtime_builder,
+            published_baseline_builder,
+        ) = _resolver_with_distinct_runtime_lanes(
+            reader,
+            strategy_reader,
+            input_resolver,
         )
 
         binder = resolver.resolve(binder_fold)
@@ -1267,7 +1308,15 @@ def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identi
             candidate_runtime_builder.calls,
             published_baseline_builder.calls,
         ) == ([(3, "draft"), (3, "draft")], [(2, "published")])
-        assert len(input_resolver.calls) == 3
+        _assert_terminal_candidate_evidence_replay(
+            resolver=resolver,
+            strategy_reader=strategy_reader,
+            binder_fold=binder_fold,
+            binder=binder,
+            candidate_runtime_builder=candidate_runtime_builder,
+            candidate_replay_runtime_builder=candidate_replay_runtime_builder,
+            input_resolver=input_resolver,
+        )
         assert all(item.snapshot == _exact_snapshot() for item in input_resolver.calls)
         assert all(
             item.universe == ExactUniverseIdentity("csi_etf_broad", "9" * 64)

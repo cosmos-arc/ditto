@@ -27,6 +27,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
     PublishedBaselineRuntimeBuilder,
+    ResearchEvidenceReplayRuntimeBuilder,
     ResearchRuntimeBuilder,
     StrategyRuntimeBuilder,
     StrategyServiceFactory,
@@ -89,6 +90,18 @@ class AppBuilderFactory(Provider):
     ) -> ResearchRuntimeBuilder:
         """Explicit-version research runtime with no catalog writer dependency."""
         return ResearchRuntimeBuilder(
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+        )
+
+    @provide
+    def research_evidence_replay_runtime_builder(
+        self,
+        node_registry: NodeRegistry,
+        node_pipeline_builder: NodePipelineBuilder,
+    ) -> ResearchEvidenceReplayRuntimeBuilder:
+        """Compile exact terminal candidate versions for immutable evidence replay."""
+        return ResearchEvidenceReplayRuntimeBuilder(
             node_registry=node_registry,
             node_pipeline_builder=node_pipeline_builder,
         )

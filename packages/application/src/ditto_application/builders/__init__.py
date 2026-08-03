@@ -17,6 +17,7 @@ from ditto_application.builders.research_input_resolver import (
     IndexedResearchInputsResolver,
 )
 from ditto_application.builders.research_runtime_builder import (
+    ResearchEvidenceReplayRuntimeBuilder,
     ResearchRuntimeBuilder,
     ResearchSnapshotIdentity,
     ResearchStrategyRuntime,
@@ -41,6 +42,7 @@ __all__ = [
     "PublishedBacktestRuntime",
     "PublishedBaselineRuntimeBuilder",
     "PublishedStrategyRuntime",
+    "ResearchEvidenceReplayRuntimeBuilder",
     "ResearchRuntimeBuilder",
     "ResearchSnapshotIdentity",
     "ResearchStrategyRuntime",

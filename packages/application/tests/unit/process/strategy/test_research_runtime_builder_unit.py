@@ -902,6 +902,46 @@ def test_research_builder_rejects_published_version_without_boolean_bypass() -> 
     assert exc_info.value.details["reason"] == "research_version_not_buildable"
 
 
+@pytest.mark.parametrize("version_status", ["published", "deprecated"])
+def test_research_evidence_replay_builder_accepts_terminal_governance_statuses(
+    version_status: str,
+) -> None:
+    """Immutable evidence remains replayable after its version leaves research."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchEvidenceReplayRuntimeBuilder,
+    )
+
+    runtime = ResearchEvidenceReplayRuntimeBuilder().build(
+        record=_record(),
+        candidate_parameters=(),
+        snapshot_identity=_snapshot(),
+        version_status=version_status,
+    )
+
+    assert runtime.version_status == version_status
+
+
+@pytest.mark.parametrize("version_status", ["draft", "review", "unknown"])
+def test_research_evidence_replay_builder_rejects_nonterminal_statuses(
+    version_status: str,
+) -> None:
+    """The replay-only adapter cannot become a bypass for live research builds."""
+    from ditto_application.builders.research_runtime_builder import (
+        ResearchEvidenceReplayRuntimeBuilder,
+    )
+
+    with pytest.raises(AppBuilderError) as exc_info:
+        ResearchEvidenceReplayRuntimeBuilder().build(
+            record=_record(),
+            candidate_parameters=(),
+            snapshot_identity=_snapshot(),
+            version_status=version_status,
+        )
+
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert exc_info.value.details["reason"] == "research_evidence_replay_status_invalid"
+
+
 def test_research_builder_fails_closed_for_native_v2_without_executor() -> None:
     """Task3 does not pretend arbitrary native V2 nodes have a runtime executor."""
     from ditto_application.builders.research_runtime_builder import (

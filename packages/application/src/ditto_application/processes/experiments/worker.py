@@ -262,7 +262,7 @@ class _ExecutionLeaseHeartbeat:
         interval_seconds: float,
     ) -> None:
         if interval_seconds <= 0:
-            raise ValueError("heartbeat_interval_must_be_positive")
+            raise _worker_error("heartbeat_interval_must_be_positive")
         self._control = control
         self._interval_seconds = interval_seconds
         self._stop = Event()
@@ -763,15 +763,18 @@ class ResearchExperimentWorker:
             audit,
             external_should_stop=execution_control.should_stop,
         )
-        _require_execution_authority(execution_control)
         if type(cast("object", run_result)) is not ResearchFoldRunResult:
             raise _worker_error("invalid_research_fold_run_result")
         if run_result.state is ResearchFoldRunState.STOPPED:
+            failure = execution_control.failure
+            if failure is not None:
+                raise failure
             if execution_control.directive is ResearchExecutionDirective.RUN:
                 raise _worker_error("stop_without_durable_control")
             raise _ResearchCooperativeStopError(
                 "research backtest stopped cooperatively"
             )
+        _require_execution_authority(execution_control)
         if (
             run_result.state is not ResearchFoldRunState.COMPLETED
             or type(run_result.report_evidence) is not BacktestReportEvidence

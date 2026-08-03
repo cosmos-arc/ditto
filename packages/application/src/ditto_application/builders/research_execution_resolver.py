@@ -20,7 +20,10 @@ from ditto_application.builders._research_execution_bindings import (
 from ditto_application.builders.published_baseline_runtime_builder import (
     PublishedBaselineRuntimeBuilder,
 )
-from ditto_application.builders.research_runtime_builder import ResearchRuntimeBuilder
+from ditto_application.builders.research_runtime_builder import (
+    ResearchEvidenceReplayRuntimeBuilder,
+    ResearchRuntimeBuilder,
+)
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.factor_bridge import (
     compiled_expressions_execution_hash,
@@ -85,9 +88,10 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class ResearchExecutionRuntimeBuilders:
-    """Typed candidate and published-baseline compiler lanes."""
+    """Typed active, historical-replay, and published-baseline compiler lanes."""
 
     candidate: ResearchRuntimeBuilder
+    candidate_replay: ResearchEvidenceReplayRuntimeBuilder
     published_baseline: PublishedBaselineRuntimeBuilder
 
 
@@ -110,6 +114,7 @@ class DurableResearchExecutionResolver:
         self._experiments = experiment_reader
         self._strategies = strategy_reader
         self._candidate_runtime_builder = runtime_builders.candidate
+        self._candidate_replay_runtime_builder = runtime_builders.candidate_replay
         self._published_baseline_builder = runtime_builders.published_baseline
         self._inputs = input_resolver
         self._environment = environment
@@ -255,8 +260,13 @@ class DurableResearchExecutionResolver:
             ),
         )
         record, version_status = read_exact_strategy_record(self._strategies, exact)
+        runtime_builder = (
+            self._candidate_replay_runtime_builder
+            if version_status in {"deprecated", "published"}
+            else self._candidate_runtime_builder
+        )
         runtime = build_research_runtime(
-            builder=self._candidate_runtime_builder,
+            builder=runtime_builder,
             record=record,
             version_status=version_status,
             parameters=planned.binder_parameters,

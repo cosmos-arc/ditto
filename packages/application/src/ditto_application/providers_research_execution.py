@@ -39,6 +39,7 @@ from ditto_application.builders import (
     IndexedResearchArtifactLoader,
     IndexedResearchInputsResolver,
     PublishedBaselineRuntimeBuilder,
+    ResearchEvidenceReplayRuntimeBuilder,
     ResearchRuntimeBuilder,
     build_code_environment_lock,
 )
@@ -263,11 +264,13 @@ class AppResearchExecutionProvider(Provider):
     def research_execution_runtime_builders(
         self,
         candidate: ResearchRuntimeBuilder,
+        candidate_replay: ResearchEvidenceReplayRuntimeBuilder,
         published_baseline: PublishedBaselineRuntimeBuilder,
     ) -> ResearchExecutionRuntimeBuilders:
-        """把 candidate + published-baseline runtime lanes 打包成 typed dataclass。"""
+        """Bundle active, historical-replay, and published-baseline runtimes."""
         return ResearchExecutionRuntimeBuilders(
             candidate=candidate,
+            candidate_replay=candidate_replay,
             published_baseline=published_baseline,
         )
 
