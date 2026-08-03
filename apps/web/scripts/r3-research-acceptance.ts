@@ -698,6 +698,19 @@ function responseData(value: unknown): Record<string, unknown> | null {
 	return typeof data === "object" && data !== null ? (data as Record<string, unknown>) : null;
 }
 
+export function hasPersistedCandidateSelection(
+	experiment: Readonly<Record<string, unknown>>,
+	experimentId: string,
+): boolean {
+	invariant(Object.hasOwn(experiment, "selection_state"), "experiment detail omitted selection_state");
+	const selection = experiment.selection_state;
+	if (selection === null) return false;
+	const state = recordValue(selection, "selection_state");
+	invariant(state.experiment_id === experimentId, "persisted selection experiment identity did not match");
+	stringValue(state, "selection_id");
+	return true;
+}
+
 async function browserApiGet(page: Page, path: string): Promise<Record<string, unknown>> {
 	const payload = await page.evaluate(async (apiPath) => {
 		const response = await fetch(apiPath);
@@ -765,6 +778,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 	let experimentId: string | null = planning.experiment_id;
 	let promotedVersion: number | null = null;
 	let resumedExistingExperiment = false;
+	let persistedCandidateSelection = false;
 	const strategyId = planning.strategy.strategy_id;
 	try {
 		steps.push(
@@ -824,6 +838,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 
 		steps.push(
 			await executeLiveStep(page, outDir, plan[2], async () => {
+				invariant(experimentId, "experiment identity was unavailable during candidate evidence review");
 				const select = page.locator('button[data-candidate-role="eligible"]').first();
 				await select.waitFor();
 				const candidateRow = select.locator("xpath=..");
@@ -833,13 +848,14 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await candidateRow.getByRole("button", { name: "查看证据" }).click();
 				await page.getByRole("heading", { name: /Candidate evidence/u }).waitFor();
 				await page.getByText("factor-contributions", { exact: true }).waitFor();
-				const recoveredHoldout = page.getByRole("button", { name: "执行一次性 Holdout" });
-				const action = await waitForSelectionActionReady(
-					async () => (await recoveredHoldout.isVisible()) && (await recoveredHoldout.isEnabled()),
-					() => select.isEnabled(),
-					(milliseconds) => page.waitForTimeout(milliseconds),
+				const serverExperiment = await browserApiGet(
+					page,
+					`/api/v1/research/experiments/${encodeURIComponent(experimentId)}`,
 				);
-				if (action === "recovered") {
+				persistedCandidateSelection = hasPersistedCandidateSelection(serverExperiment, experimentId);
+				const recoveredHoldout = page.getByRole("button", { name: "执行一次性 Holdout" });
+				if (persistedCandidateSelection) {
+					await expectEnabled(recoveredHoldout);
 					return `inspected live comparison and evidence for ${await pin.getAttribute("aria-label")}; recovered persisted candidate selection`;
 				}
 				await page
@@ -854,12 +870,8 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 			await executeLiveStep(page, outDir, plan[3], async () => {
 				const select = page.locator('button[data-candidate-role="eligible"]').first();
 				const holdout = page.getByRole("button", { name: "执行一次性 Holdout" });
-				const action = await waitForSelectionActionReady(
-					async () => (await holdout.isVisible()) && (await holdout.isEnabled()),
-					() => select.isEnabled(),
-					(milliseconds) => page.waitForTimeout(milliseconds),
-				);
-				if (action === "selectable") {
+				if (!persistedCandidateSelection) {
+					await expectEnabled(select);
 					await select.click();
 				}
 				await expectEnabled(holdout);
@@ -1022,23 +1034,6 @@ export async function waitForEnabled(
 	const startedAt = Date.now();
 	while (!(await probe())) {
 		if (Date.now() - startedAt >= timeoutMs) throw new Error(`element did not become enabled within ${timeoutMs}ms`);
-		await pause(500);
-	}
-}
-
-export async function waitForSelectionActionReady(
-	recoveredHoldout: () => Promise<boolean>,
-	selectableCandidate: () => Promise<boolean>,
-	pause: (milliseconds: number) => Promise<unknown>,
-	timeoutMs = 300_000,
-): Promise<"recovered" | "selectable"> {
-	const startedAt = Date.now();
-	while (true) {
-		if (await recoveredHoldout()) return "recovered";
-		if (await selectableCandidate()) return "selectable";
-		if (Date.now() - startedAt >= timeoutMs) {
-			throw new Error(`selection action did not become ready within ${timeoutMs}ms`);
-		}
 		await pause(500);
 	}
 }

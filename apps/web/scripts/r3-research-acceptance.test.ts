@@ -208,24 +208,20 @@ describe("R3 research deterministic acceptance contract", () => {
 		await expect(waitForEnabled(async () => false, async () => undefined, 0)).rejects.toThrow("did not become enabled");
 	});
 
-	it("waits through recovered-selection hydration before choosing the live action", async () => {
-		const { waitForSelectionActionReady } = await loadAcceptance();
-		let probes = 0;
+	it("uses persisted experiment truth to choose the live selection path", async () => {
+		const { hasPersistedCandidateSelection } = await loadAcceptance();
 
-		await expect(
-			waitForSelectionActionReady(
-				async () => {
-					probes += 1;
-					return probes >= 3;
-				},
-				async () => false,
-				async () => undefined,
-				100,
+		expect(hasPersistedCandidateSelection({ selection_state: null }, "exp-1")).toBe(false);
+		expect(
+			hasPersistedCandidateSelection(
+				{ selection_state: { experiment_id: "exp-1", selection_id: "selection-1" } },
+				"exp-1",
 			),
-		).resolves.toBe("recovered");
-		await expect(
-			waitForSelectionActionReady(async () => false, async () => true, async () => undefined, 100),
-		).resolves.toBe("selectable");
+		).toBe(true);
+		expect(() => hasPersistedCandidateSelection({}, "exp-1")).toThrow("selection_state");
+		expect(() =>
+			hasPersistedCandidateSelection({ selection_state: { experiment_id: "wrong" } }, "exp-1"),
+		).toThrow("experiment identity");
 	});
 
 	it("binds every approved live browser checkpoint without request interception", async () => {
@@ -248,8 +244,8 @@ describe("R3 research deterministic acceptance contract", () => {
 		expect(plan[3]?.description).toContain("successful terminal state");
 		expect(source).toContain('await pause.waitFor({ state: "visible" })');
 		expect(source).toContain("Selection evidence is publishing; candidate promotion remains locked.");
-		expect(source.match(/await waitForSelectionActionReady\(/gu)).toHaveLength(2);
-		expect(source).not.toContain("if (!(await holdout.isVisible()))");
+		expect(source).toContain("hasPersistedCandidateSelection(serverExperiment, experimentId)");
+		expect(source).not.toContain("waitForSelectionActionReady");
 		expect(source.match(/await page\.reload\(/gu)).toHaveLength(1);
 		expect(source).not.toContain("terminal-before-control");
 		expect(source).not.toContain("page.route(");
