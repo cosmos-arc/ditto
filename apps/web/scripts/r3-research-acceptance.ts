@@ -569,6 +569,15 @@ function isExpectedNetworkStatus(status: number, url: string): boolean {
 	);
 }
 
+export function isExpectedBrowserRequestFailure(error: string, url: string, reactBase: string): boolean {
+	if (error !== "net::ERR_ABORTED") return false;
+	try {
+		return new URL(url).origin === new URL(reactBase).origin;
+	} catch {
+		return false;
+	}
+}
+
 async function sha256File(path: string): Promise<string> {
 	return sha256(await readFile(path));
 }
@@ -810,12 +819,13 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 	});
 	page.on("pageerror", (error) => pageErrors.push(error.message.slice(0, OUTPUT_LIMIT)));
 	page.on("requestfailed", (request) => {
+		const error = request.failure()?.errorText ?? "request failed";
 		networkErrors.push({
 			method: request.method(),
 			url: redactedUrl(request.url()),
 			status: null,
-			error: request.failure()?.errorText ?? "request failed",
-			expected: false,
+			error,
+			expected: isExpectedBrowserRequestFailure(error, request.url(), options.reactBase),
 		});
 	});
 	page.on("response", (response) => {

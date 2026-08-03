@@ -93,6 +93,32 @@ describe("R3 research deterministic acceptance contract", () => {
 		);
 	});
 
+	it("classifies Chromium navigation cancellation without hiding real request failures", async () => {
+		const { isExpectedBrowserRequestFailure } = await loadAcceptance();
+
+		expect(
+			isExpectedBrowserRequestFailure(
+				"net::ERR_ABORTED",
+				"http://127.0.0.1:5173/api/v1/research/experiments/exp-1/comparison",
+				"http://127.0.0.1:5173",
+			),
+		).toBe(true);
+		expect(
+			isExpectedBrowserRequestFailure(
+				"net::ERR_FAILED",
+				"http://127.0.0.1:5173/api/v1/research/experiments/exp-1/comparison",
+				"http://127.0.0.1:5173",
+			),
+		).toBe(false);
+		expect(
+			isExpectedBrowserRequestFailure(
+				"net::ERR_ABORTED",
+				"https://example.com/api/v1/research/experiments/exp-1/comparison",
+				"http://127.0.0.1:5173",
+			),
+		).toBe(false);
+	});
+
 	it("loads the exact backend planning document used by live Studio", async () => {
 		const { livePlanningJsonFields, loadLivePlanningDocument } = await loadAcceptance();
 		const root = await mkdtemp(join(tmpdir(), "ditto-r3-live-planning-"));
