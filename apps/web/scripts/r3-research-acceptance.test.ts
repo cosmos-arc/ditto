@@ -209,15 +209,34 @@ describe("R3 research deterministic acceptance contract", () => {
 	});
 
 	it("uses persisted experiment truth to choose the live selection path", async () => {
-		const { hasPersistedCandidateSelection } = await loadAcceptance();
+		const { hasPersistedCandidateSelection, persistedHoldoutClaimId } = await loadAcceptance();
 
 		expect(hasPersistedCandidateSelection({ selection_state: null }, "exp-1")).toBe(false);
+		expect(persistedHoldoutClaimId({ selection_state: null }, "exp-1")).toBeNull();
 		expect(
 			hasPersistedCandidateSelection(
-				{ selection_state: { experiment_id: "exp-1", selection_id: "selection-1" } },
+				{
+					selection_state: {
+						experiment_id: "exp-1",
+						selection_id: "selection-1",
+						holdout_claim_id: "claim-1",
+					},
+				},
 				"exp-1",
 			),
 		).toBe(true);
+		expect(
+			persistedHoldoutClaimId(
+				{
+					selection_state: {
+						experiment_id: "exp-1",
+						selection_id: "selection-1",
+						holdout_claim_id: "claim-1",
+					},
+				},
+				"exp-1",
+			),
+		).toBe("claim-1");
 		expect(() => hasPersistedCandidateSelection({}, "exp-1")).toThrow("selection_state");
 		expect(() =>
 			hasPersistedCandidateSelection({ selection_state: { experiment_id: "wrong" } }, "exp-1"),

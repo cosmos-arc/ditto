@@ -711,6 +711,18 @@ export function hasPersistedCandidateSelection(
 	return true;
 }
 
+export function persistedHoldoutClaimId(
+	experiment: Readonly<Record<string, unknown>>,
+	experimentId: string,
+): string | null {
+	if (!hasPersistedCandidateSelection(experiment, experimentId)) return null;
+	const state = recordValue(experiment.selection_state, "selection_state");
+	invariant(Object.hasOwn(state, "holdout_claim_id"), "selection_state omitted holdout_claim_id");
+	const claimId = state.holdout_claim_id;
+	if (claimId === null) return null;
+	return stringValue(state, "holdout_claim_id");
+}
+
 async function browserApiGet(page: Page, path: string): Promise<Record<string, unknown>> {
 	const payload = await page.evaluate(async (apiPath) => {
 		const response = await fetch(apiPath);
@@ -779,6 +791,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 	let promotedVersion: number | null = null;
 	let resumedExistingExperiment = false;
 	let persistedCandidateSelection = false;
+	let persistedHoldoutClaim: string | null = null;
 	const strategyId = planning.strategy.strategy_id;
 	try {
 		steps.push(
@@ -815,9 +828,19 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				invariant(experimentId, "experiment launch did not produce an identity");
 				const header = page.getByRole("heading", { name: `Experiment ${experimentId}` });
 				await header.waitFor();
+				const serverExperiment = await browserApiGet(
+					page,
+					`/api/v1/research/experiments/${encodeURIComponent(experimentId)}`,
+				);
 				const pause = page.getByRole("button", { name: "暂停", exact: true });
 				let control: string;
-				if (!resumedExistingExperiment) {
+				if (resumedExistingExperiment && serverExperiment.status === "completed") {
+					await page
+						.locator('[data-contract-slot="experiment-meta"]')
+						.getByText(/completed/iu)
+						.waitFor();
+					control = "resumed-terminal-server-truth";
+				} else if (!resumedExistingExperiment) {
 					await pause.waitFor({ state: "visible" });
 					await expectEnabled(pause);
 					await pause.click();
@@ -828,11 +851,13 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				} else {
 					control = "resumed-existing-server-truth";
 				}
-				await page
-					.locator('[data-contract-slot="experiment-meta"]')
-					.getByText(/candidate_selection/iu)
-					.waitFor();
-				return `polling reached the candidate-selection gate; control=${control}`;
+				if (serverExperiment.status !== "completed") {
+					await page
+						.locator('[data-contract-slot="experiment-meta"]')
+						.getByText(/candidate_selection/iu)
+						.waitFor();
+				}
+				return `polling recovered experiment lifecycle truth; control=${control}`;
 			}),
 		);
 
@@ -853,9 +878,12 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 					`/api/v1/research/experiments/${encodeURIComponent(experimentId)}`,
 				);
 				persistedCandidateSelection = hasPersistedCandidateSelection(serverExperiment, experimentId);
+				persistedHoldoutClaim = persistedHoldoutClaimId(serverExperiment, experimentId);
 				const recoveredHoldout = page.getByRole("button", { name: "执行一次性 Holdout" });
 				if (persistedCandidateSelection) {
-					await expectEnabled(recoveredHoldout);
+					await recoveredHoldout.waitFor();
+					if (persistedHoldoutClaim === null) await expectEnabled(recoveredHoldout);
+					else invariant(await recoveredHoldout.isDisabled(), "persisted holdout claim did not disable the action");
 					return `inspected live comparison and evidence for ${await pin.getAttribute("aria-label")}; recovered persisted candidate selection`;
 				}
 				await page
@@ -870,15 +898,22 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 			await executeLiveStep(page, outDir, plan[3], async () => {
 				const select = page.locator('button[data-candidate-role="eligible"]').first();
 				const holdout = page.getByRole("button", { name: "执行一次性 Holdout" });
-				if (!persistedCandidateSelection) {
-					await expectEnabled(select);
-					await select.click();
+				let claimDetail: string;
+				if (persistedHoldoutClaim !== null) {
+					await holdout.waitFor();
+					invariant(await holdout.isDisabled(), "persisted holdout action was not disabled");
+					claimDetail = `claim ${persistedHoldoutClaim} recovered from immutable server truth`;
+				} else {
+					if (!persistedCandidateSelection) {
+						await expectEnabled(select);
+						await select.click();
+					}
+					await expectEnabled(holdout);
+					await holdout.click();
+					const claim = page.getByText(/^claim /u);
+					await claim.waitFor();
+					claimDetail = (await claim.textContent()) ?? "holdout claim persisted";
 				}
-				await expectEnabled(holdout);
-				await holdout.click();
-				const claim = page.getByText(/^claim /u);
-				await claim.waitFor();
-				const claimDetail = (await claim.textContent()) ?? "holdout claim persisted";
 				await page
 					.locator('[data-contract-slot="experiment-meta"]')
 					.getByText(/completed|succeeded/iu)
