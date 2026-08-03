@@ -6,7 +6,12 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { mockExperimentDetail } from "@/mocks/fixtures/experiment-workbench";
 import { server } from "@/mocks/server";
-import { experimentPollingInterval, useExperiment } from "../hooks/use-experiment";
+import {
+	comparisonEvidencePollingInterval,
+	experimentPollingInterval,
+	selectionEvidencePollingInterval,
+	useExperiment,
+} from "../hooks/use-experiment";
 import { ExperimentRunControls } from "./experiment-run-controls";
 
 function wrapper({ children }: { readonly children: ReactNode }) {
@@ -28,9 +33,27 @@ describe("ExperimentRunControls recovery", () => {
 		expect(experimentPollingInterval("queued")).toBe(2000);
 		expect(experimentPollingInterval("running")).toBe(2000);
 		expect(experimentPollingInterval("pausing")).toBe(2000);
+		expect(experimentPollingInterval("pause_requested")).toBe(2000);
+		expect(experimentPollingInterval("cancel_requested")).toBe(2000);
 		expect(experimentPollingInterval("paused")).toBe(false);
 		expect(experimentPollingInterval("completed")).toBe(false);
 		expect(experimentPollingInterval(undefined)).toBe(false);
+	});
+
+	it("polls for selection evidence only while an evidence-bearing stage is still publishing it", () => {
+		expect(selectionEvidencePollingInterval("walk_forward", false)).toBe(false);
+		expect(selectionEvidencePollingInterval("candidate_selection", false)).toBe(2000);
+		expect(selectionEvidencePollingInterval("holdout", false)).toBe(2000);
+		expect(selectionEvidencePollingInterval("evidence", false)).toBe(2000);
+		expect(selectionEvidencePollingInterval("finalized", false)).toBe(2000);
+		expect(selectionEvidencePollingInterval("candidate_selection", true)).toBe(false);
+	});
+
+	it("keeps polling comparison evidence until it matches the latest server revision", () => {
+		expect(comparisonEvidencePollingInterval("candidate_selection", 8, 12)).toBe(2000);
+		expect(comparisonEvidencePollingInterval("candidate_selection", undefined, 12)).toBe(2000);
+		expect(comparisonEvidencePollingInterval("candidate_selection", 12, 12)).toBe(false);
+		expect(comparisonEvidencePollingInterval("walk_forward", 8, 12)).toBe(false);
 	});
 
 	it("reconstructs status from server truth after remount", async () => {

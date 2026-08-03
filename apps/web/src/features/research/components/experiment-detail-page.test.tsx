@@ -46,7 +46,7 @@ describe("ExperimentDetailPage", () => {
 
 		await expect(screen.findByText("history_96_months")).resolves.toBeInTheDocument();
 		expect(screen.getByText("candidate-bundle-2")).toBeInTheDocument();
-		expect(screen.getByText(/technology/)).toBeInTheDocument();
+		await expect(screen.findByText(/technology/)).resolves.toBeInTheDocument();
 		expect(screen.getByText(/size_bucket_weights/)).toBeInTheDocument();
 		expect(screen.getByText("partial fold failure")).toBeInTheDocument();
 	});
@@ -65,5 +65,23 @@ describe("ExperimentDetailPage", () => {
 		expect(screen.getByText("candidate-bundle-2")).toBeInTheDocument();
 		for (let index = 1; index <= 4; index += 1) await user.click(screen.getByLabelText(`Pin candidate-${index}`));
 		expect(screen.getByLabelText("Pin candidate-5")).toBeDisabled();
+	});
+
+	it("does not request selection evidence before the candidate-selection gate", async () => {
+		let selectionRequests = 0;
+		useWorkbenchHandlers();
+		server.use(
+			http.get("/api/v1/research/experiments/:id", () =>
+				HttpResponse.json({ data: { ...mockExperimentDetail, stage: "walk_forward" } }),
+			),
+			http.get("/api/v1/research/experiments/:id/selection-evidence", () => {
+				selectionRequests += 1;
+				return HttpResponse.json({ detail: "not published" }, { status: 404 });
+			}),
+		);
+		render(<ExperimentDetailPage experimentId="exp-1042" />, { wrapper });
+
+		await expect(screen.findByText(/walk_forward/)).resolves.toBeInTheDocument();
+		expect(selectionRequests).toBe(0);
 	});
 });

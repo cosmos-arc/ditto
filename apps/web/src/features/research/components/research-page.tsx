@@ -37,7 +37,9 @@ export function ResearchPage() {
 	const experimentRows = experiments.data ?? [];
 	const reviewRows = reviews.data ?? [];
 	const activeCount = experimentRows.filter((entry) =>
-		["queued", "running", "pausing", "cancelling"].includes(entry.status.toLowerCase()),
+		["queued", "running", "pause_requested", "cancel_requested", "pausing", "cancelling"].includes(
+			entry.status.toLowerCase(),
+		),
 	).length;
 	const approvedCount = reviewRows.filter((entry) => entry.reviewOutcome.toLowerCase() === "approved").length;
 

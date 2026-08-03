@@ -580,6 +580,22 @@ async function assertLiveApi(apiBase: string): Promise<void> {
 	);
 }
 
+type LiveFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+export async function liveExperimentExists(
+	apiBase: string,
+	experimentId: string,
+	fetcher: LiveFetch = fetch,
+): Promise<boolean> {
+	const response = await fetcher(
+		`${apiBase}/api/v1/research/experiments/${encodeURIComponent(experimentId)}`,
+		{ signal: AbortSignal.timeout(30_000) },
+	);
+	if (response.status === 404) return false;
+	invariant(response.ok, `live experiment probe failed with HTTP ${response.status}`);
+	return true;
+}
+
 async function fillDecision(page: Page, action: string, confirm: string): Promise<void> {
 	await page.getByRole("button", { name: action, exact: true }).click();
 	await page.getByLabel("执行者").fill("chevy");
@@ -748,6 +764,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 
 	let experimentId: string | null = planning.experiment_id;
 	let promotedVersion: number | null = null;
+	let resumedExistingExperiment = false;
 	const strategyId = planning.strategy.strategy_id;
 	try {
 		steps.push(
@@ -766,6 +783,13 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				const months = Number.parseInt(history?.match(/\d+/u)?.[0] ?? "0", 10);
 				invariant(months >= 96, `preflight eligible history was ${months}, expected at least 96 months`);
 				await confirmation.check();
+				if (experimentId && (await liveExperimentExists(options.apiBase, experimentId))) {
+					resumedExistingExperiment = true;
+					await page.goto(`${options.reactBase}/research/experiments/${experimentId}`, {
+						waitUntil: "domcontentloaded",
+					});
+					return `verified ${months}-month live preflight and resumed already-launched ${experimentId}`;
+				}
 				await page.getByRole("button", { name: "启动实验" }).click();
 				await page.waitForURL(new RegExp(`/research/experiments/${experimentId}$`, "u"));
 				return `launched ${experimentId} after ${months}-month live preflight`;
@@ -779,12 +803,14 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await header.waitFor();
 				const pause = page.getByRole("button", { name: "暂停", exact: true });
 				let control = "terminal-before-control";
-				if (await pause.isVisible()) {
+				if (!resumedExistingExperiment && (await pause.isVisible())) {
 					await pause.click();
 					const resume = page.getByRole("button", { name: "恢复", exact: true });
 					await resume.waitFor();
 					await resume.click();
 					control = "pause-resume";
+				} else if (resumedExistingExperiment) {
+					control = "resumed-existing-server-truth";
 				}
 				await page
 					.locator('[data-contract-slot="experiment-meta"]')
@@ -797,20 +823,23 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 
 		steps.push(
 			await executeLiveStep(page, outDir, plan[2], async () => {
-				const pins = page.getByRole("checkbox", { name: /^Pin /u });
-				await pins.first().waitFor();
-				await pins.first().check();
+				const select = page.locator('button[data-candidate-role="eligible"]').first();
+				await select.waitFor();
+				const candidateRow = select.locator("xpath=..");
+				const pin = candidateRow.getByRole("checkbox", { name: /^Pin /u });
+				await pin.check();
 				await page.getByLabel("晋级理由").fill("Task 18 live objective and evidence review");
-				await page.getByRole("button", { name: "查看证据" }).first().click();
+				await candidateRow.getByRole("button", { name: "查看证据" }).click();
 				await page.getByRole("heading", { name: /Candidate evidence/u }).waitFor();
 				await page.getByText("factor-contributions", { exact: true }).waitFor();
-				return `inspected live comparison and evidence for ${await pins.first().getAttribute("aria-label")}`;
+				await expectEnabled(select);
+				return `inspected live comparison and evidence for ${await pin.getAttribute("aria-label")}`;
 			}),
 		);
 
 		steps.push(
 			await executeLiveStep(page, outDir, plan[3], async () => {
-				const select = page.getByRole("button", { name: /^选择为晋级候选 /u }).first();
+				const select = page.locator('button[data-candidate-role="eligible"]').first();
 				await expectEnabled(select);
 				await select.click();
 				const holdout = page.getByRole("button", { name: "执行一次性 Holdout" });
@@ -966,13 +995,24 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 	return report;
 }
 
+export async function waitForEnabled(
+	probe: () => Promise<boolean>,
+	pause: (milliseconds: number) => Promise<unknown>,
+	timeoutMs = 300_000,
+): Promise<void> {
+	const startedAt = Date.now();
+	while (!(await probe())) {
+		if (Date.now() - startedAt >= timeoutMs) throw new Error(`element did not become enabled within ${timeoutMs}ms`);
+		await pause(500);
+	}
+}
+
 async function expectEnabled(locator: ReturnType<Page["getByRole"]>): Promise<void> {
 	await locator.waitFor({ state: "visible" });
-	await locator.evaluate((element) => {
-		if (element instanceof HTMLButtonElement || element instanceof HTMLInputElement) {
-			if (element.disabled) throw new Error(`element ${element.getAttribute("aria-label") ?? element.textContent} is disabled`);
-		}
-	});
+	await waitForEnabled(
+		() => locator.isEnabled(),
+		(milliseconds) => locator.page().waitForTimeout(milliseconds),
+	);
 }
 
 async function main(args: readonly string[]): Promise<void> {

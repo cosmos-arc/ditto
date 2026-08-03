@@ -41,9 +41,9 @@ export function ExperimentDetailPage({ experimentId }: ExperimentDetailPageProps
 	const detail = useExperiment(experimentId);
 	const candidates = useExperimentCandidates(experimentId);
 	const gates = useExperimentGates(experimentId);
-	const comparison = useExperimentComparison(experimentId);
+	const comparison = useExperimentComparison(experimentId, detail.data?.stage, detail.data?.revision);
 	const artifacts = useExperimentArtifacts(experimentId);
-	const selection = useExperimentSelectionEvidence(experimentId);
+	const selection = useExperimentSelectionEvidence(experimentId, detail.data?.stage);
 	const [inspectedCandidate, setInspectedCandidate] = useState<string | null>(null);
 
 	if (detail.isLoading) return <LoadingSkeleton variant="panel" />;

@@ -104,9 +104,11 @@ export function CandidateComparison({
 							</button>
 							<button
 								type="button"
+								data-candidate-role={candidate.is_baseline ? "baseline" : "eligible"}
 								disabled={
 									!comparison ||
 									comparison.revision !== revision ||
+									candidate.is_baseline ||
 									!isPinned ||
 									!rationale.trim() ||
 									mutation.isPending

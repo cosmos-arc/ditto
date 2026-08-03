@@ -22,7 +22,7 @@ export function ExperimentValidationView({ folds, gates }: ExperimentValidationV
 					</thead>
 					<tbody>
 						{folds.map((fold) => (
-							<tr key={fold.fold_id}>
+							<tr key={`${fold.candidate_id}:${fold.fold_id}`}>
 								<td>{fold.fold_id}</td>
 								<td>{fold.status}</td>
 								<td>

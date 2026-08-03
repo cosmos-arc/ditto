@@ -17,6 +17,24 @@ function wrapper({ children }: { readonly children: ReactNode }) {
 }
 
 describe("candidate selection and holdout", () => {
+	it("never offers the registered baseline as a promotable candidate", async () => {
+		const user = userEvent.setup();
+		render(
+			<CandidateComparison
+				experimentId="exp-1042"
+				revision={9}
+				candidates={mockExperimentDetail.candidates}
+				comparison={mockExperimentComparison}
+			/>,
+			{ wrapper },
+		);
+
+		await user.click(screen.getByLabelText("Pin candidate-1"));
+		await user.type(screen.getByLabelText("晋级理由"), "baseline cannot be promoted");
+
+		expect(screen.getByRole("button", { name: "选择为晋级候选 candidate-1" })).toBeDisabled();
+	});
+
 	it("persists only an explicit selection then enables holdout for the returned selection_id", async () => {
 		const user = userEvent.setup();
 		let selectionBody: Record<string, unknown> = {};

@@ -174,6 +174,40 @@ describe("R3 research deterministic acceptance contract", () => {
 		expect(() => validateLiveRuntime({ VITE_USE_MOCK: "false" })).not.toThrow();
 	});
 
+	it("distinguishes a resumable live experiment from a not-yet-launched identity", async () => {
+		const { liveExperimentExists } = await loadAcceptance();
+		const requests: string[] = [];
+		const fetcher = async (input: string | URL | Request) => {
+			requests.push(String(input));
+			return new Response(null, { status: requests.length === 1 ? 404 : 200 });
+		};
+
+		await expect(liveExperimentExists("http://127.0.0.1:8000", "exp with spaces", fetcher)).resolves.toBe(false);
+		await expect(liveExperimentExists("http://127.0.0.1:8000", "exp with spaces", fetcher)).resolves.toBe(true);
+		expect(requests).toEqual([
+			"http://127.0.0.1:8000/api/v1/research/experiments/exp%20with%20spaces",
+			"http://127.0.0.1:8000/api/v1/research/experiments/exp%20with%20spaces",
+		]);
+	});
+
+	it("waits for a server-backed control to become enabled instead of sampling it once", async () => {
+		const { waitForEnabled } = await loadAcceptance();
+		let probes = 0;
+
+		await expect(
+			waitForEnabled(
+				async () => {
+					probes += 1;
+					return probes === 3;
+				},
+				async () => undefined,
+				100,
+			),
+		).resolves.toBeUndefined();
+		expect(probes).toBe(3);
+		await expect(waitForEnabled(async () => false, async () => undefined, 0)).rejects.toThrow("did not become enabled");
+	});
+
 	it("binds every approved live browser checkpoint without request interception", async () => {
 		const { buildLiveAcceptancePlan } = await loadAcceptance();
 		const source = readFileSync(acceptanceScript, "utf8");
