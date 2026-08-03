@@ -23,6 +23,7 @@ export const mockExperimentDetail: components["schemas"]["ExperimentDetailRespon
 	fold_protocol_hash: "f".repeat(64),
 	candidate_count: 5,
 	fold_count: 2,
+	selection_state: null,
 	candidates: Array.from({ length: 5 }, (_, index) => ({
 		candidate_id: `candidate-${index + 1}`,
 		ordinal: index + 1,

@@ -5,13 +5,14 @@ import { useHoldoutEvaluation } from "../hooks";
 
 interface HoldoutEvaluationPanelProps {
 	readonly selection: CandidateSelectionReceiptResponse;
+	readonly existingClaimId: string | null;
 }
 
 function key(): string {
 	return `holdout-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
 }
 
-export function HoldoutEvaluationPanel({ selection }: HoldoutEvaluationPanelProps) {
+export function HoldoutEvaluationPanel({ selection, existingClaimId }: HoldoutEvaluationPanelProps) {
 	const mutation = useHoldoutEvaluation();
 	const commandKey = useRef<string | null>(null);
 	const [blocked, setBlocked] = useState(false);
@@ -54,12 +55,14 @@ export function HoldoutEvaluationPanel({ selection }: HoldoutEvaluationPanelProp
 			<button
 				type="button"
 				onClick={evaluate}
-				disabled={blocked || mutation.isPending}
+				disabled={blocked || existingClaimId !== null || mutation.isPending}
 				className="self-start rounded-(--radius-sm) bg-(--brand-accent) px-2 py-1 text-xs text-(--brand-accent-fg) disabled:opacity-50"
 			>
 				执行一次性 Holdout
 			</button>
-			{mutation.data && <p className="font-data text-xs">claim {mutation.data.claim_id}</p>}
+			{(mutation.data || existingClaimId) && (
+				<p className="font-data text-xs">claim {mutation.data?.claim_id ?? existingClaimId}</p>
+			)}
 			{error && (
 				<p role="alert" className="text-xs text-(--color-led-danger)">
 					{error}

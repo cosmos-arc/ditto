@@ -833,6 +833,11 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				await candidateRow.getByRole("button", { name: "查看证据" }).click();
 				await page.getByRole("heading", { name: /Candidate evidence/u }).waitFor();
 				await page.getByText("factor-contributions", { exact: true }).waitFor();
+				const recoveredHoldout = page.getByRole("button", { name: "执行一次性 Holdout" });
+				if (await recoveredHoldout.isVisible()) {
+					await expectEnabled(recoveredHoldout);
+					return `inspected live comparison and evidence for ${await pin.getAttribute("aria-label")}; recovered persisted candidate selection`;
+				}
 				await page
 					.getByText("Selection evidence is publishing; candidate promotion remains locked.", { exact: true })
 					.waitFor({ state: "hidden" });
@@ -844,9 +849,11 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 		steps.push(
 			await executeLiveStep(page, outDir, plan[3], async () => {
 				const select = page.locator('button[data-candidate-role="eligible"]').first();
-				await expectEnabled(select);
-				await select.click();
 				const holdout = page.getByRole("button", { name: "执行一次性 Holdout" });
+				if (!(await holdout.isVisible())) {
+					await expectEnabled(select);
+					await select.click();
+				}
 				await holdout.waitFor();
 				await holdout.click();
 				const claim = page.getByText(/^claim /u);

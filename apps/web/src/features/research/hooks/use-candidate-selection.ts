@@ -17,8 +17,8 @@ export function useCandidateSelection() {
 	return useMutation<CandidateSelectionReceiptResponse, Error, Variables>({
 		mutationFn: ({ experimentId, request, idempotencyKey }) =>
 			selectExperimentCandidate(experimentId, request, idempotencyKey),
-		onSuccess: async (receipt) => {
-			await Promise.all([
+		onSuccess: (receipt) => {
+			void Promise.all([
 				queryClient.invalidateQueries({ queryKey: experimentKeys.detail(receipt.experiment_id) }),
 				queryClient.invalidateQueries({ queryKey: experimentKeys.list() }),
 				queryClient.invalidateQueries({ queryKey: experimentKeys.candidates(receipt.experiment_id) }),

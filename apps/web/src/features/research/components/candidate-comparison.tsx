@@ -11,6 +11,7 @@ interface CandidateComparisonProps {
 	readonly candidates: readonly components["schemas"]["ExperimentCandidateResponse"][];
 	readonly comparison: components["schemas"]["ExperimentComparisonResponse"] | null;
 	readonly selectionEvidenceReady: boolean;
+	readonly selectionState: components["schemas"]["ExperimentSelectionStateResponse"] | null;
 	readonly onInspect?: (candidateId: string) => void;
 }
 
@@ -24,11 +25,13 @@ export function CandidateComparison({
 	candidates,
 	comparison,
 	selectionEvidenceReady,
+	selectionState,
 	onInspect,
 }: CandidateComparisonProps) {
 	const [pinned, setPinned] = useState<string[]>([]);
 	const [rationale, setRationale] = useState("");
-	const [selection, setSelection] = useState<CandidateSelectionReceiptResponse | null>(null);
+	const [localSelection, setLocalSelection] = useState<CandidateSelectionReceiptResponse | null>(null);
+	const selection = localSelection ?? selectionState;
 	const mutation = useCandidateSelection();
 	const attempts = useRef(new Map<string, string>());
 
@@ -43,7 +46,8 @@ export function CandidateComparison({
 	}
 
 	function select(candidateId: string): void {
-		if (!selectionEvidenceReady || !comparison || comparison.revision !== revision || !rationale.trim()) return;
+		if (selection || !selectionEvidenceReady || !comparison || comparison.revision !== revision || !rationale.trim())
+			return;
 		const identity = `${candidateId}:${comparison.payload_hash}:${revision}:${rationale.trim()}`;
 		const idempotencyKey = attempts.current.get(identity) ?? key();
 		attempts.current.set(identity, idempotencyKey);
@@ -61,7 +65,7 @@ export function CandidateComparison({
 			{
 				onSuccess: (receipt) => {
 					attempts.current.delete(identity);
-					setSelection(receipt);
+					setLocalSelection(receipt);
 				},
 			},
 		);
@@ -119,6 +123,7 @@ export function CandidateComparison({
 									candidate.is_baseline ||
 									!isPinned ||
 									!rationale.trim() ||
+									selection !== null ||
 									mutation.isPending
 								}
 								onClick={() => select(candidate.candidate_id)}
@@ -143,7 +148,9 @@ export function CandidateComparison({
 					{error}
 				</p>
 			)}
-			{selection && <HoldoutEvaluationPanel selection={selection} />}
+			{selection && (
+				<HoldoutEvaluationPanel selection={selection} existingClaimId={selectionState?.holdout_claim_id ?? null} />
+			)}
 		</div>
 	);
 }

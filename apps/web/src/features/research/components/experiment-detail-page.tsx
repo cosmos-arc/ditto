@@ -81,6 +81,7 @@ export function ExperimentDetailPage({ experimentId }: ExperimentDetailPageProps
 								candidates={candidates.data ?? server.candidates}
 								comparison={comparison.data ?? null}
 								selectionEvidenceReady={selection.data !== undefined}
+								selectionState={server.selection_state}
 								onInspect={setInspectedCandidate}
 							/>
 						</div>

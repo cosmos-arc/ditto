@@ -7530,6 +7530,7 @@ export interface components {
             revision: number;
             /** Seed */
             seed: number;
+            selection_state: components["schemas"]["ExperimentSelectionStateResponse"] | null;
             /** Snapshot Id */
             snapshot_id: string;
             /** Stage */
@@ -7968,6 +7969,37 @@ export interface components {
             /** Is Pinned */
             is_pinned: boolean;
             payload: components["schemas"]["JsonValue-Output"];
+        };
+        /**
+         * ExperimentSelectionStateResponse
+         * @description Persisted preselection and optional one-shot holdout consumption truth.
+         */
+        ExperimentSelectionStateResponse: {
+            /** Candidate Evidence Artifact Id */
+            candidate_evidence_artifact_id: string;
+            /** Candidate Evidence Content Hash */
+            candidate_evidence_content_hash: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string;
+            /** Event Id */
+            event_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Holdout Claim Id */
+            holdout_claim_id: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Revision */
+            revision: number;
+            /** Selection Evidence Content Hash */
+            selection_evidence_content_hash: string;
+            /** Selection Id */
+            selection_id: string;
         };
         /**
          * ExperimentSummaryResponse

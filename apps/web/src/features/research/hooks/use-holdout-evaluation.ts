@@ -17,8 +17,8 @@ export function useHoldoutEvaluation() {
 	return useMutation<HoldoutEvaluationReceiptResponse, Error, Variables>({
 		mutationFn: ({ experimentId, request, idempotencyKey }) =>
 			evaluateExperimentHoldout(experimentId, request, idempotencyKey),
-		onSettled: async (_data, _error, variables) => {
-			await Promise.all([
+		onSettled: (_data, _error, variables) => {
+			void Promise.all([
 				queryClient.invalidateQueries({ queryKey: experimentKeys.detail(variables.experimentId) }),
 				queryClient.invalidateQueries({ queryKey: experimentKeys.selectionEvidence(variables.experimentId) }),
 				queryClient.invalidateQueries({ queryKey: experimentKeys.artifacts(variables.experimentId) }),
