@@ -818,7 +818,6 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 					.locator('[data-contract-slot="experiment-meta"]')
 					.getByText(/candidate_selection/iu)
 					.waitFor();
-				await page.reload({ waitUntil: "domcontentloaded" });
 				return `polling reached the candidate-selection gate; control=${control}`;
 			}),
 		);
