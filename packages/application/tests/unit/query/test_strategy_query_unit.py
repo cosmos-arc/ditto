@@ -339,6 +339,27 @@ class TestStrategyQueryFacadeListVersions:
         governance_reader.list_versions.assert_called_once_with("s-1")
         state_reader.get_state.assert_called_once_with("s-1", 2)
 
+    def test_enriches_experiment_id_when_resolver_present(self) -> None:
+        governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
+        state_reader = MagicMock(spec=["get_state"])
+        governance_reader.list_versions.return_value = (_make_version(2, parent=1),)
+        state_reader.get_state.return_value = _make_state(
+            2, state=StrategyVersionState.DRAFT, review=ReviewOutcome.PENDING
+        )
+        resolver = MagicMock(spec=["resolve_experiment_id_by_spec_hash"])
+        resolver.resolve_experiment_id_by_spec_hash.return_value = "exp-1"
+        facade = StrategyQueryFacade(
+            MagicMock(spec=["list_specs", "get_spec"]),
+            version_state_reader=state_reader,
+            governance_version_reader=governance_reader,
+            experiment_resolver=resolver,
+        )
+
+        result = facade.list_versions("s-1")
+
+        assert result[0].experiment_id == "exp-1"
+        resolver.resolve_experiment_id_by_spec_hash.assert_called_once_with("a" * 64)
+
     def test_returns_empty_when_no_versions(self) -> None:
         governance_reader = MagicMock(spec=["list_versions", "get_active_pointer"])
         governance_reader.list_versions.return_value = ()

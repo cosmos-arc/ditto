@@ -190,7 +190,8 @@ class StrategyQueryFacade:
         ):
             return []
         versions = self._governance_version_reader.list_versions(strategy_id)
-        return self._project_version_infos(versions, self._version_state_reader)
+        infos = self._project_version_infos(versions, self._version_state_reader)
+        return self._with_experiment_ids(infos)
 
     def list_reviews(self) -> list[StrategyVersionInfo]:
         """
@@ -211,6 +212,12 @@ class StrategyQueryFacade:
             StrategyVersionState.REVIEW
         )
         infos = self._project_version_infos(versions, self._version_state_reader)
+        return self._with_experiment_ids(infos)
+
+    def _with_experiment_ids(
+        self, infos: list[StrategyVersionInfo]
+    ) -> list[StrategyVersionInfo]:
+        """Bridge governance versions to persisted review packets by spec hash."""
         if self._experiment_resolver is None:
             return infos
         return [
