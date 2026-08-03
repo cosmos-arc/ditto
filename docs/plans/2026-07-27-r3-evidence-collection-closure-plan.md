@@ -29,6 +29,8 @@ launch 的 exact `strategy_id@version`/launch hash 绑定到 governance spec has
 > `release_status=RELEASE_ACCEPTANCE_BLOCKED`、`r2_live_gate=NOT_EVALUATED`；真实
 > provider/certified 数据与 production recovery 不在其证明范围，等待 Task 18 单独授权。
 >
+> **当前状态（2026-08-03，取代上文）**：Task 18 live 闭环已完成，本计划 deterministic scope 现已由 live evidence 覆盖。live 后端报告 SHA-256 升级为 `079506a2e565440f6a3e45e90367a619d1ce6e452bc87bda7a17c0fe1c40ad4b`（`mode=real_data`、`passed=true`、`r2_live_gate=PASS`、`release_status=RELEASE_ACCEPTANCE_PASSED`），真实 provider/certified 数据（135 eligible 月）、isolated live backup/restore 与真实浏览器验收均已绑定。总状态 **R3 G2 PASS**；逐条 evidence 见 [docs/evidence/r3/README.md](../../evidence/r3/README.md) 的 2026-08-03 live 对账节。
+>
 > **跨仓库**:全部在后端 `/home/chevy/projects/ditto`,分支 `docs/r3-research-governance-design`。
 
 ## 实施规则

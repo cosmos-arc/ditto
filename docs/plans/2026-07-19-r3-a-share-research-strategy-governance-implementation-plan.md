@@ -14,6 +14,7 @@
 > **计划状态（历史基线）**：READY FOR EXECUTION；数据库 schema、新依赖、架构边界和环境配置仍须在对应 task 前单独批准。<br>
 > **2026-07-28 实施核实快照（已被下述当前状态取代）**：当时后端 17/17 Task 与 evidence collection closure Task 1-4 + 5a-5f 已完成，但前端 W5 尚未开始；该段仅保留为历史进度，不再代表当前仓库事实。<br>
 > **当前状态（2026-08-01）**：R3 后端、W5 前端、冻结 OpenAPI 与 deterministic 双黄金验收已完成。后端实现/契约/验收分别绑定 `a4607be3`、`a6720e8a`、`39e2b752`，确定性制品提交为 `a135899c`；前端契约接线/验收/制品分别绑定 `246fc5f`、`7f4d277`、`6da94e1`。后端报告 SHA-256 为 `f005425c2428e0e9e01f746281ba2bd74b752089e3cdf202577576bf67c35f76`，前端报告 SHA-256 为 `2aae6a908f5993e11f0125c1ac4732326dc71312293725bed1a99053be7e7f40`。确定性状态是 **R3 ENGINEERING COMPLETE / G2 BLOCKED**：`r2_live_gate=NOT_EVALUATED`，真实 provider、certified 96 月数据、live backup/restore 与真实浏览器验收仍须 Task 18 单独授权，不能由 fixture 关闭。<br>
+> **当前状态（2026-08-03，取代上文）**：Task 18 已在 hard approval checkpoint 后执行并关闭 R2 live Gate，总状态升级为 **R3 G2 PASS**（23/23 G2 DoD）。真实数据双黄金路径 live 运行于 backend `11afb81c`（随后的 `903311f4` 为行为中性 leaf-module 提取重构），frontend live 运行于 `23e690b`、浏览器证据归档于 `c436dea`。live 后端报告 SHA-256 `079506a2e565440f6a3e45e90367a619d1ce6e452bc87bda7a17c0fe1c40ad4b`（`mode=real_data`、`passed=true`、`r2_live_gate=PASS`），R2 live 报告 `446ef1d513ce8c45580bbf00b181a24330de56aa39266b16d44443134377a49e`，前端 live 报告 `7a5200073ef94be915fa31af4ab39a22af429bf9035760f08f9278bdff22ac89`。逐条 evidence 索引见 [docs/evidence/r3/README.md](../../evidence/r3/README.md) 的 2026-08-03 live 对账节。<br>
 > **跨仓库规则**：后端路径相对 `/home/chevy/projects/ditto`；标记为 `ditto-app` 的路径相对 `/home/chevy/projects/ditto-app`；两个仓库分别建分支、分别提交和验证。
 
 ## 实施规则

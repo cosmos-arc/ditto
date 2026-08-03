@@ -12,6 +12,15 @@
 > `2aae6a908f5993e11f0125c1ac4732326dc71312293725bed1a99053be7e7f40`。jsdom + MSW
 > 结果只能证明确定性 UI 契约，不能证明 `VITE_USE_MOCK=false` 的真实浏览器、真实
 > provider 或 production recovery；这些 live 项仍等待 Task 18 单独授权。
+>
+> **当前状态（2026-08-03，取代上文）**：Task 18 真实浏览器 acceptance 已完成。前端
+> live 运行于 `23e690b`、证据归档于 `c436dea`，`VITE_USE_MOCK=false + Chromium + live
+> loopback API` 下 Studio→preflight→launch、experiment polling/control、candidate
+> comparison/evidence、one-shot holdout（duplicate 被阻止）、review/approve/publish、
+> R1 active、historical reactivate、refresh recovery 全部通过，0 console/page error。
+> live 报告 SHA-256 `7a5200073ef94be915fa31af4ab39a22af429bf9035760f08f9278bdff22ac89`，
+> screenshots/trace.zip/network-errors/manifest 全部内容寻址。总状态 **R3 G2 PASS**；
+> evidence 索引见 [docs/evidence/r3/README.md](../../evidence/r3/README.md)。
 
 ## 决策摘要（已对齐）
 
