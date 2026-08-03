@@ -248,6 +248,8 @@ describe("R3 research deterministic acceptance contract", () => {
 		expect(plan[3]?.description).toContain("successful terminal state");
 		expect(source).toContain('await pause.waitFor({ state: "visible" })');
 		expect(source).toContain("Selection evidence is publishing; candidate promotion remains locked.");
+		expect(source.match(/await waitForSelectionActionReady\(/gu)).toHaveLength(2);
+		expect(source).not.toContain("if (!(await holdout.isVisible()))");
 		expect(source.match(/await page\.reload\(/gu)).toHaveLength(1);
 		expect(source).not.toContain("terminal-before-control");
 		expect(source).not.toContain("page.route(");

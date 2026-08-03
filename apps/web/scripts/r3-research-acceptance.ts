@@ -854,11 +854,15 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 			await executeLiveStep(page, outDir, plan[3], async () => {
 				const select = page.locator('button[data-candidate-role="eligible"]').first();
 				const holdout = page.getByRole("button", { name: "执行一次性 Holdout" });
-				if (!(await holdout.isVisible())) {
-					await expectEnabled(select);
+				const action = await waitForSelectionActionReady(
+					async () => (await holdout.isVisible()) && (await holdout.isEnabled()),
+					() => select.isEnabled(),
+					(milliseconds) => page.waitForTimeout(milliseconds),
+				);
+				if (action === "selectable") {
 					await select.click();
 				}
-				await holdout.waitFor();
+				await expectEnabled(holdout);
 				await holdout.click();
 				const claim = page.getByText(/^claim /u);
 				await claim.waitFor();
