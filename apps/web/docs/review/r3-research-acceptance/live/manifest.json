@@ -1,0 +1,57 @@
+{
+  "schema": "ditto.r3-research-frontend-evidence-manifest",
+  "version": 2,
+  "generated_at": "2026-08-03T14:22:18Z",
+  "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8",
+  "mode": "real_data",
+  "entries": [
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/report.json",
+      "sha256": "7a5200073ef94be915fa31af4ab39a22af429bf9035760f08f9278bdff22ac89"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/network-errors.json",
+      "sha256": "2d64518cc8d174c0726161012f9698fed088d5084ffb16326bf45f5696f80f1a"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/trace.zip",
+      "sha256": "5528c6814526af474590f441b59b4257527f9d938462db835bd24d874c89c65e"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/studio-preflight-launch.png",
+      "sha256": "310da4ba9d6a8037a4f857c65c678580c30814226d58fdafdd3f01874e15cd7c"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/experiment-polling-control.png",
+      "sha256": "e9a4f05bbc1f17ccf235abcd311ba5ac477b4c16cb6f4fa554867c3ba1448196"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/candidate-comparison-evidence.png",
+      "sha256": "4d4725dbb096ad7f633eb6016232e8c2eac18d6c520e26c6d6a2611dfacba9e1"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/one-shot-holdout.png",
+      "sha256": "b9184c4945926375547ae9092a690a7654053d0fac132bb071f887143161e38e"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/duplicate-holdout-blocked.png",
+      "sha256": "669ee293e2e1e162437d1e57590dd6bc73ffb0bea66095d20b69e0268cf802fe"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/review-approve-publish.png",
+      "sha256": "04d22294a75eb7b33b7b5323df8fa209b1e5553eb2854c694404ec827f8d64b0"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/r1-active-version.png",
+      "sha256": "263c2ae77f96850777e382643606f88cc85e85e6a2a72805ffa26bf6b0e67167"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/historical-reactivate.png",
+      "sha256": "6ff276b08837d90354a088277e11e81ca99cd7b663a961dab7b4b8fdd385e143"
+    },
+    {
+      "relative_path": "docs/review/r3-research-acceptance/live/refresh-recovery.png",
+      "sha256": "0af7e4daca57b7e2facbd117de27afe9854ea32df406e0880538132f3803b27b"
+    }
+  ]
+}
