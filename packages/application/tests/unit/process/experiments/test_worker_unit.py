@@ -2309,7 +2309,7 @@ def test_worker_renews_lease_from_engine_control_and_stops_on_fence_error(
 def test_worker_heartbeats_while_fold_runner_is_blocked(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(worker_module, "_EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
+    monkeypatch.setattr(worker_module, "EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
     heartbeat_observed = Event()
 
     class _HeartbeatCoordinator(_Coordinator):
@@ -2350,7 +2350,7 @@ def test_worker_heartbeats_while_fold_runner_is_blocked(
 def test_worker_fails_closed_when_background_heartbeat_loses_lease(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(worker_module, "_EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
+    monkeypatch.setattr(worker_module, "EXECUTION_HEARTBEAT_INTERVAL_SECONDS", 0.001)
     heartbeat_failed = Event()
 
     class _FailingHeartbeatCoordinator(_Coordinator):

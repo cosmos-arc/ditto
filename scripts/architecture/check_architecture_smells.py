@@ -627,6 +627,45 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_coordinator_vocabulary.py"
+        ),
+        owner="application experiment coordinator snapshot vocabulary",
+        reason=(
+            "The extracted vocabulary binds the analysis-owned experiment, "
+            "fold and attempt status enums into the immutable "
+            "SnapshotVocabulary consumed by the host coordinator and its "
+            "result builder; it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_scheduler_models.py"
+        ),
+        owner="application experiment scheduler value models",
+        reason=(
+            "The extracted frozen dataclasses validate durable scheduler "
+            "invariants against the analysis-owned attempt, fold and "
+            "projection contracts at the boundary consumed by the scheduler "
+            "store, coordinator and worker; they perform no storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/queries/"
+            "_experiment_review_read_models.py"
+        ),
+        owner="application R3 review-packet read models",
+        reason=(
+            "The extracted read models and builder derive an "
+            "application-owned view of the analysis-owned immutable "
+            "ReviewPacket through its narrow gate-evaluation contract; they "
+            "perform no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/commands/strategy_governance.py"
         ),
         owner="application R3 evidence-gated publish command boundary",
