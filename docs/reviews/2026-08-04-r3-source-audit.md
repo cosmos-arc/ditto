@@ -163,3 +163,29 @@ r3-report.json 的 `r2_evidence`（`report_hash=446ef1d5` / `status=ready` / 拆
 - API 契约：`docs/contracts/r3-v1-api-surface.json`、`packages/apps/tests/unit/api/test_r3_api_surface_contract_unit.py`
 - 架构 allowance：`scripts/architecture/check_architecture_smells.py`、`packages/apps/tests/unit/architecture/test_capability_semantic_ownership_unit.py`
 - 前端：`ditto-app/src/routes/research.tsx`、`ditto-app/src/features/{strategy,research}/`、`ditto-app/docs/review/r3-research-acceptance/live/`
+
+---
+
+## 附录 B：2026-08-04 G2 闭环尝试与新发现
+
+> 在本审计之后，当日尝试用现有 live 数据根（`var/r3-task18-20260802/`，含已认证 metadata.sqlite + keyring 凭证）真正闭环 G2。结论：**R2 gate 真正可闭环且已闭环；G2 仍 BLOCKED，但阻断点从 R2 转移到黄金 lane 的新鲜复现。**
+
+### B.1 R2 live Gate 现已闭环（DoD #1 解决）
+
+- metadata.sqlite 实际**已含全部 19 个 dataset 认证**（`dataset_certification_reports`/`_events` 各 19 行，2026-08-02 15:44 写入）。先前 `configuration_blocked` 报告是**早 8 分钟生成**的过期产物。
+- 用全绝对路径 env 重跑 `r2_data_acceptance --mode live`（`DITTO_DATA_ROOT` 指向 live-data）产出新鲜的 `status=ready` 报告（recoverability/idempotency/19-certified 全过）。**R2 gate（原 G2 阻断）已真正可复现地闭环。**
+
+### B.2 新发现：live-acceptance runner 的 replay bug（原始 G2 evidence 受损的根因）
+
+重跑过程中暴露 r2/r3 runner 的若干 **replay 鲁棒性缺陷**（这些正是原始 G2 evidence 被覆写/不可复现的工具层根因，应作为工程债修复）：
+
+1. **r2 runner 相对路径 bug**：`write_live_evidence_bundle` 用 `output.relative_to(root)`，但 `--output` 等接受相对路径 → `relative_to` 对绝对 root 失败；`_live_recoverability` 的 backup/restore 原子写在相对路径下抛 `R2BackupError`。**全绝对路径可绕过**，但 runner 应 resolve 路径或拒绝相对路径。
+2. **r2 runner db_path 接线**：`--sqlite-path` 只用作 backup 源；认证检查/pool 用 `settings.resolved_sqlite_path`（来自 `DITTO_DATA_ROOT`）。不设该 env → 容器打开默认 `data/metadata/metadata.sqlite`（旧库）。runner 应显式接线或文档化该 env 依赖。
+3. **r3 黄金 lane 不新鲜复现**：在当前数据上 stock/etf lane 在 ~210s 早期断言失败（疑似 golden 期望相对 Aug 3 后新数据的漂移）、governance lane 缺 `lanes/stock/current.json` precondition、backup lane 报 path 错误。live-acceptance 工具链不具备跨数据变化的 replay 鲁棒性。
+
+### B.3 技术债正确修法（本轮评估，未强行实施以避免回归）
+
+- **#1 `analysis/_holdout.py` TYPE_CHECKING 循环**：Protocol 路会与 `_facts.py`/`_review_packet_store.py` 的 `_reader: SQLiteExperimentReader` 声明在 `SQLiteExperimentWriter` 多继承处产生 `reportIncompatibleVariableOverride`。**正确修法**：把 `holdout_claim_from_row`（+其 `_integrity` 依赖）抽到叶子模块 `_holdout_claim_row.py`，让 `reader` 从叶子导入（断 reader→_holdout 循环），则 `_holdout` 可正常 import `SQLiteExperimentReader`、移除 TYPE_CHECKING。
+- **#2 `ContentHash` 跨包 re-export**（定义在 analysis，`scheduler_store` re-export 给 application，~20 文件消费）：**正确修法**是把 `ContentHash` 迁到 `ditto_kernel`（或中性 contract 模块），analysis 与 application 都从 kernel 导入，消除 re-export 与 `PRODUCTION_ANALYSIS_WIRING_ALLOWANCES` 该条。属 ~20 文件重构，低危，建议单独 PR。
+
+两项均为低危、非阻断；本轮已交付的 G2 闭环价值（R2 gate 解决）不应被侵入式重构的回归风险抵消，故记录为追踪项。
