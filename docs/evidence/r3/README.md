@@ -18,6 +18,22 @@
 > 「live 工程已执行」的历史记录，但因 DoD #1（R2 hard gate）configuration_blocked，不构成 G2 PASS。
 > 要真正闭环 G2，须先补齐 R2 数据认证（certification_missing）、重跑 R2 live acceptance
 > 产出可复现 ready 报告，再重跑 R3 live runner。
+>
+> **当前状态（2026-08-04 G2 闭环尝试，取代上段 R2 判定）：** 当日实测发现 metadata.sqlite
+> 其实**已含全部 19 个 dataset 的认证记录**（2026-08-02 15:44 写入），先前 blocked 报告是
+> **早 8 分钟生成**的过期产物。用全绝对路径 env 重跑 `r2_data_acceptance --mode live`
+> （需 `DITTO_DATA_ROOT` 指向 live-data；相对路径会触发 runner 的 `relative_to`/restore
+> replay bug）产出新鲜的 `status=ready` 报告（SHA `9c2d35d1…`，recoverability/idempotency/
+> 19-certified 全过），即 **DoD #1（R2 live Gate）现已真正闭环且可复现**。
+> 但重跑 R3 黄金 lane（`r3_research_acceptance --real-data`）在当前数据上**新鲜复现失败**：
+> stock/etf lane 在 ~210s 早期断言失败（疑似 golden 期望相对 Aug 3 后新数据漂移）、
+> governance lane 缺 `lanes/stock/current.json` precondition、backup lane 报 path 错误。
+> 故 `r3-report.json` 现为 `r2_live_gate=PASS`（真实）+ 4 lane 失败 + `RELEASE_ACCEPTANCE_BLOCKED`
+> —— **G2 仍 BLOCKED，但阻断点已从 R2（已解决）转移到黄金 lane 的新鲜复现**。
+> Aug 3 真实通过的 lane 证据（在当时 certified 快照上）归档于
+> `docs/evidence/r3/20260803T142442Z-live/`。完整 G2 闭环仍需：① 修 r2/r3 runner 的
+> 相对路径 replay bug（属 live-acceptance 工具债，亦是原始 G2 evidence 受损的根因）；
+> ② 刷新 golden 期望或固定数据快照；③ 重跑。代码工程层仍为 A（见审计报告）。
 
 ## Evidence policy
 

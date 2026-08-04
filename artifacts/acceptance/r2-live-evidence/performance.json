@@ -1,1 +1,24 @@
-{"checked_at":"2026-08-02T15:36:51.593297+00:00","kind":"performance","performance":{"representative_datasets":["adj_factor","fund_adj","index_daily","stock_daily"],"projected_bootstrap_seconds":2683.6337850036216,"bootstrap_limit_seconds":86400.0,"bootstrap_passed":true,"incremental_elapsed_seconds":1.0243772180001542,"incremental_limit_seconds":1800.0,"incremental_passed":true,"workbench_query_seconds":0.01829927799917641,"workbench_query_limit_seconds":5.0,"workbench_query_passed":true,"reason_codes":[]},"schema":"ditto.r2-live-gate-artifact","version":1}
+{
+  "checked_at": "2026-08-04T06:12:20.045870+00:00",
+  "kind": "performance",
+  "performance": {
+    "bootstrap_limit_seconds": 86400.0,
+    "bootstrap_passed": true,
+    "incremental_elapsed_seconds": 1.0243772180001542,
+    "incremental_limit_seconds": 1800.0,
+    "incremental_passed": true,
+    "projected_bootstrap_seconds": 2683.6337850036216,
+    "reason_codes": [],
+    "representative_datasets": [
+      "adj_factor",
+      "fund_adj",
+      "index_daily",
+      "stock_daily"
+    ],
+    "workbench_query_limit_seconds": 5.0,
+    "workbench_query_passed": true,
+    "workbench_query_seconds": 0.01829927799917641
+  },
+  "schema": "ditto.r2-live-gate-artifact",
+  "version": 1
+}

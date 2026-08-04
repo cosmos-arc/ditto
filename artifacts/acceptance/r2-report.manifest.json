@@ -1,1 +1,34 @@
-{"groups":{"idempotency":[{"relative_path":"r2-live-evidence/idempotency.json","sha256":"411fe19c9e5b8e176f9c8107225699d5127e9e6dd56990a4fdb154d4ce825ec2"}],"performance":[{"relative_path":"r2-live-evidence/performance.json","sha256":"d11032caa48f44acaee2169b037cee4a1e9d9966af8973e690bd5aeeda2b7eb3"}],"provider_entitlement":[{"relative_path":"r2-live-evidence/provider-entitlement.json","sha256":"983ed0408d9326caa3826a461930737c85c6684aca97d5c7f1bbc1ce67f998d5"}],"recoverability":[{"relative_path":"r2-live-evidence/recoverability.json","sha256":"9e1d993a1ca46a0144315462a15db57d66be4bd747b86700d429e59fa2845bdb"}]},"report":{"relative_path":"r2-report.json","sha256":"3084bc7c47d7e68603741200221f7f16bcb1059dbf93dfd97e6ff8f5da13407e"},"schema":"ditto.r2-live-gate-source","version":1}
+{
+  "groups": {
+    "idempotency": [
+      {
+        "relative_path": "r2-live-evidence/idempotency.json",
+        "sha256": "190f19dfb6f17e3c80812c84173e6c2b12604a677b1a06cd8b4d8d1af52b3ab3"
+      }
+    ],
+    "performance": [
+      {
+        "relative_path": "r2-live-evidence/performance.json",
+        "sha256": "03afb1430947c715adc3bcab2aca63a7dc227e5a91d5baaeaae88d664c3c483b"
+      }
+    ],
+    "provider_entitlement": [
+      {
+        "relative_path": "r2-live-evidence/provider-entitlement.json",
+        "sha256": "09b30a3ffa245baa1b9feda2562d92d57ada445b155dae95262b623f79f9bc26"
+      }
+    ],
+    "recoverability": [
+      {
+        "relative_path": "r2-live-evidence/recoverability.json",
+        "sha256": "d0cd6704495de97121e380b16f4bf15c0b5992a07d8d3fd4c03b841d95b724b6"
+      }
+    ]
+  },
+  "report": {
+    "relative_path": "r2-report.json",
+    "sha256": "50bafb0725fc6398f5d5dd8e12490d9a46180161f708726dc88d1a9acc0f3a77"
+  },
+  "schema": "ditto.r2-live-gate-source",
+  "version": 1
+}
