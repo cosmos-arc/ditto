@@ -482,7 +482,14 @@ def _completed_evidence(
     if packet is None or loaded is None:
         raise ValueError("completed live experiment lacks review evidence")
     if packet.hard_review_blocked:
-        raise ValueError("completed live review packet is hard-gate blocked")
+        blocking = ", ".join(
+            f"{item.rule_id}={item.outcome}"
+            for item in packet.gate_outcomes
+            if item.outcome != "pass"
+        )
+        raise ValueError(
+            f"completed live review packet is hard-gate blocked: {blocking}"
+        )
     r2_gates = tuple(
         item for item in packet.gate_outcomes if item.rule_id == "r2_live_gate"
     )
