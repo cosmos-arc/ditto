@@ -81,55 +81,56 @@
       "stdout": "============================= test session starts ==============================\nplatform linux -- Python 3.13.13, pytest-9.0.3, pluggy-1.6.0\nrootdir: /home/chevy/projects/ditto\nconfigfile: pyproject.toml\nplugins: inline-snapshot-0.32.7, time-machine-2.19.0, cov-7.1.0, respx-0.23.1, mock-3.15.1, xdist-3.8.0, asyncio-1.3.0, hypothesis-6.152.4, timeout-2.4.0, anyio-4.13.0\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncreated: 6/6 workers\n6 workers [1 item]\n\nscheduling tests via LoadFileScheduling\n\npackages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore \n[gw1] [100%] PASSED packages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore \n\n═══════════════════════════════ inline-snapshot ════════════════════════════════\nINFO: inline-snapshot was disabled because you used xdist. This means that tests\nwith snapshots will continue to run, but snapshot(x) will only return x and \ninline-snapshot will not be able to fix snapshots or generate reports.\n\n\n\n============================= slowest 10 durations =============================\n681.96s call     packages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore\n\n(2 durations < 0.005s hidden.  Use -vv to show these durations.)\n======================== 1 passed in 688.92s (0:11:28) =========================\n"
     }
   ],
-  "does_not_prove": [],
-  "failures": [],
+  "does_not_prove": [
+    "r3_live_release_acceptance",
+    "real_browser_acceptance"
+  ],
+  "failures": [
+    "r2_live_gate_configuration_blocked"
+  ],
   "generated_at": "2026-08-03T13:24:37Z",
   "golden_lanes": [
     "stock",
     "etf"
   ],
   "mode": "real_data",
-  "passed": true,
-  "proves": [
-    "verified_r2_live_gate",
-    "certified_stock_and_etf_live_golden_lanes",
-    "live_96_month_research_governance_lifecycle",
-    "live_publish_r1_reactivate",
-    "isolated_live_backup_restore"
-  ],
+  "passed": false,
+  "proves": [],
   "r2_evidence": {
-    "checked_at": "2026-08-02T15:45:10.889214+00:00",
+    "checked_at": "2026-08-02T15:36:51.593297+00:00",
     "idempotency_evidence_refs": [
       {
         "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/idempotency.json",
-        "content_hash": "d98fcb2b7b70865f8dcc2867a69ab92b18ed3d4d8916d1a13f016632fd0b9b27"
+        "content_hash": "411fe19c9e5b8e176f9c8107225699d5127e9e6dd56990a4fdb154d4ce825ec2"
       }
     ],
     "performance_evidence_refs": [
       {
         "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/performance.json",
-        "content_hash": "63a54b894289d3403545fe011e661de0e9589c5514dc7e66f80e750ae1a459b8"
+        "content_hash": "d11032caa48f44acaee2169b037cee4a1e9d9966af8973e690bd5aeeda2b7eb3"
       }
     ],
     "provider_entitlement_evidence_refs": [
       {
         "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/provider-entitlement.json",
-        "content_hash": "ec98ba9c3e684557f23d67305e447b03e62c3818f0fb56638fcd845a39030021"
+        "content_hash": "983ed0408d9326caa3826a461930737c85c6684aca97d5c7f1bbc1ce67f998d5"
       }
     ],
-    "reason_codes": [],
+    "reason_codes": [
+      "certification_missing"
+    ],
     "recoverability_evidence_refs": [
       {
         "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/recoverability.json",
-        "content_hash": "f1642a334b3f48891b0a619444c145428f97cdb9f5783e16ce522cd9254ec825"
+        "content_hash": "9e1d993a1ca46a0144315462a15db57d66be4bd747b86700d429e59fa2845bdb"
       }
     ],
-    "report_hash": "446ef1d513ce8c45580bbf00b181a24330de56aa39266b16d44443134377a49e",
+    "report_hash": "3084bc7c47d7e68603741200221f7f16bcb1059dbf93dfd97e6ff8f5da13407e",
     "report_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-report.json",
-    "status": "ready"
+    "status": "configuration_blocked"
   },
-  "r2_live_gate": "PASS",
-  "release_status": "RELEASE_ACCEPTANCE_PASSED",
+  "r2_live_gate": "FAIL",
+  "release_status": "RELEASE_ACCEPTANCE_BLOCKED",
   "schema": "ditto.r3-research-acceptance",
   "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a",
   "version": 2

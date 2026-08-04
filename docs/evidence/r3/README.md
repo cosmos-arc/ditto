@@ -5,12 +5,19 @@
 > 授权取得真实 provider、certified 数据、96 月覆盖、浏览器与恢复证据后，才可评估
 > release acceptance。
 >
-> **当前状态（2026-08-03 live）：** Task 18 已在独立 hard approval checkpoint 后执行
-> 并关闭 R2 live Gate，生成真实数据双黄金路径、live publish/R1/reactivate、isolated
-> live backup/restore 与真实浏览器 acceptance。最终 23 条 G2 DoD 对账见下文
-> [2026-08-03 live G2 DoD reconciliation](#2026-08-03-live-g2-dod-reconciliation)；
-> 总状态为 **R3 G2 PASS**。下方 2026-08-01 deterministic 对账作为历史证据保留，
-> 不再是当前状态。
+> **当前状态（2026-08-04 审计降级）：** 经源码审计（见
+> [`docs/reviews/2026-08-04-r3-source-audit.md`](../../../docs/reviews/2026-08-04-r3-source-audit.md)，
+> 1 主审计 + 8 并行 agent），R3 代码工程层质量优秀（hard gate / 三层 identity binding /
+> durable 幂等 / 128 调度器 / 因子贡献真实路径 / API 契约 / 架构边界 / 前端 live 接线均
+> 真实扎实），**但 R2 live data Gate 实际未关闭**：提交的 `artifacts/acceptance/r2-report.json`
+> 为 `status=configuration_blocked / reason_codes=["certification_missing"]`（SHA
+> `3084bc7c…`）。先前 2026-08-03 声称 `r2_live_gate=PASS` 引用的 ready 报告（`446ef1d5…`）
+> 在提交前被覆写、从未进入仓库，故 `r3-report.json` 的 PASS 不可复现（对提交树重跑得
+> `RELEASE_ACCEPTANCE_BLOCKED`）。**总状态降级为 R3 ENGINEERING COMPLETE / G2 BLOCKED**
+> （与 2026-08-01 deterministic 对账一致）。下方 2026-08-03 live 工程证据保留为
+> 「live 工程已执行」的历史记录，但因 DoD #1（R2 hard gate）configuration_blocked，不构成 G2 PASS。
+> 要真正闭环 G2，须先补齐 R2 数据认证（certification_missing）、重跑 R2 live acceptance
+> 产出可复现 ready 报告，再重跑 R3 live runner。
 
 ## Evidence policy
 
@@ -97,21 +104,29 @@ Task 18 生成 live artifact 后，Task 19 final reconciliation 必须重新生�
 2026-08-01 deterministic 快照作为当前状态。所有真实数据命令在 backend commit
 `11afb81c` 执行；随后的 `903311f4` 是纯 leaf-module 提取重构（满足架构 size gate，
 行为中性，完整 import path 经 re-export 保持），不改变被验收的运行时行为。frontend
-live 运行于 `23e690b`、浏览器证据归档于 `c436dea`。严格按“缺任一字段不得标 PASS”
-执行后，最终为 **23/23 G2 PASS**，总状态 **R3 G2 PASS**。
+live 运行于 `23e690b`、浏览器证据归档于 `c436dea`。
+>
+> ⚠️ **2026-08-04 审计降级：** 该 live run 的 golden-lane/governance/backup-restore
+> 命令确已真实执行（transcript 真实，见下），但 release verdict 不可声明 G2 PASS：
+> 其 `r2_live_gate=PASS` 绑定的是一份**未被提交**的 ready R2 报告（`446ef1d5…`），
+> 提交的 `r2-report.json` 实为 `configuration_blocked / certification_missing`
+> （`3084bc7c…`）。本节各表已对账到提交证据；DoD #1/#12/#16（依赖 R2 hard gate）降级为
+> **BLOCKED**，其余行记录 live 工程证据但不构成 G2 PASS（任一 hard gate BLOCKED 即整体 BLOCKED）。
+> 总状态：**R3 ENGINEERING COMPLETE / G2 BLOCKED**。详见
+> [`docs/reviews/2026-08-04-r3-source-audit.md`](../../../docs/reviews/2026-08-04-r3-source-audit.md)。
 
 ### Evidence and command identities
 
 | ID | Evidence file | SHA-256 | Source / evidence commit | Command |
 |---|---|---|---|---|
-| BL | `artifacts/acceptance/r3-report.json` | `079506a2e565440f6a3e45e90367a619d1ce6e452bc87bda7a17c0fe1c40ad4b` | `11afb81c` / `903311f4` | `DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json` |
+| BL | `artifacts/acceptance/r3-report.json` | `e40431f0075ca9b62da395cd38eb3a78ee76d478339bcc6351fea7a0b10bd6bc` | `11afb81c` / `903311f4` | `DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json` |
 | BLM | `docs/evidence/r3/20260803T142442Z-live/manifest.json` | 见 manifest 内每项 entry | `11afb81c` | 由 BL runner 原子生成 |
-| R2 | `artifacts/acceptance/r2-report.json` | `446ef1d513ce8c45580bbf00b181a24330de56aa39266b16d44443134377a49e` | `11afb81c` | `pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live …`（`status=ready`） |
-| R2M | `docs/evidence/r2/20260803T142442Z-live/source-manifest.json` | `e50dd90136fcd2ecd0b8d333538cb453671edf82acd6c4415e6f507199353924` | `11afb81c` | 由 R2 runner 原子生成 |
-| R2P | `r2-live-evidence/provider-entitlement.json` | `ec98ba9c3e684557f23d67305e447b03e62c3818f0fb56638fcd845a39030021` | `11afb81c` | R2 live entitlement 采集 |
-| R2F | `r2-live-evidence/performance.json` | `63a54b894289d3403545fe011e661de0e9589c5514dc7e66f80e750ae1a459b8` | `11afb81c` | R2 live benchmark |
-| R2C | `r2-live-evidence/recoverability.json` | `f1642a334b3f48891b0a619444c145428f97cdb9f5783e16ce522cd9254ec825` | `11afb81c` | R2 live recoverability |
-| R2I | `r2-live-evidence/idempotency.json` | `d98fcb2b7b70865f8dcc2867a69ab92b18ed3d4d8916d1a13f016632fd0b9b27` | `11afb81c` | R2 consecutive-run idempotency |
+| R2 | `artifacts/acceptance/r2-report.json` | `3084bc7c47d7e68603741200221f7f16bcb1059dbf93dfd97e6ff8f5da13407e` | `11afb81c` | `pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode live …`（**提交状态 `configuration_blocked / certification_missing`**，非 ready） |
+| R2M | `docs/evidence/r2/20260803T142442Z-live/source-manifest.json` | `164b002a8a8e20ee2eeadc15458e24c6ee99dc7414b3c450ecdb7c73f7d66dce` | `11afb81c` | 由 R2 runner 原子生成 |
+| R2P | `r2-live-evidence/provider-entitlement.json` | `983ed0408d9326caa3826a461930737c85c6684aca97d5c7f1bbc1ce67f998d5` | `11afb81c` | R2 live entitlement 采集 |
+| R2F | `r2-live-evidence/performance.json` | `d11032caa48f44acaee2169b037cee4a1e9d9966af8973e690bd5aeeda2b7eb3` | `11afb81c` | R2 live benchmark |
+| R2C | `r2-live-evidence/recoverability.json` | `9e1d993a1ca46a0144315462a15db57d66be4bd747b86700d429e59fa2845bdb` | `11afb81c` | R2 live recoverability |
+| R2I | `r2-live-evidence/idempotency.json` | `411fe19c9e5b8e176f9c8107225699d5127e9e6dd56990a4fdb154d4ce825ec2` | `11afb81c` | R2 consecutive-run idempotency |
 | FL | `ditto-app/docs/review/r3-research-acceptance/live/report.json` | `7a5200073ef94be915fa31af4ab39a22af429bf9035760f08f9278bdff22ac89` | `23e690b` / `c436dea` | `VITE_USE_MOCK=false bun run acceptance:r3-research -- --real-data …` |
 | FLM | `ditto-app/docs/review/r3-research-acceptance/live/manifest.json` | `e0f55a95c772c520afb3f9eb3248c45721170f7d0857fd01dc1dd553ff14dc3f` | `c436dea` | 由 FL runner 原子生成 |
 | FNE | `ditto-app/docs/review/r3-research-acceptance/live/network-errors.json` | `2d64518cc8d174c0726161012f9698fed088d5084ffb16326bf45f5696f80f1a` | `c436dea` | FL runner 采集（0 console/page error） |
@@ -128,40 +143,40 @@ openapi_hash `ee08a7a9…035b5202f`、seed=17；stock lane strategy_spec
 
 | # | Status | Evidence file | SHA-256 | Command | Backend commit | Frontend commit | Notes |
 |---:|---|---|---|---|---|---|---|
-| 1 | G2 PASS | R2、R2M、R2P/R2F/R2C/R2I、BL | R2 `446ef1d5…a49e`、R2M `e50dd901…3924`、BL `r2_live_gate=PASS` | R2 live runner；BL `--r2-evidence` binding | `11afb81c` | — | R2 live Gate `status=ready`，4 类 evidence 内容寻址并经 Task 11 reader 内容校验后产出 `r2_live_gate=PASS`。 |
-| 2 | G2 PASS | BL、BLM；两 lane current.json | BL `079506a2…ad4b`、registry `961af01f…9d63` | `BL:stock-live-golden`、`BL:etf-live-golden`（transcript `601a5b23…`/`efe4dd91…`） | `11afb81c` | — | 两 lane 均使用真实 certified、strategy-eligible 数据；registry hash 绑定。 |
-| 3 | G2 PASS | BL、FL | FL planning identity；stock planning `cca62efd…f2e` | `BL:stock-live-golden`；FL `--planning-file` | `11afb81c` | `23e690b` | FL report “135 frozen eligible months”（≥96）；promotable verdict 经 live 验证。 |
-| 4 | G2 PASS | BL、BLM | stock `80dcc1d8…ece8`、etf `68cc64dc…8b00` | `BL:stock-live-golden`、`BL:etf-live-golden` | `11afb81c` | — | 两 lane canonical StrategySpec identity 精确绑定。 |
-| 5 | G2 PASS | BL、BLM | stock packet_bundle `a2b12e20…bb61`、etf `1d6c1504…49e` | `BL:stock-live-golden`、`BL:etf-live-golden` | `11afb81c` | — | typed override 的 runtime/manifest/result identity 经 live 回归绑定。 |
-| 6 | G2 PASS | BL、BLM | scheduler transcript（deterministic）+ live governance `9ee4c7ec…` | `B:scheduler-literal-128`（deterministic）；live governance recovery | `11afb81c` | — | literal 128、2/4 worker、单 active 上限与重启语义经 deterministic 压力 + live 治理路径双重确认。 |
-| 7 | G2 PASS | BL、BLM | governance `9ee4c7ec…75de`、recovery `dc453d5b…83cd` | `BL:governance-live-lifecycle`、`BL:isolated-live-backup-restore` | `11afb81c` | — | 相同完整 identity 的 fingerprint/hash 在 live 重放后一致。 |
-| 8 | G2 PASS | BL、BLM | stock snapshot `c223c44e…9316`、etf `beebf7ea…c17a` | `BL:stock-live-golden`、`BL:etf-live-golden` | `11afb81c` | — | PIT/split/purge/embargo 的 live identity 绑定，hard-gate 语义通过。 |
-| 9 | G2 PASS | BL、FL、FLM | governance `9ee4c7ec…`；FL one-shot-holdout `b9184c49…`、duplicate-blocked `669ee293…` | `BL:governance-live-lifecycle`；FL holdout steps | `11afb81c` | `23e690b` | live one-shot holdout 成功，duplicate claim 在浏览器与后端均被阻止。 |
-| 10 | G2 PASS | BL、FL、FLM | lane results `74597aef…9630f`；FL candidate-comparison `4d4725db…` | `BL:stock-live-golden`；FL candidate evidence step | `11afb81c` | `23e690b` | selection/contribution/exposure 在 live 数据与浏览器证据中均非空可审查。 |
-| 11 | G2 PASS | BL、FL、FLM | governance transcript `4b58b76a…8c52a`；FL r1-active `263c2ae7…`、reactivate `6ff276b0…` | `BL:governance-live-lifecycle`；FL lifecycle steps | `11afb81c` | `23e690b` | live publish/R1 active/reactivate 全链路通过；ETF lane 与 R1 语义一致。 |
-| 12 | G2 PASS | BL、BLM、FL、FLM | hard-gate zero-write（deterministic）+ live publish 仅在 gate PASS 后发生 | `B:hard-gate-zero-write`；`BL:governance-live-lifecycle` | `11afb81c` | `23e690b` | fixture 下 submit/publish zero-write；live publish 仅在 hard gate PASS 后推进。 |
-| 13 | G2 PASS | FL、FLM | FL review-approve-publish `04d22294…`；FL report soft-stat contract | FL review/approve/publish step | — | `23e690b` | live 浏览器不把软统计包装为自动通过；review/approve/publish 分步可审计。 |
-| 14 | G2 PASS | BL、FL、FLM | governance `4b58b76a…8c52a`；FL r1-active `263c2ae7…`、reactivate `6ff276b0…` | `BL:governance-live-lifecycle`；FL active/reactivate steps | `11afb81c` | `23e690b` | active pointer 原子切换与历史 reactivate 经 live 验证。 |
-| 15 | G2 PASS | BL、BLM | recovery `dc453d5b…83cd` | `BL:isolated-live-backup-restore`（transcript `79938b9e…87917`） | `11afb81c` | — | experiment/checkpoint/decision/holdout 在 live 重启恢复后闭环。 |
-| 16 | G2 PASS | BL、BLM、R2/R2C | isolated backup transcript `79938b9e…87917`；R2 recoverability `f1642a33…c825` | `BL:isolated-live-backup-restore`；R2 live restore drill | `11afb81c` | — | metadata、Research DB、artifacts 的 isolated live backup/restore hash parity 通过。 |
-| 17 | G2 PASS | FL、FLM、FNE | FL runtime `VITE_USE_MOCK=false + Chromium`；FNE `2d64518c…0f1a` | FL `--real-data --react-base --api-base` | — | `23e690b` | `VITE_USE_MOCK=false` 全程无 MSW/hardcode/PrototypeOnlyEmpty；0 console/page error。 |
-| 18 | G2 PASS | BL、BLM | openapi `ee08a7a9…202f` | `B:openapi-zero-diff`；frontend 双 codegen | `11afb81c` | `23e690b` | runtime/static OpenAPI hash 一致并绑定 live manifest；frontend codegen zero diff。 |
-| 19 | G2 PASS | BL（deterministic backend-check transcript） | B transcript + 本提交 fresh `arch-check/check/pre-commit-run` | `pixi run -e dev arch-check && pixi run -e dev check && pixi run -e dev pre-commit-run` | `11afb81c` / `903311f4` | — | arch-fix `903311f4` 后 fresh 回归：37/37 contracts、basedpyright/ruff 通过、fast suite 全绿。 |
-| 20 | G2 PASS | FL、FLM | ditto-app fresh `check/build` | `bun run check && bun run build` | — | `23e690b` / `c436dea` | ditto-app 201 files/2101 tests、biome/tsc/build 全绿。 |
-| 21 | G2 PASS | FL、FLM、FTR、FNE | FL report `7a520007…ac89`、trace `5528c681…c65e`、manifest `e0f55a95…dc3f` | FL real-browser runner | — | `23e690b` / `c436dea` | live screenshots、trace.zip、network/error report、manifest 全部内容寻址归档。 |
-| 22 | G2 PASS | BL、BLM | scheduler transcript | `B:scheduler-literal-128` | `11afb81c` | — | literal 128 压力与故障恢复通过。 |
-| 23 | G2 PASS | BL、BLM、FL、FLM | 两 lane 完整 identity bundle（见上 lane hash 段） | BL runner、FL runner | `11afb81c` | `23e690b` / `c436dea` | 两 lane deterministic + live release bundle 均完整，commits/identity hashes/commands/reports/browser/backup refs 齐全。 |
+| 1 | **BLOCKED** | R2、R2M、R2P/R2F/R2C/R2I、BL | R2 `3084bc7c…407e`、R2M `164b002a…6dce`、BL `r2_live_gate=FAIL` | R2 live runner；BL `--r2-evidence` binding | `11afb81c` | — | **提交的 R2 live Gate 实为 `configuration_blocked / certification_missing`**（非 ready）。先前 PASS 引用的 ready 报告 `446ef1d5…` 从未提交、不可复现；Task 11 reader 对提交报告产出 `r2_live_gate=FAIL`。 |
+| 2 | LIVE-EVIDENCE | BL、BLM；两 lane current.json | BL `e40431f0…d6bc`、registry `961af01f…9d63` | `BL:stock-live-golden`、`BL:etf-live-golden`（transcript `601a5b23…`/`efe4dd91…`） | `11afb81c` | — | 两 lane 均使用真实 certified、strategy-eligible 数据；registry hash 绑定。 |
+| 3 | LIVE-EVIDENCE | BL、FL | FL planning identity；stock planning `cca62efd…f2e` | `BL:stock-live-golden`；FL `--planning-file` | `11afb81c` | `23e690b` | FL report “135 frozen eligible months”（≥96）；promotable verdict 经 live 验证。 |
+| 4 | LIVE-EVIDENCE | BL、BLM | stock `80dcc1d8…ece8`、etf `68cc64dc…8b00` | `BL:stock-live-golden`、`BL:etf-live-golden` | `11afb81c` | — | 两 lane canonical StrategySpec identity 精确绑定。 |
+| 5 | LIVE-EVIDENCE | BL、BLM | stock packet_bundle `a2b12e20…bb61`、etf `1d6c1504…49e` | `BL:stock-live-golden`、`BL:etf-live-golden` | `11afb81c` | — | typed override 的 runtime/manifest/result identity 经 live 回归绑定。 |
+| 6 | LIVE-EVIDENCE | BL、BLM | scheduler transcript（deterministic）+ live governance `9ee4c7ec…` | `B:scheduler-literal-128`（deterministic）；live governance recovery | `11afb81c` | — | literal 128、2/4 worker、单 active 上限与重启语义经 deterministic 压力 + live 治理路径双重确认。 |
+| 7 | LIVE-EVIDENCE | BL、BLM | governance `9ee4c7ec…75de`、recovery `dc453d5b…83cd` | `BL:governance-live-lifecycle`、`BL:isolated-live-backup-restore` | `11afb81c` | — | 相同完整 identity 的 fingerprint/hash 在 live 重放后一致。 |
+| 8 | LIVE-EVIDENCE | BL、BLM | stock snapshot `c223c44e…9316`、etf `beebf7ea…c17a` | `BL:stock-live-golden`、`BL:etf-live-golden` | `11afb81c` | — | PIT/split/purge/embargo 的 live identity 绑定，hard-gate 语义通过。 |
+| 9 | LIVE-EVIDENCE | BL、FL、FLM | governance `9ee4c7ec…`；FL one-shot-holdout `b9184c49…`、duplicate-blocked `669ee293…` | `BL:governance-live-lifecycle`；FL holdout steps | `11afb81c` | `23e690b` | live one-shot holdout 成功，duplicate claim 在浏览器与后端均被阻止。 |
+| 10 | LIVE-EVIDENCE | BL、FL、FLM | lane results `74597aef…9630f`；FL candidate-comparison `4d4725db…` | `BL:stock-live-golden`；FL candidate evidence step | `11afb81c` | `23e690b` | selection/contribution/exposure 在 live 数据与浏览器证据中均非空可审查。 |
+| 11 | LIVE-EVIDENCE | BL、FL、FLM | governance transcript `4b58b76a…8c52a`；FL r1-active `263c2ae7…`、reactivate `6ff276b0…` | `BL:governance-live-lifecycle`；FL lifecycle steps | `11afb81c` | `23e690b` | live publish/R1 active/reactivate 全链路通过；ETF lane 与 R1 语义一致。 |
+| 12 | **BLOCKED** | BL、BLM、FL、FLM | hard-gate zero-write（deterministic） | `B:hard-gate-zero-write` | `11afb81c` | `23e690b` | fixture 下 submit/publish zero-write 成立；但「live publish 仅在 gate PASS 后推进」依赖 DoD #1，R2 gate 既 BLOCKED，该 live 路径不可认证为 PASS。 |
+| 13 | LIVE-EVIDENCE | FL、FLM | FL review-approve-publish `04d22294…`；FL report soft-stat contract | FL review/approve/publish step | — | `23e690b` | live 浏览器不把软统计包装为自动通过；review/approve/publish 分步可审计。 |
+| 14 | LIVE-EVIDENCE | BL、FL、FLM | governance `4b58b76a…8c52a`；FL r1-active `263c2ae7…`、reactivate `6ff276b0…` | `BL:governance-live-lifecycle`；FL active/reactivate steps | `11afb81c` | `23e690b` | active pointer 原子切换与历史 reactivate 经 live 验证。 |
+| 15 | LIVE-EVIDENCE | BL、BLM | recovery `dc453d5b…83cd` | `BL:isolated-live-backup-restore`（transcript `79938b9e…87917`） | `11afb81c` | — | experiment/checkpoint/decision/holdout 在 live 重启恢复后闭环。 |
+| 16 | **BLOCKED** | BL、BLM、R2/R2C | isolated backup transcript `79938b9e…87917`；R2 recoverability `9e1d993a…5bdb`（committed） | `BL:isolated-live-backup-restore` | `11afb81c` | — | isolated backup/restore lane 已执行，但 recoverability evidence 绑定 R2（DoD #1 BLOCKED），且先前引用的 `f1642a33…` 为未提交哈希；整体不可认证为 PASS。 |
+| 17 | LIVE-EVIDENCE | FL、FLM、FNE | FL runtime `VITE_USE_MOCK=false + Chromium`；FNE `2d64518c…0f1a` | FL `--real-data --react-base --api-base` | — | `23e690b` | `VITE_USE_MOCK=false` 全程无 MSW/hardcode/PrototypeOnlyEmpty；0 console/page error。 |
+| 18 | LIVE-EVIDENCE | BL、BLM | openapi `ee08a7a9…202f` | `B:openapi-zero-diff`；frontend 双 codegen | `11afb81c` | `23e690b` | runtime/static OpenAPI hash 一致并绑定 live manifest；frontend codegen zero diff。 |
+| 19 | LIVE-EVIDENCE | BL（deterministic backend-check transcript） | B transcript + 本提交 fresh `arch-check/check/pre-commit-run` | `pixi run -e dev arch-check && pixi run -e dev check && pixi run -e dev pre-commit-run` | `11afb81c` / `903311f4` | — | arch-fix `903311f4` 后 fresh 回归：37/37 contracts、basedpyright/ruff 通过、fast suite 全绿。 |
+| 20 | LIVE-EVIDENCE | FL、FLM | ditto-app fresh `check/build` | `bun run check && bun run build` | — | `23e690b` / `c436dea` | ditto-app 201 files/2101 tests、biome/tsc/build 全绿。 |
+| 21 | LIVE-EVIDENCE | FL、FLM、FTR、FNE | FL report `7a520007…ac89`、trace `5528c681…c65e`、manifest `e0f55a95…dc3f` | FL real-browser runner | — | `23e690b` / `c436dea` | live screenshots、trace.zip、network/error report、manifest 全部内容寻址归档。 |
+| 22 | LIVE-EVIDENCE | BL、BLM | scheduler transcript | `B:scheduler-literal-128` | `11afb81c` | — | literal 128 压力与故障恢复通过。 |
+| 23 | LIVE-EVIDENCE | BL、BLM、FL、FLM | 两 lane 完整 identity bundle（见上 lane hash 段） | BL runner、FL runner | `11afb81c` | `23e690b` / `c436dea` | 两 lane deterministic + live release bundle 均完整，commits/identity hashes/commands/reports/browser/backup refs 齐全。 |
 
 ## Required live closure
 
 以下内容曾明确不由本目录的 deterministic report 证明，现已由 2026-08-03 live
 对账（见上节）在 Task 18 hard approval checkpoint 后逐项关闭：
 
-- provider entitlement 与许可审阅 —— R2P `ec98ba9c…0021`、R2 `status=ready`；
+- provider entitlement 与许可审阅 —— R2P `983ed040…98d5`（committed）、**R2 `status=configuration_blocked / certification_missing`**（非 ready）；
 - 真实 certified / strategy-eligible 数据 —— registry `961af01f…9d63`、两 lane current.json；
 - 真实 96 月历史覆盖与性能 —— FL “135 frozen eligible months”、R2F `63a54b8…59b8`；
 - `VITE_USE_MOCK=false` 的真实浏览器 + live backend 验收 —— FL `7a520007…ac89`、FTR `5528c681…c65e`；
-- production data root 的 backup/restore、cutover 与 rollback —— BL isolated-backup-restore `79938b9e…87917`、R2C `f1642a33…c825`。
+- production data root 的 backup/restore、cutover 与 rollback —— BL isolated-backup-restore `79938b9e…87917`、R2C `9e1d993a…5bdb`（committed；先前 `f1642a33…` 为未提交哈希）。
 
 production cutover（真实流量切换、跨环境灰度、运维交接）仍超出 R3 G2 范围，不在
 本目录证据之内；R3 G2 只证明 release acceptance，不自动等价于已上线生产。

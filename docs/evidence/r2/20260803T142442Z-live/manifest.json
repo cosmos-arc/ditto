@@ -6,7 +6,7 @@
       "mode": "live",
       "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/idempotency.json",
       "repository": "backend",
-      "sha256": "d98fcb2b7b70865f8dcc2867a69ab92b18ed3d4d8916d1a13f016632fd0b9b27",
+      "sha256": "411fe19c9e5b8e176f9c8107225699d5127e9e6dd56990a4fdb154d4ce825ec2",
       "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
     },
     {
@@ -15,7 +15,7 @@
       "mode": "live",
       "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/performance.json",
       "repository": "backend",
-      "sha256": "63a54b894289d3403545fe011e661de0e9589c5514dc7e66f80e750ae1a459b8",
+      "sha256": "d11032caa48f44acaee2169b037cee4a1e9d9966af8973e690bd5aeeda2b7eb3",
       "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
     },
     {
@@ -24,7 +24,7 @@
       "mode": "live",
       "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/provider-entitlement.json",
       "repository": "backend",
-      "sha256": "ec98ba9c3e684557f23d67305e447b03e62c3818f0fb56638fcd845a39030021",
+      "sha256": "983ed0408d9326caa3826a461930737c85c6684aca97d5c7f1bbc1ce67f998d5",
       "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
     },
     {
@@ -33,7 +33,7 @@
       "mode": "live",
       "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-live-evidence/recoverability.json",
       "repository": "backend",
-      "sha256": "f1642a334b3f48891b0a619444c145428f97cdb9f5783e16ce522cd9254ec825",
+      "sha256": "9e1d993a1ca46a0144315462a15db57d66be4bd747b86700d429e59fa2845bdb",
       "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
     },
     {
@@ -42,7 +42,7 @@
       "mode": "live",
       "relative_path": "docs/evidence/r2/20260803T142442Z-live/r2-report.json",
       "repository": "backend",
-      "sha256": "446ef1d513ce8c45580bbf00b181a24330de56aa39266b16d44443134377a49e",
+      "sha256": "3084bc7c47d7e68603741200221f7f16bcb1059dbf93dfd97e6ff8f5da13407e",
       "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
     },
     {
@@ -51,7 +51,7 @@
       "mode": "live",
       "relative_path": "docs/evidence/r2/20260803T142442Z-live/source-manifest.json",
       "repository": "backend",
-      "sha256": "e50dd90136fcd2ecd0b8d333538cb453671edf82acd6c4415e6f507199353924",
+      "sha256": "164b002a8a8e20ee2eeadc15458e24c6ee99dc7414b3c450ecdb7c73f7d66dce",
       "source_commit": "11afb81cd6fd5a8f2d3718d5953da339db49548a"
     }
   ],

@@ -31,6 +31,8 @@ launch 的 exact `strategy_id@version`/launch hash 绑定到 governance spec has
 >
 > **当前状态（2026-08-03，取代上文）**：Task 18 live 闭环已完成，本计划 deterministic scope 现已由 live evidence 覆盖。live 后端报告 SHA-256 升级为 `079506a2e565440f6a3e45e90367a619d1ce6e452bc87bda7a17c0fe1c40ad4b`（`mode=real_data`、`passed=true`、`r2_live_gate=PASS`、`release_status=RELEASE_ACCEPTANCE_PASSED`），真实 provider/certified 数据（135 eligible 月）、isolated live backup/restore 与真实浏览器验收均已绑定。总状态 **R3 G2 PASS**；逐条 evidence 见 [docs/evidence/r3/README.md](../../evidence/r3/README.md) 的 2026-08-03 live 对账节。
 >
+> **当前状态（2026-08-04，取代上文）**：源码审计（[docs/reviews/2026-08-04-r3-source-audit.md](../reviews/2026-08-04-r3-source-audit.md)）推翻上方 G2 PASS：提交的 R2 报告实为 `configuration_blocked / certification_missing`（`3084bc7c…`），r3-report 引用的 ready 报告（`446ef1d5…`）从未提交、PASS 不可复现。本计划 deterministic scope 的工程闭环依然成立（代码层审计优秀），但 **R2 live Gate 未关闭 → 总状态回退为 R3 ENGINEERING COMPLETE / G2 BLOCKED**。r3-report/manifests/README 已对账到提交证据（r3-report 新 SHA `258e0759…`，r2_live_gate=FAIL）。
+>
 > **跨仓库**:全部在后端 `/home/chevy/projects/ditto`,分支 `docs/r3-research-governance-design`。
 
 ## 实施规则
