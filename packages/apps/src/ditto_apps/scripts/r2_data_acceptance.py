@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import shutil
 import sqlite3
 import sys
@@ -559,7 +560,73 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--restore-root", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--source-manifest", type=Path)
+    parser.add_argument("--data-root", type=Path)
     return parser
+
+
+def _resolve_path(value: Path | None) -> Path | None:
+    return None if value is None else value.expanduser().resolve(strict=False)
+
+
+def _run_stamp(now: datetime) -> str:
+    return now.strftime("%Y%m%dT%H%M%SZ")
+
+
+@dataclass(frozen=True, slots=True)
+class _ResolvedLiveArgs:
+    evidence_path: Path | None
+    sqlite_path: Path | None
+    payload_root: Path | None
+    backup_root: Path | None
+    restore_root: Path | None
+    output: Path | None
+    source_manifest: Path | None
+    env_overrides: dict[str, str]
+
+
+def _resolve_live_args(
+    args: argparse.Namespace,
+    *,
+    stamp: str,
+) -> _ResolvedLiveArgs:
+    """
+    Resolve live-run paths to absolute + derive env overrides + per-run roots.
+
+    Mirrors sibling runners (``r2_live_certification``/``r3_live_snapshot_builder``)
+    which resolve paths in ``main``. Fixes:
+
+    - relative ``--output`` crashing ``write_live_evidence_bundle``'s
+      ``path.relative_to(root)`` (one relative, one absolute);
+    - ``--sqlite-path`` being disconnected from the runtime pool, which reads
+      ``SQLITE_PATH``/``DITTO_DATA_ROOT`` env via ``load_data_store_settings``;
+    - replay colliding with the non-overwrite backup/restore contract by
+      stamping a unique subdir per run (the contract itself stays intact).
+    """
+    data_root = _resolve_path(getattr(args, "data_root", None))
+    sqlite_path = _resolve_path(args.sqlite_path)
+    env_overrides: dict[str, str] = {}
+    if data_root is not None:
+        env_overrides["DITTO_DATA_ROOT"] = str(data_root)
+    if sqlite_path is not None:
+        env_overrides["SQLITE_PATH"] = str(sqlite_path)
+    backup_root = _resolve_path(args.backup_root)
+    restore_root = _resolve_path(args.restore_root)
+    if backup_root is not None:
+        backup_root = backup_root / stamp
+    if restore_root is not None:
+        restore_root = restore_root / stamp
+    output = _resolve_path(args.output)
+    source_manifest = _resolve_path(args.source_manifest)
+    return _ResolvedLiveArgs(
+        evidence_path=_resolve_path(args.evidence),
+        sqlite_path=sqlite_path,
+        payload_root=_resolve_path(args.payload_root),
+        backup_root=backup_root,
+        restore_root=restore_root,
+        output=output,
+        source_manifest=source_manifest,
+        env_overrides=env_overrides,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -568,20 +635,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.mode == "fixture":
         report = run_fixture_acceptance()
     else:
+        resolved = _resolve_live_args(args, stamp=_run_stamp(datetime.now(UTC)))
+        if resolved.env_overrides:
+            os.environ.update(resolved.env_overrides)
         report = run_live_acceptance(
-            evidence_path=args.evidence,
-            sqlite_path=args.sqlite_path,
-            payload_root=args.payload_root,
-            backup_root=args.backup_root,
-            restore_root=args.restore_root,
+            evidence_path=resolved.evidence_path,
+            sqlite_path=resolved.sqlite_path,
+            payload_root=resolved.payload_root,
+            backup_root=resolved.backup_root,
+            restore_root=resolved.restore_root,
         )
-        if args.output is not None:
-            source_manifest = args.source_manifest or args.output.with_name(
-                f"{args.output.stem}.manifest{args.output.suffix}"
+        if resolved.output is not None:
+            source_manifest = resolved.source_manifest or resolved.output.with_name(
+                f"{resolved.output.stem}.manifest{resolved.output.suffix}"
             )
             write_live_evidence_bundle(
                 report=report,
-                output=args.output,
+                output=resolved.output,
                 source_manifest=source_manifest,
             )
     sys.stdout.write(
@@ -694,6 +764,8 @@ def _json_record(
 
 def _remove_new_restore(sqlite_target: Path, payload_target: Path) -> None:
     sqlite_target.unlink(missing_ok=True)
+    for partial in sqlite_target.parent.glob(f".{sqlite_target.name}*.partial*"):
+        partial.unlink(missing_ok=True)
     if payload_target.exists():
         shutil.rmtree(payload_target)
 
