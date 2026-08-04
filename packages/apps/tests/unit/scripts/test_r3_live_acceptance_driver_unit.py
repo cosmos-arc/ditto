@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
 
+import pytest
 from ditto_apps.registry.live import r3_live_acceptance_driver as registry_driver
 from ditto_apps.scripts import r3_live_acceptance_driver as driver
 
@@ -102,6 +103,32 @@ def test_candidate_selection_tick_replays_missing_evidence(
 
     assert result is detail
     assert len(ticks) == 1
+
+
+def test_tick_until_raises_when_wall_clock_deadline_exceeds(monkeypatch) -> None:
+    """A stalled lane must fail at the wall-clock deadline, not a tick cap."""
+    clock_calls = {"n": 0}
+
+    def fast_clock() -> float:
+        clock_calls["n"] += 1
+        return 0.0 if clock_calls["n"] == 1 else 10000.0
+
+    monkeypatch.setattr(registry_driver, "_monotonic", fast_clock)
+    monkeypatch.setattr(
+        registry_driver,
+        "_detail",
+        lambda _experiment_id: SimpleNamespace(stage="exploration", status="running"),
+    )
+    fired: list[datetime] = []
+
+    with pytest.raises(ValueError, match="did not reach candidate_selection within"):
+        registry_driver._tick_until(
+            "experiment-live",
+            target="candidate_selection",
+            scheduler_tick=lambda *, occurred_at: fired.append(occurred_at),
+        )
+
+    assert fired == []  # deadline tripped before any tick fired
 
 
 def test_select_and_claim_recovers_persisted_holdout_claim() -> None:

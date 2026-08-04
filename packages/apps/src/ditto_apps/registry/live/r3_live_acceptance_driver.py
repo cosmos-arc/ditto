@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -114,7 +115,13 @@ class SelectAndClaim(Protocol):
     def __call__(self, experiment_id: str) -> tuple[str, str, str, bool]: ...
 
 
-_MAX_TICKS = 64
+# Live golden lanes run real fold backtests (~1891s proven on the frozen Aug-3
+# snapshot). A data-blind tick cap cut slow lanes off mid-backtest, so termination
+# is wall-clock-bounded with a generous tick safety ceiling. The clock is a
+# module-level alias so unit tests can advance it without touching wall time.
+_LIVE_LANE_WALL_CLOCK_SECONDS = 3600.0
+_LIVE_LANE_MAX_TICKS = 6000
+_monotonic: Callable[[], float] = time.monotonic
 _TERMINAL_FAILURES = {"cancelled", "completed_with_failures", "failed"}
 _STRATEGY_BY_LANE = {
     "stock": "seed_stock_selection_rotation",
@@ -320,7 +327,10 @@ def _tick_until(
     target: str,
     scheduler_tick: SchedulerTick,
 ) -> ExperimentDetailReadModel:
-    for _ in range(_MAX_TICKS):
+    started = _monotonic()
+    for _ in range(_LIVE_LANE_MAX_TICKS):
+        if _monotonic() - started > _LIVE_LANE_WALL_CLOCK_SECONDS:
+            break
         detail = _detail(experiment_id)
         if target == "candidate_selection" and detail.stage == target:
             # Re-enter the stage once so an interrupted transition can
@@ -337,8 +347,11 @@ def _tick_until(
             return detail
         scheduler_tick(occurred_at=datetime.now(UTC))
     detail = _detail(experiment_id)
+    elapsed = _monotonic() - started
     raise ValueError(
-        f"live experiment did not reach {target}: {detail.stage}/{detail.status}"
+        "live experiment did not reach "
+        + f"{target} within {_LIVE_LANE_WALL_CLOCK_SECONDS:.0f}s"
+        + f" (elapsed {elapsed:.0f}s): {detail.stage}/{detail.status}"
     )
 
 
