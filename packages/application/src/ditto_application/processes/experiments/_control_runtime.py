@@ -65,7 +65,7 @@ CONTROL_ONLY_FACTORY_CODE = "CONTROL_ONLY_FACTORY"
 CONTROL_ONLY_FACTORY_REASON = "first_attempt_factory_not_wired"
 
 CONTROL_COORDINATOR_OWNER_TOKEN = "ditto-research-scheduler"  # noqa: S105
-CONTROL_COORDINATOR_LEASE_DURATION = timedelta(minutes=30)
+CONTROL_COORDINATOR_LEASE_DURATION = timedelta(minutes=5)
 
 
 class LoggingExperimentControlNotifier:
