@@ -251,6 +251,31 @@ class SQLitePartitionLifecycleStore:
         )
         return tuple(_checkpoint_from_row(row) for row in rows)
 
+    def list_complete(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+    ) -> tuple[PartitionCheckpoint, ...]:
+        """Return every immutable COMPLETE checkpoint in deterministic order."""
+        rows = self._client.fetchall(
+            """
+            SELECT * FROM ingestion_partition_checkpoints
+            WHERE status = ?
+              AND (? IS NULL OR dataset_id = ?)
+              AND (? IS NULL OR source = ?)
+            ORDER BY request_start, request_end, chunk_id
+            """,
+            [
+                PartitionLifecycleStatus.COMPLETE.value,
+                dataset_id,
+                dataset_id,
+                source,
+                source,
+            ],
+        )
+        return tuple(_checkpoint_from_row(row) for row in rows)
+
     def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
         """Return append-only lifecycle events in transition order."""
         rows = self._client.fetchall(

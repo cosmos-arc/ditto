@@ -48,6 +48,8 @@ class CatalogWriteContext:
     source_ticker: str | None = None
     end_date: str | None = None
     l1_l2_attested: bool = False
+    chunk_id: str | None = None
+    payload_retained: bool = True
 
 
 def _dataset_namespace(dataset: str) -> str:
@@ -63,8 +65,19 @@ def _source_asset(
     source_ticker: str | None = None,
     end_date: str | None = None,
 ) -> DataAssetRef:
-    if source_ticker is not None:
+    if source_ticker is not None or end_date is not None:
         range_end = end_date or trade_date
+        range_keys = (
+            f"source={source_name}",
+            f"start_date={trade_date}",
+            f"end_date={range_end}",
+        )
+        if source_ticker is None:
+            return DataAssetRef(
+                dataset_id=dataset,
+                namespace="source",
+                partition_keys=range_keys,
+            )
         return DataAssetRef(
             dataset_id=dataset,
             namespace="source",
@@ -89,8 +102,18 @@ def _output_asset(
     source_ticker: str | None = None,
     end_date: str | None = None,
 ) -> DataAssetRef:
-    if source_ticker is not None:
+    if source_ticker is not None or end_date is not None:
         range_end = end_date or trade_date
+        range_keys = (
+            f"start_date={trade_date}",
+            f"end_date={range_end}",
+        )
+        if source_ticker is None:
+            return DataAssetRef(
+                dataset_id=dataset,
+                namespace=_dataset_namespace(dataset),
+                partition_keys=range_keys,
+            )
         return DataAssetRef(
             dataset_id=dataset,
             namespace=_dataset_namespace(dataset),
@@ -116,9 +139,9 @@ def _ingestion_run_id(
     source_ticker: str | None = None,
     end_date: str | None = None,
 ) -> str:
-    if source_ticker is not None:
+    if source_ticker is not None or end_date is not None:
         return (
-            f"ingest:{source_name}:{dataset}:{source_ticker}:"
+            f"ingest:{source_name}:{dataset}:{source_ticker or 'all'}:"
             f"{trade_date}:{end_date or trade_date}:{checksum}"
         )
     return f"ingest:{source_name}:{dataset}:{trade_date}:{checksum}"
@@ -127,12 +150,13 @@ def _ingestion_run_id(
 def _source_snapshot_id(
     ctx: CatalogWriteContext,
 ) -> str:
-    if ctx.source_ticker is not None:
-        return (
-            f"snapshot:{ctx.source_name}:{ctx.dataset}:{ctx.source_ticker}:"
+    if ctx.source_ticker is not None or ctx.end_date is not None:
+        snapshot_id = (
+            f"snapshot:{ctx.source_name}:{ctx.dataset}:{ctx.source_ticker or 'all'}:"
             f"{ctx.trade_date}:{ctx.end_date or ctx.trade_date}:"
             f"{ctx.write_result.checksum}"
         )
+        return f"{snapshot_id}:quality=l1-l2" if ctx.l1_l2_attested else snapshot_id
     return catalog_source_snapshot_id(
         dataset=ctx.dataset,
         trade_date=ctx.trade_date,
@@ -308,17 +332,27 @@ def build_evidence_commit_request(
             checksum=ctx.write_result.checksum,
             canonical_asset=catalog_entry.asset,
             request_parameters_hash=f"sha256:{request_hash}",
-            response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
+            response_metadata=(
+                (
+                    "snapshot_layer",
+                    (
+                        "normalized_provider_payload"
+                        if ctx.payload_retained
+                        else "verified_empty_provider_observation"
+                    ),
+                ),
+            ),
             license_record_id=license_record_id,
             row_count=ctx.write_result.rows_written,
-            payload_uri=ctx.write_result.file_path,
-            payload_retained=True,
+            payload_uri=(ctx.write_result.file_path if ctx.payload_retained else None),
+            payload_retained=ctx.payload_retained,
             created_at=now,
         )
     )
     range_key = f":{ctx.source_ticker}" if ctx.source_ticker is not None else ""
     return EvidenceCommitRequest(
-        chunk_id=(
+        chunk_id=ctx.chunk_id
+        or (
             f"partition:{ctx.source_name}:{ctx.dataset}{range_key}:"
             f"{ctx.trade_date}:{request_end}"
         ),

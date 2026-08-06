@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_analysis.experiments import ExperimentReaderProtocol
 from ditto_data.catalog import DataCatalogReader
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.remediation import CatalogRemediationApprovalReader
@@ -18,11 +19,15 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    SQLiteStrategyGovernanceStore,
+)
 
 from ditto_application.queries.backtest import BacktestQueryFacade
 from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.comparison import ComparisonQueryFacade
+from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
@@ -30,6 +35,10 @@ from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacad
 from ditto_application.queries.remediation import CatalogRemediationQueryFacade
 from ditto_application.queries.remediation_approval import (
     CatalogRemediationApprovalQueryFacade,
+)
+from ditto_application.queries.research_catalog import (
+    ResearchCatalogQueryFacade,
+    default_research_catalog_facade,
 )
 from ditto_application.queries.run import RunReadModel
 from ditto_application.queries.source_fallback_policy_state import (
@@ -72,9 +81,35 @@ class AppStrategyQueryProvider(Provider):
     def strategy_query_facade(
         self,
         catalog_service: StrategyCatalogReader,
+        strategy_governance_store: SQLiteStrategyGovernanceStore,
+        experiment_query_facade: ExperimentQueryFacade,
     ) -> StrategyQueryFacade:
-        """策略只读查询 facade — 封装 StrategyCatalogReader."""
-        return StrategyQueryFacade(catalog_service=catalog_service)
+        """
+        策略只读查询 facade — status/version/active 由 governance 投影.
+
+        review queue 的 experiment_id 桥接由 ExperimentQueryFacade 按 spec_hash
+        解析（application 同层 join，strategy 不直 import analysis 合同）.
+        """
+        return StrategyQueryFacade(
+            catalog_service=catalog_service,
+            version_state_reader=strategy_governance_store,
+            governance_version_reader=strategy_governance_store,
+            experiment_resolver=experiment_query_facade,
+            governance_event_reader=strategy_governance_store,
+        )
+
+    @provide
+    def experiment_query_facade(
+        self,
+        reader: ExperimentReaderProtocol,
+    ) -> ExperimentQueryFacade:
+        """Expose durable research experiments through application read models."""
+        return ExperimentQueryFacade(reader=reader)
+
+    @provide
+    def research_catalog_query_facade(self) -> ResearchCatalogQueryFacade:
+        """Research catalog facade — static R3 node + factor registry projection."""
+        return default_research_catalog_facade()
 
     @provide
     def backtest_query_facade(

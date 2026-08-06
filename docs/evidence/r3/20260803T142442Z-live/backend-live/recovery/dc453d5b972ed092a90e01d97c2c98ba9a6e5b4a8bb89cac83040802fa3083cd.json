@@ -1,0 +1,11 @@
+{
+  "artifact_hash_matches": true,
+  "backup_manifest_hash": "8b565905bd921c73e007d3c270d47c12550a3411d88876290c142a10fcd879e3",
+  "backup_root": "/home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-backup",
+  "domain_matches": true,
+  "generated_at": "2026-08-03T14:08:09.884254+00:00",
+  "metadata_hash_matches": true,
+  "research_hash_matches": true,
+  "restore_root": "/home/chevy/projects/ditto/var/r3-task18-20260802/evidence/release-v22/r3-restore",
+  "schema": "ditto.r3-live-backup-restore.v1"
+}

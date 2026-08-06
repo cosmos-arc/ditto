@@ -155,9 +155,14 @@ class TestDependencyDagValid:
                 is_market = dep.startswith("market.")
                 is_fundamental = dep.startswith("fundamentals.")
                 is_capital = dep.startswith("capital.")
-                assert is_internal or is_market or is_fundamental or is_capital, (
-                    f"{spec_id} references unknown dependency: {dep}"
-                )
+                is_benchmark = dep.startswith("benchmark.")
+                assert (
+                    is_internal
+                    or is_market
+                    or is_fundamental
+                    or is_capital
+                    or is_benchmark
+                ), f"{spec_id} references unknown dependency: {dep}"
 
 
 class TestTopologicalOrder:
@@ -171,6 +176,7 @@ class TestTopologicalOrder:
                     dep.startswith("market.")
                     or dep.startswith("fundamentals.")
                     or dep.startswith("capital.")
+                    or dep.startswith("benchmark.")
                 ):
                     continue  # external data columns
                 assert dep in ALL_FACTOR_SPECS, (

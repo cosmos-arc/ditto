@@ -263,6 +263,17 @@ def _index_weight_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
     return fetch
 
 
+def _index_weight_instrument_fetch(
+    ctx: InstrumentFetchContext,
+) -> InstrumentFetchHandler:
+    """Fetch one index's effective weights over a bounded provider interval."""
+    return lambda: ctx.fetchers.capital.fetch_index_weight(
+        ctx.source_ticker,
+        start_date=ctx.params.start_date.replace("-", ""),
+        end_date=ctx.params.end_date.replace("-", ""),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Domain-grouped registration sub-lists（模块级常量）
 # ---------------------------------------------------------------------------
@@ -390,6 +401,7 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     DatasetRegistration(
         dataset=Dataset.DIVIDEND,
         write_kind=WriteKind.FUNDAMENTAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_daily_fetch("fundamental", "fetch_dividend"),
         instrument_fetch_factory=_instrument_fetch(
             "fundamental", "fetch_dividend"
@@ -398,6 +410,7 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     DatasetRegistration(
         dataset=Dataset.CORPORATE_ACTIONS,
         write_kind=WriteKind.FUNDAMENTAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
         daily_fetch_factory=_daily_fetch("fundamental", "fetch_corporate_actions"),
     ),
 )
@@ -466,6 +479,7 @@ _PLACEHOLDER_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         dataset=Dataset.INDEX_WEIGHT,
         write_kind=WriteKind.INDEX_WEIGHT,
         daily_fetch_factory=_index_weight_fetch,
+        instrument_fetch_factory=_index_weight_instrument_fetch,
     ),
 )
 

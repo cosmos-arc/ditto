@@ -76,6 +76,7 @@ class EngineOptions:
         should_stop: 协作式取消回调 (None = 不支持取消)
         on_progress: 进度回调 (completed_days, total_days)
         on_checkpoint: checkpoint 回调，供外层持久化恢复边界
+        checkpoint_interval_days: 构造可恢复 checkpoint 的完成交易日间隔
         restore_runtime_state: checkpoint runtime-state，用于恢复 engine 内部队列
         on_step_complete: 单步完成回调 (step_name, duration_seconds, success)
 
@@ -91,8 +92,18 @@ class EngineOptions:
     should_stop: Callable[[], bool] | None = None
     on_progress: Callable[[int, int], None] | None = None
     on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
+    checkpoint_interval_days: int = 1
     restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
     on_step_complete: Callable[[str, float, bool], None] | None = None
+
+    def __post_init__(self) -> None:
+        """Reject invalid recovery cadence before the engine starts."""
+        if (
+            type(self.checkpoint_interval_days) is not int
+            or self.checkpoint_interval_days < 1
+        ):
+            msg = "checkpoint_interval_days must be a positive integer"
+            raise ValueError(msg)
 
 
 @dataclass
@@ -167,17 +178,19 @@ def is_rebalance_day(
     根据配置判断是否为调仓日（纯函数）.
 
     daily: 每日
+    fold_schedule: 仅本次 fold 的首个交易日
     weekly: 每自然周第一个交易日（基于 trading_days 判断 ISO week 跨越）
     monthly: 每月第一个交易日
 
     date 不在 trading_days 中时，fallback 为 daily（return True），
     避免抛出 ValueError。
     """
-    if freq == "daily":
-        return True
-
     idx = trading_day_index.get(date)
-    if idx is None:
+    if freq == "daily":
+        should_rebalance = True
+    elif freq == "fold_schedule":
+        should_rebalance = idx == 0
+    elif idx is None:
         logger.warning(
             (
                 "is_rebalance_day: date={!r} 不在"
@@ -185,23 +198,22 @@ def is_rebalance_day(
             ),
             date,
         )
-        return True
+        should_rebalance = True
+    elif idx == 0:
+        # 首个交易日始终为调仓日（weekly / monthly 共享逻辑）
+        should_rebalance = True
+    else:
+        prev_date = trading_days[idx - 1]
+        if freq == "weekly":
+            curr = datetime.strptime(date, "%Y-%m-%d")
+            prev = datetime.strptime(prev_date, "%Y-%m-%d")
+            should_rebalance = curr.isocalendar()[1] != prev.isocalendar()[1]
+        elif freq == "monthly":
+            should_rebalance = not prev_date.startswith(date[:7])
+        else:
+            should_rebalance = True
 
-    # 首个交易日始终为调仓日（weekly / monthly 共享逻辑）
-    if idx == 0:
-        return True
-
-    prev_date = trading_days[idx - 1]
-
-    if freq == "weekly":
-        curr = datetime.strptime(date, "%Y-%m-%d")
-        prev = datetime.strptime(prev_date, "%Y-%m-%d")
-        return curr.isocalendar()[1] != prev.isocalendar()[1]
-
-    if freq == "monthly":
-        return not prev_date.startswith(date[:7])
-
-    return True
+    return should_rebalance
 
 
 def _build_data_fetch_step(deps: StepDeps) -> DataFetchStep:

@@ -126,8 +126,8 @@ class ConflictError(APIError):
 
     """
 
-    def __init__(self, message: str) -> None:
-        super().__init__(message, status_code=409, error_code="CONFLICT")
+    def __init__(self, message: str, *, error_code: str = "CONFLICT") -> None:
+        super().__init__(message, status_code=409, error_code=error_code)
 
 
 class ForbiddenError(APIError):
@@ -160,6 +160,18 @@ class BadRequestError(APIError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message, status_code=400, error_code="BAD_REQUEST")
+
+
+class UnprocessableEntityError(APIError):
+    """A syntactically valid request rejected by a typed domain rule."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        error_code: str = "UNPROCESSABLE_ENTITY",
+    ) -> None:
+        super().__init__(message, status_code=422, error_code=error_code)
 
 
 class FutureDateError(APIError):

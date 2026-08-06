@@ -9,9 +9,21 @@ import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
+    PublishedBaselineRuntimeBuilder,
+    ResearchRuntimeBuilder,
     StrategyRuntimeBuilder,
     StrategyServiceFactory,
     StrategySliceBuilder,
+)
+from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
+from ditto_application.builders.research_executor_probe import (
+    BuilderBackedResearchExecutorProbe,
+)
+from ditto_application.builders.research_validation_authority import (
+    ProductionResearchValidationAuthorityProbe,
+)
+from ditto_application.builders.research_validation_authority_source import (
+    IndexedSnapshotValidationAuthoritySource,
 )
 from ditto_application.commands.account import ImportAccountBaselineHandler
 from ditto_application.commands.catalog import (
@@ -22,14 +34,29 @@ from ditto_application.commands.catalog_remediation import (
     CatalogRemediationIngestDatePort,
     ExecuteCatalogRemediationApprovalHandler,
 )
+from ditto_application.commands.experiments import LaunchExperimentHandler
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.trade import ProjectedFillCorrectionAdapter
 from ditto_application.processes.execution.manual_sizing import (
     AShareTradeDateResolver,
     ManualSizingContextBuilder,
 )
+from ditto_application.processes.execution.replay_process import (
+    IndexedResearchReplayArtifactReader,
+    ReplayProcess,
+)
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
+)
+from ditto_application.processes.experiments.scheduler_store import (
+    FirstAttemptFactory,
+)
+from ditto_application.processes.experiments.worker import (
+    ResearchExperimentWorker,
+    ResearchFoldRunner,
+)
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -49,6 +76,7 @@ from ditto_application.providers import (
     AppBuilderFactory,
     AppCommandProvider,
     AppProcessProvider,
+    AppResearchExecutionProvider,
     get_app_providers,
 )
 from ditto_application.providers_market import AppMarketQueryProvider
@@ -56,11 +84,15 @@ from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
+from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_application.queries.remediation import CatalogRemediationQueryFacade
+from ditto_application.queries.research_certification import (
+    DataReadinessCertificationProbe,
+)
 from ditto_application.queries.source import SourceDataPort
-from ditto_application.settings import TradingSettings
+from ditto_application.settings import ResearchExecutionSettings, TradingSettings
 from ditto_data.catalog import InMemoryDataCatalog
 from ditto_data.config.data_source import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings
@@ -88,6 +120,7 @@ from ditto_data.sources.tdx.source import TdxSource
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_platform.foundation import DataCache, Environment
 from ditto_platform.services.notification import AlertManager
+from ditto_strategy.alpha.node_registry import NodeRegistry
 
 _tdx_mock = MagicMock(spec=TdxSource)
 
@@ -129,6 +162,11 @@ class _TestConfigProvider(Provider):
     def trading_settings(self) -> TradingSettings:
         """提供测试用交易配置."""
         return TradingSettings()
+
+    @provide
+    def research_execution_settings(self) -> ResearchExecutionSettings:
+        """提供测试用 R3 研究执行 bundle 配置（默认 testing/staging sentinel 值）。"""
+        return ResearchExecutionSettings()
 
     @provide
     def data_cache(self) -> DataCache[Any]:  # type: ignore[misc]
@@ -255,10 +293,10 @@ class _ProtocolAdapterProvider(Provider):
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
-    def test_get_app_providers_returns_six_providers(self) -> None:
-        """get_app_providers() 应返回 6 个 Provider 实例."""
+    def test_get_app_providers_returns_seven_providers(self) -> None:
+        """get_app_providers() 应返回 7 个 Provider 实例."""
         providers = get_app_providers()
-        assert len(providers) == 6
+        assert len(providers) == 7
         names = [type(p).__name__ for p in providers]
         assert "AppCommandProvider" in names
         assert "AppMarketQueryProvider" in names
@@ -266,6 +304,7 @@ class TestAppProviderStructure:
         assert "AppPortfolioQueryProvider" in names
         assert "AppProcessProvider" in names
         assert "AppBuilderFactory" in names
+        assert "AppResearchExecutionProvider" in names
 
     def test_app_market_query_provider_methods(self) -> None:
         """AppMarketQueryProvider 应包含市场数据查询的 provide 方法."""
@@ -299,11 +338,22 @@ class TestAppProviderStructure:
             "backtest_query_facade",
             "run_read_model",
             "strategy_query_facade",
+            "experiment_query_facade",
             "lineage_query_facade",
             "catalog_remediation_query_facade",
             "comparison_query_facade",
         }
         assert expected.issubset(method_names)
+
+    def test_experiment_query_facade_receives_analysis_reader_port(self) -> None:
+        """Experiment queries must retain the injected typed read boundary."""
+        provider = AppStrategyQueryProvider()
+        reader = MagicMock()
+
+        facade = provider.experiment_query_facade(reader=reader)
+
+        assert isinstance(facade, ExperimentQueryFacade)
+        assert facade._reader is reader
 
     def test_app_portfolio_query_provider_methods(self) -> None:
         """AppPortfolioQueryProvider 应包含组合/交易查询的 provide 方法."""
@@ -324,8 +374,19 @@ class TestAppProviderStructure:
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
             "check_data_quality_handler",
+            "launch_experiment_handler",
         }
         assert expected.issubset(method_names)
+
+    def test_launch_experiment_handler_receives_planning_process(self) -> None:
+        """Experiment command wiring must retain the exact planning process."""
+        provider = AppCommandProvider()
+        process = MagicMock()
+
+        handler = provider.launch_experiment_handler(process=process)
+
+        assert isinstance(handler, LaunchExperimentHandler)
+        assert handler._process is process
 
     def test_account_baseline_handler_receives_both_aggregate_ports(self) -> None:
         """Provider wiring must preserve complete replacement audit evidence."""
@@ -379,10 +440,128 @@ class TestAppProviderStructure:
             "quality_batch_coordinator",
             "quality_completeness_service",
             "quality_patrol_service",
+            "research_certification_probe",
+            "research_executor_probe",
+            "research_validation_authority_probe",
+            "experiment_planning_process",
             "manual_sizing_context_builder",
             "a_share_trade_date_resolver",
         }
         assert expected.issubset(method_names)
+
+    def test_experiment_planning_provider_wires_exact_ports(self) -> None:
+        """Planning provider must preserve reader, writer, and read-only probes."""
+        provider = AppProcessProvider()
+        reader = MagicMock()
+        writer = MagicMock()
+        certification_probe = MagicMock()
+        executor_probe = MagicMock()
+        authority_probe = MagicMock()
+
+        process = provider.experiment_planning_process(
+            reader=reader,
+            writer=writer,
+            certification_probe=certification_probe,
+            executor_probe=executor_probe,
+            authority_probe=authority_probe,
+        )
+
+        assert isinstance(process, ExperimentPlanningProcess)
+        assert process._reader is reader
+        assert process._writer is writer
+        assert process._certification_probe is certification_probe
+        assert process._executor_probe is executor_probe
+        assert process._authority_probe is authority_probe
+
+    def test_evidence_providers_wire_walk_forward_assembler(self) -> None:
+        """Reuse one assembler/service across selection, holdout, and collector."""
+        from ditto_application.processes.experiments._selection_evidence_artifact import (  # noqa: E501
+            DurableSelectionEvidenceService,
+        )
+        from ditto_application.processes.experiments._walk_forward_evidence_collection import (  # noqa: E501
+            WalkForwardEvidenceAssembler,
+        )
+        from ditto_application.processes.experiments.evidence_collector import (
+            ExperimentEvidenceCollector,
+        )
+        from ditto_application.processes.experiments.r2_live_gate_evidence import (
+            NullR2LiveGateEvidenceReader,
+        )
+
+        report_reader = MagicMock()
+        trace_reader = MagicMock()
+        semantics_resolver = MagicMock()
+        assembler = AppResearchExecutionProvider().walk_forward_evidence_assembler(
+            report_reader=report_reader,
+            fold_selection_trace_reader=trace_reader,
+            semantics_resolver=semantics_resolver,
+        )
+        process_provider = AppProcessProvider()
+        scheduler_store = MagicMock()
+        reader = MagicMock()
+        artifact_service = MagicMock()
+        r2_live_gate_evidence_reader = NullR2LiveGateEvidenceReader()
+        selection_service = process_provider.durable_selection_evidence_service(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            research_artifact_service=artifact_service,
+            walk_forward_assembler=assembler,
+        )
+        collector = process_provider.experiment_evidence_collector(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            writer=MagicMock(),
+            walk_forward_assembler=assembler,
+            selection_evidence_reader=selection_service,
+            r2_live_gate_evidence_reader=r2_live_gate_evidence_reader,
+        )
+
+        assert isinstance(assembler, WalkForwardEvidenceAssembler)
+        assert assembler._report_reader is report_reader
+        assert assembler._fold_selection_trace_reader is trace_reader
+        assert assembler._semantics_resolver is semantics_resolver
+        assert isinstance(selection_service, DurableSelectionEvidenceService)
+        assert selection_service.walk_forward_assembler is assembler
+        assert selection_service.artifact_service is artifact_service
+        assert isinstance(collector, ExperimentEvidenceCollector)
+        assert collector.walk_forward_assembler is assembler
+        assert collector.selection_evidence_reader is selection_service
+        assert collector.r2_live_gate_evidence_reader is r2_live_gate_evidence_reader
+
+    def test_replay_provider_wires_verified_schema_v1_reader(self) -> None:
+        provider = AppProcessProvider()
+        strategy_artifacts = MagicMock()
+        experiment_reader = MagicMock()
+        research_artifacts = MagicMock()
+
+        verified_reader = provider.verified_replay_artifact_reader(
+            strategy_artifact_service=strategy_artifacts,
+            experiment_reader=experiment_reader,
+            research_artifact_service=research_artifacts,
+        )
+        process = provider.replay_process(
+            strategy_facade=MagicMock(),
+            artifact_service=strategy_artifacts,
+            run_model=MagicMock(),
+            verified_artifact_reader=verified_reader,
+        )
+
+        assert isinstance(verified_reader, IndexedResearchReplayArtifactReader)
+        assert isinstance(process, ReplayProcess)
+        assert process._verified_artifact_reader is verified_reader
+
+    def test_research_validation_authority_provider_is_production_fail_closed(
+        self,
+    ) -> None:
+        provider = AppProcessProvider()
+        artifacts = MagicMock()
+
+        authority = provider.research_validation_authority_probe(
+            research_artifact_service=artifacts
+        )
+
+        assert isinstance(authority, ProductionResearchValidationAuthorityProbe)
+        assert isinstance(authority._source, IndexedSnapshotValidationAuthoritySource)
 
     def test_quality_batch_coordinator_provider_wires_application_dependencies(
         self,
@@ -448,10 +627,12 @@ class TestAppProviderStructure:
         assert hints["return"] is DerivedMaterializationOrchestrator
 
     def test_app_builder_factory_methods(self) -> None:
-        """AppBuilderFactory 应包含 5 个 provide 方法."""
+        """AppBuilderFactory 应包含 runtime 与 node compiler provide 方法."""
         provider = AppBuilderFactory()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
+            "node_registry",
+            "node_pipeline_builder",
             "strategy_runtime_builder",
             "backtest_runtime_builder",
             "strategy_slice_builder",
@@ -704,6 +885,7 @@ class TestAppProviderIntegration:
 
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("SQLITE_PATH", (tmp_path / "metadata.sqlite").as_posix())
 
         container = make_container(
             _TestConfigProvider(tmp_path),
@@ -737,9 +919,25 @@ class TestAppProviderIntegration:
             app_container.get(CatalogRemediationQueryFacade),
             CatalogRemediationQueryFacade,
         )
+        assert isinstance(
+            app_container.get(ExperimentQueryFacade),
+            ExperimentQueryFacade,
+        )
 
     def test_process_services_resolved(self, app_container) -> None:
         """AppProcessProvider 的服务应可从容器解析."""
+        assert isinstance(
+            app_container.get(DataReadinessCertificationProbe),
+            DataReadinessCertificationProbe,
+        )
+        assert isinstance(
+            app_container.get(BuilderBackedResearchExecutorProbe),
+            BuilderBackedResearchExecutorProbe,
+        )
+        assert isinstance(
+            app_container.get(ExperimentPlanningProcess),
+            ExperimentPlanningProcess,
+        )
         assert isinstance(
             app_container.get(DerivedMaterializationOrchestrator),
             DerivedMaterializationOrchestrator,
@@ -775,9 +973,27 @@ class TestAppProviderIntegration:
 
     def test_builder_services_resolved(self, app_container) -> None:
         """AppBuilderFactory 的服务应可从容器解析."""
+        assert isinstance(app_container.get(NodeRegistry), NodeRegistry)
+        assert isinstance(
+            app_container.get(NodePipelineBuilder),
+            NodePipelineBuilder,
+        )
         assert isinstance(
             app_container.get(StrategyRuntimeBuilder),
             StrategyRuntimeBuilder,
+        )
+        assert isinstance(
+            app_container.get(ResearchRuntimeBuilder),
+            ResearchRuntimeBuilder,
+        )
+        assert isinstance(
+            app_container.get(PublishedBaselineRuntimeBuilder),
+            PublishedBaselineRuntimeBuilder,
+        )
+        probe = app_container.get(BuilderBackedResearchExecutorProbe)
+        assert probe._builder is app_container.get(ResearchRuntimeBuilder)
+        assert probe._published_baseline_builder is app_container.get(
+            PublishedBaselineRuntimeBuilder
         )
         assert isinstance(
             app_container.get(BacktestRuntimeBuilder),
@@ -796,6 +1012,10 @@ class TestAppProviderIntegration:
     def test_command_services_resolved(self, app_container) -> None:
         """AppCommandProvider 的服务应可从容器解析."""
         assert isinstance(
+            app_container.get(LaunchExperimentHandler),
+            LaunchExperimentHandler,
+        )
+        assert isinstance(
             app_container.get(CheckDataQualityHandler),
             CheckDataQualityHandler,
         )
@@ -803,6 +1023,162 @@ class TestAppProviderIntegration:
             app_container.get(ExecuteCatalogRemediationApprovalHandler),
             ExecuteCatalogRemediationApprovalHandler,
         )
+
+    def test_research_execution_bundle_resolved(self, app_container) -> None:
+        """AppResearchExecutionProvider 的 execution bundle 链路应可从容器解析。
+
+        Providers 注册的是消费侧 ``__init__`` 注解用的 Protocol 类型；返回的实例
+        必须是 C1/C2 的具体实现类。
+        """
+        from ditto_application.builders.fold_selection_trace_artifact_adapter import (
+            IndexedFoldSelectionTraceArtifactAdapter,
+        )
+        from ditto_application.builders.research_artifact_loader import (
+            IndexedBacktestReportArtifactAdapter,
+            IndexedResearchArtifactLoader,
+        )
+        from ditto_application.builders.research_backtest_factory import (
+            ExactResearchArtifactLoader,
+            FrozenAuditResearchBacktestFactory,
+        )
+        from ditto_application.builders.research_execution_resolver import (
+            DurableResearchExecutionResolver,
+            ResearchExecutionRuntimeBuilders,
+        )
+        from ditto_application.builders.research_input_resolver import (
+            IndexedResearchInputsResolver,
+        )
+        from ditto_application.processes.experiments._execution_resolution_evidence import (  # noqa: E501
+            FrozenResearchInputsResolver,
+        )
+        from ditto_application.processes.experiments._fold_selection_trace_artifacts import (  # noqa: E501
+            FoldSelectionTraceArtifactPublisher,
+            FoldSelectionTraceArtifactReader,
+        )
+        from ditto_application.processes.experiments._report_evidence import (
+            BacktestReportArtifactPublisher,
+            BacktestReportArtifactReader,
+        )
+        from ditto_application.processes.experiments._selection_evidence_artifact import (  # noqa: E501
+            DurableSelectionEvidenceService,
+        )
+        from ditto_application.processes.experiments._walk_forward_evidence_collection import (  # noqa: E501
+            WalkForwardEvidenceAssembler,
+        )
+        from ditto_application.processes.experiments.coordinator import (
+            ExperimentExecutionCoordinator,
+        )
+        from ditto_application.processes.experiments.evidence_collector import (
+            ExperimentEvidenceCollector,
+        )
+        from ditto_application.processes.experiments.execution_bundle import (
+            CodeEnvironmentLock,
+        )
+        from ditto_application.processes.experiments.worker import (
+            ExecutionBundleFirstAttemptFactory,
+            ExistingBacktestResearchFoldRunner,
+            ResearchBacktestServiceFactory,
+            ResearchExecutionSemanticsResolver,
+        )
+
+        assert isinstance(
+            app_container.get(FrozenResearchInputsResolver),
+            IndexedResearchInputsResolver,
+        )
+        assert isinstance(
+            app_container.get(ExactResearchArtifactLoader),
+            IndexedResearchArtifactLoader,
+        )
+        assert isinstance(
+            app_container.get(CodeEnvironmentLock),
+            CodeEnvironmentLock,
+        )
+        assert isinstance(
+            app_container.get(ResearchExecutionRuntimeBuilders),
+            ResearchExecutionRuntimeBuilders,
+        )
+        assert isinstance(
+            app_container.get(ResearchExecutionSemanticsResolver),
+            DurableResearchExecutionResolver,
+        )
+        assert isinstance(
+            app_container.get(ResearchBacktestServiceFactory),
+            FrozenAuditResearchBacktestFactory,
+        )
+        assert isinstance(
+            app_container.get(ResearchFoldRunner),
+            ExistingBacktestResearchFoldRunner,
+        )
+        report_adapter = app_container.get(IndexedBacktestReportArtifactAdapter)
+        assert isinstance(report_adapter, IndexedBacktestReportArtifactAdapter)
+        assert app_container.get(BacktestReportArtifactPublisher) is report_adapter
+        assert app_container.get(BacktestReportArtifactReader) is report_adapter
+        trace_adapter = app_container.get(IndexedFoldSelectionTraceArtifactAdapter)
+        assert isinstance(
+            trace_adapter,
+            IndexedFoldSelectionTraceArtifactAdapter,
+        )
+        assert app_container.get(FoldSelectionTraceArtifactPublisher) is trace_adapter
+        assert app_container.get(FoldSelectionTraceArtifactReader) is trace_adapter
+        assembler = app_container.get(WalkForwardEvidenceAssembler)
+        assert isinstance(assembler, WalkForwardEvidenceAssembler)
+        selection_service = app_container.get(DurableSelectionEvidenceService)
+        assert isinstance(selection_service, DurableSelectionEvidenceService)
+        assert selection_service.walk_forward_assembler is assembler
+        collector = app_container.get(ExperimentEvidenceCollector)
+        assert isinstance(collector, ExperimentEvidenceCollector)
+        assert collector.walk_forward_assembler is assembler
+        assert collector.selection_evidence_reader is selection_service
+        coordinator = app_container.get(ExperimentExecutionCoordinator)
+        assert coordinator._selection_evidence_publisher is selection_service
+        assert (
+            coordinator._holdout._process._selection_evidence_provider
+            is selection_service
+        )
+        assert isinstance(
+            app_container.get(FirstAttemptFactory),
+            ExecutionBundleFirstAttemptFactory,
+        )
+        worker = app_container.get(ResearchExperimentWorker)
+        assert isinstance(worker, ResearchExperimentWorker)
+
+    def test_research_checkpoint_capabilities_are_wired(self, app_container) -> None:
+        """Coordinator and worker must read the durable backtest checkpoint store."""
+        from ditto_application.processes.experiments.coordinator import (
+            ExperimentExecutionCoordinator,
+        )
+        from ditto_strategy.runs.models import StrategyRunCheckpointRecord
+        from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+            StrategyRunCheckpointStore,
+        )
+
+        coordinator = app_container.get(ExperimentExecutionCoordinator)
+        worker = app_container.get(ResearchExperimentWorker)
+        checkpoint_store = app_container.get(StrategyRunCheckpointStore)
+        checkpoint_store.save_checkpoint(
+            StrategyRunCheckpointRecord(
+                run_id="provider-research-checkpoint",
+                strategy_id="provider-research-strategy",
+                completed_trade_date="2026-07-30",
+                resume_from="2026-07-31",
+            )
+        )
+        assert coordinator._recovery._checkpoint_available(
+            "provider-research-checkpoint"
+        )
+        assert coordinator._recovery._checkpoint_resumable(
+            "provider-research-checkpoint"
+        )
+        assert worker._checkpoint_available("provider-research-checkpoint")
+
+    def test_coordinator_uses_execution_bundle_factory(self, app_container) -> None:
+        """FirstAttemptFactory resolves to the real execution bundle factory."""
+        from ditto_application.processes.experiments.worker import (
+            ExecutionBundleFirstAttemptFactory,
+        )
+
+        factory = app_container.get(FirstAttemptFactory)
+        assert isinstance(factory, ExecutionBundleFirstAttemptFactory)
 
     def test_manual_tracker_receives_trading_calendar(self, app_container) -> None:
         """ManualTracker 应从 MetadataService 加载交易日历（非空 tuple）."""

@@ -161,7 +161,7 @@ class TestDatasetRegistryConformance:
         registration = default_dataset_registry().require(Dataset.INDEX_WEIGHT)
 
         assert registration.daily_fetch_factory is not None
-        assert registration.instrument_fetch_factory is None
+        assert registration.instrument_fetch_factory is not None
         assert registration.write_kind is WriteKind.INDEX_WEIGHT
 
     def test_registrations_match_catalog_source_capabilities(self) -> None:
@@ -197,6 +197,16 @@ class TestDateScheduleField:
         registration = default_dataset_registry().require(Dataset.STOCK_DAILY)
 
         assert registration.date_schedule is DateScheduleType.TRADING_DAYS
+
+    def test_dividend_uses_natural_days_schedule(self) -> None:
+        registration = default_dataset_registry().require(Dataset.DIVIDEND)
+
+        assert registration.date_schedule is DateScheduleType.NATURAL_DAYS
+
+    def test_corporate_actions_uses_natural_days_schedule(self) -> None:
+        registration = default_dataset_registry().require(Dataset.CORPORATE_ACTIONS)
+
+        assert registration.date_schedule is DateScheduleType.NATURAL_DAYS
 
     def test_fx_daily_has_natural_days_schedule(self) -> None:
         registration = default_dataset_registry().require(Dataset.FX_DAILY)

@@ -7,14 +7,22 @@ StrategySpec — 策略定义的核心语义契约.
 
 from __future__ import annotations
 
+import math
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import NoReturn, cast
+from enum import StrEnum
+from typing import NoReturn, TypeGuard, cast
 
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
 
+from ditto_strategy.alpha._canonical_values import (
+    canonicalize_float_identity,
+    freeze_json_mapping,
+)
+from ditto_strategy.alpha.nodes import PipelineSpec
 from ditto_strategy.alpha.production_guard import (
     UnsafeProductionFactorExpressionError,
     validate_production_factor_expression,
@@ -22,14 +30,85 @@ from ditto_strategy.alpha.production_guard import (
 from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
+    "STRATEGY_SPEC_V2_SCHEMA_VERSION",
     "ConstraintSpec",
     "CostModelSpec",
     "ExecutionSpec",
     "ParamConstraint",
     "ScorerSpec",
     "SelectorSpec",
+    "StrategyKind",
     "StrategySpec",
+    "StrategySpecV2",
 ]
+
+STRATEGY_SPEC_V2_SCHEMA_VERSION = 2
+_PARAMETER_DTYPES = frozenset({"bool", "int", "float", "str"})
+
+
+def _validate_v2_schema_version(value: object) -> None:
+    if (
+        not isinstance(value, int)
+        or isinstance(value, bool)
+        or value != STRATEGY_SPEC_V2_SCHEMA_VERSION
+    ):
+        _raise_spec_error(
+            "StrategySpecV2.schema_version must be exactly 2",
+            field_name="schema_version",
+            reason="unsupported_schema_version",
+            actual_value=value,
+        )
+
+
+def _validate_v2_strategy_kind(value: object) -> None:
+    if not isinstance(value, StrategyKind):
+        _raise_spec_error(
+            "StrategySpecV2.strategy_kind must be a StrategyKind",
+            field_name="strategy_kind",
+            reason="invalid_strategy_kind",
+            actual_value=value,
+        )
+
+
+def _validate_v2_pipeline(value: object) -> None:
+    if not isinstance(value, PipelineSpec):
+        _raise_spec_error(
+            "StrategySpecV2.pipeline must be a PipelineSpec",
+            field_name="pipeline",
+            reason="invalid_pipeline",
+        )
+
+
+def _validate_v2_parameter_schema(value: object) -> tuple[ParamConstraint, ...]:
+    if not _is_object_tuple(value) or not all(
+        isinstance(parameter, ParamConstraint) for parameter in value
+    ):
+        _raise_spec_error(
+            "StrategySpecV2.parameter_schema must be a tuple of ParamConstraint values",
+            field_name="parameter_schema",
+            reason="invalid_parameter_schema",
+        )
+    return tuple(
+        parameter for parameter in value if isinstance(parameter, ParamConstraint)
+    )
+
+
+def _validate_v2_tags(value: object) -> tuple[str, ...]:
+    if not _is_object_tuple(value) or not all(isinstance(tag, str) for tag in value):
+        _raise_spec_error(
+            "StrategySpecV2.tags must be tuple[str, ...]",
+            field_name="tags",
+            reason="invalid_tags",
+        )
+    return tuple(tag for tag in value if isinstance(tag, str))
+
+
+def _is_object_tuple(value: object) -> TypeGuard[tuple[object, ...]]:
+    return isinstance(value, tuple)
+
+
+def _is_object_list(value: object) -> TypeGuard[list[object]]:
+    return isinstance(value, list)
 
 
 def _raise_spec_error(
@@ -46,6 +125,69 @@ def _raise_spec_error(
     }
     payload.update(details)
     raise StrategySpecError(message, details=payload)
+
+
+def _validated_parameter_allowed_values(
+    value: object,
+    *,
+    allow_list: bool,
+) -> tuple[str, ...]:
+    if _is_object_tuple(value):
+        items = value
+    elif allow_list and _is_object_list(value):
+        items = tuple(value)
+    else:
+        _raise_spec_error(
+            "ParamConstraint.allowed_values must be a canonical string sequence",
+            field_name="allowed_values",
+            reason="invalid_parameter_allowed_values",
+            actual_type=type(value).__name__,
+        )
+    if not all(isinstance(item, str) for item in items):
+        _raise_spec_error(
+            "ParamConstraint.allowed_values must contain only strings",
+            field_name="allowed_values",
+            reason="invalid_parameter_allowed_values",
+        )
+    return tuple(item for item in items if isinstance(item, str))
+
+
+def _canonical_parameter_number(value: object, *, field_name: str) -> float:
+    """Return one stable JSON numeric identity or fail closed."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        _raise_spec_error(
+            f"ParamConstraint.{field_name} must be a finite canonical number",
+            field_name=field_name,
+            reason="non_finite_parameter_identity",
+            actual_value=value,
+        )
+    try:
+        normalized = float(value)
+    except OverflowError:
+        _raise_spec_error(
+            f"ParamConstraint.{field_name} must be a finite canonical number",
+            field_name=field_name,
+            reason="non_finite_parameter_identity",
+            actual_value=value,
+        )
+    if not math.isfinite(normalized) or (
+        isinstance(value, int) and int(normalized) != value
+    ):
+        _raise_spec_error(
+            f"ParamConstraint.{field_name} must be a finite canonical number",
+            field_name=field_name,
+            reason="non_finite_parameter_identity",
+            actual_value=value,
+        )
+    return canonicalize_float_identity(normalized)
+
+
+def _is_non_empty_string(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and value != ""
+
+
+def _is_supported_parameter_dtype(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and value in _PARAMETER_DTYPES
 
 
 @dataclass(frozen=True)
@@ -69,6 +211,54 @@ class ParamConstraint:
     max_value: float | None = None
     step: float | None = None
     allowed_values: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Normalize mutable inputs, then validate the complete identity."""
+        allowed_values = _validated_parameter_allowed_values(
+            self.allowed_values,
+            allow_list=True,
+        )
+        object.__setattr__(self, "allowed_values", allowed_values)
+        min_value, max_value, step = self.validate_canonical_identity()
+        object.__setattr__(self, "min_value", min_value)
+        object.__setattr__(self, "max_value", max_value)
+        object.__setattr__(self, "step", step)
+
+    def validate_canonical_identity(
+        self,
+    ) -> tuple[float | None, float | None, float | None]:
+        """Return canonical numeric identity without mutating this value object."""
+        if not _is_non_empty_string(self.name):
+            _raise_spec_error(
+                "ParamConstraint.name must be a non-empty canonical string",
+                field_name="name",
+                reason="invalid_parameter_name",
+                actual_type=type(self.name).__name__,
+            )
+        if not _is_supported_parameter_dtype(self.dtype):
+            _raise_spec_error(
+                "ParamConstraint.dtype must be one of bool, int, float, or str",
+                field_name="dtype",
+                reason="invalid_parameter_dtype",
+                actual_value=self.dtype,
+            )
+        _validated_parameter_allowed_values(
+            self.allowed_values,
+            allow_list=False,
+        )
+        normalized_values: list[float | None] = []
+        for field_name in ("min_value", "max_value", "step"):
+            value = getattr(self, field_name)
+            normalized_values.append(
+                None
+                if value is None
+                else _canonical_parameter_number(
+                    value,
+                    field_name=field_name,
+                )
+            )
+        min_value, max_value, step = normalized_values
+        return min_value, max_value, step
 
 
 @dataclass(frozen=True)
@@ -152,6 +342,49 @@ class SelectorSpec:
 
     method: str = "top_k"
     params: dict[str, object] = field(default_factory=dict)
+
+
+class StrategyKind(StrEnum):
+    """R3 两条 canonical 策略黄金路径。"""
+
+    STOCK_SELECTION = "stock_selection"
+    ETF_ROTATION = "etf_rotation"
+
+
+@dataclass(frozen=True)
+class StrategySpecV2:
+    """R3 类型化策略规格；与 R1 legacy ``StrategySpec`` 显式分离。"""
+
+    schema_version: int
+    strategy_family_id: str
+    strategy_kind: StrategyKind
+    name: str
+    pipeline: PipelineSpec
+    parameter_schema: tuple[ParamConstraint, ...] = ()
+    metadata: Mapping[str, object] = field(default_factory=dict[str, object])
+    tags: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """校验 V2 顶层类型边界，拒绝隐式 legacy/松散 payload。"""
+        _validate_v2_schema_version(self.schema_version)
+        for field_name in ("strategy_family_id", "name"):
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not value.strip():
+                _raise_spec_error(
+                    f"StrategySpecV2.{field_name} must be non-empty",
+                    field_name=field_name,
+                    reason="empty_required_field",
+                    actual_value=value,
+                )
+        _validate_v2_strategy_kind(self.strategy_kind)
+        _validate_v2_pipeline(self.pipeline)
+        _validate_v2_parameter_schema(self.parameter_schema)
+        _validate_v2_tags(self.tags)
+        object.__setattr__(
+            self,
+            "metadata",
+            freeze_json_mapping(self.metadata, field_name="metadata"),
+        )
 
 
 @dataclass(frozen=True)

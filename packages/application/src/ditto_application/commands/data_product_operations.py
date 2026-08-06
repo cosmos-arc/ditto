@@ -19,6 +19,8 @@ __all__ = [
 type DataProductOperation = Literal[
     "bootstrap",
     "repair",
+    "license",
+    "build-certification",
     "certify",
     "promotion",
     "revoke",
@@ -32,6 +34,14 @@ _EFFECTS: dict[DataProductOperation, tuple[str, ...]] = {
     "repair": (
         "detect and rewrite missing or failed partitions",
         "append recovery evidence without deleting prior evidence",
+    ),
+    "license": (
+        "append one immutable human review of provider usage rights",
+        "make only the reviewed product and source eligible for evidence ingestion",
+    ),
+    "build-certification": (
+        "measure the durable coverage, snapshot, license, PIT, DQ, and lifecycle chain",
+        "append one immutable machine report for independent human review",
     ),
     "certify": (
         "append a human approval to an immutable certification report",

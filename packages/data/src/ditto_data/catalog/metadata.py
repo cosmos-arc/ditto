@@ -250,7 +250,7 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
 def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
     """Resolve the date schedule type for a given dataset ID."""
     # Natural-days datasets
-    if dataset_id == "fx_daily":
+    if dataset_id in {"fx_daily", "dividend", "corporate_actions"}:
         return "natural_days"
     # Source-defined datasets
     if dataset_id in {"macro_indicators", "commodity_daily"}:
@@ -550,6 +550,7 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
         "valuation_metrics",
         "margin_trading",
         "pledge_ratio",
+        "index_weight",
     }
 )
 
@@ -560,6 +561,8 @@ _SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
     "adj_factor": "market.adj_factor.v1",
     "stock_status": "market.stock_status.v1",
     "etf_daily": "etf.daily.v1",
+    "corporate_actions": "fundamental.corporate_actions.v2",
+    "dividend": "fundamental.dividend.v2",
 }
 
 

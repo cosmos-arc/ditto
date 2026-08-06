@@ -1,18 +1,10 @@
-"""
-回测编排服务 — Process 模块.
-
-包含 BacktestService 及其配置类，负责编排完整回测流程：
-引擎运行 → 报告生成 → 审计日志持久化 → 策略产物持久化。
-
-审计持久化逻辑委托给 backtest_audit 模块，
-因子 bundle 构建委托给 factor_bridge 模块。
-"""
+"""回测编排服务：引擎、报告、审计及策略产物持久化。"""
 
 from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Literal
 
@@ -46,6 +38,7 @@ from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
 from ditto_risk.post_trade import PostTradeRiskGuard
 from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.parameters import CandidateParameter, EffectiveParameter
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -64,6 +57,12 @@ from ditto_application.processes.execution.backtest_audit import (
     persist_audit,
     resolve_run_id,
 )
+from ditto_application.processes.execution.backtest_config_validation import (
+    require_candidate_parameters,
+    require_research_snapshot_identity,
+    require_resolved_backtest_config,
+    require_resolved_strategy_identity,
+)
 from ditto_application.processes.execution.backtest_lineage import (
     record_backtest_lineage,
 )
@@ -73,6 +72,7 @@ from ditto_application.processes.execution.backtest_process_types import (
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
+    build_backtest_input_bundle_builder,
     build_factor_aware_bundle_builder,
 )
 from ditto_application.processes.execution.strategy_input import (
@@ -87,16 +87,13 @@ from ditto_application.processes.execution.strategy_types import (
 _ = write_backtest_artifacts
 
 __all__ = [
+    "BacktestCatalogRequestConfig",
     "BacktestService",
     "BacktestServiceConfig",
     "BacktestServiceOptions",
     "FillMode",
 ]
 
-
-# ---------------------------------------------------------------------------
-# BacktestServiceConfig
-# ---------------------------------------------------------------------------
 
 _ALLOWED_RECOMMENDATION_STATUSES = frozenset(
     {"research", "candidate", "paper", "production"}
@@ -107,9 +104,13 @@ type FillMode = Literal["partial", "all_or_nothing"]
 
 
 @dataclass(frozen=True)
-class BacktestServiceConfig:
+class BacktestCatalogRequestConfig:
     """
-    BacktestService 配置 — frozen, 运行前确定.
+    Catalog-backed backtest launch request before strategy identity resolution.
+
+    This type deliberately has no ``spec_hash`` and must never reach
+    ``BacktestService`` or ``EngineConfig``. The catalog runtime builder resolves
+    it into ``BacktestServiceConfig`` after loading the published strategy.
 
     Attributes:
         strategy_id: 策略 ID
@@ -143,9 +144,14 @@ class BacktestServiceConfig:
     initial_cash: float = DEFAULT_INITIAL_CASH
     benchmark_id: InstrumentId | None = None
     parameter_overrides: tuple[str, ...] = ()
+    candidate_parameters: tuple[CandidateParameter, ...] = ()
+    research_snapshot_id: str | None = None
+    research_snapshot_manifest_hash: str | None = None
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
+    random_seed: int = 42
     execution_delay: int = 0
+    knowledge_lag_days: int = 1
     code_version: str = ""
     data_catalog_identities: tuple[str, ...] = ()
     factor_report_refs: tuple[str, ...] = ()
@@ -167,7 +173,18 @@ class BacktestServiceConfig:
     resume_runtime_state_hash: str = ""
 
     def __post_init__(self) -> None:
-        """Validate launch promotion recommendation status."""
+        """Validate catalog launch request fields unrelated to strategy identity."""
+        for field_name, value in (
+            ("random_seed", self.random_seed),
+            ("knowledge_lag_days", self.knowledge_lag_days),
+            ("execution_delay", self.execution_delay),
+        ):
+            if type(value) is not int or value < 0:
+                raise AppProcessError(
+                    f"{field_name} must be a nonnegative exact integer",
+                    field_name=field_name,
+                    reason="invalid_deterministic_control",
+                )
         if self.recommendation_status not in _ALLOWED_RECOMMENDATION_STATUSES:
             msg = (
                 "recommendation_status must be one of "
@@ -180,6 +197,39 @@ class BacktestServiceConfig:
         if self.fill_mode not in _ALLOWED_FILL_MODES:
             msg = f"fill_mode must be one of {sorted(_ALLOWED_FILL_MODES)}"
             raise AppProcessError(msg)
+        if self.parameter_overrides:
+            raise AppProcessError(
+                "non-empty legacy parameter_overrides are unresolved",
+                field_name="parameter_overrides",
+                reason="legacy_parameter_overrides_unresolved",
+            )
+        require_candidate_parameters(self.candidate_parameters)
+        require_research_snapshot_identity(
+            self.research_snapshot_id,
+            self.research_snapshot_manifest_hash,
+        )
+
+
+@dataclass(frozen=True)
+class BacktestServiceConfig(BacktestCatalogRequestConfig):
+    """Resolved backtest service config with mandatory canonical strategy identity."""
+
+    spec_hash: str = field(kw_only=True)
+    base_spec_hash: str = field(kw_only=True)
+    parameter_hash: str = field(kw_only=True)
+    effective_parameters: tuple[EffectiveParameter, ...] = field(kw_only=True)
+    research_snapshot_id: str | None = field(kw_only=True)  # pyright: ignore[reportGeneralTypeIssues]
+    research_snapshot_manifest_hash: str | None = field(kw_only=True)  # pyright: ignore[reportGeneralTypeIssues]
+
+    def __post_init__(self) -> None:
+        """Reject unresolved or non-canonical strategy identity at construction."""
+        super().__post_init__()
+        require_resolved_strategy_identity(
+            spec_hash=self.spec_hash,
+            base_spec_hash=self.base_spec_hash,
+            parameter_hash=self.parameter_hash,
+            effective_parameters=self.effective_parameters,
+        )
 
 
 @dataclass(frozen=True)
@@ -197,6 +247,7 @@ class BacktestServiceOptions:
         artifact_dir: 回测产物序列化输出目录 (None = 使用默认临时目录)
         run_service: 策略运行生命周期服务 (None = 跳过生命周期管理)
         checkpoint_writer: 策略运行 checkpoint 写入端口 (None = 跳过恢复点持久化)
+        checkpoint_interval_days: 构造可恢复 checkpoint 的完成交易日间隔
         compiled_expressions: 编译后的因子表达式 (None = 使用默认信号)
         lineage_recorder: 数据血缘记录器 (None = 跳过 lineage 记录)
         allow_experimental_data: 是否显式允许 experimental 数据集进入运行时
@@ -213,7 +264,9 @@ class BacktestServiceOptions:
     artifact_dir: str | None = None
     display_map: dict[InstrumentId, str] | None = None
     run_service: RunLifecycleService | None = None
+    external_should_stop: Callable[[], bool] | None = None
     checkpoint_writer: StrategyRunCheckpointWriterProtocol | None = None
+    checkpoint_interval_days: int = 1
     compiled_expressions: CompiledExpressions | None = None
     lineage_recorder: DataLineageRecorder | None = None
     allow_experimental_data: bool = False
@@ -297,13 +350,22 @@ class BacktestService:
         data_feed: DataFeed,
         options: BacktestServiceOptions = BacktestServiceOptions(),
     ) -> None:
-        self._config = config
+        self._config = require_resolved_backtest_config(
+            config,
+            expected_type=BacktestServiceConfig,
+        )
         self._pipeline = pipeline
         self._planner = planner
         self._brokerage = brokerage
         self._pre_trade_check = pre_trade_check
         self._data_feed = data_feed
         self._options = options
+        self._last_run_cancelled: bool | None = None
+
+    @property
+    def last_run_cancelled(self) -> bool:
+        """Report whether the most recent engine run stopped cooperatively."""
+        return self._last_run_cancelled is True
 
     def run(self) -> BacktestReport:
         """
@@ -315,7 +377,7 @@ class BacktestService:
         """
         run_id = self._resolve_run_id()
         run_svc = self._options.run_service
-
+        self._last_run_cancelled = None
         # 1. (可选) 创建运行记录（get_or_create 语义，保留 API 预写入的 config_json）
         if run_svc is not None:
             existing = run_svc.get_run(run_id)
@@ -326,9 +388,26 @@ class BacktestService:
                         "end_date": self._config.end_date,
                         "initial_cash": self._config.initial_cash,
                         "benchmark_id": self._config.benchmark_id,
-                        "parameter_overrides": list(self._config.parameter_overrides),
+                        "strategy_version": self._config.strategy_version,
+                        "candidate_parameters": [
+                            {"path": item.path, "value": item.value}
+                            for item in self._config.candidate_parameters
+                        ],
+                        "effective_parameters": [
+                            {"path": item.path, "value": item.value}
+                            for item in self._config.effective_parameters
+                        ],
+                        "base_spec_hash": self._config.base_spec_hash,
+                        "spec_hash": self._config.spec_hash,
+                        "parameter_hash": self._config.parameter_hash,
+                        "research_snapshot_id": self._config.research_snapshot_id,
+                        "research_snapshot_manifest_hash": (
+                            self._config.research_snapshot_manifest_hash
+                        ),
                         "rebalance_freq": self._config.rebalance_freq,
+                        "random_seed": self._config.random_seed,
                         "execution_delay": self._config.execution_delay,
+                        "knowledge_lag_days": self._config.knowledge_lag_days,
                         "resume_from_run_id": self._config.resume_from_run_id,
                         "resume_checkpoint_trade_date": (
                             self._config.resume_checkpoint_trade_date
@@ -400,6 +479,7 @@ class BacktestService:
             data_feed=self._data_feed,
             clock=clock,
             start_date=self._config.start_date,
+            knowledge_lag_days=self._config.knowledge_lag_days,
         )
         engine_loop = EngineLoop(
             config=engine_config,
@@ -415,6 +495,7 @@ class BacktestService:
         )
         t0 = time.monotonic()
         engine_result = engine_loop.run()
+        self._last_run_cancelled = engine_result.cancelled
         elapsed = time.monotonic() - t0
 
         # 回测指标记录（application 桥接 backtest → platform Metrics）
@@ -449,15 +530,24 @@ class BacktestService:
             start_date=self._config.start_date,
             end_date=self._config.end_date,
             initial_cash=self._config.initial_cash,
+            spec_hash=self._config.spec_hash,
+            base_spec_hash=self._config.base_spec_hash,
+            parameter_hash=self._config.parameter_hash,
+            effective_parameters=self._config.effective_parameters,
+            research_snapshot_id=self._config.research_snapshot_id,
+            research_snapshot_manifest_hash=(
+                self._config.research_snapshot_manifest_hash
+            ),
             benchmark_id=self._config.benchmark_id,
             mode=EngineMode.BACKTEST,
             strategy_id=self._config.strategy_id,
             strategy_version=self._config.strategy_version,
             strategy_run_id=run_id,
-            parameter_overrides=self._config.parameter_overrides,
+            parameter_overrides=(),
             rebalance_freq=self._config.rebalance_freq,
             engine_version=self._config.engine_version,
             execution_delay=self._config.execution_delay,
+            knowledge_lag_days=self._config.knowledge_lag_days,
         )
 
     def _build_engine_options(
@@ -466,26 +556,24 @@ class BacktestService:
         collector: ExecutionAuditCollector,
     ) -> EngineOptions:
         """构建 EngineOptions — 含 event_bus/cancel/progress 回调。"""
-        # 构建自定义 input_bundle_builder (含因子信号注入)
-        compiled = self._options.compiled_expressions
-        input_bundle_builder = (
-            self._build_factor_aware_bundle_builder(compiled, run_id=run_id)
-            if compiled is not None
-            else None
+        input_bundle_builder = build_backtest_input_bundle_builder(
+            compiled=self._options.compiled_expressions,
+            pipeline=self._pipeline,
+            data_feed=self._data_feed,
+            strategy_id=self._config.strategy_id,
+            run_id=run_id,
         )
-
         run_svc = self._options.run_service
-
-        # 协作式取消 — 轮询 run_service.is_cancelled()
         should_stop: Callable[[], bool] | None = None
-        if run_svc is not None:
+        external_should_stop = self._options.external_should_stop
+        if external_should_stop is not None or run_svc is not None:
 
             def _check_cancelled() -> bool:
-                return run_svc.is_cancelled(run_id)
+                if external_should_stop is not None and external_should_stop():
+                    return True
+                return run_svc is not None and run_svc.is_cancelled(run_id)
 
             should_stop = _check_cancelled
-
-        # 进度上报 — 每日更新 run_service
         on_progress: Callable[[int, int], None] | None = None
         if run_svc is not None:
 
@@ -501,12 +589,20 @@ class BacktestService:
 
             on_progress = _report_progress
 
-        # checkpoint 持久化 — 引擎保持 storage-free，由 App 层写入运行控制面。
         checkpoint_writer = self._options.checkpoint_writer
         on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
         if checkpoint_writer is not None:
 
             def _save_checkpoint(checkpoint: BacktestCheckpoint) -> None:
+                completed_days = checkpoint.completed_days
+                total_days = checkpoint.total_days
+                order_count = checkpoint.order_count
+                fill_count = checkpoint.fill_count
+                if self._config.resume_from_run_id:
+                    completed_days += self._config.resume_checkpoint_completed_days
+                    total_days = self._config.resume_checkpoint_total_days
+                    order_count += self._config.resume_checkpoint_order_count
+                    fill_count += self._config.resume_checkpoint_fill_count
                 checkpoint_writer.save_checkpoint(
                     StrategyRunCheckpointRecord(
                         run_id=run_id,
@@ -515,11 +611,11 @@ class BacktestService:
                         mode=EngineMode.BACKTEST.value,
                         completed_trade_date=checkpoint.completed_trade_date,
                         resume_from=checkpoint.resume_from,
-                        completed_days=checkpoint.completed_days,
-                        total_days=checkpoint.total_days,
+                        completed_days=completed_days,
+                        total_days=total_days,
                         nav=checkpoint.nav,
-                        order_count=checkpoint.order_count,
-                        fill_count=checkpoint.fill_count,
+                        order_count=order_count,
+                        fill_count=fill_count,
                         account_state_json=checkpoint.account_state_json,
                         account_state_hash=checkpoint.account_state_hash,
                         settlement_state_json=checkpoint.settlement_state_json,
@@ -538,9 +634,11 @@ class BacktestService:
             post_trade_guard=self._options.post_trade_guard,
             audit_collector=collector,
             input_bundle_builder=input_bundle_builder,
+            random_seed=self._config.random_seed,
             should_stop=should_stop,
             on_progress=on_progress,
             on_checkpoint=on_checkpoint,
+            checkpoint_interval_days=self._options.checkpoint_interval_days,
             restore_runtime_state=self._restore_runtime_state(),
             on_step_complete=_build_step_metrics_callback(),
         )
@@ -589,14 +687,7 @@ class BacktestService:
         *,
         run_id: str,
     ) -> Callable[[StepContext], StrategyInputBundle]:
-        """
-        构建含因子信号注入的 input_bundle_builder。委托给 factor_bridge 模块。
-
-        Args:
-            compiled: 编译后的因子表达式。
-            run_id: 由 run() 统一生成的运行标识，确保 bundle.run_id 与 run record 一致。
-
-        """
+        """构建含因子信号注入的 input bundle，供兼容调用与测试使用。"""
         return build_factor_aware_bundle_builder(
             bridge=FactorBridge(),
             compiled=compiled,
@@ -659,10 +750,17 @@ class BacktestService:
                 rebalance_freq=self._config.rebalance_freq,
                 artifact_service=self._options.artifact_service,
                 write_fn=write_backtest_artifacts,
+                base_spec_hash=self._config.base_spec_hash,
+                spec_hash=self._config.spec_hash,
+                parameter_hash=self._config.parameter_hash,
+                effective_parameters=self._config.effective_parameters,
+                research_snapshot_id=self._config.research_snapshot_id,
+                research_snapshot_manifest_hash=(
+                    self._config.research_snapshot_manifest_hash
+                ),
                 artifact_dir=self._options.artifact_dir,
                 display_map=self._options.display_map,
                 benchmark_id=self._config.benchmark_id,
-                parameter_overrides=self._config.parameter_overrides,
                 code_version=self._config.code_version,
                 data_catalog_identities=self._config.data_catalog_identities,
                 factor_report_refs=self._config.factor_report_refs,

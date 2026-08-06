@@ -7,14 +7,18 @@
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-import orjson
+from ditto_backtest.config import (
+    validate_canonical_sha256,
+    validate_effective_parameter_identity,
+    validate_research_snapshot_identity,
+    validate_spec_hash,
+)
 from ditto_backtest.manifest import RunManifest
 from ditto_backtest.statistics import BacktestReport
 from ditto_execution.audit import ExecutionAuditService
@@ -23,6 +27,7 @@ from ditto_execution.audit.models import (
     RiskScanPayload,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.parameters import EffectiveParameter
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
@@ -61,16 +66,34 @@ class ArtifactPersistConfig:
     rebalance_freq: str
     artifact_service: StrategyArtifactService
     write_fn: Callable[..., dict[str, Path]]
+    base_spec_hash: str
+    spec_hash: str
+    parameter_hash: str
+    effective_parameters: tuple[EffectiveParameter, ...]
+    research_snapshot_id: str | None
+    research_snapshot_manifest_hash: str | None
     artifact_dir: str | None = None
     display_map: dict[InstrumentId, str] | None = None
     benchmark_id: InstrumentId | None = None
-    parameter_overrides: tuple[str, ...] = ()
     code_version: str = ""
     data_catalog_identities: tuple[str, ...] = ()
     factor_report_refs: tuple[str, ...] = ()
     recommendation_status: str = "research"
     fee_model_name: str = ""
     slippage_model_name: str = ""
+
+    def __post_init__(self) -> None:
+        """Validate immutable strategy and research identities before persistence."""
+        validate_canonical_sha256(self.base_spec_hash, field_name="base_spec_hash")
+        validate_spec_hash(self.spec_hash)
+        validate_effective_parameter_identity(
+            self.parameter_hash,
+            self.effective_parameters,
+        )
+        validate_research_snapshot_identity(
+            self.research_snapshot_id,
+            self.research_snapshot_manifest_hash,
+        )
 
 
 def resolve_run_id(configured_run_id: str) -> str:
@@ -221,6 +244,28 @@ def _strategy_promotion_artifact(
         if manifest is not None and manifest.strategy_version
         else config.strategy_version
     )
+    base_spec_hash = (
+        manifest.base_spec_hash if manifest is not None else config.base_spec_hash
+    )
+    spec_hash = manifest.spec_hash if manifest is not None else config.spec_hash
+    parameter_hash = (
+        manifest.parameter_hash if manifest is not None else config.parameter_hash
+    )
+    effective_parameters = (
+        manifest.effective_parameters
+        if manifest is not None
+        else config.effective_parameters
+    )
+    research_snapshot_id = (
+        manifest.research_snapshot_id
+        if manifest is not None
+        else config.research_snapshot_id
+    )
+    research_snapshot_manifest_hash = (
+        manifest.research_snapshot_manifest_hash
+        if manifest is not None
+        else config.research_snapshot_manifest_hash
+    )
     return {
         "strategy_id": config.strategy_id,
         "strategy_version": strategy_version,
@@ -229,11 +274,14 @@ def _strategy_promotion_artifact(
             manifest,
             config.data_catalog_identities,
         ),
-        "parameter_hash": _parameter_hash(
-            manifest.parameter_overrides
-            if manifest is not None and manifest.parameter_overrides
-            else config.parameter_overrides,
-        ),
+        "base_spec_hash": base_spec_hash,
+        "spec_hash": spec_hash,
+        "parameter_hash": parameter_hash,
+        "effective_parameters": [
+            {"path": item.path, "value": item.value} for item in effective_parameters
+        ],
+        "research_snapshot_id": research_snapshot_id,
+        "research_snapshot_manifest_hash": research_snapshot_manifest_hash,
         "benchmark": (
             int(config.benchmark_id) if config.benchmark_id is not None else None
         ),
@@ -253,7 +301,7 @@ def _code_version(
         return config.code_version
     if manifest is not None and manifest.spec_hash:
         return manifest.spec_hash
-    return config.strategy_version
+    return config.spec_hash
 
 
 def _data_catalog_identities(
@@ -273,12 +321,6 @@ def _data_catalog_identities(
             for ref in manifest.input_ref_details
         ]
     return list(configured)
-
-
-def _parameter_hash(parameter_overrides: tuple[str, ...]) -> str:
-    """Hash parameter overrides into stable promotion evidence."""
-    payload = orjson.dumps(list(parameter_overrides), option=orjson.OPT_SORT_KEYS)
-    return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
 def _cost_model_metadata(

@@ -302,12 +302,11 @@ class TestEodFlowHappyPath:
             ),
         )
         catalog = mocker.MagicMock()
-        catalog.get_latest_published.return_value = StrategySpecRecord(
+        catalog.get_active_published.return_value = StrategySpecRecord(
             strategy_id="alpha",
             name="Alpha",
             spec_json={"required_datasets": ["etf_daily"]},
             version=7,
-            status="published",
         )
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
@@ -336,7 +335,7 @@ class TestEodFlowHappyPath:
             source="tushare",
             allow_experimental_data=False,
         )
-        catalog.get_latest_published.assert_called_once_with("alpha")
+        catalog.get_active_published.assert_called_once_with("alpha")
 
     def test_unknown_strategy_dataset_scope_blocks_before_ingestion(
         self,
@@ -349,12 +348,11 @@ class TestEodFlowHappyPath:
         ingestion = mocker.patch(f"{EOD_MODULE}.daily_ingestion_flow")
         materialization = mocker.patch(f"{EOD_MODULE}.daily_materialization_flow")
         catalog = mocker.MagicMock()
-        catalog.get_latest_published.return_value = StrategySpecRecord(
+        catalog.get_active_published.return_value = StrategySpecRecord(
             strategy_id="alpha",
             name="Alpha",
             spec_json={"required_datasets": ["unknown_market_feed"]},
             version=7,
-            status="published",
         )
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
@@ -415,7 +413,7 @@ class TestEodFlowHappyPath:
 
         # 策略 bundle mock: 无已发布策略
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = None
+        mock_catalog.get_active_published.return_value = None
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),
@@ -469,17 +467,15 @@ class TestEodFlowHappyPath:
             name="Alpha Momentum",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         spec2 = StrategySpecRecord(
             strategy_id="alpha_mean_revert",
             name="Alpha Mean Revert",
             spec_json={"required_datasets": ["etf_daily"]},
             version=2,
-            status="published",
         )
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.side_effect = {
+        mock_catalog.get_active_published.side_effect = {
             "alpha_momentum": spec1,
             "alpha_mean_revert": spec2,
         }.get
@@ -539,7 +535,7 @@ class TestEodFlowHappyPath:
         assert result["strategies"][0]["strategy_id"] == "alpha_momentum"
         assert result["strategies"][0]["status"] == "completed"
 
-        mock_catalog.get_latest_published.assert_called_once_with("alpha_momentum")
+        mock_catalog.get_active_published.assert_called_once_with("alpha_momentum")
         mock_catalog.list_latest_published.assert_not_called()
         assert mock_facade.run_strategy_for_date_from_catalog.call_count == 1
         assert mock_publisher.publish.call_count == 1
@@ -602,12 +598,11 @@ class TestEodFlowHappyPath:
             name="Alpha Momentum",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         batch_key = "eod-2026-04-15-alpha_momentum-1"
         target = self._make_target_portfolio("alpha_momentum", batch_key)
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = spec
+        mock_catalog.get_active_published.return_value = spec
         mock_facade = mocker.MagicMock()
         mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
             run_id=batch_key,
@@ -675,7 +670,7 @@ class TestEodFlowHappyPath:
         assert kwargs["config"].manage_run_lifecycle is False
         assert kwargs["source"] == "tushare"
         assert kwargs["allow_experimental_data"] is False
-        mock_catalog.get_latest_published.assert_called_once_with("alpha_momentum")
+        mock_catalog.get_active_published.assert_called_once_with("alpha_momentum")
         mock_catalog.list_latest_published.assert_not_called()
         run_service.create_run.assert_called_once()
         run_service.mark_running.assert_called_once_with(batch_key)
@@ -760,7 +755,7 @@ class TestEodFlowHappyPath:
 
         # 无策略
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = None
+        mock_catalog.get_active_published.return_value = None
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),
@@ -842,10 +837,9 @@ class TestEodFlowIngestionFailure:
             name="Alpha",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         catalog = mocker.MagicMock()
-        catalog.get_latest_published.return_value = spec
+        catalog.get_active_published.return_value = spec
         facade = mocker.MagicMock()
         run_service = mocker.MagicMock()
         mocker.patch(
@@ -1193,7 +1187,6 @@ class TestEodFlowIngestionFailure:
             strategy_id="legacy-etf",
             name="Legacy ETF",
             version=2,
-            status="published",
             spec_json={
                 "template": "etf_rotation",
                 "universe": "csi_etf_broad",
@@ -1209,7 +1202,6 @@ class TestEodFlowIngestionFailure:
                 strategy_id="invalid",
                 name="Invalid",
                 version=1,
-                status="published",
                 spec_json={},
             )
         )
@@ -1344,10 +1336,9 @@ class TestEodFlowIngestionFailure:
             name="ETF Ready",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         catalog = mocker.MagicMock()
-        catalog.get_latest_published.return_value = etf_spec
+        catalog.get_active_published.return_value = etf_spec
         target = TargetPortfolio(
             trade_date="2026-04-15",
             strategy_id="etf-ready",
@@ -1423,7 +1414,7 @@ class TestEodFlowIngestionFailure:
         assert publish_request.dataset_snapshot_ids == {
             "etf_daily": "sha256:etf-snapshot"
         }
-        catalog.get_latest_published.assert_called_once_with("etf-ready")
+        catalog.get_active_published.assert_called_once_with("etf-ready")
         catalog.list_latest_published.assert_not_called()
         mock_materialization.assert_not_called()
 
@@ -1466,10 +1457,9 @@ class TestEodFlowStrategyPartialFailure:
             name="Alpha No Publisher",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = spec
+        mock_catalog.get_active_published.return_value = spec
         mock_facade = mocker.MagicMock()
         mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
             run_id="run-no-publisher",
@@ -1532,11 +1522,10 @@ class TestEodFlowStrategyPartialFailure:
             name="Alpha Bad",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = spec
+        mock_catalog.get_active_published.return_value = spec
 
         mock_facade = mocker.MagicMock()
         mock_facade.run_strategy_for_date_from_catalog.side_effect = RuntimeError(
@@ -1597,11 +1586,10 @@ class TestEodFlowStrategyPartialFailure:
             name="Alpha Bad Publish",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
         target_bad = self._make_target_portfolio("alpha_bad_publish", "run-bad")
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = spec_bad
+        mock_catalog.get_active_published.return_value = spec_bad
         mock_facade = mocker.MagicMock()
         mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
             run_id="run-bad",
@@ -1697,11 +1685,10 @@ class TestEodFlowMaterializationFailure:
             name="Alpha Test",
             spec_json={"required_datasets": ["etf_daily"]},
             version=1,
-            status="published",
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = spec
+        mock_catalog.get_active_published.return_value = spec
 
         mock_facade = mocker.MagicMock()
         from ditto_application.processes.execution.strategy_run_process import (
@@ -1805,7 +1792,7 @@ class TestEodFlowReturnValueStructure:
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = None
+        mock_catalog.get_active_published.return_value = None
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),
@@ -1871,7 +1858,7 @@ class TestEodFlowReturnValueStructure:
         )
 
         mock_catalog = mocker.MagicMock()
-        mock_catalog.get_latest_published.return_value = None
+        mock_catalog.get_active_published.return_value = None
         mocker.patch(
             f"{EOD_MODULE}.create_strategy_bundle",
             return_value=_mock_strategy_bundle(mocker, catalog=mock_catalog),

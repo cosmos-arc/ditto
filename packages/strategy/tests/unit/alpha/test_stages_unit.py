@@ -14,11 +14,16 @@ from ditto_strategy.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
 )
-from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
+from ditto_strategy.alpha.builtins.scoring import (
+    FactorScoreColumnBinding,
+    ScoringMethod,
+    ScoringStage,
+)
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.builtins.universe import UniverseStage
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceCollector
 from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
@@ -180,6 +185,248 @@ class TestSignalStage:
 
 
 class TestScoringStage:
+    @pytest.mark.parametrize(
+        ("ascending", "expected_scores", "expected_top"),
+        [
+            pytest.param(
+                False,
+                {"LOW": 1.0 / 3.0, "MID": 2.0 / 3.0, "HIGH": 1.0},
+                "HIGH",
+                id="larger-signal-is-better",
+            ),
+            pytest.param(
+                True,
+                {"LOW": 1.0, "MID": 2.0 / 3.0, "HIGH": 1.0 / 3.0},
+                "LOW",
+                id="smaller-signal-is-better",
+            ),
+        ],
+    )
+    def test_rank_direction_drives_expected_selector_top_k(
+        self,
+        empty_context: StrategyContext,
+        ascending: bool,
+        expected_scores: dict[str, float],
+        expected_top: str,
+    ) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["LOW", "MID", "HIGH"],
+                "signal_value": [10.0, 20.0, 30.0],
+            }
+        )
+
+        scored = ScoringStage(
+            method=ScoringMethod.RANK,
+            ascending=ascending,
+        ).process(frame, empty_context)
+        selected = SelectionStage(top_k=1).process(scored, empty_context)
+
+        assert dict(
+            scored.select("instrument_id", "score").iter_rows()
+        ) == pytest.approx(expected_scores)
+        assert selected["instrument_id"].to_list() == [expected_top]
+
+    def test_zscore_honors_smaller_signal_is_better(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["LOW", "MID", "HIGH"],
+                "signal_value": [10.0, 20.0, 30.0],
+            }
+        )
+
+        result = ScoringStage(
+            method=ScoringMethod.ZSCORE,
+            ascending=True,
+        ).process(frame, empty_context)
+        scores = dict(result.select("instrument_id", "score").iter_rows())
+
+        assert scores["LOW"] > scores["MID"] > scores["HIGH"]
+
+    def test_raw_factor_evidence_is_exact_and_adds_to_final_score(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-07-22")
+        bindings = (
+            FactorScoreColumnBinding(
+                factor_id="quality",
+                raw_column="factor_0",
+                processed_column="factor_0",
+                normalized_column="rank_factor_0",
+                weight=0.6,
+            ),
+            FactorScoreColumnBinding(
+                factor_id="value",
+                raw_column="factor_1",
+                processed_column="factor_1",
+                normalized_column="rank_factor_1",
+                weight=0.4,
+            ),
+        )
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "factor_0": [10.0, 20.0],
+                "rank_factor_0": [0.5, 1.0],
+                "factor_1": [30.0, 40.0],
+                "rank_factor_1": [1.0, 0.5],
+                "signal_value": [0.7, 0.8],
+            }
+        )
+
+        result = ScoringStage(
+            method=ScoringMethod.RAW,
+            output_column="final_score",
+            factor_bindings=bindings,
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+        collector.commit_rebalance()
+        contributions = collector.snapshot().factor_contributions
+
+        assert result["final_score"].to_list() == [0.7, 0.8]
+        assert [
+            (
+                event.instrument_id,
+                event.factor_name,
+                event.raw_value,
+                event.processed_value,
+                event.normalized_value,
+                event.weight,
+                event.contribution,
+                event.factor_signal_score,
+            )
+            for event in contributions
+        ] == [
+            (1, "quality", 10.0, 10.0, 0.5, 0.6, 0.3, 0.7),
+            (2, "quality", 20.0, 20.0, 1.0, 0.6, 0.6, 0.8),
+            (1, "value", 30.0, 30.0, 1.0, 0.4, 0.4, 0.7),
+            (2, "value", 40.0, 40.0, 0.5, 0.4, 0.2, 0.8),
+        ]
+        for instrument_id, score in result.select(
+            "instrument_id", "final_score"
+        ).iter_rows():
+            assert sum(
+                event.contribution or 0.0
+                for event in contributions
+                if event.instrument_id == instrument_id
+            ) == pytest.approx(score)
+
+    @pytest.mark.parametrize("method", [ScoringMethod.RANK, ScoringMethod.ZSCORE])
+    def test_non_additive_scoring_rejects_factor_evidence(
+        self,
+        method: ScoringMethod,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            ScoringStage(
+                method=method,
+                factor_bindings=(
+                    FactorScoreColumnBinding(
+                        factor_id="quality",
+                        raw_column="factor_0",
+                        processed_column="factor_0",
+                        normalized_column="rank_factor_0",
+                        weight=1.0,
+                    ),
+                ),
+                evidence_sink=collector,
+            )
+
+        assert exc_info.value.details["reason"] == (
+            "non_additive_factor_evidence_scoring"
+        )
+
+    @pytest.mark.parametrize(
+        ("weights", "signal_values", "expected_contributions"),
+        [
+            pytest.param((1.0, 0.0), [0.5, 1.0], [0.5, 1.0, 0.0, 0.0], id="one-zero"),
+            pytest.param((0.0, 0.0), [0.0, 0.0], [0.0, 0.0, 0.0, 0.0], id="all-zero"),
+        ],
+    )
+    def test_zero_weight_null_factor_emits_explicit_zero_contribution(
+        self,
+        empty_context: StrategyContext,
+        weights: tuple[float, float],
+        signal_values: list[float],
+        expected_contributions: list[float],
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-07-22")
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "factor_0": [10.0, 20.0],
+                "rank_factor_0": [0.5, 1.0],
+                "factor_1": [None, None],
+                "rank_factor_1": [None, None],
+                "signal_value": signal_values,
+            }
+        )
+        bindings = tuple(
+            FactorScoreColumnBinding(
+                factor_id=f"factor-{index}",
+                raw_column=f"factor_{index}",
+                processed_column=f"factor_{index}",
+                normalized_column=f"rank_factor_{index}",
+                weight=weight,
+            )
+            for index, weight in enumerate(weights)
+        )
+
+        ScoringStage(
+            method=ScoringMethod.RAW,
+            factor_bindings=bindings,
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+        collector.commit_rebalance()
+
+        assert [
+            event.contribution for event in collector.snapshot().factor_contributions
+        ] == expected_contributions
+
+    def test_non_finite_factor_evidence_is_recorded_as_missing(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        collector = SelectionEvidenceCollector()
+        collector.begin_rebalance("2026-07-22")
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "factor_0": [float("nan")],
+                "rank_factor_0": [float("inf")],
+                "signal_value": [float("-inf")],
+            }
+        )
+
+        ScoringStage(
+            method=ScoringMethod.RAW,
+            factor_bindings=(
+                FactorScoreColumnBinding(
+                    factor_id="value",
+                    raw_column="factor_0",
+                    processed_column="factor_0",
+                    normalized_column="rank_factor_0",
+                    weight=1.0,
+                ),
+            ),
+            evidence_sink=collector,
+        ).process(frame, empty_context)
+        collector.commit_rebalance()
+
+        event = collector.snapshot().factor_contributions[0]
+        assert event.raw_value is None
+        assert event.processed_value is None
+        assert event.normalized_value is None
+        assert event.contribution is None
+        assert event.factor_signal_score is None
+
     def test_raw_mode(
         self,
         empty_context: StrategyContext,
@@ -463,6 +710,35 @@ class TestFilteringStage:
 
 
 class TestSelectionStage:
+    @pytest.mark.parametrize(
+        ("instrument_ids", "expected"),
+        [
+            pytest.param([3, 1, 2, 0], [1, 2], id="integer-instruments"),
+            pytest.param(["C", "A", "B", "NULL"], ["A", "B"], id="text-instruments"),
+        ],
+    )
+    def test_top_k_ties_use_canonical_instrument_order_independent_of_input(
+        self,
+        empty_context: StrategyContext,
+        instrument_ids: list[int] | list[str],
+        expected: list[int] | list[str],
+    ) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": instrument_ids,
+                "score": [0.9, 0.9, 0.9, None],
+            }
+        )
+        stage = SelectionStage(top_k=2, score_column="score")
+
+        original = stage.process(frame, empty_context)
+        reversed_input = stage.process(frame.reverse(), empty_context)
+
+        assert original["instrument_id"].to_list() == expected
+        assert reversed_input["instrument_id"].to_list() == expected
+        assert original["score"].null_count() == 0
+        assert reversed_input["score"].null_count() == 0
+
     def test_top_k_larger_than_rows_returns_all(
         self,
         sample_instruments_with_score: pl.DataFrame,
@@ -943,9 +1219,8 @@ class TestFullPipelineIntegration:
         for stage in [universe, signal, scoring, filtering, selection]:
             result = stage.process(result, empty_context)
 
-        # Assert: 13(0.9) rank=1/4=0.25, 11(0.8) rank=2/4=0.5,
-        #         12(0.5) rank=3/4=0.75, 10(0.1) rank=4/4=1.0
-        # Filter score >= 0.4: 10(1.0), 12(0.75), 11(0.5) -- 13(0.25) excluded
-        # Top 2: 10(1.0) and 12(0.75)
+        # Assert: 默认 larger-is-better，因此 13(0.9)=1.0、11(0.8)=0.75、
+        #         12(0.5)=0.5、10(0.1)=0.25。
+        # Filter score >= 0.4 排除 10；Top 2 为 13 和 11。
         assert result.shape == (2, 4)  # instrument_id, momentum, signal_value, score
-        assert set(result["instrument_id"].to_list()) == {10, 12}
+        assert set(result["instrument_id"].to_list()) == {11, 13}

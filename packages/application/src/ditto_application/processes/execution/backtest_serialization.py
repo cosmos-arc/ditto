@@ -10,14 +10,95 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Mapping
+from typing import NoReturn, cast
 
 import orjson
 import polars as pl
 from ditto_backtest.manifest import RunManifest
 from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_backtest.statistics import BacktestReport
+from ditto_strategy.alpha.selection_evidence import (
+    ExclusionEvidence,
+    FactorContributionEvidence,
+    InitialUniverseEvidence,
+    SelectionEvidence,
+    SelectionEvidenceLog,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposureSizeBucket,
+)
+from ditto_strategy.errors import StrategySpecError
 
-__all__ = ["serialize_report"]
+from ditto_application.exceptions import AppProcessError
+
+__all__ = ["serialize_report", "serialize_selection_evidence"]
+
+_INITIAL_UNIVERSE_SCHEMA = pl.Schema(
+    {
+        "run_id": pl.String,
+        "trade_date": pl.String,
+        "instrument_id": pl.String,
+        "instrument_id_kind": pl.String,
+        "ordinal": pl.Int64,
+    },
+)
+_EXCLUSION_SCHEMA = pl.Schema(
+    {
+        "run_id": pl.String,
+        "trade_date": pl.String,
+        "instrument_id": pl.String,
+        "instrument_id_kind": pl.String,
+        "stage": pl.String,
+        "reason_code": pl.String,
+        "message": pl.String,
+    },
+)
+_SELECTION_SCHEMA = pl.Schema(
+    {
+        "run_id": pl.String,
+        "trade_date": pl.String,
+        "instrument_id": pl.String,
+        "instrument_id_kind": pl.String,
+        "score": pl.Float64,
+        "rank": pl.Int64,
+        "selected": pl.Boolean,
+    },
+)
+_FACTOR_CONTRIBUTION_SCHEMA = pl.Schema(
+    {
+        "run_id": pl.String,
+        "trade_date": pl.String,
+        "instrument_id": pl.String,
+        "instrument_id_kind": pl.String,
+        "factor_name": pl.String,
+        "raw_value": pl.Float64,
+        "processed_value": pl.Float64,
+        "normalized_value": pl.Float64,
+        "weight": pl.Float64,
+        "contribution": pl.Float64,
+        "factor_signal_score": pl.Float64,
+        "rank": pl.Int64,
+        "selected": pl.Boolean,
+    },
+)
+_SELECTION_EXPOSURE_SCHEMA = pl.Schema(
+    {
+        "run_id": pl.String,
+        "trade_date": pl.String,
+        "applicability": pl.String,
+        "lane": pl.String,
+        "industry_column": pl.String,
+        "size_column": pl.String,
+        "size_bucket_method": pl.String,
+        "instrument_id": pl.String,
+        "instrument_id_kind": pl.String,
+        "selected_weight": pl.Float64,
+        "industry_id": pl.String,
+        "industry_id_kind": pl.String,
+        "size_value": pl.Float64,
+        "size_bucket": pl.String,
+    },
+)
 
 
 def serialize_report(
@@ -28,6 +109,7 @@ def serialize_report(
     resume_provenance: Mapping[str, object] | None = None,
     strategy_promotion: Mapping[str, object] | None = None,
     risk_report: Mapping[str, object] | None = None,
+    selection_evidence: SelectionEvidenceLog | None = None,
 ) -> tuple[bytes, dict[str, pl.DataFrame]]:
     """
     将 BacktestReport 序列化为 JSON bytes + Parquet DataFrame 字典.
@@ -40,16 +122,48 @@ def serialize_report(
         resume_provenance: 可选 checkpoint 恢复来源证据。
         strategy_promotion: 可选策略晋级证据 block，写入报告 JSON。
         risk_report: 可选最小 launch risk report block，写入报告 JSON。
+        selection_evidence: 可选策略选择证据；仅增加独立列式表，不改变 JSON。
 
     Returns:
         (json_bytes, parquet_tables) 二元组.
         json_bytes: 报告元数据的 JSON 字节.
         parquet_tables: 名称到 DataFrame 的映射.
-            键: nav / portfolio_stats / trade_log / fill_log.
+            既有键: nav / portfolio_stats / trade_log / fill_log.
+            ``selection_evidence`` 非 None 时另含 initial_universe_evidence /
+            exclusion_evidence / selection_evidence /
+            factor_contribution_evidence；四表均以 trade_date 区分调仓日。
 
     """
-    # 1. JSON 元数据
-    json_data = {
+    json_data = _serialize_json_data(
+        report,
+        rebalance_freq=rebalance_freq,
+        manifest=manifest,
+        resume_provenance=resume_provenance,
+        strategy_promotion=strategy_promotion,
+        risk_report=risk_report,
+    )
+    json_bytes = orjson.dumps(json_data, option=orjson.OPT_INDENT_2)
+    parquet_tables = _serialize_report_tables(report)
+    if selection_evidence is not None:
+        _append_selection_evidence_tables(
+            parquet_tables,
+            run_id=report.run_id,
+            evidence=selection_evidence,
+        )
+    return json_bytes, parquet_tables
+
+
+def _serialize_json_data(
+    report: BacktestReport,
+    *,
+    rebalance_freq: str,
+    manifest: RunManifest | None,
+    resume_provenance: Mapping[str, object] | None,
+    strategy_promotion: Mapping[str, object] | None,
+    risk_report: Mapping[str, object] | None,
+) -> dict[str, object]:
+    """Serialize JSON-owned report metadata without columnar artifacts."""
+    json_data: dict[str, object] = {
         "run_id": report.run_id,
         "period": {"start": report.period[0], "end": report.period[1]},
         "initial_cash": report.initial_cash,
@@ -80,11 +194,12 @@ def serialize_report(
                 report.final_account_state,
             ).to_payload()
         )
-    json_bytes = orjson.dumps(json_data, option=orjson.OPT_INDENT_2)
+    return json_data
 
-    # 2. Parquet 表
+
+def _serialize_report_tables(report: BacktestReport) -> dict[str, pl.DataFrame]:
+    """Serialize the established backtest columnar tables."""
     parquet_tables: dict[str, pl.DataFrame] = {}
-
     if report.nav_series:
         parquet_tables["nav"] = pl.DataFrame(
             [{"trade_date": d, "nav": v} for d, v in report.nav_series],
@@ -104,5 +219,324 @@ def serialize_report(
         parquet_tables["fill_log"] = pl.DataFrame(
             [dataclasses.asdict(r) for r in report.fill_log],
         )
+    return parquet_tables
 
-    return json_bytes, parquet_tables
+
+def _append_selection_evidence_tables(
+    tables: dict[str, pl.DataFrame],
+    *,
+    run_id: str,
+    evidence: SelectionEvidenceLog,
+) -> None:
+    """Append evidence tables while refusing any existing-table collision."""
+    evidence_tables = serialize_selection_evidence(run_id, evidence)
+    for table_name, table in evidence_tables.items():
+        if table_name in tables:
+            raise AppProcessError(
+                "selection evidence table collides with report artifact",
+                details={"table_name": table_name},
+            )
+        tables[table_name] = table
+
+
+def serialize_selection_evidence(
+    run_id: str,
+    log: SelectionEvidenceLog,
+) -> dict[str, pl.DataFrame]:
+    """Map strategy DTOs to application-owned stable Polars schemas."""
+    trusted_log = _rebuild_selection_evidence_log(log)
+    initial_rows: list[dict[str, object]] = []
+    for event in trusted_log.initial_universe:
+        instrument_id, instrument_id_kind = _serialize_instrument_id(
+            event.instrument_id,
+        )
+        initial_rows.append(
+            {
+                "run_id": run_id,
+                "trade_date": event.trade_date,
+                "instrument_id": instrument_id,
+                "instrument_id_kind": instrument_id_kind,
+                "ordinal": event.ordinal,
+            },
+        )
+
+    exclusion_rows: list[dict[str, object]] = []
+    for event in trusted_log.exclusions:
+        instrument_id, instrument_id_kind = _serialize_instrument_id(
+            event.instrument_id,
+        )
+        exclusion_rows.append(
+            {
+                "run_id": run_id,
+                "trade_date": event.trade_date,
+                "instrument_id": instrument_id,
+                "instrument_id_kind": instrument_id_kind,
+                "stage": event.stage,
+                "reason_code": event.reason_code.value,
+                "message": event.message,
+            },
+        )
+
+    selection_rows: list[dict[str, object]] = []
+    for event in trusted_log.selections:
+        instrument_id, instrument_id_kind = _serialize_instrument_id(
+            event.instrument_id,
+        )
+        selection_rows.append(
+            {
+                "run_id": run_id,
+                "trade_date": event.trade_date,
+                "instrument_id": instrument_id,
+                "instrument_id_kind": instrument_id_kind,
+                "score": event.score,
+                "rank": event.rank,
+                "selected": event.selected,
+            },
+        )
+
+    contribution_rows: list[dict[str, object]] = []
+    for event in trusted_log.factor_contributions:
+        instrument_id, instrument_id_kind = _serialize_instrument_id(
+            event.instrument_id,
+        )
+        contribution_rows.append(
+            {
+                "run_id": run_id,
+                "trade_date": event.trade_date,
+                "instrument_id": instrument_id,
+                "instrument_id_kind": instrument_id_kind,
+                "factor_name": event.factor_name,
+                "raw_value": event.raw_value,
+                "processed_value": event.processed_value,
+                "normalized_value": event.normalized_value,
+                "weight": event.weight,
+                "contribution": event.contribution,
+                "factor_signal_score": event.factor_signal_score,
+                "rank": event.rank,
+                "selected": event.selected,
+            },
+        )
+
+    exposure_rows: list[dict[str, object]] = []
+    exposures_by_date: dict[str, list[SelectionExposureEvidence]] = {}
+    for event in trusted_log.exposures:
+        exposures_by_date.setdefault(event.trade_date, []).append(event)
+    for declaration in trusted_log.exposure_declarations:
+        date_exposures = exposures_by_date.get(declaration.trade_date, [])
+        if not date_exposures:
+            exposure_rows.append(
+                _selection_exposure_row(
+                    run_id=run_id,
+                    declaration=declaration,
+                    event=None,
+                ),
+            )
+            continue
+        exposure_rows.extend(
+            _selection_exposure_row(
+                run_id=run_id,
+                declaration=declaration,
+                event=event,
+            )
+            for event in date_exposures
+        )
+
+    return {
+        "initial_universe_evidence": _frame_with_schema(
+            initial_rows,
+            _INITIAL_UNIVERSE_SCHEMA,
+        ),
+        "exclusion_evidence": _frame_with_schema(
+            exclusion_rows,
+            _EXCLUSION_SCHEMA,
+        ),
+        "selection_evidence": _frame_with_schema(
+            selection_rows,
+            _SELECTION_SCHEMA,
+        ),
+        "factor_contribution_evidence": _frame_with_schema(
+            contribution_rows,
+            _FACTOR_CONTRIBUTION_SCHEMA,
+        ),
+        "selection_exposure_evidence": _frame_with_schema(
+            exposure_rows,
+            _SELECTION_EXPOSURE_SCHEMA,
+        ),
+    }
+
+
+def _selection_exposure_row(
+    *,
+    run_id: str,
+    declaration: SelectionExposureDeclaration,
+    event: SelectionExposureEvidence | None,
+) -> dict[str, object]:
+    instrument_id: str | None = None
+    instrument_id_kind: str | None = None
+    industry_id: str | None = None
+    industry_id_kind: str | None = None
+    if event is not None:
+        instrument_id, instrument_id_kind = _serialize_instrument_id(
+            event.instrument_id,
+        )
+        industry_id, industry_id_kind = _serialize_instrument_id(event.industry_id)
+    return {
+        "run_id": run_id,
+        "trade_date": declaration.trade_date,
+        "applicability": declaration.applicability.value,
+        "lane": declaration.lane.value,
+        "industry_column": declaration.industry_column,
+        "size_column": declaration.size_column,
+        "size_bucket_method": declaration.size_bucket_method,
+        "instrument_id": instrument_id,
+        "instrument_id_kind": instrument_id_kind,
+        "selected_weight": None if event is None else event.selected_weight,
+        "industry_id": industry_id,
+        "industry_id_kind": industry_id_kind,
+        "size_value": None if event is None else event.size_value,
+        "size_bucket": None if event is None else event.size_bucket.value,
+    }
+
+
+def _invalid_selection_evidence_log(error: Exception | None = None) -> NoReturn:
+    app_error = AppProcessError(
+        "selection evidence log is invalid at the serialization boundary",
+        details={
+            "code": "SPEC_INVALID",
+            "reason": "invalid_selection_evidence_log",
+        },
+    )
+    if error is None:
+        raise app_error
+    raise app_error from error
+
+
+def _require_exact_events[EventT](
+    value: object,
+    event_type: type[EventT],
+) -> tuple[EventT, ...]:
+    if type(value) is not tuple:
+        _invalid_selection_evidence_log()
+    events = cast("tuple[object, ...]", value)
+    if any(type(event) is not event_type for event in events):
+        _invalid_selection_evidence_log()
+    return cast("tuple[EventT, ...]", events)
+
+
+def _rebuild_selection_evidence_log(
+    value: object,
+) -> SelectionEvidenceLog:
+    """Reconstruct every event so frozen-instance poisoning cannot cross I/O."""
+    if type(value) is not SelectionEvidenceLog:
+        _invalid_selection_evidence_log()
+    try:
+        initial_universe = tuple(
+            InitialUniverseEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                ordinal=event.ordinal,
+            )
+            for event in _require_exact_events(
+                value.initial_universe,
+                InitialUniverseEvidence,
+            )
+        )
+        exclusions = tuple(
+            ExclusionEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                stage=event.stage,
+                reason_code=event.reason_code,
+                message=event.message,
+            )
+            for event in _require_exact_events(
+                value.exclusions,
+                ExclusionEvidence,
+            )
+        )
+        selections = tuple(
+            SelectionEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                score=event.score,
+                rank=event.rank,
+                selected=event.selected,
+            )
+            for event in _require_exact_events(
+                value.selections,
+                SelectionEvidence,
+            )
+        )
+        factor_contributions = tuple(
+            FactorContributionEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                factor_name=event.factor_name,
+                raw_value=event.raw_value,
+                processed_value=event.processed_value,
+                normalized_value=event.normalized_value,
+                weight=event.weight,
+                contribution=event.contribution,
+                factor_signal_score=event.factor_signal_score,
+                rank=event.rank,
+                selected=event.selected,
+            )
+            for event in _require_exact_events(
+                value.factor_contributions,
+                FactorContributionEvidence,
+            )
+        )
+        exposure_declarations = tuple(
+            SelectionExposureDeclaration(
+                trade_date=event.trade_date,
+                applicability=event.applicability,
+                lane=event.lane,
+                industry_column=event.industry_column,
+                size_column=event.size_column,
+                size_bucket_method=event.size_bucket_method,
+            )
+            for event in _require_exact_events(
+                value.exposure_declarations,
+                SelectionExposureDeclaration,
+            )
+        )
+        exposures = tuple(
+            SelectionExposureEvidence(
+                trade_date=event.trade_date,
+                instrument_id=event.instrument_id,
+                selected_weight=event.selected_weight,
+                industry_id=event.industry_id,
+                size_value=event.size_value,
+                size_bucket=SelectionExposureSizeBucket(event.size_bucket),
+            )
+            for event in _require_exact_events(
+                value.exposures,
+                SelectionExposureEvidence,
+            )
+        )
+        return SelectionEvidenceLog(
+            initial_universe=initial_universe,
+            exclusions=exclusions,
+            selections=selections,
+            factor_contributions=factor_contributions,
+            exposure_declarations=exposure_declarations,
+            exposures=exposures,
+        )
+    except (AttributeError, StrategySpecError, TypeError, ValueError) as error:
+        _invalid_selection_evidence_log(error)
+
+
+def _frame_with_schema(
+    rows: list[dict[str, object]],
+    schema: pl.Schema,
+) -> pl.DataFrame:
+    """Create the same schema for empty and populated artifact tables."""
+    if not rows:
+        return pl.DataFrame(schema=schema)
+    return pl.DataFrame(rows, schema=schema)
+
+
+def _serialize_instrument_id(instrument_id: int | str) -> tuple[str, str]:
+    """Preserve numeric-versus-text identity while using one stable column dtype."""
+    kind = "integer" if isinstance(instrument_id, int) else "string"
+    return str(instrument_id), kind

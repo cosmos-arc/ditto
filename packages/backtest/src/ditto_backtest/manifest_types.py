@@ -12,13 +12,39 @@ from enum import StrEnum
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
+from ditto_strategy.alpha.parameters import EffectiveParameter
+
+from ditto_backtest.config import (
+    validate_canonical_sha256,
+    validate_effective_parameter_identity,
+    validate_research_snapshot_identity,
+    validate_spec_hash,
+)
 
 __all__ = [
     "InputRef",
+    "ReplayArtifactRef",
+    "ResearchReplayEvidence",
     "RuleRef",
     "RunManifest",
     "RunMode",
 ]
+
+_REPLAY_EVIDENCE_SCHEMA_VERSION = 1
+_REPLAY_ARTIFACT_FORMATS = frozenset({"json", "parquet"})
+
+
+def _validate_replay_identity(value: object, *, field_name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or not value
+        or value != value.strip()
+        or "/" in value
+        or "\\" in value
+    ):
+        msg = f"{field_name} must be a non-empty canonical identity"
+        raise ValueError(msg)
+    return value
 
 
 class RunMode(StrEnum):
@@ -28,6 +54,106 @@ class RunMode(StrEnum):
     RECOMMENDATION = "recommendation"
     BACKTEST = "backtest"
     LIVE = "live"
+
+
+@dataclass(frozen=True, slots=True)
+class ReplayArtifactRef:
+    """One immutable indexed artifact required by an R3 replay proof."""
+
+    artifact_id: str
+    artifact_kind: str
+    artifact_format: str
+    content_hash: str
+    schema_hash: str
+    row_count: int
+    byte_size: int
+
+    def __post_init__(self) -> None:
+        """Reject ambiguous identities and truncated artifact measurements."""
+        _validate_replay_identity(self.artifact_id, field_name="artifact_id")
+        _validate_replay_identity(self.artifact_kind, field_name="artifact_kind")
+        if self.artifact_format not in _REPLAY_ARTIFACT_FORMATS:
+            msg = "artifact_format must be json or parquet"
+            raise ValueError(msg)
+        validate_canonical_sha256(self.content_hash, field_name="content_hash")
+        validate_canonical_sha256(self.schema_hash, field_name="schema_hash")
+        for field_name, value in (
+            ("row_count", self.row_count),
+            ("byte_size", self.byte_size),
+        ):
+            if type(value) is not int or value < 0:
+                msg = f"{field_name} must be a nonnegative exact integer"
+                raise ValueError(msg)
+
+    @property
+    def identity(self) -> tuple[str, str]:
+        """Return the stable canonical ordering key."""
+        return self.artifact_kind, self.artifact_id
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchReplayEvidence:
+    """Authoritative R3 semantics, summary, and required artifact measurements."""
+
+    reproduction_fingerprint: str
+    key_result_summary_artifact_id: str
+    required_artifacts: tuple[ReplayArtifactRef, ...]
+    schema_version: int = _REPLAY_EVIDENCE_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        """Require one complete canonical evidence set with no unknown entries."""
+        if type(self.schema_version) is not int or (
+            self.schema_version != _REPLAY_EVIDENCE_SCHEMA_VERSION
+        ):
+            msg = "unsupported replay evidence schema_version"
+            raise ValueError(msg)
+        validate_canonical_sha256(
+            self.reproduction_fingerprint,
+            field_name="reproduction_fingerprint",
+        )
+        _validate_replay_identity(
+            self.key_result_summary_artifact_id,
+            field_name="key_result_summary_artifact_id",
+        )
+        if not self.required_artifacts:
+            msg = "required_artifacts must be a non-empty tuple"
+            raise ValueError(msg)
+        artifacts: list[ReplayArtifactRef] = []
+        for item in self.required_artifacts:
+            if type(item) is not ReplayArtifactRef:
+                msg = "required_artifacts must contain exact ReplayArtifactRef values"
+                raise ValueError(msg)
+            artifacts.append(item)
+        artifact_ids = tuple(item.artifact_id for item in artifacts)
+        if len(set(artifact_ids)) != len(artifact_ids):
+            msg = "required artifact IDs must be unique"
+            raise ValueError(msg)
+        artifact_kinds = tuple(item.artifact_kind for item in artifacts)
+        if len(set(artifact_kinds)) != len(artifact_kinds):
+            msg = "required artifact kinds must be unique semantic slots"
+            raise ValueError(msg)
+        if tuple(item.identity for item in artifacts) != tuple(
+            sorted(item.identity for item in artifacts)
+        ):
+            msg = "required_artifacts must use stable sorted identity order"
+            raise ValueError(msg)
+        summaries = tuple(
+            item
+            for item in artifacts
+            if item.artifact_id == self.key_result_summary_artifact_id
+        )
+        if len(summaries) != 1 or summaries[0].artifact_format != "json":
+            msg = "key result summary must reference one required JSON artifact"
+            raise ValueError(msg)
+
+    @property
+    def key_result_summary(self) -> ReplayArtifactRef:
+        """Return the canonical verified summary artifact reference."""
+        return next(
+            item
+            for item in self.required_artifacts
+            if item.artifact_id == self.key_result_summary_artifact_id
+        )
 
 
 @dataclass(frozen=True)
@@ -109,6 +235,12 @@ class RunManifest:
     strategy_version: str
     mode: RunMode
     created_at: str
+    spec_hash: str
+    base_spec_hash: str
+    parameter_hash: str
+    effective_parameters: tuple[EffectiveParameter, ...]
+    research_snapshot_id: str | None
+    research_snapshot_manifest_hash: str | None
     input_refs: tuple[InstrumentId, ...] = ()
     input_ref_details: tuple[InputRef, ...] = ()
     parameter_overrides: tuple[str, ...] = ()
@@ -118,10 +250,39 @@ class RunManifest:
     engine_version: str = ""
     rule_resolution_policy: str = "as_of_date"
     universe_hash: str = ""
-    spec_hash: str = ""
     dependency_versions: tuple[str, ...] = ()
     random_seed: int | None = None
     pit_time_column: str = DEFAULT_PIT_TIME_COLUMN
     pit_policy: str = PIT_POLICY_FAIL_CLOSED
     unsafe_time_policy: str = ""
     knowledge_lag_days: int = 1
+    replay_evidence: ResearchReplayEvidence | None = None
+
+    def __post_init__(self) -> None:
+        """A persisted run manifest always has resolved canonical strategy identity."""
+        validate_spec_hash(self.spec_hash)
+        validate_canonical_sha256(self.base_spec_hash, field_name="base_spec_hash")
+        validate_effective_parameter_identity(
+            self.parameter_hash,
+            self.effective_parameters,
+        )
+        validate_research_snapshot_identity(
+            self.research_snapshot_id,
+            self.research_snapshot_manifest_hash,
+        )
+        if (
+            self.replay_evidence is not None
+            and type(self.replay_evidence) is not ResearchReplayEvidence
+        ):
+            msg = "replay_evidence must be an exact ResearchReplayEvidence"
+            raise ValueError(msg)
+        if self.parameter_overrides:
+            msg = (
+                "parameter_overrides cannot carry unresolved legacy values; "
+                "use effective_parameters"
+            )
+            raise ValueError(msg)
+        input_detail_ids = tuple(item.instrument_id for item in self.input_ref_details)
+        if len(set(input_detail_ids)) != len(input_detail_ids):
+            msg = "input_ref_details instrument identities must be unique"
+            raise ValueError(msg)

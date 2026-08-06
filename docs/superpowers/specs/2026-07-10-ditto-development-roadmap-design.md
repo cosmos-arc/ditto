@@ -1,7 +1,7 @@
 # Ditto 后续发展规划与分阶段开发设计
 
 > **首次创建**：2026-07-10<br>
-> **最近复核**：2026-07-17<br>
+> **最近复核**：2026-07-19<br>
 > **状态**：母路线图（Roadmap Source of Truth）<br>
 > **北极星**：全球全品类、AI 原生、以证据驱动人工决策的量化平台；十个能力维度最终全部达到 10/10。
 
@@ -14,7 +14,9 @@
 | `docs/plans/2026-07-10-capability-benchmark-design.md` | 当前能力、评分、对标、缺口和 10 分完成定义 |
 | 本文 | R0-R7 顺序、依赖、横向工程、发布 Gate 和投资重点 |
 | `docs/plans/2026-07-10-r1-implementation-plan.md` | R1 已完成的逐 task 施工与验收记录 |
-| `docs/plans/2026-07-17-r2-data-product-design.md` | R2 已确认的范围、架构、历史区间、数据集矩阵与 Definition of Done；详细施工图待创建 |
+| `docs/plans/2026-07-17-r2-data-product-design.md` | R2 确定性工程实现、详细范围、发布 evidence 缺口与 live Gate；实施 task 见 2026-07-18 R2 implementation plan |
+| `docs/plans/2026-07-19-r3-a-share-research-strategy-governance-design.md` | R3 已确认的发布边界、双黄金路径、架构、研究协议、治理状态机、工作台与 G2 验收 |
+| `docs/plans/2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md` | R3 W0-W5、22 个 TDD task、精确文件/测试、审批点和跨仓库施工顺序 |
 | `docs/plans/2026-07-10-phase-a-implementation-plan.md` | 已废弃施工属性的历史迁移索引 |
 
 事实冲突时，以验收证据、当前源码/OpenAPI/CLI、能力基准、母路线图、release 计划的顺序判定。
@@ -40,8 +42,12 @@
 - R1 日频人工交易就绪度：**7.9/10，G1 已通过**。
 - 最强项：PIT、promotion evidence、数据血缘、回测严谨性、OMS/对账协议和工程边界。
 - 最大空白：正式 AI runtime、分钟/盘中、全球资产统一模型。
-- 最大产品缺口：R2 的 A 股日频数据产品覆盖、许可与长期 SLO 尚未启动；
-  R1 仍只适用于本机单操作者边界。
+- R2 确定性工程实现：**DEVELOPMENT PASS**；代码、测试、API、CLI、工作台和
+  fail-closed acceptance runner 已落地。
+- R2 发布缺口：真实 provider entitlement/license、2015/2016 起历史 bootstrap、
+  19 份 live certification、真实性能/恢复和连续运行 evidence 尚未关闭。
+- 当前产品主线：R3 A 股日频研究与策略治理；R1 仍保持本机单操作者、日频、
+  人工审批边界。
 
 ### 3.2 R1 原五个硬阻塞（已清零）
 
@@ -65,8 +71,8 @@
 |---|---|---|---|---:|
 | I 日频闭环 | R0 产品边界固化 | 目标、评分、文档职责和架构边界稳定 | 已完成，持续维护 | 1-2 人周/次复核 |
 | I 日频闭环 | R1 日频人工交易 MVP | 单操作者本机 Beta，从 EOD 到成交复盘闭环 | 已完成，G1 通过 | 8-12 人周 |
-| I 日频闭环 | R2 A 股日频数据产品 | 19 个核心数据集有区间认证、PIT、DQ、恢复和工作台 | 设计已确认，实施未开始 | 13-19 人周 |
-| II 研究产品化 | R3 回测、选股、策略管理 | 可复现研究工作台与基础策略治理 | 未开始 | 12-18 人周 |
+| I 日频闭环 | R2 A 股日频数据产品 | 19 个核心数据集有区间认证、PIT、DQ、恢复和工作台 | 工程开发完成；真实发布 Gate 并行收口 | 13-19 人周 |
+| II 研究产品化 | R3 A 股日频研究与策略治理 Beta | 双黄金路径的可复现研究、审查、发布与历史版本重新激活闭环 | 设计和实施计划已确认；实施待启动 | 19-26 人周 |
 | II 研究产品化 | R4 组合、风险与复盘 | 组合优化、风险与执行后复盘产品化 | 未开始 | 12-18 人周 |
 | III AI 与盘中 | R5 AI Copilot / Agent v1 | grounded、可评测、HITL 的 AI 投研与建议 | 未开始 | 14-22 人周 |
 | III AI 与盘中 | R6 分钟级与盘中 Beta | 分钟数据、增量因子和盘中信号 | 未开始 | 24-36 人周 |
@@ -80,9 +86,9 @@
 |---|---|---|---|
 | 数据覆盖与接入 | R2 A 股日频 | R6 分钟；R7 全球 | 多资产/多频率、日历/时区/FX/合约/公司行动与供应商切换验收 |
 | 数据治理与 PIT | R2 全部日频核心集 | R6 盘中 lineage | 全球数据集质量、许可、回补、降级、SLO 和恢复证据 |
-| 因子与特征 | R3 日频研究生产一致 | R5 AI 辅助；R6 增量 | 跨资产/频率因子库、诊断、复现、版本和在线一致性 |
-| 策略与研究 | R3 基础生命周期 | R5 AI 辅助；R7 多市场 | 实验、审批、发布、回滚、监控、复现和用户价值证据 |
-| 回测与仿真 | R3 日频产品化 | R6 event-driven | 全球市场规则、容量/冲击、研究/决策一致和确定性回放 |
+| 因子与特征 | R3 可解释日频因子目录与诊断 | R5 AI 辅助；R6 增量 | 跨资产/频率因子库、诊断、复现、版本和在线一致性 |
+| 策略与研究 | R3 实验、审查、发布与重新激活闭环 | R5 AI 辅助；R7 多市场 | 实验、审批、发布、回滚、监控、复现和用户价值证据 |
+| 回测与仿真 | R3 批量实验、walk-forward 与确定性重放 | R6 event-driven | 全球市场规则、容量/冲击、研究/决策一致和确定性回放 |
 | 组合构建与优化 | R4 | R7 跨资产 | 多目标多约束、成本/税费/风险预算、稳定求解和解释证据 |
 | 风险管理 | R4 日频 | R6 盘中；R7 机构 | 事前/事中/事后、压力测试、恢复、告警、人工处置和审计 |
 | 执行、OMS 与账户 | R1 人工单账户 | R4 多 sleeve；R7 多账户 | 完整账本、对账恢复、可选券商、多市场交收和运营证据 |
@@ -146,10 +152,16 @@
 
 ## 8. R2：A 股日频数据产品
 
-**状态：设计已确认（2026-07-17），实施未开始。**
+**状态：DEVELOPMENT COMPLETE / RELEASE ACCEPTANCE BLOCKED（2026-07-18 对账）。**
 
-详细设计事实源：`docs/plans/2026-07-17-r2-data-product-design.md`。本节只维护
-release 级范围和 Gate；数据集契约、失败状态、波次与测试以详细设计为准。
+详细设计事实源：`docs/plans/2026-07-17-r2-data-product-design.md`；发布 evidence
+事实源：`docs/evidence/r2/README.md`。本节只维护 release 级范围和 Gate。
+
+代码、测试、API、CLI、工作台、runbook 与确定性 fixture acceptance 已完成；
+真实 provider 权限与许可、历史覆盖、19 份 live certification、真实性能、
+backup/restore 和 5 个连续交易日运行 evidence 仍须独立关闭。R3 工程实施可与
+这些 live evidence 并行，但未通过 R2 live Gate 的数据只能用于 research-only
+路径，且 G2 不得通过。
 
 ### 目标
 
@@ -215,34 +227,90 @@ PIT、质量、来源、恢复和 promotion 证据的数据产品，服务本地
 - 数据使用权、本地缓存、衍生计算、展示和再分发边界已记录；不明确的数据不得
   进入外部 Beta。
 
-## 9. R3：回测、选股与策略管理产品化
+## 9. R3：A 股日频研究与策略治理 Beta
+
+**状态：设计与实施计划已确认（2026-07-19），实施待启动。**
+
+详细设计事实源：
+`docs/plans/2026-07-19-r3-a-share-research-strategy-governance-design.md`；
+逐 task 施工图：
+`docs/plans/2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md`。
 
 ### 目标
 
-让研究员无需修改系统内部代码即可创建、比较、复现、发布和回滚日频策略。
+让不了解系统内部代码的本机单操作者，能够从 R2 certified snapshot 出发，
+通过受约束的类型化 StrategySpec 完成实验、滚动样本外验证、候选比较、解释、
+审查、发布与历史 published version 重新激活，并让 R1 读取唯一 active version。
+R3 保持日频、人工审批和本机边界。
+
+### 发布边界
+
+- 双黄金路径：A 股个股多因子选股为主线，ETF 为共享研究/治理主干的证明与
+  R1 回归线。
+- 作者能力：固定阶段的类型化流水线；表单和画布是同一不可变 StrategySpec 的
+  两种投影。内置 `NodeDescriptor` 使用 `node_type@version` 和 typed I/O/config
+  schema；未知节点 fail closed。
+- 研究协议：可晋级策略至少 96 个完整 strategy-eligible 月；最近 12 个月为
+  一次性 sealed holdout，此前 24 个月为两个年度 walk-forward folds，更早探索期
+  至少 60 个月；purge/embargo 按真实 horizon、持有期和 execution lag 动态计算。
+- 实验预算：显式参数列表/笛卡尔积，最多 128 个 candidate；默认 2、最多 4 个
+  worker；单 active experiment，支持排队、pause/cancel/checkpoint/retry/resume。
+- 治理协议：不可变版本，`draft → review → published → deprecated`；approval/
+  rejection append-only；发布原子切换 active pointer；重新激活只能指向历史
+  published、非 deprecated 版本。
 
 ### 核心工作包
 
-1. 统一 StrategySpec、参数 schema、universe、factor set、allocator、risk 和 execution assumptions。
-2. 批量回测、walk-forward、滚动训练/验证和 baseline comparison。
-3. 收益、风险、换手、容量、交易成本、行业/因子/个股归因。
-4. 选股结果解释、候选池、排除原因和历史稳定性。
-5. 策略 draft/review/published/deprecated 生命周期、审批、版本、diff 和 rollback。
-6. 研究工作台接真实 API，支持实验列表、比较、报告、artifact 和 lineage。
-7. 防数据窥探、过拟合与多重检验的研究门禁。
+1. StrategySpec v2、NodeDescriptor registry、canonical hash、typed parameter
+   binding 与 unknown-node fail-closed。
+2. 约 12 个可解释日频因子的核心目录及 PIT、winsorize、标准化、行业/规模
+   中性化、IC/衰减/换手诊断。
+3. experiment/candidate/fold/attempt 控制面，复用现有单次 backtest manifest、
+   checkpoint、retry/resume 和 replay。
+4. 96 月 validation protocol、动态 purge/embargo、baseline、multiple-testing
+   ledger 与一次性 `HoldoutClaim`。
+5. 两层研究门禁：正确性/evidence 为硬门禁，样本外收益、稳定性、回撤、换手、
+   容量和调整后统计为必须展示的人工判断 evidence。
+6. 个股候选池、逐级排除原因、factor contribution、行业/规模暴露；ETF 共享同一
+   evidence 与发布协议。
+7. 不可变策略版本、append-only review decision、active pointer、publish/
+   deprecate/历史版本重新激活和 R1 集成。
+8. Strategy Studio、Experiment、Review 工作台接真实 OpenAPI，覆盖队列、失败恢复、
+   比较、lineage、artifact、发布和历史。
+9. SQLite 控制面加内容寻址 Parquet/JSON artifact、备份恢复、确定性重放和双黄金
+   路径 release evidence。
+
+### 严格非目标
+
+- 任意 Python/Notebook/代码节点、自由 DAG、R3 动态 plugin loader 或 custom executor。
+- Bayesian/随机搜索/AutoML、大规模因子挖掘、另类数据、分钟/盘中和自动交易。
+- 组合优化、组合级风险、AI/Agent、auth/RBAC、多租户、公网部署和分布式实验。
 
 ### 验收
 
-- 同一 commit、spec、snapshot 和 seed 可复现同一报告。
-- 研究结果能一键形成候选 published version，但发布必须人工审批。
-- 选股、回测与 R1 signal 的策略/数据语义一致。
-- G2 日频研究 Beta 的 API、备份、数据许可和复现 Gate 通过。
+- 同一 code/environment、canonical spec、registry、snapshot、参数、seed 与成本假设
+  可确定性重放。
+- 个股主线完整展示候选、排除、贡献与暴露；ETF 线与 R1 策略/数据语义一致。
+- 96 月、PIT、split integrity、purge/embargo、成本、multiple-testing 和一次性
+  holdout 均由服务端 fail closed。
+- 用户只能为一个预选 candidate 打开 holdout 一次；基础设施恢复不得改变 logical
+  run 输入。
+- review approval、publish 和历史版本重新激活均为显式、append-only、可审计动作；
+  R1 每批锁定 active version。
+- `VITE_USE_MOCK=false` 下完成 Strategy Studio → Experiment → Review → Publish →
+  R1 → Reactivate 全闭环。
+- metadata/research DB 与 artifact 通过备份恢复；后端、前端和双黄金真实数据
+  evidence 通过。
+- R2 live Gate 与上述 R3 evidence 同时关闭后，G2 日频研究 Beta 才通过。
 
 ## 10. R4：组合优化、风险与复盘工作台
 
 ### 目标
 
 把“有信号”提升为“仓位可解释、风险可控、执行后可复盘”的日频决策产品。
+
+R3 只提供为回测和选股语义服务的确定性基础分配方式，例如等权、权重上限和
+简单逆波动；均值方差、风险平价、风险预算、组合约束与组合级风险仍由 R4 独占。
 
 ### 核心工作包
 
@@ -381,7 +449,7 @@ PIT、质量、来源、恢复和 promotion 证据的数据产品，服务本地
 | Gate | 面向对象 | 必须通过 |
 |---|---|---|
 | G1 内部本机 Beta | 单个开发/交易操作者 | R1 清单、loopback、恢复、真实数据 evidence |
-| G2 日频研究 Beta | 内部研究用户 | R3 可复现、数据许可、API 兼容、备份恢复 |
+| G2 日频研究 Beta | 内部研究用户 | R2 live Gate；R3 双黄金路径、96 月/一次性 holdout、确定性重放、策略治理、真实 API、备份恢复与数据许可 |
 | G3 决策工作台 Beta | 内部投资决策用户 | R4 组合/风险/账本、SLO、告警、runbook |
 | G4 受控外部 Beta | 邀请用户 | auth/RBAC、隔离、安全、隐私、数据再分发、支持流程 |
 | G5 A 股商业产品 | 付费/正式用户 | 法务合规、投资建议边界、授权、审计、灾备、SLA、客服与计费 |
@@ -394,8 +462,9 @@ G5 是独立横向 Gate，可以在 R7 之前完成；R7 不是 A 股商业化�
 ```text
 R0
  └─ R1 ── G1
-     └─ R2
-         └─ R3 ── G2
+     └─ R2 工程开发（已完成）
+         ├─ R2 真实发布 evidence 收口 ───────────┐
+         └─ R3 研究与策略治理实施 ───────────────┴─ G2
              └─ R4 ── G3
                  ├─ 安全/合规横向工程 ── G4/G5
                  └─ R5
@@ -405,24 +474,27 @@ R0
 
 允许的准备性并行：
 
-- R1 期间可调研 R2 数据许可，但不启动大规模 ingestion 改造。
+- R2 真实 provider、历史、certification、性能、恢复与连续运行 evidence 可和
+  R3 工程实施并行；fixture 或 research-only 结果不能替代 G2 所需 live evidence。
 - R3 后期可制作 AI eval 数据集，但 R5 runtime 仍依赖 R4 稳定 artifacts。
 - R5 与 R6 可在团队资源充足时并行，但共享 API/schema 需先冻结。
 - 安全、备份、SLO、许可和合规按 Gate 持续推进，不受功能 release 串行限制。
 
 ## 17. 优先级与资源配置
 
-### P0：当前 release 收口
+### P0：当前 release 与并行 Gate 收口
 
-- R1 九个 task 与 G1 evidence 已完成，保持回归门禁和本机运行边界。
-- R1 过程中发现的非阻塞需求保留在 R2+ 候选池，不扩入已关闭的 R1。
-- R2 已完成 code exploration、范围设计和投入评估；实施仍未开始，下一步创建
-  逐 task implementation plan。
+- R1 与 G1 保持已完成状态、本机运行边界和回归门禁。
+- R2 确定性工程开发已完成；按 R2 evidence index 并行关闭 entitlement/license、
+  历史、19 份 certification、性能、恢复和连续运行 Gate，不以 fixture 替代。
+- R3 设计与 W0-W5 implementation plan 已确认；下一步从 StrategySpec/registry/
+  typed parameter binding 开始实施，并在数据库 task 前执行显式审批。
 
-### P1：G1 后
+### P1：G2 收口
 
-- 先做 R2 数据产品，再做 R3 研究产品。
-- 真实用户每天使用 R1 工作流产生的摩擦，优先回流到 R2/R3。
+- 在真实 certified snapshot 上完成个股主线和 ETF 回归线，关闭 96 月协议、
+  一次性 holdout、真实 UI、重放和恢复 evidence。
+- 只有 R2 live Gate 与 R3 双黄金路径同时通过，才宣称 G2 日频研究 Beta。
 
 ### P2：G2/G3 后
 
@@ -454,7 +526,9 @@ R0
 | 文档与代码漂移 | 命令、路径、DTO 不存在 | 每个 release 开始复核源码，CI 加文档引用检查 |
 | 数据“有但不可用” | 历史浅、延迟、许可不清 | dataset-level evidence 与 promotion gate |
 | 重跑破坏交易账本 | 重复 intent/fill 或静默覆盖 | stable key、checksum、append-only、冲突 fail closed |
-| 前端掩盖后端缺失 | live 模式展示 mock | Trading domain 禁止 live fallback，契约测试 |
+| 前端掩盖后端缺失 | live 模式展示 mock | Trading/Research domain 禁止 live fallback，契约测试 |
+| 研究过拟合或 holdout 泄漏 | 反复换候选、看结果后改指标 | 预注册目标、完整 trial ledger、96 月 walk-forward、一次性 HoldoutClaim 和调整后统计 evidence |
+| 本机实验耗尽资源 | 候选无界、并发争抢、恢复重复运行 | 128 上限、单 active experiment、2/4 worker、lease/checkpoint/idempotency |
 | AI 输出像事实 | 无引用、越权调用 | grounded tools、structured output、eval、HITL、guardrails |
 | 实时化破坏日频 | 时间语义混乱、结果不一致 | frequency/clock contract、replay、日频 regression suite |
 | 全球化只扩枚举 | NAV/税费/交收错误 | 每市场 golden cases 与独立 Gate |
@@ -467,7 +541,8 @@ R0
 
 - 交易日 EOD 成功率、数据按时率、blocked 原因分布和恢复时间。
 - 建议复核耗时、建议到 fill 覆盖率、偏差、换手、费用和未解决冲突。
-- 回测/策略复现率、研究周期、发布频率和策略失效发现时间。
+- 实验排队与恢复成功率、确定性重放率、holdout 一次性合规率、研究周期、
+  review 拒绝原因、发布/重新激活频率和策略失效发现时间。
 - 组合/风险阻塞准确性、人工 override 率和账本重建一致率。
 
 ### R5 AI
@@ -498,5 +573,7 @@ R1 已按以下顺序完成：
   → G1 evidence
 ```
 
-R1 已通过 G1；R2 设计已确认、实施仍处于未开始状态。AI runtime 和分钟级改造
-继续分别留在 R5、R6，不因 G1 通过而提前进入当前范围。
+R1 已通过 G1；R2 确定性工程开发完成、live release evidence 并行收口；R3 设计
+与 22-task implementation plan 已确认，下一实施入口为 W0 StrategySpec v2、
+NodeDescriptor、canonical hash 和 typed parameter binding。AI runtime 和分钟级改造
+继续分别留在 R5、R6，不因 R3 启动而提前进入当前范围。

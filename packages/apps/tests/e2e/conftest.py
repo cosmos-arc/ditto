@@ -33,6 +33,7 @@ from ditto_data.storage.market.stock.bars import (  # noqa: E402
     StockBarsReader,
     StockBarsWriter,
 )
+from ditto_platform.foundation import reset_for_testing  # noqa: E402
 
 from tests.e2e.parquet_helpers import market_parquet_store  # noqa: E402
 from tests.e2e.reporter import E2EReporter  # noqa: E402
@@ -50,6 +51,7 @@ def register_e2e_metrics() -> None:
     tests intentionally reset the process-global metric registry, so a
     session-scoped registration can disappear before a later E2E source call.
     """
+    reset_for_testing()
     register_metrics()
 
 

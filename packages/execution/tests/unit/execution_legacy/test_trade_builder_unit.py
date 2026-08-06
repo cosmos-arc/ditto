@@ -101,6 +101,89 @@ class TestTradeMatchingMethod:
         assert TradeMatchingMethod.FLAT_TO_FLAT == "flat_to_flat"
 
 
+class TestTradeBuilderStateRestore:
+    """Checkpoint restore preserves open matching state and trade IDs."""
+
+    def test_fifo_partial_entry_resumes_exactly(
+        self,
+        account_view: AccountView,
+    ) -> None:
+        reference = FifoTradeBuilder()
+        reference.on_fill(
+            _fill("fill-1", order_id="buy-1", quantity=200, fee=10.0),
+            account_view,
+        )
+        reference.on_fill(
+            _fill(
+                "fill-2",
+                order_id="sell-1",
+                direction=OrderSide.SELL,
+                quantity=100,
+                price=11.0,
+                fee=5.0,
+            ),
+            account_view,
+        )
+        snapshot = reference.snapshot_state()
+        resumed = FifoTradeBuilder()
+        resumed.restore_state(snapshot)
+        final_fill = _fill(
+            "fill-3",
+            order_id="sell-2",
+            direction=OrderSide.SELL,
+            quantity=100,
+            price=12.0,
+            fee=6.0,
+        )
+
+        reference.on_fill(final_fill, account_view)
+        resumed.on_fill(final_fill, account_view)
+
+        assert resumed.get_closed_trades() == (reference.get_closed_trades()[-1],)
+        assert resumed.get_closed_trades()[0].trade_id == "trade-3"
+
+    def test_flat_to_flat_accumulator_resumes_exactly(
+        self,
+        account_view: AccountView,
+    ) -> None:
+        reference = FlatToFlatTradeBuilder()
+        reference.on_fill(
+            _fill("fill-1", order_id="buy-1", quantity=100, fee=5.0),
+            account_view,
+        )
+        reference.on_fill(
+            _fill(
+                "fill-2",
+                order_id="sell-1",
+                direction=OrderSide.SELL,
+                quantity=40,
+                price=11.0,
+                fee=2.0,
+            ),
+            account_view,
+        )
+        # get_open_trades() is counter-bearing in the current implementation;
+        # the checkpoint must preserve that result-determining counter too.
+        assert reference.get_open_trades()[0].trade_id == "trade-1"
+        snapshot = reference.snapshot_state()
+        resumed = FlatToFlatTradeBuilder()
+        resumed.restore_state(snapshot)
+        final_fill = _fill(
+            "fill-3",
+            order_id="sell-2",
+            direction=OrderSide.SELL,
+            quantity=60,
+            price=12.0,
+            fee=3.0,
+        )
+
+        reference.on_fill(final_fill, account_view)
+        resumed.on_fill(final_fill, account_view)
+
+        assert resumed.get_closed_trades() == reference.get_closed_trades()
+        assert resumed.get_closed_trades()[0].trade_id == "trade-2"
+
+
 # ---------------------------------------------------------------------------
 # FifoTradeBuilder — basic
 # ---------------------------------------------------------------------------

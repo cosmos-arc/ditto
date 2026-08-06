@@ -6,11 +6,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
+from ditto_analysis.experiments import (
+    ExperimentReaderProtocol,
+    ExperimentWriterProtocol,
+)
+from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.certification import (
     CertificationReader as DataProductCertificationReader,
 )
 from ditto_data.catalog.license import DatasetLicenseReader
+from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotWriter
 from ditto_data.config.data_source import DataSourceSettings
@@ -45,11 +52,32 @@ from ditto_features.storage.runtime.publication_safety import (
     ShadowReportWriter,
 )
 from ditto_platform.services import AlertManager
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
+)
 
+from ditto_application.builders.published_baseline_runtime_builder import (
+    PublishedBaselineRuntimeBuilder,
+)
+from ditto_application.builders.research_executor_probe import (
+    BuilderBackedResearchExecutorProbe as _BuilderBackedResearchExecutorProbe,
+)
+from ditto_application.builders.research_runtime_builder import (
+    ResearchRuntimeBuilder,
+)
+from ditto_application.builders.research_validation_authority import (
+    ProductionResearchValidationAuthorityProbe as _ValidationAuthorityProbe,
+)
+from ditto_application.builders.research_validation_authority_source import (
+    IndexedSnapshotValidationAuthoritySource,
+)
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+from ditto_application.commands.experiments import ExperimentControlNotifier
+from ditto_application.commands.strategy_governance import ReviewPacketReader
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_sizing import (
     AShareTradeDateResolver,
@@ -58,16 +86,50 @@ from ditto_application.processes.execution.manual_sizing import (
 )
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.position_reader import StoredPositionReader
-from ditto_application.processes.execution.replay_process import ReplayProcess
+from ditto_application.processes.execution.replay_process import (
+    IndexedResearchReplayArtifactReader,
+    ReplayProcess,
+    VerifiedReplayArtifactReader,
+)
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.experiments._control_runtime import (
+    LoggingExperimentControlNotifier,
+)
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    DurableSelectionEvidenceService,
+)
+from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    WalkForwardEvidenceAssembler,
+)
+from ditto_application.processes.experiments.comparison_reader import (
+    ExperimentComparisonReader,
+)
+from ditto_application.processes.experiments.evidence_collector import (
+    ExperimentEvidenceCollector,
+)
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
+)
+from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    NullR2LiveGateEvidenceReader,
+    R2LiveGateEvidenceReader,
+)
+from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentSchedulerStore,
+)
+from ditto_application.processes.experiments.selection_evidence_reader import (
+    ExperimentSelectionEvidenceReader,
+)
 from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitPorts,
     IngestionEvidenceCommitter,
 )
 from ditto_application.processes.ingestion.r2_preflight import (
+    R2_ACCEPTANCE_CERTIFICATION_PROFILE,
+    ProductCertificationEvidence,
     R2AcceptanceRuntimeEvidence,
 )
 from ditto_application.processes.materialization.cascade_orchestrator import (
@@ -90,11 +152,17 @@ from ditto_application.processes.quality import (
     QualityCompletenessService,
     QualityPatrolService,
 )
+from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.account import AccountBaselineQuery
-from ditto_application.queries.data_readiness import DataReadinessQueryFacade
+from ditto_application.queries.data_readiness import (
+    DataReadinessQueryFacade,
+)
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.research_certification import (
+    DataReadinessCertificationProbe as _DataReadinessCertificationProbe,
+)
 from ditto_application.queries.run import RunReadModel
 from ditto_application.settings import TradingSettings
 
@@ -130,6 +198,11 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def r2_live_gate_evidence_reader(self) -> R2LiveGateEvidenceReader:
+        """Default to fail-closed evidence until the composition root overrides it."""
+        return NullR2LiveGateEvidenceReader()
 
     @provide
     def bootstrap_planner(
@@ -172,6 +245,7 @@ class AppProcessProvider(Provider):
         self,
         settings: DataSourceSettings,
         license_reader: DatasetLicenseReader,
+        certification_reader: DataProductCertificationReader,
     ) -> R2AcceptanceRuntimeEvidence:
         """Resolve non-secret live acceptance inputs at the composition boundary."""
         credential_sources: set[str] = set()
@@ -181,9 +255,31 @@ class AppProcessProvider(Provider):
             credential_sources.update({"fred", "alfred"})
         if Path(settings.tdx_path).expanduser().is_dir():
             credential_sources.add("local_tdx")
+        certifications: list[ProductCertificationEvidence] = []
+        for metadata in default_dataset_metadata().values():
+            contract = metadata.product_contract
+            if contract is None or contract.r2_scope != "hard":
+                continue
+            report = certification_reader.get_active_report(
+                metadata.dataset_id,
+                R2_ACCEPTANCE_CERTIFICATION_PROFILE,
+            )
+            if report is None or report.coverage.complete_from is None:
+                continue
+            certifications.append(
+                ProductCertificationEvidence(
+                    dataset_id=metadata.dataset_id,
+                    profile=report.profile,
+                    report_id=report.report_id,
+                    content_hash=report.content_hash,
+                    certified_from=report.coverage.complete_from,
+                    certified_through=report.coverage.target_to,
+                )
+            )
         return R2AcceptanceRuntimeEvidence(
             credential_sources=frozenset(credential_sources),
             license_records=license_reader.list_licenses(),
+            certifications=tuple(certifications),
         )
 
     @provide
@@ -196,6 +292,143 @@ class AppProcessProvider(Provider):
         return DataReadinessQueryFacade(
             certification_reader=certification_reader,
             maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+    @provide
+    def research_certification_probe(
+        self,
+        facade: DataReadinessQueryFacade,
+        research_catalog: ResearchCatalogService,
+    ) -> _DataReadinessCertificationProbe:
+        """Bind R3 preflight to the fixed R2 certification read model."""
+        return _DataReadinessCertificationProbe(facade, research_catalog)
+
+    @provide
+    def research_executor_probe(
+        self,
+        builder: ResearchRuntimeBuilder,
+        published_baseline_builder: PublishedBaselineRuntimeBuilder,
+        strategy_catalog: StrategyCatalogService,
+    ) -> _BuilderBackedResearchExecutorProbe:
+        """Validate every candidate against the explicit-version runtime builder."""
+        return _BuilderBackedResearchExecutorProbe(
+            builder,
+            published_baseline_builder=published_baseline_builder,
+            strategy_reader=strategy_catalog,
+        )
+
+    @provide
+    def research_validation_authority_probe(
+        self,
+        research_artifact_service: ResearchArtifactService,
+    ) -> _ValidationAuthorityProbe:
+        """Bind planning to exact manifest, PIT membership, and calendar bytes."""
+        return _ValidationAuthorityProbe(
+            IndexedSnapshotValidationAuthoritySource(research_artifact_service)
+        )
+
+    @provide
+    def experiment_planning_process(
+        self,
+        reader: ExperimentReaderProtocol,
+        writer: ExperimentWriterProtocol,
+        certification_probe: _DataReadinessCertificationProbe,
+        executor_probe: _BuilderBackedResearchExecutorProbe,
+        authority_probe: _ValidationAuthorityProbe,
+    ) -> ExperimentPlanningProcess:
+        """Assemble deterministic preflight and exact launch persistence ports."""
+        return ExperimentPlanningProcess(
+            reader=reader,
+            writer=writer,
+            certification_probe=certification_probe,
+            executor_probe=executor_probe,
+            authority_probe=authority_probe,
+        )
+
+    @provide
+    def experiment_scheduler_store(
+        self,
+        reader: ExperimentReaderProtocol,
+        writer: ExperimentWriterProtocol,
+    ) -> ExperimentSchedulerStore:
+        """Bind Task 9 scheduling to the approved durable experiment ports."""
+        return ExperimentSchedulerStore(reader, writer)
+
+    @provide
+    def experiment_control_notifier(self) -> ExperimentControlNotifier:
+        """R3 best-effort logging notifier for the single-machine durable-tick model."""
+        return LoggingExperimentControlNotifier()
+
+    @provide
+    def review_packet_reader(
+        self,
+        reader: ExperimentReaderProtocol,
+    ) -> ReviewPacketReader:
+        """Expose the experiment reader as the narrow review-packet port."""
+        return reader
+
+    @provide
+    def durable_selection_evidence_service(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        reader: ExperimentReaderProtocol,
+        research_artifact_service: ResearchArtifactService,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
+    ) -> DurableSelectionEvidenceService:
+        """Bind selection publication and restart reads to one APP-scoped service."""
+        return DurableSelectionEvidenceService(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            artifact_service=research_artifact_service,
+            walk_forward_assembler=walk_forward_assembler,
+        )
+
+    @provide
+    def selection_evidence_reader(
+        self,
+        reader: ExperimentReaderProtocol,
+        selection_evidence_service: DurableSelectionEvidenceService,
+    ) -> ExperimentSelectionEvidenceReader:
+        """Bind the read-only selection-evidence view to durable experiment ports."""
+        return ExperimentSelectionEvidenceReader(
+            reader=reader,
+            selection_service=selection_evidence_service,
+        )
+
+    @provide
+    def experiment_comparison_reader(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        reader: ExperimentReaderProtocol,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
+    ) -> ExperimentComparisonReader:
+        """Bind the read-only candidate-comparison view to durable experiment ports."""
+        return ExperimentComparisonReader(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            walk_forward_assembler=walk_forward_assembler,
+        )
+
+    @provide
+    def experiment_evidence_collector(
+        self,
+        scheduler_store: ExperimentSchedulerStore,
+        reader: ExperimentReaderProtocol,
+        writer: ExperimentWriterProtocol,
+        walk_forward_assembler: WalkForwardEvidenceAssembler,
+        selection_evidence_reader: DurableSelectionEvidenceService,
+        r2_live_gate_evidence_reader: R2LiveGateEvidenceReader = (
+            NullR2LiveGateEvidenceReader()
+        ),
+    ) -> ExperimentEvidenceCollector:
+        """Wire the R3 review-packet collector behind the durable experiment ports."""
+        return ExperimentEvidenceCollector(
+            scheduler_store=scheduler_store,
+            reader=reader,
+            writer=writer,
+            walk_forward_assembler=walk_forward_assembler,
+            selection_evidence_reader=selection_evidence_reader,
+            r2_live_gate_evidence_reader=r2_live_gate_evidence_reader,
         )
 
     @provide
@@ -473,18 +706,42 @@ class AppProcessProvider(Provider):
         )
 
     @provide
+    def verified_replay_artifact_reader(
+        self,
+        strategy_artifact_service: StrategyArtifactService,
+        experiment_reader: ExperimentReaderProtocol,
+        research_artifact_service: ResearchArtifactService,
+    ) -> VerifiedReplayArtifactReader:
+        """Bind R3 replay to Schema v1 metadata and verified artifact reads."""
+        return IndexedResearchReplayArtifactReader(
+            strategy_artifact_service=strategy_artifact_service,
+            artifact_index_reader=experiment_reader,
+            artifact_content_reader=research_artifact_service,
+        )
+
+    @provide
     def replay_process(
         self,
         strategy_facade: StrategyFacade,
         artifact_service: StrategyArtifactService,
         run_model: RunReadModel,
+        verified_artifact_reader: VerifiedReplayArtifactReader,
     ) -> ReplayProcess:
         """回测重放流程."""
         return ReplayProcess(
             strategy_facade=strategy_facade,
             artifact_service=artifact_service,
             run_model=run_model,
+            verified_artifact_reader=verified_artifact_reader,
         )
+
+    @provide
+    def strategy_promotion_process(
+        self,
+        governance_service: GovernanceService,
+    ) -> StrategyPromotionProcess:
+        """R3 策略 promotion 流程（evidence-gated publish + activate）."""
+        return StrategyPromotionProcess(governance_service)
 
     @provide
     def factor_bridge(self) -> FactorBridge:

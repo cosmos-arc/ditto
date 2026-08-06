@@ -51,19 +51,15 @@ class TestFundamentalSourceWrappers:
         assert result["dataset"].item() == "dividend"
         fundamental.fetch_dividend.assert_called_once_with(ex_date="20240506")
 
-    def test_corporate_actions_delegates_with_single_compact_range(self) -> None:
-        """Corporate-action wrapper compacts trade_date to a one-day range."""
+    def test_corporate_actions_delegates_with_exact_announcement_date(self) -> None:
+        """Corporate-action wrapper compacts trade_date to announcement date."""
         fundamental = MagicMock()
         fundamental.fetch_corporate_actions.return_value = _frame("actions")
 
         result = fundamental_source.fetch_corporate_actions(fundamental, "2024-05-06")
 
         assert result["dataset"].item() == "actions"
-        fundamental.fetch_corporate_actions.assert_called_once_with(
-            ts_code=None,
-            start_date="20240506",
-            end_date="20240506",
-        )
+        fundamental.fetch_corporate_actions.assert_called_once_with(ann_date="20240506")
 
 
 @pytest.mark.unit

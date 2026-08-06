@@ -923,6 +923,159 @@ class TestTushareSourceMacroIndicators:
         assert result.equals(expected)
 
 
+class TestTushareSourceDividendRange:
+    """Dividend bootstrap uses the documented announcement-date filter."""
+
+    def test_fetch_dividend_range_queries_each_natural_announcement_date(
+        self,
+        mocker,
+    ) -> None:
+        source = TushareSource(settings=_settings())
+        fetch = mocker.patch.object(
+            source._fundamental,  # pyright: ignore[reportPrivateUsage]
+            "fetch_dividend",
+            side_effect=[
+                pl.DataFrame(
+                    {
+                        "source_ticker": ["000001.SZ"],
+                        "knowledge_date": [date(2024, 1, 1)],
+                    }
+                ),
+                pl.DataFrame(
+                    schema={"source_ticker": pl.String, "knowledge_date": pl.Date}
+                ),
+                pl.DataFrame(
+                    {
+                        "source_ticker": ["600000.SH"],
+                        "knowledge_date": [date(2024, 1, 3)],
+                    }
+                ),
+            ],
+        )
+
+        result = source.fetch_dividend_range("2024-01-01", "2024-01-03")
+
+        assert [item.kwargs for item in fetch.call_args_list] == [
+            {"ann_date": "20240101"},
+            {"ann_date": "20240102"},
+            {"ann_date": "20240103"},
+        ]
+        assert result["source_ticker"].to_list() == ["000001.SZ", "600000.SH"]
+
+    def test_fetch_dividend_range_retries_one_transient_announcement_failure(
+        self,
+        mocker,
+    ) -> None:
+        source = TushareSource(settings=_settings())
+        expected = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "knowledge_date": [date(2024, 1, 1)],
+            }
+        )
+        fetch = mocker.patch.object(
+            source._fundamental,  # pyright: ignore[reportPrivateUsage]
+            "fetch_dividend",
+            side_effect=[SourceFetchError("transient", source="tushare"), expected],
+        )
+        sleep = mocker.patch("ditto_data.sources.tushare._announcement_range.sleep")
+
+        result = source.fetch_dividend_range("2024-01-01", "2024-01-01")
+
+        assert result.equals(expected)
+        assert fetch.call_count == 2
+        sleep.assert_called_once_with(61.0)
+
+    def test_fetch_dividend_range_deduplicates_exact_provider_rows(
+        self,
+        mocker,
+    ) -> None:
+        source = TushareSource(settings=_settings())
+        duplicate = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ", "000001.SZ"],
+                "knowledge_date": [date(2024, 1, 1), date(2024, 1, 1)],
+                "ex_dividend_date": [date(2024, 6, 1), date(2024, 6, 1)],
+                "dividend_per_share": [0.1, 0.1],
+                "div_proc": ["实施", "实施"],
+            }
+        )
+        mocker.patch.object(
+            source._fundamental,  # pyright: ignore[reportPrivateUsage]
+            "fetch_dividend",
+            return_value=duplicate,
+        )
+
+        result = source.fetch_dividend_range("2024-01-01", "2024-01-01")
+
+        assert result.height == 1
+        assert result.row(0, named=True) == duplicate.row(0, named=True)
+
+
+class TestTushareSourceCorporateActionsRange:
+    """Corporate-action bootstrap follows announcement-time PIT boundaries."""
+
+    def test_fetch_range_queries_each_natural_announcement_date(
+        self,
+        mocker,
+    ) -> None:
+        source = TushareSource(settings=_settings())
+        fetch = mocker.patch.object(
+            source._fundamental,  # pyright: ignore[reportPrivateUsage]
+            "fetch_corporate_actions",
+            side_effect=[
+                pl.DataFrame(
+                    {
+                        "source_ticker": ["000001.SZ"],
+                        "knowledge_date": [date(2024, 1, 1)],
+                    }
+                ),
+                pl.DataFrame(
+                    schema={"source_ticker": pl.String, "knowledge_date": pl.Date}
+                ),
+                pl.DataFrame(
+                    {
+                        "source_ticker": ["600000.SH"],
+                        "knowledge_date": [date(2024, 1, 3)],
+                    }
+                ),
+            ],
+        )
+
+        result = source.fetch_corporate_actions_range("2024-01-01", "2024-01-03")
+
+        assert [item.kwargs for item in fetch.call_args_list] == [
+            {"ann_date": "20240101"},
+            {"ann_date": "20240102"},
+            {"ann_date": "20240103"},
+        ]
+        assert result["source_ticker"].to_list() == ["000001.SZ", "600000.SH"]
+
+    def test_fetch_range_retries_one_transient_announcement_failure(
+        self,
+        mocker,
+    ) -> None:
+        source = TushareSource(settings=_settings())
+        expected = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "knowledge_date": [date(2024, 1, 1)],
+            }
+        )
+        fetch = mocker.patch.object(
+            source._fundamental,  # pyright: ignore[reportPrivateUsage]
+            "fetch_corporate_actions",
+            side_effect=[SourceFetchError("transient", source="tushare"), expected],
+        )
+        sleep = mocker.patch("ditto_data.sources.tushare._announcement_range.sleep")
+
+        result = source.fetch_corporate_actions_range("2024-01-01", "2024-01-01")
+
+        assert result.equals(expected)
+        assert fetch.call_count == 2
+        sleep.assert_called_once_with(61.0)
+
+
 class TestTushareSourceFacadeProperties:
     """Tests for TushareSource facade property 分组入口."""
 

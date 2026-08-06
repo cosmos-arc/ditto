@@ -4,6 +4,7 @@ from datetime import datetime
 from types import MappingProxyType
 
 import pytest
+from ditto_backtest.audit import ExecutionAuditStateSnapshot
 from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
@@ -291,6 +292,106 @@ class TestEmptyCollector:
         assert collector.get_closed_trades() == ()
         assert compute_portfolio_statistics(collector) == ()
         assert compute_trade_statistics(collector) == ()
+
+
+class TestAuditCheckpointState:
+    def test_json_roundtrip_restores_full_report_history(self) -> None:
+        source = ExecutionAuditCollector()
+        source.record_account_view("2026-01-01", _account_view())
+        source.record_fill(_fill_event())
+        source.record_closed_trade(_trade_record())
+        source.record_risk_scan(
+            "2026-01-01",
+            (
+                RiskScanRecord(
+                    trade_date="2026-01-01",
+                    rule_id="risk-1",
+                    instrument_id=None,
+                    scope="portfolio",
+                    severity=RiskSeverity.WARNING,
+                    action_taken=RiskActionType.ALERT,
+                    detail="warning",
+                    current_value=0.1,
+                    threshold=0.2,
+                ),
+            ),
+        )
+        source.record_pre_trade_decisions(
+            "2026-01-01",
+            (
+                PreTradeDecisionRecord(
+                    trade_date="2026-01-01",
+                    order_id="o-1",
+                    instrument_id=1,
+                    direction="buy",
+                    original_quantity=100,
+                    final_quantity=100,
+                    decision="accepted",
+                    reason=None,
+                    check_sequence=("lot_size",),
+                ),
+            ),
+        )
+
+        payload_json = source.snapshot_state().to_json()
+        restored_state = ExecutionAuditStateSnapshot.from_json(payload_json)
+        restored = ExecutionAuditCollector()
+        restored.restore_state(restored_state)
+
+        assert restored.snapshot_state().to_json() == payload_json
+        assert build_report(restored, run_id="same") == build_report(
+            source,
+            run_id="same",
+        )
+
+    def test_canonical_json_rejects_missing_nullable_trade_field(self) -> None:
+        """V2 audit records cannot default omitted nullable result fields."""
+        state = ExecutionAuditStateSnapshot(closed_trades=(_trade_record(),))
+        payload = state.to_payload()
+        trades = payload["closed_trades"]
+        assert isinstance(trades, list)
+        trade = trades[0]
+        assert isinstance(trade, dict)
+        del trade["exit_price"]
+
+        with pytest.raises(ValueError, match="missing fields"):
+            ExecutionAuditStateSnapshot.from_payload(payload)
+
+    def test_canonical_json_rejects_integer_float_spelling_drift(self) -> None:
+        """Equivalent numbers cannot create multiple hashes for one typed state."""
+        payload_json = ExecutionAuditStateSnapshot(fills=(_fill_event(),)).to_json()
+        drifted_json = payload_json.replace('"fee":5.0', '"fee":5')
+        assert drifted_json != payload_json
+
+        with pytest.raises(ValueError, match="not canonical"):
+            ExecutionAuditStateSnapshot.from_canonical_json(drifted_json)
+
+    def test_writer_rejects_non_finite_audit_values(self) -> None:
+        """NaN cannot be normalized to JSON null inside checkpoint evidence."""
+        fill = _fill_event()
+        invalid_fill = FillEvent(
+            fill_id=fill.fill_id,
+            order_id=fill.order_id,
+            instrument_id=fill.instrument_id,
+            direction=fill.direction,
+            filled_quantity=fill.filled_quantity,
+            fill_price=float("nan"),
+            fee=fill.fee,
+            slippage=fill.slippage,
+            event_time=fill.event_time,
+            cumulative_quantity=fill.cumulative_quantity,
+            leaves_quantity=fill.leaves_quantity,
+        )
+
+        with pytest.raises(ValueError, match="must be finite"):
+            ExecutionAuditStateSnapshot(fills=(invalid_fill,)).to_json()
+
+    def test_restore_requires_pristine_collector(self) -> None:
+        collector = ExecutionAuditCollector()
+        collector.record_fill(_fill_event())
+
+        with pytest.raises(ValueError, match="pristine"):
+            collector.restore_state(ExecutionAuditStateSnapshot())
 
 
 # ---------------------------------------------------------------------------

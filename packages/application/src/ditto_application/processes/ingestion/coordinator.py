@@ -23,6 +23,9 @@ from ditto_application.processes.ingestion.commodity_fetcher import (
 from ditto_application.processes.ingestion.commodity_fetcher import (
     fetch_commodity_daily as _fetch_commodity_daily,
 )
+from ditto_application.processes.ingestion.commodity_fetcher import (
+    fetch_commodity_range as _fetch_commodity_range,
+)
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator_constants import (
     get_all_index_codes,
@@ -172,6 +175,57 @@ class IngestionCoordinator:
             primary_source=self._fetchers.macro,
             fred_source=self._fred_source,
         )
+
+    def _fetch_source_defined_range(
+        self,
+        dataset: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Use provider-native range APIs for source-defined products."""
+        if dataset == "commodity_daily":
+            return _fetch_commodity_range(
+                start_date,
+                end_date,
+                primary_source=self._fetchers.macro,
+                fred_source=self._fred_source,
+            )
+        if dataset == "macro_indicators":
+            range_fetch = getattr(
+                self._fetchers.macro,
+                "fetch_macro_indicators_range",
+                None,
+            )
+            if not callable(range_fetch):
+                raise AppProcessError(
+                    "macro source does not support bounded range ingestion"
+                )
+            value = range_fetch(start_date, end_date)
+            if not isinstance(value, pl.DataFrame):
+                raise AppProcessError("macro range fetch returned invalid payload")
+            return value
+        raise AppProcessError(f"unsupported source-defined range dataset: {dataset}")
+
+    def _fetch_sparse_range(
+        self,
+        dataset: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Fetch sparse PIT events with one product-specific bounded request."""
+        range_fetch = getattr(
+            self._fetchers.fundamental,
+            f"fetch_{dataset}_range",
+            None,
+        )
+        if not callable(range_fetch):
+            raise AppProcessError(
+                f"sparse source does not support bounded range ingestion: {dataset}"
+            )
+        value = range_fetch(start_date, end_date)
+        if not isinstance(value, pl.DataFrame):
+            raise AppProcessError("sparse range fetch returned invalid payload")
+        return value
 
     # ------------------------------------------------------------------
     # list_date 推断 + 指数代码缓存
@@ -431,6 +485,131 @@ class IngestionCoordinator:
             results.append(result)
         return results
 
+    def ingest_chunk(
+        self,
+        dataset: str,
+        *,
+        chunk_id: str,
+        request_start: str,
+        request_end: str,
+        partition_dates: tuple[str, ...],
+        force: bool = False,
+    ) -> IngestionResult:
+        """Fetch a planned same-year chunk and persist it as one durable payload."""
+        dataset_enum = _validate_dataset(dataset)
+        ensure_source_supported(dataset_enum, self._source_name)
+        if not partition_dates:
+            raise AppProcessError("ingestion chunk has no partitions")
+        normalized_dates = tuple(sorted(set(partition_dates)))
+        if normalized_dates != partition_dates:
+            raise AppProcessError(
+                "ingestion chunk partitions must be unique and sorted"
+            )
+        if normalized_dates[0] < request_start or normalized_dates[-1] > request_end:
+            raise AppProcessError("ingestion chunk partition outside request interval")
+        if len({value[:4] for value in normalized_dates}) != 1:
+            raise AppProcessError("ingestion chunk cannot cross a storage year")
+
+        combined = self._fetch_planned_chunk(
+            dataset,
+            normalized_dates,
+            request_start=request_start,
+            request_end=request_end,
+        )
+        if isinstance(combined, IngestionResult):
+            return combined
+        return _process_fetched_data(
+            combined,
+            dataset,
+            request_start,
+            force,
+            ctx=PostIngestContext(
+                result_handler=self._result_handler,
+                data_writer=self._data_writer,
+                quality_checker=self._quality_checker,
+                list_date_inference=self._list_date_inference,
+                catalog_reader=self._catalog_reader,
+                cursor_store=self._ingestion_cursor_store,
+                freeze_store=self._freeze_store,
+                lineage_recorder=self._lineage_recorder,
+                catalog_writer=self._catalog_writer,
+                source_name=self._source_name,
+                evidence_committer=self._evidence_committer,
+                license_record_id=self._license_record_id,
+            ),
+            request_end=request_end,
+            chunk_id=chunk_id,
+        )
+
+    def _fetch_planned_chunk(
+        self,
+        dataset: str,
+        partition_dates: tuple[str, ...],
+        *,
+        request_start: str,
+        request_end: str,
+    ) -> pl.DataFrame | IngestionResult:
+        """Fetch one planned range while preserving typed fetch failures."""
+        if dataset in {"macro_indicators", "commodity_daily"}:
+            return self._fetch_range_chunk(
+                dataset,
+                request_start=request_start,
+                request_end=request_end,
+                sparse=False,
+            )
+        if dataset in {
+            "balance_sheet",
+            "income_statement",
+            "cash_flow",
+            "dividend",
+            "corporate_actions",
+        }:
+            return self._fetch_range_chunk(
+                dataset,
+                request_start=request_start,
+                request_end=request_end,
+                sparse=True,
+            )
+        frames: list[pl.DataFrame] = []
+        for partition_date in partition_dates:
+            fetched = self._try_fetch_data(dataset, partition_date)
+            if isinstance(fetched, IngestionResult):
+                return fetched
+            if not fetched.is_empty():
+                frames.append(fetched)
+        return pl.concat(frames, how="diagonal_relaxed") if frames else pl.DataFrame()
+
+    def _fetch_range_chunk(
+        self,
+        dataset: str,
+        *,
+        request_start: str,
+        request_end: str,
+        sparse: bool,
+    ) -> pl.DataFrame | IngestionResult:
+        kind = "sparse" if sparse else "source-defined"
+        try:
+            fetched = (
+                self._fetch_sparse_range(dataset, request_start, request_end)
+                if sparse
+                else self._fetch_source_defined_range(
+                    dataset,
+                    request_start,
+                    request_end,
+                )
+            )
+        except Exception as error:
+            return _handle_fetch_error(
+                error,
+                dataset=dataset,
+                date_identifier=request_start,
+                context=f"fetching {kind} range {dataset}",
+                log_tag=f"during_{kind.replace('-', '_')}_range",
+                source_name=self._source_name,
+                result_handler=self._result_handler,
+            )
+        return fetched
+
     # ------------------------------------------------------------------
     # 按标的摄取（委托至 instrument_ingestion）
     # ------------------------------------------------------------------
@@ -458,6 +637,34 @@ class IngestionCoordinator:
                 evidence_committer=self._evidence_committer,
                 license_record_id=self._license_record_id,
             ),
+        )
+
+    def ingest_planned_instrument_chunk(
+        self,
+        dataset: str,
+        *,
+        chunk_id: str,
+        params: InstrumentIngestParams,
+        force: bool = False,
+    ) -> IngestionResult:
+        """Ingest one instrument range and commit the planner checkpoint identity."""
+        return _ingest_by_instrument_impl(
+            dataset,
+            params,
+            force,
+            ctx=InstrumentIngestContext(
+                fetchers=self._fetchers,
+                metadata_service=self._metadata_service,
+                source_name=self._source_name,
+                result_handler=self._result_handler,
+                data_writer=self._data_writer,
+                lineage_recorder=self._lineage_recorder,
+                catalog_writer=self._catalog_writer,
+                quality_checker=self._quality_checker,
+                evidence_committer=self._evidence_committer,
+                license_record_id=self._license_record_id,
+            ),
+            chunk_id=chunk_id,
         )
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:

@@ -43,7 +43,9 @@ from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_strategy.alpha.parameters import EffectiveParameter
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.selection_evidence import SelectionEvidenceSink
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -62,6 +64,7 @@ from ditto_application.catalog_maturity import assert_strategy_runtime_data_allo
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
@@ -81,11 +84,20 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunServiceConfig,
 )
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.baseline_registry import (
+    BaselinePlanKind,
+    BaselineRegistry,
+    default_baseline_registry,
+)
+from ditto_application.processes.experiments.execution_bundle import (
+    BaselineExecutorBinding,
+)
 
 __all__ = [
     "BacktestRuntimeBuilder",
     "PublishedBacktestRuntime",
     "StrategyServiceFactory",
+    "build_frozen_baseline_pipeline",
 ]
 
 
@@ -97,6 +109,62 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def build_frozen_baseline_pipeline(
+    binding: BaselineExecutorBinding,
+    *,
+    registry: BaselineRegistry | None = None,
+    evidence_sink: SelectionEvidenceSink | None = None,
+) -> StrategyPipeline:
+    """Build the one registered synthetic baseline without moving lookup."""
+    if type(binding) is not BaselineExecutorBinding:
+        raise AppBuilderError(
+            "frozen baseline execution binding is unsupported or drifted",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "baseline_execution_binding_drift",
+            },
+        )
+    resolved_registry = registry or default_baseline_registry()
+    if type(resolved_registry) is not BaselineRegistry:
+        raise AppBuilderError(
+            "frozen baseline execution binding is unsupported or drifted",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "baseline_execution_binding_drift",
+            },
+        )
+    matches = tuple(
+        descriptor
+        for descriptor in resolved_registry.descriptors
+        if descriptor.ref.identity == binding.baseline_ref
+    )
+    descriptor = matches[0] if len(matches) == 1 else None
+    if (
+        descriptor is None
+        or binding.baseline_ref != "stock_universe_equal_weight.v1"
+        or binding.kind is not BaselinePlanKind.STOCK_UNIVERSE_EQUAL_WEIGHT
+        or binding.implementation_key
+        != "research.baseline.stock_universe_equal_weight.v1"
+        or binding.executor_contract_version != 1
+        or binding.factor_versions != ()
+        or resolved_registry.manifest_hash != binding.registry_manifest_hash
+        or descriptor.ref.identity != binding.baseline_ref
+        or descriptor.kind is not binding.kind
+        or descriptor.implementation_key != binding.implementation_key
+        or descriptor.executor_contract_version != binding.executor_contract_version
+        or descriptor.canonical_hash != binding.descriptor_hash
+        or descriptor.requires_exact_strategy
+    ):
+        raise AppBuilderError(
+            "frozen baseline execution binding is unsupported or drifted",
+            details={
+                "code": "REPRODUCIBILITY_FAILED",
+                "reason": "baseline_execution_binding_drift",
+            },
+        )
+    return StrategyPipeline((), evidence_sink=evidence_sink)
 
 
 def _compute_max_lookback(
@@ -118,7 +186,7 @@ def _shift_back_calendar_days(date_str: str, days: int) -> str:
 
 
 def _load_account_state(
-    config: BacktestServiceConfig,
+    config: BacktestCatalogRequestConfig,
 ) -> BacktestAccountStateSnapshot | None:
     """Load verified account-state resume evidence from config."""
     if not config.resume_account_state_json:
@@ -139,7 +207,7 @@ def _load_account_state(
 
 
 def _load_settlement_state(
-    config: BacktestServiceConfig,
+    config: BacktestCatalogRequestConfig,
 ) -> BacktestSettlementStateSnapshot | None:
     """Load verified settlement-state resume evidence from config."""
     if not config.resume_settlement_state_json:
@@ -160,7 +228,7 @@ def _load_settlement_state(
 
 
 def _load_runtime_state(
-    config: BacktestServiceConfig,
+    config: BacktestCatalogRequestConfig,
 ) -> BacktestRuntimeStateSnapshot | None:
     """Load verified runtime-state resume evidence from config."""
     if not config.resume_runtime_state_json:
@@ -187,7 +255,7 @@ def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
         raise AppBuilderError(msg)
 
 
-def _build_fill_model(config: BacktestServiceConfig) -> AShareFillModel:
+def _build_fill_model(config: BacktestCatalogRequestConfig) -> AShareFillModel:
     """Build the configured A-share fill model for backtests."""
     participation_rate = (
         0.0 if config.fill_mode == "all_or_nothing" else config.participation_rate
@@ -285,6 +353,61 @@ class PublishedBacktestRuntime:
     compiled_expressions: CompiledExpressions | None = None
 
 
+def _resolve_backtest_catalog_request(
+    config: BacktestCatalogRequestConfig,
+    *,
+    strategy_version: str,
+    benchmark_id: InstrumentId | None,
+    base_spec_hash: str,
+    spec_hash: str,
+    parameter_hash: str,
+    effective_parameters: tuple[EffectiveParameter, ...],
+) -> BacktestServiceConfig:
+    """Resolve a catalog launch request without dropping any request field."""
+    return BacktestServiceConfig(
+        strategy_id=config.strategy_id,
+        strategy_version=strategy_version,
+        run_id=config.run_id,
+        parent_run_id=config.parent_run_id,
+        start_date=config.start_date,
+        end_date=config.end_date,
+        initial_cash=config.initial_cash,
+        benchmark_id=benchmark_id,
+        parameter_overrides=(),
+        candidate_parameters=config.candidate_parameters,
+        research_snapshot_id=config.research_snapshot_id,
+        research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
+        rebalance_freq=config.rebalance_freq,
+        engine_version=config.engine_version,
+        random_seed=config.random_seed,
+        execution_delay=config.execution_delay,
+        knowledge_lag_days=config.knowledge_lag_days,
+        code_version=config.code_version,
+        data_catalog_identities=config.data_catalog_identities,
+        factor_report_refs=config.factor_report_refs,
+        recommendation_status=config.recommendation_status,
+        participation_rate=config.participation_rate,
+        fill_mode=config.fill_mode,
+        resume_from_run_id=config.resume_from_run_id,
+        resume_checkpoint_trade_date=config.resume_checkpoint_trade_date,
+        resume_checkpoint_completed_days=config.resume_checkpoint_completed_days,
+        resume_checkpoint_total_days=config.resume_checkpoint_total_days,
+        resume_checkpoint_nav=config.resume_checkpoint_nav,
+        resume_checkpoint_order_count=config.resume_checkpoint_order_count,
+        resume_checkpoint_fill_count=config.resume_checkpoint_fill_count,
+        resume_account_state_json=config.resume_account_state_json,
+        resume_account_state_hash=config.resume_account_state_hash,
+        resume_settlement_state_json=config.resume_settlement_state_json,
+        resume_settlement_state_hash=config.resume_settlement_state_hash,
+        resume_runtime_state_json=config.resume_runtime_state_json,
+        resume_runtime_state_hash=config.resume_runtime_state_hash,
+        base_spec_hash=base_spec_hash,
+        spec_hash=spec_hash,
+        parameter_hash=parameter_hash,
+        effective_parameters=effective_parameters,
+    )
+
+
 # ===========================================================================
 # BacktestRuntimeBuilder
 # ===========================================================================
@@ -313,7 +436,7 @@ class BacktestRuntimeBuilder:
     def build_published_runtime(
         self,
         *,
-        config: BacktestServiceConfig,
+        config: BacktestCatalogRequestConfig,
         version: int | None = None,
         source: str = "tushare",
         fee_model: FeeModel | None = None,
@@ -324,6 +447,7 @@ class BacktestRuntimeBuilder:
         runtime = self._strategy_runtime_builder.build_published_runtime(
             config.strategy_id,
             version,
+            candidate_parameters=config.candidate_parameters,
         )
         assert_strategy_runtime_data_allowed(
             runtime.spec,
@@ -357,10 +481,14 @@ class BacktestRuntimeBuilder:
             config.start_date,
             config_benchmark=config.benchmark_id,
         )
-        resolved_config = replace(
+        resolved_config = _resolve_backtest_catalog_request(
             config,
             strategy_version=str(runtime.record.version),
             benchmark_id=benchmark_id,
+            base_spec_hash=runtime.base_spec_hash,
+            spec_hash=runtime.spec_hash,
+            parameter_hash=runtime.parameter_hash,
+            effective_parameters=runtime.effective_parameters,
         )
 
         # 解析 universe → tickers + id_map + display_map
@@ -523,7 +651,7 @@ class StrategyServiceFactory:
     def build_backtest_service_from_catalog(
         self,
         *,
-        config: BacktestServiceConfig,
+        config: BacktestCatalogRequestConfig,
         version: int | None = None,
         options: BacktestServiceOptions | None = None,
         source: str = "tushare",
@@ -535,6 +663,11 @@ class StrategyServiceFactory:
         resolved_version = version
         if resolved_version is None:
             resolved_version = self._parse_catalog_version(config.strategy_version)
+        if resolved_version is None or resolved_version <= 0:
+            msg = (
+                "Backtest catalog execution requires an exact positive catalog version"
+            )
+            raise AppBuilderError(msg)
         resolved_options = options or BacktestServiceOptions()
         runtime = self._backtest_runtime_builder.build_published_runtime(
             config=config,
@@ -611,7 +744,9 @@ class StrategyServiceFactory:
             artifact_dir=options.artifact_dir,
             display_map=options.display_map,
             run_service=options.run_service or self._run_service,
+            external_should_stop=options.external_should_stop,
             checkpoint_writer=options.checkpoint_writer or self._checkpoint_writer,
+            checkpoint_interval_days=options.checkpoint_interval_days,
             lineage_recorder=options.lineage_recorder or self._lineage_recorder,
             allow_experimental_data=options.allow_experimental_data,
             restore_runtime_state=options.restore_runtime_state,

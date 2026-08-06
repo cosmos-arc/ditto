@@ -264,6 +264,7 @@ class TestFundamentalAdapterDividendAndActions:
 
         result = adapter.fetch_dividend(
             ts_code="000001.SZ",
+            ann_date="20240507",
             ex_date="20240506",
             start_date="20240501",
             end_date="20240531",
@@ -275,6 +276,7 @@ class TestFundamentalAdapterDividendAndActions:
             "api_name": "dividend",
             "fields": "ts_code,ex_date,cash_div,record_date,ann_date,div_proc",
             "ts_code": "000001.SZ",
+            "ann_date": "20240507",
             "ex_date": "20240506",
             "start_date": "20240501",
             "end_date": "20240531",
@@ -298,15 +300,33 @@ class TestFundamentalAdapterDividendAndActions:
             fields="ts_code,ex_date,cash_div,record_date,ann_date,div_proc",
         )
 
-    def test_fetch_corporate_actions_includes_all_optional_params(
-        self,
-        mocker: pytest_mock.MockFixture,
-    ) -> None:
-        """Corporate-action fetch forwards all filters."""
+    def test_fetch_corporate_actions_includes_all_optional_params(self) -> None:
+        """Corporate actions use supported provider endpoints and filters."""
         adapter, client = _adapter_with_client()
-        frame = pl.DataFrame({"source_ticker": ["000001.SZ"]})
-        transform = _patch_transform(mocker, frame)
-        client.query.return_value = pl.DataFrame({"raw": ["value"]})
+        client.query.side_effect = [
+            pl.DataFrame(
+                {
+                    "ts_code": ["000001.SZ"],
+                    "ann_date": ["20240501"],
+                    "end_date": ["20240520"],
+                    "proc": ["完成"],
+                    "exp_date": [None],
+                    "vol": [1.0],
+                    "amount": [10.0],
+                }
+            ),
+            pl.DataFrame(
+                {
+                    "ts_code": [],
+                    "ann_date": [],
+                    "float_date": [],
+                    "float_share": [],
+                    "float_ratio": [],
+                    "holder_name": [],
+                    "share_type": [],
+                }
+            ),
+        ]
 
         result = adapter.fetch_corporate_actions(
             ts_code="000001.SZ",
@@ -314,32 +334,34 @@ class TestFundamentalAdapterDividendAndActions:
             end_date="20240531",
         )
 
-        client.query.assert_called_once_with(
-            api_name="ba",
-            fields="ts_code,ann_date,act_date,ba_type,name",
-            ts_code="000001.SZ",
-            start_date="20240501",
-            end_date="20240531",
-        )
-        transform.assert_called_once_with(
-            client.query.return_value,
-            "corporate_actions",
-            fundamental_adapter.CORPORATE_ACTIONS_MAPPING,
+        assert client.query.call_count == 2
+        assert [call.kwargs["api_name"] for call in client.query.call_args_list] == [
+            "repurchase",
+            "share_float",
+        ]
+        assert all(
+            call.kwargs["start_date"] == "20240501"
+            and call.kwargs["end_date"] == "20240531"
+            for call in client.query.call_args_list
         )
         assert result["source_ticker"].item() == "000001.SZ"
 
-    def test_fetch_corporate_actions_omits_empty_optional_params(
-        self,
-        mocker: pytest_mock.MockFixture,
-    ) -> None:
+    def test_fetch_corporate_actions_omits_empty_optional_params(self) -> None:
         """Corporate-action fetch skips falsy optional filters."""
         adapter, client = _adapter_with_client()
-        _patch_transform(mocker, pl.DataFrame({"source_ticker": ["000001.SZ"]}))
-        client.query.return_value = pl.DataFrame({"raw": ["value"]})
+        client.query.return_value = pl.DataFrame()
 
-        adapter.fetch_corporate_actions()
+        result = adapter.fetch_corporate_actions()
 
-        client.query.assert_called_once_with(
-            api_name="ba",
-            fields="ts_code,ann_date,act_date,ba_type,name",
-        )
+        assert client.query.call_count == 2
+        assert all("ts_code" not in call.kwargs for call in client.query.call_args_list)
+        assert result.is_empty()
+        assert result.columns == [
+            "source_ticker",
+            "action_type",
+            "action_date",
+            "knowledge_date",
+            "effective_from",
+            "effective_to",
+            "description",
+        ]

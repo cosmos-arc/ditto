@@ -9,6 +9,10 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.audit import ExecutionAuditService
 from ditto_features.services import DerivedQueryService
+from ditto_strategy.alpha.node_registry import (
+    NodeRegistry,
+    default_node_registry,
+)
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -22,11 +26,15 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 
 from ditto_application.builders import (
     BacktestRuntimeBuilder,
+    PublishedBaselineRuntimeBuilder,
+    ResearchEvidenceReplayRuntimeBuilder,
+    ResearchRuntimeBuilder,
     StrategyRuntimeBuilder,
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
+from ditto_application.builders.node_pipeline_builder import NodePipelineBuilder
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_application.settings import TradingSettings
@@ -48,12 +56,67 @@ class AppBuilderFactory(Provider):
     scope = Scope.APP
 
     @provide
+    def node_registry(self) -> NodeRegistry:
+        """提供固定 builtin descriptor manifest。"""
+        return default_node_registry()
+
+    @provide
+    def node_pipeline_builder(
+        self,
+        node_registry: NodeRegistry,
+    ) -> NodePipelineBuilder:
+        """提供受约束 compiler 到现有 StrategyPipeline 的装配器。"""
+        return NodePipelineBuilder(registry=node_registry)
+
+    @provide
     def strategy_runtime_builder(
         self,
         catalog_service: StrategyCatalogService,
+        node_registry: NodeRegistry,
+        node_pipeline_builder: NodePipelineBuilder,
     ) -> StrategyRuntimeBuilder:
         """策略运行时构建器."""
-        return StrategyRuntimeBuilder(catalog_service=catalog_service)
+        return StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+        )
+
+    @provide
+    def research_runtime_builder(
+        self,
+        node_registry: NodeRegistry,
+        node_pipeline_builder: NodePipelineBuilder,
+    ) -> ResearchRuntimeBuilder:
+        """Explicit-version research runtime with no catalog writer dependency."""
+        return ResearchRuntimeBuilder(
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+        )
+
+    @provide
+    def research_evidence_replay_runtime_builder(
+        self,
+        node_registry: NodeRegistry,
+        node_pipeline_builder: NodePipelineBuilder,
+    ) -> ResearchEvidenceReplayRuntimeBuilder:
+        """Compile exact terminal candidate versions for immutable evidence replay."""
+        return ResearchEvidenceReplayRuntimeBuilder(
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+        )
+
+    @provide
+    def published_baseline_runtime_builder(
+        self,
+        node_registry: NodeRegistry,
+        node_pipeline_builder: NodePipelineBuilder,
+    ) -> PublishedBaselineRuntimeBuilder:
+        """Build exact published ETF baselines through the constrained compiler."""
+        return PublishedBaselineRuntimeBuilder(
+            node_registry=node_registry,
+            node_pipeline_builder=node_pipeline_builder,
+        )
 
     @provide
     def data_provider(

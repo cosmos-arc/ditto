@@ -10,7 +10,16 @@ from ditto_features.errors import FactorValidationError
 from ditto_features.expression.analyzer import analyze_expression
 from ditto_features.expression.lexer import tokenize
 from ditto_features.expression.parser import ExpressionParser
+from ditto_features.factors.core_daily import (
+    R3_CORE_FACTOR_CATALOG,
+    CoreFactorCatalog,
+    CoreFactorDescriptor,
+    CoreFactorSpecContract,
+    PitRequirement,
+    PreprocessingStep,
+)
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
+from ditto_features.factors.spec import FactorSpec
 
 __all__ = [
     "R2_STOCK_SEED_FACTOR_CONTRACT",
@@ -18,6 +27,7 @@ __all__ = [
     "UnsafeProductionFactorExpressionError",
     "validate_certified_seed_factor_contract",
     "validate_production_factor_expression",
+    "validate_r3_core_factor_catalog",
 ]
 
 _CROSS_SECTION_OPERATORS = frozenset({"cs_rank", "cs_zscore", "cs_demean"})
@@ -36,6 +46,11 @@ _R2_STOCK_SEED_INPUT_DATASET_IDS = (
 )
 _R2_STOCK_SEED_MAX_LOOKBACK = 20
 _R2_CERTIFICATION_PROFILE = "r2-modern-a-share-v1"
+_R3_CORE_FACTOR_IDS = R3_CORE_FACTOR_CATALOG.factor_ids
+_R3_PREPROCESSING_STEPS = R3_CORE_FACTOR_CATALOG.preprocessing.steps
+_R3_CORE_PAYLOAD_HASH = (
+    "ec79390c84b1bcc2234ffc24bcb50c36cccf38b28492e6052b9a924e0f5e67f3"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +143,125 @@ def validate_production_factor_expression(
             _raise_unsafe_expression(expression, operator, compact_arg)
         if _is_unmaterialized_time_series_identifier(compact_arg, materialized):
             _raise_unsafe_expression(expression, operator, compact_arg)
+
+
+def validate_r3_core_factor_catalog(catalog: CoreFactorCatalog) -> None:
+    """Fail closed when the governed R3 catalog or production seam drifts."""
+    for descriptor in catalog.descriptors:
+        _validate_r3_core_descriptor(descriptor)
+
+    if catalog.factor_ids != _R3_CORE_FACTOR_IDS:
+        raise ValueError(f"R3 core factor IDs changed: {catalog.factor_ids!r}")
+    if catalog.preprocessing.steps != _R3_PREPROCESSING_STEPS:
+        raise ValueError("R3 preprocessing order changed")
+    if catalog.preprocessing.steps != tuple(PreprocessingStep):
+        raise ValueError("R3 preprocessing registry is incomplete")
+    if catalog.payload_hash != _R3_CORE_PAYLOAD_HASH:
+        raise ValueError("R3 core factor catalog payload changed")
+
+
+def _validate_r3_core_descriptor(descriptor: CoreFactorDescriptor) -> None:
+    spec = ALL_FACTOR_SPECS.get(descriptor.factor_id)
+    if spec is None:
+        raise ValueError(f"unregistered core factor: {descriptor.factor_id}")
+    _validate_bound_factor_spec(descriptor, spec)
+    _validate_effective_lookback_coverage(descriptor)
+    _validate_governed_leaf_dependencies(descriptor)
+    _validate_descriptor_pit_dataset(descriptor)
+    if descriptor.benchmark_required:
+        if spec.computation_type != "python" or spec.expression:
+            raise ValueError(
+                "benchmark-relative core factor must use explicit Python computation: "
+                + descriptor.factor_id
+            )
+        return
+    for intermediate in descriptor.materialized_intermediates:
+        validate_production_factor_expression(intermediate.expression)
+    validate_production_factor_expression(
+        descriptor.production_expression or spec.expression,
+        materialized_columns=(
+            item.column_id for item in descriptor.materialized_intermediates
+        ),
+    )
+
+
+def _validate_bound_factor_spec(
+    descriptor: CoreFactorDescriptor,
+    spec: FactorSpec,
+) -> None:
+    if spec.id != descriptor.factor_id:
+        raise ValueError(f"core factor spec ID drifted: {descriptor.factor_id}")
+    actual_contract = CoreFactorSpecContract.from_spec(spec, ALL_FACTOR_SPECS)
+    if actual_contract != descriptor.factor_spec:
+        raise ValueError(f"factor spec contract drifted: {descriptor.factor_id}")
+
+
+def _validate_effective_lookback_coverage(
+    descriptor: CoreFactorDescriptor,
+) -> None:
+    effective = descriptor.factor_spec.effective_lookback
+    if effective == 0:
+        return
+    undersized = tuple(
+        requirement.dataset_id
+        for lane in descriptor.lanes
+        for requirement in descriptor.input_requirements_for(lane)
+        if requirement.lookback.unit is descriptor.lookback.unit
+        and requirement.lookback.value < effective
+    )
+    if undersized:
+        message = "factor dataset history is below effective lookback"
+        message += f": {descriptor.factor_id}: {undersized!r} < {effective}"
+        raise ValueError(message)
+    undersized_intermediates = tuple(
+        intermediate.column_id
+        for intermediate in descriptor.materialized_intermediates
+        if intermediate.lookback.unit is descriptor.lookback.unit
+        and intermediate.lookback.value < effective
+    )
+    if undersized_intermediates:
+        message = "materialized history is below effective lookback"
+        message += (
+            f": {descriptor.factor_id}: {undersized_intermediates!r} < {effective}"
+        )
+        raise ValueError(message)
+
+
+def _validate_governed_leaf_dependencies(
+    descriptor: CoreFactorDescriptor,
+) -> None:
+    for lane in descriptor.lanes:
+        governed_fields = {
+            field_id
+            for requirement in descriptor.input_requirements_for(lane)
+            for field_id in requirement.required_fields
+        }
+        if descriptor.benchmark_requirement is not None:
+            governed_fields.update(descriptor.benchmark_requirement.required_fields)
+        missing_dependencies = tuple(
+            dependency
+            for dependency in descriptor.factor_spec.leaf_dependencies
+            if dependency not in governed_fields
+        )
+        if missing_dependencies:
+            message = "factor spec dependencies lack governed input requirements"
+            message += f": {descriptor.factor_id}: {missing_dependencies!r}"
+            raise ValueError(message)
+
+
+def _validate_descriptor_pit_dataset(descriptor: CoreFactorDescriptor) -> None:
+    if descriptor.pit_requirement is PitRequirement.ANNOUNCEMENT_KNOWN_AT and not any(
+        dataset_id in descriptor.required_datasets_for(lane)
+        for lane in descriptor.lanes
+        for dataset_id in (
+            "balance_sheet",
+            "income_statement",
+            "valuation_metrics",
+        )
+    ):
+        raise ValueError(
+            f"PIT core factor has no governed PIT dataset: {descriptor.factor_id}"
+        )
 
 
 def _iter_cross_section_first_args(expression: str) -> Iterator[tuple[str, str]]:

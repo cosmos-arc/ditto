@@ -4,17 +4,26 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
+from typing import get_type_hints
 from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.processes.execution._factor_bundle import (
+    build_factor_aware_bundle_builder as build_factor_aware_bundle_builder_impl,
+)
+from ditto_application.processes.execution._factor_bundle import (
+    build_factor_bundle as build_factor_bundle_impl,
+)
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
 from ditto_application.processes.execution.factor_bridge import (
+    CompiledExpressions,
     FactorBridge,
+    build_factor_aware_bundle_builder,
     build_factor_bundle,
 )
 from ditto_backtest.data_feed import Slice
@@ -117,6 +126,23 @@ class _StrictHistoryDataFeed:
 class TestFactorAwareBundleBuilder:
     """验证含因子信号注入的 input_bundle_builder."""
 
+    def test_public_bundle_type_hints_resolve_at_runtime(self) -> None:
+        bundle_hints = get_type_hints(build_factor_bundle)
+        factory_hints = get_type_hints(build_factor_aware_bundle_builder)
+
+        assert bundle_hints["bridge"] is FactorBridge
+        assert bundle_hints["compiled"] is CompiledExpressions
+        assert factory_hints["bridge"] is FactorBridge
+        assert factory_hints["compiled"] is CompiledExpressions
+
+    def test_internal_bundle_type_hints_are_self_contained(self) -> None:
+        """The cycle-free implementation must not depend on facade side effects."""
+        bundle_hints = get_type_hints(build_factor_bundle_impl)
+        factory_hints = get_type_hints(build_factor_aware_bundle_builder_impl)
+
+        assert {"bridge", "compiled", "return"} <= bundle_hints.keys()
+        assert {"bridge", "compiled", "return"} <= factory_hints.keys()
+
     def test_factor_bundle_produces_signal_values(self) -> None:
         """含因子表达式的 bundle builder 产出 signal_value 列."""
         bridge = FactorBridge()
@@ -129,6 +155,12 @@ class TestFactorAwareBundleBuilder:
             strategy_id="test-strat",
             start_date="2024-01-02",
             end_date="2024-01-05",
+            spec_hash="a" * 64,
+            base_spec_hash="b" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         )
 
         # BacktestService 需要 pipeline 等参数，但我们只需要测试
@@ -180,6 +212,12 @@ class TestFactorAwareBundleBuilder:
             strategy_id="test-strat",
             start_date="2024-01-02",
             end_date="2024-01-05",
+            spec_hash="a" * 64,
+            base_spec_hash="b" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         )
 
         mock_pipeline = MagicMock()
@@ -247,6 +285,12 @@ class TestFactorAwareBundleBuilder:
                 strategy_id="pit-strat",
                 start_date="2026-04-08",
                 end_date="2026-04-10",
+                spec_hash="a" * 64,
+                base_spec_hash="b" * 64,
+                parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                effective_parameters=(),
+                research_snapshot_id=None,
+                research_snapshot_manifest_hash=None,
             ),
             pipeline=MagicMock(),
             planner=MagicMock(),
@@ -348,6 +392,46 @@ class TestFactorBundleFundamentalInjection:
         # quality_roe → roe 列 → signal_value 产出（不再 ColumnNotFoundError）
         assert bundle.signal_values.height == 3
         assert "signal_value" in bundle.signal_values.columns
+
+    def test_carries_pit_industry_and_market_cap_into_instrument_frame(self) -> None:
+        """The final strategy frame retains exact exposure source values."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("quality_roe",),
+            weights=(1.0,),
+        )
+        data_feed = MagicMock()
+        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "roe": [0.15, 0.10, 0.20],
+                "eps": [1.5, 2.0, 2.5],
+                "market_cap": [8.0, 30.0, 90.0],
+            },
+        )
+        data_feed.get_classification_snapshot.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "sector_id": ["bank", "tech", "bank"],
+            },
+        )
+
+        bundle = build_factor_bundle(
+            ctx=_make_step_context("2024-01-02", _make_slice_with_bars()),
+            strategy_id="t",
+            run_id="t",
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=20,
+        )
+
+        assert bundle.instruments.sort("instrument_id").to_dict(as_series=False) == {
+            "instrument_id": [1, 2, 3],
+            "sector_id": ["bank", "tech", "bank"],
+            "market_cap": [8.0, 30.0, 90.0],
+        }
 
     def test_fundamental_snapshot_uses_knowledge_date(self) -> None:
         """get_fundamental_snapshot 的 as_of = knowledge_date（PIT，非 trade_date）."""

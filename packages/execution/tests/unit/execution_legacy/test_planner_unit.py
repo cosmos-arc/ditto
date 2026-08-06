@@ -213,6 +213,11 @@ class TestExecutionPlannerProtocol:
         assert "rules" in params
         assert "market_snapshots" in params
 
+    def test_base_protocol_does_not_require_checkpoint_capabilities(self) -> None:
+        """Custom planners remain valid without backtest-resume state ownership."""
+        assert not hasattr(ExecutionPlanner, "snapshot_id_counter")
+        assert not hasattr(ExecutionPlanner, "restore_id_counter")
+
 
 # ---------------------------------------------------------------------------
 # SimpleExecutionPlanner — 首次建仓
@@ -260,6 +265,28 @@ class TestFirstBuild:
         )
 
         assert len(plan.orders) == 0
+
+    def test_id_counter_snapshot_restore_keeps_client_ids_unique(self) -> None:
+        """Resume must continue after IDs already held by the restored order book."""
+        planner = SimpleExecutionPlanner()
+        planner.restore_id_counter(9)
+
+        plan = planner.plan(
+            target=_target({1: 0.5}),
+            account_view=_account_view(),
+            trade_date="2026-03-21",
+        )
+
+        assert plan.orders[0].client_id.value == "plan-order-10"
+        assert plan.plan_id == "plan-order-11"
+        assert planner.snapshot_id_counter() == 11
+
+    @pytest.mark.parametrize("counter", [-1, True, 1.5])
+    def test_restore_id_counter_rejects_invalid_values(self, counter: object) -> None:
+        planner = SimpleExecutionPlanner()
+
+        with pytest.raises(ValueError, match="counter"):
+            planner.restore_id_counter(counter)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

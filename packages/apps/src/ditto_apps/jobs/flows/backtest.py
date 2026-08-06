@@ -14,7 +14,7 @@ from typing import cast
 from ditto_application.commands.backtest import CostConfig
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.processes.execution.backtest_process import (
-    BacktestServiceConfig,
+    BacktestCatalogRequestConfig,
     BacktestServiceOptions,
     FillMode,
 )
@@ -158,7 +158,7 @@ def run_backtest_flow(
     fee_model = build_fee_model(cost_cfg)
     slippage_model = build_slippage_model(cost_cfg)
 
-    config = BacktestServiceConfig(
+    config = BacktestCatalogRequestConfig(
         strategy_id=flow_request.strategy_id,
         run_id=flow_request.run_id,
         start_date=flow_request.start_date,

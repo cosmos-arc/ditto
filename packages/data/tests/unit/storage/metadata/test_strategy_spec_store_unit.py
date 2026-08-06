@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -35,20 +36,20 @@ def _make_spec(
     strategy_id: str = "strat-001",
     name: str = "Test Strategy",
     spec_json: dict[str, object] | None = None,
+    spec_hash: str = "",
     version: int = 1,
-    status: str = "draft",
+    parent_version: int | None = None,
     created_at: str = "2026-03-24T10:00:00+08:00",
-    updated_at: str = "2026-03-24T10:00:00+08:00",
     tags: tuple[str, ...] = (),
 ) -> StrategySpecRecord:
     return StrategySpecRecord(
         strategy_id=strategy_id,
         name=name,
         spec_json=spec_json or {"type": "etf_momentum", "params": {"lookback": 20}},
+        spec_hash=spec_hash,
         version=version,
-        status=status,
+        parent_version=parent_version,
         created_at=created_at,
-        updated_at=updated_at,
         tags=tags,
     )
 
@@ -67,21 +68,16 @@ class TestSQLiteStrategySpecWriter:
         record = _make_spec()
         writer.save(record)
 
-    def test_save_upsert_replaces_same_key(
+    def test_save_rejects_duplicate_primary_key(
         self,
         writer: SQLiteStrategySpecWriter,
-        reader: SQLiteStrategySpecReader,
     ) -> None:
-        """INSERT OR REPLACE should overwrite existing (strategy_id, version)."""
+        """save() is append-only; duplicate (strategy_id, version) raises."""
         writer.init_schema()
         writer.save(_make_spec(name="Original"))
 
-        updated = _make_spec(name="Updated")
-        writer.save(updated)
-
-        result = reader.get_spec("strat-001", version=1)
-        assert result is not None
-        assert result.name == "Updated"
+        with pytest.raises(sqlite3.IntegrityError):
+            writer.save(_make_spec(name="Updated"))
 
 
 class TestSQLiteStrategySpecReader:
@@ -144,6 +140,19 @@ class TestSQLiteStrategySpecReader:
         assert result is not None
         assert result.spec_json == spec.spec_json
 
+    def test_get_spec_preserves_spec_hash_and_parent_version(
+        self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
+    ) -> None:
+        """spec_hash/parent_version roundtrip as content-addressed identity."""
+        writer.init_schema()
+        spec = _make_spec(spec_hash="a" * 64, parent_version=3)
+        writer.save(spec)
+
+        result = reader.get_spec("strat-001")
+        assert result is not None
+        assert result.spec_hash == "a" * 64
+        assert result.parent_version == 3
+
     def test_get_spec_preserves_tags(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
@@ -181,41 +190,6 @@ class TestSQLiteStrategySpecReader:
         writer.init_schema()
         assert reader.list_specs() == []
 
-    def test_get_latest_published_ignores_newer_draft(
-        self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
-    ) -> None:
-        writer.init_schema()
-        writer.save(_make_spec(version=1, status="published", name="Published V1"))
-        writer.save(_make_spec(version=2, status="draft", name="Draft V2"))
-
-        result = reader.get_latest_published("strat-001")
-
-        assert result is not None
-        assert result.version == 1
-        assert result.name == "Published V1"
-
-    def test_list_latest_published_includes_strategy_with_newer_draft(
-        self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
-    ) -> None:
-        writer.init_schema()
-        writer.save(
-            _make_spec(
-                strategy_id="strat-a", version=1, status="published", name="A V1"
-            )
-        )
-        writer.save(
-            _make_spec(strategy_id="strat-a", version=2, status="draft", name="A V2")
-        )
-        writer.save(
-            _make_spec(strategy_id="strat-b", version=1, status="draft", name="B V1")
-        )
-
-        result = reader.list_latest_published()
-
-        assert [(record.strategy_id, record.version) for record in result] == [
-            ("strat-a", 1)
-        ]
-
     def test_list_versions_returns_all_for_strategy(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
@@ -247,30 +221,3 @@ class TestSQLiteStrategySpecReader:
         result = reader.list_versions("strat-a")
         assert len(result) == 1
         assert result[0].strategy_id == "strat-a"
-
-
-class TestSQLiteStrategySpecWriterUpdateStatus:
-    """Tests for update_status()."""
-
-    def test_update_status_success(
-        self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
-    ) -> None:
-        """update_status() should change the status field."""
-        writer.init_schema()
-        writer.save(_make_spec())
-
-        ok = writer.update_status("strat-001", 1, "published")
-        assert ok is True
-
-        result = reader.get_spec("strat-001")
-        assert result is not None
-        assert result.status == "published"
-
-    def test_update_status_missing_returns_false(
-        self,
-        writer: SQLiteStrategySpecWriter,
-    ) -> None:
-        """update_status() returns False when no matching row exists."""
-        writer.init_schema()
-        ok = writer.update_status("nonexistent", 99, "published")
-        assert ok is False

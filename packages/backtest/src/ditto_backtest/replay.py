@@ -14,6 +14,7 @@ from ditto_backtest.manifest import (
     InputRef,
     RunManifest,
 )
+from ditto_backtest.manifest_types import ReplayArtifactRef, ResearchReplayEvidence
 
 __all__ = [
     "AccountStateComparison",
@@ -50,6 +51,7 @@ class ManifestDiff:
     data_diffs: tuple[str, ...] = ()
     version_diffs: tuple[str, ...] = ()
     seed_diffs: tuple[str, ...] = ()
+    evidence_diffs: tuple[str, ...] = ()
 
     @property
     def has_diff(self) -> bool:
@@ -58,7 +60,8 @@ class ManifestDiff:
             self.config_diffs
             or self.data_diffs
             or self.version_diffs
-            or self.seed_diffs,
+            or self.seed_diffs
+            or self.evidence_diffs
         )
 
 
@@ -135,11 +138,239 @@ class ReplayValidationResult:
     account_state_match: bool | None = None
     fill_comparison: FillComparison | None = None
     account_state_comparison: AccountStateComparison | None = None
+    reproduction_fingerprint_match: bool | None = None
+    key_result_summary_match: bool | None = None
+    required_artifact_hashes_match: bool | None = None
 
 
 # ---------------------------------------------------------------------------
 # ReplayValidator
 # ---------------------------------------------------------------------------
+
+
+def _manifest_diff_line(
+    field_name: str,
+    original_value: object,
+    replay_value: object,
+) -> str:
+    return f"{field_name}: {original_value} vs {replay_value}"
+
+
+def _compare_manifest_config(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    diffs: list[str] = []
+    scalar_fields = (
+        ("mode", original.mode, replay.mode),
+        ("config_hash", original.config_hash, replay.config_hash),
+        ("strategy_id", original.strategy_id, replay.strategy_id),
+        ("base_spec_hash", original.base_spec_hash, replay.base_spec_hash),
+        ("spec_hash", original.spec_hash, replay.spec_hash),
+        ("parameter_hash", original.parameter_hash, replay.parameter_hash),
+        (
+            "rule_resolution_policy",
+            original.rule_resolution_policy,
+            replay.rule_resolution_policy,
+        ),
+        ("pit_time_column", original.pit_time_column, replay.pit_time_column),
+        ("pit_policy", original.pit_policy, replay.pit_policy),
+        (
+            "unsafe_time_policy",
+            original.unsafe_time_policy,
+            replay.unsafe_time_policy,
+        ),
+        (
+            "knowledge_lag_days",
+            original.knowledge_lag_days,
+            replay.knowledge_lag_days,
+        ),
+    )
+    for field_name, original_value, replay_value in scalar_fields:
+        if original_value != replay_value:
+            diffs.append(_manifest_diff_line(field_name, original_value, replay_value))
+    if original.effective_parameters != replay.effective_parameters:
+        diffs.append("effective_parameters: mismatch")
+    if original.rule_refs != replay.rule_refs:
+        diffs.append("rule_refs: mismatch")
+    return tuple(diffs)
+
+
+def _compare_manifest_data(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    diffs: list[str] = []
+    if original.input_refs != replay.input_refs:
+        diffs.append(f"input_refs: {original.input_refs} vs {replay.input_refs}")
+    diffs.extend(
+        _compare_input_ref_details(
+            original.input_ref_details,
+            replay.input_ref_details,
+        )
+    )
+    if original.artifacts != replay.artifacts:
+        diffs.append(
+            _manifest_diff_line("artifacts", original.artifacts, replay.artifacts)
+        )
+    if original.universe_hash != replay.universe_hash:
+        diffs.append(
+            _manifest_diff_line(
+                "universe_hash",
+                original.universe_hash,
+                replay.universe_hash,
+            )
+        )
+    if original.research_snapshot_id != replay.research_snapshot_id:
+        diffs.append(
+            _manifest_diff_line(
+                "research_snapshot_id",
+                original.research_snapshot_id,
+                replay.research_snapshot_id,
+            )
+        )
+    if (
+        original.research_snapshot_manifest_hash
+        != replay.research_snapshot_manifest_hash
+    ):
+        diffs.append(
+            _manifest_diff_line(
+                "research_snapshot_manifest_hash",
+                original.research_snapshot_manifest_hash,
+                replay.research_snapshot_manifest_hash,
+            )
+        )
+    return tuple(diffs)
+
+
+def _compare_manifest_versions(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    diffs: list[str] = []
+    scalar_fields = (
+        ("engine_version", original.engine_version, replay.engine_version),
+        ("strategy_version", original.strategy_version, replay.strategy_version),
+    )
+    for field_name, original_value, replay_value in scalar_fields:
+        if original_value != replay_value:
+            diffs.append(_manifest_diff_line(field_name, original_value, replay_value))
+    if original.dependency_versions != replay.dependency_versions:
+        diffs.append(
+            _manifest_diff_line(
+                "dependency_versions",
+                original.dependency_versions,
+                replay.dependency_versions,
+            )
+        )
+    return tuple(diffs)
+
+
+def _compare_manifest_seed(
+    original: RunManifest,
+    replay: RunManifest,
+) -> tuple[str, ...]:
+    if original.random_seed == replay.random_seed:
+        return ()
+    return (f"random_seed: {original.random_seed} vs {replay.random_seed}",)
+
+
+def _compare_research_evidence(
+    original: ResearchReplayEvidence | None,
+    replay: ResearchReplayEvidence | None,
+    *,
+    required: bool,
+) -> tuple[str, ...]:
+    """Compare already-authoritative R3 evidence without deriving a fingerprint."""
+    if original is None and replay is None:
+        return ("research replay evidence is required but missing",) if required else ()
+    if original is None:
+        return ("research replay evidence missing in original",)
+    if replay is None:
+        return ("research replay evidence missing in replay",)
+
+    diffs: list[str] = []
+    if original.schema_version != replay.schema_version:
+        diffs.append(
+            _manifest_diff_line(
+                "replay_evidence.schema_version",
+                original.schema_version,
+                replay.schema_version,
+            )
+        )
+    if original.reproduction_fingerprint != replay.reproduction_fingerprint:
+        diffs.append(
+            _manifest_diff_line(
+                "reproduction_fingerprint",
+                original.reproduction_fingerprint,
+                replay.reproduction_fingerprint,
+            )
+        )
+    if _artifact_measurement(original.key_result_summary) != _artifact_measurement(
+        replay.key_result_summary
+    ):
+        diffs.append("key_result_summary: verified content mismatch")
+    original_by_kind = _artifact_measurements_by_kind(original)
+    replay_by_kind = _artifact_measurements_by_kind(replay)
+    for artifact_kind in sorted(original_by_kind.keys() | replay_by_kind.keys()):
+        if original_by_kind.get(artifact_kind) != replay_by_kind.get(artifact_kind):
+            original_ids = ",".join(
+                item.artifact_id
+                for item in original.required_artifacts
+                if item.artifact_kind == artifact_kind
+            )
+            diffs.append(
+                "required_artifacts kind "
+                + f"{artifact_kind} ({original_ids}): verified measurements mismatch"
+            )
+    return tuple(diffs)
+
+
+def _artifact_measurement(artifact: ReplayArtifactRef) -> tuple[object, ...]:
+    ref = artifact
+    return (
+        ref.artifact_kind,
+        ref.artifact_format,
+        ref.content_hash,
+        ref.schema_hash,
+        ref.row_count,
+        ref.byte_size,
+    )
+
+
+def _artifact_measurements_by_kind(
+    evidence: ResearchReplayEvidence,
+) -> dict[str, tuple[tuple[object, ...], ...]]:
+    kinds = {item.artifact_kind for item in evidence.required_artifacts}
+    return {
+        kind: tuple(
+            sorted(
+                _artifact_measurement(item)
+                for item in evidence.required_artifacts
+                if item.artifact_kind == kind
+            )
+        )
+        for kind in kinds
+    }
+
+
+def _research_evidence_match_state(
+    original: ResearchReplayEvidence | None,
+    replay: ResearchReplayEvidence | None,
+    *,
+    required: bool,
+) -> tuple[bool | None, bool | None, bool | None]:
+    if original is None and replay is None and not required:
+        return None, None, None
+    if original is None or replay is None:
+        return False, False, False
+    return (
+        original.reproduction_fingerprint == replay.reproduction_fingerprint,
+        _artifact_measurement(original.key_result_summary)
+        == _artifact_measurement(replay.key_result_summary),
+        _artifact_measurements_by_kind(original)
+        == _artifact_measurements_by_kind(replay),
+    )
 
 
 class ReplayValidator:
@@ -149,74 +380,24 @@ class ReplayValidator:
     def compare_manifests(
         original: RunManifest,
         replay: RunManifest,
+        *,
+        require_research_evidence: bool = False,
     ) -> ManifestDiff:
         """
         对比两个 RunManifest，返回分类差异报告.
 
         跳过 run_id / created_at（这些在重放时必然不同）。
         """
-        config_diffs: list[str] = []
-        data_diffs: list[str] = []
-        version_diffs: list[str] = []
-        seed_diffs: list[str] = []
-
-        # -- config 类 --
-        if original.config_hash != replay.config_hash:
-            config_diffs.append(
-                f"config_hash: {original.config_hash} vs {replay.config_hash}",
-            )
-        if original.strategy_id != replay.strategy_id:
-            config_diffs.append(
-                f"strategy_id: {original.strategy_id} vs {replay.strategy_id}",
-            )
-        if original.parameter_overrides != replay.parameter_overrides:
-            a_str = original.parameter_overrides
-            b_str = replay.parameter_overrides
-            config_diffs.append(
-                f"parameter_overrides: {a_str} vs {b_str}",
-            )
-        if original.spec_hash != replay.spec_hash:
-            config_diffs.append(
-                f"spec_hash: {original.spec_hash} vs {replay.spec_hash}",
-            )
-        if original.rule_refs != replay.rule_refs:
-            config_diffs.append("rule_refs: mismatch")
-
-        # -- data 类 --
-        if original.input_refs != replay.input_refs:
-            data_diffs.append(
-                f"input_refs: {original.input_refs} vs {replay.input_refs}",
-            )
-        data_diffs.extend(
-            _compare_input_ref_details(
-                original.input_ref_details,
-                replay.input_ref_details,
-            ),
-        )
-
-        # -- version 类 --
-        if original.engine_version != replay.engine_version:
-            version_diffs.append(
-                f"engine_version: {original.engine_version} vs {replay.engine_version}",
-            )
-        if original.dependency_versions != replay.dependency_versions:
-            a_ver = original.dependency_versions
-            b_ver = replay.dependency_versions
-            version_diffs.append(
-                f"dependency_versions: {a_ver} vs {b_ver}",
-            )
-
-        # -- seed 类 --
-        if original.random_seed != replay.random_seed:
-            seed_diffs.append(
-                f"random_seed: {original.random_seed} vs {replay.random_seed}",
-            )
-
         return ManifestDiff(
-            config_diffs=tuple(config_diffs),
-            data_diffs=tuple(data_diffs),
-            version_diffs=tuple(version_diffs),
-            seed_diffs=tuple(seed_diffs),
+            config_diffs=_compare_manifest_config(original, replay),
+            data_diffs=_compare_manifest_data(original, replay),
+            version_diffs=_compare_manifest_versions(original, replay),
+            seed_diffs=_compare_manifest_seed(original, replay),
+            evidence_diffs=_compare_research_evidence(
+                original.replay_evidence,
+                replay.replay_evidence,
+                required=require_research_evidence,
+            ),
         )
 
     @staticmethod
@@ -276,6 +457,7 @@ class ReplayValidator:
         replay_nav: Sequence[float],
         *,
         state_proof: ReplayStateProof | None = None,
+        require_research_evidence: bool = False,
     ) -> ReplayValidationResult:
         """
         端到端复现性验证.
@@ -289,6 +471,7 @@ class ReplayValidator:
         manifest_diff = ReplayValidator.compare_manifests(
             original_manifest,
             replay_manifest,
+            require_research_evidence=require_research_evidence,
         )
         nav_comp = ReplayValidator.compare_nav_series(original_nav, replay_nav)
 
@@ -335,6 +518,13 @@ class ReplayValidator:
         is_reproducible = (
             not manifest_diff.has_diff and nav_comp.identical and state_match
         )
+        fingerprint_match, summary_match, artifact_hashes_match = (
+            _research_evidence_match_state(
+                original_manifest.replay_evidence,
+                replay_manifest.replay_evidence,
+                required=require_research_evidence,
+            )
+        )
 
         return ReplayValidationResult(
             is_reproducible=is_reproducible,
@@ -346,6 +536,9 @@ class ReplayValidator:
             account_state_match=account_state_match,
             fill_comparison=fill_comparison,
             account_state_comparison=account_state_comparison,
+            reproduction_fingerprint_match=fingerprint_match,
+            key_result_summary_match=summary_match,
+            required_artifact_hashes_match=artifact_hashes_match,
         )
 
 
@@ -476,6 +669,15 @@ def _compare_input_ref_details(
             diffs.append(
                 f"data_hash mismatch for {iid}: {a_ref.data_hash} vs {b_ref.data_hash}",
             )
+        if a_ref.date_range != b_ref.date_range:
+            diffs.append(
+                f"date_range mismatch for {iid}: "
+                + f"{a_ref.date_range} vs {b_ref.date_range}",
+            )
+        if a_ref.source != b_ref.source:
+            diffs.append(
+                f"source mismatch for {iid}: {a_ref.source} vs {b_ref.source}",
+            )
         if a_ref.source_snapshot_id != b_ref.source_snapshot_id:
             diffs.append(
                 "source_snapshot_id mismatch for "
@@ -484,7 +686,7 @@ def _compare_input_ref_details(
             )
 
     # 如果只是数量不同但没有具体映射差异（空 input_ref_details 对比场景）
-    if not diffs and len(a) != len(b):
+    if len(a) != len(b):
         diffs.append("input_ref_details: count mismatch")
 
     return diffs

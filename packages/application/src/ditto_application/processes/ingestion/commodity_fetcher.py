@@ -38,7 +38,7 @@ class CommoditySource(Protocol):
     ) -> pl.DataFrame: ...
 
 
-__all__ = ["fetch_commodity_daily"]
+__all__ = ["fetch_commodity_daily", "fetch_commodity_range"]
 
 
 def fetch_commodity_daily(
@@ -59,6 +59,22 @@ def fetch_commodity_daily(
         合并后的商品数据 DataFrame.
 
     """
+    return fetch_commodity_range(
+        trade_date,
+        trade_date,
+        primary_source=primary_source,
+        fred_source=fred_source,
+    )
+
+
+def fetch_commodity_range(
+    start_date: str,
+    end_date: str,
+    *,
+    primary_source: _MetalSource,
+    fred_source: CommoditySource | None = None,
+) -> pl.DataFrame:
+    """Fetch commodity observations for one explicit provider interval."""
     results: list[pl.DataFrame] = []
 
     fred_codes = [
@@ -71,8 +87,8 @@ def fetch_commodity_daily(
         try:
             fred_df = fred_source.fetch_commodities(
                 codes=fred_codes,
-                start_date=trade_date,
-                end_date=trade_date,
+                start_date=start_date,
+                end_date=end_date,
             )
             if not fred_df.is_empty():
                 results.append(fred_df)
@@ -93,8 +109,8 @@ def fetch_commodity_daily(
     try:
         metal_df = primary_source.fetch_metal_daily(
             codes=metal_codes,
-            start_date=trade_date,
-            end_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
         )
         if not metal_df.is_empty():
             results.append(metal_df)

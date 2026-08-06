@@ -67,6 +67,12 @@ def _build_engine_with_audit(
         start_date=start_date,
         end_date=end_date,
         initial_cash=INITIAL_CASH,
+        spec_hash="e" * 64,
+        base_spec_hash="e" * 64,
+        parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        effective_parameters=(),
+        research_snapshot_id=None,
+        research_snapshot_manifest_hash=None,
         mode=EngineMode.BACKTEST,
         strategy_id="golden-baseline",
         strategy_run_id="golden-baseline",
@@ -130,12 +136,12 @@ class TestGoldenBaseline:
         result = engine.run()
         report = build_report(audit, run_id=result.run_id)
 
-        assert result.final_nav == snapshot(998136.3701199999)
-        assert result.total_trades == snapshot(7)
-        assert report.alpha_stats.annualized_return == snapshot(-15.813802428690893)
-        assert report.alpha_stats.max_drawdown == snapshot(-1.1245120206538581)
-        assert report.alpha_stats.sharpe_ratio == snapshot(-0.6633620945414491)
-        assert report.aggregated_trade_stats.total_trades == snapshot(2)
+        assert result.final_nav == snapshot(998115.2271599998)
+        assert result.total_trades == snapshot(9)
+        assert report.alpha_stats.annualized_return == snapshot(-16.038197082756867)
+        assert report.alpha_stats.max_drawdown == snapshot(-1.1256421793995597)
+        assert report.alpha_stats.sharpe_ratio == snapshot(-0.6727290829013094)
+        assert report.aggregated_trade_stats.total_trades == snapshot(4)
         assert report.aggregated_trade_stats.win_rate == snapshot(100.0)
 
     def test_5day_etf_rotation_baseline(
@@ -160,12 +166,12 @@ class TestGoldenBaseline:
         result = engine.run()
         report = build_report(audit, run_id=result.run_id)
 
-        assert result.final_nav == snapshot(1040636.1681199998)
-        assert result.total_trades == snapshot(13)
-        assert report.alpha_stats.annualized_return == snapshot(1169.0819710283006)
-        assert report.alpha_stats.max_drawdown == snapshot(-1.1245120206538581)
-        assert report.alpha_stats.sharpe_ratio == snapshot(40.76240257266437)
-        assert report.aggregated_trade_stats.total_trades == snapshot(5)
+        assert result.final_nav == snapshot(1040603.2855399998)
+        assert result.total_trades == snapshot(18)
+        assert report.alpha_stats.annualized_return == snapshot(1166.5580727754098)
+        assert report.alpha_stats.max_drawdown == snapshot(-1.1256421793995597)
+        assert report.alpha_stats.sharpe_ratio == snapshot(40.67721350648211)
+        assert report.aggregated_trade_stats.total_trades == snapshot(10)
         assert report.aggregated_trade_stats.win_rate == snapshot(100.0)
 
     def test_3day_etf_trend_swing_baseline(

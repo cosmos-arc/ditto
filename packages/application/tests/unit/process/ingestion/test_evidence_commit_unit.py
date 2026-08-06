@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -204,6 +205,60 @@ def test_evidence_commit_reaches_complete_only_after_all_durable_writes(
         assert len(catalog.values) == 1
         assert len(lineage.values) == 1
         assert len(logs.values) == 1
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_license_effective_on_fetch_date_allows_older_observation_date(
+    tmp_path: Path,
+) -> None:
+    lifecycle, pool = _store(tmp_path)
+    license_record = replace(_license(), effective_from=date(2026, 7, 18))
+    recorder = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=recorder,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=recorder,
+            lineage_recorder=recorder,
+            ingestion_log_store=recorder,
+        )
+    )
+
+    try:
+        outcome = committer.commit(_request(license_record))
+
+        assert outcome.completed is True
+        assert outcome.error_code is None
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_license_expired_before_fetch_date_fails_closed(tmp_path: Path) -> None:
+    lifecycle, pool = _store(tmp_path)
+    license_record = replace(_license(), effective_to=date(2026, 7, 17))
+    recorder = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=recorder,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=recorder,
+            lineage_recorder=recorder,
+            ingestion_log_store=recorder,
+        )
+    )
+
+    try:
+        outcome = committer.commit(_request(license_record))
+
+        assert outcome.completed is False
+        assert outcome.error_code == "LICENSE_NOT_EFFECTIVE"
     finally:
         pool.close()
 

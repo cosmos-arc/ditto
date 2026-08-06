@@ -1,0 +1,380 @@
+{
+  "checked_at": "2026-08-04T06:12:20.045870+00:00",
+  "contract_count": 19,
+  "kind": "provider_entitlement",
+  "products": [
+    {
+      "certification_content_hash": "8348f2d79e9106f651d23088065399dcdc85997c04d06927c2f012f45baf32f7",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:065dc34b4b44dd202f7624bdd339989d53154a6b239b8d3a306cdc060065fe28",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "stock_basic",
+      "license_record_ids": [
+        "license:tushare:stock_basic:sha256:86fa696d8a5787acfa5fa12aaeab65252ff61b80b84b07c8fba2fbdaa39bea04"
+      ],
+      "provider_datasets": [
+        "tushare:stock_basic",
+        "tushare:bak_basic"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:stock_basic"
+      ]
+    },
+    {
+      "certification_content_hash": "d369ac6740f823c568df87b9582e2eec8d0413caafbcfdef5cc713c75830eb5e",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:17f45963940dc5ecef70c7cf8236ae905f64f17b0d1fab4312151779dee4351f",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "etf_basic",
+      "license_record_ids": [
+        "license:tushare:etf_basic:sha256:fa0c87c50d803ef77e48faefb6affad5bfc1a9f20200c98dd76050b1b13c0d94"
+      ],
+      "provider_datasets": [
+        "tushare:fund_basic"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:fund_basic"
+      ]
+    },
+    {
+      "certification_content_hash": "d7f9d9a5c3feabc7c8f313172ac4c100e624bad26ed1d537275cacbce138fdeb",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:2b4d075a0ee4a1fce01f75c1fe0eeb9b7e3fdfd2820021735e4731e3f67bd05b",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "index_basic",
+      "license_record_ids": [
+        "license:tushare:index_basic:sha256:a79c217f4de7be327a794efbd12b48c6930b721fd2357ad64b5f123d6fed8e13"
+      ],
+      "provider_datasets": [
+        "tushare:index_basic"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:index_basic"
+      ]
+    },
+    {
+      "certification_content_hash": "f5b0d34ac45ad0dc33c049d046b87d6b750b64cef07bee28e4548b29f63b897d",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:89dcc2a9bc5395c7142ff26eb50bf18a12b027fcbc92497d2d944e67042d9c60",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "calendar",
+      "license_record_ids": [
+        "license:tushare:calendar:sha256:effeeb61f3f089c8db62ca42df9c458a1db3c69919ac80ef5ba48752abe07513"
+      ],
+      "provider_datasets": [
+        "tushare:trade_cal"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:trade_cal"
+      ]
+    },
+    {
+      "certification_content_hash": "6455ba16cb739e7a1528cd31fb47e2703210965513f4a26cd404ebf5315e5766",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:ed6d7bd6fc47e82ff74b26c85ee3c9ebe852a765342ceaf76ab9ea26fc3443d0",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "stock_daily",
+      "license_record_ids": [
+        "license:tushare:stock_daily:sha256:2b66ae1d9552ba4a88fe358911323deb24ff39930daa99b3b6e037667f2302e2"
+      ],
+      "provider_datasets": [
+        "tushare:daily",
+        "local_tdx:day"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:daily"
+      ]
+    },
+    {
+      "certification_content_hash": "4db04635658d6b68e9ed79feb18b9d81f73f1e094f38df9a17c51c20c6635343",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:b10bb73c122fc623531b7039429ae8276d8a11e8309aff0f5b5827dc0cdf2e23",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "etf_daily",
+      "license_record_ids": [
+        "license:tushare:etf_daily:sha256:eab77dd00db856b4adcf1d888bbf50696b84b0a66c0cd5ea184d9fb77602cba1"
+      ],
+      "provider_datasets": [
+        "tushare:fund_daily",
+        "local_tdx:day"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:fund_daily"
+      ]
+    },
+    {
+      "certification_content_hash": "a863522f85bc13ab915f97747fd5834c7be20d99c9991929a9c05f48759e6a2d",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:5767c725cd83d83991e85208c7ec07f532dd50dc649b084383f8ac573a7f2bed",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "index_daily",
+      "license_record_ids": [
+        "license:tushare:index_daily:sha256:0b68d8fed043f492f0ae6d2511d5503900a010a4b0e904d8b0db87c88801241b"
+      ],
+      "provider_datasets": [
+        "tushare:index_daily",
+        "local_tdx:day"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:index_daily"
+      ]
+    },
+    {
+      "certification_content_hash": "1fb32351612ba4cb151077cdefb900f715345d0efa043d6a52b75165104c99f3",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:1a2faed6f3be2a57d1413bcef881beced4e5e0f916c27fe5e4645be9e113945f",
+      "certified_from": "2016-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "stock_status",
+      "license_record_ids": [
+        "license:tushare:stock_status:sha256:70180b257e1a1fb5fb1f9569431fb2dcfea4c9683dfd5a90d6c546d0ef691564"
+      ],
+      "provider_datasets": [
+        "tushare:stock_st",
+        "tushare:suspend_d",
+        "tushare:bak_basic"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:stock_st"
+      ]
+    },
+    {
+      "certification_content_hash": "e10136de1f0d1d16f9c66dd3a8e9044fc574d563dd006e5ebd6ae4db3674c6e1",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:735124ace47c437f0e3728cfd4c8ff58384df9159d8547d5323d34a8afc284f6",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "adj_factor",
+      "license_record_ids": [
+        "license:tushare:adj_factor:sha256:e0d7d0b8fa36e2f1fd5cb40515a2e74c642e16ee569d209c216a83b14a7d5833"
+      ],
+      "provider_datasets": [
+        "tushare:adj_factor"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:adj_factor"
+      ]
+    },
+    {
+      "certification_content_hash": "acdce0ee4d0bd49ba5bece294ed238f6b9e41b41c6b6dc6b9570d2724950b3df",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:ca5dbe267be1e551a0987e9e291733ca06e0542f70c90b05a257aaf504fe1459",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "fund_adj",
+      "license_record_ids": [
+        "license:tushare:fund_adj:sha256:3f15d59dec9e53e9bf56c620f13b99e18ce8a999c467061ff874d47a72b69392"
+      ],
+      "provider_datasets": [
+        "tushare:fund_adj"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:fund_adj"
+      ]
+    },
+    {
+      "certification_content_hash": "45952eee973a024fb2bacab82307b9cbb5450c453d8db44215d343491c15ce3e",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:a323d3c2854e6d67e5f4ff9c35e9107218b90f4e0094513f51d954492d18dbc7",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "balance_sheet",
+      "license_record_ids": [
+        "license:tushare:balance_sheet:sha256:c74adb82d6544650312262f0a575b1c690c481dc1114e03f5b4aa33c4fb68114"
+      ],
+      "provider_datasets": [
+        "tushare:balancesheet"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:balancesheet"
+      ]
+    },
+    {
+      "certification_content_hash": "fa2f320ca0a2fb62c3496fc98232b6917b04dcfc5e3b553ed4b1395383414b8a",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:51ab9d985874ab857be8b2cc76e40b79c4f49b2de45b4cd4aba7b5def3e8b422",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "income_statement",
+      "license_record_ids": [
+        "license:tushare:income_statement:sha256:b99cad5eefaf317fa663157d1d4967b3168d7dc23c22b0384d97f4755218903e"
+      ],
+      "provider_datasets": [
+        "tushare:income"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:income"
+      ]
+    },
+    {
+      "certification_content_hash": "14adcdfbc88a020d23713191750e5eaa0cb46e93f4e37665501f90847fcd0cc6",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:f27eca01983af266453a0a6589fa42ee2ce6dd14038cb74350cec69c138d5b5d",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "cash_flow",
+      "license_record_ids": [
+        "license:tushare:cash_flow:sha256:c5354780cffd4a726a18c70bcadd4a4ceae7665f9c073c903170903def4915cf"
+      ],
+      "provider_datasets": [
+        "tushare:cashflow"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:cashflow"
+      ]
+    },
+    {
+      "certification_content_hash": "83c0829ff87aa16840b54bc6df064c1dbd7e178b48edaa6e33371f4e563e3be7",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:31abf9fd1ac84921dd162d1a6c551fb2396dcda0eba2e7bebf852b4c96ef0255",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "dividend",
+      "license_record_ids": [
+        "license:tushare:dividend:sha256:4d82e3a191208332958418f87a20ff5d4a6aa07192fcbb931d8a1305d34940f9"
+      ],
+      "provider_datasets": [
+        "tushare:dividend"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:dividend"
+      ]
+    },
+    {
+      "certification_content_hash": "b50d521164853bd7d10b9a09bf8dcc56b29dbd1470dbdc30c28eff968103c9bb",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:5e8468624da76e1f87681ec1a171230520987f1aaa15cde3d5284791f4c7804a",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "valuation_metrics",
+      "license_record_ids": [
+        "license:tushare:valuation_metrics:sha256:642422a2ee7e5f54637faa949640998eb5ee29ff0d436aec2e6aa9d2b1b241be"
+      ],
+      "provider_datasets": [
+        "tushare:daily_basic"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:daily_basic"
+      ]
+    },
+    {
+      "certification_content_hash": "bb498f5cc53ad04a547b22a5d0d526828dcdf45c8501884d55b92b78be5698b1",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:fb5e63979df4bf824c77dec9b1d2c3a8711f57caa63820d40029ac3c0e2ef95d",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "macro_indicators",
+      "license_record_ids": [
+        "license:tushare:macro_indicators:sha256:7f012754d168e903813b862d5e8a276b6ab30946ee0f88e20840021953902aab"
+      ],
+      "provider_datasets": [
+        "tushare:cn_macro",
+        "fred:series_observations",
+        "alfred:vintages"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:cn_macro"
+      ]
+    },
+    {
+      "certification_content_hash": "4d50b61255a5b85f0f5979dad26d121ba1b561ba89e8f4e4a7607093e275c7c8",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:dc894b7830a2dab8af6b88b94e095a54e5fde7e48cda94a315e425032c36142c",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "commodity_daily",
+      "license_record_ids": [
+        "license:tushare:commodity_daily:sha256:76eeb3f81b7c3a67252fdf1841edeac67156368fdcc03901832664e16ee6c2cb"
+      ],
+      "provider_datasets": [
+        "fred:commodity_series",
+        "tushare:commodity_reference"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:commodity_reference"
+      ]
+    },
+    {
+      "certification_content_hash": "b31f630c6ed43bc7660c2256f99352f4fb797fcc9452cc8280a6c0689ea620e6",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:97aa71f73c1cbea0032e377b35bd5d5943daca57ae30c0143f2e75d24296c3f3",
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "dataset_id": "corporate_actions",
+      "license_record_ids": [
+        "license:tushare:corporate_actions:sha256:d7b01e921ea9f9b7b401c4f926fcefec2b5aa94f313213cfceba610f8815845c"
+      ],
+      "provider_datasets": [
+        "tushare:corporate_actions"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:corporate_actions"
+      ]
+    },
+    {
+      "certification_content_hash": "a989a8f38a1960d35f1fcf00ca53fe151af125ecdddd584095644fcbac2fbc2b",
+      "certification_profile": "r2-modern-a-share-v1",
+      "certification_report_id": "certification:3e93fbfe688674afa480973e9439ba3a812d4236c229dc19c29e9e3707f4cc76",
+      "certified_from": "2015-01-05",
+      "certified_through": "2026-07-31",
+      "dataset_id": "index_weight",
+      "license_record_ids": [
+        "license:tushare:index_weight:sha256:45c4708d7ffbc9e4895604605e065aa31eb9710dca434424a8277a4bcc901982"
+      ],
+      "provider_datasets": [
+        "tushare:index_weight"
+      ],
+      "ready": true,
+      "reason_codes": [],
+      "usable_provider_datasets": [
+        "tushare:index_weight"
+      ]
+    }
+  ],
+  "reason_codes": [],
+  "schema": "ditto.r2-live-gate-artifact",
+  "version": 1
+}

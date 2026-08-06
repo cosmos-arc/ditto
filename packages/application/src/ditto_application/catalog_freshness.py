@@ -480,12 +480,18 @@ def _catalog_entry_freshness_sort_key(
 
 
 def _exact_partition_date(entry: DataCatalogEntry) -> date | None:
-    raw_dates = [
+    trade_dates = [
         partition.removeprefix("trade_date=")
         for partition in entry.asset.partition_keys
         if partition.startswith("trade_date=")
     ]
-    if len(raw_dates) != 1:
+    range_end_dates = [
+        partition.removeprefix("end_date=")
+        for partition in entry.asset.partition_keys
+        if partition.startswith("end_date=")
+    ]
+    raw_dates = trade_dates or range_end_dates
+    if len(raw_dates) != 1 or (trade_dates and range_end_dates):
         return None
     try:
         return date.fromisoformat(raw_dates[0])

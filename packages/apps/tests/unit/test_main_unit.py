@@ -75,6 +75,15 @@ class TestFastAPIEndpoints:
 class TestOpenAPIMaturity:
     """OpenAPI should expose capability maturity honestly."""
 
+    def test_strategy_publish_surface_is_evidence_gated(self):
+        """OpenAPI excludes the seed/system fast-path and keeps governed publish."""
+        app.openapi_schema = None
+
+        paths = app.openapi()["paths"]
+
+        assert "/api/v1/strategies/{strategy_id}/publish" not in paths
+        assert "/api/v1/strategies/{strategy_id}/versions/{version}/publish" in paths
+
     def test_openapi_operations_include_maturity_extension(self):
         """Every documented operation carries x-ditto-maturity."""
         app.openapi_schema = None

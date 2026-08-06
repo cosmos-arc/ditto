@@ -21,6 +21,57 @@ def _metadata_service(mocker):
 
 
 class TestBootstrapPlannerSchedules:
+    def test_calendar_bootstrap_uses_one_request_per_year_without_seed_calendar(
+        self, mocker
+    ) -> None:
+        service = _metadata_service(mocker)
+        service.list_trading_days.return_value = []
+        planner = BootstrapPlanner(metadata_service=service)
+
+        plan = planner.plan(
+            dataset_id="calendar",
+            source="tushare",
+            start_date="2015-01-01",
+            end_date="2017-03-15",
+        )
+
+        assert [chunk.partition_dates for chunk in plan.chunks] == [
+            ("2015-12-31",),
+            ("2016-12-31",),
+            ("2017-03-15",),
+        ]
+        assert [chunk.chunk_key for chunk in plan.chunks] == [
+            "2015",
+            "2016",
+            "2017",
+        ]
+        assert [(chunk.request_start, chunk.request_end) for chunk in plan.chunks] == [
+            ("2015-01-01", "2015-12-31"),
+            ("2016-01-01", "2016-12-31"),
+            ("2017-01-01", "2017-03-15"),
+        ]
+        service.list_trading_days.assert_not_called()
+
+    @pytest.mark.parametrize("dataset_id", ["stock_basic", "etf_basic", "index_basic"])
+    def test_effective_dated_basic_bootstrap_fetches_one_current_snapshot(
+        self, mocker, dataset_id: str
+    ) -> None:
+        service = _metadata_service(mocker)
+        planner = BootstrapPlanner(metadata_service=service)
+
+        plan = planner.plan(
+            dataset_id=dataset_id,
+            source="tushare",
+            start_date="2015-01-01",
+            end_date="2026-08-01",
+        )
+
+        assert len(plan.chunks) == 1
+        assert plan.chunks[0].partition_dates == ("2026-08-01",)
+        assert plan.chunks[0].request_start == "2015-01-01"
+        assert plan.chunks[0].request_end == "2026-08-01"
+        service.list_trading_days.assert_not_called()
+
     def test_trading_schedule_groups_expected_dates_by_product_chunk(
         self, mocker
     ) -> None:
@@ -56,6 +107,40 @@ class TestBootstrapPlannerSchedules:
             ("2026-01-30", "2026-01-31"),
             ("2026-02-01", "2026-02-02"),
         ]
+
+    def test_dividend_chunk_identity_binds_exact_announcement_query_contract(
+        self, mocker
+    ) -> None:
+        planner = BootstrapPlanner(metadata_service=_metadata_service(mocker))
+
+        plan = planner.plan(
+            dataset_id="dividend",
+            source="tushare",
+            start_date="2026-01-01",
+            end_date="2026-03-31",
+        )
+
+        assert len(plan.chunks) == 1
+        assert plan.chunks[0].chunk_key.endswith(":query:ann-date-v2")
+        assert plan.chunks[0].chunk_id.endswith(":query:ann-date-v2")
+
+    def test_corporate_action_chunk_identity_binds_announcement_query_contract(
+        self, mocker
+    ) -> None:
+        planner = BootstrapPlanner(metadata_service=_metadata_service(mocker))
+
+        plan = planner.plan(
+            dataset_id="corporate_actions",
+            source="tushare",
+            start_date="2026-01-01",
+            end_date="2026-03-31",
+        )
+
+        assert len(plan.chunks) == 1
+        assert plan.chunks[0].partition_dates[0] == "2026-01-01"
+        assert plan.chunks[0].partition_dates[-1] == "2026-03-31"
+        assert plan.chunks[0].chunk_key.endswith(":query:ann-date-v2")
+        assert plan.chunks[0].chunk_id.endswith(":query:ann-date-v2")
 
     def test_source_defined_schedule_uses_provider_release_dates(self, mocker) -> None:
         resolver = mocker.Mock(return_value=("2026-01-15", "2026-02-20"))
@@ -100,6 +185,24 @@ class TestBootstrapPlannerSchedules:
         assert plan.chunks[0].request_start == "2026-01-01"
         assert plan.chunks[0].request_end == "2026-03-31"
 
+    def test_source_defined_long_history_is_bounded_by_provider_year(
+        self, mocker
+    ) -> None:
+        planner = BootstrapPlanner(metadata_service=_metadata_service(mocker))
+
+        plan = planner.plan(
+            dataset_id="macro_indicators",
+            source="tushare",
+            start_date="2024-07-01",
+            end_date="2026-03-31",
+        )
+
+        assert [(chunk.request_start, chunk.request_end) for chunk in plan.chunks] == [
+            ("2024-07-01", "2024-12-31"),
+            ("2025-01-01", "2025-12-31"),
+            ("2026-01-01", "2026-03-31"),
+        ]
+
 
 class TestBootstrapPlannerCapabilitiesAndResume:
     def test_selects_instrument_range_when_instruments_are_supplied(
@@ -116,7 +219,15 @@ class TestBootstrapPlannerCapabilitiesAndResume:
         )
 
         assert all(chunk.execution_mode == "instrument_range" for chunk in plan.chunks)
-        assert all(chunk.instrument_ids == (1, 2) for chunk in plan.chunks)
+        assert all(len(chunk.instrument_ids) == 1 for chunk in plan.chunks)
+        assert [chunk.instrument_ids for chunk in plan.chunks] == [
+            (1,),
+            (2,),
+        ]
+        assert [(chunk.request_start, chunk.request_end) for chunk in plan.chunks] == [
+            ("2026-01-30", "2026-02-03"),
+            ("2026-01-30", "2026-02-03"),
+        ]
 
     def test_filters_chunks_already_marked_complete(self, mocker) -> None:
         service = _metadata_service(mocker)

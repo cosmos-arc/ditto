@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+from math import inf, nan
+from typing import cast
 from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution import factor_bridge as factor_bridge_module
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
     build_signal_spec,
+    compiled_expressions_execution_hash,
 )
 from ditto_features.derived_types import (
     DerivedRole,
@@ -80,6 +85,44 @@ class TestCompileAndValidate:
         assert len(result.expressions) == 2
         assert result.weights == (0.6, 0.4)
 
+    def test_actual_max_lookback_uses_compiled_expression_analysis(self) -> None:
+        compiled = FactorBridge().compile_and_validate(
+            expressions=("close", "ts_mean(close, 63)"),
+            weights=(0.5, 0.5),
+        )
+
+        assert (
+            factor_bridge_module.compiled_expressions_actual_max_lookback(compiled)
+            == 64
+        )
+
+    @pytest.mark.parametrize("lookback", [-1, True], ids=("negative", "bool"))
+    def test_actual_max_lookback_rejects_invalid_nonnegative_integer(
+        self,
+        lookback: int,
+    ) -> None:
+        compiled = FactorBridge().compile_and_validate(
+            expressions=("close",),
+            weights=(1.0,),
+        )
+        expression = compiled.expressions[0]
+        drifted = CompiledExpressions(
+            expressions=(
+                replace(
+                    expression,
+                    analysis=replace(expression.analysis, lookback=lookback),
+                ),
+            ),
+            weights=compiled.weights,
+        )
+
+        with pytest.raises(AppProcessError) as exc_info:
+            factor_bridge_module.compiled_expressions_actual_max_lookback(drifted)
+
+        assert exc_info.value.details["reason"] == (
+            "compiled_factor_lookback_state_drift"
+        )
+
     def test_compile_produces_compiled_derived_expression(self) -> None:
         """编译结果包含正确的 derived_id."""
         bridge = FactorBridge()
@@ -114,6 +157,35 @@ class TestCompileAndValidate:
         assert compiled_expr.analysis is not None
         assert isinstance(compiled_expr.analysis.dependencies, tuple)
         assert "close" in compiled_expr.analysis.dependencies
+
+    def test_execution_hash_rejects_polars_expression_method_shadow(self) -> None:
+        """Serialized expression bytes cannot hide instance-level execution hooks."""
+        compiled = FactorBridge().compile_and_validate(
+            expressions=("close",),
+            weights=(1.0,),
+        )
+        expression = compiled.expressions[0].expr
+        before = expression.meta.serialize()
+        object.__setattr__(
+            expression,
+            "alias",
+            lambda name: pl.col("open").alias(name),
+        )
+        assert expression.meta.serialize() == before
+
+        with pytest.raises(AppProcessError) as exc_info:
+            compiled_expressions_execution_hash(compiled)
+
+        assert exc_info.value.details["reason"] == (
+            "compiled_factor_expression_state_drift"
+        )
+        with pytest.raises(AppProcessError):
+            FactorBridge().compute_signals(
+                pl.DataFrame(
+                    {"instrument_id": [1, 2], "close": [1.0, 2.0], "open": [2.0, 1.0]}
+                ),
+                compiled,
+            )
 
     def test_syntax_error_raises_value_error(self) -> None:
         """语法错误的表达式抛出 ValueError."""
@@ -169,6 +241,27 @@ class TestCompileAndValidate:
         )
         assert result.weights == (0.0,)
 
+    @pytest.mark.parametrize(
+        "invalid_weight",
+        [True, "1.0", nan, inf, -inf],
+        ids=("bool", "text", "nan", "positive-inf", "negative-inf"),
+    )
+    def test_invalid_weight_type_and_finiteness_fail_closed(
+        self,
+        invalid_weight: object,
+    ) -> None:
+        with pytest.raises(AppProcessError) as exc_info:
+            FactorBridge().compile_and_validate(
+                expressions=("close",),
+                weights=cast("tuple[float, ...]", (invalid_weight,)),
+            )
+
+        assert exc_info.value.details == {
+            "code": "SPEC_INVALID",
+            "reason": "invalid_factor_weight",
+            "weight_index": 0,
+        }
+
     def test_custom_compiler_is_used(self) -> None:
         """传入自定义 compiler 时使用它."""
         mock_compiler = MagicMock()
@@ -210,6 +303,90 @@ class TestCompileAndValidate:
 
         assert result.expressions[0].derived_id == "mock_signal_0"
         mock_compiler.compile.assert_called_once()
+
+    def test_registered_only_mode_rejects_unknown_literal_before_compilation(
+        self,
+    ) -> None:
+        """Research mode cannot reinterpret an unknown factor ID as raw DSL."""
+        compiler = MagicMock()
+        bridge = FactorBridge(
+            compiler=compiler,
+            factor_registry={
+                "known_factor": FactorSpec(
+                    id="known_factor",
+                    expression="close",
+                )
+            },
+            factor_versions={"known_factor": 2},
+            require_registered_factor_ids=True,
+        )
+
+        with pytest.raises(AppProcessError) as exc_info:
+            bridge.compile_and_validate(expressions=("close",), weights=(1.0,))
+
+        assert exc_info.value.details["reason"] == "unknown_registered_factor"
+        compiler.compile.assert_not_called()
+
+    def test_registered_only_mode_rejects_duplicate_factor_ids(self) -> None:
+        """One research signal source may bind each exact factor only once."""
+        compiler = MagicMock()
+        bridge = FactorBridge(
+            compiler=compiler,
+            factor_registry={
+                "known_factor": FactorSpec(
+                    id="known_factor",
+                    expression="close",
+                )
+            },
+            factor_versions={"known_factor": 1},
+            require_registered_factor_ids=True,
+        )
+
+        with pytest.raises(AppProcessError) as exc_info:
+            bridge.compile_and_validate(
+                expressions=("known_factor", "known_factor"),
+                weights=(0.5, 0.5),
+            )
+
+        assert exc_info.value.details["reason"] == "duplicate_registered_factor"
+        compiler.compile.assert_not_called()
+
+    def test_registered_only_mode_compiles_exact_factor_id_and_version(self) -> None:
+        """Compiler cache identity is seeded with the registered factor identity."""
+        bridge = FactorBridge(
+            factor_registry={
+                "known_factor": FactorSpec(
+                    id="known_factor",
+                    expression="close",
+                )
+            },
+            factor_versions={"known_factor": 2},
+            require_registered_factor_ids=True,
+        )
+
+        result = bridge.compile_and_validate(
+            expressions=("known_factor",),
+            weights=(1.0,),
+        )
+
+        assert result.expressions[0].derived_id == "known_factor"
+        assert result.expressions[0].version == 2
+
+    def test_registered_only_mode_inlines_transitive_factor_dependencies(
+        self,
+    ) -> None:
+        """A governed factor must execute from raw leaves, not derived columns."""
+        bridge = FactorBridge(require_registered_factor_ids=True)
+
+        result = bridge.compile_and_validate(
+            expressions=("volatility_factor",),
+            weights=(1.0,),
+        )
+
+        analysis = result.expressions[0].analysis
+        assert analysis.dependencies == ("market.close",)
+        assert analysis.operator_names == ("ts_std", "ts_pct_change")
+        assert analysis.lookback == 21
 
 
 # ===========================================================================
@@ -360,6 +537,91 @@ class TestComputeSignals:
         result_ids = set(result["instrument_id"].to_list())
         expected_ids = set(sample_df["instrument_id"].to_list())
         assert result_ids == expected_ids
+
+    def test_average_tie_rank_is_independent_of_input_order(self) -> None:
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close",),
+            weights=(1.0,),
+        )
+        original = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3, 4],
+                "close": [10.0, 10.0, 20.0, 30.0],
+            }
+        )
+        shuffled = original.reverse()
+
+        first = bridge.compute_signals(original, compiled).sort("instrument_id")
+        second = bridge.compute_signals(shuffled, compiled).sort("instrument_id")
+
+        assert first["rank_factor_0"].to_list() == second["rank_factor_0"].to_list()
+        assert first["signal_value"].to_list() == second["signal_value"].to_list()
+        assert first["rank_factor_0"].to_list() == [0.375, 0.375, 0.75, 1.0]
+
+    def test_zero_weight_null_factor_does_not_poison_signal(self) -> None:
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close", "volume"),
+            weights=(1.0, 0.0),
+        )
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "close": [10.0, 20.0, 30.0],
+                "volume": [None, None, None],
+            }
+        )
+
+        result = bridge.compute_signals(frame, compiled)
+
+        assert result["rank_factor_1"].null_count() == 3
+        assert result["signal_value"].to_list() == pytest.approx(
+            [1.0 / 3.0, 2.0 / 3.0, 1.0]
+        )
+
+    def test_non_finite_expression_results_are_missing_before_rank(self) -> None:
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close / denominator",),
+            weights=(1.0,),
+        )
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "close": [10.0, 0.0, 10.0],
+                "denominator": [0.0, 0.0, 2.0],
+            }
+        )
+
+        result = bridge.compute_signals(frame, compiled)
+
+        assert result["factor_0"].to_list() == [None, None, 5.0]
+        assert result["rank_factor_0"].to_list() == [None, None, 1.0 / 3.0]
+        assert result["signal_value"].to_list() == [None, None, 1.0 / 3.0]
+
+    def test_transitive_registered_factor_executes_from_raw_market_history(
+        self,
+    ) -> None:
+        bridge = FactorBridge(require_registered_factor_ids=True)
+        compiled = bridge.compile_and_validate(
+            expressions=("volatility_factor",),
+            weights=(1.0,),
+        )
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1] * 30 + [2] * 30,
+                "trade_date": list(range(30)) * 2,
+                "close": [10.0 + index * 0.1 for index in range(30)]
+                + [20.0 + index * 0.2 for index in range(30)],
+            }
+        )
+
+        result = bridge.compute_signals(frame, compiled)
+
+        assert result.height == 2
+        assert result["factor_0"].null_count() == 0
+        assert result["signal_value"].null_count() == 0
 
 
 # ===========================================================================

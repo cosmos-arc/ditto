@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError
+from collections.abc import Callable
+from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, date, datetime, timedelta
+from inspect import Parameter, signature
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -32,11 +34,17 @@ from ditto_data.catalog import DataAssetRef
 from ditto_data.lineage import InMemoryDataLineage
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_context import TimeContext
+from ditto_strategy.alpha.parameters import (
+    EffectiveParameter,
+    canonical_parameter_hash,
+)
 from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+_EMPTY_PARAMETER_HASH = canonical_parameter_hash(())
 
 
 def _make_engine_result(
@@ -59,6 +67,7 @@ def _make_service_config(
     run_id: str = "run-001",
     start_date: str = "2026-01-01",
     end_date: str = "2026-03-01",
+    spec_hash: str = "c" * 64,
     **overrides: object,
 ) -> BacktestServiceConfig:
     """创建 BacktestServiceConfig 测试辅助函数。"""
@@ -67,6 +76,12 @@ def _make_service_config(
         run_id=run_id,
         start_date=start_date,
         end_date=end_date,
+        spec_hash=spec_hash,
+        base_spec_hash=spec_hash,
+        parameter_hash=_EMPTY_PARAMETER_HASH,
+        effective_parameters=(),
+        research_snapshot_id=None,
+        research_snapshot_manifest_hash=None,
         **overrides,
     )
 
@@ -113,21 +128,99 @@ def _make_minimal_service(
 class TestBacktestServiceConfig:
     """测试 BacktestServiceConfig frozen dataclass。"""
 
-    def test_default_values(self) -> None:
-        """默认值正确。"""
-        config = BacktestServiceConfig()
-        assert config.strategy_id == "default"
-        assert config.strategy_version == ""
-        assert config.run_id == ""
-        assert config.start_date == ""
-        assert config.end_date == ""
-        assert config.initial_cash == 1_000_000.0
-        assert config.benchmark_id is None
-        assert config.rebalance_freq == "daily"
-        assert config.engine_version == "0.1.0"
-        assert config.parameter_overrides == ()
-        assert config.participation_rate == pytest.approx(0.05)
-        assert config.fill_mode == "partial"
+    def test_catalog_request_is_explicitly_unresolved(self) -> None:
+        """Catalog lookup request has no fake or sentinel spec hash."""
+        from ditto_application.processes.execution import backtest_process
+
+        request_type = getattr(
+            backtest_process,
+            "BacktestCatalogRequestConfig",
+            None,
+        )
+
+        assert isinstance(request_type, type)
+        request = request_type()
+        assert request.strategy_id == "default"
+        assert request.start_date == ""
+        assert request.initial_cash == 1_000_000.0
+        assert not hasattr(request, "spec_hash")
+
+    def test_resolved_config_requires_canonical_spec_hash(self) -> None:
+        """Resolved service config cannot represent an unresolved identity."""
+        config_signature = signature(BacktestServiceConfig)
+
+        assert config_signature.parameters["spec_hash"].default is Parameter.empty
+
+    @pytest.mark.parametrize(
+        "invalid_hash",
+        [
+            pytest.param("", id="empty"),
+            pytest.param("a" * 16, id="short"),
+            pytest.param("A" * 64, id="uppercase"),
+            pytest.param("z" * 64, id="non-hex"),
+        ],
+    )
+    def test_resolved_config_rejects_invalid_spec_hash(
+        self,
+        invalid_hash: str,
+    ) -> None:
+        with pytest.raises(AppProcessError, match="spec_hash"):
+            _make_service_config(spec_hash=invalid_hash)
+
+    @pytest.mark.parametrize(
+        ("changes", "expected_field"),
+        [
+            pytest.param({"spec_hash": "bad"}, "spec_hash", id="spec"),
+            pytest.param(
+                {"base_spec_hash": "bad"},
+                "base_spec_hash",
+                id="base-spec",
+            ),
+            pytest.param(
+                {"parameter_hash": "bad"},
+                "parameter_hash",
+                id="parameters",
+            ),
+            pytest.param(
+                {"research_snapshot_id": "snapshot-without-hash"},
+                "research_snapshot",
+                id="research-snapshot",
+            ),
+        ],
+    )
+    def test_resolved_config_reports_the_failing_identity_field(
+        self,
+        changes: dict[str, object],
+        expected_field: str,
+    ) -> None:
+        """Identity validation errors name their actual boundary field."""
+        with pytest.raises(AppProcessError) as exc_info:
+            replace(_make_service_config(), **changes)
+
+        assert exc_info.value.details["field_name"] == expected_field
+        assert exc_info.value.details["reason"] == "invalid_canonical_identity"
+
+    def test_service_rejects_unresolved_catalog_request(self) -> None:
+        from ditto_application.processes.execution.backtest_process import (
+            BacktestCatalogRequestConfig,
+        )
+
+        constructor: Callable[..., BacktestService] = BacktestService
+        request = BacktestCatalogRequestConfig(
+            strategy_id="momentum-etf",
+            start_date="2026-01-01",
+            end_date="2026-03-01",
+        )
+
+        with pytest.raises(AppProcessError, match="resolved"):
+            constructor(
+                config=request,
+                pipeline=MagicMock(),
+                planner=MagicMock(),
+                brokerage=MagicMock(),
+                pre_trade_check=MagicMock(),
+                data_feed=MagicMock(),
+            )
 
     def test_custom_values(self) -> None:
         """自定义值正确。"""
@@ -137,7 +230,6 @@ class TestBacktestServiceConfig:
             strategy_version="2026.03",
             initial_cash=5_000_000.0,
             benchmark_id=InstrumentId(3_000_001),
-            parameter_overrides=("top_k=5",),
             participation_rate=0.02,
             fill_mode="all_or_nothing",
         )
@@ -146,7 +238,7 @@ class TestBacktestServiceConfig:
         assert config.run_id == "run-123"
         assert config.initial_cash == 5_000_000.0
         assert config.benchmark_id == InstrumentId(3_000_001)
-        assert config.parameter_overrides == ("top_k=5",)
+        assert config.parameter_overrides == ()
         assert config.participation_rate == pytest.approx(0.02)
         assert config.fill_mode == "all_or_nothing"
 
@@ -163,6 +255,12 @@ class TestBacktestServiceConfig:
             start_date=config.start_date,
             end_date=config.end_date,
             initial_cash=config.initial_cash,
+            spec_hash=config.spec_hash,
+            base_spec_hash=config.base_spec_hash,
+            parameter_hash=config.parameter_hash,
+            effective_parameters=config.effective_parameters,
+            research_snapshot_id=config.research_snapshot_id,
+            research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
             benchmark_id=config.benchmark_id,
             strategy_id=config.strategy_id,
             strategy_run_id=config.run_id,
@@ -171,6 +269,62 @@ class TestBacktestServiceConfig:
         )
         assert engine_config.strategy_run_id == "run-xyz"
         assert engine_config.strategy_id == config.strategy_id
+
+    def test_canonical_spec_hash_propagates_to_engine_config(self) -> None:
+        """Service config 的 canonical hash 必须原样进入 EngineConfig。"""
+        canonical_spec_hash = "c" * 64
+        config = _make_service_config(spec_hash=canonical_spec_hash)
+        service = _make_minimal_service(config=config)
+
+        engine_config = service._build_engine_config("run-spec-hash")
+
+        assert engine_config.spec_hash == canonical_spec_hash
+
+    def test_random_seed_propagates_to_engine_options(self) -> None:
+        """Service config must override the engine's ambient seed default."""
+        service = _make_minimal_service(
+            config=_make_service_config(random_seed=1729),
+        )
+
+        options = service._build_engine_options(
+            "run-deterministic-seed",
+            ExecutionAuditCollector(),
+        )
+
+        assert options.random_seed == 1729
+
+    def test_knowledge_lag_propagates_to_engine_config(self) -> None:
+        """Engine PIT semantics must use the service's frozen knowledge lag."""
+        service = _make_minimal_service(
+            config=_make_service_config(knowledge_lag_days=3),
+        )
+
+        engine_config = service._build_engine_config("run-knowledge-lag")
+
+        assert engine_config.knowledge_lag_days == 3
+
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value"),
+        [
+            pytest.param("random_seed", True, id="seed-bool"),
+            pytest.param("random_seed", -1, id="seed-negative"),
+            pytest.param("knowledge_lag_days", True, id="knowledge-lag-bool"),
+            pytest.param("knowledge_lag_days", -1, id="knowledge-lag-negative"),
+            pytest.param("execution_delay", True, id="execution-delay-bool"),
+            pytest.param("execution_delay", -1, id="execution-delay-negative"),
+        ],
+    )
+    def test_deterministic_controls_require_nonnegative_exact_integers(
+        self,
+        field_name: str,
+        invalid_value: object,
+    ) -> None:
+        """Invalid timing or seed controls must fail before engine assembly."""
+        with pytest.raises(AppProcessError) as exc_info:
+            _make_service_config(**{field_name: invalid_value})
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "invalid_deterministic_control"
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +344,7 @@ class TestBacktestServiceOptions:
         assert options.audit_service is None
         assert options.artifact_service is None
         assert options.artifact_dir is None
+        assert options.external_should_stop is None
 
     def test_frozen(self) -> None:
         """BacktestServiceOptions 是 frozen，不可变。"""
@@ -208,6 +363,62 @@ class TestBacktestServiceOptions:
         assert options.fee_model is mock_fee
         assert options.audit_service is mock_audit
 
+    @pytest.mark.parametrize("value", [0, -1, True, 1.5])
+    def test_engine_rejects_invalid_checkpoint_interval(self, value: object) -> None:
+        """Invalid cadence must fail before any execution side effect."""
+        service = BacktestService(
+            config=_make_service_config(),
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(checkpoint_interval_days=value),  # type: ignore[arg-type]
+        )
+
+        with pytest.raises(ValueError, match="checkpoint_interval_days"):
+            service._build_engine_options(
+                "run-invalid-checkpoint-interval",
+                ExecutionAuditCollector(),
+            )
+
+    @pytest.mark.parametrize(
+        ("external_result", "lifecycle_result", "expected"),
+        [
+            (False, False, False),
+            (True, False, True),
+            (False, True, True),
+            (True, True, True),
+        ],
+    )
+    def test_external_stop_is_or_combined_with_lifecycle_cancellation(
+        self,
+        external_result: bool,
+        lifecycle_result: bool,
+        expected: bool,
+    ) -> None:
+        external_should_stop = MagicMock(return_value=external_result)
+        run_service = MagicMock()
+        run_service.is_cancelled.return_value = lifecycle_result
+        service = _make_minimal_service()
+        service._options = BacktestServiceOptions(
+            run_service=run_service,
+            external_should_stop=external_should_stop,
+        )
+
+        engine_options = service._build_engine_options(
+            "run-stop-control",
+            ExecutionAuditCollector(),
+        )
+
+        assert engine_options.should_stop is not None
+        assert engine_options.should_stop() is expected
+        external_should_stop.assert_called_once_with()
+        if external_result:
+            run_service.is_cancelled.assert_not_called()
+        else:
+            run_service.is_cancelled.assert_called_once_with("run-stop-control")
+
 
 # ---------------------------------------------------------------------------
 # Tests: BacktestService.run()
@@ -216,6 +427,58 @@ class TestBacktestServiceOptions:
 
 class TestBacktestServiceRun:
     """测试 BacktestService 核心运行流程。"""
+
+    def test_knowledge_lag_and_execution_delay_keep_distinct_semantics(
+        self,
+    ) -> None:
+        """Calendar-day knowledge lag must not become session execution delay."""
+        config = _make_service_config(
+            knowledge_lag_days=3,
+            execution_delay=5,
+        )
+        service = _make_minimal_service(config=config)
+        fake_report = MagicMock(spec=BacktestReport)
+
+        with (
+            patch(
+                "ditto_application.processes.execution.backtest_process."
+                "BacktestSynchronizer",
+            ) as synchronizer_type,
+            patch(
+                "ditto_application.processes.execution.backtest_process.EngineLoop",
+            ) as engine_loop_type,
+            patch(
+                "ditto_application.processes.execution.backtest_process.build_report",
+                return_value=fake_report,
+            ),
+        ):
+            engine_loop_type.return_value.run.return_value = _make_engine_result()
+
+            service.run()
+
+        synchronizer_kwargs = synchronizer_type.call_args.kwargs
+        engine_config = engine_loop_type.call_args.kwargs["config"]
+        assert synchronizer_kwargs["knowledge_lag_days"] == 3
+        assert engine_config.knowledge_lag_days == 3
+        assert engine_config.execution_delay == 5
+
+    @patch.object(
+        EngineLoop,
+        "run",
+        return_value=replace(_make_engine_result(), cancelled=True),
+    )
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_run_exposes_cooperative_stop_to_research_runner(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        mock_build_report.return_value = MagicMock(spec=BacktestReport)
+        service = _make_minimal_service()
+
+        service.run()
+
+        assert service.last_run_cancelled is True
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_application.processes.execution.backtest_process.build_report")
@@ -404,6 +667,12 @@ class TestArtifactPersistence:
                 strategy_version="2026.03",
                 mode=RunMode.BACKTEST,
                 created_at="2026-03-24T10:00:00Z",
+                spec_hash="e" * 64,
+                base_spec_hash="e" * 64,
+                parameter_hash=_EMPTY_PARAMETER_HASH,
+                effective_parameters=(),
+                research_snapshot_id=None,
+                research_snapshot_manifest_hash=None,
             ),
         ),
     )
@@ -472,10 +741,34 @@ class TestArtifactPersistence:
                         source_snapshot_id="catalog-snap-20260621",
                     ),
                 ),
-                parameter_overrides=("top_k=20", "max_weight=0.08"),
+                effective_parameters=(
+                    EffectiveParameter(
+                        path="/pipeline/nodes/legacy_factor_set/config/params/max_weight",
+                        value=0.08,
+                    ),
+                    EffectiveParameter(
+                        path="/pipeline/nodes/legacy_factor_set/config/params/top_k",
+                        value=20,
+                    ),
+                ),
                 config_hash="config-sha",
                 engine_version="0.2.0",
-                spec_hash="spec-sha",
+                spec_hash="d" * 64,
+                base_spec_hash="c" * 64,
+                parameter_hash=canonical_parameter_hash(
+                    (
+                        EffectiveParameter(
+                            path="/pipeline/nodes/legacy_factor_set/config/params/max_weight",
+                            value=0.08,
+                        ),
+                        EffectiveParameter(
+                            path="/pipeline/nodes/legacy_factor_set/config/params/top_k",
+                            value=20,
+                        ),
+                    ),
+                ),
+                research_snapshot_id="snapshot-stock-daily-20260621",
+                research_snapshot_manifest_hash="f" * 64,
             ),
         ),
     )
@@ -542,7 +835,15 @@ class TestArtifactPersistence:
                 "date_range": ["2026-01-01", "2026-06-21"],
             }
         ]
-        assert promotion["parameter_hash"].startswith("sha256:")
+        assert promotion["base_spec_hash"] == "c" * 64
+        assert promotion["spec_hash"] == "d" * 64
+        assert promotion["parameter_hash"] == canonical_parameter_hash(
+            tuple(
+                EffectiveParameter(**item) for item in promotion["effective_parameters"]
+            ),
+        )
+        assert promotion["research_snapshot_id"] == "snapshot-stock-daily-20260621"
+        assert promotion["research_snapshot_manifest_hash"] == "f" * 64
         assert promotion["benchmark"] == 3_000_001
         assert promotion["cost_model"]["total_fees"] == 128.0
         assert promotion["cost_model"]["cost_drag"] == 0.02
@@ -864,8 +1165,13 @@ class TestArtifactPersistence:
             strategy_version="2026.03",
             mode=RunMode.BACKTEST,
             created_at="2026-03-24T10:00:00Z",
+            spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash=_EMPTY_PARAMETER_HASH,
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             input_refs=("ETF-001",),
-            parameter_overrides=("top_k=3",),
             config_hash="cfg-123",
             engine_version="0.2.0",
         )
@@ -905,6 +1211,12 @@ class TestArtifactPersistence:
             strategy_version="2026.03",
             mode=RunMode.BACKTEST,
             created_at="2026-03-24T10:00:00+00:00",
+            spec_hash="e" * 64,
+            base_spec_hash="e" * 64,
+            parameter_hash=_EMPTY_PARAMETER_HASH,
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             input_ref_details=(
                 InputRef(
                     instrument_id=InstrumentId(510050),
@@ -962,6 +1274,7 @@ class TestArtifactPersistence:
                     "start_date=2026-01-01",
                     "end_date=2026-03-01",
                     "data_hash=sha256:abc123",
+                    "source_snapshot_id=",
                 ),
             ),
         )
@@ -1097,17 +1410,6 @@ class TestWithoutPersistence:
 
 class TestBuildFactorAwareBundleBuilder:
     """测试 _build_factor_aware_bundle_builder — 因子信号注入构建器."""
-
-    def _make_compiled_expressions(
-        self,
-        expressions: list[object] | None = None,
-        weights: tuple[float, ...] = (1.0,),
-    ) -> MagicMock:
-        """构建 CompiledExpressions mock (含 expressions 列表或空)."""
-        compiled = MagicMock()
-        compiled.expressions = expressions or []
-        compiled.weights = weights
-        return compiled
 
     def _make_step_context(
         self,
@@ -1280,7 +1582,11 @@ class TestBuildFactorAwareBundleBuilder:
 
     def test_compiled_empty_expressions_skips_builder(self) -> None:
         """空 expressions 元组时 builder 可构建但信号为空."""
-        compiled = self._make_compiled_expressions(expressions=[], weights=())
+        from ditto_application.processes.execution.factor_bridge import (
+            CompiledExpressions,
+        )
+
+        compiled = CompiledExpressions(expressions=(), weights=())
 
         config = _make_service_config(strategy_id="empty-strat", run_id="run-empty")
         service = _make_minimal_service(config=config)
@@ -1360,11 +1666,7 @@ class TestBuildFactorAwareBundleBuilder:
             CompiledExpressions,
         )
 
-        compiled = self._make_compiled_expressions(
-            expressions=[],
-            weights=(),
-        )
-        compiled.__class__ = CompiledExpressions  # type: ignore[assignment]
+        compiled = CompiledExpressions(expressions=(), weights=())
 
         config = _make_service_config(strategy_id="test-strat", run_id="run-test")
         service = _make_minimal_service(config=config)
@@ -1606,6 +1908,45 @@ class TestRunServiceLifecycle:
         call_kwargs = mock_run_svc.create_run.call_args[1]
         config_data = orjson.loads(call_kwargs["config_json"])
         assert config_data["allow_experimental_data"] is True
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_run_config_records_deterministic_execution_controls(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """Lifecycle evidence must freeze seed and both timing controls."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+        mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None
+        service = BacktestService(
+            config=_make_service_config(
+                run_id="deterministic-controls",
+                random_seed=1729,
+                knowledge_lag_days=3,
+                execution_delay=5,
+            ),
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(run_service=mock_run_svc),
+        )
+
+        service.run()
+
+        import orjson
+
+        config_json = mock_run_svc.create_run.call_args.kwargs["config_json"]
+        config_data = orjson.loads(config_json)
+        assert config_data["random_seed"] == 1729
+        assert config_data["knowledge_lag_days"] == 3
+        assert config_data["execution_delay"] == 5
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_application.processes.execution.backtest_process.build_report")
@@ -1876,6 +2217,73 @@ class TestBacktestCheckpointPersistence:
                 runtime_state_hash=checkpoint.runtime_state_hash,
             )
         )
+
+    def test_checkpoint_interval_is_forwarded_before_engine_construction(self) -> None:
+        """Application recovery cadence must reach the engine unchanged."""
+        service = BacktestService(
+            config=_make_service_config(),
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(checkpoint_interval_days=20),
+        )
+
+        options = service._build_engine_options(
+            "run-checkpoint-interval",
+            ExecutionAuditCollector(),
+        )
+
+        assert options.checkpoint_interval_days == 20
+
+    def test_resumed_child_checkpoint_accumulates_parent_progress(self) -> None:
+        """Restored child checkpoints keep run-global progress and total days."""
+        checkpoint_writer = MagicMock()
+        config = _make_service_config(
+            strategy_id="momentum-etf",
+            strategy_version="4",
+            run_id="run-resumed-child",
+            resume_from_run_id="run-parent",
+            resume_checkpoint_completed_days=21,
+            resume_checkpoint_total_days=60,
+            resume_checkpoint_order_count=11,
+            resume_checkpoint_fill_count=9,
+        )
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(checkpoint_writer=checkpoint_writer),
+        )
+        options = service._build_engine_options(
+            "run-resumed-child",
+            ExecutionAuditCollector(),
+        )
+        assert options.on_checkpoint is not None
+
+        options.on_checkpoint(
+            BacktestCheckpoint(
+                run_id="run-resumed-child",
+                strategy_id="momentum-etf",
+                completed_trade_date="2026-02-05",
+                resume_from="2026-02-06",
+                completed_days=4,
+                total_days=39,
+                nav=1_030_000.0,
+                order_count=2,
+                fill_count=2,
+            )
+        )
+
+        persisted = checkpoint_writer.save_checkpoint.call_args.args[0]
+        assert persisted.completed_days == 25
+        assert persisted.total_days == 60
+        assert persisted.order_count == 13
+        assert persisted.fill_count == 11
 
     def test_checkpoint_callback_absent_without_writer(self) -> None:
         """未提供 checkpoint writer 时不注册持久化回调。"""

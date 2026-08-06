@@ -14,6 +14,7 @@ from ditto_data.lineage.contracts import (
 )
 from ditto_platform.foundation import logger
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process_types import (
     BacktestLineageConfig,
 )
@@ -23,14 +24,14 @@ __all__ = ["record_backtest_lineage"]
 
 def _parse_manifest_timestamp(value: str) -> datetime:
     if not value:
-        return datetime.now(UTC)
+        raise AppProcessError("manifest created_at is required for lineage")
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return datetime.now(UTC)
+    except ValueError as exc:
+        raise AppProcessError("manifest created_at is invalid") from exc
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
-    return parsed
+    return parsed.astimezone(UTC)
 
 
 def _strategy_asset(
@@ -57,6 +58,7 @@ def _market_input_asset(ref: InputRef) -> DataAssetRef:
             f"start_date={start_date}",
             f"end_date={end_date}",
             f"data_hash={ref.data_hash}",
+            f"source_snapshot_id={ref.source_snapshot_id}",
         ),
     )
 

@@ -48,12 +48,13 @@ class StrategyCatalogReader(Protocol):
         """列出策略的所有版本."""
         ...
 
-    def get_latest_published(self, strategy_id: str) -> StrategySpecRecord | None:
-        """获取最高 published 版本，忽略更新的草稿."""
-        ...
+    def get_active_published(self, strategy_id: str) -> StrategySpecRecord | None:
+        """
+        获取 governance active pointer 指向的 published payload.
 
-    def list_latest_published(self) -> list[StrategySpecRecord]:
-        """列出每个策略的最高 published 版本."""
+        无 active pointer 时返回 None（调用方走 fail-closed）。
+        这是生产读取的唯一入口（R1/EOD/backtest）。
+        """
         ...
 
 
@@ -62,11 +63,7 @@ class StrategyCatalogWriter(Protocol):
     """Stable strategy catalog write contract for application composition."""
 
     def save(self, record: StrategySpecRecord) -> None:
-        """保存策略 Spec 记录."""
-        ...
-
-    def update_status(self, strategy_id: str, version: int, status: str) -> bool:
-        """更新策略 Spec 状态，成功返回 True."""
+        """保存策略 Spec 记录（append-only immutable payload）."""
         ...
 
 

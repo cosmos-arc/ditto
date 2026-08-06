@@ -1,0 +1,447 @@
+"""Tests for strategy governance command handlers — state-machine boundary.
+
+The handlers are thin seams over :class:`GovernanceService`: they mint a stable
+event id / decided_at timestamp, forward the typed decision, map the three
+governance failure modes (unknown version, CAS conflict, illegal transition)
+into a single typed :class:`AppCommandError` so the API layer can map status
+codes from the message, and return an application-owned read model so capability
+types never leak past the boundary.
+"""
+
+from __future__ import annotations
+
+import importlib
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
+from ditto_application.commands import strategy as strategy_commands
+from ditto_application.commands import strategy_governance as governance_commands
+from ditto_application.commands.strategy_governance import (
+    ApproveReviewCommand,
+    ApproveReviewHandler,
+    DeprecateStrategyCommand,
+    DeprecateStrategyHandler,
+    ReactivateStrategyCommand,
+    ReactivateStrategyHandler,
+    RejectReviewCommand,
+    RejectReviewHandler,
+    ReviewPacketReader,
+    SubmitReviewCommand,
+    SubmitReviewHandler,
+    reactivate_confirmation_phrase,
+)
+from ditto_application.contracts import (
+    StrategyActivePointerInfo,
+    StrategyVersionStateInfo,
+)
+from ditto_application.exceptions import AppCommandError
+from ditto_strategy.governance.models import (
+    ReviewOutcome,
+    StrategyActivePointer,
+    StrategyDecision,
+    StrategyVersionState,
+    StrategyVersionStateRecord,
+)
+from ditto_strategy.governance.protocols import (
+    StrategyGovernanceEventIntegrityError,
+)
+from ditto_strategy.governance.service import (
+    GovernanceService,
+    StrategyGovernanceError,
+)
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    StrategyGovernanceCasConflict,
+)
+
+
+def _state_record() -> StrategyVersionStateRecord:
+    return StrategyVersionStateRecord(
+        strategy_id="s1",
+        version=1,
+        state=StrategyVersionState.REVIEW,
+        review_outcome=ReviewOutcome.PENDING,
+        state_revision=1,
+    )
+
+
+def _state_info() -> StrategyVersionStateInfo:
+    """Application projection of ``_state_record`` (what the handler returns)."""
+    return StrategyVersionStateInfo(
+        strategy_id="s1",
+        version=1,
+        state="review",
+        review_outcome="pending",
+    )
+
+
+def _pointer() -> StrategyActivePointer:
+    return StrategyActivePointer(
+        strategy_id="s1",
+        active_version=1,
+        pointer_revision=1,
+        activation_event_id="e1",
+    )
+
+
+def _pointer_info() -> StrategyActivePointerInfo:
+    """Application projection of ``_pointer`` (what the handler returns)."""
+    return StrategyActivePointerInfo(
+        strategy_id="s1",
+        active_version=1,
+        pointer_revision=1,
+    )
+
+
+_ErrorFactory = Callable[[], Exception]
+
+
+def _timestamp(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def test_governance_clock_is_shared_and_strictly_monotonic_on_clock_rollback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    values = iter(
+        (
+            datetime(2026, 7, 31, 12, 0, 2, tzinfo=UTC),
+            datetime(2026, 7, 31, 12, 0, 1, tzinfo=UTC),
+        )
+    )
+
+    class ReversingDatetime:
+        @classmethod
+        def now(cls, tz: object) -> datetime:
+            del cls, tz
+            return next(values)
+
+    modules = {
+        importlib.import_module(strategy_commands._utc_now_iso.__module__),
+        importlib.import_module(governance_commands._utc_now_iso.__module__),
+    }
+    for module in modules:
+        monkeypatch.setattr(module, "datetime", ReversingDatetime)
+
+    first = strategy_commands._utc_now_iso()
+    second = governance_commands._utc_now_iso()
+
+    assert strategy_commands._utc_now_iso is governance_commands._utc_now_iso
+    assert _timestamp(second) > _timestamp(first)
+    assert len(first.rsplit(".", maxsplit=1)[-1].removesuffix("Z")) == 6
+    assert len(second.rsplit(".", maxsplit=1)[-1].removesuffix("Z")) == 6
+
+
+def test_governance_clock_is_unique_under_concurrent_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frozen = datetime(2026, 7, 31, 12, 0, 0, tzinfo=UTC)
+
+    class FrozenDatetime:
+        @classmethod
+        def now(cls, tz: object) -> datetime:
+            del cls, tz
+            return frozen
+
+    modules = {
+        importlib.import_module(strategy_commands._utc_now_iso.__module__),
+        importlib.import_module(governance_commands._utc_now_iso.__module__),
+    }
+    for module in modules:
+        monkeypatch.setattr(module, "datetime", FrozenDatetime)
+    clocks = (strategy_commands._utc_now_iso, governance_commands._utc_now_iso) * 32
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        timestamps = tuple(executor.map(lambda clock: clock(), clocks))
+
+    assert len(set(timestamps)) == len(timestamps)
+    assert all("." in value and value.endswith("Z") for value in timestamps)
+
+
+def _submit_handler(
+    governance: GovernanceService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> SubmitReviewHandler:
+    """Isolate thin governance forwarding from shared verifier integration."""
+    monkeypatch.setattr(
+        governance_commands,
+        "load_verified_promotion_target",
+        lambda **_kwargs: SimpleNamespace(
+            packet=SimpleNamespace(gate_evaluations=()),
+        ),
+    )
+    monkeypatch.setattr(
+        governance_commands,
+        "hard_gate_contract_blocks_promotion",
+        lambda _evaluations: False,
+    )
+    return SubmitReviewHandler(
+        governance,
+        MagicMock(spec=ReviewPacketReader),
+    )
+
+
+@pytest.mark.parametrize(
+    ("exc_factory", "code"),
+    [
+        (
+            lambda: StrategyGovernanceError("governance version not found"),
+            "STRATEGY_VERSION_NOT_FOUND",
+        ),
+        (
+            lambda: StrategyGovernanceCasConflict("pointer CAS missed revision"),
+            "STRATEGY_REVISION_CONFLICT",
+        ),
+        (
+            lambda: ValueError("requires published/approved"),
+            "STRATEGY_INVALID_TRANSITION",
+        ),
+        (
+            lambda: StrategyGovernanceEventIntegrityError("corrupt stream"),
+            "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR",
+        ),
+    ],
+    ids=["not_found", "cas_conflict", "invalid_transition", "event_integrity"],
+)
+def test_submit_review_maps_governance_errors(
+    exc_factory: _ErrorFactory,
+    code: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """All three governance failure modes become a typed AppCommandError."""
+    governance = MagicMock(spec=GovernanceService)
+    governance.submit_review.side_effect = exc_factory()
+    handler = _submit_handler(governance, monkeypatch)
+
+    with pytest.raises(AppCommandError) as info:
+        handler.handle(
+            SubmitReviewCommand(
+                strategy_id="s1",
+                version=1,
+                bundle_hash="a" * 64,
+                actor="alice",
+                reason="ok",
+            )
+        )
+
+    assert info.value.details["code"] == code
+
+
+class TestSubmitReviewHandler:
+    """submit_review forwards actor/reason with a stable event id."""
+
+    def test_success_returns_application_state_info(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        governance.submit_review.return_value = _state_record()
+        handler = _submit_handler(governance, monkeypatch)
+
+        result = handler.handle(
+            SubmitReviewCommand(
+                strategy_id="s1",
+                version=1,
+                bundle_hash="a" * 64,
+                actor="alice",
+                reason="ok",
+            )
+        )
+
+        assert result == _state_info()
+        call = governance.submit_review.call_args
+        assert call.args == ("s1", 1)
+        assert call.kwargs["actor"] == "alice"
+        assert call.kwargs["reason"] == "ok"
+        assert call.kwargs["event_id"].startswith("s1:1:submit_review:")
+        assert call.kwargs["decided_at"]
+
+
+class TestApproveReviewHandler:
+    """approve forwards to GovernanceService.approve."""
+
+    def test_success_returns_application_state_info(self) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        governance.approve.return_value = _state_record()
+        handler = ApproveReviewHandler(governance)
+
+        result = handler.handle(
+            ApproveReviewCommand(
+                strategy_id="s1", version=1, actor="bob", reason="lgtg"
+            )
+        )
+
+        assert result == _state_info()
+        call = governance.approve.call_args
+        assert call.args == ("s1", 1)
+        assert call.kwargs["actor"] == "bob"
+        assert call.kwargs["event_id"].startswith("s1:1:approve:")
+
+
+class TestRejectReviewHandler:
+    """reject forwards to GovernanceService.reject."""
+
+    def test_success_returns_application_state_info(self) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        governance.reject.return_value = _state_record()
+        handler = RejectReviewHandler(governance)
+
+        result = handler.handle(
+            RejectReviewCommand(strategy_id="s1", version=1, actor="bob", reason="no")
+        )
+
+        assert result == _state_info()
+        call = governance.reject.call_args
+        assert call.args == ("s1", 1)
+        assert call.kwargs["actor"] == "bob"
+        assert call.kwargs["event_id"].startswith("s1:1:reject:")
+
+
+class TestDeprecateStrategyHandler:
+    """deprecate forwards to GovernanceService.deprecate."""
+
+    def test_success_returns_application_state_info(self) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        governance.deprecate.return_value = _state_record()
+        handler = DeprecateStrategyHandler(governance)
+
+        result = handler.handle(
+            DeprecateStrategyCommand(
+                strategy_id="s1", version=1, actor="bob", reason="retire"
+            )
+        )
+
+        assert result == _state_info()
+        call = governance.deprecate.call_args
+        assert call.args == ("s1", 1)
+        assert call.kwargs["actor"] == "bob"
+        assert call.kwargs["event_id"].startswith("s1:1:deprecate:")
+
+
+class TestReactivateStrategyHandler:
+    """reactivate forwards expected_pointer_revision for optimistic-pointer CAS."""
+
+    def test_confirmation_phrase_binds_target_and_pointer_revision(self) -> None:
+        assert (
+            reactivate_confirmation_phrase("s1", 2, 3)
+            == "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+        )
+
+    def test_success_returns_application_pointer_info(self) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        governance.activate.return_value = _pointer()
+        handler = ReactivateStrategyHandler(governance)
+
+        result = handler.handle(
+            ReactivateStrategyCommand(
+                strategy_id="s1",
+                version=2,
+                actor="carol",
+                reason="  rollback  ",
+                confirmation="strategy:reactivate:s1@2:pointer-revision:3:confirm",
+                impact_summary="  restore the prior production behavior  ",
+                expected_pointer_revision=3,
+            )
+        )
+
+        assert result == _pointer_info()
+        call = governance.activate.call_args
+        assert call.args[0] == "s1"
+        assert call.args[1] == 2
+        assert call.kwargs["expected_pointer_revision"] == 3
+        event = call.args[2]
+        assert event.event_id.startswith("s1:2:reactivate:")
+        assert event.actor == "carol"
+        assert event.activation_kind is StrategyDecision.REACTIVATE
+        assert event.reason == (
+            '{"impact_summary":"restore the prior production behavior",'
+            '"reason":"rollback"}'
+        )
+
+    @pytest.mark.parametrize(
+        ("reason", "impact_summary", "failure_reason"),
+        [
+            ("  ", "restore prior behavior", "reason_blank"),
+            ("rollback", "\t", "impact_summary_blank"),
+        ],
+    )
+    def test_blank_reason_or_impact_fails_before_governance_write(
+        self,
+        reason: str,
+        impact_summary: str,
+        failure_reason: str,
+    ) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        handler = ReactivateStrategyHandler(governance)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(
+                ReactivateStrategyCommand(
+                    strategy_id="s1",
+                    version=2,
+                    actor="carol",
+                    reason=reason,
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+                    ),
+                    impact_summary=impact_summary,
+                    expected_pointer_revision=3,
+                )
+            )
+
+        assert info.value.details["code"] == "STRATEGY_REACTIVATION_INPUT_INVALID"
+        assert info.value.details["reason"] == failure_reason
+        governance.activate.assert_not_called()
+
+    def test_confirmation_mismatch_fails_before_governance_write(self) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        handler = ReactivateStrategyHandler(governance)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(
+                ReactivateStrategyCommand(
+                    strategy_id="s1",
+                    version=2,
+                    actor="carol",
+                    reason="rollback",
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm "
+                    ),
+                    impact_summary="restore the prior production behavior",
+                    expected_pointer_revision=3,
+                )
+            )
+
+        assert (
+            info.value.details["code"] == "STRATEGY_REACTIVATION_CONFIRMATION_MISMATCH"
+        )
+        assert info.value.details["reason"] == "confirmation_mismatch"
+        assert info.value.details["expected_confirmation"] == (
+            "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+        )
+        governance.activate.assert_not_called()
+
+    def test_stale_pointer_conflict_is_mapped(self) -> None:
+        governance = MagicMock(spec=GovernanceService)
+        governance.activate.side_effect = StrategyGovernanceCasConflict("stale")
+        handler = ReactivateStrategyHandler(governance)
+
+        with pytest.raises(AppCommandError) as info:
+            handler.handle(
+                ReactivateStrategyCommand(
+                    strategy_id="s1",
+                    version=2,
+                    actor="carol",
+                    reason="rollback",
+                    confirmation=(
+                        "strategy:reactivate:s1@2:pointer-revision:3:confirm"
+                    ),
+                    impact_summary="restore the prior production behavior",
+                    expected_pointer_revision=3,
+                )
+            )
+
+        assert "conflict" in str(info.value).lower()

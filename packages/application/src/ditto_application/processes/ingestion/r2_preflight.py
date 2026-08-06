@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
@@ -13,12 +14,15 @@ from ditto_data.catalog.product_contract import DatasetProductContract
 from ditto_application.exceptions import AppProcessError
 
 __all__ = [
+    "R2_ACCEPTANCE_CERTIFICATION_PROFILE",
     "ChunkBenchmark",
     "PerformanceGateReport",
+    "ProductCertificationEvidence",
     "ProductPreflightReport",
     "ProviderAccessEvidence",
     "R2AcceptanceRuntimeEvidence",
     "R2IngestionPreflight",
+    "R2PreflightEvidence",
     "R2PreflightReport",
 ]
 
@@ -35,6 +39,8 @@ _REPRESENTATIVE_DATASETS = frozenset(
 _BOOTSTRAP_LIMIT_SECONDS = 24 * 60 * 60
 _INCREMENTAL_LIMIT_SECONDS = 30 * 60
 _WORKBENCH_QUERY_LIMIT_SECONDS = 5.0
+_SHA256_HEX_LENGTH = 64
+R2_ACCEPTANCE_CERTIFICATION_PROFILE = "r2-modern-a-share-v1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +49,34 @@ class R2AcceptanceRuntimeEvidence:
 
     credential_sources: frozenset[str]
     license_records: tuple[DatasetLicenseRecord, ...]
+    certifications: tuple[ProductCertificationEvidence, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProductCertificationEvidence:
+    """Projection of one independently approved active certification report."""
+
+    dataset_id: str
+    profile: str
+    report_id: str
+    content_hash: str
+    certified_from: date
+    certified_through: date
+
+    def __post_init__(self) -> None:
+        """Reject ambiguous certification projections before gate evaluation."""
+        for field_name in ("dataset_id", "profile", "report_id"):
+            value = getattr(self, field_name)
+            if not value or value.strip() != value:
+                raise AppProcessError(
+                    f"invalid product certification {field_name}: {value!r}"
+                )
+        if len(self.content_hash) != _SHA256_HEX_LENGTH or any(
+            character not in "0123456789abcdef" for character in self.content_hash
+        ):
+            raise AppProcessError("product certification content_hash must be SHA-256")
+        if self.certified_through < self.certified_from:
+            raise AppProcessError("certification interval is reversed")
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +135,20 @@ class ChunkBenchmark:
 
 
 @dataclass(frozen=True, slots=True)
+class R2PreflightEvidence:
+    """Complete provider, legal, certification, and performance gate input."""
+
+    provider_access: tuple[ProviderAccessEvidence, ...]
+    license_records: tuple[DatasetLicenseRecord, ...]
+    certifications: tuple[ProductCertificationEvidence, ...]
+    benchmarks: tuple[ChunkBenchmark, ...]
+    incremental_elapsed_seconds: float | None
+    workbench_query_seconds: float | None
+    as_of: date
+    checked_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class ProductPreflightReport:
     """Access and reviewed-license result for one independent data product."""
 
@@ -108,6 +156,11 @@ class ProductPreflightReport:
     provider_datasets: tuple[str, ...]
     usable_provider_datasets: tuple[str, ...]
     license_record_ids: tuple[str, ...]
+    certification_profile: str
+    certification_report_id: str | None
+    certification_content_hash: str | None
+    certified_from: date | None
+    certified_through: date | None
     ready: bool
     reason_codes: tuple[str, ...]
 
@@ -165,6 +218,9 @@ class R2IngestionPreflight:
             )
             for contract in contracts
         )
+        certifications = tuple(
+            _fixture_certification(contract, checked_at) for contract in contracts
+        )
         benchmarks = tuple(
             ChunkBenchmark(
                 dataset_id=dataset_id,
@@ -178,36 +234,39 @@ class R2IngestionPreflight:
             for dataset_id in _REPRESENTATIVE_DATASETS
         )
         return self.run(
-            provider_access=access,
-            license_records=licenses,
-            benchmarks=benchmarks,
-            incremental_elapsed_seconds=120.0,
-            workbench_query_seconds=0.4,
-            as_of=checked_at.date(),
-            checked_at=checked_at,
+            R2PreflightEvidence(
+                provider_access=access,
+                license_records=licenses,
+                certifications=certifications,
+                benchmarks=benchmarks,
+                incremental_elapsed_seconds=120.0,
+                workbench_query_seconds=0.4,
+                as_of=checked_at.date(),
+                checked_at=checked_at,
+            )
         )
 
-    def run(
-        self,
-        *,
-        provider_access: tuple[ProviderAccessEvidence, ...],
-        license_records: tuple[DatasetLicenseRecord, ...],
-        benchmarks: tuple[ChunkBenchmark, ...],
-        incremental_elapsed_seconds: float | None,
-        workbench_query_seconds: float | None,
-        as_of: date,
-        checked_at: datetime,
-    ) -> R2PreflightReport:
+    def run(self, evidence: R2PreflightEvidence) -> R2PreflightReport:
         """Return ready only after every declared release gate is proven."""
+        provider_access = evidence.provider_access
+        license_records = evidence.license_records
+        certifications = evidence.certifications
+        benchmarks = evidence.benchmarks
+        incremental_elapsed_seconds = evidence.incremental_elapsed_seconds
+        workbench_query_seconds = evidence.workbench_query_seconds
+        as_of = evidence.as_of
+        checked_at = evidence.checked_at
         if checked_at.tzinfo is None:
             raise AppProcessError("preflight checked_at must be timezone-aware")
         contracts = _hard_contracts()
         access_by_dataset = _access_by_provider_dataset(provider_access)
+        certification_by_dataset = _certification_by_dataset(certifications)
         products = tuple(
             _evaluate_product(
                 contract,
                 access_by_dataset=access_by_dataset,
                 license_records=license_records,
+                certification=certification_by_dataset.get(contract.dataset_id),
                 as_of=as_of,
             )
             for contract in contracts
@@ -280,6 +339,21 @@ def _fixture_license(
     )
 
 
+def _fixture_certification(
+    contract: DatasetProductContract,
+    checked_at: datetime,
+) -> ProductCertificationEvidence:
+    required_from = _required_certified_from(contract) or checked_at.date()
+    return ProductCertificationEvidence(
+        dataset_id=contract.dataset_id,
+        profile=R2_ACCEPTANCE_CERTIFICATION_PROFILE,
+        report_id=f"certification:{contract.dataset_id}:fixture",
+        content_hash=hashlib.sha256(contract.dataset_id.encode()).hexdigest(),
+        certified_from=required_from,
+        certified_through=max(required_from, checked_at.date()),
+    )
+
+
 def _access_by_provider_dataset(
     values: tuple[ProviderAccessEvidence, ...],
 ) -> dict[str, ProviderAccessEvidence]:
@@ -293,11 +367,36 @@ def _access_by_provider_dataset(
     return result
 
 
+def _certification_by_dataset(
+    values: tuple[ProductCertificationEvidence, ...],
+) -> dict[str, ProductCertificationEvidence]:
+    result: dict[str, ProductCertificationEvidence] = {}
+    for value in values:
+        if value.dataset_id in result:
+            raise AppProcessError(
+                f"duplicate active product certification: {value.dataset_id}"
+            )
+        result[value.dataset_id] = value
+    return result
+
+
+def _required_certified_from(contract: DatasetProductContract) -> date | None:
+    for value in (contract.certified_target_from, contract.raw_target_from):
+        if value is None:
+            continue
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            continue
+    return None
+
+
 def _evaluate_product(
     contract: DatasetProductContract,
     *,
     access_by_dataset: dict[str, ProviderAccessEvidence],
     license_records: tuple[DatasetLicenseRecord, ...],
+    certification: ProductCertificationEvidence | None,
     as_of: date,
 ) -> ProductPreflightReport:
     observed = tuple(
@@ -327,11 +426,35 @@ def _evaluate_product(
         reasons.append("entitlement_denied")
     if usable and not licenses:
         reasons.append("license_missing")
+    required_certified_from = _required_certified_from(contract)
+    if (
+        certification is None
+        or certification.profile != R2_ACCEPTANCE_CERTIFICATION_PROFILE
+    ):
+        reasons.append("certification_missing")
+    elif (
+        required_certified_from is not None
+        and certification.certified_from > required_certified_from
+    ):
+        reasons.append("certified_history_target_unmet")
     return ProductPreflightReport(
         dataset_id=contract.dataset_id,
         provider_datasets=contract.provider_datasets,
         usable_provider_datasets=usable,
         license_record_ids=tuple(record.record_id for record in licenses),
+        certification_profile=R2_ACCEPTANCE_CERTIFICATION_PROFILE,
+        certification_report_id=(
+            certification.report_id if certification is not None else None
+        ),
+        certification_content_hash=(
+            certification.content_hash if certification is not None else None
+        ),
+        certified_from=(
+            certification.certified_from if certification is not None else None
+        ),
+        certified_through=(
+            certification.certified_through if certification is not None else None
+        ),
         ready=not reasons,
         reason_codes=tuple(reasons),
     )

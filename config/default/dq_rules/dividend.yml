@@ -5,12 +5,12 @@ description: "分红数据质量检查规则"
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [instrument_id, ex_dividend_date]
-    message: "必填字段不能为空"
+    columns: [source_ticker, knowledge_date]
+    message: "源代码和公告日不能为空；预案阶段除权日允许为空"
 
   - rule: unique
-    columns: [instrument_id, ex_dividend_date, effective_from]
-    message: "主键 (instrument_id, ex_dividend_date, effective_from) 重复"
+    columns: [source_ticker, knowledge_date, ex_dividend_date, dividend_per_share, div_proc]
+    message: "分红公告业务行 (source_ticker, knowledge_date, ex_dividend_date, dividend_per_share, div_proc) 重复"
 
   - rule: foreign_key
     column: instrument_id

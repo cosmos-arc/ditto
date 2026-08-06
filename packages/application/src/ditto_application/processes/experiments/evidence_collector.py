@@ -1,0 +1,614 @@
+"""
+Collect and publish governed R3 review packets from persisted evidence.
+
+The collector is the R3 evidence-stage seam: it loads one durable experiment
+snapshot, reads the persisted ``preflight_passed`` event, assembles the typed
+hard-gate view, evaluates the eleven hard-correctness gates, freezes the result
+into an immutable :class:`ReviewPacket`, and publishes it through the durable
+writer protocol.
+
+The selected candidate's metrics and comparison hash come from exact persisted
+walk-forward attempts and verified report artifacts. Missing reports remain an
+honest packet outcome; malformed reports fail closed before publication.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Protocol, cast
+
+from ditto_analysis.errors import ExperimentIntegrityError
+from ditto_analysis.experiments import (
+    R3_COMPARISON_METRIC_IDS,
+    CandidateExecutionBinding,
+    CandidateId,
+    CandidateSpec,
+    ContentHash,
+    ExperimentId,
+    ExperimentLaunchSpec,
+    ExperimentReaderProtocol,
+    ExperimentStatus,
+    ExperimentWriterProtocol,
+    FoldRole,
+    FoldView,
+    GateFact,
+    HardGateEvidence,
+    HardGateEvidenceView,
+    LeaseFence,
+    ResearchMetricId,
+    ResearchMetricValue,
+    ReviewExposureWeight,
+    ReviewPacket,
+    ReviewSelectionExposure,
+    SelectionTraceArtifactRef,
+    collect_hard_gate_evidence,
+    encode_launch_spec,
+)
+from ditto_analysis.experiments.trial_ledger import (
+    promotion_objective_content_hash,
+)
+
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._evidence_inputs import (
+    SnapshotManifestProjection,
+    project_snapshot_manifest,
+    read_unique_preflight_detail,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifact_validation import (  # noqa: E501
+    FoldSelectionTraceArtifactValidationError,
+    validate_fold_selection_trace_artifacts,
+)
+from ditto_application.processes.experiments._fold_selection_trace_artifacts import (
+    FOLD_SELECTION_TRACE_ARTIFACT_KINDS,
+    FoldSelectionTraceArtifactKind,
+)
+from ditto_application.processes.experiments._holdout_contract import (
+    PersistedHoldoutClaim,
+)
+from ditto_application.processes.experiments._process_error import (
+    experiment_process_error,
+)
+from ditto_application.processes.experiments._selection_evidence_artifact import (
+    PublishedSelectionEvidence,
+)
+from ditto_application.processes.experiments._walk_forward_evidence_collection import (
+    CollectedWalkForwardEvidence,
+    WalkForwardEvidenceAssembler,
+)
+from ditto_application.processes.experiments.comparison import (
+    CandidateFoldEvidence,
+    FoldOutcome,
+)
+from ditto_application.processes.experiments.evidence import (
+    ReviewPacketInput,
+    assemble_review_packet,
+)
+from ditto_application.processes.experiments.planning_process import (
+    reconstruct_preflight_report,
+)
+from ditto_application.processes.experiments.r2_live_gate_evidence import (
+    R2LiveGateEvidenceReader,
+    VerifiedR2LiveGateEvidence,
+)
+from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentSchedulerSnapshot,
+    ExperimentSchedulerStoreProtocol,
+)
+from ditto_application.processes.experiments.walk_forward import WalkForwardCandidate
+
+__all__ = ["ExperimentEvidenceCollector", "project_r2_live_gate_fact"]
+
+
+_REQUIRED_SELECTED_WALK_FORWARD_FOLDS = 2
+
+
+def project_r2_live_gate_fact(reader: R2LiveGateEvidenceReader) -> GateFact:
+    """Project only reader-produced verified evidence onto the analysis gate."""
+    evidence = reader.read_verified_live_gate()
+    if evidence is None:
+        return GateFact(
+            None,
+            {
+                "status": "not_evaluated",
+                "reason_code": "r2_live_evidence_unavailable",
+            },
+        )
+    if type(evidence) is not VerifiedR2LiveGateEvidence:
+        raise AppProcessError(
+            "R2 live gate reader returned an unverified value",
+            details={
+                "code": "EXPERIMENT_INTEGRITY_FAILED",
+                "reason": "r2_live_gate_reader_contract_invalid",
+            },
+        )
+    return GateFact(evidence.status == "ready", evidence.gate_detail())
+
+
+class _SelectionEvidenceReader(Protocol):
+    """Read one claim-bound immutable trial ledger with its artifact identity."""
+
+    def read_selection_evidence(
+        self,
+        experiment_id: ExperimentId,
+        expected_content_hash: ContentHash,
+    ) -> PublishedSelectionEvidence: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ExperimentEvidenceCollector:
+    """Collect and publish R3 review packets from persisted experiment evidence."""
+
+    scheduler_store: ExperimentSchedulerStoreProtocol
+    reader: ExperimentReaderProtocol
+    writer: ExperimentWriterProtocol
+    walk_forward_assembler: WalkForwardEvidenceAssembler
+    selection_evidence_reader: _SelectionEvidenceReader
+    r2_live_gate_evidence_reader: R2LiveGateEvidenceReader
+
+    def collect(
+        self,
+        experiment_id: ExperimentId,
+        *,
+        lease_fence: LeaseFence,
+        now_epoch_us: int,
+        created_at: datetime,
+    ) -> ReviewPacket:
+        """Load evidence, evaluate hard gates, and publish one review packet."""
+        snapshot = self.scheduler_store.load_snapshot(experiment_id)
+        claim = snapshot.holdout_claim
+        if claim is None:
+            raise experiment_process_error("evidence_requires_holdout_claim")
+        selected_id = _validate_holdout_claim_lineage(snapshot, claim)
+        events = self.reader.list_status_events(experiment_id)
+        detail = read_unique_preflight_detail(events, experiment_id)
+        manifest = project_snapshot_manifest(detail)
+        selection_evidence = self.selection_evidence_reader.read_selection_evidence(
+            experiment_id,
+            ContentHash(claim.selection_evidence_hash),
+        )
+        if type(selection_evidence) is not PublishedSelectionEvidence:
+            raise experiment_process_error("selection_evidence_reader_contract_invalid")
+        collected = self.walk_forward_assembler.assemble(snapshot, manifest)
+        selected, selected_rows = _selected_walk_forward_evidence(
+            collected,
+            selected_id,
+        )
+        r2_live_gate = project_r2_live_gate_fact(self.r2_live_gate_evidence_reader)
+        hard_view = _build_hard_gate_view(
+            snapshot,
+            detail,
+            manifest,
+            collected,
+            selected_rows,
+            selection_evidence,
+            r2_live_gate,
+        )
+        hard_evidence = collect_hard_gate_evidence(hard_view)
+        packet_input = _build_packet_input(
+            snapshot,
+            manifest,
+            hard_evidence,
+            selected,
+            selected_rows,
+            selection_evidence,
+            collected,
+        )
+        packet = assemble_review_packet(packet_input)
+        self.writer.publish_review_packet(
+            packet,
+            lease_fence=lease_fence,
+            now_epoch_us=now_epoch_us,
+            created_at=created_at,
+        )
+        return packet
+
+
+def _mapping_field(
+    mapping: Mapping[str, object],
+    key: str,
+    *,
+    context: str,
+) -> Mapping[str, object]:
+    value = mapping.get(key)
+    if not isinstance(value, Mapping):
+        raise experiment_process_error(context)
+    return cast("Mapping[str, object]", value)
+
+
+def _certified_snapshot(detail: Mapping[str, object]) -> bool:
+    """Read the certification ready flag from the persisted preflight detail."""
+    preflight = _mapping_field(detail, "preflight", context="preflight_missing")
+    identities = _mapping_field(
+        preflight, "identities", context="preflight_identities_missing"
+    )
+    certification = _mapping_field(
+        identities, "certification", context="preflight_certification_missing"
+    )
+    ready = certification.get("ready")
+    if type(ready) is not bool:
+        raise experiment_process_error("preflight_certification_ready_missing")
+    return ready
+
+
+def _is_walk_forward(fold: FoldView) -> bool:
+    return fold.spec.fold_role is FoldRole.WALK_FORWARD
+
+
+def _purge_embargo_configured(walk_forward_folds: tuple[FoldView, ...]) -> bool:
+    """True only when every walk-forward fold declares purge or embargo."""
+    return bool(walk_forward_folds) and all(
+        fold.spec.purge_sessions > 0 or fold.spec.embargo_sessions > 0
+        for fold in walk_forward_folds
+    )
+
+
+def _artifact_complete(
+    walk_forward_folds: tuple[FoldView, ...],
+    missing_artifact_refs: tuple[str, ...],
+) -> bool:
+    """Require every family fold completed and every expected report present."""
+    return (
+        bool(walk_forward_folds)
+        and all(
+            fold.projection.status is ExperimentStatus.COMPLETED
+            for fold in walk_forward_folds
+        )
+        and not missing_artifact_refs
+    )
+
+
+def _build_hard_gate_view(
+    snapshot: ExperimentSchedulerSnapshot,
+    detail: Mapping[str, object],
+    manifest: SnapshotManifestProjection,
+    collected: CollectedWalkForwardEvidence,
+    selected_rows: tuple[CandidateFoldEvidence, ...],
+    selection_evidence: PublishedSelectionEvidence,
+    r2_live_gate: GateFact,
+) -> HardGateEvidenceView:
+    """Assemble the thirteen hard-gate view fields from persisted evidence."""
+    launch_spec = snapshot.launch_spec
+    preflight = reconstruct_preflight_report(detail)
+    claim = snapshot.holdout_claim
+    if claim is None:
+        raise experiment_process_error("evidence_requires_holdout_claim")
+    all_walk_forward = tuple(fold for fold in snapshot.folds if _is_walk_forward(fold))
+    return HardGateEvidenceView(
+        certified_snapshot=_certified_snapshot(detail),
+        snapshot_id=str(launch_spec.snapshot_id),
+        eligible_month_count=preflight.eligible_month_count,
+        pit_policy=manifest.pit_policy,
+        purge_embargo_configured=_purge_embargo_configured(all_walk_forward),
+        reproduction_fingerprints=tuple(
+            row.reproduction_fingerprint for row in selected_rows
+        ),
+        cost_config_hashes=collected.fold_cost_config_hashes,
+        baseline_candidate_id=str(
+            launch_spec.promotion_objective.baseline_candidate_id
+        ),
+        trial_count=selection_evidence.ledger.observed_trial_count,
+        expected_trial_count=selection_evidence.ledger.declared_trial_count,
+        holdout_claim_id=claim.claim_id,
+        artifact_complete=_artifact_complete(
+            all_walk_forward,
+            collected.missing_artifact_refs,
+        ),
+        artifact_missing=collected.missing_artifact_refs,
+        r2_live_gate=r2_live_gate,
+    )
+
+
+def _selected_candidate(
+    launch_spec: ExperimentLaunchSpec,
+    candidate_id: CandidateId,
+) -> CandidateSpec:
+    for candidate in launch_spec.candidates:
+        if candidate.candidate_id == candidate_id:
+            return candidate
+    raise experiment_process_error("evidence_selected_candidate_missing")
+
+
+def _selected_binding(
+    launch_spec: ExperimentLaunchSpec,
+    candidate_id: CandidateId,
+) -> CandidateExecutionBinding:
+    for binding in launch_spec.execution_bindings:
+        if binding.candidate_id == candidate_id:
+            return binding
+    raise experiment_process_error("evidence_selected_binding_missing")
+
+
+def _validate_holdout_claim_lineage(
+    snapshot: ExperimentSchedulerSnapshot,
+    claim: PersistedHoldoutClaim,
+) -> CandidateId:
+    """Fail closed unless the claim binds the exact launch and unique holdout."""
+    launch = snapshot.launch_spec
+    try:
+        selected_id = CandidateId(claim.candidate_id)
+    except (TypeError, ValueError):
+        raise experiment_process_error("holdout_claim_evidence_lineage_drift") from None
+    candidates = tuple(
+        candidate
+        for candidate in launch.candidates
+        if candidate.candidate_id == selected_id
+    )
+    bindings = tuple(
+        binding
+        for binding in launch.execution_bindings
+        if binding.candidate_id == selected_id
+    )
+    holdout_folds = tuple(
+        fold
+        for fold in snapshot.folds
+        if fold.spec.fold_role is FoldRole.HOLDOUT
+        and fold.spec.key.experiment_id == launch.experiment_id
+        and fold.spec.key.candidate_id == selected_id
+    )
+    if (
+        len(candidates) != 1
+        or len(bindings) != 1
+        or claim.experiment_id != str(launch.experiment_id)
+        or claim.parameters_hash != str(candidates[0].parameter_hash)
+        or claim.resolved_spec_hash != str(bindings[0].resolved_spec_hash)
+        or claim.snapshot_id != str(launch.snapshot_id)
+        or len(holdout_folds) != 1
+        or claim.fold_id != str(holdout_folds[0].spec.key.fold_id)
+        or claim.window_start != holdout_folds[0].spec.test_window.start.isoformat()
+        or claim.window_end != holdout_folds[0].spec.test_window.end.isoformat()
+    ):
+        raise experiment_process_error("holdout_claim_evidence_lineage_drift")
+    return selected_id
+
+
+def _selected_walk_forward_evidence(
+    collected: CollectedWalkForwardEvidence,
+    selected_id: CandidateId,
+) -> tuple[WalkForwardCandidate, tuple[CandidateFoldEvidence, ...]]:
+    """Bind the holdout claim to one exact two-fold completed source pair."""
+    candidates = tuple(
+        candidate
+        for candidate in collected.aggregation.candidates
+        if candidate.candidate_id == selected_id
+    )
+    rows = tuple(
+        row for row in collected.source_rows if row.candidate_id == selected_id
+    )
+    if len(candidates) != 1 or type(candidates[0]) is not WalkForwardCandidate:
+        raise experiment_process_error("selected_walk_forward_candidate_not_unique")
+    candidate = candidates[0]
+    if (
+        len(rows) != _REQUIRED_SELECTED_WALK_FORWARD_FOLDS
+        or len(candidate.folds) != _REQUIRED_SELECTED_WALK_FORWARD_FOLDS
+        or tuple(item.source for item in candidate.folds) != rows
+        or any(row.outcome is not FoldOutcome.COMPLETED for row in rows)
+        or len({row.fold_id for row in rows}) != _REQUIRED_SELECTED_WALK_FORWARD_FOLDS
+        or len({row.attempt_id for row in rows})
+        != _REQUIRED_SELECTED_WALK_FORWARD_FOLDS
+    ):
+        raise experiment_process_error("selected_walk_forward_incomplete")
+    return candidate, rows
+
+
+def _metric_values(
+    selected: WalkForwardCandidate,
+) -> dict[ResearchMetricId, ResearchMetricValue]:
+    """Project evaluated values in fixed R3 comparison-schema order."""
+    result: dict[ResearchMetricId, ResearchMetricValue] = {}
+    for metric_id in R3_COMPARISON_METRIC_IDS:
+        value = selected.metrics[metric_id].metric_value
+        if value is not None:
+            if type(value) is not ResearchMetricValue:
+                raise experiment_process_error("invalid_walk_forward_metric_value")
+            result[metric_id] = value
+    return result
+
+
+def _build_packet_input(
+    snapshot: ExperimentSchedulerSnapshot,
+    manifest: SnapshotManifestProjection,
+    hard_evidence: HardGateEvidence,
+    selected: WalkForwardCandidate,
+    selected_rows: tuple[CandidateFoldEvidence, ...],
+    selection_evidence: PublishedSelectionEvidence,
+    collected: CollectedWalkForwardEvidence,
+) -> ReviewPacketInput:
+    """Assemble the review packet from exact selected walk-forward evidence."""
+    launch_spec = snapshot.launch_spec
+    claim = snapshot.holdout_claim
+    if claim is None:
+        raise experiment_process_error("evidence_requires_holdout_claim")
+    selected_id = CandidateId(claim.candidate_id)
+    candidate = _selected_candidate(launch_spec, selected_id)
+    binding = _selected_binding(launch_spec, selected_id)
+    return ReviewPacketInput(
+        experiment_id=str(snapshot.projection.record.experiment_id),
+        candidate_id=claim.candidate_id,
+        fold_ids=tuple(str(row.fold_id) for row in selected_rows),
+        attempt_ids=tuple(str(row.attempt_id) for row in selected_rows),
+        spec_hash=encode_launch_spec(launch_spec).content_hash,
+        resolved_spec_hash=binding.resolved_spec_hash,
+        parameter_hash=candidate.parameter_hash,
+        snapshot_hash=manifest.snapshot_hash,
+        registry_hash=manifest.registry_hash,
+        objective=launch_spec.promotion_objective,
+        objective_payload_hash=promotion_objective_content_hash(
+            launch_spec.promotion_objective
+        ),
+        hard_evidence=hard_evidence,
+        metric_values=_metric_values(selected),
+        comparison_payload_hash=selected.content_hash,
+        r1_impact_payload_hash=None,
+        selection_evidence_artifact_id=selection_evidence.record.artifact_id,
+        holdout_claim_id=claim.claim_id,
+        candidate_rationale=_candidate_rationale(
+            launch_spec,
+            claim.candidate_id,
+        ),
+        selection_trace_artifact_refs=_selection_trace_artifact_refs(collected),
+        selection_exposure=_selection_exposure_summary(
+            collected,
+            selected_candidate_id=selected_id,
+        ),
+    )
+
+
+def _selection_trace_artifact_refs(
+    collected: CollectedWalkForwardEvidence,
+) -> tuple[SelectionTraceArtifactRef, ...]:
+    """Project only complete verified five-kind blocks into packet v3 refs."""
+    refs: list[SelectionTraceArtifactRef] = []
+    for bundle in collected.selection_traces:
+        try:
+            validate_fold_selection_trace_artifacts(
+                bundle.identity,
+                bundle.evidence,
+                bundle.receipt,
+            )
+            refs.extend(
+                SelectionTraceArtifactRef(
+                    artifact_kind=kind.value,
+                    artifact_id=bundle.receipt.record(kind).artifact_id,
+                    content_hash=bundle.receipt.record(kind).content_hash,
+                )
+                for kind in FOLD_SELECTION_TRACE_ARTIFACT_KINDS
+            )
+        except (FoldSelectionTraceArtifactValidationError, ValueError) as error:
+            raise ExperimentIntegrityError(
+                "collected fold selection trace references are inconsistent",
+                details={
+                    "reason_code": ("fold_selection_trace_artifact_integrity_mismatch"),
+                    "reason": "invalid_review_packet_selection_trace_block",
+                },
+            ) from error
+    return tuple(refs)
+
+
+def _selection_exposure_summary(
+    collected: CollectedWalkForwardEvidence,
+    *,
+    selected_candidate_id: CandidateId,
+) -> ReviewSelectionExposure | None:
+    """Aggregate the selected candidate's per-rebalance exposure weights."""
+    bundles = tuple(
+        bundle
+        for bundle in collected.selection_traces
+        if bundle.identity.candidate_id == selected_candidate_id
+    )
+    if not bundles:
+        return None
+    if any(not bundle.evidence.exposure_declarations for bundle in bundles):
+        raise ExperimentIntegrityError(
+            "selected candidate exposure evidence is unavailable",
+            details={
+                "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                "reason": "selected_candidate_exposure_missing",
+            },
+        )
+    declarations = tuple(
+        declaration
+        for bundle in bundles
+        for declaration in bundle.evidence.exposure_declarations
+    )
+    applicability_lanes = {
+        (declaration.applicability.value, declaration.lane.value)
+        for declaration in declarations
+    }
+    if len(applicability_lanes) != 1:
+        raise ExperimentIntegrityError(
+            "selected candidate exposure applicability drifted",
+            details={
+                "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                "reason": "selected_candidate_exposure_applicability_drift",
+            },
+        )
+    applicability, lane = next(iter(applicability_lanes))
+    artifact_refs = tuple(
+        SelectionTraceArtifactRef(
+            artifact_kind=FoldSelectionTraceArtifactKind.EXPOSURES.value,
+            artifact_id=bundle.receipt.exposures.artifact_id,
+            content_hash=bundle.receipt.exposures.content_hash,
+        )
+        for bundle in bundles
+    )
+    if applicability == "NOT_APPLICABLE":
+        if any(bundle.evidence.exposures for bundle in bundles):
+            raise ExperimentIntegrityError(
+                "ETF exposure evidence contains stock rows",
+                details={
+                    "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                    "reason": "not_applicable_exposure_has_rows",
+                },
+            )
+        return ReviewSelectionExposure(
+            applicability=applicability,
+            lane=lane,
+            industry_weights=(),
+            size_bucket_weights=(),
+            artifact_refs=artifact_refs,
+        )
+    group_keys = {
+        (str(bundle.identity.fold_id), exposure.trade_date)
+        for bundle in bundles
+        for exposure in bundle.evidence.exposures
+    }
+    if not group_keys:
+        raise ExperimentIntegrityError(
+            "stock exposure evidence is empty",
+            details={
+                "reason_code": "fold_selection_trace_artifact_integrity_mismatch",
+                "reason": "applicable_exposure_empty",
+            },
+        )
+    industry_totals: dict[str, float] = {}
+    size_totals: dict[str, float] = {}
+    for bundle in bundles:
+        for exposure in bundle.evidence.exposures:
+            industry_key = str(exposure.industry_id)
+            industry_totals[industry_key] = (
+                industry_totals.get(industry_key, 0.0) + exposure.selected_weight
+            )
+            size_key = exposure.size_bucket.value
+            size_totals[size_key] = (
+                size_totals.get(size_key, 0.0) + exposure.selected_weight
+            )
+    divisor = float(len(group_keys))
+    return ReviewSelectionExposure(
+        applicability=applicability,
+        lane=lane,
+        industry_weights=tuple(
+            ReviewExposureWeight(key, total / divisor)
+            for key, total in sorted(industry_totals.items())
+        ),
+        size_bucket_weights=tuple(
+            ReviewExposureWeight(key, total / divisor)
+            for key, total in sorted(size_totals.items())
+        ),
+        artifact_refs=artifact_refs,
+    )
+
+
+def _candidate_rationale(
+    launch_spec: ExperimentLaunchSpec,
+    selected_candidate_id: str,
+) -> str:
+    """Format the selected candidate's parameter delta vs the declared baseline."""
+    selected_id = CandidateId(selected_candidate_id)
+    selected = _selected_candidate(launch_spec, selected_id)
+    baseline_id = launch_spec.promotion_objective.baseline_candidate_id
+    baseline = _selected_candidate(launch_spec, baseline_id)
+    selected_keys = set(selected.parameters)
+    baseline_keys = set(baseline.parameters)
+    added = sorted(selected_keys - baseline_keys)
+    removed = sorted(baseline_keys - selected_keys)
+    changed = sorted(
+        key
+        for key in (selected_keys & baseline_keys)
+        if selected.parameters[key] != baseline.parameters[key]
+    )
+    return (
+        f"selected={selected_candidate_id}; baseline={baseline_id}; "
+        f"added={added}; removed={removed}; changed={changed}"
+    )

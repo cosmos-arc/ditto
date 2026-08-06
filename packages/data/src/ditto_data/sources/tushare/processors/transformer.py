@@ -81,7 +81,12 @@ class TushareDataTransformer:
         # 2. 应用类型转换
         transforms: list[pl.Expr] = []
         for col, fmt in mapping.date_columns.items():
-            transforms.append(pl.col(col).str.to_date(fmt, strict=False))
+            # Tushare materializes a present-but-all-null JSON field as Polars
+            # ``Null``.  Normalize through String so nullable provider dates
+            # still become typed Date columns instead of failing schema dispatch.
+            transforms.append(
+                pl.col(col).cast(pl.String).str.to_date(fmt, strict=False)
+            )
         for col in mapping.float_columns:
             transforms.append(pl.col(col).cast(pl.Float64))
         for col in mapping.int_columns:
@@ -151,7 +156,9 @@ class TushareDataTransformer:
         # 应用类型转换
         transforms: list[pl.Expr] = []
         for col, fmt in mapping.date_columns.items():
-            transforms.append(pl.col(col).str.to_date(fmt, strict=False))
+            transforms.append(
+                pl.col(col).cast(pl.String).str.to_date(fmt, strict=False)
+            )
         for col in mapping.float_columns:
             transforms.append(pl.col(col).cast(pl.Float64))
         for col in mapping.int_columns:

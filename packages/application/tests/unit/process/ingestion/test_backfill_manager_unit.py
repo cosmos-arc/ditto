@@ -9,6 +9,7 @@ from ditto_data.models.ingestion import (
     IngestionResult,
     IngestionStatus,
 )
+from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import (
     Environment,
     ObservabilityConfig,
@@ -170,6 +171,117 @@ class TestBackfillRange:
         assert result.failed_count == 0
         assert len(result.results) == 3
         mock_coordinator.ingest_date.assert_called()
+
+    def test_real_chunk_coordinator_executes_month_chunks_atomically(
+        self,
+        mock_metadata_service,
+        mock_ingestion_log_store,
+    ) -> None:
+        class ChunkCoordinator:
+            def __init__(self) -> None:
+                self.calls: list[tuple[str, str, tuple[str, ...]]] = []
+
+            def ingest_chunk(
+                self,
+                dataset: str,
+                *,
+                chunk_id: str,
+                request_start: str,
+                request_end: str,
+                partition_dates: tuple[str, ...],
+                force: bool = False,
+            ) -> IngestionResult:
+                _ = chunk_id, request_end, force
+                self.calls.append((dataset, request_start, partition_dates))
+                return IngestionResult(
+                    dataset=dataset,
+                    trade_date=request_start,
+                    status="success",
+                    row_count=len(partition_dates),
+                )
+
+        mock_metadata_service.list_trading_days.return_value = [
+            "2026-01-30",
+            "2026-02-02",
+            "2026-02-03",
+        ]
+        coordinator = ChunkCoordinator()
+        manager = BackfillManager(
+            coordinator=coordinator,
+            metadata_service=mock_metadata_service,
+            ingestion_log_store=mock_ingestion_log_store,
+        )
+
+        result = manager.backfill_range(
+            "stock_daily",
+            "2026-01-30",
+            "2026-02-03",
+        )
+
+        assert result.total_dates == 3
+        assert result.success_count == 2
+        assert coordinator.calls == [
+            ("stock_daily", "2026-01-30", ("2026-01-30",)),
+            (
+                "stock_daily",
+                "2026-02-02",
+                ("2026-02-02", "2026-02-03"),
+            ),
+        ]
+
+    def test_instrument_range_plan_executes_each_instrument_with_chunk_identity(
+        self,
+        mock_metadata_service,
+        mock_ingestion_log_store,
+    ) -> None:
+        class InstrumentCoordinator:
+            def __init__(self) -> None:
+                self.calls: list[tuple[str, str, InstrumentIngestParams]] = []
+
+            def ingest_planned_instrument_chunk(
+                self,
+                dataset: str,
+                *,
+                chunk_id: str,
+                params: InstrumentIngestParams,
+                force: bool = False,
+            ) -> IngestionResult:
+                _ = force
+                self.calls.append((dataset, chunk_id, params))
+                return IngestionResult(
+                    dataset=dataset,
+                    trade_date=params.start_date,
+                    status="success",
+                    row_count=1,
+                )
+
+        mock_metadata_service.list_trading_days.return_value = [
+            "2026-01-05",
+            "2026-01-06",
+        ]
+        coordinator = InstrumentCoordinator()
+        manager = BackfillManager(
+            coordinator=coordinator,
+            metadata_service=mock_metadata_service,
+            ingestion_log_store=mock_ingestion_log_store,
+        )
+
+        result = manager.backfill_range(
+            "index_daily",
+            "2026-01-05",
+            "2026-01-06",
+            instrument_ids=(9, 3),
+        )
+
+        assert result.total_dates == 4
+        assert result.success_count == 2
+        assert [call[2].instrument_id for call in coordinator.calls] == [3, 9]
+        assert {call[1] for call in coordinator.calls} == {
+            "chunk:tushare:index_daily:2026:2026-01-05:2026-01-06:instrument:3",
+            "chunk:tushare:index_daily:2026:2026-01-05:2026-01-06:instrument:9",
+        }
+        assert all(call[2].start_date == "2026-01-05" for call in coordinator.calls)
+        assert all(call[2].end_date == "2026-01-06" for call in coordinator.calls)
 
     def test_backfill_range_with_skipped_dates(
         self,

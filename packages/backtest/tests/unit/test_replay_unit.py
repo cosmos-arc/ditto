@@ -13,6 +13,10 @@ from ditto_backtest.manifest import (
     RunManifest,
     RunMode,
 )
+from ditto_backtest.manifest_types import (
+    ReplayArtifactRef,
+    ResearchReplayEvidence,
+)
 from ditto_backtest.replay import (
     ManifestDiff,
     NavComparison,
@@ -20,6 +24,10 @@ from ditto_backtest.replay import (
     ReplayValidator,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.parameters import (
+    EffectiveParameter,
+    canonical_parameter_hash,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -36,28 +44,90 @@ def _make_manifest(
     config_hash: str = "abc123",
     engine_version: str = "0.1.0",
     input_refs: tuple[InstrumentId, ...] = (_IID_510300, _IID_510500),
-    parameter_overrides: tuple[str, ...] = (),
     rule_refs: tuple[RuleRef, ...] = (),
-    spec_hash: str = "",
+    spec_hash: str = "a" * 64,
+    base_spec_hash: str = "b" * 64,
+    effective_parameters: tuple[EffectiveParameter, ...] = (),
+    research_snapshot_id: str | None = None,
+    research_snapshot_manifest_hash: str | None = None,
     random_seed: int | None = None,
     dependency_versions: tuple[str, ...] = (),
     input_ref_details: tuple[InputRef, ...] = (),
+    replay_evidence: ResearchReplayEvidence | None = None,
+    **overrides: object,
 ) -> RunManifest:
-    return RunManifest(
-        run_id=run_id,
-        strategy_id=strategy_id,
-        strategy_version=strategy_version,
-        mode=RunMode.BACKTEST,
-        created_at="2026-04-11T00:00:00Z",
-        input_refs=input_refs,
-        input_ref_details=input_ref_details,
-        parameter_overrides=parameter_overrides,
-        rule_refs=rule_refs,
-        config_hash=config_hash,
-        engine_version=engine_version,
-        spec_hash=spec_hash,
-        random_seed=random_seed,
-        dependency_versions=dependency_versions,
+    values: dict[str, object] = {
+        "run_id": run_id,
+        "strategy_id": strategy_id,
+        "strategy_version": strategy_version,
+        "mode": RunMode.BACKTEST,
+        "created_at": "2026-04-11T00:00:00Z",
+        "input_refs": input_refs,
+        "input_ref_details": input_ref_details,
+        "parameter_overrides": (),
+        "rule_refs": rule_refs,
+        "config_hash": config_hash,
+        "engine_version": engine_version,
+        "spec_hash": spec_hash,
+        "base_spec_hash": base_spec_hash,
+        "parameter_hash": canonical_parameter_hash(effective_parameters),
+        "effective_parameters": effective_parameters,
+        "research_snapshot_id": research_snapshot_id,
+        "research_snapshot_manifest_hash": research_snapshot_manifest_hash,
+        "random_seed": random_seed,
+        "dependency_versions": dependency_versions,
+        "replay_evidence": replay_evidence,
+    }
+    values.update(overrides)
+    return RunManifest(**values)  # type: ignore[arg-type]
+
+
+def _artifact_ref(
+    artifact_id: str,
+    *,
+    artifact_kind: str,
+    content_hash: str,
+) -> ReplayArtifactRef:
+    return ReplayArtifactRef(
+        artifact_id=artifact_id,
+        artifact_kind=artifact_kind,
+        artifact_format="json" if artifact_kind == "summary" else "parquet",
+        content_hash=content_hash,
+        schema_hash="e" * 64,
+        row_count=1,
+        byte_size=128,
+    )
+
+
+def _research_replay_evidence(
+    *,
+    reproduction_fingerprint: str = "f" * 64,
+    summary_hash: str = "1" * 64,
+    nav_hash: str = "2" * 64,
+    include_nav: bool = True,
+    artifact_id_suffix: str = "",
+) -> ResearchReplayEvidence:
+    summary_id = f"artifact-summary{artifact_id_suffix}"
+    nav_id = f"artifact-nav{artifact_id_suffix}"
+    artifacts = [
+        _artifact_ref(
+            summary_id,
+            artifact_kind="summary",
+            content_hash=summary_hash,
+        )
+    ]
+    if include_nav:
+        artifacts.append(
+            _artifact_ref(
+                nav_id,
+                artifact_kind="nav",
+                content_hash=nav_hash,
+            )
+        )
+    return ResearchReplayEvidence(
+        reproduction_fingerprint=reproduction_fingerprint,
+        key_result_summary_artifact_id=summary_id,
+        required_artifacts=tuple(sorted(artifacts, key=lambda item: item.identity)),
     )
 
 
@@ -123,6 +193,149 @@ class TestManifestDiff:
             seed_diffs=("random_seed: 42 vs None",),
         )
         assert diff.has_diff is True
+
+    def test_has_diff_true_when_research_evidence_mismatch(self) -> None:
+        diff = ManifestDiff(evidence_diffs=("reproduction_fingerprint: mismatch",))
+
+        assert diff.has_diff is True
+
+
+class TestResearchReplayEvidence:
+    """R3 replay evidence is complete, canonical, and content addressed."""
+
+    def test_complete_evidence_accepts_full_hashes_and_sorted_artifacts(self) -> None:
+        evidence = _research_replay_evidence()
+
+        assert evidence.schema_version == 1
+        assert evidence.key_result_summary.content_hash == "1" * 64
+        assert tuple(item.artifact_id for item in evidence.required_artifacts) == (
+            "artifact-nav",
+            "artifact-summary",
+        )
+
+    @pytest.mark.parametrize(
+        ("field_name", "value"),
+        [
+            ("content_hash", "a" * 16),
+            ("schema_hash", "A" * 64),
+            ("content_hash", "z" * 64),
+        ],
+    )
+    def test_artifact_ref_rejects_noncanonical_hash(
+        self,
+        field_name: str,
+        value: str,
+    ) -> None:
+        kwargs: dict[str, object] = {
+            "artifact_id": "artifact-summary",
+            "artifact_kind": "summary",
+            "artifact_format": "json",
+            "content_hash": "a" * 64,
+            "schema_hash": "b" * 64,
+            "row_count": 1,
+            "byte_size": 10,
+        }
+        kwargs[field_name] = value
+
+        with pytest.raises(ValueError, match="SHA-256"):
+            ReplayArtifactRef(**kwargs)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("artifact_format", ["", "csv", "JSON"])
+    def test_artifact_ref_rejects_unknown_format(self, artifact_format: str) -> None:
+        with pytest.raises(ValueError, match="artifact_format"):
+            ReplayArtifactRef(
+                artifact_id="artifact-summary",
+                artifact_kind="summary",
+                artifact_format=artifact_format,
+                content_hash="a" * 64,
+                schema_hash="b" * 64,
+                row_count=1,
+                byte_size=10,
+            )
+
+    def test_evidence_rejects_unknown_schema_version(self) -> None:
+        with pytest.raises(ValueError, match="schema_version"):
+            ResearchReplayEvidence(
+                schema_version=2,
+                reproduction_fingerprint="f" * 64,
+                key_result_summary_artifact_id="artifact-summary",
+                required_artifacts=(
+                    _artifact_ref(
+                        "artifact-summary",
+                        artifact_kind="summary",
+                        content_hash="1" * 64,
+                    ),
+                ),
+            )
+
+    def test_evidence_rejects_missing_key_result_summary(self) -> None:
+        with pytest.raises(ValueError, match="key result summary"):
+            ResearchReplayEvidence(
+                reproduction_fingerprint="f" * 64,
+                key_result_summary_artifact_id="artifact-summary",
+                required_artifacts=(
+                    _artifact_ref(
+                        "artifact-nav",
+                        artifact_kind="nav",
+                        content_hash="2" * 64,
+                    ),
+                ),
+            )
+
+    def test_evidence_rejects_duplicate_artifact_identity(self) -> None:
+        artifact = _artifact_ref(
+            "artifact-summary",
+            artifact_kind="summary",
+            content_hash="1" * 64,
+        )
+        with pytest.raises(ValueError, match="unique"):
+            ResearchReplayEvidence(
+                reproduction_fingerprint="f" * 64,
+                key_result_summary_artifact_id="artifact-summary",
+                required_artifacts=(artifact, artifact),
+            )
+
+    def test_evidence_rejects_ambiguous_duplicate_semantic_kind(self) -> None:
+        summary = _artifact_ref(
+            "artifact-summary",
+            artifact_kind="summary",
+            content_hash="1" * 64,
+        )
+        nav_a = _artifact_ref(
+            "artifact-nav-a",
+            artifact_kind="nav",
+            content_hash="2" * 64,
+        )
+        nav_b = _artifact_ref(
+            "artifact-nav-b",
+            artifact_kind="nav",
+            content_hash="3" * 64,
+        )
+
+        with pytest.raises(ValueError, match=r"kinds.*unique"):
+            ResearchReplayEvidence(
+                reproduction_fingerprint="f" * 64,
+                key_result_summary_artifact_id="artifact-summary",
+                required_artifacts=(nav_a, nav_b, summary),
+            )
+
+    def test_evidence_rejects_noncanonical_artifact_order(self) -> None:
+        summary = _artifact_ref(
+            "artifact-summary",
+            artifact_kind="summary",
+            content_hash="1" * 64,
+        )
+        nav = _artifact_ref(
+            "artifact-nav",
+            artifact_kind="nav",
+            content_hash="2" * 64,
+        )
+        with pytest.raises(ValueError, match="sorted"):
+            ResearchReplayEvidence(
+                reproduction_fingerprint="f" * 64,
+                key_result_summary_artifact_id="artifact-summary",
+                required_artifacts=(summary, nav),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -254,12 +467,51 @@ class TestCompareManifests:
         assert diff.has_diff is True
         assert any("strategy_id" in d for d in diff.config_diffs)
 
-    def test_parameter_overrides_mismatch(self) -> None:
-        a = _make_manifest(parameter_overrides=("key1=val1",))
-        b = _make_manifest(parameter_overrides=("key1=val2",))
+    def test_base_spec_hash_mismatch(self) -> None:
+        a = _make_manifest(base_spec_hash="a" * 64)
+        b = _make_manifest(base_spec_hash="b" * 64)
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("base_spec_hash" in item for item in diff.config_diffs)
+
+    def test_strategy_version_mismatch(self) -> None:
+        a = _make_manifest(strategy_version="1")
+        b = _make_manifest(strategy_version="2")
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("strategy_version" in item for item in diff.version_diffs)
+
+    def test_research_snapshot_identity_mismatch(self) -> None:
+        a = _make_manifest(
+            research_snapshot_id="snapshot-a",
+            research_snapshot_manifest_hash="c" * 64,
+        )
+        b = _make_manifest(
+            research_snapshot_id="snapshot-b",
+            research_snapshot_manifest_hash="d" * 64,
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("research_snapshot_id" in item for item in diff.data_diffs)
+        assert any(
+            "research_snapshot_manifest_hash" in item for item in diff.data_diffs
+        )
+
+    def test_effective_parameters_mismatch(self) -> None:
+        path = "/pipeline/nodes/legacy_factor_set/config/params/key1"
+        a = _make_manifest(
+            effective_parameters=(EffectiveParameter(path=path, value="val1"),),
+        )
+        b = _make_manifest(
+            effective_parameters=(EffectiveParameter(path=path, value="val2"),),
+        )
         diff = ReplayValidator.compare_manifests(a, b)
         assert diff.has_diff is True
-        assert any("parameter_overrides" in d for d in diff.config_diffs)
+        assert any("effective_parameters" in d for d in diff.config_diffs)
+        assert any("parameter_hash" in d for d in diff.config_diffs)
 
     def test_input_refs_mismatch(self) -> None:
         a = _make_manifest(input_refs=(_IID_510300, _IID_510500))
@@ -323,6 +575,167 @@ class TestCompareManifests:
         assert diff.has_diff is True
         assert any("source_snapshot_id" in d for d in diff.data_diffs)
 
+    def test_manifest_rejects_duplicate_input_ref_identity(self) -> None:
+        first = InputRef(
+            instrument_id=_IID_510300,
+            data_hash="sha256:aaa",
+            date_range=("2025-01-01", "2025-03-01"),
+            source="tushare",
+        )
+        second = InputRef(
+            instrument_id=_IID_510300,
+            data_hash="sha256:bbb",
+            date_range=("2025-01-01", "2025-03-01"),
+            source="wind",
+        )
+
+        with pytest.raises(ValueError, match=r"input_ref_details.*unique"):
+            _make_manifest(input_ref_details=(first, second))
+
+    @pytest.mark.parametrize(
+        ("field_name", "replay_value"),
+        [
+            ("source", "wind"),
+            ("date_range", ("2025-01-02", "2025-03-01")),
+        ],
+    )
+    def test_input_ref_details_compares_complete_identity(
+        self,
+        field_name: str,
+        replay_value: object,
+    ) -> None:
+        values: dict[str, object] = {
+            "instrument_id": _IID_510300,
+            "data_hash": "sha256:aaa",
+            "date_range": ("2025-01-01", "2025-03-01"),
+            "source": "tushare",
+            "source_snapshot_id": "snapshot-v1",
+        }
+        replay_values = dict(values)
+        replay_values[field_name] = replay_value
+        a = _make_manifest(input_ref_details=(InputRef(**values),))  # type: ignore[arg-type]
+        b = _make_manifest(
+            input_ref_details=(InputRef(**replay_values),),  # type: ignore[arg-type]
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any(field_name in item for item in diff.data_diffs)
+
+    @pytest.mark.parametrize(
+        ("field_name", "replay_value"),
+        [
+            ("mode", RunMode.RESEARCH),
+            ("artifacts", ("manifest.json",)),
+            ("rule_resolution_policy", "latest"),
+            ("universe_hash", "changed"),
+            ("pit_time_column", "trade_date"),
+            ("pit_policy", "unsafe"),
+            ("unsafe_time_policy", "allow_future"),
+            ("knowledge_lag_days", 2),
+        ],
+    )
+    def test_complete_deterministic_manifest_identity_is_compared(
+        self,
+        field_name: str,
+        replay_value: object,
+    ) -> None:
+        a = _make_manifest()
+        b = _make_manifest(**{field_name: replay_value})
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert diff.has_diff is True
+        assert any(
+            field_name in item
+            for item in (
+                *diff.config_diffs,
+                *diff.data_diffs,
+                *diff.version_diffs,
+                *diff.seed_diffs,
+                *diff.evidence_diffs,
+            )
+        )
+
+    def test_audit_identity_can_change_when_r3_evidence_is_exact(self) -> None:
+        evidence = _research_replay_evidence()
+        a = _make_manifest(
+            run_id="run-original",
+            replay_evidence=evidence,
+        )
+        b = _make_manifest(
+            run_id="run-replay",
+            replay_evidence=evidence,
+            created_at="2026-04-12T00:00:00Z",
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert diff.has_diff is False
+
+    def test_attempt_specific_artifact_ids_can_change_when_hashes_are_exact(
+        self,
+    ) -> None:
+        a = _make_manifest(
+            run_id="run-original",
+            replay_evidence=_research_replay_evidence(artifact_id_suffix="-attempt-1"),
+        )
+        b = _make_manifest(
+            run_id="run-replay",
+            replay_evidence=_research_replay_evidence(artifact_id_suffix="-attempt-2"),
+            created_at="2026-04-12T00:00:00Z",
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert diff.has_diff is False
+
+    def test_reproduction_fingerprint_mismatch_is_explicit(self) -> None:
+        a = _make_manifest(replay_evidence=_research_replay_evidence())
+        b = _make_manifest(
+            replay_evidence=_research_replay_evidence(
+                reproduction_fingerprint="0" * 64,
+            )
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("reproduction_fingerprint" in item for item in diff.evidence_diffs)
+
+    def test_key_result_summary_hash_mismatch_is_explicit(self) -> None:
+        a = _make_manifest(replay_evidence=_research_replay_evidence())
+        b = _make_manifest(
+            replay_evidence=_research_replay_evidence(summary_hash="3" * 64)
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("key_result_summary" in item for item in diff.evidence_diffs)
+
+    def test_missing_required_artifact_is_fail_closed(self) -> None:
+        a = _make_manifest(replay_evidence=_research_replay_evidence())
+        b = _make_manifest(replay_evidence=_research_replay_evidence(include_nav=False))
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("required_artifacts" in item for item in diff.evidence_diffs)
+
+    def test_required_parquet_content_hash_mismatch_is_fail_closed(self) -> None:
+        a = _make_manifest(replay_evidence=_research_replay_evidence())
+        b = _make_manifest(replay_evidence=_research_replay_evidence(nav_hash="4" * 64))
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("artifact-nav" in item for item in diff.evidence_diffs)
+
+    def test_one_sided_r3_evidence_is_fail_closed(self) -> None:
+        a = _make_manifest(replay_evidence=_research_replay_evidence())
+        b = _make_manifest(replay_evidence=None)
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert any("missing" in item for item in diff.evidence_diffs)
+
     def test_engine_version_mismatch(self) -> None:
         a = _make_manifest(engine_version="0.1.0")
         b = _make_manifest(engine_version="0.2.0")
@@ -352,8 +765,8 @@ class TestCompareManifests:
         assert len(diff.seed_diffs) == 1
 
     def test_spec_hash_mismatch(self) -> None:
-        a = _make_manifest(spec_hash="spec_aaa")
-        b = _make_manifest(spec_hash="spec_bbb")
+        a = _make_manifest(spec_hash="a" * 64)
+        b = _make_manifest(spec_hash="b" * 64)
         diff = ReplayValidator.compare_manifests(a, b)
         assert diff.has_diff is True
         assert any("spec_hash" in d for d in diff.config_diffs)
@@ -471,6 +884,48 @@ class TestValidate:
         assert result.max_nav_diff_bps == pytest.approx(0.0)
         assert result.manifest_diff.has_diff is False
         assert result.input_data_match is True
+
+    def test_r3_replay_requires_complete_evidence_on_both_sides(self) -> None:
+        manifest = _make_manifest()
+
+        result = ReplayValidator.validate(
+            manifest,
+            manifest,
+            [100.0],
+            [100.0],
+            require_research_evidence=True,
+        )
+
+        assert result.is_reproducible is False
+        assert result.reproduction_fingerprint_match is False
+        assert result.key_result_summary_match is False
+        assert result.required_artifact_hashes_match is False
+        assert any("required" in item for item in result.manifest_diff.evidence_diffs)
+
+    def test_r3_replay_passes_with_exact_semantics_summary_and_artifacts(self) -> None:
+        evidence = _research_replay_evidence()
+        original = _make_manifest(
+            run_id="run-original",
+            replay_evidence=evidence,
+        )
+        replay = _make_manifest(
+            run_id="run-replay",
+            replay_evidence=evidence,
+            created_at="2026-04-12T00:00:00Z",
+        )
+
+        result = ReplayValidator.validate(
+            original,
+            replay,
+            [100.0, 101.0],
+            [100.0, 101.0],
+            require_research_evidence=True,
+        )
+
+        assert result.is_reproducible is True
+        assert result.reproduction_fingerprint_match is True
+        assert result.key_result_summary_match is True
+        assert result.required_artifact_hashes_match is True
 
     def test_failed_replay_config_diff(self) -> None:
         a = _make_manifest(config_hash="aaa")

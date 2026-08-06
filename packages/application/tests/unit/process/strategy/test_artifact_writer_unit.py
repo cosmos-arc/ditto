@@ -171,9 +171,16 @@ class TestWriteBacktestArtifacts:
             mode=RunMode.BACKTEST,
             created_at="2026-03-24T10:00:00Z",
             input_refs=(InstrumentId(2_000_001), InstrumentId(2_000_002)),
-            parameter_overrides=("top_k=3",),
             config_hash="cfg-123",
             engine_version="0.2.0",
+            spec_hash="a" * 64,
+            base_spec_hash="b" * 64,
+            parameter_hash=(
+                "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            ),
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
         )
 
     @patch("ditto_application.processes.execution.strategy_input.serialize_report")
@@ -306,7 +313,9 @@ class TestWriteBacktestArtifacts:
         parsed = orjson.loads(manifest_path.read_bytes())
         assert parsed["strategy_version"] == "2026.03"
         assert parsed["pit_policy"] == "knowledge_date_fail_closed"
-        assert parsed["parameter_overrides"] == ["top_k=3"]
+        assert parsed["parameter_overrides"] == []
+        assert parsed["base_spec_hash"] == "b" * 64
+        assert parsed["effective_parameters"] == []
         assert "manifest.json" in parsed["artifacts"]
 
     def test_writes_report_json_with_pit_policy_from_manifest(

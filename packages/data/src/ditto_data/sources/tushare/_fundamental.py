@@ -9,6 +9,7 @@ fetch_dividend / fetch_corporate_actions 模块级函数，
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import date
 
 import polars as pl
 
@@ -219,12 +220,14 @@ def fetch_dividend(
         compact_date = to_compact_date(trade_date)
         return fundamental.fetch_dividend(ex_date=compact_date)
 
-    compact_start = to_compact_date(start_date) if start_date else None
-    compact_end = to_compact_date(end_date) if end_date else None
-    return fundamental.fetch_dividend(
-        ts_code=source_ticker,
-        start_date=compact_start,
-        end_date=compact_end,
+    result = fundamental.fetch_dividend(ts_code=source_ticker)
+    if result.is_empty() or start_date is None or end_date is None:
+        return result
+    start = date.fromisoformat(start_date)
+    end = date.fromisoformat(end_date)
+    return result.filter(
+        pl.col("knowledge_date").is_not_null()
+        & pl.col("knowledge_date").is_between(start, end, closed="both")
     )
 
 
@@ -247,7 +250,5 @@ def fetch_corporate_actions(
     """
     compact_date = to_compact_date(trade_date)
     return fundamental.fetch_corporate_actions(
-        ts_code=None,
-        start_date=compact_date,
-        end_date=compact_date,
+        ann_date=compact_date,
     )

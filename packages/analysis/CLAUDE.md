@@ -15,14 +15,14 @@ root package barrel（`from ditto_analysis import ...`）只重导出 `AnalysisE
 - `ditto_analysis.di`
 - `ditto_analysis.storage.sqlite.research`
 
-`experiments` 是 reserved/future product namespace；当前无 public runtime API。不得将其视为已实现能力，也不得作为运行时行为依赖使用。
+`experiments` 已实现 experiment/candidate/fold/attempt 的领域与持久化合同，包括 opaque identity、immutable launch spec、canonical codec、typed persistence DTO、状态机与窄 Protocol。runtime database/reader/writer 不从该 barrel 暴露，而位于 `storage/sqlite/experiments/`；调度编排仍由上层负责。
 
 **核心原则**：
 - Analysis 自身不依赖 application/apps/生产域包
 - 生产域包 data/features/strategy/portfolio/risk/execution/backtest 禁止导入 analysis
-- application 只有 research query/facade/DI wiring 可以使用 analysis
+- application 可在 research query/facade/DI wiring 与 experiment 编排路径消费 analysis 合同
 - apps 只有 research jobs/api/registry composition 入口可以使用 analysis
-- application/apps 不得把 `experiments` 当行为依赖
+- application/apps 通过持久化 Protocol 或 composition wiring 使用 experiment adapter，不得从合同 barrel 获取 runtime 实现
 - 研究存储使用独立 SQLite，不与生产存储混合
 
 ## 允许依赖
@@ -61,8 +61,8 @@ ditto_analysis → ditto_apps ❌
 其中 production→analysis wiring 豁免以 `PRODUCTION_ANALYSIS_WIRING_ALLOWANCES` 作为 enforcement source；当前只覆盖 application provider/research query 路径，并且每条必须带 owner/reason。
 
 架构策略：
-- application/apps 不得把 `experiments` 当行为依赖
-- 当前没有专门扫描这些 reserved namespace 的 use-site checker；治理依赖 placeholder honesty checker 保持命名空间诚实，并依赖上述导入边界限制 capability 直连范围
+- application 可消费 `experiments` 纯合同，但不得期待 analysis 提供调度、I/O 或存储行为；apps 通过 application facade/composition 使用
+- honesty checker 验证 promoted experiments public surface 只暴露领域与持久化合同、不暴露 runtime adapter；上述导入边界限制 capability 直连范围
 
 ## 内部目录职责
 
@@ -77,12 +77,11 @@ ditto_analysis/
 │   ├── domain.py         # 研究领域模型
 │   ├── catalog_service.py    # 研究目录服务
 │   └── artifact_service.py   # 研究产物服务
-├── experiments/          # reserved/future product namespace；当前无 public runtime API
+├── experiments/          # experiment 领域与持久化合同；无 runtime adapter
 └── storage/
     └── sqlite/
-        └── research/     # 研究 SQLite 存储
-            ├── reader.py
-            └── writer.py
+        ├── research/     # R2 catalog SQLite adapter（metadata binding）
+        └── experiments/  # R3 独立 research SQLite + typed store + lease
 ```
 
 ## 测试位置
@@ -90,6 +89,7 @@ ditto_analysis/
 ```
 packages/analysis/tests/
 └── unit/
+    ├── experiments/      # experiment identity/spec/state/persistence 合同测试
     └── test_research_unit.py
 ```
 
@@ -104,8 +104,10 @@ from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.contracts import ResearchCatalogReaderProtocol
 from ditto_analysis.di import get_analysis_providers
 
-# 保留命名空间不得作为现有能力或运行时行为依赖
-# from ditto_analysis import experiments
+# experiment 合同从子包引用；root barrel 仍不重导出
+from ditto_analysis.experiments import ExperimentId, ExperimentLaunchSpec
+
+# runtime adapter 必须从 storage leaf 导入；合同 barrel 不暴露它们
 ```
 
 ## 常用验证命令

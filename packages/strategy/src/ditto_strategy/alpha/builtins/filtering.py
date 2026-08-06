@@ -8,6 +8,11 @@ import polars as pl
 
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.frame import FrameCol, validate_frame
+from ditto_strategy.alpha.selection_evidence import (
+    ExclusionEvidence,
+    ExclusionReason,
+    SelectionEvidenceSink,
+)
 
 __all__ = ["FilterCondition", "FilteringStage", "RiskLockFilter", "TrendFilterStage"]
 
@@ -31,6 +36,8 @@ class FilterCondition:
     min_value: float | None = None
     max_value: float | None = None
     exclude_nulls: bool = True
+    reason_code: ExclusionReason = ExclusionReason.CONDITION_NOT_MET
+    message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -46,6 +53,7 @@ class FilteringStage:
     """
 
     conditions: tuple[FilterCondition, ...] = ()
+    evidence_sink: SelectionEvidenceSink | None = None
 
     def process(
         self,
@@ -66,7 +74,15 @@ class FilteringStage:
                 mask = mask & (pl.col(cond.column) <= cond.max_value)
             if cond.exclude_nulls:
                 mask = mask & pl.col(cond.column).is_not_null()
-            result = result.filter(mask)
+            result = _filter_with_evidence(
+                result,
+                mask=mask,
+                reason_column=cond.column,
+                stage_name=cond.name,
+                reason_code=cond.reason_code,
+                message=cond.message,
+                evidence_sink=self.evidence_sink,
+            )
         return result
 
 
@@ -79,6 +95,8 @@ class RiskLockFilter:
     锁定标的不进入 Pipeline 后续阶段，防止 same-day re-entry。
     """
 
+    evidence_sink: SelectionEvidenceSink | None = None
+
     def process(
         self,
         frame: pl.DataFrame,
@@ -89,8 +107,14 @@ class RiskLockFilter:
         locked = context.risk_locked_instruments
         if not locked:
             return frame
-        return frame.filter(
-            ~pl.col("instrument_id").is_in(list(locked.keys())),
+        return _filter_with_evidence(
+            frame,
+            mask=~pl.col(FrameCol.INSTRUMENT_ID).is_in(list(locked.keys())),
+            reason_column=None,
+            stage_name="risk_lock",
+            reason_code=ExclusionReason.RISK_LOCKED,
+            message=None,
+            evidence_sink=self.evidence_sink,
         )
 
 
@@ -109,6 +133,7 @@ class TrendFilterStage:
     threshold: float = 0.0
     direction: str = "long"
     signal_column: str = "signal_value"
+    evidence_sink: SelectionEvidenceSink | None = None
 
     def process(
         self,
@@ -120,8 +145,63 @@ class TrendFilterStage:
         col = pl.col(self.signal_column)
 
         if self.direction == "long":
-            return frame.filter(col >= self.threshold)
+            mask = col >= self.threshold
         elif self.direction == "short":
-            return frame.filter(col <= -self.threshold)
+            mask = col <= -self.threshold
         else:  # "both"
-            return frame.filter(col.abs() >= self.threshold)
+            mask = col.abs() >= self.threshold
+        return _filter_with_evidence(
+            frame,
+            mask=mask,
+            reason_column=self.signal_column,
+            stage_name="trend_filter",
+            reason_code=ExclusionReason.TREND_THRESHOLD,
+            message=None,
+            evidence_sink=self.evidence_sink,
+        )
+
+
+def _filter_with_evidence(
+    frame: pl.DataFrame,
+    *,
+    mask: pl.Expr,
+    reason_column: str | None,
+    stage_name: str,
+    reason_code: ExclusionReason,
+    message: str | None,
+    evidence_sink: SelectionEvidenceSink | None,
+) -> pl.DataFrame:
+    """Apply one business filter and emit only rows first removed by it."""
+    if evidence_sink is None:
+        return frame.filter(mask)
+
+    row_column = _unused_row_column(frame.columns)
+    indexed = frame.with_row_index(row_column)
+    filtered = indexed.filter(mask)
+    excluded = indexed.join(filtered.select(row_column), on=row_column, how="anti")
+    evidence_columns = [FrameCol.INSTRUMENT_ID]
+    if reason_column is not None:
+        evidence_columns.append(reason_column)
+    for values in excluded.select(evidence_columns).iter_rows():
+        instrument_id = values[0]
+        is_missing = reason_column is not None and values[1] is None
+        evidence_sink.emit(
+            ExclusionEvidence(
+                trade_date=evidence_sink.current_trade_date,
+                instrument_id=instrument_id,
+                stage=stage_name,
+                reason_code=(
+                    ExclusionReason.MISSING_DATA if is_missing else reason_code
+                ),
+                message=message,
+            ),
+        )
+    return filtered.drop(row_column)
+
+
+def _unused_row_column(columns: list[str]) -> str:
+    """Choose a temporary evidence row key without colliding with business data."""
+    candidate = "_selection_evidence_row"
+    while candidate in columns:
+        candidate = f"_{candidate}"
+    return candidate

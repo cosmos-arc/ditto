@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from dishka import Provider, Scope, provide
-from ditto_application.settings import TradingSettings
+from ditto_application.settings import ResearchExecutionSettings, TradingSettings
 from ditto_data.config import DataSourceSettings, FileStorageSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
 from ditto_data.config.data_store import DataStoreSettings as _DataStoreSettings
@@ -298,6 +301,34 @@ class ConfigProvider(Provider):
         return TradingSettings(**values) if values else TradingSettings()
 
     @provide
+    def research_execution_settings(
+        self,
+        environment: Environment,
+    ) -> ResearchExecutionSettings:
+        """
+        R3 研究执行 bundle 配置.
+
+        解析优先级（每个字段独立）::
+
+            环境变量 DITTO_RESEARCH_CODE_VERSION / _ENVIRONMENT_LOCK_HASH
+              > git rev-parse HEAD / pixi.lock sha256（C3 真实值）
+              > ResearchExecutionSettings 默认值（testing/staging fallback）
+
+        TESTING 环境跳过 git/lockfile I/O 以保持测试确定性；DEVELOPMENT 与
+        PRODUCTION 总是尝试读取真实值，缺失时静默退回默认值。
+        """
+        values: dict[str, Any] = {}
+        if code_version := _resolve_research_code_version(environment):
+            values["code_version"] = code_version
+        if lock_hash := _resolve_research_environment_lock_hash(environment):
+            values["environment_lock_hash"] = lock_hash
+        return (
+            ResearchExecutionSettings(**values)
+            if values
+            else ResearchExecutionSettings()
+        )
+
+    @provide
     def runtime_flags(self, environment: Environment) -> RuntimeFlags:
         """提供运行时标志。"""
         return _detect_runtime_flags(environment)
@@ -306,3 +337,60 @@ class ConfigProvider(Provider):
     def data_cache(self) -> DataCache[Any]:
         """提供数据缓存实例（应用级单例）。"""
         return DataCache[Any](ttl_seconds=300, max_size=10000)
+
+
+# 仓库根目录（config.py 位于 ditto_apps 包根下 registry 子目录的 infra 模块）
+_PROJECT_ROOT = Path(__file__).resolve().parents[6]
+_PIXI_LOCK_PATH = _PROJECT_ROOT / "pixi.lock"
+_GIT_HEAD_TIMEOUT_SECONDS = 5
+
+
+def _resolve_research_code_version(environment: Environment) -> str | None:
+    """
+    Resolve code_version: env override > git HEAD > None (use default).
+
+    TESTING skips git I/O to keep tests deterministic; DEVELOPMENT and
+    PRODUCTION always attempt ``git rev-parse HEAD`` and silently fall back to
+    the settings default when git is unavailable (e.g. tarball deploys).
+    """
+    if override := os.getenv("DITTO_RESEARCH_CODE_VERSION"):
+        return override
+    if environment is Environment.TESTING:
+        return None
+    git_path = shutil.which("git")
+    if git_path is None:
+        logger.debug("git binary not on PATH; using default code_version")
+        return None
+    try:
+        result = subprocess.run(  # noqa: S603 - git_path 来自 shutil.which，args 全部为静态字符串
+            [git_path, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=_GIT_HEAD_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        logger.debug("git rev-parse HEAD unavailable; using default code_version")
+        return None
+    sha = result.stdout.strip()
+    return sha or None
+
+
+def _resolve_research_environment_lock_hash(environment: Environment) -> str | None:
+    """
+    Resolve environment_lock_hash: env override > pixi.lock sha256 > None.
+
+    TESTING skips lockfile I/O to keep tests deterministic; DEVELOPMENT and
+    PRODUCTION hash ``pixi.lock`` when present and silently fall back to the
+    settings default when the lockfile is missing.
+    """
+    if override := os.getenv("DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH"):
+        return override
+    if environment is Environment.TESTING:
+        return None
+    try:
+        content = _PIXI_LOCK_PATH.read_bytes()
+    except OSError:
+        logger.debug("pixi.lock unavailable; using default environment_lock_hash")
+        return None
+    return hashlib.sha256(content).hexdigest()

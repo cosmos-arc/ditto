@@ -48,3 +48,30 @@ class TestDefaultConfigPaths:
 
             assert len(not_null_rules) == 1
             assert set(not_null_rules[0]["columns"]) == expected_columns
+
+    def test_dividend_l1_rules_allow_preliminary_rows_without_ex_date(self) -> None:
+        """分红预案可无除权日，但公告日与源代码必须形成可审计身份。"""
+        import yaml
+        from ditto_data.quality.config_paths import get_default_dq_rules_dir
+
+        path = get_default_dq_rules_dir() / "dividend.yml"
+        with path.open(encoding="utf-8") as file:
+            config = yaml.safe_load(file)
+
+        not_null = next(
+            rule for rule in config["technical"] if rule.get("rule") == "not_null"
+        )
+
+        assert set(not_null["columns"]) == {"source_ticker", "knowledge_date"}
+        assert "ex_dividend_date" not in not_null["columns"]
+
+        unique = next(
+            rule for rule in config["technical"] if rule.get("rule") == "unique"
+        )
+        assert set(unique["columns"]) == {
+            "source_ticker",
+            "knowledge_date",
+            "ex_dividend_date",
+            "dividend_per_share",
+            "div_proc",
+        }

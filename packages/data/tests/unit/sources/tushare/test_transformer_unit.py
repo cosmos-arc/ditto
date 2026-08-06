@@ -8,6 +8,7 @@ from ditto_data.sources.tushare.processors.mappings import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     DAILY_OHLCV_MAPPING,
+    DIVIDEND_MAPPING,
     ETF_BASIC_MAPPING,
 )
 from ditto_data.sources.tushare.processors.transformer import (
@@ -189,6 +190,28 @@ class TestTushareDataTransformer:
                 "pct_change": 1.96,
             },
         ]
+
+    def test_transform_all_null_provider_date_column_to_typed_nulls(self) -> None:
+        """预案分红的全空 ex_date 仍须成为 Date，而不是触发 String schema 错误。"""
+        source = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "ex_date": [None],
+                "cash_div": [0.1],
+                "ann_date": ["20160514"],
+                "div_proc": ["预案"],
+            }
+        )
+
+        result = TushareDataTransformer.transform(
+            source,
+            "dividend",
+            DIVIDEND_MAPPING,
+        )
+
+        assert result.schema["ex_dividend_date"] == pl.Date
+        assert result["ex_dividend_date"].to_list() == [None]
+        assert result["knowledge_date"].to_list() == [date(2016, 5, 14)]
 
     def test_transform_daily_ohlcv_empty_dataframe(self) -> None:
         """Test transform_daily_ohlcv with empty DataFrame."""

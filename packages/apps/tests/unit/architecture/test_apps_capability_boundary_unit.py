@@ -93,6 +93,18 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
             "ditto_data.sources.registry",
         }
     )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/contexts/r3_recovery.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.storage.sqlite.experiments",
+            "ditto_analysis.storage.sqlite.experiments.schema",
+            "ditto_data.config.data_store",
+            "ditto_strategy.governance.service",
+            "ditto_strategy.storage.sqlite.strategy_governance_schema",
+            "ditto_strategy.storage.sqlite.strategy_governance_store",
+        }
+    )
 
 
 def test_apps_capability_import_guard_reports_non_registry_routes() -> None:

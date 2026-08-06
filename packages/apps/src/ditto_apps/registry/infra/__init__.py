@@ -7,7 +7,7 @@ from .config import ConfigProvider
 from .init_providers import MetadataDbInitProvider
 from .notification import NotificationProvider
 from .observability import ObservabilityProvider
-from .protocol_adapters import ProtocolAdapterProvider
+from .protocol_adapters import ProtocolAdapterProvider, R2LiveGateEvidenceProvider
 from .signal_delivery import SignalDeliveryProvider
 
 __all__ = [
@@ -16,6 +16,7 @@ __all__ = [
     "NotificationProvider",
     "ObservabilityProvider",
     "ProtocolAdapterProvider",
+    "R2LiveGateEvidenceProvider",
     "SignalDeliveryProvider",
     "get_infra_providers",
 ]

@@ -1,36 +1,19 @@
-"""
-ReplayProcess — 回测重放编排.
-
-从原始运行的 manifest.json 恢复配置，重新执行回测，
-使用 ReplayValidator 对比结果，并记录血统关系.
-"""
+"""ReplayProcess — deterministic backtest replay orchestration."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from types import MappingProxyType
 from typing import Any, Protocol, cast
 
 import orjson
-import polars as pl
-from ditto_backtest.manifest import InputRef, RuleRef, RunManifest, RunMode
-from ditto_backtest.replay import (
-    AccountStateComparison,
-    FillComparison,
-    ManifestDiff,
-    ReplayStateProof,
-    ReplayValidationResult,
-    ReplayValidator,
-)
-from ditto_backtest.result import BacktestAccountStateSnapshot
+from ditto_backtest.manifest import RunManifest
+from ditto_backtest.replay import ReplayValidationResult, ReplayValidator
 from ditto_backtest.statistics import BacktestReport
-from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
 from ditto_platform.foundation import atomic_bytes_write
-from ditto_portfolio.accounting import AccountView, CashBook, Position
 from ditto_portfolio.accounting.fills import FillEvent
+from ditto_strategy.alpha.parameters import CandidateParameter
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.runs.models import StrategyRunRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -39,11 +22,57 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.exceptions import AppProcessError
-from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution._replay_artifact_reservation import (
+    ReplayArtifactReservation,
+)
+from ditto_application.processes.execution._replay_proof import (
+    build_replay_proof_payload as _build_replay_proof_payload,
+)
+from ditto_application.processes.execution._replay_proof import (
+    build_state_proof as _build_state_proof,
+)
+from ditto_application.processes.execution._replay_proof import (
+    load_fill_log as _load_fill_log,
+)
+from ditto_application.processes.execution._replay_proof import (
+    load_final_account_state as _load_final_account_state,
+)
+from ditto_application.processes.execution._replay_proof import (
+    load_resume_provenance as _load_resume_provenance,
+)
+from ditto_application.processes.execution._replay_proof import (
+    resume_provenance_metadata as _resume_provenance_metadata,
+)
+from ditto_application.processes.execution._research_replay_artifacts import (
+    IndexedResearchReplayArtifactReader,
+    VerifiedReplayArtifactReader,
+    VerifiedReplayBundle,
+)
+from ditto_application.processes.execution._research_replay_codec import (
+    build_research_replay_metadata,
+)
+from ditto_application.processes.execution._research_replay_codec import (
+    deserialize_manifest as _deserialize_manifest,
+)
+from ditto_application.processes.execution._research_replay_codec import (
+    research_replay_pointer as _research_replay_pointer,
+)
+from ditto_application.processes.execution.backtest_audit import resolve_run_id
+from ditto_application.processes.execution.backtest_process import (
+    BacktestServiceConfig,
+    BacktestServiceOptions,
+)
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.queries.artifact_utils import find_artifact
 
-__all__ = ["ReplayProcess", "ReplayResult"]
+__all__ = [
+    "IndexedResearchReplayArtifactReader",
+    "ReplayProcess",
+    "ReplayResult",
+    "VerifiedReplayArtifactReader",
+    "VerifiedReplayBundle",
+    "build_research_replay_metadata",
+]
 
 
 class ReplayRunConfigReader(Protocol):
@@ -54,18 +83,17 @@ class ReplayRunConfigReader(Protocol):
         ...
 
 
+@dataclass(frozen=True, slots=True)
+class _ReplayInputs:
+    manifest: RunManifest
+    report: dict[str, Any]
+    fill_log: tuple[FillEvent, ...] | None
+    is_research_evidence: bool
+
+
 @dataclass(frozen=True)
 class ReplayResult:
-    """
-    重放结果.
-
-    Attributes:
-        new_run_id: 新运行的 run_id
-        validation: 复现性验证结果
-        original_manifest: 原始 manifest
-        replay_manifest: 重放 manifest
-
-    """
+    """Replay result and immutable original/replayed manifests."""
 
     new_run_id: str
     validation: ReplayValidationResult
@@ -74,108 +102,156 @@ class ReplayResult:
 
 
 class ReplayProcess:
-    """
-    回测重放编排 — 从原始运行恢复配置并重新执行.
-
-    职责：
-    1. 加载原始 manifest.json
-    2. 从 backtest_report.json 恢复运行配置
-    3. 使用 StrategyFacade 重新执行回测
-    4. 使用 ReplayValidator 对比两次运行结果
-    5. 返回 ReplayResult
-    """
+    """Replay a persisted backtest and validate deterministic equivalence."""
 
     def __init__(
         self,
         strategy_facade: StrategyFacade,
         artifact_service: StrategyArtifactService,
         run_model: ReplayRunConfigReader | None = None,
+        *,
+        verified_artifact_reader: VerifiedReplayArtifactReader | None = None,
     ) -> None:
         self._facade = strategy_facade
         self._artifact_service = artifact_service
         self._run_model = run_model
+        self._verified_artifact_reader = verified_artifact_reader
 
     def replay(self, original_run_id: str) -> ReplayResult:
-        """
-        基于原始运行重放回测.
-
-        Args:
-            original_run_id: 原始运行的 run_id
-
-        Returns:
-            ReplayResult 包含验证结果
-
-        Raises:
-            FileNotFoundError: manifest.json 不存在
-            ValueError: 无法从报告中恢复配置
-
-        """
-        # 1. 加载原始 manifest.json
-        artifact_dir = self._find_artifact_dir(original_run_id)
-        original_manifest = self._load_manifest(artifact_dir)
-
-        # 2. 从 backtest_report.json 恢复配置
-        report = self._load_report(artifact_dir)
+        """Replay ``original_run_id`` without mutating its artifacts."""
+        original_record = self._find_artifact_record(original_run_id)
+        artifact_dir = Path(original_record.file_path)
+        original_inputs = self._load_replay_inputs(original_record)
+        original_manifest = original_inputs.manifest
+        report = original_inputs.report
         original_run_config = self._load_run_config(original_run_id)
+        requested_run_id = resolve_run_id("")
+        if requested_run_id == original_run_id:
+            raise AppProcessError(
+                "Replay run ID must differ from the original run ID",
+                reason="replay_run_id_collision",
+                original_run_id=original_run_id,
+                replay_run_id=requested_run_id,
+            )
+        indexed_target = find_artifact(
+            self._artifact_service,
+            requested_run_id,
+            ArtifactKind.BACKTEST_REPORT,
+        )
+        if indexed_target is not None:
+            indexed_dir = Path(indexed_target.file_path)
+            same_dir = indexed_dir.resolve() == artifact_dir.resolve()
+            raise AppProcessError(
+                "Replay artifact target is already indexed",
+                reason=(
+                    "replay_artifact_directory_collision"
+                    if same_dir
+                    else "replay_artifact_target_exists"
+                ),
+                original_artifact_dir=str(artifact_dir),
+                replay_artifact_dir=str(indexed_dir),
+            )
+        target_dir = artifact_dir.parent / requested_run_id
         config = self._build_config(
             original_manifest,
             report,
+            run_id=requested_run_id,
             parent_run_id=original_run_id,
             run_config=original_run_config,
         )
-
-        # 3. 执行重放
-        replay_report = self._facade.run_backtest_from_catalog(
-            config=config,
-            version=int(original_manifest.strategy_version)
-            if original_manifest.strategy_version.isdigit()
-            else None,
+        reservation = ReplayArtifactReservation.acquire(
+            target_dir,
+            original=artifact_dir,
         )
-
-        # 4. 加载重放 manifest（从新运行的 artifact 目录）
-        new_run_id = replay_report.run_id
-        replay_artifact_dir = self._find_artifact_dir(new_run_id)
-        replay_manifest = self._load_manifest(replay_artifact_dir)
-
-        # 5. 提取 NAV 序列进行对比
-        original_nav = self._extract_nav(report)
-        replay_nav = self._extract_nav_from_report(replay_report)
-        state_proof = _build_state_proof(
-            original_fills=_load_fill_log(artifact_dir),
-            original_account=_load_final_account_state(report),
-            replay_report=replay_report,
-        )
-
-        # 6. 验证复现性
-        validation = ReplayValidator.validate(
-            original_manifest,
-            replay_manifest,
-            original_nav,
-            replay_nav,
-            state_proof=state_proof,
-        )
-        self._persist_replay_proof(
-            original_run_id=original_run_id,
-            replay_run_id=new_run_id,
-            original_manifest=original_manifest,
-            validation=validation,
-            original_resume_provenance=_load_resume_provenance(report),
-            replay_artifact_dir=replay_artifact_dir,
-        )
-
-        return ReplayResult(
-            new_run_id=new_run_id,
-            validation=validation,
-            original_manifest=original_manifest,
-            replay_manifest=replay_manifest,
-        )
-
-    # ------------------------------------------------------------------
-    # 内部辅助
-    # ------------------------------------------------------------------
+        try:
+            replay_report = self._facade.run_backtest_from_catalog(
+                config=config,
+                options=BacktestServiceOptions(artifact_dir=str(artifact_dir.parent)),
+                version=int(original_manifest.strategy_version)
+                if original_manifest.strategy_version.isdigit()
+                else None,
+            )
+            new_run_id = replay_report.run_id
+            if new_run_id != requested_run_id:
+                raise AppProcessError(
+                    "Replay facade returned a run ID that differs from the request",
+                    reason="replay_run_id_mismatch",
+                    original_run_id=original_run_id,
+                    requested_run_id=requested_run_id,
+                    actual_run_id=new_run_id,
+                )
+            replay_record = self._find_artifact_record(new_run_id)
+            replay_artifact_dir = Path(replay_record.file_path)
+            if not reservation.matches(replay_artifact_dir):
+                raise AppProcessError(
+                    "Replay artifact directory differs from its reserved target",
+                    reason="replay_artifact_target_mismatch",
+                    requested_artifact_dir=str(target_dir),
+                    replay_artifact_dir=str(replay_artifact_dir),
+                )
+            replay_inputs = self._load_replay_inputs(
+                replay_record,
+                load_report=False,
+            )
+            replay_manifest = replay_inputs.manifest
+            state_proof = _build_state_proof(
+                original_fills=(
+                    original_inputs.fill_log
+                    if original_inputs.is_research_evidence
+                    else _load_fill_log(artifact_dir)
+                ),
+                original_account=_load_final_account_state(report),
+                replay_fills=(
+                    replay_inputs.fill_log
+                    if replay_inputs.is_research_evidence
+                    else tuple(replay_report.fill_log)
+                ),
+                replay_account=(
+                    _load_final_account_state(replay_inputs.report)
+                    if replay_inputs.is_research_evidence
+                    else replay_report.final_account_state
+                ),
+            )
+            replay_nav = (
+                self._extract_nav(replay_inputs.report)
+                if replay_inputs.is_research_evidence
+                else self._extract_nav_from_report(replay_report)
+            )
+            validation = ReplayValidator.validate(
+                original_manifest,
+                replay_manifest,
+                self._extract_nav(report),
+                replay_nav,
+                state_proof=state_proof,
+                require_research_evidence=(
+                    original_inputs.is_research_evidence
+                    or replay_inputs.is_research_evidence
+                ),
+            )
+            self._persist_replay_proof(
+                original_run_id=original_run_id,
+                replay_run_id=new_run_id,
+                original_manifest=original_manifest,
+                replay_manifest=replay_manifest,
+                validation=validation,
+                original_resume_provenance=_load_resume_provenance(report),
+                replay_artifact_dir=replay_artifact_dir,
+            )
+            return ReplayResult(
+                new_run_id=new_run_id,
+                validation=validation,
+                original_manifest=original_manifest,
+                replay_manifest=replay_manifest,
+            )
+        finally:
+            reservation.cleanup_empty()
 
     def _find_artifact_dir(self, run_id: str) -> Path:
         """查找运行对应的 artifact 目录."""
+        return Path(self._find_artifact_record(run_id).file_path)
+
+    def _find_artifact_record(self, run_id: str) -> StrategyArtifactRecord:
+        """Return the indexed strategy artifact record for one run."""
         record = find_artifact(
             self._artifact_service,
             run_id,
@@ -184,7 +260,90 @@ class ReplayProcess:
         if record is None:
             msg = f"Artifact directory not found for run: {run_id}"
             raise FileNotFoundError(msg)
-        return Path(record.file_path)
+        return record
+
+    def _load_replay_inputs(
+        self,
+        record: StrategyArtifactRecord,
+        *,
+        load_report: bool = True,
+    ) -> _ReplayInputs:
+        """Load a genuine legacy v1 run or an index-verified R3 bundle."""
+        pointer = _research_replay_pointer(record)
+        if pointer is None:
+            artifact_dir = Path(record.file_path)
+            manifest = self._load_manifest(artifact_dir)
+            if manifest.replay_evidence is not None:
+                raise AppProcessError(
+                    "R3 replay manifest is missing its persisted index marker",
+                    reason="r3_replay_index_marker_missing",
+                    run_id=record.run_id,
+                )
+            return _ReplayInputs(
+                manifest=manifest,
+                report=self._load_report(artifact_dir) if load_report else {},
+                fill_log=None,
+                is_research_evidence=False,
+            )
+
+        reader = self._verified_artifact_reader
+        if reader is None:
+            raise AppProcessError(
+                "R3 replay requires an injected verified artifact reader",
+                reason="verified_artifact_reader_required",
+                run_id=record.run_id,
+            )
+        bundle = reader.read_bundle(record.run_id)
+        if type(bundle) is not VerifiedReplayBundle:
+            raise AppProcessError(
+                "verified artifact reader returned an invalid bundle",
+                reason="invalid_verified_replay_bundle",
+                run_id=record.run_id,
+            )
+        manifest = _deserialize_manifest(dict(bundle.manifest_payload))
+        evidence = manifest.replay_evidence
+        if (
+            bundle.schema_version != pointer.schema_version
+            or bundle.run_id != record.run_id
+            or manifest.run_id != record.run_id
+            or evidence is None
+            or evidence.schema_version != pointer.schema_version
+            or evidence.reproduction_fingerprint != bundle.reproduction_fingerprint
+            or evidence.required_artifacts != bundle.verified_artifacts
+            or bundle.manifest_artifact.artifact_id != pointer.manifest_artifact_id
+            or bundle.report_artifact_id != pointer.report_artifact_id
+            or tuple(item.artifact_id for item in bundle.verified_artifacts)
+            != pointer.required_artifact_ids
+            or bundle.fill_log_artifact_id != pointer.fill_log_artifact_id
+            or bundle.report_artifact_id != evidence.key_result_summary_artifact_id
+        ):
+            raise AppProcessError(
+                "verified bundle fingerprint or required artifacts mismatch",
+                reason="verified_replay_evidence_mismatch",
+                run_id=record.run_id,
+            )
+        artifacts_by_id = {item.artifact_id: item for item in bundle.verified_artifacts}
+        report_ref = artifacts_by_id.get(bundle.report_artifact_id)
+        if report_ref is None or report_ref.artifact_format != "json":
+            raise AppProcessError(
+                "verified report is not one of the required JSON artifacts",
+                reason="verified_replay_evidence_mismatch",
+                run_id=record.run_id,
+            )
+        if bundle.fill_log_artifact_id is not None:
+            fill_ref = artifacts_by_id.get(bundle.fill_log_artifact_id)
+            if fill_ref is None or fill_ref.artifact_format != "parquet":
+                raise AppProcessError(
+                    "verified fill log is not one of the required Parquet artifacts",
+                    reason="verified_replay_evidence_mismatch",
+                    run_id=record.run_id,
+                )
+        return _ReplayInputs(
+            manifest=manifest,
+            report={str(key): value for key, value in bundle.report_payload.items()},
+            fill_log=bundle.fill_log,
+            is_research_evidence=True,
+        )
 
     @staticmethod
     def _load_manifest(artifact_dir: Path) -> RunManifest:
@@ -210,6 +369,7 @@ class ReplayProcess:
         manifest: RunManifest,
         report: dict[str, Any],
         *,
+        run_id: str = "",
         parent_run_id: str = "",
         run_config: dict[str, object] | None = None,
     ) -> BacktestServiceConfig:
@@ -218,14 +378,35 @@ class ReplayProcess:
         return BacktestServiceConfig(
             strategy_id=manifest.strategy_id,
             strategy_version=manifest.strategy_version,
+            run_id=run_id,
+            spec_hash=manifest.spec_hash,
+            base_spec_hash=manifest.base_spec_hash,
+            parameter_hash=manifest.parameter_hash,
+            effective_parameters=manifest.effective_parameters,
+            research_snapshot_id=manifest.research_snapshot_id,
+            research_snapshot_manifest_hash=(manifest.research_snapshot_manifest_hash),
             parent_run_id=parent_run_id,
-            start_date=period.get("start", ""),
-            end_date=period.get("end", ""),
+            start_date=(
+                _str_config_field(run_config, "start_date") or period.get("start", "")
+            ),
+            end_date=(
+                _str_config_field(run_config, "end_date") or period.get("end", "")
+            ),
             initial_cash=_initial_cash_from_config_or_report(run_config, report),
-            parameter_overrides=manifest.parameter_overrides,
+            parameter_overrides=(),
+            candidate_parameters=tuple(
+                CandidateParameter(path=item.path, value=item.value)
+                for item in manifest.effective_parameters
+            ),
             rebalance_freq=_extract_rebalance_freq(report),
             engine_version=manifest.engine_version,
+            random_seed=_int_config_field(run_config, "random_seed", default=42),
             execution_delay=_int_config_field(run_config, "execution_delay"),
+            knowledge_lag_days=_int_config_field(
+                run_config,
+                "knowledge_lag_days",
+                default=1,
+            ),
             resume_from_run_id=_str_config_field(run_config, "resume_from_run_id"),
             resume_checkpoint_trade_date=_str_config_field(
                 run_config,
@@ -283,7 +464,6 @@ class ReplayProcess:
         nav_data = report.get("nav_series")
         if nav_data is not None:
             return [float(v) for v in nav_data]
-        # 退而求其次 — 用单个 final_nav
         final_nav = report.get("final_nav")
         if final_nav is not None:
             return [float(final_nav)]
@@ -322,6 +502,7 @@ class ReplayProcess:
         original_run_id: str,
         replay_run_id: str,
         original_manifest: RunManifest,
+        replay_manifest: RunManifest,
         validation: ReplayValidationResult,
         original_resume_provenance: dict[str, object] | None,
         replay_artifact_dir: Path,
@@ -334,6 +515,8 @@ class ReplayProcess:
             original_run_id=original_run_id,
             replay_run_id=replay_run_id,
             validation=validation,
+            original_replay_evidence=original_manifest.replay_evidence,
+            replay_replay_evidence=replay_manifest.replay_evidence,
             original_resume_provenance=original_resume_provenance,
             created_at=created_at,
         )
@@ -354,6 +537,24 @@ class ReplayProcess:
             "account_state_match": validation.account_state_match,
             "proof_path": str(proof_path),
         }
+        if original_manifest.replay_evidence is not None:
+            metadata.update(
+                {
+                    "replay_evidence_schema_version": (
+                        original_manifest.replay_evidence.schema_version
+                    ),
+                    "reproduction_fingerprint": (
+                        original_manifest.replay_evidence.reproduction_fingerprint
+                    ),
+                    "reproduction_fingerprint_match": (
+                        validation.reproduction_fingerprint_match
+                    ),
+                    "key_result_summary_match": validation.key_result_summary_match,
+                    "required_artifact_hashes_match": (
+                        validation.required_artifact_hashes_match
+                    ),
+                }
+            )
         metadata.update(_resume_provenance_metadata(original_resume_provenance))
 
         self._artifact_service.save_artifact(
@@ -367,52 +568,6 @@ class ReplayProcess:
                 created_at=created_at,
             ),
         )
-
-
-def _deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
-    """从 JSON dict 反序列化 RunManifest."""
-    input_ref_details = tuple(
-        InputRef(
-            instrument_id=ref["instrument_id"],
-            data_hash=ref.get("data_hash", ""),
-            date_range=tuple(ref.get("date_range", ("", ""))),
-            source=ref.get("source", ""),
-            source_snapshot_id=ref.get("source_snapshot_id", ""),
-        )
-        for ref in raw.get("input_ref_details", [])
-    )
-
-    rule_refs = tuple(
-        RuleRef(
-            instrument_id=ref["instrument_id"],
-            definition_version=ref.get("definition_version", ""),
-            trading_rule_as_of=ref.get("trading_rule_as_of", ""),
-            fee_schedule_as_of=ref.get("fee_schedule_as_of", ""),
-            trading_rule_effective_to=ref.get("trading_rule_effective_to", ""),
-            fee_schedule_effective_to=ref.get("fee_schedule_effective_to", ""),
-        )
-        for ref in raw.get("rule_refs", [])
-    )
-
-    return RunManifest(
-        run_id=raw.get("run_id", ""),
-        strategy_id=raw.get("strategy_id", ""),
-        strategy_version=raw.get("strategy_version", ""),
-        mode=RunMode(raw.get("mode", "backtest")),
-        created_at=raw.get("created_at", ""),
-        input_refs=tuple(raw.get("input_refs", ())),
-        input_ref_details=input_ref_details,
-        parameter_overrides=tuple(raw.get("parameter_overrides", ())),
-        rule_refs=rule_refs,
-        artifacts=tuple(raw.get("artifacts", ())),
-        config_hash=raw.get("config_hash", ""),
-        engine_version=raw.get("engine_version", ""),
-        rule_resolution_policy=raw.get("rule_resolution_policy", "as_of_date"),
-        universe_hash=raw.get("universe_hash", ""),
-        spec_hash=raw.get("spec_hash", ""),
-        dependency_versions=tuple(raw.get("dependency_versions", ())),
-        random_seed=raw.get("random_seed"),
-    )
 
 
 def _extract_rebalance_freq(report: dict[str, Any]) -> str:
@@ -431,14 +586,19 @@ def _str_config_field(config: dict[str, object] | None, key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
-def _int_config_field(config: dict[str, object] | None, key: str) -> int:
+def _int_config_field(
+    config: dict[str, object] | None,
+    key: str,
+    *,
+    default: int = 0,
+) -> int:
     """Read an optional run-config int field without treating bool as int."""
     if config is None:
-        return 0
+        return default
     value = config.get(key)
     if isinstance(value, bool):
-        return 0
-    return value if isinstance(value, int) else 0
+        return default
+    return value if isinstance(value, int) else default
 
 
 def _float_config_field(config: dict[str, object] | None, key: str) -> float:
@@ -471,236 +631,3 @@ def _initial_cash_from_config_or_report(
     if config_cash is not None:
         return config_cash
     return float(report.get("initial_cash", DEFAULT_INITIAL_CASH))
-
-
-def _build_replay_proof_payload(
-    *,
-    original_run_id: str,
-    replay_run_id: str,
-    validation: ReplayValidationResult,
-    original_resume_provenance: dict[str, object] | None = None,
-    created_at: str,
-) -> dict[str, object]:
-    """构建可持久化的 replay proof JSON 载荷."""
-    payload: dict[str, object] = {
-        "proof_version": 1,
-        "created_at": created_at,
-        "original_run_id": original_run_id,
-        "replay_run_id": replay_run_id,
-        "is_reproducible": validation.is_reproducible,
-        "nav_correlation": validation.nav_correlation,
-        "max_nav_diff_bps": validation.max_nav_diff_bps,
-        "input_data_match": validation.input_data_match,
-        "manifest_diff": _manifest_diff_to_payload(validation.manifest_diff),
-        "fill_match": validation.fill_match,
-        "account_state_match": validation.account_state_match,
-        "fill_comparison": _fill_comparison_to_payload(validation.fill_comparison),
-        "account_state_comparison": _account_comparison_to_payload(
-            validation.account_state_comparison,
-        ),
-    }
-    if original_resume_provenance is not None:
-        payload["original_resume_provenance"] = original_resume_provenance
-    return payload
-
-
-def _load_resume_provenance(report: dict[str, Any]) -> dict[str, object] | None:
-    """Load restored-run provenance from backtest_report.json when available."""
-    payload = report.get("resume_provenance")
-    if payload is None:
-        return None
-    if not isinstance(payload, dict):
-        msg = "Invalid resume_provenance payload in backtest_report.json"
-        raise AppProcessError(msg)
-    raw = cast(dict[object, object], payload)
-    return {str(key): value for key, value in raw.items()}
-
-
-def _resume_provenance_metadata(
-    provenance: dict[str, object] | None,
-) -> dict[str, object]:
-    """Flatten original restored-run provenance into replay artifact metadata."""
-    if provenance is None:
-        return {}
-    return {
-        "original_resume_from_run_id": provenance.get("from_run_id", ""),
-        "original_resume_checkpoint_trade_date": provenance.get(
-            "checkpoint_trade_date",
-            "",
-        ),
-        "original_resume_checkpoint_completed_days": provenance.get(
-            "checkpoint_completed_days",
-            0,
-        ),
-        "original_resume_checkpoint_total_days": provenance.get(
-            "checkpoint_total_days",
-            0,
-        ),
-        "original_resume_checkpoint_nav": provenance.get("checkpoint_nav", 0.0),
-        "original_resume_checkpoint_order_count": provenance.get(
-            "checkpoint_order_count",
-            0,
-        ),
-        "original_resume_checkpoint_fill_count": provenance.get(
-            "checkpoint_fill_count",
-            0,
-        ),
-        "original_resume_account_state_hash": provenance.get(
-            "account_state_hash",
-            "",
-        ),
-        "original_resume_settlement_state_hash": provenance.get(
-            "settlement_state_hash",
-            "",
-        ),
-        "original_resume_runtime_state_hash": provenance.get(
-            "runtime_state_hash",
-            "",
-        ),
-    }
-
-
-def _build_state_proof(
-    *,
-    original_fills: tuple[FillEvent, ...] | None,
-    original_account: AccountView | None,
-    replay_report: BacktestReport,
-) -> ReplayStateProof | None:
-    """Build replay state proof from persisted original evidence when available."""
-    if original_fills is None and original_account is None:
-        return None
-    return ReplayStateProof(
-        original_fills=original_fills,
-        replay_fills=tuple(replay_report.fill_log)
-        if original_fills is not None
-        else None,
-        original_account=original_account,
-        replay_account=replay_report.final_account_state
-        if original_account is not None
-        else None,
-    )
-
-
-def _load_final_account_state(report: dict[str, Any]) -> AccountView | None:
-    """Load persisted final_account_state from backtest_report.json when available."""
-    payload = report.get("final_account_state")
-    if payload is None:
-        return None
-    try:
-        snapshot = BacktestAccountStateSnapshot.from_payload(payload)
-    except ValueError as exc:
-        msg = "Invalid final_account_state payload in backtest_report.json"
-        raise AppProcessError(msg) from exc
-    return _account_view_from_snapshot(snapshot)
-
-
-def _account_view_from_snapshot(snapshot: BacktestAccountStateSnapshot) -> AccountView:
-    """Convert persisted account-state snapshot into an AccountView."""
-    positions = {
-        position.instrument_id: Position(
-            instrument_id=position.instrument_id,
-            quantity=position.quantity,
-            available_quantity=position.available_quantity,
-            average_cost=position.average_cost,
-            market_value=position.market_value,
-            unrealized_pnl=position.unrealized_pnl,
-            realized_pnl=position.realized_pnl,
-            total_fees=position.total_fees,
-        )
-        for position in snapshot.positions
-    }
-    return AccountView(
-        positions=MappingProxyType(positions),
-        cash=CashBook(
-            available=snapshot.cash_available,
-            settled=snapshot.cash_settled,
-            frozen=snapshot.cash_frozen,
-        ),
-        total_value=snapshot.total_value,
-        nav=snapshot.nav,
-        exposure=snapshot.exposure,
-    )
-
-
-def _load_fill_log(artifact_dir: Path) -> tuple[FillEvent, ...] | None:
-    """Load persisted fill_log.parquet as replay state evidence when available."""
-    fill_log_path = artifact_dir / "fill_log.parquet"
-    if not fill_log_path.exists():
-        return None
-    df = pl.read_parquet(fill_log_path)
-    return tuple(_fill_from_row(row) for row in df.to_dicts())
-
-
-def _fill_from_row(row: dict[str, Any]) -> FillEvent:
-    """Deserialize one persisted fill_log row into a FillEvent."""
-    correlation_id_raw = row.get("correlation_id")
-    correlation_id = str(correlation_id_raw) if correlation_id_raw is not None else None
-    return FillEvent(
-        fill_id=str(row["fill_id"]),
-        order_id=str(row["order_id"]),
-        instrument_id=InstrumentId(int(row["instrument_id"])),
-        direction=OrderSide(str(row["direction"])),
-        filled_quantity=int(row["filled_quantity"]),
-        fill_price=float(row["fill_price"]),
-        fee=float(row["fee"]),
-        slippage=float(row["slippage"]),
-        event_time=_parse_fill_event_time(row["event_time"]),
-        cumulative_quantity=int(row["cumulative_quantity"]),
-        leaves_quantity=int(row["leaves_quantity"]),
-        correlation_id=correlation_id,
-    )
-
-
-def _parse_fill_event_time(value: object) -> datetime:
-    """Parse persisted fill event time from parquet-compatible values."""
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError as exc:
-            msg = f"Unsupported fill event_time value: {value!r}"
-            raise AppProcessError(msg) from exc
-    msg = f"Unsupported fill event_time value: {value!r}"
-    raise AppProcessError(msg)
-
-
-def _manifest_diff_to_payload(diff: ManifestDiff) -> dict[str, object]:
-    """将 ManifestDiff 转成稳定 JSON 结构."""
-    return {
-        "config_diffs": list(diff.config_diffs),
-        "data_diffs": list(diff.data_diffs),
-        "version_diffs": list(diff.version_diffs),
-        "seed_diffs": list(diff.seed_diffs),
-        "has_diff": diff.has_diff,
-    }
-
-
-def _fill_comparison_to_payload(
-    comparison: FillComparison | None,
-) -> dict[str, object] | None:
-    """将 FillComparison 转成稳定 JSON 结构."""
-    if comparison is None:
-        return None
-    return {
-        "identical": comparison.identical,
-        "mismatch_count": comparison.mismatch_count,
-        "length_mismatch": comparison.length_mismatch,
-        "point_count": comparison.point_count,
-    }
-
-
-def _account_comparison_to_payload(
-    comparison: AccountStateComparison | None,
-) -> dict[str, object] | None:
-    """将 AccountStateComparison 转成稳定 JSON 结构."""
-    if comparison is None:
-        return None
-    return {
-        "identical": comparison.identical,
-        "nav_diff": comparison.nav_diff,
-        "available_cash_diff": comparison.available_cash_diff,
-        "settled_cash_diff": comparison.settled_cash_diff,
-        "frozen_cash_diff": comparison.frozen_cash_diff,
-        "position_count_diff": comparison.position_count_diff,
-    }

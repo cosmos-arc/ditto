@@ -5,9 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from hashlib import sha256
 from typing import Literal, cast
 
 import httpx
+import orjson
 import polars as pl
 from ditto_data.catalog import (
     DataCatalogReader,
@@ -170,9 +172,21 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     force: bool,
     *,
     ctx: PostIngestContext,
+    request_end: str | None = None,
+    chunk_id: str | None = None,
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
+    processing_date = request_end or trade_date
     if df.is_empty():
+        if ctx.evidence_committer is not None:
+            return _commit_empty_provider_observation(
+                df,
+                dataset=dataset,
+                trade_date=trade_date,
+                request_end=request_end,
+                chunk_id=chunk_id,
+                ctx=ctx,
+            )
         if is_sparse_pit_dataset(dataset):
             snapshot = resolve_sparse_asof_snapshot(
                 dataset=dataset,
@@ -205,7 +219,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     cutoff_error = validate_sparse_pit_cutoff(
         df,
         dataset=dataset,
-        trade_date=trade_date,
+        trade_date=processing_date,
     )
     if cutoff_error is not None:
         return ctx.result_handler.handle_pit_cutoff_failure(
@@ -229,7 +243,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     df, quality_failure = run_write_quality_gate(
         df,
         dataset=dataset,
-        trade_date=trade_date,
+        trade_date=processing_date,
         quality_checker=ctx.quality_checker,
         result_handler=ctx.result_handler,
     )
@@ -242,7 +256,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         DataWriteContext(
             dataset=dataset,
             df=df,
-            trade_date=trade_date,
+            trade_date=processing_date,
             on_duplicate=on_duplicate,
         ),
         result_handler=ctx.result_handler,
@@ -260,7 +274,9 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         source_name=ctx.source_name,
         write_result=write_result,
         df=df,
+        end_date=request_end,
         l1_l2_attested=ctx.quality_checker is not None,
+        chunk_id=chunk_id,
     )
     snapshot_evidence: IngestionSnapshotEvidence | None = None
     if ctx.evidence_committer is not None:
@@ -281,7 +297,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         if sparse_pit:
             snapshot_evidence = resolve_sparse_asof_snapshot(
                 dataset=dataset,
-                trade_date=trade_date,
+                trade_date=processing_date,
                 source_name=ctx.source_name,
                 catalog_reader=ctx.catalog_reader,
             )
@@ -301,7 +317,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
             )
         snapshot_evidence = resolve_sparse_asof_snapshot(
             dataset=dataset,
-            trade_date=trade_date,
+            trade_date=processing_date,
             source_name=ctx.source_name,
             catalog_reader=ctx.catalog_reader,
         )
@@ -313,7 +329,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
 
     run_post_ingest_hooks(
         dataset,
-        trade_date,
+        processing_date,
         cursor_store=ctx.cursor_store,
         freeze_store=ctx.freeze_store,
         source_name=ctx.source_name,
@@ -355,6 +371,102 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
             )
     run_list_date_inference(ctx.list_date_inference, dataset)
     return result
+
+
+def _commit_empty_provider_observation(
+    df: pl.DataFrame,
+    *,
+    dataset: str,
+    trade_date: str,
+    request_end: str | None,
+    chunk_id: str | None,
+    ctx: PostIngestContext,
+) -> IngestionResult:
+    """Persist an auditable zero-row provider response without inventing payload."""
+    if ctx.quality_checker is None:
+        return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
+    if not ctx.license_record_id:
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="R2_LICENSE_RECORD_REQUIRED",
+            message="R2 证据模式缺少已审核 license record",
+        )
+    range_end = request_end or trade_date
+    digest = sha256(
+        orjson.dumps(
+            [
+                dataset,
+                ctx.source_name,
+                trade_date,
+                range_end,
+                [(name, str(dtype)) for name, dtype in df.schema.items()],
+            ]
+        )
+    ).hexdigest()
+    observation = CatalogWriteContext(
+        dataset=dataset,
+        trade_date=trade_date,
+        source_name=ctx.source_name,
+        write_result=WriteResult(
+            file_path=(
+                f"{dataset}/observations/no-data/{trade_date}:{range_end}:sha256:{digest}"
+            ),
+            checksum=f"empty:sha256:{digest}",
+            rows_written=0,
+            rows_total=0,
+            blocked=False,
+        ),
+        df=df,
+        end_date=request_end,
+        l1_l2_attested=True,
+        chunk_id=chunk_id,
+        payload_retained=False,
+    )
+    committer = ctx.evidence_committer
+    if committer is None:
+        raise AppProcessError("empty provider observation requires evidence committer")
+    outcome = committer.commit(
+        build_evidence_commit_request(
+            observation,
+            license_record_id=ctx.license_record_id,
+        )
+    )
+    if not outcome.completed:
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error=outcome.error_code or "R2_EVIDENCE_COMMIT_FAILED",
+            message="R2 空响应证据提交失败, 分区已进入可修复状态",
+        )
+    snapshot = (
+        resolve_sparse_asof_snapshot(
+            dataset=dataset,
+            trade_date=range_end,
+            source_name=ctx.source_name,
+            catalog_reader=ctx.catalog_reader,
+        )
+        if is_sparse_pit_dataset(dataset)
+        else None
+    )
+    if is_sparse_pit_dataset(dataset) and snapshot is None:
+        return ctx.result_handler.handle_pit_snapshot_missing(dataset, trade_date)
+    return ctx.result_handler.handle_empty_success(
+        dataset,
+        trade_date,
+        message="provider 已验证无数据并提交零行证据",
+        snapshot_evidence=snapshot,
+        quality_evidence=IngestionQualityEvidence(
+            kind="no_new_rows",
+            status="not_applicable_no_new_rows",
+            source=ctx.source_name,
+            trade_date=trade_date,
+            levels=(),
+            row_count=0,
+        ),
+    )
 
 
 def record_data_catalog_entry(

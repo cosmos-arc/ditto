@@ -23,6 +23,15 @@ def fetch_macro_indicators(
     return macro.fetch_macro_indicators(trade_date)
 
 
+def fetch_macro_indicators_range(
+    macro: MacroTushareAdapter,
+    start_date: str,
+    end_date: str,
+) -> pl.DataFrame:
+    """Fetch normalized macro observations over one bounded interval."""
+    return macro.fetch_macro_indicators_range(start_date, end_date)
+
+
 def fetch_fx_daily(
     fx: FxTushareAdapter,
     *,

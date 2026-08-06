@@ -10,6 +10,8 @@ import orjson
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.contracts import StrategyCatalogReader
 
+_CANONICAL_SEED_VERSION = 1
+
 __all__ = [
     "SeedBootstrapResult",
     "SeedBootstrapStatus",
@@ -112,6 +114,17 @@ class SeedStrategyBootstrap:
                     spec_json=expected_spec,
                     tags=seed.tags,
                 )
+                if version != _CANONICAL_SEED_VERSION:
+                    results.append(
+                        SeedBootstrapResult(
+                            strategy_id=strategy_id,
+                            status=SeedBootstrapStatus.CONFLICT,
+                            version=version,
+                            created=True,
+                            differences=("version",),
+                        )
+                    )
+                    continue
                 self._publish_port.publish(
                     strategy_id=strategy_id,
                     version=version,
@@ -146,22 +159,32 @@ class SeedStrategyBootstrap:
                 )
                 continue
 
-            if existing.status != "published":
-                self._publish_port.publish(
-                    strategy_id=strategy_id,
-                    version=existing.version,
+            active = self._catalog.get_active_published(strategy_id)
+            if (
+                existing.version == _CANONICAL_SEED_VERSION
+                and active is not None
+                and active.version == existing.version
+            ):
+                results.append(
+                    SeedBootstrapResult(
+                        strategy_id=strategy_id,
+                        status=SeedBootstrapStatus.UNCHANGED,
+                        version=existing.version,
+                    )
                 )
-                status = SeedBootstrapStatus.PUBLISHED
-                published = True
-            else:
-                status = SeedBootstrapStatus.UNCHANGED
-                published = False
+                continue
+
+            lifecycle_differences: list[str] = []
+            if existing.version != _CANONICAL_SEED_VERSION:
+                lifecycle_differences.append("version")
+            if active is None or active.version != existing.version:
+                lifecycle_differences.append("lifecycle")
             results.append(
                 SeedBootstrapResult(
                     strategy_id=strategy_id,
-                    status=status,
+                    status=SeedBootstrapStatus.CONFLICT,
                     version=existing.version,
-                    published=published,
+                    differences=tuple(lifecycle_differences),
                 )
             )
         return tuple(results)

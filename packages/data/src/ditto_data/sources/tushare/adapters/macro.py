@@ -68,19 +68,30 @@ class MacroTushareAdapter(BaseTushareAdapter):
 
         当前实现接入 `shibor` 接口并标准化为统一 macro_indicators SourceSchema。
         """
-        compact_date = trade_date.replace("-", "")
+        return self.fetch_macro_indicators_range(trade_date, trade_date)
+
+    @traced("source.tushare.fetch_macro_indicators_range")
+    def fetch_macro_indicators_range(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Fetch the normalized SHIBOR series with one bounded request."""
+        compact_start = start_date.replace("-", "")
+        compact_end = end_date.replace("-", "")
         logger.info(
             "Fetching Tushare macro indicators",
             event="tushare_macro_indicators_fetch_start",
-            trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         with tushare_fetch_error_handler("macro_indicators", "shibor"):
             response = self._client.query(
                 api_name="shibor",
                 fields="date,on",
-                start_date=compact_date,
-                end_date=compact_date,
+                start_date=compact_start,
+                end_date=compact_end,
             )
             if response.is_empty():
                 return empty_macro_dataframe()

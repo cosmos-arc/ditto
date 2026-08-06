@@ -142,6 +142,17 @@ class SimpleExecutionPlanner:
             blocked_orders=tuple(blocked_orders),
         )
 
+    def snapshot_id_counter(self) -> int:
+        """Capture the monotonic planner/order ID counter for checkpointing."""
+        return self._counter
+
+    def restore_id_counter(self, counter: int) -> None:
+        """Restore the monotonic ID counter from a verified checkpoint."""
+        if type(counter) is not int or counter < 0:
+            msg = "planner ID counter must be a non-negative integer"
+            raise ValueError(msg)
+        self._counter = counter
+
     # -- order creation & id generation -----------------------------------
 
     def _make_order(

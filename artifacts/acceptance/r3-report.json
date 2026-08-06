@@ -1,0 +1,136 @@
+{
+  "commands": [
+    {
+      "artifact_hashes": {
+        "command_transcript": "02ae1450063e63981fcf274340523c7c2cb1f4ccff8984337e9134a849344735"
+      },
+      "command": [
+        "pixi",
+        "run",
+        "-e",
+        "dev",
+        "pytest",
+        "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_stock_live_golden_lane",
+        "-q",
+        "--no-cov"
+      ],
+      "name": "stock-live-golden",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "============================= test session starts ==============================\nplatform linux -- Python 3.13.13, pytest-9.0.3, pluggy-1.6.0\nrootdir: /home/chevy/projects/ditto\nconfigfile: pyproject.toml\nplugins: inline-snapshot-0.32.7, time-machine-2.19.0, cov-7.1.0, respx-0.23.1, mock-3.15.1, xdist-3.8.0, asyncio-1.3.0, hypothesis-6.152.4, timeout-2.4.0, anyio-4.13.0\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncreated: 6/6 workers\n6 workers [1 item]\n\nscheduling tests via LoadFileScheduling\n\npackages/apps/tests/e2e/test_r3_live_acceptance.py::test_stock_live_golden_lane \n[gw0] [100%] PASSED packages/apps/tests/e2e/test_r3_live_acceptance.py::test_stock_live_golden_lane \n\n═══════════════════════════════ inline-snapshot ════════════════════════════════\nINFO: inline-snapshot was disabled because you used xdist. This means that tests\nwith snapshots will continue to run, but snapshot(x) will only return x and \ninline-snapshot will not be able to fix snapshots or generate reports.\n\n\n\n============================= slowest 10 durations =============================\n1921.30s call     packages/apps/tests/e2e/test_r3_live_acceptance.py::test_stock_live_golden_lane\n\n(2 durations < 0.005s hidden.  Use -vv to show these durations.)\n======================== 1 passed in 1930.21s (0:32:10) ========================\n"
+    },
+    {
+      "artifact_hashes": {
+        "command_transcript": "32ce44f572a4c08ded2f54109e396b5875cb49cb642b80acf6b106d1f5025ad2"
+      },
+      "command": [
+        "pixi",
+        "run",
+        "-e",
+        "dev",
+        "pytest",
+        "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_etf_live_golden_lane",
+        "-q",
+        "--no-cov"
+      ],
+      "name": "etf-live-golden",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "============================= test session starts ==============================\nplatform linux -- Python 3.13.13, pytest-9.0.3, pluggy-1.6.0\nrootdir: /home/chevy/projects/ditto\nconfigfile: pyproject.toml\nplugins: inline-snapshot-0.32.7, time-machine-2.19.0, cov-7.1.0, respx-0.23.1, mock-3.15.1, xdist-3.8.0, asyncio-1.3.0, hypothesis-6.152.4, timeout-2.4.0, anyio-4.13.0\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncreated: 6/6 workers\n6 workers [1 item]\n\nscheduling tests via LoadFileScheduling\n\npackages/apps/tests/e2e/test_r3_live_acceptance.py::test_etf_live_golden_lane \n[gw2] [100%] PASSED packages/apps/tests/e2e/test_r3_live_acceptance.py::test_etf_live_golden_lane \n\n═══════════════════════════════ inline-snapshot ════════════════════════════════\nINFO: inline-snapshot was disabled because you used xdist. This means that tests\nwith snapshots will continue to run, but snapshot(x) will only return x and \ninline-snapshot will not be able to fix snapshots or generate reports.\n\n\n\n============================= slowest 10 durations =============================\n185.90s call     packages/apps/tests/e2e/test_r3_live_acceptance.py::test_etf_live_golden_lane\n\n(2 durations < 0.005s hidden.  Use -vv to show these durations.)\n======================== 1 passed in 193.64s (0:03:13) =========================\n"
+    },
+    {
+      "artifact_hashes": {
+        "command_transcript": "9c05dbea8fb22e0720831e6360c0457edc33744a7d5023da8283c4275604f287"
+      },
+      "command": [
+        "pixi",
+        "run",
+        "-e",
+        "dev",
+        "pytest",
+        "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_live_publish_r1_and_reactivate",
+        "-q",
+        "--no-cov"
+      ],
+      "name": "governance-live-lifecycle",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "============================= test session starts ==============================\nplatform linux -- Python 3.13.13, pytest-9.0.3, pluggy-1.6.0\nrootdir: /home/chevy/projects/ditto\nconfigfile: pyproject.toml\nplugins: inline-snapshot-0.32.7, time-machine-2.19.0, cov-7.1.0, respx-0.23.1, mock-3.15.1, xdist-3.8.0, asyncio-1.3.0, hypothesis-6.152.4, timeout-2.4.0, anyio-4.13.0\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncreated: 6/6 workers\n6 workers [1 item]\n\nscheduling tests via LoadFileScheduling\n\npackages/apps/tests/e2e/test_r3_live_acceptance.py::test_live_publish_r1_and_reactivate \n[gw1] [100%] PASSED packages/apps/tests/e2e/test_r3_live_acceptance.py::test_live_publish_r1_and_reactivate \n\n═══════════════════════════════ inline-snapshot ════════════════════════════════\nINFO: inline-snapshot was disabled because you used xdist. This means that tests\nwith snapshots will continue to run, but snapshot(x) will only return x and \ninline-snapshot will not be able to fix snapshots or generate reports.\n\n\n\n============================= slowest 10 durations =============================\n0.18s call     packages/apps/tests/e2e/test_r3_live_acceptance.py::test_live_publish_r1_and_reactivate\n\n(2 durations < 0.005s hidden.  Use -vv to show these durations.)\n============================== 1 passed in 6.68s ===============================\n"
+    },
+    {
+      "artifact_hashes": {
+        "command_transcript": "3aad59f7e0d69554b6f64c1eb4b8148b1beeea2db22a7063719d7dd45cd6eeda"
+      },
+      "command": [
+        "pixi",
+        "run",
+        "-e",
+        "dev",
+        "pytest",
+        "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore",
+        "-q",
+        "--no-cov"
+      ],
+      "name": "isolated-live-backup-restore",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "============================= test session starts ==============================\nplatform linux -- Python 3.13.13, pytest-9.0.3, pluggy-1.6.0\nrootdir: /home/chevy/projects/ditto\nconfigfile: pyproject.toml\nplugins: inline-snapshot-0.32.7, time-machine-2.19.0, cov-7.1.0, respx-0.23.1, mock-3.15.1, xdist-3.8.0, asyncio-1.3.0, hypothesis-6.152.4, timeout-2.4.0, anyio-4.13.0\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncreated: 6/6 workers\n6 workers [1 item]\n\nscheduling tests via LoadFileScheduling\n\npackages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore \n[gw2] [100%] PASSED packages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore \n\n═══════════════════════════════ inline-snapshot ════════════════════════════════\nINFO: inline-snapshot was disabled because you used xdist. This means that tests\nwith snapshots will continue to run, but snapshot(x) will only return x and \ninline-snapshot will not be able to fix snapshots or generate reports.\n\n\n\n============================= slowest 10 durations =============================\n369.60s call     packages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore\n\n(2 durations < 0.005s hidden.  Use -vv to show these durations.)\n======================== 1 passed in 375.71s (0:06:15) =========================\n"
+    }
+  ],
+  "does_not_prove": [],
+  "failures": [],
+  "generated_at": "2026-08-05T14:10:42Z",
+  "golden_lanes": [
+    "stock",
+    "etf"
+  ],
+  "mode": "real_data",
+  "passed": true,
+  "proves": [
+    "verified_r2_live_gate",
+    "certified_stock_and_etf_live_golden_lanes",
+    "live_96_month_research_governance_lifecycle",
+    "live_publish_r1_reactivate",
+    "isolated_live_backup_restore"
+  ],
+  "r2_evidence": {
+    "checked_at": "2026-08-04T06:12:20.045870+00:00",
+    "idempotency_evidence_refs": [
+      {
+        "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/idempotency.json",
+        "content_hash": "190f19dfb6f17e3c80812c84173e6c2b12604a677b1a06cd8b4d8d1af52b3ab3"
+      }
+    ],
+    "performance_evidence_refs": [
+      {
+        "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/performance.json",
+        "content_hash": "03afb1430947c715adc3bcab2aca63a7dc227e5a91d5baaeaae88d664c3c483b"
+      }
+    ],
+    "provider_entitlement_evidence_refs": [
+      {
+        "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/provider-entitlement.json",
+        "content_hash": "09b30a3ffa245baa1b9feda2562d92d57ada445b155dae95262b623f79f9bc26"
+      }
+    ],
+    "reason_codes": [],
+    "recoverability_evidence_refs": [
+      {
+        "artifact_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-live-evidence/recoverability.json",
+        "content_hash": "d0cd6704495de97121e380b16f4bf15c0b5992a07d8d3fd4c03b841d95b724b6"
+      }
+    ],
+    "report_hash": "50bafb0725fc6398f5d5dd8e12490d9a46180161f708726dc88d1a9acc0f3a77",
+    "report_uri": "file:///home/chevy/projects/ditto/artifacts/acceptance/r2-report.json",
+    "status": "ready"
+  },
+  "r2_live_gate": "PASS",
+  "release_status": "RELEASE_ACCEPTANCE_PASSED",
+  "schema": "ditto.r3-research-acceptance",
+  "source_commit": "7e887cf5d12c4da1fd896784e36dcec67a501f6b",
+  "version": 2
+}

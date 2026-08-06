@@ -295,7 +295,7 @@ def _missing_package_report(run: StrategyRunRecord) -> DailyDecisionV2Report:
     package_reader = MagicMock()
     package_reader.list_by_strategy.return_value = []
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     run_reader = MagicMock()
@@ -467,7 +467,7 @@ def test_v2_reads_package_baseline_sizing_evidence_and_effective_fills() -> None
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = _eod_run(
         error_message="", config_json="", status="completed"
@@ -571,7 +571,7 @@ def test_v2_keeps_overfill_visible_as_stable_review_evidence() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     signal_facade = MagicMock()
     signal_facade.get_intents_by_date.return_value = [
         replace(_intent(intent_id=intent_id), status="filled")
@@ -625,7 +625,7 @@ def test_v2_without_account_id_uses_persisted_package_identity() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     signal_facade = MagicMock()
     signal_facade.get_intents_by_date.return_value = [_intent()]
     portfolio_facade = MagicMock()
@@ -664,7 +664,7 @@ def test_v2_fails_closed_when_package_account_identity_is_incomplete(
     ]
     account_query = MagicMock()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
 
     report = DailyDecisionQueryFacade(
         signal_facade=MagicMock(),
@@ -687,7 +687,7 @@ def test_v2_fails_closed_when_requested_account_conflicts_with_package() -> None
     package_reader.list_by_strategy.return_value = [_package_artifact()]
     account_query = MagicMock()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
 
     report = DailyDecisionQueryFacade(
         signal_facade=MagicMock(),
@@ -714,7 +714,7 @@ def test_v2_zero_rebalance_uses_package_date_without_signal_intents() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     signal_facade = MagicMock()
     signal_facade.get_intents_by_date.return_value = []
     portfolio_facade = MagicMock()
@@ -747,7 +747,7 @@ def test_v2_blocks_when_persisted_package_checksum_does_not_match() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     signal_facade = MagicMock()
     signal_facade.get_intents_by_date.return_value = [_intent()]
     portfolio_facade = MagicMock()
@@ -798,7 +798,7 @@ def test_v2_does_not_guess_when_package_sizing_evidence_is_missing(
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = _eod_run(
         error_message="", config_json="", status="completed"
@@ -841,7 +841,7 @@ def test_v2_blocks_when_required_dataset_contract_is_missing() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = _eod_run(
         error_message="", config_json="", status="completed"
@@ -871,7 +871,7 @@ def test_v2_blocks_when_run_record_is_missing_even_if_package_exists() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = None
     portfolio_facade = MagicMock()
@@ -899,7 +899,7 @@ def test_v2_failed_run_record_overrides_completed_package_metadata() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = _eod_run(
         error_message="failed:EOD_RUN_FAILED",
@@ -945,7 +945,7 @@ def test_v2_fails_closed_when_duplicated_package_metadata_is_tampered(
         replace(artifact, metadata={**artifact.metadata, field: tampered})
     ]
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     run_reader = MagicMock()
@@ -982,7 +982,7 @@ def test_v2_uses_package_for_latest_published_version_only() -> None:
         _package_artifact(strategy_version="3")
     ]
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=4)
+    strategy_query.get_active_published.return_value = MagicMock(version=4)
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     run_reader = MagicMock()
@@ -1017,7 +1017,7 @@ def test_v2_reports_successful_run_without_package_as_package_missing() -> None:
     package_reader = MagicMock()
     package_reader.list_by_strategy.return_value = []
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     run_reader = MagicMock()
@@ -1233,7 +1233,7 @@ def test_v2_surfaces_persisted_conflict_without_hiding_active_package() -> None:
     package_reader = MagicMock()
     package_reader.list_by_strategy.return_value = [conflict, active]
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     run_reader = MagicMock()
@@ -1275,7 +1275,7 @@ def test_v2_running_run_never_trusts_completed_package_outcome() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = _eod_run(
         error_message="",
@@ -1310,7 +1310,7 @@ def test_v2_package_run_identity_is_always_validated() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = _eod_run(
         error_message="",
@@ -1345,7 +1345,7 @@ def test_v2_missing_persisted_intent_fails_closed() -> None:
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=3)
+    strategy_query.get_active_published.return_value = MagicMock(version=3)
     run_reader = MagicMock()
     run_reader.get_run.return_value = _eod_run(
         error_message="",
@@ -1387,7 +1387,7 @@ def test_v2_ignores_an_older_published_version_intent_on_the_same_date() -> None
     account_query = MagicMock()
     account_query.get_latest.return_value = _account_baseline()
     strategy_query = MagicMock()
-    strategy_query.get_latest_published.return_value = MagicMock(version=4)
+    strategy_query.get_active_published.return_value = MagicMock(version=4)
     run_reader = MagicMock()
     run_reader.get_run.return_value = replace(
         _eod_run(error_message="", config_json="", status="completed"),

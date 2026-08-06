@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 from collections.abc import Iterable, Mapping
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 
 import orjson
@@ -21,7 +21,7 @@ from ditto_kernel.trading import (
 )
 from loguru import logger
 
-from ditto_backtest.config import EngineConfig
+from ditto_backtest.config import EngineConfig, validate_spec_hash
 from ditto_backtest.manifest_types import (
     InputRef,
     RuleRef,
@@ -32,14 +32,23 @@ from ditto_backtest.provenance import aggregate_source_snapshot_id
 
 __all__ = [
     "RuleRefCollector",
+    "RunManifestInputEvidence",
     "build_run_manifest",
     "hash_config",
-    "hash_spec",
     "hash_universe",
     "serialize_manifest",
 ]
 
 _HASH_TRUNCATE_LEN = 16
+
+
+@dataclass(frozen=True)
+class RunManifestInputEvidence:
+    """Manifest 构建所需的输入集合、指纹与上游快照证据。"""
+
+    input_instruments: set[InstrumentId]
+    bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]]
+    source_snapshot_ids: Mapping[InstrumentId, str | Iterable[str]] | None = None
 
 
 def _hash_definition(defn: InstrumentDefinition) -> str:
@@ -69,16 +78,6 @@ def hash_config(
         f"{start_date}|{end_date}|{initial_cash}"
         f"|{strategy_id}|{rebalance_freq}|{engine_version}"
     )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:_HASH_TRUNCATE_LEN]
-
-
-def hash_spec(
-    strategy_id: str,
-    strategy_version: str,
-    rebalance_freq: str,
-) -> str:
-    """对策略规格关键字段做 SHA-256, 返回前 16 位 hex。"""
-    payload = f"{strategy_id}|{strategy_version}|{rebalance_freq}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:_HASH_TRUNCATE_LEN]
 
 
@@ -200,13 +199,17 @@ def build_run_manifest(
     *,
     run_id: str,
     config: EngineConfig,
-    input_instruments: set[InstrumentId],
-    bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]],
+    spec_hash: str,
+    input_evidence: RunManifestInputEvidence,
     rule_refs: tuple[RuleRef, ...],
     random_seed: int,
-    source_snapshot_ids: Mapping[InstrumentId, str | Iterable[str]] | None = None,
 ) -> RunManifest:
     """构建 RunManifest — 记录运行配置、规则引用、输入依赖等治理字段."""
+    validated_spec_hash = validate_spec_hash(spec_hash)
+    if validated_spec_hash != config.spec_hash:
+        msg = "spec_hash does not match EngineConfig.spec_hash"
+        raise ValueError(msg)
+    input_instruments = input_evidence.input_instruments
     input_refs = tuple(sorted(input_instruments))
     config_hash = hash_config(
         start_date=config.start_date,
@@ -216,11 +219,6 @@ def build_run_manifest(
         rebalance_freq=config.rebalance_freq,
         engine_version=config.engine_version,
     )
-    spec_hash = hash_spec(
-        strategy_id=config.strategy_id,
-        strategy_version=config.strategy_version,
-        rebalance_freq=config.rebalance_freq,
-    )
     return RunManifest(
         run_id=run_id,
         strategy_id=config.strategy_id,
@@ -228,14 +226,19 @@ def build_run_manifest(
         mode=RunMode.BACKTEST,
         input_refs=input_refs,
         input_ref_details=_build_input_ref_details(
-            bar_fingerprints,
-            source_snapshot_ids=source_snapshot_ids,
+            input_evidence.bar_fingerprints,
+            source_snapshot_ids=input_evidence.source_snapshot_ids,
         ),
         parameter_overrides=config.parameter_overrides,
         rule_refs=rule_refs,
         config_hash=config_hash,
         engine_version=config.engine_version,
-        spec_hash=spec_hash,
+        spec_hash=validated_spec_hash,
+        base_spec_hash=config.base_spec_hash,
+        parameter_hash=config.parameter_hash,
+        effective_parameters=config.effective_parameters,
+        research_snapshot_id=config.research_snapshot_id,
+        research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
         universe_hash=hash_universe(input_instruments),
         dependency_versions=_collect_dependency_versions(),
         random_seed=random_seed,

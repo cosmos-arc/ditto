@@ -5,6 +5,16 @@ from __future__ import annotations
 import polars as pl
 
 from ditto_data.config import DataSourceSettings
+from ditto_data.sources.tushare._announcement_range import (
+    fetch_corporate_actions_range as _fetch_corporate_actions_range,
+)
+from ditto_data.sources.tushare._announcement_range import (
+    fetch_dividend_range as _fetch_dividend_range,
+)
+from ditto_data.sources.tushare._market_facades import (
+    EtfIndexFacade as _EtfIndexFacade,
+)
+from ditto_data.sources.tushare._market_facades import StockFacade as _StockFacade
 from ditto_data.sources.tushare.adapters.calendar import CalendarTushareAdapter
 from ditto_data.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
@@ -38,6 +48,7 @@ from ditto_data.sources.tushare.macro_source import (
     fetch_commodities,
     fetch_fx_daily,
     fetch_macro_indicators,
+    fetch_macro_indicators_range,
     fetch_metal_daily,
 )
 from ditto_data.sources.tushare.stock_source import (
@@ -52,153 +63,6 @@ from ditto_data.sources.tushare.stock_source import (
 )
 
 # ── 内部 Facade 类 ───────────────────────────────────────────────────
-
-
-class _StockFacade:
-    """股票/日历数据域 facade."""
-
-    def __init__(
-        self,
-        calendar: CalendarTushareAdapter,
-        stock: StockTushareAdapter,
-    ) -> None:
-        self._calendar = calendar
-        self._stock = stock
-
-    def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
-        """获取交易日历."""
-        return fetch_calendar(self._calendar, start_date, end_date)
-
-    def fetch_stock_basic(self, source_ticker: str | None = None) -> pl.DataFrame:
-        """获取股票基本信息."""
-        return fetch_stock_basic(self._stock, source_ticker)
-
-    def fetch_stock_daily(
-        self,
-        trade_date: str | None = None,
-        source_ticker: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """获取股票日线 OHLCV."""
-        return fetch_stock_daily(
-            self._stock,
-            trade_date=trade_date,
-            source_ticker=source_ticker,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-    def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
-        """获取股票复权因子."""
-        return fetch_adj_factor(self._stock, trade_date)
-
-    def fetch_adj_factor_by_ticker(
-        self,
-        ts_code: str,
-        start_date: str,
-        end_date: str,
-    ) -> pl.DataFrame:
-        """按标的获取复权因子."""
-        return fetch_adj_factor_by_ticker(self._stock, ts_code, start_date, end_date)
-
-    def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
-        """获取股票涨跌停价格."""
-        return fetch_stock_limit(self._stock, trade_date)
-
-    def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
-        """获取股票状态信息."""
-        return fetch_stock_status(self._stock, trade_date)
-
-    def fetch_st_history(
-        self,
-        ts_code: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """获取 ST 状态变更历史."""
-        return fetch_st_history(
-            self._stock,
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-
-class _EtfIndexFacade:
-    """ETF/指数/行业数据域 facade."""
-
-    def __init__(
-        self,
-        etf: ETFTushareAdapter,
-        index: IndexTushareAdapter,
-        industry: IndustryTushareAdapter,
-    ) -> None:
-        self._etf = etf
-        self._index = index
-        self._industry = industry
-
-    def fetch_etf_basic(self) -> pl.DataFrame:
-        """获取 ETF 基本信息."""
-        return fetch_etf_basic(self._etf)
-
-    def fetch_etf_daily(
-        self,
-        trade_date: str | None = None,
-        source_ticker: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """获取 ETF 日线 OHLCV."""
-        return fetch_etf_daily(
-            self._etf,
-            trade_date=trade_date,
-            source_ticker=source_ticker,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-    def fetch_fund_adj(
-        self,
-        trade_date: str | None = None,
-        source_ticker: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """获取 ETF/基金复权因子."""
-        return fetch_fund_adj(
-            self._etf,
-            trade_date=trade_date,
-            source_ticker=source_ticker,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-    def fetch_index_basic(self) -> pl.DataFrame:
-        """获取指数基本信息."""
-        return fetch_index_basic(self._index)
-
-    def fetch_index_daily(
-        self,
-        trade_date: str | None = None,
-        ts_codes: list[str] | None = None,
-        source_ticker: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """获取指数日线 OHLCV."""
-        return fetch_index_daily(
-            self._index,
-            trade_date=trade_date,
-            ts_codes=ts_codes,
-            source_ticker=source_ticker,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-    def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
-        """获取申万行业分类."""
-        return fetch_sw_industry(self._industry, level)
 
 
 class _FundamentalFacade:
@@ -328,16 +192,66 @@ class _FundamentalFacade:
         self,
         index_code: str,
         trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取 effective-dated 指数成分权重."""
+        if start_date is None and end_date is None:
+            return self._capital.fetch_index_weight(
+                index_code,
+                trade_date=trade_date,
+            )
         return self._capital.fetch_index_weight(
             index_code,
             trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         """获取公司行为数据."""
         return fetch_corporate_actions(self._fundamental, trade_date)
+
+    def fetch_balance_sheet_range(self, start_date: str, end_date: str) -> pl.DataFrame:
+        """Fetch all balance-sheet announcements in one bounded interval."""
+        return self._fundamental.fetch_balance_sheet_vip(
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+        )
+
+    def fetch_income_statement_range(
+        self, start_date: str, end_date: str
+    ) -> pl.DataFrame:
+        """Fetch all income-statement announcements in one bounded interval."""
+        return self._fundamental.fetch_income_statement_vip(
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+        )
+
+    def fetch_cash_flow_range(self, start_date: str, end_date: str) -> pl.DataFrame:
+        """Fetch all cash-flow announcements in one bounded interval."""
+        return self._fundamental.fetch_cash_flow_vip(
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+        )
+
+    def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
+        """Fetch dividend announcements in one bounded natural-day interval."""
+        return _fetch_dividend_range(
+            self._fundamental,
+            start_date,
+            end_date,
+        )
+
+    def fetch_corporate_actions_range(
+        self, start_date: str, end_date: str
+    ) -> pl.DataFrame:
+        """Fetch corporate actions in a bounded announcement-date interval."""
+        return _fetch_corporate_actions_range(
+            self._fundamental,
+            start_date,
+            end_date,
+        )
 
 
 class _MacroFacade:
@@ -356,6 +270,14 @@ class _MacroFacade:
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         """获取宏观指标数据."""
         return fetch_macro_indicators(self._macro, trade_date)
+
+    def fetch_macro_indicators_range(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """获取宏观指标区间数据."""
+        return fetch_macro_indicators_range(self._macro, start_date, end_date)
 
     def fetch_fx_daily(
         self,
@@ -700,22 +622,80 @@ class TushareSource:
         self,
         index_code: str,
         trade_date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """Fetch effective-dated index weights from the capital adapter."""
+        if start_date is None and end_date is None:
+            return self._capital.fetch_index_weight(
+                index_code,
+                trade_date=trade_date,
+            )
         return self._capital.fetch_index_weight(
             index_code,
             trade_date=trade_date,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         """Fetch corporate actions data. 委托给 fundamental_source."""
         return fetch_corporate_actions(self._fundamental, trade_date)
 
+    def fetch_balance_sheet_range(self, start_date: str, end_date: str) -> pl.DataFrame:
+        """Fetch all balance-sheet announcements in a bounded interval."""
+        return self._fundamental.fetch_balance_sheet_vip(
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+        )
+
+    def fetch_income_statement_range(
+        self, start_date: str, end_date: str
+    ) -> pl.DataFrame:
+        """Fetch all income-statement announcements in a bounded interval."""
+        return self._fundamental.fetch_income_statement_vip(
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+        )
+
+    def fetch_cash_flow_range(self, start_date: str, end_date: str) -> pl.DataFrame:
+        """Fetch all cash-flow announcements in a bounded interval."""
+        return self._fundamental.fetch_cash_flow_vip(
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+        )
+
+    def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
+        """Fetch dividend announcements in a bounded natural-day interval."""
+        return _fetch_dividend_range(
+            self._fundamental,
+            start_date,
+            end_date,
+        )
+
+    def fetch_corporate_actions_range(
+        self, start_date: str, end_date: str
+    ) -> pl.DataFrame:
+        """Fetch corporate actions in a bounded announcement-date interval."""
+        return _fetch_corporate_actions_range(
+            self._fundamental,
+            start_date,
+            end_date,
+        )
+
     # ── Macro + FX + Metal + Commodity（向后兼容委托）────────────────
 
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         """Fetch macro indicators data. 委托给 macro_source.fetch_macro_indicators."""
         return fetch_macro_indicators(self._macro, trade_date)
+
+    def fetch_macro_indicators_range(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Fetch macro indicator observations over a bounded interval."""
+        return fetch_macro_indicators_range(self._macro, start_date, end_date)
 
     def fetch_fx_daily(
         self,

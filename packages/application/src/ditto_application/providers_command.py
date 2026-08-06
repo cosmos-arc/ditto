@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog import DataCatalogReader
 from ditto_data.catalog.certification import CertificationGovernanceStore
 from ditto_data.catalog.fallback_policy import (
     CatalogSourceFallbackPolicyReader,
     CatalogSourceFallbackPolicyWriter,
 )
+from ditto_data.catalog.license import DatasetLicenseReader, DatasetLicenseWriter
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionReader,
     DatasetMaturityPromotionRevoker,
@@ -19,6 +21,8 @@ from ditto_data.catalog.remediation import (
     CatalogRemediationApprovalReader,
     CatalogRemediationApprovalWriter,
 )
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
 )
@@ -36,6 +40,7 @@ from ditto_execution.contracts import (
     IntentDataPort,
     PositionDataPort,
 )
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -53,6 +58,9 @@ from ditto_application.commands.backtest import (
     CancelRunHandler,
     ResumeRunHandler,
     RetryRunHandler,
+)
+from ditto_application.commands.candidate_selection import (
+    CandidateSelectionHandler,
 )
 from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
@@ -72,6 +80,19 @@ from ditto_application.commands.catalog_remediation import (
 from ditto_application.commands.data_product_certification import (
     DataProductCertificationCommands,
 )
+from ditto_application.commands.data_product_certification_builder import (
+    DataProductCertificationBuilder,
+)
+from ditto_application.commands.data_product_license import DataProductLicenseCommands
+from ditto_application.commands.experiments import (
+    CancelExperimentHandler,
+    ClaimHoldoutCandidateHandler,
+    ExperimentControlNotifier,
+    LaunchExperimentHandler,
+    PauseExperimentHandler,
+    ResumeExperimentHandler,
+    RetryExperimentFoldHandler,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
 from ditto_application.commands.source_fallback_policy import (
@@ -84,6 +105,15 @@ from ditto_application.commands.strategy import (
     CreateStrategyHandler,
     PublishStrategyHandler,
     UpdateStrategyHandler,
+)
+from ditto_application.commands.strategy_governance import (
+    ApproveReviewHandler,
+    DeprecateStrategyHandler,
+    PublishStrategyVersionHandler,
+    ReactivateStrategyHandler,
+    RejectReviewHandler,
+    ReviewPacketReader,
+    SubmitReviewHandler,
 )
 from ditto_application.commands.trade import (
     ProjectedFillAppendAdapter,
@@ -102,6 +132,15 @@ from ditto_application.opening_baseline import OpeningBaselinePort
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.experiments.coordinator import (
+    ExperimentExecutionCoordinator,
+)
+from ditto_application.processes.experiments.planning_process import (
+    ExperimentPlanningProcess,
+)
+from ditto_application.processes.strategy.promotion import (
+    StrategyPromotionProcess,
+)
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.opening_baseline import OpeningBaselineResolver
 
@@ -112,12 +151,97 @@ class AppCommandProvider(Provider):
     scope = Scope.APP
 
     @provide
+    def candidate_selection_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+    ) -> CandidateSelectionHandler:
+        """Expose durable server-side preselection through the coordinator lease."""
+        return CandidateSelectionHandler(process)
+
+    @provide
+    def launch_experiment_handler(
+        self,
+        process: ExperimentPlanningProcess,
+    ) -> LaunchExperimentHandler:
+        """Expose confirmed experiment launch through the command boundary."""
+        return LaunchExperimentHandler(process)
+
+    @provide
+    def pause_experiment_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> PauseExperimentHandler:
+        """Persist pause intent, then notify each persisted live run to stop."""
+        return PauseExperimentHandler(process=process, notifier=notifier)
+
+    @provide
+    def cancel_experiment_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> CancelExperimentHandler:
+        """Persist cancel intent, then notify each persisted live run to stop."""
+        return CancelExperimentHandler(process=process, notifier=notifier)
+
+    @provide
+    def resume_experiment_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> ResumeExperimentHandler:
+        """Persist resume intent, then wake the scheduler for one paused experiment."""
+        return ResumeExperimentHandler(process=process, notifier=notifier)
+
+    @provide
+    def retry_experiment_fold_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> RetryExperimentFoldHandler:
+        """Persist one fold retry intent, then wake the scheduler to dispatch it."""
+        return RetryExperimentFoldHandler(process=process, notifier=notifier)
+
+    @provide
+    def claim_holdout_candidate_handler(
+        self,
+        process: ExperimentExecutionCoordinator,
+        notifier: ExperimentControlNotifier,
+    ) -> ClaimHoldoutCandidateHandler:
+        """Commit one holdout claim, then wake the scheduler for dispatch."""
+        return ClaimHoldoutCandidateHandler(process=process, notifier=notifier)
+
+    @provide
     def data_product_certification_commands(
         self,
         store: CertificationGovernanceStore,
     ) -> DataProductCertificationCommands:
         """R2 immutable certification review commands."""
         return DataProductCertificationCommands(store=store)
+
+    @provide
+    def data_product_license_commands(
+        self,
+        writer: DatasetLicenseWriter,
+    ) -> DataProductLicenseCommands:
+        """Append one application-validated human license review."""
+        return DataProductLicenseCommands(writer)
+
+    @provide
+    def data_product_certification_builder(
+        self,
+        catalog_reader: DataCatalogReader,
+        snapshot_reader: ProviderSnapshotReader,
+        license_reader: DatasetLicenseReader,
+        lifecycle_reader: PartitionLifecycleReader,
+    ) -> DataProductCertificationBuilder:
+        """Build reviewable R2 reports from the durable ingestion evidence chain."""
+        return DataProductCertificationBuilder(
+            catalog_reader=catalog_reader,
+            snapshot_reader=snapshot_reader,
+            license_reader=license_reader,
+            lifecycle_reader=lifecycle_reader,
+        )
 
     @provide
     def opening_baseline_resolver(
@@ -302,26 +426,80 @@ class AppCommandProvider(Provider):
     @provide
     def create_strategy_handler(
         self,
-        catalog_service: StrategyCatalogService,
+        governance_service: GovernanceService,
     ) -> CreateStrategyHandler:
-        """策略创建 Handler."""
-        return CreateStrategyHandler(catalog_service=catalog_service)
+        """策略创建 Handler（governance-backed append-only）."""
+        return CreateStrategyHandler(governance=governance_service)
 
     @provide
     def update_strategy_handler(
         self,
         catalog_service: StrategyCatalogService,
+        governance_service: GovernanceService,
     ) -> UpdateStrategyHandler:
-        """策略更新 Handler."""
-        return UpdateStrategyHandler(catalog_service=catalog_service)
+        """策略更新 Handler（catalog 读 existing + governance 写 draft）."""
+        return UpdateStrategyHandler(
+            catalog_service=catalog_service,
+            governance=governance_service,
+        )
 
     @provide
     def publish_strategy_handler(
         self,
-        catalog_service: StrategyCatalogService,
+        governance_service: GovernanceService,
     ) -> PublishStrategyHandler:
-        """策略发布 Handler."""
-        return PublishStrategyHandler(catalog_service=catalog_service)
+        """策略发布 Handler（governance publish_and_activate）."""
+        return PublishStrategyHandler(governance=governance_service)
+
+    @provide
+    def submit_review_handler(
+        self,
+        governance_service: GovernanceService,
+        reader: ReviewPacketReader,
+    ) -> SubmitReviewHandler:
+        """策略版本提交审查 Handler（governance submit_review）."""
+        return SubmitReviewHandler(governance=governance_service, reader=reader)
+
+    @provide
+    def approve_review_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> ApproveReviewHandler:
+        """策略版本审批 Handler（governance approve）."""
+        return ApproveReviewHandler(governance=governance_service)
+
+    @provide
+    def reject_review_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> RejectReviewHandler:
+        """策略版本驳回 Handler（governance reject）."""
+        return RejectReviewHandler(governance=governance_service)
+
+    @provide
+    def deprecate_strategy_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> DeprecateStrategyHandler:
+        """策略版本弃用 Handler（governance deprecate）."""
+        return DeprecateStrategyHandler(governance=governance_service)
+
+    @provide
+    def reactivate_strategy_handler(
+        self,
+        governance_service: GovernanceService,
+    ) -> ReactivateStrategyHandler:
+        """策略版本重新激活 Handler（governance activate + expected pointer CAS）."""
+        return ReactivateStrategyHandler(governance=governance_service)
+
+    @provide
+    def publish_strategy_version_handler(
+        self,
+        process: StrategyPromotionProcess,
+        reader: ReviewPacketReader,
+    ) -> PublishStrategyVersionHandler:
+        """Promote one reviewed version after evidence-gated validation."""
+        return PublishStrategyVersionHandler(process=process, reader=reader)
 
     @provide
     def record_fill_handler(

@@ -144,6 +144,10 @@ class MetadataQueryFacade:
         """
         return self._service.is_trading_day(date)
 
+    def list_trading_days(self, start: str, end: str) -> list[str]:
+        """Return the canonical ordered open-session dates for one interval."""
+        return self._service.list_trading_days(start, end)
+
     def get_last_trading_day(self) -> str | None:
         """
         获取最后一个交易日.

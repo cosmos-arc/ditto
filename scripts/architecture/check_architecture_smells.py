@@ -21,6 +21,8 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 16. Application providers must not read environment variables directly
 17. Generic helpers/utils source paths must have owned architecture allowances
 18. Every src __init__.py must declare an explicit __all__
+19. Experiment sources must not use TYPE_CHECKING to hide import cycles
+20. The process provider must declare wiring classes only
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -313,12 +315,34 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             {
                 "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
                 "ditto_strategy.storage.sqlite.services.strategy_run_service",
+                "ditto_strategy.governance.service",
+                "ditto_strategy.models",
             }
         ),
         owner="apps strategy registry context",
         reason=(
-            "Strategy registry context owns concrete strategy storage wiring for "
-            "application execution facades."
+            "Strategy registry context owns concrete strategy storage and "
+            "governance wiring (seed draft/publish via GovernanceService plus "
+            "StrategySpecRecord construction) for application execution facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/contexts/r3_recovery.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.storage.sqlite.experiments",
+                "ditto_analysis.storage.sqlite.experiments.schema",
+                "ditto_data.config.data_store",
+                "ditto_strategy.governance.service",
+                "ditto_strategy.storage.sqlite.strategy_governance_schema",
+                "ditto_strategy.storage.sqlite.strategy_governance_store",
+            }
+        ),
+        owner="apps R3 recovery composition boundary",
+        reason=(
+            "The offline recovery verifier owns exact schema inspection and "
+            "reopens canonical governance/research adapters after restore; "
+            "ordinary apps paths remain on application facades."
         ),
     ),
     CompositionImportAllowance(
@@ -377,6 +401,80 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             "registration before runtime services start."
         ),
     ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/live/r2_live_certification.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_data.catalog",
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.metadata",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        owner="apps isolated R2 live certification composition",
+        reason=(
+            "Task 18 certification binds registry-resolved catalog, provider "
+            "snapshot, and application governance ports for one isolated root."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/live/r3_live_snapshot_builder.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.artifact_service",
+                "ditto_analysis.research.catalog_service",
+                "ditto_analysis.research.records",
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        owner="apps isolated R3 live snapshot composition",
+        reason=(
+            "Task 18 freezes analysis artifacts against exact active data "
+            "certifications and provider snapshots in the isolated live root."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/live/r3_live_planning_builder.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments",
+                "ditto_analysis.experiments.promotion_objective",
+                "ditto_analysis.experiments.trial_ledger",
+                "ditto_analysis.research.artifact_service",
+                "ditto_analysis.research.catalog_service",
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.source_snapshot",
+                "ditto_strategy.alpha.seeds",
+                "ditto_strategy.models",
+                "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
+            }
+        ),
+        owner="apps isolated R3 live planning composition",
+        reason=(
+            "Task 18 composes frozen analysis planning inputs with the canonical "
+            "seed catalog and exact certified live snapshot identities."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=(
+            "packages/apps/src/ditto_apps/registry/live/r3_live_acceptance_driver.py"
+        ),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.artifact_service",
+                "ditto_analysis.research.catalog_service",
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.source_snapshot",
+                "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
+            }
+        ),
+        owner="apps isolated R3 live acceptance composition",
+        reason=(
+            "Task 18 owns the explicit production-port composition for golden "
+            "lane, governance, and recovery evidence over an isolated root."
+        ),
+    ),
 )
 
 APPS_REGISTRY_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
@@ -422,6 +520,549 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
         ),
     ),
     ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/providers_process.py",
+        owner="application research process DI provider",
+        reason=(
+            "The process composition root wires approved experiment persistence "
+            "ports into the application research planning boundary."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/execution/"
+            "_research_replay_artifacts.py"
+        ),
+        owner="application R3 verified replay artifact boundary",
+        reason=(
+            "The verified-read boundary reuses the analysis-owned immutable "
+            "Schema v1 artifact contract through a narrow indexed port; it "
+            "performs no storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "evidence.py"
+        ),
+        owner="application R3 review evidence assembler",
+        reason=(
+            "The pure assembler evaluates the analysis-owned two-layer gate "
+            "engine and freezes an immutable review packet; it performs no "
+            "storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_selection_evidence_artifact.py"
+        ),
+        owner="application R3 durable selection-evidence boundary",
+        reason=(
+            "The pre-holdout boundary rebuilds the analysis-owned typed trial "
+            "ledger and verifies its immutable Schema v1 indexed artifact; "
+            "storage access remains behind approved reader and artifact ports."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "selection_evidence_reader.py"
+        ),
+        owner="application R3 selection-evidence read boundary",
+        reason=(
+            "The read-only boundary resolves the content-addressed selection "
+            "ledger via the analysis-owned experiment reader contract and "
+            "delegates verification to the durable selection-evidence service; "
+            "it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "comparison_reader.py"
+        ),
+        owner="application R3 candidate-comparison read boundary",
+        reason=(
+            "The read-only boundary reuses the analysis-owned walk-forward "
+            "evidence assembler and experiment reader contract to project a "
+            "candidate comparison without holdout or review publication; it "
+            "performs no storage writes or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/strategy/promotion.py"
+        ),
+        owner="application R3 strategy promotion process",
+        reason=(
+            "The promotion process reads the analysis-owned immutable review "
+            "packet and gate outcomes to gate a governance publish/activate; "
+            "it performs no direct storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "coordinator.py"
+        ),
+        owner="application experiment execution coordinator",
+        reason=(
+            "The first-run coordinator consumes the analysis-owned Task 7 lease, "
+            "fold, and attempt contracts through a narrow application scheduler "
+            "store; it owns no persistence implementation."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_coordinator_stage_drivers.py"
+        ),
+        owner="application experiment stage-progression helpers",
+        reason=(
+            "The extracted stage-progression helpers drive the analysis-owned "
+            "EVIDENCE-stage review-packet collector and failed-candidate fold "
+            "cancellation through the same narrow scheduler store as the host "
+            "coordinator; they perform no direct storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_coordinator_vocabulary.py"
+        ),
+        owner="application experiment coordinator snapshot vocabulary",
+        reason=(
+            "The extracted vocabulary binds the analysis-owned experiment, "
+            "fold and attempt status enums into the immutable "
+            "SnapshotVocabulary consumed by the host coordinator and its "
+            "result builder; it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_scheduler_models.py"
+        ),
+        owner="application experiment scheduler value models",
+        reason=(
+            "The extracted frozen dataclasses validate durable scheduler "
+            "invariants against the analysis-owned attempt, fold and "
+            "projection contracts at the boundary consumed by the scheduler "
+            "store, coordinator and worker; they perform no storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/queries/"
+            "_experiment_review_read_models.py"
+        ),
+        owner="application R3 review-packet read models",
+        reason=(
+            "The extracted read models and builder derive an "
+            "application-owned view of the analysis-owned immutable "
+            "ReviewPacket through its narrow gate-evaluation contract; they "
+            "perform no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/commands/strategy_governance.py"
+        ),
+        owner="application R3 evidence-gated publish command boundary",
+        reason=(
+            "The evidence-gated publish command reads the analysis-owned immutable "
+            "review packet through a narrow reader port and forwards it to the "
+            "promotion process; it performs no direct storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_control_runtime.py"
+        ),
+        owner="application experiment control runtime",
+        reason=(
+            "The R3 control-only runtime wires analysis-owned fold/attempt "
+            "contracts into the placeholder first-attempt factory, logging "
+            "notifier and transient retry-lease helper; it performs no storage "
+            "or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "execution_bundle.py"
+        ),
+        owner="application experiment execution evidence compiler",
+        reason=(
+            "The pure execution compiler freezes analysis-owned content hashes "
+            "and canonical payload identities into the per-attempt evidence bundle; "
+            "it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_comparison_evidence.py"
+        ),
+        owner="application R3 comparison evidence values",
+        reason=(
+            "The approved R3 evidence boundary validates analysis-owned metric, "
+            "identity, and persistence value types without storage writes."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_factor_diagnostics_evidence.py"
+        ),
+        owner="application R3 factor diagnostics evidence boundary",
+        reason=(
+            "The read-only lineage envelope binds exact analysis-owned experiment, "
+            "fold, snapshot, and content identities to a diagnostics projection."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_oos_fold_registration.py"
+        ),
+        owner="application R3 OOS fold registration boundary",
+        reason=(
+            "The immutable registration reuses analysis-owned fold and date-window "
+            "value contracts for the approved walk-forward protocol."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_persisted_execution_evidence.py"
+        ),
+        owner="application R3 persisted execution evidence boundary",
+        reason=(
+            "The approved read-only authority seam validates exact analysis-owned "
+            "fold and terminal-attempt projections loaded through the reader port."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_report_evidence.py"
+        ),
+        owner="application R3 backtest report evidence boundary",
+        reason=(
+            "The pure report hasher emits an analysis-owned content identity over "
+            "the complete result fields consumed by R3 metrics."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_report_artifact_validation.py"
+        ),
+        owner="application R3 immutable report artifact validation boundary",
+        reason=(
+            "The immutable report receipt/read validator directly checks "
+            "analysis-owned manifests and canonical byte measurements; it is "
+            "pure and performs no storage or file I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_evidence.py"
+        ),
+        owner="application R3 walk-forward evidence values",
+        reason=(
+            "The immutable evidence values carry analysis-owned fold and content "
+            "identities without persistence or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_evidence_collection.py"
+        ),
+        owner="application R3 walk-forward evidence collection boundary",
+        reason=(
+            "The typed read boundary selects exact terminal analysis-owned fold "
+            "and attempt projections, then verifies immutable report artifacts "
+            "through a narrow reader port; it performs no writes or execution."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_walk_forward_execution_semantics.py"
+        ),
+        owner="application R3 walk-forward execution-semantics evidence boundary",
+        reason=(
+            "The narrow resolver validates immutable analysis-owned fold and "
+            "attempt identities against exact execution semantics; it performs "
+            "no storage writes or execution."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "comparison.py"
+        ),
+        owner="application R3 candidate comparison process",
+        reason=(
+            "The approved comparison process binds persisted experiment identities "
+            "to versioned analysis-owned metric projections."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "trial_evidence_bridge.py"
+        ),
+        owner="application R3 trial evidence bridge",
+        reason=(
+            "The approved bridge converts validated walk-forward evidence into "
+            "analysis-owned logical trial outcomes without persistence I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "walk_forward.py"
+        ),
+        owner="application R3 walk-forward aggregation",
+        reason=(
+            "The approved aggregation process recomputes analysis-owned metrics "
+            "from validated out-of-sample result evidence."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_execution_resolution_evidence.py"
+        ),
+        owner="application durable research execution evidence boundary",
+        reason=(
+            "The private evidence boundary reconstructs exact analysis launch and "
+            "status DTOs for the builder-owned resolver without storage or "
+            "moving-state fallback."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "lease_authority.py"
+        ),
+        owner="application experiment scheduler lease authority",
+        reason=(
+            "The serialized authority owns the latest analysis scheduler fence "
+            "and normalizes lease and integrity failures before application writes."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "scheduler_store.py"
+        ),
+        owner="application experiment scheduler persistence adapter",
+        reason=(
+            "The narrow adapter preserves the analysis-owned Task 7 reader, "
+            "writer, revision, and lease-fence contracts for first-run scheduling."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/worker.py"
+        ),
+        owner="application experiment first-attempt worker",
+        reason=(
+            "The execution boundary consumes frozen analysis attempt, fold, hash, "
+            "and failure contracts while delegating numerical work to BacktestService."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning.py"
+        ),
+        owner="application experiment planning process",
+        reason=(
+            "The pure work planner reuses the analysis-owned failure-policy value "
+            "that is frozen into the approved launch contract; it performs no I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning_process.py"
+        ),
+        owner="application experiment planning process",
+        reason=(
+            "The approved R3 planning boundary assembles analysis-owned launch "
+            "identities and delegates persistence through narrow protocols."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "planning_contracts.py"
+        ),
+        owner="application experiment planning contracts",
+        reason=(
+            "The neutral request contract freezes the analysis-owned failure "
+            "policy selected by the operator; it contains no orchestration or I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_executor_probe.py"
+        ),
+        owner="application experiment executor probe boundary",
+        reason=(
+            "The private probe boundary seals an analysis-owned canonical payload "
+            "before and after calling an untrusted executor adapter."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_material.py"
+        ),
+        owner="application experiment launch material compiler",
+        reason=(
+            "The private compiler materializes every immutable analysis launch row "
+            "before computing the operator-confirmed content hash."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_creation_identity.py"
+        ),
+        owner="application experiment creation identity fence",
+        reason=(
+            "The private fail-closed boundary validates the analysis-owned "
+            "revision-zero event and reader projection before planning probes."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_saga.py"
+        ),
+        owner="application experiment launch saga",
+        reason=(
+            "The private launch saga owns exact replay and readback over the "
+            "analysis experiment reader and writer protocols."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_contracts.py"
+        ),
+        owner="application experiment launch immutable contracts",
+        reason=(
+            "The extracted contracts carry the analysis-owned immutable launch "
+            "rows shared by compilation, strict replay, and persistence."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_durable_reconstruction.py"
+        ),
+        owner="application experiment durable launch reconstruction",
+        reason=(
+            "The strict readback boundary reconstructs analysis-owned launch, "
+            "gate, and fold rows before any durable enqueue can be replayed."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_idempotency.py"
+        ),
+        owner="application experiment launch idempotency boundary",
+        reason=(
+            "The mutation boundary binds and verifies durable receipts over the "
+            "analysis-owned experiment event and projection contracts."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_mutation_receipts.py"
+        ),
+        owner="application experiment control receipt boundary",
+        reason=(
+            "The typed receipt boundary validates analysis-owned status events "
+            "and persists control responses through the approved scheduler port."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_planning_launch.py"
+        ),
+        owner="application experiment durable planning launch",
+        reason=(
+            "The extracted mutation path replays and persists analysis-owned "
+            "experiment launch contracts after read-only preflight planning."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_scheduler_mutations.py"
+        ),
+        owner="application experiment scheduler mutation store",
+        reason=(
+            "The extracted mutation store implements exact operator transition "
+            "and fold retry operations over the approved analysis persistence ports."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_launch_reconstruction.py"
+        ),
+        owner="application experiment launch reconstruction boundary",
+        reason=(
+            "The private fail-closed codec reconstructs analysis-owned launch, "
+            "gate, and fold value rows before the saga's first writer call."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_preflight_codec.py"
+        ),
+        owner="application experiment preflight codec",
+        reason=(
+            "The private persisted-report codec verifies analysis-owned fold, "
+            "window, failure-policy, and canonical payload identities."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/research_validation_windows.py"
+        ),
+        owner="application validation protocol compiler",
+        reason=(
+            "The research validation compiler reuses analysis-owned date-window "
+            "and fold-role value contracts without storage or runtime I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/queries/experiments.py",
+        owner="application experiment query facade",
+        reason=(
+            "The experiment query facade is the approved application boundary "
+            "for durable analysis control-plane reads."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/queries/research.py",
         owner="application research query facade",
         reason=(
@@ -431,11 +1072,128 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
         ),
     ),
     ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/queries/"
+            "research_certification.py"
+        ),
+        owner="application research certification query adapter",
+        reason=(
+            "The read-only certification adapter resolves one exact immutable "
+            "research snapshot through the approved analysis catalog boundary."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/queries/research_helpers.py",
         owner="application research query facade (extracted helpers)",
         reason=(
             "Extracted helper functions for the research query facade; same "
             "analysis import allowance as the parent facade module."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/builders/"
+            "research_input_resolver.py"
+        ),
+        owner="application indexed frozen research inputs resolver",
+        reason=(
+            "The production resolver reads analysis-owned indexed artifact bytes "
+            "through the narrow ResearchArtifactService port and rebuilds the "
+            "frozen input trust boundary; it performs no storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/builders/"
+            "research_artifact_loader.py"
+        ),
+        owner="application indexed research artifact loader",
+        reason=(
+            "The production loader reads analysis-owned indexed artifact bytes "
+            "through the narrow ResearchArtifactService port and rebuilds "
+            "verified frame and instrument-rules trust boundaries; it performs "
+            "no storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/providers_research_execution.py"
+        ),
+        owner="application R3 research execution bundle DI provider",
+        reason=(
+            "The DI provider wires the C1 indexed builders and durable execution "
+            "resolver into a complete attempt dispatch graph; it only injects "
+            "analysis-owned ExperimentReaderProtocol and ResearchArtifactService "
+            "ports that are already registered in the host container."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_evidence_inputs.py"
+        ),
+        owner="application R3 evidence-input assembly boundary",
+        reason=(
+            "The pure assembler binds persisted fold and attempt views with their "
+            "artifact record and optional backtest report into analysis-owned "
+            "CandidateFoldEvidence rows; it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "evidence_collector.py"
+        ),
+        owner="application R3 review-packet collector",
+        reason=(
+            "The collector loads one durable experiment snapshot, projects the "
+            "persisted preflight detail onto the analysis-owned HardGateEvidenceView, "
+            "and freezes the evaluated gates into an immutable ReviewPacket via the "
+            "analysis-owned assembler; storage I/O is delegated to the injected "
+            "ExperimentReaderProtocol and ExperimentWriterProtocol."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_fold_selection_trace_artifacts.py"
+        ),
+        owner="application R3 fold-selection-trace artifact contract boundary",
+        reason=(
+            "The pure typed contract module freezes the analysis-owned attempt, "
+            "fold, content-hash, date-window, lease-fence, canonical-payload, and "
+            "relative-path value contracts into deterministic artifact identities, "
+            "fixed four-record receipts, and narrow publisher/reader/index protocols; "
+            "it performs no storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_fold_selection_trace_artifact_validation.py"
+        ),
+        owner="application R3 fold-selection-trace artifact validation boundary",
+        reason=(
+            "The pure no-I/O validator verifies the four analysis-owned immutable "
+            "ArtifactRecord, ContentHash, LeaseFence, ArtifactManifest, and canonical "
+            "parquet byte-measurement contracts against canonical selection-evidence "
+            "trace frames and the attempt test window; it performs no storage or "
+            "execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/builders/"
+            "fold_selection_trace_artifact_adapter.py"
+        ),
+        owner="application R3 fold-selection-trace indexed artifact adapter",
+        reason=(
+            "The indexed builder publishes and reads the four attempt-scoped fold "
+            "selection trace Parquet facts through the analysis-owned "
+            "ResearchArtifactService and a narrow index-reader port, reusing the "
+            "immutable ArtifactRecord, LeaseFence, and ArtifactPublicationSpec value "
+            "contracts; storage access remains behind the injected indexed service "
+            "and reader ports and the adapter performs no direct storage I/O."
         ),
     ),
 )
@@ -630,6 +1388,44 @@ STALE_SOURCE_ARCHITECTURE_TERMS = (
 
 ANALYSIS_PLACEHOLDER_INIT_PATHS = (
     "packages/analysis/src/ditto_analysis/experiments/__init__.py",
+)
+
+EXPERIMENT_APPLICATION_SOURCE_PREFIX = (
+    "packages/application/src/ditto_application/processes/experiments/"
+)
+EXPERIMENT_APPLICATION_SOURCE_PATHS = frozenset(
+    {
+        "packages/application/src/ditto_application/commands/experiments.py",
+        "packages/application/src/ditto_application/queries/experiments.py",
+    }
+)
+TASK8_VALIDATION_AUTHORITY_SOURCE_PATHS = frozenset(
+    {
+        (
+            "packages/application/src/ditto_application/builders/"
+            "research_executor_probe.py"
+        ),
+        (
+            "packages/application/src/ditto_application/builders/"
+            "research_validation_authority.py"
+        ),
+        (
+            "packages/application/src/ditto_application/"
+            "research_certification_contracts.py"
+        ),
+        ("packages/application/src/ditto_application/research_validation_contracts.py"),
+        ("packages/application/src/ditto_application/research_validation_calendar.py"),
+        (
+            "packages/application/src/ditto_application/"
+            "research_validation_eligibility.py"
+        ),
+        ("packages/application/src/ditto_application/research_validation_protocol.py"),
+        ("packages/application/src/ditto_application/research_validation_windows.py"),
+    }
+)
+TYPE_CHECKING_MODULES = frozenset({"typing", "typing_extensions"})
+PROCESS_PROVIDER_SOURCE_PATH = (
+    "packages/application/src/ditto_application/providers_process.py"
 )
 
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
@@ -1149,6 +1945,93 @@ def check_application_provider_no_environment_reads(
     return errors
 
 
+def check_experiment_source_no_type_checking(
+    source: str,
+    rel_path: str,
+) -> list[str]:
+    """Reject TYPE_CHECKING imports across the Task 8 planning boundary."""
+    if not (
+        rel_path.startswith(EXPERIMENT_APPLICATION_SOURCE_PREFIX)
+        or rel_path in EXPERIMENT_APPLICATION_SOURCE_PATHS
+        or rel_path in TASK8_VALIDATION_AUTHORITY_SOURCE_PATHS
+    ):
+        return []
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    imports_type_checking_directly = any(
+        isinstance(node, ast.ImportFrom)
+        and node.module in TYPE_CHECKING_MODULES
+        and any(alias.name == "TYPE_CHECKING" for alias in node.names)
+        for node in ast.walk(tree)
+    )
+    type_checking_module_aliases = {
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+        if alias.name in TYPE_CHECKING_MODULES
+    }
+    simple_name_aliases = {
+        (target.id, node.value.id)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign | ast.AnnAssign)
+        and isinstance(node.value, ast.Name)
+        for target in (node.targets if isinstance(node, ast.Assign) else (node.target,))
+        if isinstance(target, ast.Name)
+    }
+    aliases_changed = True
+    while aliases_changed:
+        aliases_changed = False
+        for alias_name, source_name in simple_name_aliases:
+            if (
+                source_name in type_checking_module_aliases
+                and alias_name not in type_checking_module_aliases
+            ):
+                type_checking_module_aliases.add(alias_name)
+                aliases_changed = True
+    accesses_type_checking_attribute = any(
+        isinstance(node, ast.Attribute)
+        and node.attr == "TYPE_CHECKING"
+        and isinstance(node.value, ast.Name)
+        and node.value.id in type_checking_module_aliases
+        for node in ast.walk(tree)
+    )
+    if not (imports_type_checking_directly or accesses_type_checking_attribute):
+        return []
+    return [
+        f"{rel_path}: experiment source imports TYPE_CHECKING; extract a neutral "
+        "contract instead of hiding an import cycle"
+    ]
+
+
+def check_process_provider_wiring_only(
+    source: str,
+    rel_path: str,
+) -> list[str]:
+    """Reject public behavior classes declared in the process DI provider."""
+    if rel_path != PROCESS_PROVIDER_SOURCE_PATH:
+        return []
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    behavior_classes = (
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and not node.name.startswith("_")
+        and node.name != "AppProcessProvider"
+    )
+    return [
+        f"{rel_path}: application process provider declares behavior class "
+        f"{class_name!r}; move behavior to its owning query, builder, or process "
+        "adapter module"
+        for class_name in behavior_classes
+    ]
+
+
 def is_generic_helper_namespace_path(rel_path: str) -> bool:
     """Return whether a production source path uses generic helpers/utils names."""
     parts = Path(rel_path).parts
@@ -1281,6 +2164,8 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_execution_sqlite_legacy_not_extension_point(rel_path))
         errors.extend(check_apps_non_registry_capability_imports(source, rel_path))
         errors.extend(check_application_provider_no_environment_reads(source, rel_path))
+        errors.extend(check_experiment_source_no_type_checking(source, rel_path))
+        errors.extend(check_process_provider_wiring_only(source, rel_path))
         errors.extend(check_generic_helper_namespace_allowance(rel_path))
         errors.extend(check_source_architecture_terms(source, rel_path))
         if _is_semantic_scan_target(rel_path):
@@ -1409,7 +2294,37 @@ _DEP_NAME_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)")
 
 # Exact cross-package export exceptions only. Every entry must include a
 # design-boundary reason in the value before it is added here.
-ALLOWED_CROSS_PACKAGE_EXPORTS: dict[tuple[str, str, str], str] = {}
+_RESEARCH_SCHEDULER_FACADE = (
+    "packages/application/src/ditto_application/processes/experiments/"
+    "scheduler_store.py"
+)
+_RESEARCH_SCHEDULER_EXPORTS = frozenset(
+    {
+        "AttemptId",
+        "AttemptView",
+        "BacktestRunId",
+        "CandidateId",
+        "CheckpointRef",
+        "ContentHash",
+        "ExperimentDesiredState",
+        "ExperimentFailureCode",
+        "ExperimentId",
+        "ExperimentProjection",
+        "ExperimentStage",
+        "ExperimentStatus",
+        "FoldId",
+        "FoldKey",
+        "FoldView",
+        "SchedulerLease",
+    }
+)
+ALLOWED_CROSS_PACKAGE_EXPORTS: dict[tuple[str, str, str], str] = {
+    (_RESEARCH_SCHEDULER_FACADE, name, "ditto_analysis.experiments"): (
+        "The approved R3 scheduler facade is the sole application boundary for "
+        "analysis-owned persistence identities and projections."
+    )
+    for name in _RESEARCH_SCHEDULER_EXPORTS
+}
 _MIN_PACKAGE_SOURCE_PARTS = 4
 
 # Leaf public surfaces that have been hardened to expose only local symbols.

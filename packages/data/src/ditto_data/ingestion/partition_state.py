@@ -135,6 +135,15 @@ class PartitionLifecycleReader(Protocol):
         """List non-complete chunks with optional product/provider filters."""
         ...
 
+    def list_complete(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+    ) -> tuple[PartitionCheckpoint, ...]:
+        """List complete chunks with optional product/provider filters."""
+        ...
+
     def list_events(self, chunk_id: str) -> tuple[PartitionLifecycleEvent, ...]:
         """List append-only transition events for one chunk."""
         ...

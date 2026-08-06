@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,7 +11,9 @@ from ditto_application.builders import (
     PublishedStrategyRuntime,
 )
 from ditto_application.exceptions import AppBuilderError
-from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
+)
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import ProviderBackedDataFeed
 from ditto_backtest.result import (
@@ -30,7 +32,14 @@ from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.node_registry import default_node_registry
+from ditto_strategy.alpha.parameters import (
+    CandidateParameter,
+    ParameterBinder,
+    canonical_parameter_hash,
+)
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
 
@@ -56,6 +65,35 @@ def _make_strategy_spec(
     )
 
 
+def _make_published_strategy_runtime(
+    spec: StrategySpec,
+    *,
+    version: int,
+    spec_hash: str | None = None,
+) -> PublishedStrategyRuntime:
+    binding = ParameterBinder(registry=default_node_registry()).bind(
+        adapt_legacy_strategy_spec(spec),
+        candidate_parameters=(),
+    )
+    return PublishedStrategyRuntime(
+        record=StrategySpecRecord(
+            strategy_id=spec.strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=version,
+            tags=spec.tags,
+        ),
+        spec=spec,
+        base_spec=binding.base_spec,
+        resolved_spec=binding.resolved_spec,
+        pipeline=MagicMock(spec=StrategyPipeline),
+        base_spec_hash=binding.base_spec_hash,
+        spec_hash=spec_hash or binding.resolved_spec_hash,
+        parameter_hash=binding.parameter_hash,
+        effective_parameters=binding.effective_parameters,
+    )
+
+
 class _MaturityPromotionReader:
     def __init__(self, promoted_dataset_ids: set[str]) -> None:
         self._promoted_dataset_ids = promoted_dataset_ids
@@ -77,22 +115,81 @@ class _MaturityPromotionReader:
 class TestBacktestRuntimeBuilder:
     """published backtest runtime 装配测试。"""
 
+    def test_catalog_resolution_preserves_every_request_field(self) -> None:
+        """Resolved config keeps the entire unresolved launch request intact."""
+        from ditto_application.builders import service_factory
+        from ditto_application.processes.execution import backtest_process
+
+        request_type = getattr(
+            backtest_process,
+            "BacktestCatalogRequestConfig",
+            None,
+        )
+        resolver = getattr(
+            service_factory,
+            "_resolve_backtest_catalog_request",
+            None,
+        )
+
+        assert isinstance(request_type, type)
+        assert callable(resolver)
+        request = request_type(
+            strategy_id="momentum-etf",
+            strategy_version="requested",
+            run_id="run-request",
+            parent_run_id="run-parent",
+            start_date="2026-01-10",
+            end_date="2026-01-13",
+            initial_cash=2_000_000.0,
+            candidate_parameters=(
+                CandidateParameter(
+                    path="/pipeline/nodes/legacy_factor_set/config/params/lookback",
+                    value=20,
+                ),
+            ),
+            random_seed=1729,
+            knowledge_lag_days=3,
+            data_catalog_identities=("dataset:snapshot",),
+            recommendation_status="candidate",
+            participation_rate=0.02,
+            fill_mode="all_or_nothing",
+            resume_from_run_id="resume-source",
+        )
+
+        resolved = resolver(
+            request,
+            strategy_version="7",
+            benchmark_id=InstrumentId(3_000_001),
+            base_spec_hash="a" * 64,
+            spec_hash="b" * 64,
+            parameter_hash=canonical_parameter_hash(()),
+            effective_parameters=(),
+        )
+
+        request_fields = {field.name for field in fields(request)}
+        resolved_fields = {field.name for field in fields(resolved)}
+        assert resolved_fields == request_fields | {
+            "base_spec_hash",
+            "spec_hash",
+            "parameter_hash",
+            "effective_parameters",
+        }
+        for field_name in request_fields - {"strategy_version", "benchmark_id"}:
+            assert getattr(resolved, field_name) == getattr(request, field_name)
+        assert resolved.strategy_version == "7"
+        assert resolved.benchmark_id == InstrumentId(3_000_001)
+        assert resolved.spec_hash == "b" * 64
+
     def test_build_published_runtime_creates_minimal_backtest_components(self) -> None:
         """builder 应从 published runtime 构造可跑的 backtest 依赖。"""
+        canonical_spec_hash = "b" * 64
         spec = _make_strategy_spec()
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=2,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
+            _make_published_strategy_runtime(
+                spec,
+                version=2,
+                spec_hash=canonical_spec_hash,
             )
         )
         metadata_service = MagicMock(spec=MetadataService)
@@ -110,7 +207,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-10",
                 end_date="2026-01-13",
@@ -120,6 +217,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         assert runtime.config.strategy_version == "2"
+        assert runtime.config.spec_hash == canonical_spec_hash
         assert runtime.config.benchmark_id == 3_000_001
         # data_feed 是 ProviderBackedDataFeed 实例
         assert isinstance(runtime.data_feed, ProviderBackedDataFeed)
@@ -138,6 +236,7 @@ class TestBacktestRuntimeBuilder:
         strategy_runtime_builder.build_published_runtime.assert_called_once_with(
             "momentum-etf",
             2,
+            candidate_parameters=(),
         )
 
     def test_all_or_nothing_fill_mode_disables_participation_cap(self) -> None:
@@ -145,18 +244,7 @@ class TestBacktestRuntimeBuilder:
         spec = _make_strategy_spec()
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=2,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-            )
+            _make_published_strategy_runtime(spec, version=2, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
@@ -173,7 +261,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-10",
                 end_date="2026-01-13",
@@ -193,18 +281,7 @@ class TestBacktestRuntimeBuilder:
         spec = _make_strategy_spec()
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=2,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-            )
+            _make_published_strategy_runtime(spec, version=2, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
@@ -269,7 +346,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-13",
                 end_date="2026-01-15",
@@ -306,18 +383,7 @@ class TestBacktestRuntimeBuilder:
         )
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=1,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-            )
+            _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         data_provider = MagicMock(spec=DataProvider)
@@ -329,7 +395,7 @@ class TestBacktestRuntimeBuilder:
 
         with pytest.raises(AppBuilderError, match="experimental dataset"):
             builder.build_published_runtime(
-                config=BacktestServiceConfig(
+                config=BacktestCatalogRequestConfig(
                     strategy_id="stock-alpha",
                     start_date="2026-01-10",
                     end_date="2026-01-13",
@@ -351,18 +417,7 @@ class TestBacktestRuntimeBuilder:
         )
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=1,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-            )
+            _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
@@ -379,7 +434,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="stock-alpha",
                 start_date="2026-01-10",
                 end_date="2026-01-13",
@@ -401,18 +456,7 @@ class TestBacktestRuntimeBuilder:
         )
         strategy_runtime_builder = MagicMock()
         strategy_runtime_builder.build_published_runtime.return_value = (
-            PublishedStrategyRuntime(
-                record=StrategySpecRecord(
-                    strategy_id=spec.strategy_id,
-                    name=spec.name,
-                    spec_json=asdict(spec),
-                    version=1,
-                    status="published",
-                    tags=spec.tags,
-                ),
-                spec=spec,
-                pipeline=MagicMock(spec=StrategyPipeline),
-            )
+            _make_published_strategy_runtime(spec, version=1, spec_hash="b" * 64)
         )
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
@@ -432,7 +476,7 @@ class TestBacktestRuntimeBuilder:
         )
 
         runtime = builder.build_published_runtime(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="stock-alpha",
                 start_date="2026-01-10",
                 end_date="2026-01-13",

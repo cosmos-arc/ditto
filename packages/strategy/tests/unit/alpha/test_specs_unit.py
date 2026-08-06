@@ -1,5 +1,8 @@
 """Tests for StrategySpec and related types."""
 
+import math
+import operator
+from collections.abc import Callable, Mapping
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -21,6 +24,123 @@ class TestParamConstraint:
         assert param.min_value == 10
         assert param.step == 10
 
+    @pytest.mark.parametrize(
+        "numeric_values",
+        [
+            pytest.param((10, 20, 5), id="integer-inputs"),
+            pytest.param((10.0, 20.0, 5.0), id="float-inputs"),
+        ],
+    )
+    def test_normalizes_numeric_identity_fields_to_floats(
+        self,
+        numeric_values: tuple[int | float, int | float, int | float],
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        minimum, maximum, step = numeric_values
+        param = ParamConstraint(
+            name="lookback",
+            dtype="int",
+            min_value=minimum,
+            max_value=maximum,
+            step=step,
+        )
+
+        assert param.min_value == 10.0
+        assert param.max_value == 20.0
+        assert param.step == 5.0
+        assert type(param.min_value) is float
+        assert type(param.max_value) is float
+        assert type(param.step) is float
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_normalizes_signed_zero_identity_to_positive_zero(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        positive = constructor(
+            name="lookback",
+            dtype="float",
+            **{field_name: 0.0},
+        )
+        negative = constructor(
+            name="lookback",
+            dtype="float",
+            **{field_name: -0.0},
+        )
+
+        assert positive == negative
+        assert math.copysign(1.0, getattr(positive, field_name)) == 1.0
+        assert math.copysign(1.0, getattr(negative, field_name)) == 1.0
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_preserves_negative_nonzero_numeric_identity(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        parameter = constructor(
+            name="lookback",
+            dtype="float",
+            **{field_name: -5.0},
+        )
+        value = getattr(parameter, field_name)
+
+        assert value == -5.0
+        assert math.copysign(1.0, value) == -1.0
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_accepts_exact_float_integer_boundary_and_rejects_lossy_integer(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        exact_integer = 2**53
+        lossy_integer = exact_integer + 1
+        assert float(exact_integer) == float(lossy_integer)
+
+        exact = constructor(
+            name="lookback",
+            dtype="int",
+            **{field_name: exact_integer},
+        )
+        exact_value = getattr(exact, field_name)
+        assert exact_value == float(exact_integer)
+        assert type(exact_value) is float
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(
+                name="lookback",
+                dtype="int",
+                **{field_name: lossy_integer},
+            )
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "non_finite_parameter_identity"
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_rejects_bool_numeric_identity_fields(self, field_name: str) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(
+                name="lookback",
+                dtype="int",
+                **{field_name: True},
+            )
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "non_finite_parameter_identity"
+
     def test_create_enum_param(self) -> None:
         from ditto_strategy.alpha.specs import ParamConstraint
 
@@ -37,6 +157,103 @@ class TestParamConstraint:
         param = ParamConstraint(name="k", dtype="int", min_value=1, max_value=10)
         with pytest.raises(FrozenInstanceError):
             param.max_value = 100  # type: ignore[misc]
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            pytest.param(float("nan"), id="nan"),
+            pytest.param(float("inf"), id="positive-infinity"),
+            pytest.param(float("-inf"), id="negative-infinity"),
+        ],
+    )
+    def test_rejects_non_finite_numeric_identity_fields(
+        self,
+        field_name: str,
+        invalid_value: float,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        with pytest.raises(StrategySpecError, match=field_name):
+            ParamConstraint(
+                name="lookback",
+                dtype="float",
+                **{field_name: invalid_value},
+            )
+
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value", "expected_reason"),
+        [
+            pytest.param("name", "", "invalid_parameter_name", id="empty-name"),
+            pytest.param("name", True, "invalid_parameter_name", id="bool-name"),
+            pytest.param("name", None, "invalid_parameter_name", id="null-name"),
+            pytest.param("dtype", True, "invalid_parameter_dtype", id="bool-dtype"),
+            pytest.param(
+                "dtype",
+                "decimal",
+                "invalid_parameter_dtype",
+                id="unsupported-dtype",
+            ),
+            pytest.param(
+                "allowed_values",
+                "equal_weight",
+                "invalid_parameter_allowed_values",
+                id="string-is-not-container",
+            ),
+            pytest.param(
+                "allowed_values",
+                None,
+                "invalid_parameter_allowed_values",
+                id="null-allowed-values",
+            ),
+            pytest.param(
+                "allowed_values",
+                ("equal_weight", True),
+                "invalid_parameter_allowed_values",
+                id="bool-allowed-value",
+            ),
+        ],
+    )
+    def test_rejects_invalid_canonical_identity_shapes(
+        self,
+        field_name: str,
+        invalid_value: object,
+        expected_reason: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+        values: dict[str, object] = {
+            "name": "allocation_method",
+            "dtype": "str",
+            "allowed_values": ("equal_weight",),
+        }
+        values[field_name] = invalid_value
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(**values)
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == expected_reason
+
+    @pytest.mark.parametrize("field_name", ["min_value", "max_value", "step"])
+    def test_huge_integer_identity_raises_typed_spec_error(
+        self,
+        field_name: str,
+    ) -> None:
+        from ditto_strategy.alpha.specs import ParamConstraint
+
+        constructor: Callable[..., ParamConstraint] = ParamConstraint
+
+        with pytest.raises(StrategySpecError) as exc_info:
+            constructor(
+                name="lookback",
+                dtype="int",
+                **{field_name: 10**1000},
+            )
+
+        assert exc_info.value.details["field_name"] == field_name
+        assert exc_info.value.details["reason"] == "non_finite_parameter_identity"
 
 
 class TestExecutionSpec:
@@ -517,3 +734,129 @@ class TestStrategySpecValidation:
         )
 
         assert spec.signal_expressions == ("cs_rank(ts_mean_close_20)",)
+
+
+class TestStrategySpecV2:
+    """V2 canonical spec 与 legacy runtime spec 保持显式类型边界。"""
+
+    def test_is_a_distinct_frozen_type_from_legacy_strategy_spec(self) -> None:
+        from ditto_strategy.alpha.nodes import (
+            NodeCategory,
+            NodeInstance,
+            NodeRef,
+            PipelineSpec,
+        )
+        from ditto_strategy.alpha.specs import (
+            StrategyKind,
+            StrategySpec,
+            StrategySpecV2,
+        )
+
+        pipeline = PipelineSpec(
+            nodes=(
+                NodeInstance(
+                    node_id="universe",
+                    ref=NodeRef("builtin.universe", "1"),
+                    category=NodeCategory.UNIVERSE,
+                    config={"universe_id": "csi_300"},
+                ),
+            ),
+            sequence=("universe",),
+        )
+        spec = StrategySpecV2(
+            schema_version=2,
+            strategy_family_id="stock-alpha",
+            strategy_kind=StrategyKind.STOCK_SELECTION,
+            name="Stock Alpha",
+            pipeline=pipeline,
+        )
+
+        assert not isinstance(spec, StrategySpec)
+        with pytest.raises(FrozenInstanceError):
+            spec.name = "Changed"  # type: ignore[misc]
+
+    def test_rejects_non_v2_schema_version(self) -> None:
+        from ditto_strategy.alpha.nodes import PipelineSpec
+        from ditto_strategy.alpha.specs import StrategyKind, StrategySpecV2
+
+        with pytest.raises(StrategySpecError, match="schema_version"):
+            StrategySpecV2(
+                schema_version=1,
+                strategy_family_id="stock-alpha",
+                strategy_kind=StrategyKind.STOCK_SELECTION,
+                name="Stock Alpha",
+                pipeline=PipelineSpec(nodes=(), sequence=()),
+            )
+
+    def test_metadata_is_a_recursive_immutable_snapshot(self) -> None:
+        from ditto_strategy.alpha.nodes import PipelineSpec
+        from ditto_strategy.alpha.specs import StrategyKind, StrategySpecV2
+
+        source: dict[str, object] = {"layout": {"columns": ["factor", "score"]}}
+        spec = StrategySpecV2(
+            schema_version=2,
+            strategy_family_id="stock-alpha",
+            strategy_kind=StrategyKind.STOCK_SELECTION,
+            name="Stock Alpha",
+            pipeline=PipelineSpec(nodes=(), sequence=()),
+            parameter_schema=(),
+            metadata=source,
+            tags=(),
+        )
+        layout = spec.metadata["layout"]
+        assert isinstance(layout, Mapping)
+        columns = layout["columns"]
+        assert isinstance(columns, tuple)
+
+        with pytest.raises(TypeError):
+            operator.setitem(spec.metadata, "added", True)
+        with pytest.raises(TypeError):
+            operator.setitem(layout, "added", True)
+        with pytest.raises(TypeError):
+            operator.setitem(columns, 0, "changed")
+
+        source_layout = source["layout"]
+        assert isinstance(source_layout, dict)
+        source_layout["columns"] = ["changed"]
+        assert layout["columns"] == ("factor", "score")
+
+    @pytest.mark.parametrize(
+        ("field_name", "invalid_value"),
+        [
+            pytest.param("parameter_schema", [], id="parameter-schema-list"),
+            pytest.param("parameter_schema", None, id="parameter-schema-none"),
+            pytest.param(
+                "parameter_schema",
+                (object(),),
+                id="parameter-schema-invalid-element",
+            ),
+            pytest.param("tags", [], id="tags-list"),
+            pytest.param("tags", None, id="tags-none"),
+            pytest.param("tags", (object(),), id="tags-invalid-element"),
+            pytest.param("metadata", [], id="metadata-list"),
+            pytest.param("metadata", None, id="metadata-none"),
+        ],
+    )
+    def test_programmatic_boundaries_require_canonical_container_types(
+        self,
+        field_name: str,
+        invalid_value: object,
+    ) -> None:
+        from ditto_strategy.alpha.nodes import PipelineSpec
+        from ditto_strategy.alpha.specs import StrategyKind, StrategySpecV2
+
+        values: dict[str, object] = {
+            "schema_version": 2,
+            "strategy_family_id": "stock-alpha",
+            "strategy_kind": StrategyKind.STOCK_SELECTION,
+            "name": "Stock Alpha",
+            "pipeline": PipelineSpec(nodes=(), sequence=()),
+            "parameter_schema": (),
+            "metadata": {},
+            "tags": (),
+        }
+        values[field_name] = invalid_value
+        constructor: Callable[..., StrategySpecV2] = StrategySpecV2
+
+        with pytest.raises(StrategySpecError, match=field_name):
+            constructor(**values)

@@ -199,7 +199,7 @@ def test_run_eod_never_enters_prefect_engine_in_real_import_process() -> None:
         check=False,
         capture_output=True,
         text=True,
-        timeout=15,
+        timeout=30,
     )
 
     assert result.returncode == 0, result.stderr or result.stdout

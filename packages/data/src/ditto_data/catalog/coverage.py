@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
-from ditto_data.catalog.contracts import DataCatalogReader
+from ditto_data.catalog.contracts import DataAssetRef, DataCatalogReader
 from ditto_data.catalog.metadata import DatasetSchedule, default_dataset_metadata
-from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 
 __all__ = [
     "CoverageCollector",
@@ -105,6 +105,7 @@ class CoverageCollector:
         target_to: date,
         expected_dates: tuple[date, ...],
         exceptions: tuple[CoverageException, ...] = (),
+        snapshot_ids: frozenset[str] | None = None,
     ) -> DatasetCoverage:
         """Assess expected versus canonical partitions for one target interval."""
         try:
@@ -137,7 +138,11 @@ class CoverageCollector:
                 }
             )
         )
-        actual_dates = self._actual_partition_dates(dataset_id)
+        actual_dates = self._actual_partition_dates(
+            dataset_id,
+            expected_dates=frozenset(expected),
+            snapshot_ids=snapshot_ids,
+        )
         actual = tuple(
             partition_date
             for partition_date in expected
@@ -153,8 +158,15 @@ class CoverageCollector:
             for gap in gaps
             if not any(exception.covers(gap) for exception in exceptions)
         )
-        complete_from = _complete_from(expected, unapproved)
-        native_from, native_to = self._native_interval(dataset_id)
+        complete_from = _complete_from(
+            target_from=target_from,
+            expected=expected,
+            unapproved_gaps=unapproved,
+        )
+        native_from, native_to = self._native_interval(
+            dataset_id,
+            snapshot_ids=snapshot_ids,
+        )
         return DatasetCoverage(
             dataset_id=dataset_id,
             schedule=metadata.schedule,
@@ -173,28 +185,79 @@ class CoverageCollector:
             collected_at=datetime.now(UTC),
         )
 
-    def _actual_partition_dates(self, dataset_id: str) -> frozenset[date]:
+    def _actual_partition_dates(
+        self,
+        dataset_id: str,
+        *,
+        expected_dates: frozenset[date],
+        snapshot_ids: frozenset[str] | None,
+    ) -> frozenset[date]:
         contract = default_dataset_metadata()[dataset_id].product_contract
         if contract is None:
             raise ValueError(f"dataset has no product contract: {dataset_id}")
-        keys = set(contract.partition_keys)
+        keys = frozenset(contract.partition_keys)
         dates: set[date] = set()
+        selected_snapshots = self._selected_snapshots(
+            dataset_id,
+            snapshot_ids=snapshot_ids,
+        )
+        allowed_assets = (
+            None
+            if snapshot_ids is None
+            else {snapshot.canonical_asset for snapshot in selected_snapshots}
+        )
+        canonical_assets: set[DataAssetRef] = set()
         for entry in self._catalog_reader.list_assets():
             if entry.asset.dataset_id != dataset_id:
                 continue
-            for partition in entry.asset.partition_keys:
-                key, separator, raw_value = partition.partition("=")
-                if separator and key in keys:
-                    try:
-                        dates.add(date.fromisoformat(raw_value))
-                    except ValueError:
-                        continue
+            if allowed_assets is not None and entry.asset not in allowed_assets:
+                continue
+            canonical_assets.add(entry.asset)
+            dates.update(
+                _asset_partition_dates(
+                    entry.asset.partition_keys,
+                    contract_keys=keys,
+                    expected_dates=expected_dates,
+                )
+            )
+        for snapshot in selected_snapshots:
+            if snapshot.canonical_asset in canonical_assets:
+                dates.update(
+                    _expected_dates_in_interval(
+                        snapshot.request_start,
+                        snapshot.request_end,
+                        expected_dates=expected_dates,
+                    )
+                )
         return frozenset(dates)
 
-    def _native_interval(self, dataset_id: str) -> tuple[date | None, date | None]:
+    def _selected_snapshots(
+        self,
+        dataset_id: str,
+        *,
+        snapshot_ids: frozenset[str] | None,
+    ) -> tuple[ProviderSnapshot, ...]:
+        if self._snapshot_reader is None:
+            return ()
+        return tuple(
+            snapshot
+            for snapshot in self._snapshot_reader.list_snapshots(dataset_id=dataset_id)
+            if snapshot_ids is None or snapshot.snapshot_id in snapshot_ids
+        )
+
+    def _native_interval(
+        self,
+        dataset_id: str,
+        *,
+        snapshot_ids: frozenset[str] | None,
+    ) -> tuple[date | None, date | None]:
         if self._snapshot_reader is None:
             return None, None
-        snapshots = self._snapshot_reader.list_snapshots(dataset_id=dataset_id)
+        snapshots = tuple(
+            snapshot
+            for snapshot in self._snapshot_reader.list_snapshots(dataset_id=dataset_id)
+            if snapshot_ids is None or snapshot.snapshot_id in snapshot_ids
+        )
         starts: list[date] = []
         ends: list[date] = []
         for snapshot in snapshots:
@@ -207,18 +270,74 @@ class CoverageCollector:
 
 
 def _complete_from(
+    *,
+    target_from: date,
     expected: tuple[date, ...],
     unapproved_gaps: tuple[date, ...],
 ) -> date | None:
     if not expected:
         return None
     if not unapproved_gaps:
-        return expected[0]
+        return target_from
     final_gap = max(unapproved_gaps)
     return next(
         (partition_date for partition_date in expected if partition_date > final_gap),
         None,
     )
+
+
+def _asset_partition_dates(
+    partition_keys: tuple[str, ...],
+    *,
+    contract_keys: frozenset[str],
+    expected_dates: frozenset[date],
+) -> frozenset[date]:
+    values: dict[str, str] = {}
+    for partition in partition_keys:
+        key, separator, raw_value = partition.partition("=")
+        if separator:
+            values[key] = raw_value
+    dates = {
+        parsed
+        for key, raw_value in values.items()
+        if key in contract_keys
+        if (parsed := _optional_iso_date(raw_value)) is not None
+    }
+    raw_start = values.get("start_date")
+    raw_end = values.get("end_date")
+    if raw_start is not None and raw_end is not None:
+        dates.update(
+            _expected_dates_in_interval(
+                raw_start,
+                raw_end,
+                expected_dates=expected_dates,
+            )
+        )
+    return frozenset(dates)
+
+
+def _expected_dates_in_interval(
+    raw_start: str,
+    raw_end: str,
+    *,
+    expected_dates: frozenset[date],
+) -> frozenset[date]:
+    start = _optional_iso_date(raw_start)
+    end = _optional_iso_date(raw_end)
+    if start is None or end is None or end < start:
+        return frozenset()
+    return frozenset(
+        expected_date
+        for expected_date in expected_dates
+        if start <= expected_date <= end
+    )
+
+
+def _optional_iso_date(value: str) -> date | None:
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 def _validate_text(field: str, value: str) -> None:

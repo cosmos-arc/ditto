@@ -63,6 +63,19 @@ class IngestionCoordinatorLike(Protocol):
         """Ingest a date range."""
         ...
 
+    def ingest_chunk(
+        self,
+        dataset: str,
+        *,
+        chunk_id: str,
+        request_start: str,
+        request_end: str,
+        partition_dates: tuple[str, ...],
+        force: bool = False,
+    ) -> IngestionResult:
+        """Ingest one planner-owned chunk as one durable payload."""
+        ...
+
     def ingest_by_instrument(
         self,
         dataset: str,
@@ -70,6 +83,17 @@ class IngestionCoordinatorLike(Protocol):
         force: bool = False,
     ) -> IngestionResult:
         """Ingest one instrument range."""
+        ...
+
+    def ingest_planned_instrument_chunk(
+        self,
+        dataset: str,
+        *,
+        chunk_id: str,
+        params: InstrumentIngestParams,
+        force: bool = False,
+    ) -> IngestionResult:
+        """Ingest one planner-owned instrument chunk with its durable identity."""
         ...
 
     def backfill_adj_factor(
@@ -166,6 +190,37 @@ class AutoSourceIngestionCoordinator:
             for trade_date in self._date_range_lister(dataset, start_date, end_date)
         ]
 
+    def ingest_chunk(
+        self,
+        dataset: str,
+        *,
+        chunk_id: str,
+        request_start: str,
+        request_end: str,
+        partition_dates: tuple[str, ...],
+        force: bool = False,
+    ) -> IngestionResult:
+        """Delegate an atomic chunk only when one concrete source owns it."""
+        decision = self._source_decision_for_selection_date(dataset, request_end)
+        _ensure_selected_source_supported(
+            dataset,
+            decision.source,
+            operation="ingest_chunk",
+            selection_date=request_end,
+            start_date=request_start,
+            end_date=request_end,
+            source_fallback_policy_effect=decision.source_fallback_policy_effect,
+        )
+        coordinator = self._coordinator_for_source(decision.source, decision)
+        return coordinator.ingest_chunk(
+            dataset,
+            chunk_id=chunk_id,
+            request_start=request_start,
+            request_end=request_end,
+            partition_dates=partition_dates,
+            force=force,
+        )
+
     def ingest_by_instrument(
         self,
         dataset: str,
@@ -192,6 +247,34 @@ class AutoSourceIngestionCoordinator:
             params,
             force,
             selection_date=selection_date,
+        )
+
+    def ingest_planned_instrument_chunk(
+        self,
+        dataset: str,
+        *,
+        chunk_id: str,
+        params: InstrumentIngestParams,
+        force: bool = False,
+    ) -> IngestionResult:
+        """Choose one concrete source for a planner-owned instrument chunk."""
+        selection_date = self._selection_date_for_instrument_request(params)
+        decision = self._source_decision_for_selection_date(dataset, selection_date)
+        _ensure_selected_source_supported(
+            dataset,
+            decision.source,
+            operation="ingest_planned_instrument_chunk",
+            selection_date=selection_date,
+            start_date=params.start_date,
+            end_date=params.end_date,
+            source_fallback_policy_effect=decision.source_fallback_policy_effect,
+        )
+        coordinator = self._coordinator_for_source(decision.source, decision)
+        return coordinator.ingest_planned_instrument_chunk(
+            dataset,
+            chunk_id=chunk_id,
+            params=params,
+            force=force,
         )
 
     def _ingest_instrument_for_date(

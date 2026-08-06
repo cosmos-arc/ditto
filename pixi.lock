@@ -2428,7 +2428,7 @@ packages:
 - pypi: ./packages/analysis
   name: ditto-analysis
   version: 0.1.0
-  sha256: 553c8eafeededb61e1701d674f17062f395576f7ecd340c163320797b3a67783
+  sha256: e4dad257df562d6b9882cbcbc9142aa80402bf9c5c16b9274495e119311e8d8a
   requires_dist:
   - ditto-kernel
   - ditto-platform

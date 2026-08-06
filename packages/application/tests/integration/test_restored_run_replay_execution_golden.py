@@ -23,6 +23,7 @@ from ditto_application.builders import (
 )
 from ditto_application.commands.backtest import ResumeRunCommand, ResumeRunHandler
 from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
@@ -36,6 +37,7 @@ from ditto_execution.audit import ExecutionAuditService
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RunStatus
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.parameters import canonical_parameter_hash
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import (
@@ -363,19 +365,26 @@ class _RuntimeBuilderStub:
         self,
         strategy_id: str,
         version: int | None = None,
+        *,
+        candidate_parameters: tuple[object, ...] = (),
     ) -> PublishedStrategyRuntime:
-        _ = (strategy_id, version)
+        _ = (strategy_id, version, candidate_parameters)
         return PublishedStrategyRuntime(
             record=StrategySpecRecord(
                 strategy_id=self._spec.strategy_id,
                 name=self._spec.name,
                 spec_json=asdict(self._spec),
                 version=1,
-                status="published",
                 tags=self._spec.tags,
             ),
             spec=self._spec,
+            base_spec=self._spec,
+            resolved_spec=self._spec,
             pipeline=StrategyPipeline((_AllCashStage(),)),
+            base_spec_hash="a" * 64,
+            spec_hash="b" * 64,
+            parameter_hash=canonical_parameter_hash(()),
+            effective_parameters=(),
         )
 
 
@@ -434,11 +443,11 @@ class _ReplayFacade:
         return service.run()
 
 
-def _config_from_record(record: StrategyRunRecord) -> BacktestServiceConfig:
+def _config_from_record(record: StrategyRunRecord) -> BacktestCatalogRequestConfig:
     raw = orjson.loads(record.config_json)
     assert isinstance(raw, dict)
     data = cast(dict[str, object], raw)
-    return BacktestServiceConfig(
+    return BacktestCatalogRequestConfig(
         strategy_id=record.strategy_id,
         strategy_version=record.strategy_version,
         run_id=record.run_id,
@@ -487,7 +496,7 @@ def test_restored_run_replay_execution_golden(tmp_path: Path) -> None:
     )
 
     root_service = factory.build_backtest_service_from_catalog(
-        config=BacktestServiceConfig(
+        config=BacktestCatalogRequestConfig(
             strategy_id=STRATEGY_ID,
             run_id="run-root",
             start_date=TRADE_DATES[0],

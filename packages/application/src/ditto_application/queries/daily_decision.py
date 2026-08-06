@@ -131,7 +131,7 @@ class DailyDecisionQueryFacade:
     ) -> DailyDecisionV2Report:
         """从持久化 package 构造 V2；不以 intents 是否为空推断运行状态。"""
         active_spec = (
-            self._strategy_query.get_latest_published(strategy_id)
+            self._strategy_query.get_active_published(strategy_id)
             if self._strategy_query is not None
             else None
         )

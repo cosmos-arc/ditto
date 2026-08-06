@@ -234,14 +234,14 @@ CREATE TABLE IF NOT EXISTS strategy_spec (
     version           INTEGER NOT NULL,
     name              TEXT NOT NULL,
     spec_json         TEXT NOT NULL,
-    status            TEXT NOT NULL DEFAULT 'draft',
+    spec_hash         TEXT NOT NULL DEFAULT '',
+    parent_version    INTEGER,
     tags              TEXT NOT NULL DEFAULT '',
     created_at        TEXT NOT NULL DEFAULT '',
-    updated_at        TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (strategy_id, version)
 );
-CREATE INDEX IF NOT EXISTS idx_spec_status ON strategy_spec(status);
 CREATE INDEX IF NOT EXISTS idx_spec_strategy_id ON strategy_spec(strategy_id);
+CREATE INDEX IF NOT EXISTS idx_spec_hash ON strategy_spec(spec_hash);
 
 -- 策略产物控制面
 CREATE TABLE IF NOT EXISTS strategy_artifact (

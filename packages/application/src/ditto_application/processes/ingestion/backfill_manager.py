@@ -14,10 +14,13 @@ from ditto_data.models.ingestion import (
     IngestionStatus,
 )
 from ditto_data.services.metadata_service import MetadataService
+from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import logger
 
 from ditto_application.catalog_freshness import PersistedIngestionEvidenceVerifier
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.bootstrap_planner import (
+    BootstrapChunk,
     BootstrapPlan,
     BootstrapPlanner,
 )
@@ -64,6 +67,7 @@ class BackfillManager:
         end_date: str,
         parallel: int = 1,
         source: str = "tushare",
+        instrument_ids: tuple[int, ...] = (),
     ) -> BackfillResult:
         """
         全量回补指定日期范围。
@@ -74,6 +78,7 @@ class BackfillManager:
             end_date: 结束日期 (YYYY-MM-DD)。
             parallel: 并行度，默认为 1（串行）。
             source: 数据源标识符（默认: "tushare"）。
+            instrument_ids: 可选的显式标的范围；为空时按日期全市场回补。
 
         Returns:
             BackfillResult: 回补结果。
@@ -93,9 +98,9 @@ class BackfillManager:
             source=source,
             start_date=start_date,
             end_date=end_date,
+            instrument_ids=instrument_ids,
         )
-        partition_dates = _planned_dates(plan)
-        if not partition_dates:
+        if not plan.chunks:
             return BackfillResult(
                 dataset=dataset,
                 total_dates=0,
@@ -105,9 +110,8 @@ class BackfillManager:
                 results=(),
             )
 
-        result = self._execute_backfill(
-            dataset=dataset,
-            trade_dates=partition_dates,
+        result = self._execute_plan(
+            plan=plan,
             parallel=parallel,
             log_event="backfill_range_complete",
         )
@@ -280,6 +284,81 @@ class BackfillManager:
         )
 
         return backfill_result
+
+    def _execute_plan(
+        self,
+        *,
+        plan: BootstrapPlan,
+        parallel: int,
+        log_event: str,
+    ) -> BackfillResult:
+        """Execute planner chunks atomically when the coordinator supports it."""
+        requires_instrument_chunks = any(
+            chunk.execution_mode == "instrument_range" for chunk in plan.chunks
+        )
+        supported_chunk_method = (
+            getattr(type(self._coordinator), "ingest_planned_instrument_chunk", None)
+            if requires_instrument_chunks
+            else getattr(type(self._coordinator), "ingest_chunk", None)
+        )
+        if not callable(supported_chunk_method):
+            return self._execute_backfill(
+                dataset=plan.dataset_id,
+                trade_dates=_planned_dates(plan),
+                parallel=parallel,
+                log_event=log_event,
+            )
+
+        def execute(typed_chunk: BootstrapChunk) -> IngestionResult:
+            if typed_chunk.execution_mode == "instrument_range":
+                if len(typed_chunk.instrument_ids) != 1:
+                    raise AppProcessError(
+                        "instrument bootstrap chunk must own exactly one instrument"
+                    )
+                return self._coordinator.ingest_planned_instrument_chunk(
+                    plan.dataset_id,
+                    chunk_id=typed_chunk.chunk_id,
+                    params=InstrumentIngestParams(
+                        instrument_id=typed_chunk.instrument_ids[0],
+                        start_date=typed_chunk.request_start,
+                        end_date=typed_chunk.request_end,
+                    ),
+                )
+            return self._coordinator.ingest_chunk(
+                plan.dataset_id,
+                chunk_id=typed_chunk.chunk_id,
+                request_start=typed_chunk.request_start,
+                request_end=typed_chunk.request_end,
+                partition_dates=typed_chunk.partition_dates,
+            )
+
+        results: list[IngestionResult] = []
+        if parallel > 1:
+            with ThreadPoolExecutor(max_workers=parallel) as executor:
+                futures = [executor.submit(execute, chunk) for chunk in plan.chunks]
+                results.extend(future.result() for future in as_completed(futures))
+        else:
+            results.extend(execute(chunk) for chunk in plan.chunks)
+        counts = count_results(results)
+        result = BackfillResult(
+            dataset=plan.dataset_id,
+            total_dates=plan.expected_partition_count,
+            success_count=counts.success,
+            skipped_count=counts.skipped,
+            failed_count=counts.failed,
+            results=tuple(results),
+        )
+        logger.info(
+            "回补完成",
+            event=log_event,
+            dataset=plan.dataset_id,
+            total_dates=result.total_dates,
+            chunk_count=len(plan.chunks),
+            success_count=result.success_count,
+            skipped_count=result.skipped_count,
+            failed_count=result.failed_count,
+        )
+        return result
 
 
 def _planned_dates(plan: BootstrapPlan) -> list[str]:

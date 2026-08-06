@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "command": "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --real-data --require-certified --require-both-golden-lanes --r2-evidence artifacts/acceptance/r2-report.json --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-05T14:10:42Z",
+      "mode": "live",
+      "relative_path": "artifacts/acceptance/r3-report.json",
+      "sha256": "79cb8d36ceae6626913440c15d9783cb372b947ad4d619d55159d97a623d84de",
+      "source_commit": "7e887cf5d12c4da1fd896784e36dcec67a501f6b"
+    }
+  ],
+  "schema": "ditto.r3-evidence-manifest",
+  "version": 1
+}

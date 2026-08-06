@@ -10,8 +10,12 @@ BacktestReportSerializer 单元测试 — JSON 输出格式兼容 replay 反序�
 from __future__ import annotations
 
 from types import MappingProxyType
+from typing import ClassVar
 
 import orjson
+import polars as pl
+import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_backtest.manifest import RunManifest, RunMode
 from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
@@ -24,6 +28,18 @@ from ditto_kernel.time_semantics import (
     PIT_POLICY_FAIL_CLOSED,
 )
 from ditto_portfolio.accounting import AccountView, CashBook, Position
+from ditto_strategy.alpha.selection_evidence import (
+    ExclusionEvidence,
+    ExclusionReason,
+    FactorContributionEvidence,
+    InitialUniverseEvidence,
+    SelectionEvidence,
+    SelectionEvidenceLog,
+    SelectionExposureDeclaration,
+    SelectionExposureEvidence,
+    SelectionExposurePolicy,
+    SelectionExposureSizeBucket,
+)
 
 # ---------------------------------------------------------------------------
 # 辅助函数
@@ -204,6 +220,12 @@ class TestPitPolicyReporting:
             strategy_version="2026.01",
             mode=RunMode.BACKTEST,
             created_at="2026-01-31T00:00:00Z",
+            spec_hash="a" * 64,
+            base_spec_hash="b" * 64,
+            parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            effective_parameters=(),
+            research_snapshot_id=None,
+            research_snapshot_manifest_hash=None,
             knowledge_lag_days=2,
         )
 
@@ -401,3 +423,577 @@ class TestRoundTripCompatibility:
         nav_data_from_json = data.get("nav_series")
         assert nav_data_from_json is not None
         assert [float(v) for v in nav_data_from_json] == [1.0, 1.01, 1.02]
+
+
+class TestSelectionEvidenceTables:
+    """R3 selection evidence has stable optional columnar artifacts."""
+
+    _EXPECTED_SCHEMAS: ClassVar[dict[str, pl.Schema]] = {
+        "initial_universe_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "trade_date": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "ordinal": pl.Int64,
+            },
+        ),
+        "exclusion_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "trade_date": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "stage": pl.String,
+                "reason_code": pl.String,
+                "message": pl.String,
+            },
+        ),
+        "selection_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "trade_date": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "score": pl.Float64,
+                "rank": pl.Int64,
+                "selected": pl.Boolean,
+            },
+        ),
+        "factor_contribution_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "trade_date": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "factor_name": pl.String,
+                "raw_value": pl.Float64,
+                "processed_value": pl.Float64,
+                "normalized_value": pl.Float64,
+                "weight": pl.Float64,
+                "contribution": pl.Float64,
+                "factor_signal_score": pl.Float64,
+                "rank": pl.Int64,
+                "selected": pl.Boolean,
+            },
+        ),
+        "selection_exposure_evidence": pl.Schema(
+            {
+                "run_id": pl.String,
+                "trade_date": pl.String,
+                "applicability": pl.String,
+                "lane": pl.String,
+                "industry_column": pl.String,
+                "size_column": pl.String,
+                "size_bucket_method": pl.String,
+                "instrument_id": pl.String,
+                "instrument_id_kind": pl.String,
+                "selected_weight": pl.Float64,
+                "industry_id": pl.String,
+                "industry_id_kind": pl.String,
+                "size_value": pl.Float64,
+                "size_bucket": pl.String,
+            },
+        ),
+    }
+
+    def test_public_serializer_emits_exactly_five_empty_existing_tables(
+        self,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        tables = serialize_selection_evidence(
+            "test-run-001",
+            SelectionEvidenceLog(),
+        )
+
+        assert set(tables) == set(self._EXPECTED_SCHEMAS)
+        for table_name, expected_schema in self._EXPECTED_SCHEMAS.items():
+            assert tables[table_name].is_empty()
+            assert tables[table_name].schema == expected_schema
+
+    def test_exposure_table_serializes_stock_rows_and_etf_not_applicable_sentinel(
+        self,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        stock_date = "2026-03-22"
+        etf_date = "2026-03-23"
+        log = SelectionEvidenceLog(
+            exposure_declarations=(
+                SelectionExposureDeclaration.from_policy(
+                    stock_date,
+                    SelectionExposurePolicy.stock(),
+                ),
+                SelectionExposureDeclaration.from_policy(
+                    etf_date,
+                    SelectionExposurePolicy.etf(),
+                ),
+            ),
+            exposures=(
+                SelectionExposureEvidence(
+                    trade_date=stock_date,
+                    instrument_id=1,
+                    selected_weight=1.0,
+                    industry_id="bank",
+                    size_value=50_000_000_000.0,
+                    size_bucket=SelectionExposureSizeBucket.MID,
+                ),
+            ),
+        )
+
+        table = serialize_selection_evidence("run-exposure", log)[
+            "selection_exposure_evidence"
+        ]
+
+        assert table.to_dicts() == [
+            {
+                "run_id": "run-exposure",
+                "trade_date": stock_date,
+                "applicability": "APPLICABLE",
+                "lane": "STOCK_LANE",
+                "industry_column": "sector_id",
+                "size_column": "market_cap",
+                "size_bucket_method": "selected_market_cap_tertiles_v1",
+                "instrument_id": "1",
+                "instrument_id_kind": "integer",
+                "selected_weight": 1.0,
+                "industry_id": "bank",
+                "industry_id_kind": "string",
+                "size_value": 50_000_000_000.0,
+                "size_bucket": "MID",
+            },
+            {
+                "run_id": "run-exposure",
+                "trade_date": etf_date,
+                "applicability": "NOT_APPLICABLE",
+                "lane": "ETF_LANE",
+                "industry_column": None,
+                "size_column": None,
+                "size_bucket_method": None,
+                "instrument_id": None,
+                "instrument_id_kind": None,
+                "selected_weight": None,
+                "industry_id": None,
+                "industry_id_kind": None,
+                "size_value": None,
+                "size_bucket": None,
+            },
+        ]
+
+    @staticmethod
+    def _single_event_log(
+        event: (
+            InitialUniverseEvidence
+            | ExclusionEvidence
+            | SelectionEvidence
+            | FactorContributionEvidence
+        ),
+    ) -> SelectionEvidenceLog:
+        if type(event) is InitialUniverseEvidence:
+            return SelectionEvidenceLog(initial_universe=(event,))
+        if type(event) is ExclusionEvidence:
+            return SelectionEvidenceLog(exclusions=(event,))
+        if type(event) is SelectionEvidence:
+            return SelectionEvidenceLog(selections=(event,))
+        return SelectionEvidenceLog(factor_contributions=(event,))
+
+    @pytest.mark.parametrize(
+        ("event", "field_name", "poisoned_value"),
+        [
+            (
+                InitialUniverseEvidence("2026-03-22", 1, 1),
+                "trade_date",
+                "20260322",
+            ),
+            (
+                InitialUniverseEvidence("2026-03-22", 1, 1),
+                "instrument_id",
+                True,
+            ),
+            (
+                InitialUniverseEvidence("2026-03-22", 1, 1),
+                "ordinal",
+                0,
+            ),
+            (
+                ExclusionEvidence(
+                    "2026-03-22",
+                    1,
+                    "selection",
+                    ExclusionReason.BELOW_TOP_K,
+                ),
+                "stage",
+                " ",
+            ),
+            (
+                ExclusionEvidence(
+                    "2026-03-22",
+                    1,
+                    "selection",
+                    ExclusionReason.BELOW_TOP_K,
+                ),
+                "reason_code",
+                "below_top_k",
+            ),
+            (
+                ExclusionEvidence(
+                    "2026-03-22",
+                    1,
+                    "selection",
+                    ExclusionReason.BELOW_TOP_K,
+                ),
+                "message",
+                7,
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "instrument_id",
+                "",
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "score",
+                float("inf"),
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "rank",
+                0,
+            ),
+            (
+                SelectionEvidence("2026-03-22", 1, 0.5, 1, True),
+                "selected",
+                1,
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "factor_name",
+                "",
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "weight",
+                float("nan"),
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "rank",
+                0,
+            ),
+            (
+                FactorContributionEvidence(
+                    "2026-03-22",
+                    1,
+                    "momentum",
+                    0.5,
+                    0.5,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.5,
+                    1,
+                    True,
+                ),
+                "selected",
+                1,
+            ),
+        ],
+        ids=(
+            "compact-trade-date",
+            "boolean-instrument-id",
+            "non-positive-ordinal",
+            "blank-stage",
+            "untyped-reason",
+            "non-text-message",
+            "empty-instrument-id",
+            "non-finite-score",
+            "non-positive-rank",
+            "non-boolean-selected",
+            "blank-factor-name",
+            "non-finite-weight",
+            "non-positive-factor-rank",
+            "non-boolean-factor-selected",
+        ),
+    )
+    def test_public_serializer_rebuilds_and_rejects_poisoned_events(
+        self,
+        event: (
+            InitialUniverseEvidence
+            | ExclusionEvidence
+            | SelectionEvidence
+            | FactorContributionEvidence
+        ),
+        field_name: str,
+        poisoned_value: object,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        log = self._single_event_log(event)
+        object.__setattr__(event, field_name, poisoned_value)
+
+        with pytest.raises(AppProcessError) as exc_info:
+            serialize_selection_evidence("test-run-001", log)
+
+        assert exc_info.value.details["reason"] == "invalid_selection_evidence_log"
+
+    def test_public_serializer_rejects_poisoned_log_collections(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        log = SelectionEvidenceLog()
+        object.__setattr__(log, "selections", (object(),))
+
+        with pytest.raises(AppProcessError) as exc_info:
+            serialize_selection_evidence("test-run-001", log)
+
+        assert exc_info.value.details["reason"] == "invalid_selection_evidence_log"
+
+    def test_public_serializer_rebuilds_log_level_invariants(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_selection_evidence,
+        )
+
+        exclusion = ExclusionEvidence(
+            "2026-03-22",
+            1,
+            "selection",
+            ExclusionReason.BELOW_TOP_K,
+        )
+        selection = SelectionEvidence(
+            "2026-03-22",
+            1,
+            0.5,
+            1,
+            False,
+        )
+        log = SelectionEvidenceLog(
+            exclusions=(exclusion,),
+            selections=(selection,),
+        )
+        object.__setattr__(selection, "selected", True)
+
+        with pytest.raises(AppProcessError) as exc_info:
+            serialize_selection_evidence("test-run-001", log)
+
+        assert exc_info.value.details["reason"] == "invalid_selection_evidence_log"
+
+    def test_empty_evidence_log_emits_all_stable_empty_schemas(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        _, tables = serialize_report(
+            _make_report(),
+            selection_evidence=SelectionEvidenceLog(),
+        )
+
+        for table_name, expected_schema in self._EXPECTED_SCHEMAS.items():
+            assert table_name in tables
+            assert tables[table_name].is_empty()
+            assert tables[table_name].schema == expected_schema
+
+    def test_omitted_evidence_preserves_existing_table_surface(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        _, tables = serialize_report(_make_report())
+
+        assert set(tables) == {"nav"}
+        assert not (set(tables) & set(self._EXPECTED_SCHEMAS))
+
+    def test_multi_day_evidence_serializes_trade_date_in_every_table(self) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        trade_dates = ("2026-03-22", "2026-03-23")
+        log = SelectionEvidenceLog(
+            initial_universe=tuple(
+                InitialUniverseEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    ordinal=1,
+                )
+                for trade_date in trade_dates
+            ),
+            exclusions=tuple(
+                ExclusionEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    stage="selection",
+                    reason_code=ExclusionReason.BELOW_TOP_K,
+                )
+                for trade_date in trade_dates
+            ),
+            selections=tuple(
+                SelectionEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    score=0.5,
+                    rank=2,
+                    selected=False,
+                )
+                for trade_date in trade_dates
+            ),
+            factor_contributions=tuple(
+                FactorContributionEvidence(
+                    trade_date=trade_date,
+                    instrument_id=1,
+                    factor_name="momentum",
+                    raw_value=0.5,
+                    processed_value=0.5,
+                    normalized_value=0.5,
+                    weight=1.0,
+                    contribution=0.5,
+                    factor_signal_score=0.5,
+                    rank=2,
+                    selected=False,
+                )
+                for trade_date in trade_dates
+            ),
+            exposure_declarations=tuple(
+                SelectionExposureDeclaration.from_policy(
+                    trade_date,
+                    SelectionExposurePolicy.etf(),
+                )
+                for trade_date in trade_dates
+            ),
+        )
+
+        _, tables = serialize_report(_make_report(), selection_evidence=log)
+
+        for table_name in self._EXPECTED_SCHEMAS:
+            assert tables[table_name]["trade_date"].to_list() == list(trade_dates)
+
+    def test_populated_evidence_uses_stable_names_without_overwriting_report_tables(
+        self,
+    ) -> None:
+        from ditto_application.processes.execution.backtest_serialization import (
+            serialize_report,
+        )
+
+        log = SelectionEvidenceLog(
+            initial_universe=(
+                InitialUniverseEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id=1,
+                    ordinal=1,
+                ),
+                InitialUniverseEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id="000002.SZ",
+                    ordinal=2,
+                ),
+            ),
+            exclusions=(
+                ExclusionEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id="000002.SZ",
+                    stage="selection",
+                    reason_code=ExclusionReason.BELOW_TOP_K,
+                ),
+            ),
+            selections=(
+                SelectionEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id=1,
+                    score=0.9,
+                    rank=1,
+                    selected=True,
+                ),
+                SelectionEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id="000002.SZ",
+                    score=0.5,
+                    rank=2,
+                    selected=False,
+                ),
+            ),
+            factor_contributions=(
+                FactorContributionEvidence(
+                    trade_date="2026-03-22",
+                    instrument_id=1,
+                    factor_name="momentum",
+                    raw_value=0.12,
+                    processed_value=1.1,
+                    normalized_value=1.0,
+                    weight=0.6,
+                    contribution=0.6,
+                    factor_signal_score=0.8,
+                    rank=1,
+                    selected=True,
+                ),
+            ),
+        )
+
+        _, tables = serialize_report(_make_report(), selection_evidence=log)
+
+        assert "nav" in tables
+        assert set(self._EXPECTED_SCHEMAS) <= set(tables)
+        assert tables["initial_universe_evidence"].to_dicts() == [
+            {
+                "run_id": "test-run-001",
+                "trade_date": "2026-03-22",
+                "instrument_id": "1",
+                "instrument_id_kind": "integer",
+                "ordinal": 1,
+            },
+            {
+                "run_id": "test-run-001",
+                "trade_date": "2026-03-22",
+                "instrument_id": "000002.SZ",
+                "instrument_id_kind": "string",
+                "ordinal": 2,
+            },
+        ]
+        assert tables["exclusion_evidence"]["reason_code"].to_list() == [
+            "below_top_k",
+        ]
+        assert tables["factor_contribution_evidence"]["selected"].to_list() == [
+            True,
+        ]

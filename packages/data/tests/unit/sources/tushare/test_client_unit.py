@@ -52,6 +52,23 @@ class TestTushareClientInit:
         )
         assert isinstance(client._limiter, TushareRateLimiter)
 
+    def test_init_uses_explicit_paid_profile_from_settings(self) -> None:
+        """Production paid profile must reach the shared provider limiter."""
+        settings = DataSourceSettings(
+            tushare_token="not_a_secret",
+            rate_limit_profile="paid",
+        )
+
+        client = TushareClient(settings=settings)
+
+        assert client._limiter._config == TushareRateLimitConfig.paid()
+
+    def test_init_keeps_free_profile_as_the_default(self) -> None:
+        """Development defaults stay conservative unless explicitly overridden."""
+        client = TushareClient(settings=_settings())
+
+        assert client._limiter._config == TushareRateLimitConfig.free()
+
 
 class TestTushareClientQuery:
     """Tests for TushareClient.query method."""

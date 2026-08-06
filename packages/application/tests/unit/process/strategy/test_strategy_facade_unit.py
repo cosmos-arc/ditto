@@ -5,7 +5,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from ditto_application.builders import StrategyServiceFactory, StrategySliceBuilder
-from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
+)
 from ditto_application.processes.execution.strategy_run_process import (
     StrategyFacade,
     StrategyRunMode,
@@ -64,7 +66,7 @@ class TestStrategyFacade:
         facade = StrategyFacade(factory=factory)
 
         result = facade.run_backtest_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-24",

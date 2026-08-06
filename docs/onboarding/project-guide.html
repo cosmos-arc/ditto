@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ditto 项目完整导读 · 新人版</title>
+<style>
+  :root {
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+
+    /* light theme */
+    --bg: #f6f8fb;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #dbeafe;
+    --accent: #0891b2;
+    --accent-light: #cffafe;
+
+    /* plane colors */
+    --c-kernel: #64748b;
+    --c-platform: #475569;
+    --c-data: #059669;
+    --c-features: #0d9488;
+    --c-analysis: #16a34a;
+    --c-strategy: #2563eb;
+    --c-portfolio: #4f46e5;
+    --c-risk: #7c3aed;
+    --c-execution: #db2777;
+    --c-backtest: #9333ea;
+    --c-application: #ea580c;
+    --c-apps: #dc2626;
+
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+    --code-comment: #64748b;
+    --shadow-sm: 0 1px 2px rgba(15,23,42,.06);
+    --shadow: 0 4px 12px rgba(15,23,42,.08);
+    --shadow-lg: 0 12px 32px rgba(15,23,42,.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1120;
+      --surface: #131c31;
+      --surface-2: #0f172a;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      --border: #1e293b;
+      --border-strong: #334155;
+      --primary: #60a5fa;
+      --primary-dark: #3b82f6;
+      --primary-light: #1e3a5f;
+      --accent: #22d3ee;
+      --accent-light: #134e4a;
+      --code-bg: #020617;
+      --code-text: #e2e8f0;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+      --shadow: 0 4px 12px rgba(0,0,0,.35);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,.45);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* layout */
+  .layout { display: flex; max-width: 1500px; margin: 0 auto; }
+  nav.sidebar {
+    width: 270px; flex-shrink: 0; position: sticky; top: 0;
+    height: 100vh; overflow-y: auto; padding: 24px 16px;
+    border-right: 1px solid var(--border); background: var(--surface);
+  }
+  main { flex: 1; min-width: 0; padding: 0 48px 120px; max-width: 1180px; }
+  @media (max-width: 1100px) {
+    nav.sidebar { display: none; }
+    main { padding: 0 20px 80px; }
+  }
+
+  /* sidebar */
+  .sidebar h2 { font-size: 16px; margin: 0 0 4px; color: var(--primary); font-weight: 700; }
+  .sidebar .ver { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; }
+  .sidebar ol { list-style: none; padding: 0; margin: 0; }
+  .sidebar ol li { margin: 2px 0; }
+  .sidebar ol li a {
+    display: block; padding: 6px 12px; border-radius: var(--radius-sm);
+    color: var(--text-muted); text-decoration: none; font-size: 13.5px;
+    border-left: 2px solid transparent; transition: all .15s;
+  }
+  .sidebar ol li a:hover { background: var(--surface-2); color: var(--text); }
+  .sidebar ol li a.active { color: var(--primary); border-left-color: var(--primary); background: var(--primary-light); font-weight: 600; }
+  .sidebar ol ol { padding-left: 14px; }
+  .sidebar ol ol li a { font-size: 12.5px; padding: 4px 10px; }
+
+  /* header */
+  header.hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #0891b2 100%);
+    color: #fff; padding: 56px 48px 48px; border-radius: 0 0 24px 24px;
+    margin-bottom: 40px; box-shadow: var(--shadow-lg);
+  }
+  @media (max-width: 1100px) { header.hero { padding: 40px 20px; border-radius: 0 0 16px 16px; } }
+  header.hero h1 { margin: 0 0 12px; font-size: 32px; font-weight: 800; letter-spacing: -.5px; }
+  header.hero .lead { font-size: 16px; opacity: .92; max-width: 760px; margin: 0 0 20px; }
+  header.hero .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  header.hero .badge {
+    background: rgba(255,255,255,.16); backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,.22); padding: 4px 12px; border-radius: 999px;
+    font-size: 12.5px; font-family: var(--font-mono);
+  }
+
+  /* sections */
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  h2.section-title {
+    font-size: 24px; font-weight: 750; margin: 0 0 6px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 10px;
+  }
+  h2.section-title .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px; background: var(--primary); color: #fff;
+    font-size: 15px; font-weight: 700;
+  }
+  .section-desc { color: var(--text-muted); margin: 0 0 24px; font-size: 14.5px; }
+  h3 { font-size: 18px; margin: 28px 0 12px; font-weight: 700; }
+  h4 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; color: var(--text); }
+  p { margin: 10px 0; }
+
+  /* cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 24px; box-shadow: var(--shadow-sm); margin: 16px 0;
+  }
+  .card.glow { border-left: 4px solid var(--primary); }
+  .card.warn { border-left: 4px solid var(--c-apps); background: var(--surface); }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+    background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+  th { background: var(--surface-2); text-align: left; padding: 10px 14px; font-weight: 700;
+    border-bottom: 2px solid var(--border); color: var(--text); font-size: 13px; }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-2); }
+  td code, p code, li code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surface-2);
+    padding: 1.5px 6px; border-radius: 4px; color: var(--accent); border: 1px solid var(--border); }
+
+  /* code blocks */
+  pre {
+    background: var(--code-bg); color: var(--code-text); padding: 16px 20px; border-radius: var(--radius);
+    overflow-x: auto; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; margin: 14px 0;
+    box-shadow: var(--shadow);
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+  .cmd { color: #93c5fd; }
+  .cmt { color: var(--code-comment); }
+
+  /* callouts */
+  .callout { padding: 14px 18px; border-radius: var(--radius); margin: 16px 0; font-size: 14px; }
+  .callout.tip { background: var(--primary-light); border-left: 4px solid var(--primary); }
+  .callout.warn { background: rgba(220,38,38,.08); border-left: 4px solid var(--c-apps); }
+  .callout.key { background: var(--accent-light); border-left: 4px solid var(--accent); }
+  .callout b { color: var(--text); }
+
+  /* ===== ARCH FIGURE 1: layered stack ===== */
+  .arch-stack { display: flex; flex-direction: column; gap: 8px; margin: 20px 0; }
+  .arch-layer {
+    display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: var(--radius);
+    color: #fff; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+  }
+  .arch-layer .lname { font-family: var(--font-mono); font-weight: 700; font-size: 15px; min-width: 110px; }
+  .arch-layer .ldesc { flex: 1; font-size: 13.5px; opacity: .95; }
+  .arch-layer .ltag { font-size: 11px; background: rgba(255,255,255,.22); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .arch-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+  .arch-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 700px) { .arch-row, .arch-row.three { grid-template-columns: 1fr; } }
+  .arch-cell { padding: 12px 14px; border-radius: var(--radius); color: #fff; box-shadow: var(--shadow-sm); }
+  .arch-cell .cname { font-family: var(--font-mono); font-weight: 700; font-size: 13.5px; }
+  .arch-cell .cdesc { font-size: 12px; opacity: .9; margin-top: 2px; }
+  .arch-note { text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
+  .arch-arrow-down { text-align: center; color: var(--text-light); font-size: 18px; margin: -2px 0; }
+
+  /* ===== FIGURE 2: flow chain ===== */
+  .flow-chain { margin: 20px 0; }
+  .flow-step {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 18px; box-shadow: var(--shadow-sm); border-left: 4px solid var(--primary);
+  }
+  .flow-step .sh { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .flow-step .snum { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+    border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; font-size: 13px; }
+  .flow-step .spkg { font-family: var(--font-mono); font-size: 13px; color: var(--accent); font-weight: 600; }
+  .flow-step .sname { font-weight: 700; font-size: 14.5px; }
+  .flow-step .srows { display: grid; grid-template-columns: 70px 1fr; gap: 4px 12px; font-size: 13px; }
+  .flow-step .srows b { color: var(--text-muted); font-weight: 600; font-size: 12px; padding-top: 1px; }
+  .flow-step .pit { color: var(--c-apps); font-weight: 600; }
+  .flow-arrow { text-align: center; color: var(--text-light); font-size: 20px; line-height: 1; margin: 2px 0; }
+
+  /* ===== FIGURE 3: compare grid ===== */
+  .compare { margin: 20px 0; }
+  .compare-seam { text-align: center; background: var(--accent); color: #fff; padding: 8px; border-radius: var(--radius);
+    font-weight: 700; font-size: 13.5px; box-shadow: var(--shadow-sm); }
+  .compare-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+  @media (max-width: 600px) { .compare-cols { grid-template-columns: 1fr; } }
+  .compare-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; box-shadow: var(--shadow-sm); }
+  .compare-col h5 { margin: 0 0 6px; font-size: 14px; color: var(--primary); }
+  .compare-col .body { font-size: 13px; color: var(--text-muted); }
+  .compare-col .body code { font-size: 12px; }
+  .compare-shared { background: linear-gradient(135deg, var(--c-strategy), var(--c-portfolio)); color: #fff;
+    padding: 16px; border-radius: var(--radius); text-align: center; box-shadow: var(--shadow); margin: 8px 0; }
+  .compare-shared .big { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+  .compare-shared .sub { font-size: 12.5px; opacity: .92; margin-top: 4px; }
+
+  /* ===== FIGURE 4: value chain ===== */
+  .chain-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 18px; box-shadow: var(--shadow-sm); margin: 8px 0; }
+  .chain-box .ct { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: var(--primary); }
+  .chain-box .cb { font-size: 13px; color: var(--text-muted); }
+  .chain-box ul { margin: 6px 0 0; padding-left: 20px; font-size: 12.5px; color: var(--text-muted); }
+  .chain-box ul li code { font-size: 11.5px; }
+  .chain-checks { background: rgba(22,163,74,.08); border: 1px solid var(--c-analysis); border-radius: var(--radius);
+    padding: 14px 18px; margin: 8px 0; }
+  .chain-checks .ct { color: var(--c-analysis); }
+  .chain-checks ul li { color: var(--text); }
+  .chain-checks ul li::marker { content: "✓ "; color: var(--c-analysis); font-weight: 700; }
+
+  /* principles */
+  .principle { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 22px; margin: 14px 0; box-shadow: var(--shadow-sm); border-top: 4px solid var(--accent); }
+  .principle h4 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
+  .principle .pnum { background: var(--accent); color: #fff; width: 24px; height: 24px; border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+
+  /* module cards */
+  .plane-group { margin: 24px 0; }
+  .plane-label { display: inline-block; padding: 4px 14px; border-radius: 999px; color: #fff; font-size: 12.5px;
+    font-weight: 700; margin-bottom: 12px; }
+  .modules { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+  .mod {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; box-shadow: var(--shadow-sm); border-top: 3px solid var(--primary);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .mod:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .mod h5 { margin: 0 0 4px; font-size: 15px; font-family: var(--font-mono); font-weight: 700; }
+  .mod .role { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .mod .duty { font-size: 13px; margin: 6px 0; }
+  .mod .deps { font-size: 11.5px; color: var(--text-light); font-family: var(--font-mono); margin-top: 8px;
+    padding-top: 8px; border-top: 1px dashed var(--border); }
+  .mod details { margin-top: 8px; }
+  .mod details summary { cursor: pointer; font-size: 12.5px; color: var(--accent); font-weight: 600; }
+  .mod details .inner { font-size: 12.5px; color: var(--text-muted); padding: 8px 0 0; line-height: 1.7; }
+  .mod details .inner b { color: var(--text); }
+
+  /* glossary */
+  .glos-search { width: 100%; padding: 11px 16px; border: 2px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; font-family: var(--font-sans); background: var(--surface); color: var(--text); margin-bottom: 8px; }
+  .glos-search:focus { outline: none; border-color: var(--primary); }
+  .glos-cat { margin: 22px 0 10px; }
+  .glos-cat h4 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .glos-cat .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--primary-light); color: var(--primary); font-weight: 600; }
+  .glos-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; margin: 6px 0; font-size: 13.5px; box-shadow: var(--shadow-sm); }
+  .glos-item .term { font-weight: 700; color: var(--text); }
+  .glos-item .term .mark { font-family: var(--font-mono); font-size: 12px; background: var(--accent-light);
+    color: var(--accent); padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 600; }
+  .glos-item .def { color: var(--text-muted); margin-top: 3px; }
+  .glos-item.hidden { display: none; }
+
+  /* maturity */
+  .mat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 10px; margin: 14px 0; }
+  .mat-card { padding: 12px 14px; border-radius: var(--radius); color: #fff; box-shadow: var(--shadow-sm); }
+  .mat-card .ml { font-weight: 700; font-size: 13.5px; font-family: var(--font-mono); }
+  .mat-card .md { font-size: 12px; opacity: .92; margin-top: 3px; }
+
+  /* command block */
+  .cmd-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin: 12px 0; }
+  @media (max-width: 700px) { .cmd-grid { grid-template-columns: 1fr; } }
+  .cmd-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; box-shadow: var(--shadow-sm); }
+  .cmd-card code { display: block; font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); }
+  .cmd-card span { font-size: 12px; color: var(--text-muted); }
+
+  /* lifecycle diagrams */
+  .lifecycle { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin: 14px 0; box-shadow: var(--shadow-sm); overflow-x: auto; }
+  .lifecycle .lc-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 12.5px; }
+  .lc-state { padding: 4px 10px; border-radius: 6px; background: var(--primary); color: #fff; font-weight: 600; white-space: nowrap; }
+  .lc-state.warn { background: var(--c-apps); }
+  .lc-state.muted { background: var(--text-light); }
+  .lc-arrow { color: var(--text-light); }
+  .lc-trigger { font-size: 11px; color: var(--accent); }
+
+  /* back to top */
+  #topbtn { position: fixed; bottom: 28px; right: 28px; width: 44px; height: 44px; border-radius: 50%;
+    background: var(--primary); color: #fff; border: none; cursor: pointer; box-shadow: var(--shadow-lg);
+    font-size: 20px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 50; }
+  #topbtn.show { opacity: 1; pointer-events: auto; }
+  #topbtn:hover { transform: translateY(-3px); }
+
+  .footer { text-align: center; color: var(--text-light); font-size: 12.5px; padding: 40px 0 0; border-top: 1px solid var(--border); margin-top: 40px; }
+  hr.sep { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+  .pill.yes { background: rgba(5,150,105,.15); color: var(--c-data); }
+  .pill.no { background: rgba(220,38,38,.15); color: var(--c-apps); }
+</style>
+</head>
+<body>
+
+<div class="layout">
+<nav class="sidebar">
+  <h2>📘 Ditto 导读</h2>
+  <div class="ver">新人版 · 2026-08-02</div>
+  <ol>
+    <li><a href="#overview">一、鸟瞰</a></li>
+    <li><a href="#arch">二、12 包骨架</a></li>
+    <li><a href="#journey">三、端到端旅程</a></li>
+    <li><a href="#principles">四、五条设计主线</a></li>
+    <li><a href="#modules">五、分模块导读</a>
+      <ol>
+        <li><a href="#m-base">基础层</a></li>
+        <li><a href="#m-data">数据/计算平面</a></li>
+        <li><a href="#m-cap">领域能力平面</a></li>
+        <li><a href="#m-orch">编排/入口层</a></li>
+      </ol>
+    </li>
+    <li><a href="#governance">六、三重治理闭环</a></li>
+    <li><a href="#maturity">七、成熟度分级</a></li>
+    <li><a href="#glossary">八、领域概念词典</a></li>
+    <li><a href="#onboard">九、新人上手清单</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <h1>Ditto 项目完整导读</h1>
+  <p class="lead">一个以 A 股 ETF 为主、对标 QuantConnect LEAN / NautilusTrader 的 T1 级量化交易平台。把"数据摄取 → 因子计算 → 策略信号 → 组合 → 风控 → 执行 → 回测/研究"做成一条<b>可治理、防前瞻偏差（PIT）、回测与生产共用同一套领域能力</b>的完整流水线。</p>
+  <div class="badges">
+    <span class="badge">polars</span>
+    <span class="badge">orjson</span>
+    <span class="badge">pixi</span>
+    <span class="badge">FastAPI + granian</span>
+    <span class="badge">Prefect</span>
+    <span class="badge">Dishka DI</span>
+    <span class="badge">OpenTelemetry</span>
+    <span class="badge">Python ≥ 3.13</span>
+    <span class="badge">12 包 / 932 文件 / 106K LOC</span>
+  </div>
+</header>
+
+<!-- ============ 1 OVERVIEW ============ -->
+<section id="overview">
+  <h2 class="section-title"><span class="num">1</span>鸟瞰：Ditto 是什么</h2>
+  <p class="section-desc">先建立最顶层的心智模型——技术栈、当前进度、北极星原则。</p>
+
+  <div class="card glow">
+    <h4>🎯 北极星原则</h4>
+    <p>以<b>卓越代码质量</b>为底线、以<b>艺术般的可读性与一致风格</b>为追求，持续产出清晰、整洁、可演进的架构。<b>质量 &gt; 功能广度</b>——这就是为什么工程质量 4.56★ 而功能完整度只有 2.9★（刻意为之）。</p>
+  </div>
+
+  <h4>当前进度（你接手时的状态）</h4>
+  <table>
+    <tr><th>阶段</th><th>状态</th><th>说明</th></tr>
+    <tr><td>MVP（Phase 0–2）</td><td><span class="pill yes">上线就绪</span></td><td>数据治理 promotion、FRED realtime PIT、真实数据联通全绿</td></tr>
+    <tr><td>R1 日频人工交易</td><td>进行中</td><td>单操作员单账户手工交易本地 Beta</td></tr>
+    <tr><td>R3 研究治理</td><td>后端完成 / 前端进行中</td><td>研究→审查→发布→治理晋级价值链已闭合；前端在独立 <code>ditto-app</code> 仓库接线</td></tr>
+  </table>
+
+  <div class="callout key">
+    <b>不可逾越的技术铁律：</b>数据处理用 <code>polars</code>（禁 pandas）/ JSON 用 <code>orjson</code>（禁 json）/ 包管理用 <code>pixi</code>（禁 pip/poetry/conda）/ 禁用 <code>TYPE_CHECKING</code> 解决循环依赖（必须重构）/ 禁止跨包 re-export / <code>rolling_mean(20)</code> 必须带 <code>closed="left"</code>（防数据泄漏）。
+  </div>
+</section>
+
+<!-- ============ 2 ARCHITECTURE ============ -->
+<section id="arch">
+  <h2 class="section-title"><span class="num">2</span>12 包架构骨架</h2>
+  <p class="section-desc">这是你最先要刻进脑子的东西。所有代码归属这 12 个包，依赖方向严格单向。</p>
+
+  <h4>图 1 — 分层架构（从入口到内核）</h4>
+  <div class="arch-stack">
+    <div class="arch-layer" style="background:var(--c-apps)">
+      <span class="lname">apps</span>
+      <span class="ldesc">入口层：FastAPI / CLI / Prefect + DI 装配（唯一可直 import capability 实现的现场）</span>
+      <span class="ltag">Composition Root</span>
+    </div>
+    <div class="arch-layer" style="background:var(--c-application)">
+      <span class="lname">application</span>
+      <span class="ldesc">编排层：CQRS（queries / commands / processes / builders）</span>
+      <span class="ltag">唯一编排全部能力包</span>
+    </div>
+    <div class="arch-layer" style="background:var(--c-backtest)">
+      <span class="lname">backtest</span>
+      <span class="ldesc">模拟 runtime：复用下方全部能力包 + 替换数据源与成交模拟</span>
+      <span class="ltag">共享 capability</span>
+    </div>
+
+    <div class="arch-row">
+      <div class="arch-cell" style="background:var(--c-strategy)"><div class="cname">strategy</div><div class="cdesc">信号 / 治理</div></div>
+      <div class="arch-cell" style="background:var(--c-portfolio)"><div class="cname">portfolio</div><div class="cdesc">组合 / 会计</div></div>
+      <div class="arch-cell" style="background:var(--c-risk)"><div class="cname">risk</div><div class="cdesc">风控</div></div>
+      <div class="arch-cell" style="background:var(--c-execution)"><div class="cname">execution</div><div class="cdesc">订单 / 券商</div></div>
+    </div>
+    <div class="arch-note">▲ 领域能力平面（peer，互不依赖，平级无高低）</div>
+
+    <div class="arch-row three">
+      <div class="arch-cell" style="background:var(--c-data)"><div class="cname">data</div><div class="cdesc">数据底座 / PIT</div></div>
+      <div class="arch-cell" style="background:var(--c-features)"><div class="cname">features</div><div class="cdesc">因子 / 表达式引擎</div></div>
+      <div class="arch-cell" style="background:var(--c-analysis)"><div class="cname">analysis</div><div class="cdesc">研究 control-plane</div></div>
+    </div>
+    <div class="arch-note">▲ 数据 / 计算平面</div>
+
+    <div class="arch-layer" style="background:var(--c-platform)">
+      <span class="lname">platform</span>
+      <span class="ldesc">横切基础设施：config / db / cache / observability / storage</span>
+      <span class="ltag">零业务</span>
+    </div>
+    <div class="arch-layer" style="background:var(--c-kernel)">
+      <span class="lname">kernel</span>
+      <span class="ldesc">共享内核：值类型 / Protocol / 运行时三件套（Clock / Synchronizer / TimeContext）</span>
+      <span class="ltag">零依赖</span>
+    </div>
+  </div>
+  <div class="callout warn">
+    <b>依赖方向是铁律：</b>上层可依赖下层，下层绝不反向。<code>kernel</code> 是绝对底；<code>analysis</code> 只被 application 经 allowlist 引用（<b>生产包禁止依赖 analysis</b>）。
+  </div>
+
+  <h4>代码该放哪个包？——放置决策树</h4>
+  <table>
+    <tr><th>你要写的东西</th><th>去这里</th><tr>
+    <tr><td>跨 2+ 包用的纯值类型 / 枚举 / Protocol（零 I/O）</td><td><code>kernel</code></td></tr>
+    <tr><td>横切基础设施（缓存 / 日志 / DB 基类）</td><td><code>platform</code></td></tr>
+    <tr><td>市场 / 基本面 / 宏观数据获取或存储</td><td><code>data</code></td></tr>
+    <tr><td>因子 / 表达式 / 衍生数据计算</td><td><code>features</code></td></tr>
+    <tr><td>策略定义 / 信号生成 / alpha pipeline</td><td><code>strategy</code></td></tr>
+    <tr><td>组合构建 / 调仓 / 会计</td><td><code>portfolio</code></td></tr>
+    <tr><td>风控检查 / 约束 / 暴露度</td><td><code>risk</code></td></tr>
+    <tr><td>订单 / 券商网关 / 成交处理</td><td><code>execution</code></td></tr>
+    <tr><td>回测引擎 / 绩效统计 / 模拟</td><td><code>backtest</code></td></tr>
+    <tr><td>研究分析 / 数据集契约</td><td><code>analysis</code></td></tr>
+    <tr><td>Use Case 编排（CQRS）</td><td><code>application</code></td></tr>
+    <tr><td>HTTP API / CLI / Prefect Job / DI 注册</td><td><code>apps</code></td></tr>
+  </table>
+
+  <h4>硬约束（违反会被 arch-check + importlinter 拦截）</h4>
+  <div class="cmd-grid">
+    <div class="cmd-card"><code>生产包 ✗ analysis</code><span>研究单向只读消费生产数据</span></div>
+    <div class="cmd-card"><code>strategy ✗ execution</code><span>策略不碰交易执行</span></div>
+    <div class="cmd-card"><code>execution ✗ backtest</code><span>执行不依赖回测</span></div>
+    <div class="cmd-card"><code>backtest ✗ 真实券商</code><span>只用模拟执行</span></div>
+    <div class="cmd-card"><code>✗ 跨包 re-export</code><span>消费者直引叶模块</span></div>
+    <div class="cmd-card"><code>✗ TYPE_CHECKING 解循环</code><span>必须重构架构</span></div>
+  </div>
+</section>
+
+<!-- ============ 3 JOURNEY ============ -->
+<section id="journey">
+  <h2 class="section-title"><span class="num">3</span>端到端数据 / 控制流</h2>
+  <p class="section-desc">理解这一条链，你就理解了 80% 的项目。以一次"日频 ETF 轮动策略下单"为例。</p>
+
+  <h4>图 2 — 一条交易从数据到成交的完整旅程</h4>
+  <div class="flow-chain">
+    <div class="flow-step">
+      <div class="sh"><span class="snum">1</span><span class="spkg">data.ingestion</span><span class="sname">摄取</span></div>
+      <div class="srows">
+        <b>输入</b><span>Tushare / FRED / TDX adapter 拉取</span>
+        <b>处理</b><span>游标去重 → FreezeManager 冻结 → 写时 quality L1/L2 阻断</span>
+        <b>产出</b><span>parquet + DataCatalog(URI/schema/freshness/maturity) + lineage 血缘 + <span class="pit">knowledge_date 列 (T+1) ◀ PIT 防线①</span></span>
+      </div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step">
+      <div class="sh"><span class="snum">2</span><span class="spkg">features.expression</span><span class="sname">因子计算</span></div>
+      <div class="srows">
+        <b>输入</b><span>市场数据（由 application 经 Protocol 注入）</span>
+        <b>处理</b><span>DSL 表达式 → 词法/语法/语义分析 → codegen 编译成 polars Expr</span>
+        <b>产出</b><span>物化因子 parquet（带 CompileIdentity 版本哈希）<span class="pit">· shift(1)+rolling=closed="left" ◀ PIT 防线②</span></span>
+      </div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step">
+      <div class="sh"><span class="snum">3</span><span class="spkg">strategy.alpha</span><span class="sname">信号生成</span></div>
+      <div class="srows">
+        <b>输入</b><span>因子 + 市场输入 → StrategyInputBundle</span>
+        <b>处理</b><span>StrategySpecV2 → compile_node_pipeline → StrategyPipeline.run() → DecisionStage 链</span>
+        <b>产出</b><span><b>TargetPortfolio</b>（InstrumentId → 权重）</span>
+      </div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step">
+      <div class="sh"><span class="snum">4</span><span class="spkg">portfolio.rebalancing</span><span class="sname">组合构建</span></div>
+      <div class="srows">
+        <b>输入</b><span>TargetPortfolio</span>
+        <b>处理</b><span>WeightAllocator 加权重列 → ConstraintChecker 按优先级调权 → 对比 AccountView 现状</span>
+        <b>产出</b><span>目标订单集（该买卖什么）</span>
+      </div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step">
+      <div class="sh"><span class="snum">5</span><span class="spkg">risk.constraints</span><span class="sname">风控（盘前）</span></div>
+      <div class="srows">
+        <b>输入</b><span>订单 + AccountView</span>
+        <b>处理</b><span>CompositePreTradeCheck 逐单：涨跌停/手数/购买力/集中度；PreTradeContext 批内滚动冻结</span>
+        <b>产出</b><span>Decision = <b>ACCEPT / REJECT / RESIZE</b>（resize 后重入检查链）</span>
+      </div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step">
+      <div class="sh"><span class="snum">6</span><span class="spkg">execution</span><span class="sname">交易执行</span></div>
+      <div class="srows">
+        <b>输入</b><span>通过风控的订单</span>
+        <b>处理</b><span>SimpleExecutionPlanner 生成订单 → BrokerGateway.submit_order → OMS FSM(7态) → 成交</span>
+        <b>产出</b><span>FillEvent → Account.apply_fill() 原子更新（BUY 注册 T+1 冻结，SELL 算盈亏）</span>
+      </div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step">
+      <div class="sh"><span class="snum">7</span><span class="spkg">risk + execution.audit</span><span class="sname">盘后风控 + 审计</span></div>
+      <div class="srows">
+        <b>处理</b><span>post_trade: MaxDrawdown/Concentration 扫描 → RiskAction(减仓/清仓/告警)</span>
+        <b>产出</b><span>execution_audit 表 + query_operating_timeline() 合并 audit/order_events/broker_events</span>
+      </div>
+    </div>
+  </div>
+  <div class="callout tip">
+    <b>回测版本的旅程完全一样</b>——唯一差别：第①步换成 DataFeed 从历史 parquet 读，第⑥步成交换成 BrokerageModel 模拟。<b>策略/组合/风控/执行的代码一行都不改。</b>详见主线 2。
+  </div>
+</section>
+
+<!-- ============ 4 PRINCIPLES ============ -->
+<section id="principles">
+  <h2 class="section-title"><span class="num">4</span>五条设计主线</h2>
+  <p class="section-desc">这五条是你在任何模块都会反复遇到的"基因"，必须先建立直觉。</p>
+
+  <!-- 主线 1 -->
+  <div class="principle">
+    <h4><span class="pnum">1</span>PIT（Point-in-Time）安全 —— 量化系统的命脉</h4>
+    <p>PIT 含义：<b>时间点 T 只能用 T 之前已知的信息</b>，绝不能用未来数据，否则回测业绩全是假的。Ditto 用<b>三层防线</b>层层设防：</p>
+    <table>
+      <tr><th>防线</th><th>所在包</th><th>机制</th></tr>
+      <tr><td>① knowledge_date 列</td><td><code>data</code></td><td>T+1 语义（行情=交易日+1，财报=公告日），查询 <code>&lt;= knowledge_date</code>，<b>缺列 fail-closed</b></td></tr>
+      <tr><td>② effective_from / effective_to</td><td><code>data</code></td><td>元数据版本区间，<code>effective_to</code> 是"失效日（不含）"</td></tr>
+      <tr><td>③ shift(1) + rolling</td><td><code>features</code></td><td>等价 <code>closed="left"</code>，窗口只看 <code>[T-window, T-1]</code>，绝不包含当前行</td></tr>
+      <tr><td>冻结 TimeSlice</td><td><code>backtest</code></td><td>策略输入用 Synchronizer 冻结的 bars/benchmark，禁二次 get_slice</td></tr>
+    </table>
+    <div class="callout warn"><b>铁律：</b><code>rolling_mean(20)</code> 不带 <code>closed="left"</code> 一律禁止。研究模式绕过须显式 <code>UnsafeResearchTimePolicy.ALLOW_TRADE_DATE_FALLBACK</code> + 记审计。</div>
+  </div>
+
+  <!-- 主线 2 -->
+  <div class="principle">
+    <h4><span class="pnum">2</span>回测 = 生产 capability + 模拟替换</h4>
+    <p>避免"回测一套、生产一套"漂移。<code>strategy/portfolio/risk/execution</code> 在两条路径<b>完全一致</b>，只替换两个 seam：</p>
+
+    <h4 style="margin-top:16px">图 3 — 回测 vs 生产对照</h4>
+    <div class="compare">
+      <div class="compare-seam">seam ① · 数据来源</div>
+      <div class="compare-cols">
+        <div class="compare-col"><h5>生产 (Production)</h5><div class="body">实时 / 真实数据源（<code>data.services</code>）</div></div>
+        <div class="compare-col"><h5>回测 (Backtest)</h5><div class="body"><code>DataFeed</code>：从历史 parquet 切片，Synchronizer 产出 TimeSlice</div></div>
+      </div>
+      <div class="compare-shared">
+        <div class="big">strategy → portfolio → risk → execution</div>
+        <div class="sub">同一套代码，零差异，一行都不改 · 共享 capability</div>
+      </div>
+      <div class="compare-seam">seam ② · 成交模拟</div>
+      <div class="compare-cols">
+        <div class="compare-col"><h5>生产</h5><div class="body"><code>BrokerGateway</code>（现仅 PaperBrokerGateway，真实券商 = reserved）</div></div>
+        <div class="compare-col"><h5>回测</h5><div class="body"><code>BrokerageModel</code>：FillModel + SlippageModel + AShareFeeModel + SettlementModel(T+1)</div></div>
+      </div>
+    </div>
+    <div class="callout tip"><b>桥接点：</b><code>backtest/brokerage.py</code> 的 <code>BacktestBrokerage</code> 是 state owner，内部用 execution 的订单 FSM 和写库逻辑，但成交价/量/费/交收交给 BrokerageModel 模拟。回测的 ExecutionStep 只有 68 行——它只是薄壳。</div>
+  </div>
+
+  <!-- 主线 3 -->
+  <div class="principle">
+    <h4><span class="pnum">3</span>CQRS 编排（application 层）</h4>
+    <p><code>application</code> 把读写切成四个互斥子域，由 importlinter 的 <b>R8 规则</b>强制：</p>
+
+    <h4 style="margin-top:16px">图 6 — CQRS 四子域与 R8 互斥规则</h4>
+    <div class="card">
+      <table>
+        <tr><th>子域</th><th>职责</th><th>代表</th><th>R8 约束</th></tr>
+        <tr><td><code>queries</code></td><td>只读 Facade，零写入</td><td>StrategyQueryFacade / BacktestQueryFacade</td><td>✗ processes / builders</td></tr>
+        <tr><td><code>commands</code></td><td>Command DTO + Handler，原子写</td><td>PublishStrategyVersionHandler</td><td>✗ queries / builders</td></tr>
+        <tr><td><code>processes</code></td><td>有状态长流程</td><td>IngestionCoordinator / StrategyFacade</td><td>可调 queries + builders</td></tr>
+        <tr><td><code>builders</code></td><td>运行时装配，<b>不查不写</b></td><td>StrategyRuntimeBuilder</td><td>✗ queries</td></tr>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted)">入口层（route/CLI/job）只能注入 <code>CommandHandler</code> 或 Query Facade；写必经 Command→Process，读必经 Query Facade。</p>
+  </div>
+
+  <!-- 主线 4 -->
+  <div class="principle">
+    <h4><span class="pnum">4</span>三重治理闭环（R3 的灵魂）</h4>
+    <p>Ditto 把"什么东西能上线"做成<b>可证伪、不可篡改</b>的流程，分三个域（详见<a href="#governance">第六章</a>）。这里先看研究治理的价值链：</p>
+
+    <h4 style="margin-top:16px">图 4 — R3 研究治理价值链</h4>
+    <div class="chain-box">
+      <div class="ct">EvidenceCollector 组装 HardGateEvidenceView</div>
+      <div class="cb">snapshot / 96 月历史 / PIT 校验 / holdout / 复现指纹 → <code>collect_hard_gate_evidence()</code> 纯投影，无 I/O</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="chain-box" style="border-left:4px solid var(--c-apps)">
+      <div class="ct" style="color:var(--c-apps)">evaluate_hard_gates() —— 11 道 HARD gate</div>
+      <div class="cb">每道 pass / fail / not_evaluated。<b>缺数据 = not_evaluated = 阻断</b>（绝不默认通过）。EVIDENCE 层只展示、永不自动决策（防 p-hacking）。</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="chain-box">
+      <div class="ct">组装 ReviewPacket（不可变 evidence bundle，schema v1/v2/v3）</div>
+      <ul>
+        <li>6 个 reproduction hash：spec / resolved_spec / parameter / snapshot / registry / objective</li>
+        <li>comparison / r1_impact hash（可选）+ selection_evidence_artifact_id + holdout_claim_id</li>
+        <li>v3：selection_trace_artifact_refs + ReviewSelectionExposure</li>
+      </ul>
+      <div class="cb"><code>bundle_hash</code> 拒绝任何 stale evidence drift</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="chain-box">
+      <div class="ct">publish_review_packet() → 实验状态转 COMPLETED</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="chain-checks">
+      <div class="ct">governance promote —— 三层 identity binding 校验</div>
+      <div class="cb" style="margin-bottom:6px"><code>LogicalTrialIdentity = (origin_experiment_id, candidate_id, ordinal, parameter_hash, kind)</code></div>
+      <ul>
+        <li>一个 candidate → 一个 ordinal + parameter_hash</li>
+        <li>一个 ordinal → 一个 candidate</li>
+        <li>必须有 CURRENT member；baseline 必须落在 current</li>
+        <li>prior_trial_evidence 与 prior members 一一绑定</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 主线 5 -->
+  <div class="principle">
+    <h4><span class="pnum">5</span>Protocol 解耦 + 零循环依赖</h4>
+    <p>项目<b>禁止用 <code>TYPE_CHECKING</code> 延迟导入解决循环依赖</b>，遇到循环必须重构。手段是<b>处处 Protocol</b>：</p>
+    <table>
+      <tr><th>解耦场景</th><th>窄协议</th></tr>
+      <tr><td>risk 想校验订单但不依赖 execution</td><td><code>PreTradeOrder</code> / <code>PreTradeTicket</code> / <code>SliceView</code></td></tr>
+      <tr><td>strategy 想持久化信号但不依赖存储实现</td><td><code>SignalStore</code></td></tr>
+      <tr><td>features 要算因子但不依赖 data</td><td><code>ForwardReturnProvider</code> / <code>ClosePriceProvider</code></td></tr>
+      <tr><td>跨层运行时契约</td><td><code>Clock</code> / <code>Synchronizer</code> / <code>EventBus</code> / <code>BrokerGateway</code> / <code>RiskGate</code></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 5 MODULES ============ -->
+<section id="modules">
+  <h2 class="section-title"><span class="num">5</span>分模块深度导读（12 包）</h2>
+  <p class="section-desc">每包：一句话职责 + 依赖 + 子模块（可展开）+ 上手路径。点击卡片标题展开细节。</p>
+
+  <div id="m-base">
+    <span class="plane-label" style="background:var(--c-kernel)">基础层</span>
+    <div class="modules">
+      <div class="mod" style="border-top-color:var(--c-kernel)">
+        <h5>kernel</h5><div class="role">共享内核 · 零业务 / 零 I/O</div>
+        <div class="duty">跨层共享的值类型、枚举、Protocol、薄实现 + 运行时三件套。</div>
+        <div class="deps">依赖：无（绝对底）</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>核心：</b><code>clock.py</code>(Clock+SimulatedClock+RealtimeClock) · <code>synchronizer.py</code>(Synchronizer+TimeSlice，回测/实盘切换唯一 seam) · <code>time_context.py</code>(TimeContext+pit_cutoff) · <code>runtime.py</code>(BaseRuntimeKernel FSM) · <code>events.py</code>(EventBus+EventName catalog) · <code>tracing.py</code>(可插拔 @traced) · <code>instrument/order/market.py</code>(值对象)
+          <br><b>上手：</b>kernel/CLAUDE.md → __init__.py → runtime.py → clock+synchronizer+time_context 三件套
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-platform)">
+        <h5>platform</h5><div class="role">横切基础设施 · 零业务逻辑</div>
+        <div class="duty">config / observability(OTel+loguru) / storage(parquet+sqlite) / db / cache / concurrency。</div>
+        <div class="deps">依赖：kernel（仅 exceptions 继承豁免）</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>foundation/：</b>config(get_environment+ConfigLoader+XDG) · observability(init/shutdown+SafeCounter+@traced OTel 实现) · storage(ParquetStore 按年分区+SQLiteClient 防 SQL 注入) · db(SQLitePool) · cache(DataCache) · concurrency(FileLockManager) · checksum · util(atomic_write)
+          <br><b>services/notification/：</b>AlertManager + Telegram/Email/Webhook
+          <br><b>上手：</b>CLAUDE.md → foundation/__init__.py → observability/_lifecycle → config → storage/parquet_store
+        </div></details>
+      </div>
+    </div>
+  </div>
+
+  <div id="m-data" style="margin-top:28px">
+    <span class="plane-label" style="background:var(--c-data)">数据 / 计算平面</span>
+    <div class="modules">
+      <div class="mod" style="border-top-color:var(--c-data)">
+        <h5>data</h5><div class="role">数据平面 · 平台数据底座</div>
+        <div class="duty">外部数据源接入、PIT 安全存储、质量校验、目录成熟度治理、血缘追踪。</div>
+        <div class="deps">依赖：kernel + platform</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>子包：</b>sources(Tushare/FRED/TDX) · storage(CQRS 读写分离) · services(MetadataService/MarketService) · catalog(DatasetMetadata+maturity 治理) · quality(L1-L4 引擎) · ingestion(游标/冻结/晚到) · lineage(append-only) · <b>helpers/pit(PIT 核心)</b> · runtime(SqlEngine)
+          <br><b>PIT 三层防线：</b>knowledge_date 列(T+1) + effective_from/to 版本 + rolling closed="left"
+          <br><b>catalog 治理：</b>evidence 驱动 promotion，绝不自造通过
+          <br><b>上手：</b>CLAUDE.md + .claude/rules/pit.md → sources→services→storage → helpers/pit → catalog/promotion
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-features)">
+        <h5>features</h5><div class="role">因子与表达式引擎 · 纯计算边界</div>
+        <div class="duty">DSL 表达式编译成 polars、因子定义库、IC 评估、版本化物化。不依赖 data（输入注入）。</div>
+        <div class="deps">依赖：kernel + platform</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>主线：</b>expression(lexer→parser→ast→analyzer→compiler→codegen，DSL→polars) · factors(FactorSpec 按类别) · evaluation(FactorEvaluator 9 步 IC 流水线) · materialization(DerivedExecutionPlanner，薄编排) · storage(parquet+sqlite)
+          <br><b>PIT：</b><code>_builders._rolling</code> 用 shift(1)+rolling=closed="left"
+          <br><b>统一根模型：</b>DerivedSpec(role/profile)
+          <br><b>上手：</b>CLAUDE.md → expression 主线(lexer→codegen→_builders 看 PIT) → factors/momentum → evaluation/_orchestrator
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-analysis)">
+        <h5>analysis</h5><div class="role">研究 control-plane · 纯合同</div>
+        <div class="duty">实验/候选/fold 的不可变合同、ReviewPacket、11 hard gate、selection evidence。自身不调度不做 I/O。</div>
+        <div class="deps">依赖：kernel + platform · <b style="color:var(--c-apps)">⚠ 生产包禁依赖</b></div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>experiments/：</b>models(identity+状态机) · specs(ExperimentLaunchSpec 深冻结) · promotion_models+trial_family(三层 identity binding) · evidence(ReviewPacket) · gates+hard_gate_collector(11 gate) · protocols(持久化端口)
+          <br><b>research/：</b>ResearchDatasetSpec / LateArrivalPolicy / ExperienceMemory
+          <br><b>storage/sqlite/：</b>ResearchExperimentDatabase
+          <br><b>上手：</b>CLAUDE.md → experiments/models→specs→gates→evidence → protocols→sqlite
+        </div></details>
+      </div>
+    </div>
+  </div>
+
+  <div id="m-cap" style="margin-top:28px">
+    <span class="plane-label" style="background:var(--c-strategy)">领域能力平面（peer）</span>
+    <div class="modules">
+      <div class="mod" style="border-top-color:var(--c-strategy)">
+        <h5>strategy</h5><div class="role">策略定义与信号 · + 治理控制面</div>
+        <div class="duty">声明式策略规格 → 运行产出 TargetPortfolio；不可篡改的版本治理生命周期。</div>
+        <div class="deps">依赖：kernel + platform · ✗ data/features/execution</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>alpha/：</b>specs(StrategySpec legacy + StrategySpecV2) · nodes(V2 编辑模型) · pipeline(StrategyPipeline+StrategyInputBundle) · spec_codec(canonical hash) · builtins(DecisionStage) · templates(etf_rotation 等 4 模板)
+          <br><b>governance/：</b>models(状态机+next_lifecycle) · service(GovernanceService+CAS) · protocols
+          <br><b>signals/：</b>SignalStore Protocol · <b>storage/sqlite/：</b>INSERT-only payload + 5 张 append-only 表
+          <br><b>上手：</b>CLAUDE.md → alpha README+protocols+specs → templates/etf_rotation → governance 主线(models→service→store)
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-portfolio)">
+        <h5>portfolio</h5><div class="role">组合构建与管理 · 会计状态机</div>
+        <div class="duty">账户/持仓/现金 + 权重分配/约束检查/组合对比。零横向耦合。</div>
+        <div class="deps">依赖：kernel + polars（仅此）</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>accounting/：</b>Account(可变唯一 owner)+AccountView(frozen 快照) · Position · CashBook · FillEvent · BuyingPowerModel。<code>apply_fill()</code> 先算后赋原子更新
+          <br><b>rebalancing/：</b>WeightAllocator(等权/反波动/得分)+MeanVarianceAllocator(无 solver)+7 种 Constraint+ConstraintChecker
+          <br><b>projection.py：</b>FillProjector 从 fill 流重建状态（B5 无损恢复）
+          <br><b>上手：</b>CLAUDE.md → accounting/account(apply_fill) → rebalancing/allocation+constraints
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-risk)">
+        <h5>risk</h5><div class="role">风险管理 · 盘前/盘后 + Kill Switch</div>
+        <div class="duty">盘前逐单校验 + 盘后组合扫描 + 紧急熔断。窄协议解耦 execution。</div>
+        <div class="deps">依赖：kernel + portfolio · 对 execution 仅窄协议</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>constraints/：</b>PreTradeContext(frozen，批内防超买)+5 条 PreTradeRiskCheck+CompositePreTradeCheck(resize 重入)
+          <br><b>exposure/：</b>ConcentrationPreCheck · <b>drawdown/：</b>MaxDrawdownRule(stateful snapshot/restore)
+          <br><b>post_trade.py：</b>RiskAction+CompositePostTradeGuard · <b>contracts.py：</b>RiskGate Protocol(4 钩子)
+          <br><b>错误语义：</b>命中=返回值，配置非法=异常
+          <br><b>上手：</b>CLAUDE.md → constraints/context+checks → post_trade+drawdown → contracts
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-execution)">
+        <h5>execution</h5><div class="role">交易执行 · OMS Lite · 最后一道门</div>
+        <div class="duty">订单全生命周期(7态 FSM)、券商网关抽象、A 股费用、审计、对账修复。</div>
+        <div class="deps">依赖：kernel + portfolio + platform · ✗ risk/data/strategy/backtest</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>orders/：</b>Order+OrderTicket+FSM(7态5触发)+双 ID(ClientOrderId/BrokerOrderId)+OrderEventJournal
+          <br><b>broker/：</b>BrokerGateway Protocol(6 方法+describe) · <b>gateways/paper.py：</b>现仅此一个，真实=reserved
+          <br><b>reality/：</b>AShareFeeModel · <b>audit/：</b>ExecutionAuditService+timeline · <b>reconciliation/：</b>reconcile+plan_repair(纯函数)+RepairActionExecutor(claim 互斥)
+          <br><b>上手：</b>CLAUDE.md → orders/fsm+ticket → broker/contracts → paper → reconciliation
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-backtest)">
+        <h5>backtest</h5><div class="role">回测引擎 · 复用全部 capability</div>
+        <div class="duty">按历史切片驱动主循环，7 步 Step Chain，只替换数据源和成交模拟。</div>
+        <div class="deps">依赖：data/strategy/portfolio/risk/execution · ✗ 真实券商</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>engine.py：</b>EngineLoop(run→_run_main_loop→_step，支持 checkpoint/resume)
+          <br><b>engine_steps.py：</b>固定 7 步 DataFetch→RiskScan→Strategy→Planning→PreTrade→Execution→Audit
+          <br><b>simulation/：</b>BrokerageModel(FillModel+Slippage+Fee+Settlement)
+          <br><b>brokerage.py：</b>BacktestBrokerage 桥接点（共享 execution FSM）
+          <br><b>上手：</b>CLAUDE.md → engine.py(run) → engine_steps.build_steps → brokerage(BacktestBrokerage) → simulation
+        </div></details>
+      </div>
+    </div>
+  </div>
+
+  <div id="m-orch" style="margin-top:28px">
+    <span class="plane-label" style="background:var(--c-application)">编排 / 入口层</span>
+    <div class="modules">
+      <div class="mod" style="border-top-color:var(--c-application)">
+        <h5>application</h5><div class="role">应用编排 · CQRS</div>
+        <div class="duty">用 CQRS 组织所有 capability 包的读写，本身不含核心业务逻辑。</div>
+        <div class="deps">依赖：全部 capability 包 · 被apps 依赖</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>queries/：</b>MarketQueryFacade/BacktestQueryFacade/StrategyQueryFacade/IngestionStatusQueryFacade/LineageQueryFacade
+          <br><b>commands/：</b>CommandHandler Protocol + IngestDateHandler/PublishStrategyVersionHandler/ReviewDatasetPromotionEvidenceHandler
+          <br><b>processes/：</b>ingestion(IngestionCoordinator) / materialization / execution(StrategyFacade) / experiments(R3 闭环) / strategy / quality
+          <br><b>builders/：</b>StrategyRuntimeBuilder/BacktestRuntimeBuilder（不查不写）
+          <br><b>上手：</b>CLAUDE.md → queries/commands/processes → providers.py → 跟一条 CQRS 闭环
+        </div></details>
+      </div>
+      <div class="mod" style="border-top-color:var(--c-apps)">
+        <h5>apps</h5><div class="role">应用边界 + Composition Root</div>
+        <div class="duty">FastAPI / CLI / Prefect 三类入口 + registry 装配整个 DI 容器。</div>
+        <div class="deps">依赖：application + platform · 唯一可直 import capability（仅 registry/**）</div>
+        <details><summary>子模块与上手</summary><div class="inner">
+          <b>api/routes/：</b>30 路由 / 14 prefix，注入 x-ditto-maturity，route 只做 DTO 映射
+          <br><b>cli/：</b>ditto {init|ingest|backfill|query|strategy|experiment|research|ops|data-products}
+          <br><b>jobs/：</b>9 个 Prefect flow（daily T0→T1→T3 编排等）
+          <br><b>registry/：</b>container + contexts(领域 bundle) + infra(平台 Provider) + live(R2/R3 验收 root)
+          <br><b>三层环境：</b>Pixi(default/dev) × ENVIRONMENT(dev/test/prod) × config/{env}/{name}.env
+          <br><b>上手：</b>CLAUDE.md → main.py → registry/container → 跑 ditto query / ditto ops status
+        </div></details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 GOVERNANCE ============ -->
+<section id="governance">
+  <h2 class="section-title"><span class="num">6</span>三重治理闭环（横向对比）</h2>
+  <p class="section-desc">项目把"什么能上线"做成三个结构相同、对象不同的治理域。三者共享同一套基因：append-only 事件 + 可重建投影 + 内容寻址哈希 + 显式门禁 + 绝不静默通过。</p>
+
+  <h4>图 5 — 三重治理对照</h4>
+  <table>
+    <tr>
+      <th>维度</th>
+      <th style="background:rgba(37,99,235,.1)">策略治理<br><small>strategy.governance</small></th>
+      <th style="background:rgba(22,163,74,.1)">研究治理<br><small>analysis + application</small></th>
+      <th style="background:rgba(5,150,105,.1)">数据治理<br><small>data.catalog</small></th>
+    </tr>
+    <tr><td><b>治理对象</b></td><td>策略版本 spec</td><td>实验候选 / 家族</td><td>数据集 maturity</td></tr>
+    <tr><td><b>状态机</b></td><td>DRAFT→REVIEW→PUBLISHED→DEPRECATED</td><td>EVIDENCE→COMPLETED→promote</td><td>experimental→initial-focus</td></tr>
+    <tr><td><b>门禁</b></td><td>canonical spec hash</td><td>11 hard gate（绝不自造通过）</td><td>promotion criteria（evidence 精确匹配）</td></tr>
+    <tr><td><b>持久化</b></td><td>INSERT-only payload + 5 张 append-only 表</td><td>ReviewPacket + bundle_hash + 6 reproduction hash</td><td>append-only governance event</td></tr>
+    <tr><td><b>并发控制</b></td><td>CAS revision</td><td>bundle_hash 拒 drift</td><td>精确匹配评估</td></tr>
+    <tr><td><b>可证伪</b></td><td>rebuildable projection</td><td>三层 identity binding</td><td>可撤销 + revoke reason</td></tr>
+    <tr><td><b>触发晋级</b></td><td>PUBLISH（原子切 pointer）</td><td>promote</td><td>evidence 全 pass</td></tr>
+  </table>
+
+  <h4>策略 governance lifecycle（状态不可逆）</h4>
+  <div class="lifecycle">
+    <div class="lc-line">
+      <span class="lc-state">DRAFT</span>
+      <span class="lc-arrow">─<span class="lc-trigger">SUBMIT_REVIEW</span>→</span>
+      <span class="lc-state">REVIEW/PENDING</span>
+      <span class="lc-arrow">─<span class="lc-trigger">APPROVE</span>→</span>
+      <span class="lc-state">REVIEW/APPROVED</span>
+      <span class="lc-arrow">─<span class="lc-trigger">PUBLISH</span>→</span>
+      <span class="lc-state">PUBLISHED</span>
+      <span class="lc-arrow">─<span class="lc-trigger">DEPRECATE</span>→</span>
+      <span class="lc-state warn">DEPRECATED</span>
+    </div>
+    <div class="lc-line" style="margin-top:10px">
+      <span class="lc-state muted">REVIEW/PENDING</span>
+      <span class="lc-arrow">─<span class="lc-trigger">REJECT</span>→</span>
+      <span class="lc-state warn">REVIEW/REJECTED</span>
+      <span style="color:var(--text-muted);font-size:12px">（只能 clone 新 draft）</span>
+    </div>
+  </div>
+
+  <h4>OMS 订单 FSM（7 状态 + 5 触发器）</h4>
+  <div class="lifecycle">
+    <div class="lc-line">
+      <span class="lc-state">NEW</span>
+      <span class="lc-arrow">─<span class="lc-trigger">submit</span>→</span>
+      <span class="lc-state">SUBMITTED</span>
+      <span class="lc-arrow">──→</span>
+      <span class="lc-state">PARTIALLY_FILLED</span>
+      <span class="lc-arrow">─<span class="lc-trigger">fill</span>→</span>
+      <span class="lc-state">FILLED</span>
+    </div>
+    <div class="lc-line" style="margin-top:8px;color:var(--text-muted);font-size:12.5px">
+      SUBMITTED 还可 → <span class="lc-state" style="font-size:11px">FILLED</span> / <span class="lc-state warn" style="font-size:11px">CANCELED</span> / <span class="lc-state warn" style="font-size:11px">REJECTED</span> / <span class="lc-state muted" style="font-size:11px">INVALID</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7 MATURITY ============ -->
+<section id="maturity">
+  <h2 class="section-title"><span class="num">7</span>能力成熟度分级</h2>
+  <p class="section-desc">看懂"什么能用什么不能用"。每个能力都标了成熟度，OpenAPI 路由带 x-ditto-maturity，绝不能把 experimental/reserved 当生产可用。</p>
+
+  <div class="mat-grid">
+    <div class="mat-card" style="background:#16a34a"><div class="ml">production</div><div class="md">用户可用、有测试、有运维、无阻断</div></div>
+    <div class="mat-card" style="background:#2563eb"><div class="ml">initial-focus</div><div class="md">近期主要范围，有实现有测试，仍在审查</div></div>
+    <div class="mat-card" style="background:#ea580c"><div class="ml">experimental</div><div class="md">研究/未来方向，非生产范围（需 opt-in）</div></div>
+    <div class="mat-card" style="background:#475569"><div class="ml">infrastructure</div><div class="md">支撑产品的基础能力</div></div>
+    <div class="mat-card" style="background:#94a3b8"><div class="ml">reserved</div><div class="md">占位命名空间，不可当运行时行为</div></div>
+  </div>
+
+  <table>
+    <tr><th>能力</th><th>成熟度</th><th>说明</th></tr>
+    <tr><td>A 股 ETF 日频数据/研究/回测</td><td><span class="pill" style="background:#dbeafe;color:#2563eb">initial-focus</span></td><td>有 golden e2e（5 测试）gate PR</td></tr>
+    <tr><td>OMS Lite / 回测引擎</td><td><span class="pill" style="background:#dbeafe;color:#2563eb">initial-focus</span></td><td>7 态 FSM + EngineLoop 完整</td></tr>
+    <tr><td>真实券商 adapter</td><td><span class="pill" style="background:#e2e8f0;color:#64748b">reserved</span></td><td>只有 PaperBrokerGateway</td></tr>
+    <tr><td>股票/基本面/宏观/外汇/商品数据</td><td><span class="pill" style="background:#fed7aa;color:#ea580c">experimental</span></td><td>需显式 opt-in 或晋级</td></tr>
+  </table>
+</section>
+
+<!-- ============ 8 GLOSSARY ============ -->
+<section id="glossary">
+  <h2 class="section-title"><span class="num">8</span>领域概念词典</h2>
+  <p class="section-desc">对着它能查任何不懂的词。<span class="mark" style="font-family:var(--font-mono);font-size:11px;background:var(--primary-light);color:var(--primary);padding:1px 6px;border-radius:4px">🏠</span> = 项目专有，<span class="mark" style="font-family:var(--font-mono);font-size:11px;background:var(--accent-light);color:var(--accent);padding:1px 6px;border-radius:4px">🌐</span> = 业界通用。</p>
+
+  <input type="text" class="glos-search" id="glosSearch" placeholder="🔍 搜索术语（支持中英文，实时过滤）…" oninput="filterGlossary()">
+
+  <div class="glos-cat" id="cat-A">
+    <h4>A · 量化 / 金融核心概念 <span class="tag">🌐 业界通用</span></h4>
+    <div class="glos-item"><span class="term">PIT（Point-in-Time）<span class="mark">🌐</span></span><div class="def">时间点查询：在时点 T 只能用 T 之前已知的信息。Ditto 用三层防线（knowledge_date 列 / effective_from-to / shift(1) rolling）保证。</div></div>
+    <div class="glos-item"><span class="term">前瞻偏差 / Look-ahead bias <span class="mark">🌐</span></span><div class="def">回测中错误使用了当时不可能知道的信息，导致业绩虚高。PIT 就是为消灭它。</div></div>
+    <div class="glos-item"><span class="term">因子（Factor）<span class="mark">🌐</span></span><div class="def">用于预测收益的横截面特征值（动量、价值、波动率等）。Ditto 里由 FactorSpec 定义。</div></div>
+    <div class="glos-item"><span class="term">IC（Information Coefficient）<span class="mark">🌐</span></span><div class="def">因子值与未来收益的相关性，衡量因子预测力。Ditto 用 Rank-IC（秩相关）。</div></div>
+    <div class="glos-item"><span class="term">ICIR / IR（Information Ratio）<span class="mark">🌐</span></span><div class="def">IC 的均值/标准差，衡量预测稳定性。Grinold-Kahn IR 是其理论框架。</div></div>
+    <div class="glos-item"><span class="term">IC decay / half-life <span class="mark">🌐</span></span><div class="def">IC 随滞后期数衰减的曲线及半衰期，衡量因子时效。</div></div>
+    <div class="glos-item"><span class="term">分位多空（Quantile Long-Short）<span class="mark">🌐</span></span><div class="def">按因子值分 N 组，做多最高组、做空最低组，看多空收益。评估器核心输出之一。</div></div>
+    <div class="glos-item"><span class="term">换手率（Turnover）<span class="mark">🌐</span></span><div class="def">组合持仓变动比例，衡量交易成本。Turnover-adjusted IR 把成本纳入 IR。</div></div>
+    <div class="glos-item"><span class="term">Fama-MacBeth <span class="mark">🌐</span></span><div class="def">横截面回归估计因子溢价的两步法（先截面回归、再对时间序列取均值）。</div></div>
+    <div class="glos-item"><span class="term">PBO <span class="mark">🌐</span></span><div class="def">Probability of Backtest Overfitting，回测过拟合概率。Ditto 用 holdout + trial family 控制。</div></div>
+    <div class="glos-item"><span class="term">NAV <span class="mark">🌐</span></span><div class="def">Net Asset Value，净资产价值，组合的账户净值。</div></div>
+    <div class="glos-item"><span class="term">A 股交易制度 <span class="mark">🌐</span></span><div class="def">T+1 交收（当日买入次日才能卖）、涨跌停（±10%/20%）、最小单位 100 股（1 手）、印花税（卖出方单边）。reality/ + simulation/ 建模这些摩擦。</div></div>
+    <div class="glos-item"><span class="term">ALFRED <span class="mark">🌐</span></span><div class="def">FRED 的实时数据库（带 vintage 修订历史）。MacroFredAdapter 透传 realtime 参数实现宏观 PIT。</div></div>
+  </div>
+
+  <div class="glos-cat" id="cat-B">
+    <h4>B · 架构与软件设计模式 <span class="tag">混合</span></h4>
+    <div class="glos-item"><span class="term">Capability plane（能力平面）<span class="mark">🏠</span></span><div class="def">strategy/portfolio/risk/execution/backtest 是平级的领域能力，没有层级高低。.importlinter 的 layers 顺序只是工具限制。</div></div>
+    <div class="glos-item"><span class="term">Composition Root <span class="mark">🌐</span></span><div class="def">整个应用唯一的依赖注入装配现场。Ditto 里是 apps/registry/，唯一允许直接 import capability 实现的地方。</div></div>
+    <div class="glos-item"><span class="term">CQRS <span class="mark">🌐</span></span><div class="def">Command Query Responsibility Segregation，读写职责分离。Ditto 的 application 分 queries/commands/processes/builders。</div></div>
+    <div class="glos-item"><span class="term">DI（Dependency Injection）<span class="mark">🌐</span></span><div class="def">依赖注入。Ditto 用 Dishka 容器，@inject 装配，Protocol 定义契约。</div></div>
+    <div class="glos-item"><span class="term">Protocol <span class="mark">🌐</span></span><div class="def">Python typing.Protocol，鸭子类型接口。Ditto 处处用 Protocol 解耦（BrokerGateway/RiskGate/SignalStore），禁止 TYPE_CHECKING 解循环。</div></div>
+    <div class="glos-item"><span class="term">Barrel / re-export <span class="mark">🌐</span></span><div class="def">__init__.py 聚合导出公共 API。Ditto 规则：re-export 链深度 ≤ 2，禁止混合 re-export+内联定义。</div></div>
+    <div class="glos-item"><span class="term">CAS（Compare-And-Swap）<span class="mark">🌐</span></span><div class="def">乐观并发控制。Ditto 策略治理用 state_revision/pointer_revision 做 CAS，并发覆写抛 CasConflict。</div></div>
+    <div class="glos-item"><span class="term">Append-only / 事件溯源 <span class="mark">🌐</span></span><div class="def">只追加不修改。Ditto 治理事件、订单 journal、audit 全是 append-only，保证可重建可追溯。</div></div>
+    <div class="glos-item"><span class="term">Frozen dataclass <span class="mark">🌐</span></span><div class="def">@dataclass(frozen=True) 不可变值对象。Ditto 值对象（Position/AccountView/TimeSlice）几乎全 frozen。</div></div>
+    <div class="glos-item"><span class="term">FSM <span class="mark">🌐</span></span><div class="def">Finite State Machine。Ditto 的 OMS 订单状态机、runtime lifecycle、governance lifecycle 都是 FSM + 纯函数 transition。</div></div>
+    <div class="glos-item"><span class="term">Fail-closed <span class="mark">🌐</span></span><div class="def">出错/缺数据时默认拒绝而非放行。Ditto 大量使用：experimental 数据默认阻断、PIT 缺列报错、hard gate 缺数据即阻断。</div></div>
+    <div class="glos-item"><span class="term">Content addressing（内容寻址）<span class="mark">🌐</span></span><div class="def">用内容的哈希作为唯一标识。canonical spec hash、reproduction hash、bundle_hash 都是。</div></div>
+    <div class="glos-item"><span class="term">Seam（替换点）<span class="mark">🌐</span></span><div class="def">架构中可替换的实现边界。Ditto 最关键两个：数据来源（DataFeed vs 真实源）、成交模拟（BrokerageModel vs BrokerGateway）。</div></div>
+    <div class="glos-item"><span class="term">DTO <span class="mark">🌐</span></span><div class="def">Data Transfer Object。Ditto 的 apps/models/ 是 Pydantic DTO，route 只做 DTO↔领域对象映射。</div></div>
+  </div>
+
+  <div class="glos-cat" id="cat-C">
+    <h4>C · 项目专有核心抽象 <span class="tag" style="background:var(--accent-light);color:var(--accent)">🏠 最重要</span></h4>
+    <div class="glos-item"><span class="term">TimeSlice <span class="mark">🏠</span></span><div class="def">时间切片值对象，含某时点的 bars/benchmark_close。回测主循环每次迭代消费的数据单元，由 Synchronizer 产出，回测中冻结保证 PIT。</div></div>
+    <div class="glos-item"><span class="term">Synchronizer <span class="mark">🏠</span></span><div class="def">时间流驱动器 Protocol，stream() → Iterator[TimeSlice]。对标 LEAN ISynchronizer，是回测/实盘切换的唯一 seam——主循环永远不知道自己在哪个模式。</div></div>
+    <div class="glos-item"><span class="term">TimeContext <span class="mark">🏠</span></span><div class="def">时间上下文（decision_time/knowledge_date/trade_date + pit_cutoff）。PIT 语义统一入口。</div></div>
+    <div class="glos-item"><span class="term">knowledge_date <span class="mark">🏠</span></span><div class="def">数据"可知日期"列，T+1 语义（行情=交易日+1，财报=公告日）。PIT 第一道防线：查询严格 <= knowledge_date，缺列 fail-closed。</div></div>
+    <div class="glos-item"><span class="term">effective_from / effective_to <span class="mark">🏠</span></span><div class="def">元数据版本区间。get(instrument, as_of) 取 effective_from <= as_of AND (effective_to IS NULL OR effective_to > as_of)。effective_to 是"失效日（不含）"。</div></div>
+    <div class="glos-item"><span class="term">UnsafeResearchTimePolicy <span class="mark">🏠</span></span><div class="def">研究模式显式 opt-in 策略。绕过 knowledge_date 用 trade_date 必须显式 ALLOW_TRADE_DATE_FALLBACK + 记审计。默认 fail-closed。</div></div>
+    <div class="glos-item"><span class="term">DecisionFrame / DecisionStage <span class="mark">🏠</span></span><div class="def">策略 pipeline 的数据载体与处理节点。DecisionFrame=pl.DataFrame（必含 instrument_id），各 DecisionStage.process() 链式追加列，边界 validate_frame() 校验。</div></div>
+    <div class="glos-item"><span class="term">TargetPortfolio <span class="mark">🏠</span></span><div class="def">策略最终产出：dict[InstrumentId, 权重]。交给 portfolio 编排。</div></div>
+    <div class="glos-item"><span class="term">StrategyInputBundle <span class="mark">🏠</span></span><div class="def">策略数据注入容器，含市场输入 + instrument_id_map + require_canonical_target_ids。strategy 不读数据源，全靠它注入。</div></div>
+    <div class="glos-item"><span class="term">canonical spec hash <span class="mark">🏠</span></span><div class="def">策略规格内容寻址哈希：递归 key-sorted JSON（nodes 按 sequence、parameters 按 name）的 SHA-256。governance 版本用它做唯一锚点。</div></div>
+    <div class="glos-item"><span class="term">active pointer <span class="mark">🏠</span></span><div class="def">每策略唯一指向当前生效版本的指针。PUBLISH 原子切换，REACTIVATE 切回历史。get_active_published 是生产读取唯一入口。</div></div>
+    <div class="glos-item"><span class="term">DataCatalog <span class="mark">🏠</span></span><div class="def">数据目录运行时，记录每个数据集的 storage URI/schema/freshness/maturity/血缘。</div></div>
+    <div class="glos-item"><span class="term">DatasetMetadata <span class="mark">🏠</span></span><div class="def">数据集元数据，声明 source/granularity/asset_class/freshness SLA/maturity/default source/schema_version/promotion criteria。</div></div>
+    <div class="glos-item"><span class="term">promotion criteria / evidence <span class="mark">🏠</span></span><div class="def">experimental 数据集晋级须声明的客观标准 + 收集的证据。assess_dataset_promotion() 精确匹配评估，全 pass 才写 override。绝不自造通过。</div></div>
+    <div class="glos-item"><span class="term">ReviewPacket <span class="mark">🏠</span></span><div class="def">研究审查的不可变证据包（schema v1/v2/v3），含 11 hard gate 结果 + 6 reproduction hash + selection evidence。bundle_hash 拒绝 stale drift。</div></div>
+    <div class="glos-item"><span class="term">hard gate <span class="mark">🏠</span></span><div class="def">研究治理的 11 道硬门禁，每道 pass/fail/not_evaluated。缺数据即 not_evaluated 即阻断，EVIDENCE 层只展示永不自动决策。</div></div>
+    <div class="glos-item"><span class="term">三层 identity binding <span class="mark">🏠</span></span><div class="def">LogicalTrialIdentity = (origin_experiment_id, candidate_id, ordinal, parameter_hash, kind)，锁死多重检验家族，防跨实验/跨候选证据混淆。</div></div>
+    <div class="glos-item"><span class="term">CompileIdentity <span class="mark">🏠</span></span><div class="def">表达式编译身份哈希（input_hash + operator_fingerprint + compiler_fingerprint，后者绑定 polars 版本）。物化产物可追溯复现的根。</div></div>
+    <div class="glos-item"><span class="term">DerivedSpec <span class="mark">🏠</span></span><div class="def">features 统一根模型，role=FEATURE/FACTOR/SIGNAL/LABEL，profile=SERIES/STATE/DERIVE/OFFLINE。</div></div>
+    <div class="glos-item"><span class="term">EngineLoop <span class="mark">🏠</span></span><div class="def">回测主循环（backtest/engine.py），run() 按 Synchronizer 的 TimeSlice 迭代，每个切片执行 7 步 Step Chain。</div></div>
+    <div class="glos-item"><span class="term">Step Chain <span class="mark">🏠</span></span><div class="def">回测固定 7 步：DataFetch→RiskScan→Strategy→Planning→PreTrade→Execution→Audit。各步实现 TradingStep.execute(ctx)。</div></div>
+    <div class="glos-item"><span class="term">BacktestBrokerage <span class="mark">🏠</span></span><div class="def">回测桥接点（state owner），内部用 execution 订单 FSM，但成交价/量/费/交收交给 BrokerageModel 模拟。</div></div>
+    <div class="glos-item"><span class="term">BrokerageModel <span class="mark">🏠</span></span><div class="def">回测成交模拟模型（frozen），打包 FillModel+SlippageModel+AShareFeeModel+SettlementModel。</div></div>
+    <div class="glos-item"><span class="term">BrokerGateway <span class="mark">🏠</span></span><div class="def">券商网关 Protocol（6 必需方法 + describe()）。目前只有 PaperBrokerGateway，真实券商 adapter=reserved。</div></div>
+    <div class="glos-item"><span class="term">OMS Lite <span class="mark">🏠</span></span><div class="def">execution 的订单管理系统：7 状态 FSM + OrderBook + OrderTicket + 双 ID（ClientOrderId/BrokerOrderId）。</div></div>
+    <div class="glos-item"><span class="term">RiskGate <span class="mark">🏠</span></span><div class="def">风控运行时 Protocol，4 生命周期钩子（pre_submit/pre_cancel/post_fill/daily_scan），backtest 与 paper-trading 共用。</div></div>
+    <div class="glos-item"><span class="term">Account / AccountView <span class="mark">🏠</span></span><div class="def">portfolio 会计：Account 是可变状态唯一 owner，AccountView 是 frozen 只读快照（对外唯一形态）。apply_fill() 先算后赋原子更新。</div></div>
+    <div class="glos-item"><span class="term">FillProjector <span class="mark">🏠</span></span><div class="def">从 fill 流可完整重建 PortfolioStateSnapshot（B5 无损恢复基线）。</div></div>
+    <div class="glos-item"><span class="term">PreTradeContext <span class="mark">🏠</span></span><div class="def">风控滚动上下文（frozen），with_order_accepted() 返回冻结新实例，批内防超买超卖。</div></div>
+    <div class="glos-item"><span class="term">R8 规则 <span class="mark">🏠</span></span><div class="def">application 层 CQRS 互斥的 importlinter 约束（queries/commands/processes/builders 间的禁向依赖）。</div></div>
+  </div>
+
+  <div class="glos-cat" id="cat-D">
+    <h4>D · 缩写速查表</h4>
+    <table>
+      <tr><th>缩写</th><th>全称 / 含义</th></tr>
+      <tr><td><code>PIT</code></td><td>Point-In-Time，时间点查询</td></tr>
+      <tr><td><code>DQ</code></td><td>Data Quality，数据质量（L1 技术/L2 业务/L3 统计/L4 跨源）</td></tr>
+      <tr><td><code>IC / IR / ICIR</code></td><td>Information Coefficient / Ratio / IC 的 IR</td></tr>
+      <tr><td><code>GK</code></td><td>Grinold-Kahn（IR 理论框架）</td></tr>
+      <tr><td><code>NAV</code></td><td>Net Asset Value，净资产价值</td></tr>
+      <tr><td><code>PBO</code></td><td>Probability of Backtest Overfitting</td></tr>
+      <tr><td><code>OMS</code></td><td>Order Management System</td></tr>
+      <tr><td><code>FSM</code></td><td>Finite State Machine</td></tr>
+      <tr><td><code>CAS</code></td><td>Compare-And-Swap（乐观并发）</td></tr>
+      <tr><td><code>CQRS</code></td><td>Command Query Responsibility Segregation</td></tr>
+      <tr><td><code>DI</code></td><td>Dependency Injection（Ditto 用 Dishka）</td></tr>
+      <tr><td><code>DTO</code></td><td>Data Transfer Object</td></tr>
+      <tr><td><code>ASGI</code></td><td>Async Server Gateway Interface（Ditto 用 granian）</td></tr>
+      <tr><td><code>OTel</code></td><td>OpenTelemetry（可观测性标准）</td></tr>
+      <tr><td><code>ETF / FX</code></td><td>Exchange-Traded Fund / Foreign Exchange</td></tr>
+      <tr><td><code>ALFRED</code></td><td>FRED 实时数据库（带 vintage）</td></tr>
+      <tr><td><code>XDG</code></td><td>X Desktop Group（跨桌面路径规范）</td></tr>
+      <tr><td><code>SLA</code></td><td>Service Level Agreement（catalog freshness SLA）</td></tr>
+      <tr><td><code>EOD</code></td><td>End Of Day（日终流程）</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 9 ONBOARDING ============ -->
+<section id="onboard">
+  <h2 class="section-title"><span class="num">9</span>新人 30 分钟上手清单</h2>
+  <p class="section-desc">从零到建立体感的最短路径。</p>
+
+  <h4>① 环境准备</h4>
+<pre><code><span class="cmt"># 必须用 pixi（禁 pip/poetry/conda）</span>
+pixi install -e dev
+pixi run -e dev check          <span class="cmt"># 全量验证：lint + fmt + type + test --fast</span></code></pre>
+
+  <h4>② 常用命令</h4>
+  <div class="cmd-grid">
+    <div class="cmd-card"><code>pixi run -e dev test --fast</code><span>快速测试</span></div>
+    <div class="cmd-card"><code>pixi run -e dev test --unit</code><span>只跑单元测试</span></div>
+    <div class="cmd-card"><code>pixi run -e dev type</code><span>basedpyright 类型检查</span></div>
+    <div class="cmd-card"><code>pixi run -e dev lint</code><span>ruff 检查</span></div>
+    <div class="cmd-card"><code>pixi run -e dev arch-check</code><span>架构合约（37 条）</span></div>
+    <div class="cmd-card"><code>pixi run -e dev lint-imports</code><span>依赖边界检查</span></div>
+    <div class="cmd-card"><code>ditto query market --instrument 510300.SH ...</code><span>查行情建立体感</span></div>
+    <div class="cmd-card"><code>ditto ops status --json</code><span>看运维状态</span></div>
+  </div>
+
+  <h4>③ 推荐阅读顺序（建立全局认知）</h4>
+  <div class="card">
+    <ol style="margin:6px 0; padding-left:20px; line-height:2">
+      <li><code>CLAUDE.md</code>（项目铁律）+ 本导读</li>
+      <li><code>docs/architecture/README.md</code>（依赖图 + 放置决策树）</li>
+      <li>跟一条数据：data/sources → data/services → 读 <code>.claude/rules/pit.md</code> 理解 PIT</li>
+      <li>跟一个策略：strategy/alpha/templates/etf_rotation.py（最简模板）→ governance/models.py</li>
+      <li>跟回测：backtest/engine.py（run 主循环）→ brokerage.py（BacktestBrokerage 桥接）</li>
+      <li>看 DI 装配：apps/registry/container.py → application/providers.py</li>
+    </ol>
+  </div>
+
+  <h4>④ 容易踩的坑（前人血泪）</h4>
+  <table>
+    <tr><th>❌ 禁止</th><th>✅ 正确</th></tr>
+    <tr><td>用 pandas / json / pip</td><td>用 polars / orjson / pixi</td></tr>
+    <tr><td><code>rolling_mean(20)</code> 不带 <code>closed="left"</code></td><td>数据泄漏！必须加</td></tr>
+    <tr><td>用 TYPE_CHECKING 解决循环依赖</td><td>必须重构架构 / 用 Protocol</td></tr>
+    <tr><td>跨包 re-export</td><td>消费者直接引用叶模块</td></tr>
+    <tr><td>用 Bash cat/sed/echo 改文件</td><td>用 Read/Edit/Write 工具</td></tr>
+    <tr><td>加 import 后没在同次 edit 加用法</td><td>ruff 会删 unused import（命中过 6 次）</td></tr>
+  </table>
+  <div class="callout tip">
+    <b>历史文档在 <code>docs/*/archive/</code></b>，当前权威是各包 <code>CLAUDE.md</code> + <code>docs/architecture/</code>。遇到冲突以代码门禁和最新 CLAUDE.md 为准。
+  </div>
+</section>
+
+<div class="footer">
+  Ditto 项目导读 · 基于源码核实生成 · 2026-08-02<br>
+  12 包 / 932 生产文件 / 106K LOC / 37 架构合约 / 11700+ 测试
+</div>
+
+</main>
+</div>
+
+<button id="topbtn" title="回到顶部" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+  // back to top
+  const btn = document.getElementById('topbtn');
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('show', window.scrollY > 400);
+  });
+
+  // sidebar active highlight
+  const links = document.querySelectorAll('nav.sidebar a');
+  const sections = document.querySelectorAll('main section[id]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        links.forEach(l => {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  // glossary search
+  function filterGlossary() {
+    const q = document.getElementById('glosSearch').value.trim().toLowerCase();
+    document.querySelectorAll('.glos-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.classList.toggle('hidden', q && !text.includes(q));
+    });
+    // hide category headers that have no visible items
+    document.querySelectorAll('.glos-cat').forEach(cat => {
+      const visible = cat.querySelectorAll('.glos-item:not(.hidden)').length;
+      const header = cat.querySelector('h4');
+      const search = cat.querySelector('.glos-search');
+      // keep header/search visibility based on visible items or empty query
+      cat.style.opacity = (q && visible === 0) ? '0.4' : '1';
+    });
+  }
+</script>
+</body>
+</html>

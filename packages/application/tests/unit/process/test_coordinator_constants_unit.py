@@ -48,6 +48,7 @@ class TestSupportedInstrumentDatasets:
             Dataset.DIVIDEND,
             Dataset.MARGIN_TRADING,
             Dataset.PLEDGE_RATIO,
+            Dataset.INDEX_WEIGHT,
         }
         assert expected == SUPPORTED_INSTRUMENT_DATASETS
 
@@ -149,6 +150,8 @@ class TestGetDefaultIndexCodes:
         # 验证不包含任何风格指数
         for code in STYLE_INDEX_CODES:
             assert code not in result
+
+        assert "000905.SH" in result
 
     def test_default_parameter_includes_style(self) -> None:
         """默认参数 include_style=True."""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, datetime
 from typing import Any, cast
 
@@ -49,10 +50,10 @@ class SQLiteDatasetLicenseStore:
         self._client.commit()
 
     def append_license(self, record: DatasetLicenseRecord) -> None:
-        """Append a review, treating an exact duplicate as idempotent."""
+        """Append a review, treating an unchanged command retry as idempotent."""
         existing = self.get_license(record.record_id)
         if existing is not None:
-            if existing == record:
+            if replace(record, reviewed_at=existing.reviewed_at) == existing:
                 return
             raise ValueError(f"immutable license record conflict: {record.record_id}")
         try:

@@ -12,6 +12,7 @@ from ditto_application.builders import (
     StrategySliceBuilder,
 )
 from ditto_application.processes.execution.backtest_process import (
+    BacktestCatalogRequestConfig,
     BacktestService,
     BacktestServiceConfig,
 )
@@ -37,12 +38,10 @@ from ditto_features.services import DerivedQueryService
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.governance.service import GovernanceService
 from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
-)
-from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
-    StrategyCatalogService,
 )
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore as DataStrategyRunLifecycleStore,
@@ -136,17 +135,27 @@ class TestAppBuilderFactory:
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = _make_test_container()
         spec = self._make_strategy_spec()
-        catalog_service = container.get(StrategyCatalogService)
-        catalog_service.save_spec(
-            StrategySpecRecord(
-                strategy_id=spec.strategy_id,
-                name=spec.name,
-                spec_json=asdict(spec),
-                version=2,
-                tags=spec.tags,
-            )
+        record = StrategySpecRecord(
+            strategy_id=spec.strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=2,
+            tags=spec.tags,
         )
-        catalog_service.publish_spec("momentum-etf", 2)
+        governance = container.get(GovernanceService)
+        governance.create_draft(
+            strategy_id="momentum-etf",
+            version=2,
+            spec_record=record,
+            created_at="2026-01-01T00:00:00Z",
+        )
+        governance.publish_and_activate(
+            strategy_id="momentum-etf",
+            version=2,
+            actor="test",
+            reason="test setup",
+            decided_at="2026-01-01T00:00:01Z",
+        )
 
         factory = container.get(StrategyServiceFactory)
         service = factory.build_strategy_run_service_from_catalog(
@@ -188,6 +197,12 @@ class TestAppBuilderFactory:
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",
+                spec_hash="a" * 64,
+                base_spec_hash="b" * 64,
+                parameter_hash="4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                effective_parameters=(),
+                research_snapshot_id=None,
+                research_snapshot_manifest_hash=None,
             ),
             pipeline=MagicMock(spec=StrategyPipeline),
             planner=MagicMock(spec=ExecutionPlanner),
@@ -263,21 +278,31 @@ class TestAppBuilderFactory:
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = _make_test_container()
         spec = self._make_strategy_spec()
-        catalog_service = container.get(StrategyCatalogService)
-        catalog_service.save_spec(
-            StrategySpecRecord(
-                strategy_id=spec.strategy_id,
-                name=spec.name,
-                spec_json=asdict(spec),
-                version=2,
-                tags=spec.tags,
-            )
+        record = StrategySpecRecord(
+            strategy_id=spec.strategy_id,
+            name=spec.name,
+            spec_json=asdict(spec),
+            version=2,
+            tags=spec.tags,
         )
-        catalog_service.publish_spec("momentum-etf", 2)
+        governance = container.get(GovernanceService)
+        governance.create_draft(
+            strategy_id="momentum-etf",
+            version=2,
+            spec_record=record,
+            created_at="2026-01-01T00:00:00Z",
+        )
+        governance.publish_and_activate(
+            strategy_id="momentum-etf",
+            version=2,
+            actor="test",
+            reason="test setup",
+            decided_at="2026-01-01T00:00:01Z",
+        )
 
         factory = container.get(StrategyServiceFactory)
         service = factory.build_backtest_service_from_catalog(
-            config=BacktestServiceConfig(
+            config=BacktestCatalogRequestConfig(
                 strategy_id="momentum-etf",
                 start_date="2026-01-01",
                 end_date="2026-03-01",

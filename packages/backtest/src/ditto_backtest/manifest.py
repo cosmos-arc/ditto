@@ -13,9 +13,9 @@
 
 from ditto_backtest.manifest_build import (
     RuleRefCollector,
+    RunManifestInputEvidence,
     build_run_manifest,
     hash_config,
-    hash_spec,
     serialize_manifest,
 )
 from ditto_backtest.manifest_types import (
@@ -30,9 +30,9 @@ __all__ = [
     "RuleRef",
     "RuleRefCollector",
     "RunManifest",
+    "RunManifestInputEvidence",
     "RunMode",
     "build_run_manifest",
     "hash_config",
-    "hash_spec",
     "serialize_manifest",
 ]

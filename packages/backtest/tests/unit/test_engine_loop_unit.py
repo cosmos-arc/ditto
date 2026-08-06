@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 from types import MappingProxyType
 from typing import NamedTuple
 from unittest.mock import Mock
@@ -13,16 +13,24 @@ import pytest
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineConfig, EngineLoop, EngineOptions
 from ditto_backtest.result import (
+    BacktestCheckpoint,
     BacktestDelayedSignalSnapshot,
     BacktestFrozenQuantitySnapshot,
+    BacktestRuntimeStateCapture,
     BacktestRuntimeStateSnapshot,
     BacktestSettlementStateSnapshot,
+    BacktestStrategyContextSnapshot,
     BacktestTargetWeightSnapshot,
 )
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.trade_builder import (
+    FifoOpenEntrySnapshot,
+    TradeBuilderStateSnapshot,
+    TradeMatchingMethod,
+)
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
@@ -38,6 +46,7 @@ from ditto_risk.pre_trade import (
     Decision,
     OrderCheckResult,
 )
+from ditto_strategy.alpha.context import StrategyContextSnapshot
 from ditto_strategy.alpha.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
@@ -46,6 +55,29 @@ from ditto_strategy.alpha.models import TargetPortfolio
 
 
 DAYS = ["2026-03-01", "2026-03-02", "2026-03-03"]
+_CANONICAL_SPEC_HASH = "d" * 64
+_EMPTY_PARAMETER_HASH = (
+    "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+)
+
+
+def test_engine_config_requires_full_canonical_spec_hash() -> None:
+    """执行配置不得缺失或接受截断的 spec hash。"""
+    required: dict[str, object] = {
+        "start_date": "2026-03-01",
+        "end_date": "2026-03-03",
+        "initial_cash": 1_000_000.0,
+        "base_spec_hash": "b" * 64,
+        "parameter_hash": _EMPTY_PARAMETER_HASH,
+        "effective_parameters": (),
+        "research_snapshot_id": None,
+        "research_snapshot_manifest_hash": None,
+    }
+
+    with pytest.raises(TypeError, match="spec_hash"):
+        EngineConfig(**required)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="spec_hash"):
+        EngineConfig(**required, spec_hash="a" * 16)  # type: ignore[arg-type]
 
 
 def _make_cash(available: float = 500_000.0) -> CashBook:
@@ -140,6 +172,12 @@ def _make_config() -> EngineConfig:
         start_date="2026-03-01",
         end_date="2026-03-03",
         initial_cash=1_000_000.0,
+        spec_hash=_CANONICAL_SPEC_HASH,
+        base_spec_hash=_CANONICAL_SPEC_HASH,
+        parameter_hash=_EMPTY_PARAMETER_HASH,
+        effective_parameters=(),
+        research_snapshot_id=None,
+        research_snapshot_manifest_hash=None,
         strategy_id="default",
         strategy_run_id="run-001",
     )
@@ -192,6 +230,7 @@ def _make_engine_loop(
     pre_trade_check: Mock | None = None,
     data_feed: Mock | None = None,
     fee_model: Mock | None = None,
+    restore_runtime_state: BacktestRuntimeStateSnapshot | None = None,
 ) -> EngineLoop:
     config = config or _make_config()
     pipeline = pipeline or Mock()
@@ -216,7 +255,10 @@ def _make_engine_loop(
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
         synchronizer=_make_synchronizer(data_feed, config, clock),
-        options=EngineOptions(fee_model=fee_model),
+        options=EngineOptions(
+            fee_model=fee_model,
+            restore_runtime_state=restore_runtime_state,
+        ),
     )
 
 
@@ -233,6 +275,7 @@ def _make_wired_engine_loop(
     should_stop: Callable[[], bool] | None = None,
     on_checkpoint: Callable[[object], None] | None = None,
     execution_delay: int = 0,
+    checkpoint_interval_days: int = 1,
 ) -> _WiredMocks:
     """构建完整 mock 的 EngineLoop（3 天回测 + pipeline/planner/brokerage 配置）.
 
@@ -286,6 +329,7 @@ def _make_wired_engine_loop(
             fee_model=fee_model,
             should_stop=should_stop,
             on_checkpoint=on_checkpoint,
+            checkpoint_interval_days=checkpoint_interval_days,
         ),
     )
     return _WiredMocks(
@@ -1079,6 +1123,71 @@ class TestIsRebalanceDay:
         assert loop._is_rebalance_day("2026-03-01") is True
         assert loop._is_rebalance_day("2026-03-15") is True
 
+    def test_fold_schedule_rebalances_only_at_fold_start(self) -> None:
+        config = replace(_make_config(), rebalance_freq="fold_schedule")
+        loop = _make_engine_loop(config=config)
+        loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
+
+        assert loop._is_rebalance_day(DAYS[0]) is True
+        assert loop._is_rebalance_day(DAYS[1]) is False
+
+    @pytest.mark.parametrize(
+        "frequency",
+        ["weekly", "monthly", "fold_schedule"],
+    )
+    def test_resume_preserves_original_calendar_phase(self, frequency: str) -> None:
+        """A suffix run must not reinterpret its first day as a fold boundary."""
+        config = replace(
+            _make_config(),
+            start_date=DAYS[-1],
+            rebalance_freq=frequency,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        runtime = BacktestRuntimeStateSnapshot.from_state(
+            BacktestRuntimeStateCapture(
+                trade_builder_state=TradeBuilderStateSnapshot(
+                    method=TradeMatchingMethod.FIFO,
+                    counter=0,
+                ),
+                rebalance_calendar_start=DAYS[0],
+            )
+        )
+        loop = _make_engine_loop(
+            config=config,
+            data_feed=data_feed,
+            restore_runtime_state=runtime,
+        )
+
+        execution_days = loop._build_trading_days()
+
+        assert execution_days == [DAYS[-1]]
+        assert loop._is_rebalance_day(DAYS[-1]) is False
+
+    @pytest.mark.parametrize(
+        "frequency",
+        ["weekly", "monthly", "fold_schedule"],
+    )
+    def test_fresh_mid_feed_run_starts_a_new_calendar_phase(
+        self,
+        frequency: str,
+    ) -> None:
+        """A fresh configured window still rebalances on its first session."""
+        config = replace(
+            _make_config(),
+            start_date=DAYS[-1],
+            rebalance_freq=frequency,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        loop = _make_engine_loop(config=config, data_feed=data_feed)
+
+        execution_days = loop._build_trading_days()
+
+        assert execution_days == [DAYS[-1]]
+        assert loop._is_rebalance_day(DAYS[-1]) is True
+
     def test_weekly_monday_true(self) -> None:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
@@ -1371,6 +1480,82 @@ class TestCooperativeCancellation:
         # _build_step_context 不再调用 data_feed.get_slice()（直接从 TimeSlice 构建）
         assert wired.data_feed.get_slice.call_count == 0
 
+    def test_final_day_checkpoint_is_published_only_after_terminal_flush(self) -> None:
+        """A crash before tail flush leaves the prior resumable boundary durable."""
+        checkpoints: list[BacktestCheckpoint] = []
+        wired = _make_wired_engine_loop(
+            on_checkpoint=checkpoints.append,
+            execution_delay=1,
+        )
+
+        def _crash_before_flush() -> None:
+            raise RuntimeError("crash-before-terminal-flush")
+
+        wired.loop._flush_delayed_signals = _crash_before_flush  # type: ignore[method-assign]
+
+        with pytest.raises(RuntimeError, match="crash-before-terminal-flush"):
+            wired.loop.run()
+
+        assert [item.completed_trade_date for item in checkpoints] == DAYS[:-1]
+        assert checkpoints[-1].resume_from == DAYS[-1]
+
+    def test_terminal_checkpoint_is_not_published_before_artifact_commit(self) -> None:
+        """A terminal engine snapshot is not itself a recoverable commit."""
+        checkpoints: list[BacktestCheckpoint] = []
+        wired = _make_wired_engine_loop(
+            on_checkpoint=checkpoints.append,
+            execution_delay=1,
+        )
+
+        result = wired.loop.run()
+
+        assert [item.completed_trade_date for item in checkpoints] == DAYS[:-1]
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.completed_trade_date == DAYS[-1]
+        assert result.last_checkpoint.can_resume is False
+
+    def test_sparse_checkpoint_skips_state_capture_until_durable_boundary(
+        self,
+    ) -> None:
+        """Sparse recovery cadence must avoid constructing discarded snapshots."""
+        checkpoints: list[BacktestCheckpoint] = []
+        wired = _make_wired_engine_loop(
+            on_checkpoint=checkpoints.append,
+            checkpoint_interval_days=2,
+        )
+        runtime_snapshot = Mock(wraps=wired.loop._runtime_state_snapshot)
+        wired.loop._runtime_state_snapshot = runtime_snapshot  # type: ignore[method-assign]
+
+        result = wired.loop.run()
+
+        assert [item.completed_trade_date for item in checkpoints] == [DAYS[1]]
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.completed_trade_date == DAYS[-1]
+        assert result.last_checkpoint.can_resume is False
+        assert runtime_snapshot.call_count == 3
+
+    def test_sparse_checkpoint_never_returns_an_unpublished_boundary(self) -> None:
+        """A stop before the first cadence boundary must restart from scratch."""
+        stop_calls = 0
+        checkpoints: list[BacktestCheckpoint] = []
+
+        def _should_stop() -> bool:
+            nonlocal stop_calls
+            stop_calls += 1
+            return stop_calls >= 2
+
+        wired = _make_wired_engine_loop(
+            should_stop=_should_stop,
+            on_checkpoint=checkpoints.append,
+            checkpoint_interval_days=20,
+        )
+
+        result = wired.loop.run()
+
+        assert result.cancelled is True
+        assert result.last_checkpoint is None
+        assert checkpoints == []
+
     def test_cancelled_result_carries_resume_checkpoint(self) -> None:
         """取消前最后完成日应产生可恢复 checkpoint，resume_from 指向下一交易日。"""
         call_count = 0
@@ -1477,12 +1662,13 @@ class TestCooperativeCancellation:
         assert result.last_checkpoint is not None
         runtime_state = result.last_checkpoint.runtime_state
         assert isinstance(runtime_state, BacktestRuntimeStateSnapshot)
-        # flush 后延迟信号已执行完毕，checkpoint 反映刷新后的状态
         assert runtime_state.pending_orders[0].client_order_id == "order-001"
         assert runtime_state.pending_orders[0].leaves_quantity == 300
-        # _flush_delayed_signals() 已清空信号队列，
-        # _refresh_final_checkpoint 正确刷新为空队列
-        assert runtime_state.delayed_signals == ()
+        # Cooperative pause/cancel is a resumable boundary, not terminal
+        # completion: queued signals must enter the checkpoint unchanged.
+        assert len(runtime_state.delayed_signals) == 1
+        assert runtime_state.delayed_signals[0].trade_date == "2026-03-01"
+        wired.brokerage.place_order.assert_not_called()
         assert runtime_state.state_hash.startswith("sha256:")
 
     def test_should_stop_never_triggered(self) -> None:
@@ -1536,6 +1722,9 @@ class TestExecutionDelay:
 
         order = _make_order()
         planner = Mock()
+        if restore_runtime_state is not None:
+            planner.snapshot_id_counter = Mock(return_value=0)
+            planner.restore_id_counter = Mock()
         plan = Mock(
             plan_id="plan-001",
             trade_date="2026-03-01",
@@ -1547,6 +1736,9 @@ class TestExecutionDelay:
         planner.plan.return_value = plan
 
         brokerage = Mock()
+        if restore_runtime_state is not None:
+            brokerage.snapshot_fill_counter = Mock(return_value=0)
+            brokerage.restore_fill_counter = Mock()
         brokerage.get_account.return_value = _make_account_view()
         brokerage.process_pending.return_value = ()
 
@@ -1612,7 +1804,7 @@ class TestExecutionDelay:
         assert first_call_target is targets[0]
 
     def test_restore_runtime_state_rehydrates_delayed_signal_queue(self) -> None:
-        """resume runtime state 应先执行 checkpoint 中的 delayed signal。"""
+        """Resume restores queues, locks, ID counters, and open trade state."""
         restore_state = BacktestRuntimeStateSnapshot(
             delayed_signals=(
                 BacktestDelayedSignalSnapshot(
@@ -1628,19 +1820,61 @@ class TestExecutionDelay:
                         ),
                     ),
                 ),
-            )
+            ),
+            strategy_context=(
+                BacktestStrategyContextSnapshot.from_strategy_snapshot(
+                    StrategyContextSnapshot(
+                        risk_locked_instruments={
+                            InstrumentId(2): ("cooldown", "2026-03-10"),
+                        },
+                        positions={InstrumentId(2): 8.5},
+                    )
+                )
+            ),
+            planner_id_counter=9,
+            brokerage_fill_counter=4,
+            trade_builder_state=TradeBuilderStateSnapshot(
+                method=TradeMatchingMethod.FIFO,
+                counter=3,
+                fifo_open_entries=(
+                    FifoOpenEntrySnapshot(
+                        trade_id="trade-3",
+                        instrument_id=InstrumentId(2),
+                        direction=OrderSide.BUY,
+                        entry_date=date(2026, 2, 27),
+                        entry_price=8.5,
+                        entry_fee=5.0,
+                        original_quantity=100,
+                        remaining_quantity=100,
+                        entry_order_id="plan-order-8",
+                    ),
+                ),
+            ),
         )
-        loop, _pipeline, planner, _brokerage = self._make_delay_loop(
+        loop, _pipeline, planner, brokerage = self._make_delay_loop(
             execution_delay=1,
             restore_runtime_state=restore_state,
         )
+        planner.snapshot_id_counter.return_value = 9
+        brokerage.snapshot_fill_counter.return_value = 4
 
-        loop.run()
+        result = loop.run()
 
+        planner.restore_id_counter.assert_called_once_with(9)
+        brokerage.restore_fill_counter.assert_called_once_with(4)
         first_call_target = planner.plan.call_args_list[0][1]["target"]
         assert first_call_target.trade_date == "2026-02-27"
         assert first_call_target.positions == {InstrumentId(2): 0.75}
         assert first_call_target.cash_target == 0.25
+        assert planner.plan.call_args_list[0][1]["locked_instruments"] == {
+            InstrumentId(2)
+        }
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.runtime_state is not None
+        assert (
+            result.last_checkpoint.runtime_state.trade_builder_state
+            == restore_state.trade_builder_state
+        )
 
     def test_delay_1_trailing_signal_flushed(self) -> None:
         """execution_delay=1: 回测结束后尾部信号被 flush 执行。"""
@@ -1656,7 +1890,7 @@ class TestExecutionDelay:
 
     def test_final_checkpoint_includes_trailing_flush_orders(self) -> None:
         """最终 checkpoint 应反映 tail flush 追加后的订单数量。"""
-        checkpoints: list[object] = []
+        checkpoints: list[BacktestCheckpoint] = []
         loop, _pipeline, _planner, _brokerage = self._make_delay_loop(
             execution_delay=1,
             on_checkpoint=checkpoints.append,
@@ -1667,7 +1901,39 @@ class TestExecutionDelay:
         assert result.last_checkpoint is not None
         assert result.last_checkpoint.resume_from is None
         assert result.last_checkpoint.order_count == len(result.orders)
-        assert checkpoints[-1] == result.last_checkpoint
+        assert checkpoints[-1].can_resume is True
+        assert checkpoints[-1].completed_trade_date == DAYS[-2]
+
+    def test_final_day_failure_cannot_republish_mutated_prior_checkpoint(self) -> None:
+        """Only a successful daily boundary may replace the durable checkpoint."""
+        from ditto_backtest.steps import StepResult
+
+        checkpoints: list[BacktestCheckpoint] = []
+        loop, _pipeline, _planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+            on_checkpoint=checkpoints.append,
+        )
+        audit_step = Mock()
+        audit_step.execute.side_effect = (
+            StepResult.ok(),
+            StepResult.ok(),
+            StepResult.fail("final audit failure"),
+            StepResult.ok(),
+        )
+        loop._steps = (*loop._steps[:-1], audit_step)
+
+        result = loop.run()
+
+        assert result.skipped_dates == (DAYS[-1],)
+        assert len(checkpoints) == 2
+        durable = checkpoints[-1]
+        assert durable.completed_trade_date == DAYS[-2]
+        assert durable.resume_from == DAYS[-1]
+        assert durable.runtime_state is not None
+        assert [item.trade_date for item in durable.runtime_state.delayed_signals] == [
+            DAYS[0]
+        ]
+        assert result.last_checkpoint == durable
 
     def test_delay_1_no_skipped_dates(self) -> None:
         """execution_delay=1: PlanningStep 被跳过而非 fail，无 skipped_dates."""
@@ -1681,8 +1947,10 @@ class TestExecutionDelay:
     def test_delay_1_flush_runs_audit_step(self) -> None:
         """execution_delay=1: flush 阶段应执行 AuditStep，记录审计数据."""
         from ditto_backtest.audit.collector import ExecutionAuditCollector
+        from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 
         audit_collector = Mock(spec=ExecutionAuditCollector)
+        audit_collector.snapshot_state.return_value = ExecutionAuditStateSnapshot()
         config = replace(
             _make_config(),
             execution_delay=1,

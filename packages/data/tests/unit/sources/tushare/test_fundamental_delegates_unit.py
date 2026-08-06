@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -183,9 +184,18 @@ class TestDividendDelegate:
         fundamental.fetch_dividend.assert_called_once_with(ex_date="20240506")
 
     def test_ticker_mode_allows_optional_range(self) -> None:
-        """Dividend ticker mode forwards optional compact start/end dates."""
+        """Dividend ticker mode applies the optional range to announcement dates."""
         fundamental = MagicMock()
-        fundamental.fetch_dividend.return_value = _frame("dividend")
+        fundamental.fetch_dividend.return_value = pl.DataFrame(
+            {
+                "dataset": ["outside", "dividend", "outside"],
+                "knowledge_date": [
+                    date(2023, 12, 31),
+                    date(2024, 6, 1),
+                    date(2025, 1, 1),
+                ],
+            }
+        )
 
         result = _fundamental.fetch_dividend(
             fundamental,
@@ -196,11 +206,7 @@ class TestDividendDelegate:
         )
 
         assert result["dataset"].item() == "dividend"
-        fundamental.fetch_dividend.assert_called_once_with(
-            ts_code="000001.SZ",
-            start_date="20240101",
-            end_date="20241231",
-        )
+        fundamental.fetch_dividend.assert_called_once_with(ts_code="000001.SZ")
 
     def test_ticker_mode_without_range_forwards_none_dates(self) -> None:
         """Dividend ticker mode can query by ticker alone."""
@@ -213,11 +219,7 @@ class TestDividendDelegate:
             source_ticker="000001.SZ",
         )
 
-        fundamental.fetch_dividend.assert_called_once_with(
-            ts_code="000001.SZ",
-            start_date=None,
-            end_date=None,
-        )
+        fundamental.fetch_dividend.assert_called_once_with(ts_code="000001.SZ")
 
     def test_trade_date_and_source_ticker_are_mutually_exclusive(self) -> None:
         """Dividend delegate rejects ambiguous query modes."""
@@ -239,8 +241,8 @@ class TestDividendDelegate:
 class TestCorporateActionsDelegate:
     """Corporate-action delegate behavior."""
 
-    def test_trade_date_queries_single_compact_date_range(self) -> None:
-        """Corporate actions query uses compact trade date as start and end."""
+    def test_trade_date_queries_exact_compact_announcement_date(self) -> None:
+        """Corporate actions query uses the compact announcement date."""
         fundamental = MagicMock()
         fundamental.fetch_corporate_actions.return_value = _frame("actions")
 
@@ -249,8 +251,4 @@ class TestCorporateActionsDelegate:
         )
 
         assert result["dataset"].item() == "actions"
-        fundamental.fetch_corporate_actions.assert_called_once_with(
-            ts_code=None,
-            start_date="20240506",
-            end_date="20240506",
-        )
+        fundamental.fetch_corporate_actions.assert_called_once_with(ann_date="20240506")

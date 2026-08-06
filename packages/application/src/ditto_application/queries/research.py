@@ -4,10 +4,11 @@ App-layer research dataset snapshot facade.
 ADR: narrow import allowance
   This module imports directly from ditto_analysis.research and
   ditto_data.services (MetadataService).  The ditto_analysis dependency is
-  confined to the research query path only — no production orchestration
-  code depends on ditto_analysis.  If an alternative analysis backend
-  emerges, introduce application-owned Protocol ports (ResearchCatalogPort,
-  ResearchArtifactPort) at that time.
+  confined to approved research boundaries.  Experiment planning is the only
+  production orchestration path allowed to consume analysis-owned control-plane
+  Protocols; unrelated application code must remain independent.  If an
+  alternative dataset-analysis backend emerges, introduce application-owned
+  Protocol ports (ResearchCatalogPort, ResearchArtifactPort) at that time.
 """
 
 from __future__ import annotations

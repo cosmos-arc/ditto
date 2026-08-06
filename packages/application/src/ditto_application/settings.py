@@ -34,4 +34,37 @@ class TradingSettings(BaseModel):
         return v
 
 
-__all__ = ["TradingSettings"]
+# 默认值仅用于 testing/staging：``code_version`` 必须是非空 canonical 字符串，
+# ``environment_lock_hash`` 必须是 64 位小写 hex SHA-256 摘要（由
+# ``CodeEnvironmentLock.__post_init__`` 强制）。apps composition root 在 C3 会用
+# ``git rev-parse HEAD`` 与 ``pixi.lock`` sha256 覆盖这两个字段；application 层
+# 自身不做 git/lockfile I/O。
+_DEFAULT_CODE_VERSION = "unversioned"
+_DEFAULT_ENVIRONMENT_LOCK_HASH = (
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+)
+
+
+class ResearchExecutionSettings(BaseModel):
+    """
+    R3 研究执行 bundle 的 composition-root 配置。
+
+    这两个字段描述当前运行环境的代码版本与依赖锁：``code_version`` 是 git HEAD
+    sha，``environment_lock_hash`` 是 ``pixi.lock`` 的 SHA-256 摘要。二者只在 apps
+    composition root（C3）通过 ``git rev-parse HEAD`` + lockfile 哈希写入；
+    application 层只读取它们以构建 :class:`CodeEnvironmentLock`。
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    code_version: str = Field(
+        default=_DEFAULT_CODE_VERSION,
+        description="git HEAD sha, C3 由 apps composition root 写入",
+    )
+    environment_lock_hash: str = Field(
+        default=_DEFAULT_ENVIRONMENT_LOCK_HASH,
+        description="pixi.lock sha256, C3 由 apps 计算",
+    )
+
+
+__all__ = ["ResearchExecutionSettings", "TradingSettings"]
