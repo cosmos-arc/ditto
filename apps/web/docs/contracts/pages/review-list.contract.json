@@ -1,0 +1,65 @@
+{
+  "id": "review-list",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-08-01",
+  "updatedAt": "2026-08-01",
+  "route": "/research/reviews",
+  "pagePattern": "catalog-screener",
+  "shellFamily": "catalog",
+  "prototypeRef": "docs/contracts/pages/review-list.contract.json",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/research",
+    "contractStatus": "generated",
+    "overlayStatus": "none",
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/research/components/review-queue-page.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "ReviewQueuePage"
+    ]
+  },
+  "viewports": [
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 900, "height": 768, "role": "compact" }
+  ],
+  "slots": [
+    {
+      "name": "toolbar",
+      "required": true,
+      "prototypeSelector": ".filter-toolbar",
+      "reactSelector": "[data-slot='toolbar']",
+      "a11yRole": "toolbar",
+      "responsiveBehavior": { "compact": "reflow" }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".catalog-table",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "detail",
+      "required": true,
+      "prototypeSelector": ".catalog-detail",
+      "reactSelector": "[data-slot='detail']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": { "compact": "overlay" }
+    }
+  ],
+  "states": {
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["packet-missing", "approved-awaiting-publish"]
+  },
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  }
+}

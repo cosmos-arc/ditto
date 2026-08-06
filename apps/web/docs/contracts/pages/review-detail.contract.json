@@ -1,0 +1,65 @@
+{
+  "id": "review-detail",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-08-01",
+  "updatedAt": "2026-08-01",
+  "route": "/research/reviews/$id",
+  "pagePattern": "object-hub",
+  "shellFamily": "object-hub",
+  "prototypeRef": "docs/contracts/pages/review-detail.contract.json",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/research",
+    "contractStatus": "generated",
+    "overlayStatus": "implemented",
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/research/components/review-detail-page.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "ReviewDetailPage"
+    ]
+  },
+  "viewports": [
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 900, "height": 768, "role": "compact" }
+  ],
+  "slots": [
+    {
+      "name": "meta",
+      "required": true,
+      "prototypeSelector": ".shell-strip",
+      "reactSelector": "[data-contract-slot='review-decision-banner']",
+      "a11yRole": "banner",
+      "responsiveBehavior": { "compact": "reflow" }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".shell-main",
+      "reactSelector": "[data-contract-slot='review-evidence']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "bottom",
+      "required": true,
+      "prototypeSelector": ".shell-analysis",
+      "reactSelector": "[data-contract-slot='review-actions']",
+      "a11yRole": "region",
+      "responsiveBehavior": { "compact": "overlay" }
+    }
+  ],
+  "states": {
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["hard-gate-blocked", "review-pending", "approved", "published", "rejected"]
+  },
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  }
+}

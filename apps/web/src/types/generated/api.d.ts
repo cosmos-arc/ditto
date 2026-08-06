@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/v1/backtests/runs": {
+    "/": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,194 +12,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Runs
-         * @description 列出回测运行记录.
+         * Root
+         * @description 根路径.
          *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
-        get: operations["backtests_list_runs"];
-        put?: never;
-        /**
-         * Trigger Backtest
-         * @description 触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["backtests_trigger_backtest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cancel Run
-         * @description 取消回测运行 — 检查 status in {pending, running}，更新为 cancelled.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["backtests_cancel_run"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Retry Run
-         * @description 重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["backtests_retry_run"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/resume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Resume Run
-         * @description 从 latest checkpoint 恢复回测运行，创建 child run 并提交 flow.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["backtests_resume_run"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Run
-         * @description 获取回测运行详情.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["backtests_get_run"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/trades": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Trades
-         * @description 获取回测成交明细.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["backtests_get_trades"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Audit
-         * @description 获取回测审计记录.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["backtests_get_audit"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/report": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Report
-         * @description 获取回测报告 (backtest_report.json 元数据).
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["backtests_get_report"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/lineage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Lineage
-         * @description 查询运行血统链 — 从当前运行追溯到原始运行.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["backtests_get_lineage"];
+        get: operations["system_root"];
         put?: never;
         post?: never;
         delete?: never;
@@ -252,7 +70,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/backtests/runs/{run_id}/lineage/data": {
+    "/api/v1/backtests/runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -260,12 +78,128 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Run Data Lineage
-         * @description 查询某个运行关联的数据血缘摘要.
+         * List Runs
+         * @description 列出回测运行记录.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        get: operations["backtests_get_run_data_lineage"];
+        get: operations["backtests_list_runs"];
+        put?: never;
+        /**
+         * Trigger Backtest
+         * @description 触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["backtests_trigger_backtest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Run
+         * @description 获取回测运行详情.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Audit
+         * @description 获取回测审计记录.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/benchmark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Benchmark
+         * @description 获取回测基准 NAV 序列与基准收益率.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_benchmark"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Run
+         * @description 取消回测运行 — 检查 status in {pending, running}，更新为 cancelled.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["backtests_cancel_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Lineage
+         * @description 查询运行血统链 — 从当前运行追溯到原始运行.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_lineage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -296,29 +230,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/backtests/runs/{run_id}/replay": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Replay Run
-         * @description 基于原始 manifest 重放回测并验证复现性.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["backtests_replay_run"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/replay/proof": {
+    "/api/v1/backtests/runs/{run_id}/lineage/data": {
         parameters: {
             query?: never;
             header?: never;
@@ -326,34 +238,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Replay Proof
-         * @description 获取 replay proof 证据 JSON.
+         * Get Run Data Lineage
+         * @description 查询某个运行关联的数据血缘摘要.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        get: operations["backtests_get_replay_proof"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/backtests/runs/{run_id}/replay/evidence": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Replay Evidence Summary
-         * @description 获取 restored-run report 与 replay proof 的组合证据摘要.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["backtests_get_replay_evidence_summary"];
+        get: operations["backtests_get_run_data_lineage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -384,7 +274,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/backtests/runs/{run_id}/benchmark": {
+    "/api/v1/backtests/runs/{run_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replay Run
+         * @description 基于原始 manifest 重放回测并验证复现性.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["backtests_replay_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/replay/evidence": {
         parameters: {
             query?: never;
             header?: never;
@@ -392,12 +304,122 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Benchmark
-         * @description 获取回测基准 NAV 序列与基准收益率.
+         * Get Replay Evidence Summary
+         * @description 获取 restored-run report 与 replay proof 的组合证据摘要.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        get: operations["backtests_get_benchmark"];
+        get: operations["backtests_get_replay_evidence_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/replay/proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Replay Proof
+         * @description 获取 replay proof 证据 JSON.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_replay_proof"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Report
+         * @description 获取回测报告 (backtest_report.json 元数据).
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Run
+         * @description 从 latest checkpoint 恢复回测运行，创建 child run 并提交 flow.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["backtests_resume_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Run
+         * @description 重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["backtests_retry_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trades
+         * @description 获取回测成交明细.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_trades"];
         put?: never;
         post?: never;
         delete?: never;
@@ -537,50 +559,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/data-products/{dataset_id}/quality": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Data Product Quality
-         * @description Return DQ, PIT replay, freshness, recovery, and consumer checks.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["data_products_get_data_product_quality"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/data-products/{dataset_id}/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Data Product Runs
-         * @description Return immutable certification generations and review status.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["data_products_list_data_product_runs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/data-products/{dataset_id}/evidence": {
         parameters: {
             query?: never;
@@ -625,7 +603,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/fundamental/financials/{report_type}": {
+    "/api/v1/data-products/{dataset_id}/quality": {
         parameters: {
             query?: never;
             header?: never;
@@ -633,8 +611,52 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Financials
-         * @description 获取财务报表数据.
+         * Get Data Product Quality
+         * @description Return DQ, PIT replay, freshness, recovery, and consumer checks.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_get_data_product_quality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-products/{dataset_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Data Product Runs
+         * @description Return immutable certification generations and review status.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_list_data_product_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fundamental/corporate-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Corporate Actions
+         * @description 查询公司行动列表.
          *
          *     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
          *     - instrument_id: 内部 ID，如 1000001
@@ -642,11 +664,12 @@ export interface paths {
          *     - ticker: 裸代码，如 "000001"
          *
          *     Raises:
+         *         DateRangeError: 400 如果 start_date > end_date
          *         FutureDateError: 400 如果 as_of_date 为未来日期
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
-        get: operations["fundamental_get_financials"];
+        get: operations["fundamental_list_corporate_actions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -685,7 +708,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/fundamental/corporate-actions": {
+    "/api/v1/fundamental/financials/{report_type}": {
         parameters: {
             query?: never;
             header?: never;
@@ -693,8 +716,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Corporate Actions
-         * @description 查询公司行动列表.
+         * Get Financials
+         * @description 获取财务报表数据.
          *
          *     标识符三选一（优先级: instrument_id > standard_ticker > ticker）:
          *     - instrument_id: 内部 ID，如 1000001
@@ -702,12 +725,11 @@ export interface paths {
          *     - ticker: 裸代码，如 "000001"
          *
          *     Raises:
-         *         DateRangeError: 400 如果 start_date > end_date
          *         FutureDateError: 400 如果 as_of_date 为未来日期
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
-        get: operations["fundamental_list_corporate_actions"];
+        get: operations["fundamental_get_financials"];
         put?: never;
         post?: never;
         delete?: never;
@@ -749,6 +771,160 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ingestion/catalog/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog Asset
+         * @description 查询单个 DataCatalog 资产 freshness/storage/schema 元数据.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_catalog_asset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/catalog/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Catalog Assets
+         * @description 查询 DataCatalog 资产 freshness/storage/schema 元数据.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_list_catalog_assets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/catalog/maturity/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog Maturity Governance Report
+         * @description Return unified maturity, readiness and revocation governance report.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_catalog_maturity_governance_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/catalog/promotion/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Dataset Promotion Evidence
+         * @description Persist reviewer evidence for one dataset promotion criterion.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        post: operations["ingestion_review_dataset_promotion_evidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/catalog/promotion/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Dataset Maturity Promotion History
+         * @description List dataset maturity promotion governance history.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_list_dataset_maturity_promotion_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/catalog/promotion/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog Promotion Readiness Report
+         * @description Return aggregated dataset promotion readiness governance report.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_catalog_promotion_readiness_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/catalog/promotion/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Dataset Maturity Promotion
+         * @description Revoke the current dataset maturity promotion override.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        post: operations["ingestion_revoke_dataset_maturity_promotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ingestion/catalog/remediation/approvals": {
         parameters: {
             query?: never;
@@ -777,6 +953,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog Remediation Approval
+         * @description Return current remediation approval state by ID.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_catalog_remediation_approval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/decision": {
         parameters: {
             query?: never;
@@ -793,28 +991,6 @@ export interface paths {
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
         post: operations["ingestion_decide_catalog_remediation_approval"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/execute": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Execute Catalog Remediation Approval
-         * @description Execute an approved remediation action through application orchestration.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        post: operations["ingestion_execute_catalog_remediation_approval"];
         delete?: never;
         options?: never;
         head?: never;
@@ -843,22 +1019,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}": {
+    "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/execute": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
-         * Get Catalog Remediation Approval
-         * @description Return current remediation approval state by ID.
+         * Execute Catalog Remediation Approval
+         * @description Execute an approved remediation action through application orchestration.
          *
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
-        get: operations["ingestion_get_catalog_remediation_approval"];
-        put?: never;
-        post?: never;
+        post: operations["ingestion_execute_catalog_remediation_approval"];
         delete?: never;
         options?: never;
         head?: never;
@@ -959,22 +1135,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/events": {
+    "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/activation": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
-         * List Catalog Source Fallback Policy Events
-         * @description List append-only audit events for one source fallback policy.
+         * Activate Catalog Source Fallback Policy
+         * @description Activate an approved source fallback policy resource only.
          *
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
-        get: operations["ingestion_list_catalog_source_fallback_policy_events"];
-        put?: never;
-        post?: never;
+        post: operations["ingestion_activate_catalog_source_fallback_policy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1003,22 +1179,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/activation": {
+    "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/events": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Activate Catalog Source Fallback Policy
-         * @description Activate an approved source fallback policy resource only.
+         * List Catalog Source Fallback Policy Events
+         * @description List append-only audit events for one source fallback policy.
          *
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
-        post: operations["ingestion_activate_catalog_source_fallback_policy"];
+        get: operations["ingestion_list_catalog_source_fallback_policy_events"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1041,250 +1217,6 @@ export interface paths {
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
         post: operations["ingestion_retire_catalog_source_fallback_policy"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Ingestion Status
-         * @description 获取各数据集最新摄取状态.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_get_ingestion_status"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Ingestion History
-         * @description 获取数据集摄取历史.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_get_ingestion_history"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/dq-summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Dq Summary
-         * @description 获取 DQ 检查摘要.
-         *
-         *     V1 占位: 返回空列表，待接入 QualityPatrolService 后填充实际数据。
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_get_dq_summary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/promotion/evidence": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Review Dataset Promotion Evidence
-         * @description Persist reviewer evidence for one dataset promotion criterion.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        post: operations["ingestion_review_dataset_promotion_evidence"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/promotion/readiness": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Catalog Promotion Readiness Report
-         * @description Return aggregated dataset promotion readiness governance report.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_get_catalog_promotion_readiness_report"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/maturity/governance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Catalog Maturity Governance Report
-         * @description Return unified maturity, readiness and revocation governance report.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_get_catalog_maturity_governance_report"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/promotion/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Dataset Maturity Promotion History
-         * @description List dataset maturity promotion governance history.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_list_dataset_maturity_promotion_history"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/promotion/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke Dataset Maturity Promotion
-         * @description Revoke the current dataset maturity promotion override.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        post: operations["ingestion_revoke_dataset_maturity_promotion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/assets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Catalog Assets
-         * @description 查询 DataCatalog 资产 freshness/storage/schema 元数据.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_list_catalog_assets"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/asset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Catalog Asset
-         * @description 查询单个 DataCatalog 资产 freshness/storage/schema 元数据.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_get_catalog_asset"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ingestion/catalog/source-health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Catalog Source Health Report
-         * @description Return catalog-backed source health evidence for source=auto decisions.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["ingestion_get_catalog_source_health_report"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1335,6 +1267,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ingestion/catalog/source-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog Source Health Report
+         * @description Return catalog-backed source health evidence for source=auto decisions.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_catalog_source_health_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ingestion/catalog/source-health/summary": {
         parameters: {
             query?: never;
@@ -1349,6 +1303,74 @@ export interface paths {
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
         get: operations["ingestion_get_catalog_source_health_summary_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/dq-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dq Summary
+         * @description 获取 DQ 检查摘要.
+         *
+         *     V1 占位: 返回空列表，待接入 QualityPatrolService 后填充实际数据。
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_dq_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ingestion History
+         * @description 获取数据集摄取历史.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_ingestion_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ingestion Status
+         * @description 获取各数据集最新摄取状态.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["ingestion_get_ingestion_status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1459,6 +1481,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/metadata/instruments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Instruments
+         * @description 查询标的列表.
+         *
+         *     Args:
+         *         asset_class: 资产类别过滤 (可选)
+         *         exchange: 交易所过滤 (可选)
+         *         is_active: 活跃状态过滤 (可选)
+         *         pagination: 分页参数
+         *         facade: MetadataQueryFacade 依赖注入
+         *
+         *     Returns:
+         *         APIResponse 包含 Instrument 列表 + 分页信息
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["metadata_list_instruments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metadata/instruments/{instrument_id}": {
         parameters: {
             query?: never;
@@ -1491,7 +1545,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/metadata/instruments": {
+    "/api/v1/research/candidates/{candidate_id}/exclusions": {
         parameters: {
             query?: never;
             header?: never;
@@ -1499,22 +1553,494 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Instruments
-         * @description 查询标的列表.
+         * Get Candidate Exclusions
+         * @description Read exclusion events from the current candidate bundle.
          *
-         *     Args:
-         *         asset_class: 资产类别过滤 (可选)
-         *         exchange: 交易所过滤 (可选)
-         *         is_active: 活跃状态过滤 (可选)
-         *         pagination: 分页参数
-         *         facade: MetadataQueryFacade 依赖注入
-         *
-         *     Returns:
-         *         APIResponse 包含 Instrument 列表 + 分页信息
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
-        get: operations["metadata_list_instruments"];
+        get: operations["design_research_candidate_exclusions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/candidates/{candidate_id}/factor-contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Candidate Factor Contributions
+         * @description Read factor contributions from the current candidate bundle.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_candidate_factor_contributions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/candidates/{candidate_id}/selections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Candidate Selections
+         * @description Read selected-instrument decisions from the current candidate bundle.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_candidate_selections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Experiments
+         * @description 列出研究实验（newest first，不含候选/fold 展开）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_experiments"];
+        put?: never;
+        /**
+         * Launch Experiment
+         * @description Rebuild and launch one exact operator-confirmed planning document.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_launch_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Experiment
+         * @description 获取实验详情.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_get_experiment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Experiment Artifacts
+         * @description 列出实验的 immutable indexed artifacts（lineage order）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_experiment_artifacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Experiment
+         * @description 请求取消实验 (revision-fenced terminal cancel).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_cancel_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/candidate-selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Select Experiment Candidate
+         * @description Persist one server-side preselection distinct from local comparison pins.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["design_research_candidate_selection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Experiment Candidates
+         * @description 列出同一持久实验详情中的 immutable candidates.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_experiment_candidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Experiment Comparison
+         * @description 读取实验的 candidate comparison（walk-forward 投影）.
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_get_experiment_comparison"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Experiment Gates
+         * @description 列出实验的门禁评估.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_experiment_gates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/holdout-evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim Experiment Holdout
+         * @description Claim the one candidate referenced by a durable preselection event.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["design_research_holdout_evaluations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Experiment
+         * @description 请求暂停实验 (revision-fenced cooperative pause).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_pause_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preflight Experiment
+         * @description Compute deterministic experiment eligibility without writing.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_preflight_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Experiment
+         * @description 请求恢复实验 (revision-fenced resume of one paused experiment).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_resume_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/retry-fold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Fold Experiment
+         * @description 请求重试一个失败 fold (revision-fenced successor attempt).
+         *
+         *     expected_revision is the fold projection revision (not experiment revision).
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_retry_fold_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/review-packet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Research Experiment Review Packet
+         * @description 获取实验的 review packet（完整 hard gate + statistical evidence + lineage）.
+         *
+         *     Maturity: experimental — R3 research control-plane surface.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_get_research_experiment_review_packet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/experiments/{experiment_id}/selection-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Experiment Selection Evidence
+         * @description 读取实验已发布并验证的 selection-evidence ledger.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_get_experiment_selection_evidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/factors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Factors
+         * @description 列出 R3 受控核心因子目录（governed catalog order）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_factors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/factors/{factor_id}/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Research Factor Diagnostics
+         * @description Read one provenance-bound factor diagnostic artifact by exact scope.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_factor_diagnostics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/node-descriptors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Node Descriptors
+         * @description 列出 R3 内置策略节点 descriptor（pipeline studio 事实源）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_node_descriptors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Reviews
+         * @description 列出跨 strategy 的 review queue（state=REVIEW 版本，newest first）.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_reviews"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1560,6 +2086,28 @@ export interface paths {
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
         get: operations["source_get_source_data"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Status
+         * @description 获取系统状态.
+         *
+         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
+         */
+        get: operations["system_get_status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1624,7 +2172,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/strategies/{strategy_id}/publish": {
+    "/api/v1/strategies/{strategy_id}/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Active Strategy
+         * @description 获取 active pointer + published payload；无 active pointer 返回 404.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["strategies_get_active_strategy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Strategy Governance Events
+         * @description Return append-only decision and activation rows at a stable cursor.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["design_strategy_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Strategy Versions
+         * @description 列出策略的 governance 版本历史（newest first）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["strategies_list_strategy_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Strategy Version Detail
+         * @description Return one immutable canonical version and its governance state.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["design_strategy_version_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/approve": {
         parameters: {
             query?: never;
             header?: never;
@@ -1634,12 +2270,166 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Publish Strategy
-         * @description 发布策略.
+         * Approve Strategy Review
+         * @description 审批策略版本.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        post: operations["strategies_publish_strategy"];
+        post: operations["strategies_approve_strategy_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deprecate Strategy Version
+         * @description 弃用已发布版本（弃用后不可再激活）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_deprecate_strategy_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diff Strategy Version
+         * @description 返回 version v 相对 parent_version 的 canonical spec 字段级 diff.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["strategies_diff_strategy_version"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish Strategy Version
+         * @description 证据门控发布（经 StrategyPromotionProcess 验证 review packet hard gates）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_publish_strategy_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate Strategy Version
+         * @description 重新激活已发布版本（乐观指针 CAS，要求 expected_pointer_revision）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_reactivate_strategy_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject Strategy Review
+         * @description 驳回策略版本（驳回后只能 clone 新 draft）.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_reject_strategy_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/submit-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Strategy Review
+         * @description 提交策略版本审查.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_submit_strategy_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Strategy Version
+         * @description 校验 candidate spec_json（pre-save），返回 canonical hash + 合法性 + 变更检测.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_validate_strategy_version"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1674,94 +2464,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/trade/intents/{intent_id}/status": {
+    "/api/v1/trade/comparison": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
         /**
-         * Update Intent Status
-         * @description 更新交易意图状态.
+         * Get Comparison
+         * @description 回测 vs 实际对比.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        put: operations["trade_update_intent_status"];
+        get: operations["trade_get_comparison"];
+        put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Fills
-         * @description 列出成交记录.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_list_fills"];
-        put?: never;
-        /**
-         * Record Fill
-         * @description 录入人工成交.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["trade_record_fill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills/{fill_id}/void": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Void Fill
-         * @description 追加作废事件；原始成交保持不可变。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["trade_void_fill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills/{fill_id}/replace": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Replace Fill
-         * @description 追加替换成交及链接事件；原始成交保持不可变。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["trade_replace_fill"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1812,7 +2530,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/trade/intents": {
+    "/api/v1/trade/deviation": {
         parameters: {
             query?: never;
             header?: never;
@@ -1820,34 +2538,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Intents
-         * @description 列出交易意图.
+         * Get Deviation
+         * @description 信号-成交偏差报告.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        get: operations["trade_list_intents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills/effective": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Effective Fills
-         * @description 列出排除已作废/被替换原记录后的有效成交。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_list_effective_fills"];
+        get: operations["trade_get_deviation"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1878,7 +2574,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/trade/positions": {
+    "/api/v1/trade/fills": {
         parameters: {
             query?: never;
             header?: never;
@@ -1886,13 +2582,129 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Positions
-         * @description 列出实际持仓.
+         * List Fills
+         * @description 列出成交记录.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        get: operations["trade_list_positions"];
+        get: operations["trade_list_fills"];
         put?: never;
+        /**
+         * Record Fill
+         * @description 录入人工成交.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["trade_record_fill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trade/fills/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Effective Fills
+         * @description 列出排除已作废/被替换原记录后的有效成交。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["trade_list_effective_fills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trade/fills/{fill_id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace Fill
+         * @description 追加替换成交及链接事件；原始成交保持不可变。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["trade_replace_fill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trade/fills/{fill_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void Fill
+         * @description 追加作废事件；原始成交保持不可变。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["trade_void_fill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trade/intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Intents
+         * @description 列出交易意图.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["trade_list_intents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trade/intents/{intent_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Intent Status
+         * @description 更新交易意图状态.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        put: operations["trade_update_intent_status"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1914,6 +2726,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_compute_pnl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trade/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Positions
+         * @description 列出实际持仓.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["trade_list_positions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1958,50 +2792,6 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["trade_get_signal_intents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/deviation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Deviation
-         * @description 信号-成交偏差报告.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_deviation"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/comparison": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Comparison
-         * @description 回测 vs 实际对比.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_comparison"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2094,50 +2884,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/logs/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Generate Test Logs
-         * @description 测试日志记录功能（仅开发/测试环境可用）.
-         *
-         *     Capability maturity: `debug`. Debug-only surface; must not be exposed in production.
-         */
-        get: operations["debug_generate_test_logs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Root
-         * @description 根路径.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["system_root"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -2152,28 +2898,6 @@ export interface paths {
          *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
          */
         get: operations["system_health_check"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Status
-         * @description 获取系统状态.
-         *
-         *     Capability maturity: `infrastructure`. Foundation surface supporting product workflows.
-         */
-        get: operations["system_get_status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2218,6 +2942,34 @@ export interface components {
         APIResponse_CancelRunResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["CancelRunResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[CandidateExclusionPageResponse] */
+        APIResponse_CandidateExclusionPageResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateExclusionPageResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[CandidateFactorContributionPageResponse] */
+        APIResponse_CandidateFactorContributionPageResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateFactorContributionPageResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[CandidateSelectionPageResponse] */
+        APIResponse_CandidateSelectionPageResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateSelectionPageResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[CandidateSelectionReceiptResponse] */
+        APIResponse_CandidateSelectionReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["CandidateSelectionReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -2375,6 +3127,62 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[ExperimentComparisonResponse] */
+        APIResponse_ExperimentComparisonResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentComparisonResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentControlReceiptResponse] */
+        APIResponse_ExperimentControlReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentControlReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentDetailResponse] */
+        APIResponse_ExperimentDetailResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentDetailResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentLaunchResponse] */
+        APIResponse_ExperimentLaunchResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentLaunchResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentPreflightResponse] */
+        APIResponse_ExperimentPreflightResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentPreflightResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentReviewPacketResponse] */
+        APIResponse_ExperimentReviewPacketResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentReviewPacketResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ExperimentSelectionEvidenceResponse] */
+        APIResponse_ExperimentSelectionEvidenceResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ExperimentSelectionEvidenceResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[FactorDiagnosticsResponse] */
+        APIResponse_FactorDiagnosticsResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["FactorDiagnosticsResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[FillAdjustmentResponse] */
         APIResponse_FillAdjustmentResponse_: {
             /** @description 响应数据 */
@@ -2386,6 +3194,13 @@ export interface components {
         APIResponse_FillResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["FillResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[HoldoutEvaluationReceiptResponse] */
+        APIResponse_HoldoutEvaluationReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["HoldoutEvaluationReceiptResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -2487,10 +3302,52 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[StrategyActivePointerResponse] */
+        APIResponse_StrategyActivePointerResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyActivePointerResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyActiveResponse] */
+        APIResponse_StrategyActiveResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyActiveResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[StrategyResponse] */
         APIResponse_StrategyResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["StrategyResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategySpecValidationResponse] */
+        APIResponse_StrategySpecValidationResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategySpecValidationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyVersionDetailResponse] */
+        APIResponse_StrategyVersionDetailResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyVersionDetailResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyVersionDiffResponse] */
+        APIResponse_StrategyVersionDiffResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyVersionDiffResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyVersionStateResponse] */
+        APIResponse_StrategyVersionStateResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyVersionStateResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -2648,6 +3505,56 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[list[ExperimentArtifactResponse]] */
+        APIResponse_list_ExperimentArtifactResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ExperimentArtifactResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[ExperimentCandidateResponse]] */
+        APIResponse_list_ExperimentCandidateResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ExperimentCandidateResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[ExperimentGateResponse]] */
+        APIResponse_list_ExperimentGateResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ExperimentGateResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[ExperimentSummaryResponse]] */
+        APIResponse_list_ExperimentSummaryResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ExperimentSummaryResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[FactorDescriptorResponse]] */
+        APIResponse_list_FactorDescriptorResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["FactorDescriptorResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[list[FillAdjustmentResponse]] */
         APIResponse_list_FillAdjustmentResponse__: {
             /**
@@ -2758,6 +3665,16 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[list[NodeDescriptorResponse]] */
+        APIResponse_list_NodeDescriptorResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["NodeDescriptorResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[list[PositionSnapshotResponse]] */
         APIResponse_list_PositionSnapshotResponse__: {
             /**
@@ -2778,6 +3695,16 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[list[StrategyGovernanceEventResponse]] */
+        APIResponse_list_StrategyGovernanceEventResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["StrategyGovernanceEventResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[list[StrategyResponse]] */
         APIResponse_list_StrategyResponse__: {
             /**
@@ -2785,6 +3712,16 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["StrategyResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[StrategyVersionResponse]] */
+        APIResponse_list_StrategyVersionResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["StrategyVersionResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -2833,10 +3770,10 @@ export interface components {
          * @description 账户基线导入结果。
          */
         AccountBaselineImportResponse: {
-            /** Snapshot Id */
-            snapshot_id: string;
             /** Sleeve Id */
             sleeve_id: string;
+            /** Snapshot Id */
+            snapshot_id: string;
             /**
              * Status
              * @enum {string}
@@ -2848,36 +3785,46 @@ export interface components {
          * @description 与信号日匹配的账户基线。
          */
         AccountBaselineResponse: {
-            /** Snapshot Id */
-            snapshot_id: string;
-            /** Sleeve Id */
-            sleeve_id: string;
             /** Account Id */
             account_id: string;
-            /** Strategy Id */
-            strategy_id: string;
-            /** Snapshot Date */
-            snapshot_date: string;
             /** Cash Available */
             cash_available: number;
-            /** Cash Settled */
-            cash_settled: number;
             /** Cash Frozen */
             cash_frozen: number;
-            /** Total Value */
-            total_value: number;
-            /** Nav */
-            nav: number;
+            /** Cash Settled */
+            cash_settled: number;
             /** Exposure */
             exposure: number;
+            /** Nav */
+            nav: number;
             /** Positions */
             positions: components["schemas"]["PositionSnapshotResponse"][];
+            /** Sleeve Id */
+            sleeve_id: string;
+            /** Snapshot Date */
+            snapshot_date: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Total Value */
+            total_value: number;
         };
         /**
          * AccountStateComparisonResponse
          * @description Replay 账户状态对比响应.
          */
         AccountStateComparisonResponse: {
+            /**
+             * Available Cash Diff
+             * @description 可用现金绝对差异
+             */
+            available_cash_diff: number;
+            /**
+             * Frozen Cash Diff
+             * @description 冻结现金绝对差异
+             */
+            frozen_cash_diff: number;
             /**
              * Identical
              * @description 账户状态是否完全一致
@@ -2889,25 +3836,15 @@ export interface components {
              */
             nav_diff: number;
             /**
-             * Available Cash Diff
-             * @description 可用现金绝对差异
+             * Position Count Diff
+             * @description 持仓数量差异
              */
-            available_cash_diff: number;
+            position_count_diff: number;
             /**
              * Settled Cash Diff
              * @description 已结算现金绝对差异
              */
             settled_cash_diff: number;
-            /**
-             * Frozen Cash Diff
-             * @description 冻结现金绝对差异
-             */
-            frozen_cash_diff: number;
-            /**
-             * Position Count Diff
-             * @description 持仓数量差异
-             */
-            position_count_diff: number;
         };
         /**
          * Adjustment
@@ -2926,96 +3863,98 @@ export interface components {
          */
         AggregatedTradeStatsResponse: {
             /**
-             * Total Trades
+             * Avg Holding Days
              * @default 0
              */
-            total_trades: number;
-            /**
-             * Long Trades
-             * @default 0
-             */
-            long_trades: number;
-            /**
-             * Short Trades
-             * @default 0
-             */
-            short_trades: number;
-            /**
-             * Win Trades
-             * @default 0
-             */
-            win_trades: number;
-            /**
-             * Loss Trades
-             * @default 0
-             */
-            loss_trades: number;
-            /**
-             * Win Rate
-             * @default 0
-             */
-            win_rate: number;
-            /**
-             * Profit Factor
-             * @default 0
-             */
-            profit_factor: number;
-            /**
-             * Avg Win
-             * @default 0
-             */
-            avg_win: number;
+            avg_holding_days: number;
             /**
              * Avg Loss
              * @default 0
              */
             avg_loss: number;
             /**
+             * Avg Trade Return Pct
+             * @default 0
+             */
+            avg_trade_return_pct: number;
+            /**
+             * Avg Win
+             * @default 0
+             */
+            avg_win: number;
+            /**
              * Avg Win Loss Ratio
              * @default 0
              */
             avg_win_loss_ratio: number;
-            /**
-             * Max Consecutive Wins
-             * @default 0
-             */
-            max_consecutive_wins: number;
-            /**
-             * Max Consecutive Losses
-             * @default 0
-             */
-            max_consecutive_losses: number;
-            /**
-             * Avg Holding Days
-             * @default 0
-             */
-            avg_holding_days: number;
-            /**
-             * Median Holding Days
-             * @default 0
-             */
-            median_holding_days: number;
             /**
              * Best Trade
              * @default 0
              */
             best_trade: number;
             /**
+             * Long Trades
+             * @default 0
+             */
+            long_trades: number;
+            /**
+             * Loss Trades
+             * @default 0
+             */
+            loss_trades: number;
+            /**
+             * Max Consecutive Losses
+             * @default 0
+             */
+            max_consecutive_losses: number;
+            /**
+             * Max Consecutive Wins
+             * @default 0
+             */
+            max_consecutive_wins: number;
+            /**
+             * Median Holding Days
+             * @default 0
+             */
+            median_holding_days: number;
+            /**
+             * Profit Factor
+             * @default 0
+             */
+            profit_factor: number;
+            /**
+             * Short Trades
+             * @default 0
+             */
+            short_trades: number;
+            /**
+             * Total Trades
+             * @default 0
+             */
+            total_trades: number;
+            /**
+             * Win Rate
+             * @default 0
+             */
+            win_rate: number;
+            /**
+             * Win Trades
+             * @default 0
+             */
+            win_trades: number;
+            /**
              * Worst Trade
              * @default 0
              */
             worst_trade: number;
-            /**
-             * Avg Trade Return Pct
-             * @default 0
-             */
-            avg_trade_return_pct: number;
         };
         /**
          * AlphaStatsResponse
          * @description 绩效分析统计.
          */
         AlphaStatsResponse: {
+            /** Alpha Annualized */
+            alpha_annualized?: number | null;
             /**
              * Annualized Return
              * @default 0
@@ -3027,15 +3966,24 @@ export interface components {
              */
             annualized_volatility: number;
             /**
-             * Sharpe Ratio
+             * Avg Turnover Per Rebalance
              * @default 0
              */
-            sharpe_ratio: number;
+            avg_turnover_per_rebalance: number;
+            /** Beta */
+            beta?: number | null;
             /**
-             * Sortino Ratio
+             * Calmar Ratio
              * @default 0
              */
-            sortino_ratio: number;
+            calmar_ratio: number;
+            /**
+             * Cost Drag
+             * @default 0
+             */
+            cost_drag: number;
+            /** Information Ratio */
+            information_ratio?: number | null;
             /**
              * Max Drawdown
              * @default 0
@@ -3047,43 +3995,32 @@ export interface components {
              */
             max_drawdown_duration_days: number;
             /**
-             * Calmar Ratio
+             * Net Return After Cost
              * @default 0
              */
-            calmar_ratio: number;
-            /** Information Ratio */
-            information_ratio?: number | null;
-            /** Tracking Error */
-            tracking_error?: number | null;
-            /** Beta */
-            beta?: number | null;
-            /** Alpha Annualized */
-            alpha_annualized?: number | null;
+            net_return_after_cost: number;
             /**
-             * Total Turnover
+             * Sharpe Ratio
              * @default 0
              */
-            total_turnover: number;
+            sharpe_ratio: number;
             /**
-             * Avg Turnover Per Rebalance
+             * Sortino Ratio
              * @default 0
              */
-            avg_turnover_per_rebalance: number;
+            sortino_ratio: number;
             /**
              * Total Fees
              * @default 0
              */
             total_fees: number;
             /**
-             * Net Return After Cost
+             * Total Turnover
              * @default 0
              */
-            net_return_after_cost: number;
-            /**
-             * Cost Drag
-             * @default 0
-             */
-            cost_drag: number;
+            total_turnover: number;
+            /** Tracking Error */
+            tracking_error?: number | null;
         };
         /**
          * AssetClass
@@ -3097,29 +4034,17 @@ export interface components {
          */
         AuditRecordResponse: {
             /**
+             * Created At
+             * @description 创建时间 (ISO 8601)
+             * @default
+             */
+            created_at: string;
+            /**
              * Id
              * @description 记录 ID
              * @default 0
              */
             id: number;
-            /**
-             * Run Id
-             * @description 运行 ID
-             * @default
-             */
-            run_id: string;
-            /**
-             * Trade Date
-             * @description 交易日期 (YYYY-MM-DD)
-             * @default
-             */
-            trade_date: string;
-            /**
-             * Record Type
-             * @description 审计记录类型
-             * @default
-             */
-            record_type: string;
             /**
              * Instrument Id
              * @description 标的 ID
@@ -3133,22 +4058,48 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
-             * Created At
-             * @description 创建时间 (ISO 8601)
+             * Record Type
+             * @description 审计记录类型
              * @default
              */
-            created_at: string;
+            record_type: string;
+            /**
+             * Run Id
+             * @description 运行 ID
+             * @default
+             */
+            run_id: string;
+            /**
+             * Trade Date
+             * @description 交易日期 (YYYY-MM-DD)
+             * @default
+             */
+            trade_date: string;
         };
         /**
          * BacktestReportResponse
          * @description 回测报告响应 — 对应 backtest_report.json 的元数据结构.
          */
         BacktestReportResponse: {
+            /** @description 汇总交易统计 */
+            aggregated_trade_stats?: components["schemas"]["AggregatedTradeStatsResponse"] | null;
+            /** @description 绩效分析统计 */
+            alpha_stats?: components["schemas"]["AlphaStatsResponse"] | null;
             /**
-             * Run Id
-             * @default
+             * Final Nav
+             * @default 0
              */
-            run_id: string;
+            final_nav: number;
+            /**
+             * Initial Cash
+             * @default 0
+             */
+            initial_cash: number;
+            /**
+             * Nav Series
+             * @description NAV series (float list)
+             */
+            nav_series?: number[] | null;
             /**
              * Period
              * @description 回测期间 {start, end}
@@ -3157,29 +4108,15 @@ export interface components {
                 [key: string]: string;
             };
             /**
-             * Initial Cash
-             * @default 0
-             */
-            initial_cash: number;
-            /**
-             * Final Nav
-             * @default 0
-             */
-            final_nav: number;
-            /** @description 汇总交易统计 */
-            aggregated_trade_stats?: components["schemas"]["AggregatedTradeStatsResponse"] | null;
-            /** @description 绩效分析统计 */
-            alpha_stats?: components["schemas"]["AlphaStatsResponse"] | null;
-            /**
              * Rebalance Freq
              * @default daily
              */
             rebalance_freq: string;
             /**
-             * Nav Series
-             * @description NAV series (float list)
+             * Run Id
+             * @default
              */
-            nav_series?: number[] | null;
+            run_id: string;
         } & {
             [key: string]: unknown;
         };
@@ -3190,13 +4127,13 @@ export interface components {
         BacktestRunTriggerResponse: {
             /** Run Id */
             run_id: string;
-            /** Strategy Id */
-            strategy_id: string;
             /**
              * Status
              * @default pending
              */
             status: string;
+            /** Strategy Id */
+            strategy_id: string;
         };
         /**
          * Bar
@@ -3215,50 +4152,50 @@ export interface components {
          */
         Bar: {
             /**
-             * Instrument Id
-             * @description 标的 ID
+             * Amount
+             * @description 成交额
              */
-            instrument_id: number;
-            /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
-            /**
-             * Open
-             * @description 开盘价
-             */
-            open: number;
-            /**
-             * High
-             * @description 最高价
-             */
-            high: number;
-            /**
-             * Low
-             * @description 最低价
-             */
-            low: number;
+            amount: number;
             /**
              * Close
              * @description 收盘价
              */
             close: number;
             /**
-             * Volume
-             * @description 成交量
+             * High
+             * @description 最高价
              */
-            volume: number;
+            high: number;
             /**
-             * Amount
-             * @description 成交额
+             * Instrument Id
+             * @description 标的 ID
              */
-            amount: number;
+            instrument_id: number;
+            /**
+             * Low
+             * @description 最低价
+             */
+            low: number;
+            /**
+             * Open
+             * @description 开盘价
+             */
+            open: number;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
             /**
              * Turnover Rate
              * @description 换手率
              */
             turnover_rate?: number | null;
+            /**
+             * Volume
+             * @description 成交量
+             */
+            volume: number;
         };
         /**
          * BarsQuery
@@ -3275,30 +4212,10 @@ export interface components {
          */
         BarsQuery: {
             /**
-             * Instrument Ids
-             * @description 标的 ID 列表
-             */
-            instrument_ids?: number[] | null;
-            /**
-             * Start Date
-             * @description 开始日期
-             */
-            start_date?: string | null;
-            /**
-             * End Date
-             * @description 结束日期
-             */
-            end_date?: string | null;
-            /**
              * @description 复权类型
              * @default none
              */
             adjustment: components["schemas"]["Adjustment"];
-            /**
-             * Asset Class
-             * @description 资产类别过滤
-             */
-            asset_class?: string | null;
             /**
              * Allow Experimental Data
              * @description 显式允许 experimental 数据集进入研究态查询
@@ -3306,11 +4223,31 @@ export interface components {
              */
             allow_experimental_data: boolean;
             /**
+             * Asset Class
+             * @description 资产类别过滤
+             */
+            asset_class?: string | null;
+            /**
+             * End Date
+             * @description 结束日期
+             */
+            end_date?: string | null;
+            /**
+             * Instrument Ids
+             * @description 标的 ID 列表
+             */
+            instrument_ids?: number[] | null;
+            /**
              * Limit
              * @description 返回数量限制
              * @default 1000
              */
             limit: number;
+            /**
+             * Start Date
+             * @description 开始日期
+             */
+            start_date?: string | null;
         };
         /**
          * BenchmarkNavResponse
@@ -3318,10 +4255,10 @@ export interface components {
          */
         BenchmarkNavResponse: {
             /**
-             * Run Id
-             * @description 运行 ID
+             * Benchmark Return
+             * @description 基准收益率(%)
              */
-            run_id: string;
+            benchmark_return?: number | null;
             /**
              * Dates
              * @description 日期序列 (YYYY-MM-DD)
@@ -3333,10 +4270,10 @@ export interface components {
              */
             navs?: number[];
             /**
-             * Benchmark Return
-             * @description 基准收益率(%)
+             * Run Id
+             * @description 运行 ID
              */
-            benchmark_return?: number | null;
+            run_id: string;
         };
         /**
          * CancelRunResponse
@@ -3350,6 +4287,171 @@ export interface components {
              * @default cancelled
              */
             status: string;
+        };
+        /**
+         * CandidateExclusionEventResponse
+         * @description One candidate exclusion event from an immutable candidate bundle.
+         */
+        CandidateExclusionEventResponse: {
+            /** Evidence Hash */
+            evidence_hash: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Instrument Id */
+            instrument_id: number | string;
+            /** Message */
+            message: string | null;
+            /** Reason Code */
+            reason_code: string;
+            /** Stage */
+            stage: string;
+            /** Trade Date */
+            trade_date: string;
+            /** Validation Fold Ordinal */
+            validation_fold_ordinal: number;
+        };
+        /**
+         * CandidateExclusionPageResponse
+         * @description Typed exclusions page over one immutable candidate bundle.
+         */
+        CandidateExclusionPageResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Items */
+            items: components["schemas"]["CandidateExclusionEventResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /**
+         * CandidateFactorContributionPageResponse
+         * @description Typed contribution page over one immutable candidate bundle.
+         */
+        CandidateFactorContributionPageResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Items */
+            items: components["schemas"]["CandidateFactorContributionResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /**
+         * CandidateFactorContributionResponse
+         * @description One factor contribution bound to a fold decision and evidence hash.
+         */
+        CandidateFactorContributionResponse: {
+            /** Contribution */
+            contribution: number | null;
+            /** Evidence Hash */
+            evidence_hash: string;
+            /** Factor Id */
+            factor_id: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Instrument Id */
+            instrument_id: number | string;
+            /** Rank */
+            rank: number | null;
+            /** Selected */
+            selected: boolean | null;
+            /** Trade Date */
+            trade_date: string;
+            /** Validation Fold Ordinal */
+            validation_fold_ordinal: number;
+        };
+        /**
+         * CandidateSelectionEventResponse
+         * @description One candidate selection event from an immutable candidate bundle.
+         */
+        CandidateSelectionEventResponse: {
+            /** Evidence Hash */
+            evidence_hash: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Instrument Id */
+            instrument_id: number | string;
+            /** Rank */
+            rank: number;
+            /** Score */
+            score: number | null;
+            /** Selected */
+            selected: boolean;
+            /** Trade Date */
+            trade_date: string;
+            /** Validation Fold Ordinal */
+            validation_fold_ordinal: number;
+        };
+        /**
+         * CandidateSelectionPageResponse
+         * @description Typed selections page over one immutable candidate bundle.
+         */
+        CandidateSelectionPageResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Items */
+            items: components["schemas"]["CandidateSelectionEventResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /**
+         * CandidateSelectionReceiptResponse
+         * @description API projection of one append-only candidate preselection event.
+         */
+        CandidateSelectionReceiptResponse: {
+            /** Candidate Evidence Artifact Id */
+            candidate_evidence_artifact_id: string;
+            /** Candidate Evidence Content Hash */
+            candidate_evidence_content_hash: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string;
+            /** Event Id */
+            event_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Revision */
+            revision: number;
+            /** Selection Evidence Content Hash */
+            selection_evidence_content_hash: string;
+            /** Selection Id */
+            selection_id: string;
+        };
+        /**
+         * CandidateSelectionRequest
+         * @description Body for one durable server-side promotion preselection.
+         */
+        CandidateSelectionRequest: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Rationale */
+            rationale: string;
         };
         /**
          * CatalogAssetRefResponse
@@ -3380,10 +4482,10 @@ export interface components {
             /** @description 资产身份 */
             asset: components["schemas"]["CatalogAssetRefResponse"];
             /**
-             * Storage Uri
-             * @description 存储 URI
+             * Freshness At
+             * @description 最新鲜度时间
              */
-            storage_uri: string;
+            freshness_at: string;
             /** @description Schema 指纹 */
             schema_fingerprint: components["schemas"]["CatalogSchemaResponse"];
             /**
@@ -3392,10 +4494,10 @@ export interface components {
              */
             source: string;
             /**
-             * Freshness At
-             * @description 最新鲜度时间
+             * Storage Uri
+             * @description 存储 URI
              */
-            freshness_at: string;
+            storage_uri: string;
         };
         /**
          * CatalogRemediationActionExecutionResponse
@@ -3403,30 +4505,30 @@ export interface components {
          */
         CatalogRemediationActionExecutionResponse: {
             /**
-             * Approval Id
-             * @description stable remediation approval ID
-             */
-            approval_id: string;
-            /**
              * Action
              * @description remediation action code
              */
             action: string;
             /**
-             * Status
-             * @description execution status: success/skipped/failed
+             * Approval Id
+             * @description stable remediation approval ID
              */
-            status: string;
+            approval_id: string;
+            /**
+             * Executed At
+             * @description execution time
+             */
+            executed_at: string;
             /**
              * Executed By
              * @description execution operator or backend actor
              */
             executed_by: string;
             /**
-             * Executed At
-             * @description execution time
+             * Notes
+             * @description execution notes
              */
-            executed_at: string;
+            notes?: string | null;
             /**
              * Result Payload
              * @description backend action result payload
@@ -3435,10 +4537,10 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
-             * Notes
-             * @description execution notes
+             * Status
+             * @description execution status: success/skipped/failed
              */
-            notes?: string | null;
+            status: string;
         };
         /**
          * CatalogRemediationApprovalDecisionRequest
@@ -3446,16 +4548,16 @@ export interface components {
          */
         CatalogRemediationApprovalDecisionRequest: {
             /**
+             * Decided By
+             * @description decision operator or system
+             */
+            decided_by: string;
+            /**
              * Decision
              * @description approved or rejected
              * @enum {string}
              */
             decision: "approved" | "rejected";
-            /**
-             * Decided By
-             * @description decision operator or system
-             */
-            decided_by: string;
             /**
              * Notes
              * @description decision notes
@@ -3468,35 +4570,35 @@ export interface components {
          */
         CatalogRemediationApprovalEventResponse: {
             /**
-             * Approval Id
-             * @description stable remediation approval ID
-             */
-            approval_id: string;
-            /**
              * Action
              * @description audit event action
              */
             action: string;
-            /**
-             * Actor
-             * @description operator or backend actor that wrote the event
-             */
-            actor: string;
             /**
              * Action At
              * @description audit event time
              */
             action_at: string;
             /**
-             * Status
-             * @description approval status after the event
+             * Actor
+             * @description operator or backend actor that wrote the event
              */
-            status: string;
+            actor: string;
+            /**
+             * Approval Id
+             * @description stable remediation approval ID
+             */
+            approval_id: string;
             /**
              * Notes
              * @description audit event notes
              */
             notes?: string | null;
+            /**
+             * Status
+             * @description approval status after the event
+             */
+            status: string;
         };
         /**
          * CatalogRemediationApprovalExecutionRequest
@@ -3545,6 +4647,11 @@ export interface components {
              */
             method?: string | null;
             /**
+             * Notes
+             * @description intent 说明
+             */
+            notes?: string | null;
+            /**
              * Path
              * @description 后端 API path
              */
@@ -3561,11 +4668,6 @@ export interface components {
              * @description 执行该 intent 前需要 operator 填写的字段
              */
             required_operator_inputs?: string[];
-            /**
-             * Notes
-             * @description intent 说明
-             */
-            notes?: string | null;
         };
         /**
          * CatalogRemediationApprovalRequest
@@ -3573,30 +4675,30 @@ export interface components {
          */
         CatalogRemediationApprovalRequest: {
             /**
-             * Item Id
-             * @description remediation backlog item ID
-             */
-            item_id: string;
-            /**
              * Action
              * @description remediation action code
              */
             action: string;
-            /**
-             * Requested By
-             * @description requesting operator or system
-             */
-            requested_by: string;
             /**
              * Intent Type
              * @description intent type: read/write/manual
              */
             intent_type: string;
             /**
+             * Item Id
+             * @description remediation backlog item ID
+             */
+            item_id: string;
+            /**
              * Method
              * @description target backend method
              */
             method?: string | null;
+            /**
+             * Notes
+             * @description approval request notes
+             */
+            notes?: string | null;
             /**
              * Path
              * @description target backend path
@@ -3610,10 +4712,10 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
-             * Notes
-             * @description approval request notes
+             * Requested By
+             * @description requesting operator or system
              */
-            notes?: string | null;
+            requested_by: string;
         };
         /**
          * CatalogRemediationApprovalResponse
@@ -3621,45 +4723,50 @@ export interface components {
          */
         CatalogRemediationApprovalResponse: {
             /**
-             * Approval Id
-             * @description stable remediation approval ID
-             */
-            approval_id: string;
-            /**
-             * Item Id
-             * @description remediation backlog item ID
-             */
-            item_id: string;
-            /**
              * Action
              * @description remediation action code
              */
             action: string;
             /**
-             * Status
-             * @description current approval status
+             * Approval Id
+             * @description stable remediation approval ID
              */
-            status: string;
+            approval_id: string;
             /**
-             * Requested By
-             * @description requesting operator or system
+             * Decided At
+             * @description decision time
              */
-            requested_by: string;
+            decided_at?: string | null;
             /**
-             * Requested At
-             * @description approval request time
+             * Decided By
+             * @description decision actor
              */
-            requested_at: string;
+            decided_by?: string | null;
+            /**
+             * Decision Notes
+             * @description decision notes
+             */
+            decision_notes?: string | null;
             /**
              * Intent Type
              * @description intent type: read/write/manual
              */
             intent_type: string;
             /**
+             * Item Id
+             * @description remediation backlog item ID
+             */
+            item_id: string;
+            /**
              * Method
              * @description target backend method
              */
             method?: string | null;
+            /**
+             * Notes
+             * @description approval request notes
+             */
+            notes?: string | null;
             /**
              * Path
              * @description target backend path
@@ -3673,25 +4780,20 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
-             * Notes
-             * @description approval request notes
+             * Requested At
+             * @description approval request time
              */
-            notes?: string | null;
+            requested_at: string;
             /**
-             * Decided By
-             * @description decision actor
+             * Requested By
+             * @description requesting operator or system
              */
-            decided_by?: string | null;
+            requested_by: string;
             /**
-             * Decided At
-             * @description decision time
+             * Status
+             * @description current approval status
              */
-            decided_at?: string | null;
-            /**
-             * Decision Notes
-             * @description decision notes
-             */
-            decision_notes?: string | null;
+            status: string;
         };
         /** @enum {string} */
         CatalogRemediationApprovalStatus: "requested" | "approved" | "rejected" | "completed" | "cancelled";
@@ -3701,35 +4803,35 @@ export interface components {
          */
         CatalogRemediationBacklogResponse: {
             /**
-             * Generated At
-             * @description backlog 生成时间
+             * Available Sources
+             * @description 参与 source=auto 判断的来源
              */
-            generated_at: string;
+            available_sources: string[];
             /**
              * Dataset Ids
              * @description 报告覆盖的数据集 ID
              */
             dataset_ids: string[];
             /**
-             * Trade Dates
-             * @description 报告覆盖的交易日期
+             * Generated At
+             * @description backlog 生成时间
              */
-            trade_dates: string[];
+            generated_at: string;
             /**
-             * Available Sources
-             * @description 参与 source=auto 判断的来源
+             * Items
+             * @description 按 severity 排序的 remediation backlog items
              */
-            available_sources: string[];
+            items: components["schemas"]["CatalogRemediationItemResponse"][];
+            /**
+             * Reason Counts
+             * @description 按来源报告和 reason 聚合的 backlog item 数量
+             */
+            reason_counts?: components["schemas"]["CatalogRemediationReasonCountResponse"][];
             /**
              * Run Id
              * @description 可选 backtest run ID
              */
             run_id?: string | null;
-            /**
-             * Total Items
-             * @description backlog item 总数
-             */
-            total_items: number;
             /**
              * Severity Counts
              * @description 按 severity 聚合的 backlog item 数量
@@ -3741,26 +4843,31 @@ export interface components {
              */
             source_counts?: components["schemas"]["CatalogRemediationSourceCountResponse"][];
             /**
-             * Reason Counts
-             * @description 按来源报告和 reason 聚合的 backlog item 数量
-             */
-            reason_counts?: components["schemas"]["CatalogRemediationReasonCountResponse"][];
-            /**
              * Source Fallback Policy Effect Counts
              * @description 按 active source fallback policy effect 聚合的 backlog item 数量
              */
             source_fallback_policy_effect_counts?: components["schemas"]["CatalogRemediationSourceFallbackPolicyEffectCountResponse"][];
             /**
-             * Items
-             * @description 按 severity 排序的 remediation backlog items
+             * Total Items
+             * @description backlog item 总数
              */
-            items: components["schemas"]["CatalogRemediationItemResponse"][];
+            total_items: number;
+            /**
+             * Trade Dates
+             * @description 报告覆盖的交易日期
+             */
+            trade_dates: string[];
         };
         /**
          * CatalogRemediationEvidenceRequirementResponse
          * @description Evidence requirement for one remediation item.
          */
         CatalogRemediationEvidenceRequirementResponse: {
+            /**
+             * Description
+             * @description requirement 描述
+             */
+            description: string;
             /**
              * Requirement Id
              * @description 稳定 evidence requirement ID
@@ -3776,17 +4883,22 @@ export interface components {
              * @description requirement 当前状态
              */
             status: string;
-            /**
-             * Description
-             * @description requirement 描述
-             */
-            description: string;
         };
         /**
          * CatalogRemediationItemDetailResponse
          * @description Detailed backend-owned remediation item response.
          */
         CatalogRemediationItemDetailResponse: {
+            /**
+             * Approval Intents
+             * @description 可由后端消费者发起的下一步审批/证据 intent
+             */
+            approval_intents?: components["schemas"]["CatalogRemediationApprovalIntentResponse"][];
+            /**
+             * Evidence Requirements
+             * @description 推进该 remediation 前需要补齐或复核的证据
+             */
+            evidence_requirements?: components["schemas"]["CatalogRemediationEvidenceRequirementResponse"][];
             /**
              * Generated At
              * @description detail 生成时间
@@ -3799,16 +4911,6 @@ export interface components {
              * @description 后端生成的 remediation 摘要
              */
             summary: string;
-            /**
-             * Evidence Requirements
-             * @description 推进该 remediation 前需要补齐或复核的证据
-             */
-            evidence_requirements?: components["schemas"]["CatalogRemediationEvidenceRequirementResponse"][];
-            /**
-             * Approval Intents
-             * @description 可由后端消费者发起的下一步审批/证据 intent
-             */
-            approval_intents?: components["schemas"]["CatalogRemediationApprovalIntentResponse"][];
         };
         /**
          * CatalogRemediationItemResponse
@@ -3816,35 +4918,97 @@ export interface components {
          */
         CatalogRemediationItemResponse: {
             /**
-             * Item Id
-             * @description 稳定 backlog item ID
+             * Catalog Status
+             * @description lineage catalog 状态
              */
-            item_id: string;
+            catalog_status?: string | null;
             /**
-             * Source
-             * @description backlog item 来源报告
+             * Current Maturity
+             * @description 当前 maturity
              */
-            source: string;
+            current_maturity?: string | null;
             /**
              * Dataset Id
              * @description 数据集 ID
              */
             dataset_id: string;
             /**
+             * Default Source
+             * @description 默认数据源
+             */
+            default_source?: string | null;
+            /**
+             * Fallback Sources
+             * @description source-health 当前候选 fallback 数据源
+             */
+            fallback_sources?: string[];
+            /**
+             * Freshness Status
+             * @description freshness 状态
+             */
+            freshness_status?: string | null;
+            /**
+             * Item Id
+             * @description 稳定 backlog item ID
+             */
+            item_id: string;
+            /**
              * Namespace
              * @description Catalog namespace
              */
             namespace: string;
+            /**
+             * Partition Keys
+             * @description Catalog/lineage asset partition keys
+             */
+            partition_keys?: string[];
+            /**
+             * Promotion Status
+             * @description 晋级评估状态
+             */
+            promotion_status?: string | null;
+            /**
+             * Reasons
+             * @description 触发该 backlog item 的结构化 reason codes
+             */
+            reasons?: string[];
+            /**
+             * Run Id
+             * @description 关联 backtest run ID
+             */
+            run_id?: string | null;
+            /**
+             * Selected Source
+             * @description source=auto 当前选择的数据源
+             */
+            selected_source?: string | null;
             /**
              * Severity
              * @description remediation severity
              */
             severity: string;
             /**
-             * Reasons
-             * @description 触发该 backlog item 的结构化 reason codes
+             * Side
+             * @description lineage asset side
              */
-            reasons?: string[];
+            side?: string | null;
+            /**
+             * Source
+             * @description backlog item 来源报告
+             */
+            source: string;
+            /** @description active source fallback policy 对该 remediation item 的影响证据 */
+            source_fallback_policy_effect?: components["schemas"]["CatalogSourceFallbackPolicyEffectResponse"] | null;
+            /**
+             * Source Selection Blockers
+             * @description 阻塞 source=auto 选源执行的稳定 blocker codes
+             */
+            source_selection_blockers?: string[];
+            /**
+             * Source Selection Status
+             * @description source=auto 选源 readiness 状态
+             */
+            source_selection_status?: string | null;
             /**
              * Suggested Actions
              * @description 后端建议的稳定修复动作代码
@@ -3855,68 +5019,6 @@ export interface components {
              * @description 交易日期
              */
             trade_date?: string | null;
-            /**
-             * Run Id
-             * @description 关联 backtest run ID
-             */
-            run_id?: string | null;
-            /**
-             * Side
-             * @description lineage asset side
-             */
-            side?: string | null;
-            /**
-             * Partition Keys
-             * @description Catalog/lineage asset partition keys
-             */
-            partition_keys?: string[];
-            /**
-             * Default Source
-             * @description 默认数据源
-             */
-            default_source?: string | null;
-            /**
-             * Selected Source
-             * @description source=auto 当前选择的数据源
-             */
-            selected_source?: string | null;
-            /**
-             * Fallback Sources
-             * @description source-health 当前候选 fallback 数据源
-             */
-            fallback_sources?: string[];
-            /** @description active source fallback policy 对该 remediation item 的影响证据 */
-            source_fallback_policy_effect?: components["schemas"]["CatalogSourceFallbackPolicyEffectResponse"] | null;
-            /**
-             * Source Selection Status
-             * @description source=auto 选源 readiness 状态
-             */
-            source_selection_status?: string | null;
-            /**
-             * Source Selection Blockers
-             * @description 阻塞 source=auto 选源执行的稳定 blocker codes
-             */
-            source_selection_blockers?: string[];
-            /**
-             * Current Maturity
-             * @description 当前 maturity
-             */
-            current_maturity?: string | null;
-            /**
-             * Promotion Status
-             * @description 晋级评估状态
-             */
-            promotion_status?: string | null;
-            /**
-             * Catalog Status
-             * @description lineage catalog 状态
-             */
-            catalog_status?: string | null;
-            /**
-             * Freshness Status
-             * @description freshness 状态
-             */
-            freshness_status?: string | null;
         };
         /**
          * CatalogRemediationReasonCountResponse
@@ -3924,20 +5026,20 @@ export interface components {
          */
         CatalogRemediationReasonCountResponse: {
             /**
-             * Source
-             * @description backlog item 来源报告
+             * Count
+             * @description 该 reason 的 backlog item 数量
              */
-            source: string;
+            count: number;
             /**
              * Reason
              * @description 结构化 reason code
              */
             reason: string;
             /**
-             * Count
-             * @description 该 reason 的 backlog item 数量
+             * Source
+             * @description backlog item 来源报告
              */
-            count: number;
+            source: string;
         };
         /**
          * CatalogRemediationSeverityCountResponse
@@ -3945,15 +5047,15 @@ export interface components {
          */
         CatalogRemediationSeverityCountResponse: {
             /**
-             * Severity
-             * @description remediation severity
-             */
-            severity: string;
-            /**
              * Count
              * @description 该 severity 的 backlog item 数量
              */
             count: number;
+            /**
+             * Severity
+             * @description remediation severity
+             */
+            severity: string;
         };
         /**
          * CatalogRemediationSourceCountResponse
@@ -3961,21 +5063,36 @@ export interface components {
          */
         CatalogRemediationSourceCountResponse: {
             /**
-             * Source
-             * @description backlog item 来源报告
-             */
-            source: string;
-            /**
              * Count
              * @description 该来源报告产生的 backlog item 数量
              */
             count: number;
+            /**
+             * Source
+             * @description backlog item 来源报告
+             */
+            source: string;
         };
         /**
          * CatalogRemediationSourceFallbackPolicyEffectCountResponse
          * @description Catalog remediation backlog count by source fallback policy effect.
          */
         CatalogRemediationSourceFallbackPolicyEffectCountResponse: {
+            /**
+             * Catalog Selected Source
+             * @description Catalog freshness 策略原本选择的来源
+             */
+            catalog_selected_source: string;
+            /**
+             * Count
+             * @description 该 policy effect 影响的 backlog item 数量
+             */
+            count: number;
+            /**
+             * Effective Selected Source
+             * @description 应用 active fallback policy 后的最终来源
+             */
+            effective_selected_source: string;
             /**
              * Policy Id
              * @description 触发 source fallback effect 的 policy ID
@@ -3986,21 +5103,6 @@ export interface components {
              * @description 触发 effect 的 policy lifecycle 状态
              */
             policy_status: string;
-            /**
-             * Catalog Selected Source
-             * @description Catalog freshness 策略原本选择的来源
-             */
-            catalog_selected_source: string;
-            /**
-             * Effective Selected Source
-             * @description 应用 active fallback policy 后的最终来源
-             */
-            effective_selected_source: string;
-            /**
-             * Count
-             * @description 该 policy effect 影响的 backlog item 数量
-             */
-            count: number;
         };
         /**
          * CatalogSchemaResponse
@@ -4008,20 +5110,20 @@ export interface components {
          */
         CatalogSchemaResponse: {
             /**
-             * Schema Hash
-             * @description Schema 指纹
+             * Created At
+             * @description Schema 观测时间
              */
-            schema_hash: string;
+            created_at?: string | null;
             /**
              * Row Count
              * @description 记录数
              */
             row_count?: number | null;
             /**
-             * Created At
-             * @description Schema 观测时间
+             * Schema Hash
+             * @description Schema 指纹
              */
-            created_at?: string | null;
+            schema_hash: string;
         };
         /**
          * CatalogSourceFallbackPolicyActionCountResponse
@@ -4045,101 +5147,91 @@ export interface components {
          */
         CatalogSourceFallbackPolicyDraftRequest: {
             /**
-             * Dataset Id
-             * @description 数据集 ID
+             * Approval Required
+             * @description 是否需要人工审批或复核
              */
-            dataset_id: string;
-            /**
-             * Namespace
-             * @description Catalog namespace
-             */
-            namespace: string;
-            /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
-            /**
-             * Default Source
-             * @description DatasetMetadata 默认来源
-             */
-            default_source: string;
-            /**
-             * Selected Source
-             * @description source=auto 当前选择的来源
-             */
-            selected_source: string;
-            /**
-             * Recommended Source
-             * @description 后端建议持久化的 fallback 来源
-             */
-            recommended_source?: string | null;
+            approval_required: boolean;
             /**
              * Created By
              * @description 创建 draft policy 的 operator/backend actor
              */
             created_by: string;
             /**
-             * Recommended Actions
-             * @description 后端建议的下一步 action codes
+             * Dataset Id
+             * @description 数据集 ID
              */
-            recommended_actions?: string[];
+            dataset_id: string;
             /**
-             * Reason Codes
-             * @description 支撑该 policy draft 的 reason/blocker codes
+             * Default Source
+             * @description DatasetMetadata 默认来源
              */
-            reason_codes?: string[];
-            /**
-             * Fallback Sources
-             * @description 候选 fallback sources
-             */
-            fallback_sources?: string[];
-            /**
-             * Unsupported Sources
-             * @description 当前请求中不被 dataset metadata 支持的来源
-             */
-            unsupported_sources?: string[];
-            /**
-             * Source Selection Status
-             * @description source=auto readiness 状态
-             */
-            source_selection_status: string;
-            /**
-             * Source Selection Blockers
-             * @description 阻塞 source=auto 编排的结构化原因代码
-             */
-            source_selection_blockers?: string[];
-            /**
-             * Approval Required
-             * @description 是否需要人工审批或复核
-             */
-            approval_required: boolean;
+            default_source: string;
             /**
              * Execution Allowed
              * @description 是否允许进入后端执行编排
              */
             execution_allowed: boolean;
             /**
+             * Fallback Sources
+             * @description 候选 fallback sources
+             */
+            fallback_sources?: string[];
+            /**
+             * Namespace
+             * @description Catalog namespace
+             */
+            namespace: string;
+            /**
              * Notes
              * @description draft policy 备注
              */
             notes?: string | null;
+            /**
+             * Reason Codes
+             * @description 支撑该 policy draft 的 reason/blocker codes
+             */
+            reason_codes?: string[];
+            /**
+             * Recommended Actions
+             * @description 后端建议的下一步 action codes
+             */
+            recommended_actions?: string[];
+            /**
+             * Recommended Source
+             * @description 后端建议持久化的 fallback 来源
+             */
+            recommended_source?: string | null;
+            /**
+             * Selected Source
+             * @description source=auto 当前选择的来源
+             */
+            selected_source: string;
+            /**
+             * Source Selection Blockers
+             * @description 阻塞 source=auto 编排的结构化原因代码
+             */
+            source_selection_blockers?: string[];
+            /**
+             * Source Selection Status
+             * @description source=auto readiness 状态
+             */
+            source_selection_status: string;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
+            /**
+             * Unsupported Sources
+             * @description 当前请求中不被 dataset metadata 支持的来源
+             */
+            unsupported_sources?: string[];
         };
         /**
          * CatalogSourceFallbackPolicyEffectResponse
          * @description Active source fallback policy effect evidence.
          */
         CatalogSourceFallbackPolicyEffectResponse: {
-            /**
-             * Policy Id
-             * @description 触发 source fallback effect 的 policy ID
-             */
-            policy_id: string;
-            /**
-             * Policy Status
-             * @description 触发 effect 的 policy lifecycle 状态
-             */
-            policy_status: string;
             /**
              * Catalog Selected Source
              * @description Catalog freshness 策略原本选择的来源
@@ -4150,6 +5242,16 @@ export interface components {
              * @description 应用 active fallback policy 后的最终来源
              */
             effective_selected_source: string;
+            /**
+             * Policy Id
+             * @description 触发 source fallback effect 的 policy ID
+             */
+            policy_id: string;
+            /**
+             * Policy Status
+             * @description 触发 effect 的 policy lifecycle 状态
+             */
+            policy_status: string;
             /**
              * Reason Codes
              * @description policy 持久化的结构化原因代码
@@ -4167,35 +5269,35 @@ export interface components {
          */
         CatalogSourceFallbackPolicyEventResponse: {
             /**
-             * Policy Id
-             * @description stable source fallback policy ID
-             */
-            policy_id: string;
-            /**
              * Action
              * @description audit event action
              */
             action: string;
-            /**
-             * Actor
-             * @description operator/backend actor that wrote the event
-             */
-            actor: string;
             /**
              * Action At
              * @description audit event time
              */
             action_at: string;
             /**
-             * Status
-             * @description policy status after the event
+             * Actor
+             * @description operator/backend actor that wrote the event
              */
-            status: string;
+            actor: string;
             /**
              * Notes
              * @description audit event notes
              */
             notes?: string | null;
+            /**
+             * Policy Id
+             * @description stable source fallback policy ID
+             */
+            policy_id: string;
+            /**
+             * Status
+             * @description policy status after the event
+             */
+            status: string;
         };
         /**
          * CatalogSourceFallbackPolicyLifecycleRequest
@@ -4219,30 +5321,55 @@ export interface components {
          */
         CatalogSourceFallbackPolicyPreviewResponse: {
             /**
+             * Approval Required
+             * @description 是否需要人工审批或复核
+             */
+            approval_required: boolean;
+            /**
              * Dataset Id
              * @description 数据集 ID
              */
             dataset_id: string;
-            /**
-             * Namespace
-             * @description Catalog namespace
-             */
-            namespace: string;
-            /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
             /**
              * Default Source
              * @description DatasetMetadata 默认来源
              */
             default_source: string;
             /**
-             * Selected Source
-             * @description source=auto 当前会选择的来源
+             * Execution Allowed
+             * @description 当前 source=auto 结果是否可进入后端执行编排
              */
-            selected_source: string;
+            execution_allowed: boolean;
+            /**
+             * Fallback Sources
+             * @description 该数据集支持的非默认候选来源
+             */
+            fallback_sources?: string[];
+            /**
+             * Latest Revocation Reason
+             * @description 最近一次数据集晋级撤销原因分类
+             */
+            latest_revocation_reason?: string | null;
+            /**
+             * Namespace
+             * @description Catalog namespace
+             */
+            namespace: string;
+            /**
+             * Policy Status
+             * @description fallback policy preview 状态
+             */
+            policy_status: string;
+            /**
+             * Reason Codes
+             * @description 支撑该 preview 决策的 reason/blocker codes
+             */
+            reason_codes?: string[];
+            /**
+             * Recommended Actions
+             * @description 后端建议的下一步 action codes
+             */
+            recommended_actions?: string[];
             /**
              * Recommended Source
              * @description 后端建议使用的来源; blocked 时为空
@@ -4254,55 +5381,30 @@ export interface components {
              */
             selected_freshness_status: string;
             /**
-             * Policy Status
-             * @description fallback policy preview 状态
+             * Selected Source
+             * @description source=auto 当前会选择的来源
              */
-            policy_status: string;
-            /**
-             * Recommended Actions
-             * @description 后端建议的下一步 action codes
-             */
-            recommended_actions?: string[];
-            /**
-             * Approval Required
-             * @description 是否需要人工审批或复核
-             */
-            approval_required: boolean;
-            /**
-             * Execution Allowed
-             * @description 当前 source=auto 结果是否可进入后端执行编排
-             */
-            execution_allowed: boolean;
-            /**
-             * Reason Codes
-             * @description 支撑该 preview 决策的 reason/blocker codes
-             */
-            reason_codes?: string[];
-            /**
-             * Fallback Sources
-             * @description 该数据集支持的非默认候选来源
-             */
-            fallback_sources?: string[];
-            /**
-             * Unsupported Sources
-             * @description 本次可用来源中不被该数据集 metadata 支持的来源
-             */
-            unsupported_sources?: string[];
-            /**
-             * Source Selection Status
-             * @description source=auto 选中来源是否可用于后端编排
-             */
-            source_selection_status: string;
+            selected_source: string;
             /**
              * Source Selection Blockers
              * @description 阻塞 source=auto 编排的结构化原因代码
              */
             source_selection_blockers?: string[];
             /**
-             * Latest Revocation Reason
-             * @description 最近一次数据集晋级撤销原因分类
+             * Source Selection Status
+             * @description source=auto 选中来源是否可用于后端编排
              */
-            latest_revocation_reason?: string | null;
+            source_selection_status: string;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
+            /**
+             * Unsupported Sources
+             * @description 本次可用来源中不被该数据集 metadata 支持的来源
+             */
+            unsupported_sources?: string[];
         };
         /**
          * CatalogSourceFallbackPolicyStateResponse
@@ -4310,115 +5412,115 @@ export interface components {
          */
         CatalogSourceFallbackPolicyStateResponse: {
             /**
-             * Policy Id
-             * @description stable source fallback policy ID
+             * Approval Required
+             * @description 是否需要人工审批或复核
              */
-            policy_id: string;
-            /**
-             * Dataset Id
-             * @description 数据集 ID
-             */
-            dataset_id: string;
-            /**
-             * Namespace
-             * @description Catalog namespace
-             */
-            namespace: string;
-            /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
-            /**
-             * Default Source
-             * @description DatasetMetadata 默认来源
-             */
-            default_source: string;
-            /**
-             * Selected Source
-             * @description source=auto 当前选择的来源
-             */
-            selected_source: string;
-            /**
-             * Recommended Source
-             * @description 后端建议持久化的 fallback 来源
-             */
-            recommended_source?: string | null;
-            /**
-             * Status
-             * @description current policy lifecycle status
-             */
-            status: string;
-            /**
-             * Created By
-             * @description 创建 policy 的 operator/backend actor
-             */
-            created_by: string;
+            approval_required: boolean;
             /**
              * Created At
              * @description policy 创建时间
              */
             created_at: string;
             /**
-             * Recommended Actions
-             * @description 后端建议的下一步 action codes
+             * Created By
+             * @description 创建 policy 的 operator/backend actor
              */
-            recommended_actions?: string[];
+            created_by: string;
             /**
-             * Reason Codes
-             * @description 支撑该 policy 的 reason/blocker codes
+             * Dataset Id
+             * @description 数据集 ID
              */
-            reason_codes?: string[];
-            /**
-             * Fallback Sources
-             * @description 候选 fallback sources
-             */
-            fallback_sources?: string[];
-            /**
-             * Unsupported Sources
-             * @description 当前请求中不被 dataset metadata 支持的来源
-             */
-            unsupported_sources?: string[];
-            /**
-             * Source Selection Status
-             * @description source=auto readiness 状态
-             */
-            source_selection_status: string;
-            /**
-             * Source Selection Blockers
-             * @description 阻塞 source=auto 编排的结构化原因代码
-             */
-            source_selection_blockers?: string[];
-            /**
-             * Approval Required
-             * @description 是否需要人工审批或复核
-             */
-            approval_required: boolean;
-            /**
-             * Execution Allowed
-             * @description 是否允许进入后端执行编排
-             */
-            execution_allowed: boolean;
-            /**
-             * Notes
-             * @description policy 备注
-             */
-            notes?: string | null;
-            /**
-             * Decided By
-             * @description decision actor
-             */
-            decided_by?: string | null;
+            dataset_id: string;
             /**
              * Decided At
              * @description decision time
              */
             decided_at?: string | null;
             /**
+             * Decided By
+             * @description decision actor
+             */
+            decided_by?: string | null;
+            /**
              * Decision Notes
              * @description decision notes
              */
             decision_notes?: string | null;
+            /**
+             * Default Source
+             * @description DatasetMetadata 默认来源
+             */
+            default_source: string;
+            /**
+             * Execution Allowed
+             * @description 是否允许进入后端执行编排
+             */
+            execution_allowed: boolean;
+            /**
+             * Fallback Sources
+             * @description 候选 fallback sources
+             */
+            fallback_sources?: string[];
+            /**
+             * Namespace
+             * @description Catalog namespace
+             */
+            namespace: string;
+            /**
+             * Notes
+             * @description policy 备注
+             */
+            notes?: string | null;
+            /**
+             * Policy Id
+             * @description stable source fallback policy ID
+             */
+            policy_id: string;
+            /**
+             * Reason Codes
+             * @description 支撑该 policy 的 reason/blocker codes
+             */
+            reason_codes?: string[];
+            /**
+             * Recommended Actions
+             * @description 后端建议的下一步 action codes
+             */
+            recommended_actions?: string[];
+            /**
+             * Recommended Source
+             * @description 后端建议持久化的 fallback 来源
+             */
+            recommended_source?: string | null;
+            /**
+             * Selected Source
+             * @description source=auto 当前选择的来源
+             */
+            selected_source: string;
+            /**
+             * Source Selection Blockers
+             * @description 阻塞 source=auto 编排的结构化原因代码
+             */
+            source_selection_blockers?: string[];
+            /**
+             * Source Selection Status
+             * @description source=auto readiness 状态
+             */
+            source_selection_status: string;
+            /**
+             * Status
+             * @description current policy lifecycle status
+             */
+            status: string;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
+            /**
+             * Unsupported Sources
+             * @description 当前请求中不被 dataset metadata 支持的来源
+             */
+            unsupported_sources?: string[];
         };
         /** @enum {string} */
         CatalogSourceFallbackPolicyStatus: "draft" | "approved" | "active" | "retired";
@@ -4428,15 +5530,15 @@ export interface components {
          */
         CatalogSourceFallbackPolicyStatusCountResponse: {
             /**
-             * Status
-             * @description fallback policy preview 状态
-             */
-            status: string;
-            /**
              * Count
              * @description 该状态覆盖的 preview 数量
              */
             count: number;
+            /**
+             * Status
+             * @description fallback policy preview 状态
+             */
+            status: string;
         };
         /**
          * CatalogSourceFallbackPolicySummaryResponse
@@ -4444,30 +5546,20 @@ export interface components {
          */
         CatalogSourceFallbackPolicySummaryResponse: {
             /**
-             * Dataset Ids
-             * @description 聚合的数据集 ID
+             * Approval Required Count
+             * @description 需要审批或人工复核的 preview 数量
              */
-            dataset_ids: string[];
-            /**
-             * Trade Dates
-             * @description 聚合的交易日期
-             */
-            trade_dates: string[];
+            approval_required_count: number;
             /**
              * Available Sources
              * @description 参与 source=auto 判断的来源
              */
             available_sources: string[];
             /**
-             * Total Previews
-             * @description 单项 fallback policy preview 数量
+             * Dataset Ids
+             * @description 聚合的数据集 ID
              */
-            total_previews: number;
-            /**
-             * Approval Required Count
-             * @description 需要审批或人工复核的 preview 数量
-             */
-            approval_required_count: number;
+            dataset_ids: string[];
             /**
              * Execution Allowed Count
              * @description 允许进入后端执行编排的 preview 数量
@@ -4479,65 +5571,31 @@ export interface components {
              */
             policy_status_counts: components["schemas"]["CatalogSourceFallbackPolicyStatusCountResponse"][];
             /**
+             * Previews
+             * @description 明细 fallback policy previews
+             */
+            previews: components["schemas"]["CatalogSourceFallbackPolicyPreviewResponse"][];
+            /**
              * Recommended Action Counts
              * @description 按 recommended action 聚合的数量
              */
             recommended_action_counts?: components["schemas"]["CatalogSourceFallbackPolicyActionCountResponse"][];
             /**
-             * Previews
-             * @description 明细 fallback policy previews
+             * Total Previews
+             * @description 单项 fallback policy preview 数量
              */
-            previews: components["schemas"]["CatalogSourceFallbackPolicyPreviewResponse"][];
+            total_previews: number;
+            /**
+             * Trade Dates
+             * @description 聚合的交易日期
+             */
+            trade_dates: string[];
         };
         /**
          * CatalogSourceHealthAttentionItemResponse
          * @description Source-health summary item requiring operator attention.
          */
         CatalogSourceHealthAttentionItemResponse: {
-            /**
-             * Dataset Id
-             * @description 数据集 ID
-             */
-            dataset_id: string;
-            /**
-             * Namespace
-             * @description Catalog namespace
-             */
-            namespace: string;
-            /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
-            /**
-             * Default Source
-             * @description DatasetMetadata 默认来源
-             */
-            default_source: string;
-            /**
-             * Selected Source
-             * @description source=auto 当前会选择的来源
-             */
-            selected_source: string;
-            /**
-             * Selected Freshness Status
-             * @description selected source freshness 状态
-             */
-            selected_freshness_status: string;
-            /** @description selected source 的 freshness/storage/schema 证据 */
-            selected_source_health: components["schemas"]["CatalogSourceHealthResponse"];
-            /** @description active fallback policy 对 source=auto 选择产生的只读证据 */
-            source_fallback_policy_effect?: components["schemas"]["CatalogSourceFallbackPolicyEffectResponse"] | null;
-            /**
-             * Source Selection Status
-             * @description source=auto 选中来源是否可用于后端编排
-             */
-            source_selection_status: string;
-            /**
-             * Source Selection Blockers
-             * @description 阻塞 source=auto 编排的结构化原因代码
-             */
-            source_selection_blockers?: string[];
             /**
              * Attention Reasons
              * @description 需要后端消费者关注该 report 的结构化原因代码
@@ -4549,10 +5607,15 @@ export interface components {
              */
             attention_severity: string;
             /**
-             * Unsupported Sources
-             * @description 本次可用来源中不被该数据集 metadata 支持的来源
+             * Dataset Id
+             * @description 数据集 ID
              */
-            unsupported_sources?: string[];
+            dataset_id: string;
+            /**
+             * Default Source
+             * @description DatasetMetadata 默认来源
+             */
+            default_source: string;
             /**
              * Failover From Default
              * @description source=auto 是否选择了非默认来源
@@ -4567,15 +5630,54 @@ export interface components {
             /** @description 最近一次数据集晋级撤销原因分类 */
             latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
             /**
+             * Latest Revoked At
+             * @description 最近一次数据集晋级撤销时间
+             */
+            latest_revoked_at?: string | null;
+            /**
              * Latest Revoked By
              * @description 最近一次数据集晋级撤销人或撤销主体
              */
             latest_revoked_by?: string | null;
             /**
-             * Latest Revoked At
-             * @description 最近一次数据集晋级撤销时间
+             * Namespace
+             * @description Catalog namespace
              */
-            latest_revoked_at?: string | null;
+            namespace: string;
+            /**
+             * Selected Freshness Status
+             * @description selected source freshness 状态
+             */
+            selected_freshness_status: string;
+            /**
+             * Selected Source
+             * @description source=auto 当前会选择的来源
+             */
+            selected_source: string;
+            /** @description selected source 的 freshness/storage/schema 证据 */
+            selected_source_health: components["schemas"]["CatalogSourceHealthResponse"];
+            /** @description active fallback policy 对 source=auto 选择产生的只读证据 */
+            source_fallback_policy_effect?: components["schemas"]["CatalogSourceFallbackPolicyEffectResponse"] | null;
+            /**
+             * Source Selection Blockers
+             * @description 阻塞 source=auto 编排的结构化原因代码
+             */
+            source_selection_blockers?: string[];
+            /**
+             * Source Selection Status
+             * @description source=auto 选中来源是否可用于后端编排
+             */
+            source_selection_status: string;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
+            /**
+             * Unsupported Sources
+             * @description 本次可用来源中不被该数据集 metadata 支持的来源
+             */
+            unsupported_sources?: string[];
         };
         /**
          * CatalogSourceHealthAttentionReasonCountResponse
@@ -4583,15 +5685,15 @@ export interface components {
          */
         CatalogSourceHealthAttentionReasonCountResponse: {
             /**
-             * Reason
-             * @description 需要关注的结构化原因代码
-             */
-            reason: string;
-            /**
              * Count
              * @description 该原因出现次数
              */
             count: number;
+            /**
+             * Reason
+             * @description 需要关注的结构化原因代码
+             */
+            reason: string;
         };
         /**
          * CatalogSourceHealthAttentionSeverityCountResponse
@@ -4599,15 +5701,15 @@ export interface components {
          */
         CatalogSourceHealthAttentionSeverityCountResponse: {
             /**
-             * Severity
-             * @description source-health attention severity
-             */
-            severity: string;
-            /**
              * Count
              * @description 该严重程度覆盖的 attention item 数量
              */
             count: number;
+            /**
+             * Severity
+             * @description source-health attention severity
+             */
+            severity: string;
         };
         /**
          * CatalogSourceHealthReportResponse
@@ -4615,64 +5717,20 @@ export interface components {
          */
         CatalogSourceHealthReportResponse: {
             /**
-             * Dataset Id
-             * @description 数据集 ID
-             */
-            dataset_id: string;
-            /**
-             * Namespace
-             * @description Catalog namespace
-             */
-            namespace: string;
-            /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
-            /**
-             * Default Source
-             * @description DatasetMetadata 默认来源
-             */
-            default_source: string;
-            /**
-             * Selected Source
-             * @description source=auto 当前会选择的来源
-             */
-            selected_source: string;
-            /**
-             * Selected Freshness Status
-             * @description selected_source 在指定交易日的 freshness 状态
-             */
-            selected_freshness_status: string;
-            /** @description source=auto 选中来源的完整 freshness 证据 */
-            selected_source_health: components["schemas"]["CatalogSourceHealthResponse"];
-            /** @description active fallback policy 对 source=auto 选择产生的只读证据 */
-            source_fallback_policy_effect?: components["schemas"]["CatalogSourceFallbackPolicyEffectResponse"] | null;
-            /**
-             * Source Selection Status
-             * @description source=auto 选中来源是否可用于后端编排
-             */
-            source_selection_status: string;
-            /**
-             * Source Selection Blockers
-             * @description 阻塞 source=auto 编排的结构化原因代码
-             */
-            source_selection_blockers?: string[];
-            /**
              * Attention Reasons
              * @description 需要后端消费者关注该 report 的结构化原因代码
              */
             attention_reasons?: string[];
             /**
-             * Sources
-             * @description 候选来源 freshness 证据
+             * Dataset Id
+             * @description 数据集 ID
              */
-            sources: components["schemas"]["CatalogSourceHealthResponse"][];
+            dataset_id: string;
             /**
-             * Unsupported Sources
-             * @description 本次可用来源中不被该数据集 metadata 支持的来源
+             * Default Source
+             * @description DatasetMetadata 默认来源
              */
-            unsupported_sources?: string[];
+            default_source: string;
             /**
              * Failover From Default
              * @description source=auto 是否选择了非默认来源
@@ -4687,15 +5745,59 @@ export interface components {
             /** @description 最近一次数据集晋级撤销原因分类 */
             latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
             /**
+             * Latest Revoked At
+             * @description 最近一次数据集晋级撤销时间
+             */
+            latest_revoked_at?: string | null;
+            /**
              * Latest Revoked By
              * @description 最近一次数据集晋级撤销人或撤销主体
              */
             latest_revoked_by?: string | null;
             /**
-             * Latest Revoked At
-             * @description 最近一次数据集晋级撤销时间
+             * Namespace
+             * @description Catalog namespace
              */
-            latest_revoked_at?: string | null;
+            namespace: string;
+            /**
+             * Selected Freshness Status
+             * @description selected_source 在指定交易日的 freshness 状态
+             */
+            selected_freshness_status: string;
+            /**
+             * Selected Source
+             * @description source=auto 当前会选择的来源
+             */
+            selected_source: string;
+            /** @description source=auto 选中来源的完整 freshness 证据 */
+            selected_source_health: components["schemas"]["CatalogSourceHealthResponse"];
+            /** @description active fallback policy 对 source=auto 选择产生的只读证据 */
+            source_fallback_policy_effect?: components["schemas"]["CatalogSourceFallbackPolicyEffectResponse"] | null;
+            /**
+             * Source Selection Blockers
+             * @description 阻塞 source=auto 编排的结构化原因代码
+             */
+            source_selection_blockers?: string[];
+            /**
+             * Source Selection Status
+             * @description source=auto 选中来源是否可用于后端编排
+             */
+            source_selection_status: string;
+            /**
+             * Sources
+             * @description 候选来源 freshness 证据
+             */
+            sources: components["schemas"]["CatalogSourceHealthResponse"][];
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
+            /**
+             * Unsupported Sources
+             * @description 本次可用来源中不被该数据集 metadata 支持的来源
+             */
+            unsupported_sources?: string[];
         };
         /**
          * CatalogSourceHealthResponse
@@ -4703,45 +5805,45 @@ export interface components {
          */
         CatalogSourceHealthResponse: {
             /**
-             * Source
-             * @description 来源名称
+             * Freshness At
+             * @description Catalog freshness 时间
              */
-            source: string;
-            /**
-             * Supported
-             * @description 该来源是否被数据集 metadata 支持
-             */
-            supported: boolean;
-            /**
-             * Freshness Status
-             * @description 该来源在指定交易日的 freshness 状态
-             */
-            freshness_status: string;
+            freshness_at?: string | null;
             /**
              * Freshness Sla Hours
              * @description 该数据集 freshness SLA 小时数
              */
             freshness_sla_hours?: number | null;
             /**
-             * Freshness At
-             * @description Catalog freshness 时间
+             * Freshness Status
+             * @description 该来源在指定交易日的 freshness 状态
              */
-            freshness_at?: string | null;
+            freshness_status: string;
             /**
-             * Storage Uri
-             * @description Catalog asset storage URI
+             * Row Count
+             * @description Catalog asset row count
              */
-            storage_uri?: string | null;
+            row_count?: number | null;
             /**
              * Schema Hash
              * @description Catalog asset schema hash
              */
             schema_hash?: string | null;
             /**
-             * Row Count
-             * @description Catalog asset row count
+             * Source
+             * @description 来源名称
              */
-            row_count?: number | null;
+            source: string;
+            /**
+             * Storage Uri
+             * @description Catalog asset storage URI
+             */
+            storage_uri?: string | null;
+            /**
+             * Supported
+             * @description 该来源是否被数据集 metadata 支持
+             */
+            supported: boolean;
         };
         /**
          * CatalogSourceHealthStatusCountResponse
@@ -4749,15 +5851,15 @@ export interface components {
          */
         CatalogSourceHealthStatusCountResponse: {
             /**
-             * Status
-             * @description freshness 状态
-             */
-            status: string;
-            /**
              * Count
              * @description 该状态出现次数
              */
             count: number;
+            /**
+             * Status
+             * @description freshness 状态
+             */
+            status: string;
         };
         /**
          * CatalogSourceHealthSummaryReportResponse
@@ -4765,25 +5867,30 @@ export interface components {
          */
         CatalogSourceHealthSummaryReportResponse: {
             /**
-             * Dataset Ids
-             * @description 聚合的数据集 ID
+             * Attention Reason Counts
+             * @description 按 source-health attention reason 聚合的 report 数量
              */
-            dataset_ids: string[];
+            attention_reason_counts?: components["schemas"]["CatalogSourceHealthAttentionReasonCountResponse"][];
             /**
-             * Trade Dates
-             * @description 聚合的交易日期
+             * Attention Required
+             * @description 带有结构化 attention reason 的数据集/日期
              */
-            trade_dates: string[];
+            attention_required: components["schemas"]["CatalogSourceHealthAttentionItemResponse"][];
+            /**
+             * Attention Severity Counts
+             * @description 按 source-health attention severity 聚合的 attention item 数量
+             */
+            attention_severity_counts?: components["schemas"]["CatalogSourceHealthAttentionSeverityCountResponse"][];
             /**
              * Available Sources
              * @description 参与 source=auto 判断的来源
              */
             available_sources: string[];
             /**
-             * Total Reports
-             * @description 单项 source-health report 数量
+             * Dataset Ids
+             * @description 聚合的数据集 ID
              */
-            total_reports: number;
+            dataset_ids: string[];
             /**
              * Failover Count
              * @description selected source 与默认来源不同的 report 数量
@@ -4791,22 +5898,27 @@ export interface components {
              */
             failover_count: number;
             /**
+             * Fallback Source Counts
+             * @description 按非默认候选来源聚合的 report 覆盖数量
+             */
+            fallback_source_counts?: components["schemas"]["CatalogSourceSelectionCountResponse"][];
+            /**
              * No Fallback Source Count
              * @description 没有非默认候选来源的 report 数量
              * @default 0
              */
             no_fallback_source_count: number;
             /**
+             * Reports
+             * @description 明细 source-health reports
+             */
+            reports: components["schemas"]["CatalogSourceHealthReportResponse"][];
+            /**
              * Revoked Promotion Count
              * @description 存在最近晋级撤销上下文的 report 数量
              * @default 0
              */
             revoked_promotion_count: number;
-            /**
-             * Status Counts
-             * @description 按 freshness 状态聚合的 source health 数量
-             */
-            status_counts: components["schemas"]["CatalogSourceHealthStatusCountResponse"][];
             /**
              * Selected Source Counts
              * @description 按 selected source 聚合的 report 数量
@@ -4818,30 +5930,20 @@ export interface components {
              */
             source_selection_status_counts?: components["schemas"]["CatalogSourceSelectionStatusCountResponse"][];
             /**
-             * Fallback Source Counts
-             * @description 按非默认候选来源聚合的 report 覆盖数量
+             * Status Counts
+             * @description 按 freshness 状态聚合的 source health 数量
              */
-            fallback_source_counts?: components["schemas"]["CatalogSourceSelectionCountResponse"][];
+            status_counts: components["schemas"]["CatalogSourceHealthStatusCountResponse"][];
             /**
-             * Attention Reason Counts
-             * @description 按 source-health attention reason 聚合的 report 数量
+             * Total Reports
+             * @description 单项 source-health report 数量
              */
-            attention_reason_counts?: components["schemas"]["CatalogSourceHealthAttentionReasonCountResponse"][];
+            total_reports: number;
             /**
-             * Attention Severity Counts
-             * @description 按 source-health attention severity 聚合的 attention item 数量
+             * Trade Dates
+             * @description 聚合的交易日期
              */
-            attention_severity_counts?: components["schemas"]["CatalogSourceHealthAttentionSeverityCountResponse"][];
-            /**
-             * Attention Required
-             * @description 带有结构化 attention reason 的数据集/日期
-             */
-            attention_required: components["schemas"]["CatalogSourceHealthAttentionItemResponse"][];
-            /**
-             * Reports
-             * @description 明细 source-health reports
-             */
-            reports: components["schemas"]["CatalogSourceHealthReportResponse"][];
+            trade_dates: string[];
         };
         /**
          * CatalogSourceSelectionCountResponse
@@ -4849,15 +5951,15 @@ export interface components {
          */
         CatalogSourceSelectionCountResponse: {
             /**
-             * Source
-             * @description 被 source=auto 选中的来源
-             */
-            source: string;
-            /**
              * Count
              * @description 该来源被选中次数
              */
             count: number;
+            /**
+             * Source
+             * @description 被 source=auto 选中的来源
+             */
+            source: string;
         };
         /**
          * CatalogSourceSelectionStatusCountResponse
@@ -4865,15 +5967,15 @@ export interface components {
          */
         CatalogSourceSelectionStatusCountResponse: {
             /**
-             * Status
-             * @description source=auto 选中来源是否可用于后端编排
-             */
-            status: string;
-            /**
              * Count
              * @description 该 source-selection 状态出现次数
              */
             count: number;
+            /**
+             * Status
+             * @description source=auto 选中来源是否可用于后端编排
+             */
+            status: string;
         };
         /**
          * CommodityBar
@@ -4890,20 +5992,15 @@ export interface components {
          */
         CommodityBar: {
             /**
+             * Close
+             * @description 收盘价
+             */
+            close: number;
+            /**
              * Commodity Code
              * @description 商品代码
              */
             commodity_code: string;
-            /**
-             * Trade Date Utc
-             * @description 交易日期 (UTC)
-             */
-            trade_date_utc: string;
-            /**
-             * Open
-             * @description 开盘价
-             */
-            open: number;
             /**
              * High
              * @description 最高价
@@ -4915,10 +6012,15 @@ export interface components {
              */
             low: number;
             /**
-             * Close
-             * @description 收盘价
+             * Open
+             * @description 开盘价
              */
-            close: number;
+            open: number;
+            /**
+             * Trade Date Utc
+             * @description 交易日期 (UTC)
+             */
+            trade_date_utc: string;
             /**
              * Volume
              * @description 成交量
@@ -4942,11 +6044,6 @@ export interface components {
              */
             commodity_codes?: string[] | null;
             /**
-             * Start Date
-             * @description 开始日期
-             */
-            start_date?: string | null;
-            /**
              * End Date
              * @description 结束日期
              */
@@ -4957,6 +6054,11 @@ export interface components {
              * @default 1000
              */
             limit: number;
+            /**
+             * Start Date
+             * @description 开始日期
+             */
+            start_date?: string | null;
         };
         /**
          * ComparisonMetricsResponse
@@ -4964,15 +6066,55 @@ export interface components {
          */
         ComparisonMetricsResponse: {
             /**
+             * Actual Return
+             * @description 实际累计收益率 (%)
+             */
+            actual_return?: number | null;
+            /**
+             * Actual Sharpe
+             * @description 实际夏普比率
+             */
+            actual_sharpe: number;
+            /**
+             * Actual Total Cost
+             * @description 实际累计交易成本
+             */
+            actual_total_cost: number;
+            /**
+             * Avg Daily Tracking Error Bps
+             * @description 日均跟踪误差 (bps)
+             */
+            avg_daily_tracking_error_bps: number;
+            /**
              * Backtest Return
              * @description 回测累计收益率 (%)
              */
             backtest_return: number;
             /**
-             * Actual Return
-             * @description 实际累计收益率 (%)
+             * Backtest Sharpe
+             * @description 回测夏普比率
              */
-            actual_return?: number | null;
+            backtest_sharpe: number;
+            /**
+             * Backtest Total Cost
+             * @description 回测累计交易成本
+             */
+            backtest_total_cost: number;
+            /**
+             * Cost Drag Bps
+             * @description 成本拖累(实际-回测)成本/初始资金 (bps)
+             */
+            cost_drag_bps: number;
+            /**
+             * Max Nav Diff Bps
+             * @description 回测与实际净值序列最大偏差 (bps)
+             */
+            max_nav_diff_bps: number;
+            /**
+             * Nav Correlation
+             * @description 回测与实际净值序列相关系数
+             */
+            nav_correlation: number;
             /**
              * Return Diff
              * @description 收益率差(百分点)
@@ -4983,46 +6125,6 @@ export interface components {
              * @description 收益率差值 (bps)
              */
             return_diff_bps?: number | null;
-            /**
-             * Backtest Sharpe
-             * @description 回测夏普比率
-             */
-            backtest_sharpe: number;
-            /**
-             * Actual Sharpe
-             * @description 实际夏普比率
-             */
-            actual_sharpe: number;
-            /**
-             * Backtest Total Cost
-             * @description 回测累计交易成本
-             */
-            backtest_total_cost: number;
-            /**
-             * Actual Total Cost
-             * @description 实际累计交易成本
-             */
-            actual_total_cost: number;
-            /**
-             * Cost Drag Bps
-             * @description 成本拖累(实际-回测)成本/初始资金 (bps)
-             */
-            cost_drag_bps: number;
-            /**
-             * Nav Correlation
-             * @description 回测与实际净值序列相关系数
-             */
-            nav_correlation: number;
-            /**
-             * Max Nav Diff Bps
-             * @description 回测与实际净值序列最大偏差 (bps)
-             */
-            max_nav_diff_bps: number;
-            /**
-             * Avg Daily Tracking Error Bps
-             * @description 日均跟踪误差 (bps)
-             */
-            avg_daily_tracking_error_bps: number;
         };
         /**
          * CorporateAction
@@ -5035,11 +6137,6 @@ export interface components {
          *         description: 行动描述
          */
         CorporateAction: {
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
             /**
              * Action Date
              * @description 行动日期
@@ -5055,6 +6152,11 @@ export interface components {
              * @description 行动描述
              */
             description: string;
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
         };
         /**
          * CostConfigRequest
@@ -5062,23 +6164,22 @@ export interface components {
          */
         CostConfigRequest: {
             /**
-             * Commission Rate
-             * @description 佣金费率
-             * @default 0.0003
-             */
-            commission_rate: number;
-            /**
              * Commission Min
              * @description 最低佣金(元)
              * @default 5
              */
             commission_min: number;
             /**
-             * Stamp Duty Rate
-             * @description 印花税税率(卖出)
-             * @default 0.001
+             * Commission Rate
+             * @description 佣金费率
+             * @default 0.0003
              */
-            stamp_duty_rate: number;
+            commission_rate: number;
+            /**
+             * @description 冲击成本模型
+             * @default none
+             */
+            impact_model: components["schemas"]["ImpactModel"];
             /**
              * Slippage Bps
              * @description 滑点(bps)
@@ -5086,10 +6187,11 @@ export interface components {
              */
             slippage_bps: number;
             /**
-             * @description 冲击成本模型
-             * @default none
+             * Stamp Duty Rate
+             * @description 印花税税率(卖出)
+             * @default 0.001
              */
-            impact_model: components["schemas"]["ImpactModel"];
+            stamp_duty_rate: number;
         };
         /**
          * CreateBacktestRunRequest
@@ -5097,15 +6199,13 @@ export interface components {
          */
         CreateBacktestRunRequest: {
             /**
-             * Strategy Id
-             * @description 策略 ID
+             * Allow Experimental Data
+             * @description 显式允许 experimental 数据集进入研究态回测运行
+             * @default false
              */
-            strategy_id: string;
-            /**
-             * Start Date
-             * @description 起始日期 (YYYY-MM-DD)
-             */
-            start_date: string;
+            allow_experimental_data: boolean;
+            /** @description 成本模型配置 */
+            cost_config?: components["schemas"]["CostConfigRequest"] | null;
             /**
              * End Date
              * @description 结束日期 (YYYY-MM-DD)
@@ -5122,25 +6222,22 @@ export interface components {
              * @description 参数覆盖
              */
             parameter_overrides?: string[];
-            /** @description 成本模型配置 */
-            cost_config?: components["schemas"]["CostConfigRequest"] | null;
             /**
-             * Allow Experimental Data
-             * @description 显式允许 experimental 数据集进入研究态回测运行
-             * @default false
+             * Start Date
+             * @description 起始日期 (YYYY-MM-DD)
              */
-            allow_experimental_data: boolean;
+            start_date: string;
+            /**
+             * Strategy Id
+             * @description 策略 ID
+             */
+            strategy_id: string;
         };
         /**
          * CreateStrategyRequest
          * @description 创建策略请求.
          */
         CreateStrategyRequest: {
-            /**
-             * Strategy Id
-             * @description 策略 ID
-             */
-            strategy_id: string;
             /**
              * Name
              * @description 策略名称
@@ -5151,8 +6248,13 @@ export interface components {
              * @description 策略定义 JSON
              */
             spec_json: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Input"];
             };
+            /**
+             * Strategy Id
+             * @description 策略 ID
+             */
+            strategy_id: string;
             /**
              * Tags
              * @description 标签
@@ -5165,20 +6267,20 @@ export interface components {
          */
         CreateUniverseRequest: {
             /**
-             * Universe Id
-             * @description Universe ID
+             * Description
+             * @description 描述
              */
-            universe_id: string;
+            description?: string | null;
             /**
              * Name
              * @description 名称
              */
             name: string;
             /**
-             * Description
-             * @description 描述
+             * Universe Id
+             * @description Universe ID
              */
-            description?: string | null;
+            universe_id: string;
         };
         /**
          * DQDatasetSummary
@@ -5191,11 +6293,11 @@ export interface components {
              */
             dataset: string;
             /**
-             * Total Checks
-             * @description 总检查数
+             * Errors
+             * @description 错误数
              * @default 0
              */
-            total_checks: number;
+            errors: number;
             /**
              * Passed
              * @description 通过数
@@ -5203,17 +6305,17 @@ export interface components {
              */
             passed: number;
             /**
+             * Total Checks
+             * @description 总检查数
+             * @default 0
+             */
+            total_checks: number;
+            /**
              * Warnings
              * @description 警告数
              * @default 0
              */
             warnings: number;
-            /**
-             * Errors
-             * @description 错误数
-             * @default 0
-             */
-            errors: number;
         };
         /**
          * DQSummaryResponse
@@ -5231,94 +6333,94 @@ export interface components {
          * @description 信号日可用的完整账户基线。
          */
         DailyDecisionAccountPositionsResponse: {
-            /** Baseline Id */
-            baseline_id?: string | null;
             /** Account Id */
             account_id?: string | null;
-            /** Sleeve Id */
-            sleeve_id?: string | null;
-            /** Cash Available */
-            cash_available?: number | null;
-            /** Cash Settled */
-            cash_settled?: number | null;
-            /** Cash Frozen */
-            cash_frozen?: number | null;
-            /** Total Value */
-            total_value?: number | null;
-            /** Nav */
-            nav?: number | null;
-            /** Exposure */
-            exposure?: number | null;
             /** As Of */
             as_of?: string | null;
+            /** Baseline Id */
+            baseline_id?: string | null;
+            /** Cash Available */
+            cash_available?: number | null;
+            /** Cash Frozen */
+            cash_frozen?: number | null;
+            /** Cash Settled */
+            cash_settled?: number | null;
+            /** Exposure */
+            exposure?: number | null;
+            /** Nav */
+            nav?: number | null;
             /** Positions */
             positions: components["schemas"]["PositionSnapshotResponse"][];
+            /** Sleeve Id */
+            sleeve_id?: string | null;
+            /** Total Value */
+            total_value?: number | null;
         };
         /**
          * DailyDecisionActionResponse
          * @description 一个可人工复核的建议动作及执行进度。
          */
         DailyDecisionActionResponse: {
-            /** Intent Id */
-            intent_id: string;
-            /** Instrument Id */
-            instrument_id: number;
-            /** Direction */
-            direction: string;
-            /** Target Weight */
-            target_weight: number;
+            /** Cash Impact */
+            cash_impact?: number | null;
             /** Current Weight */
             current_weight: number;
             /** Delta Weight */
             delta_weight: number;
-            /** Raw Quantity */
-            raw_quantity?: number | null;
-            /** Rounded Quantity */
-            rounded_quantity?: number | null;
-            /** Suggested Quantity */
-            suggested_quantity?: number | null;
-            /** Reference Price */
-            reference_price?: number | null;
-            /** Lot Size */
-            lot_size?: number | null;
-            /** Cash Impact */
-            cash_impact?: number | null;
-            /** Reason */
-            reason?: string | null;
-            /** Sizing Readiness */
-            sizing_readiness?: ("ready" | "review" | "blocked") | null;
-            /** Risk Flags */
-            risk_flags: string[];
-            /** Intent Status */
-            intent_status?: string | null;
+            /** Direction */
+            direction: string;
             /** Filled Quantity */
             filled_quantity: number;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Intent Id */
+            intent_id: string;
+            /** Intent Status */
+            intent_status?: string | null;
+            /** Lot Size */
+            lot_size?: number | null;
+            /** Raw Quantity */
+            raw_quantity?: number | null;
+            /** Reason */
+            reason?: string | null;
+            /** Reference Price */
+            reference_price?: number | null;
             /** Remaining Quantity */
             remaining_quantity?: number | null;
+            /** Risk Flags */
+            risk_flags: string[];
+            /** Rounded Quantity */
+            rounded_quantity?: number | null;
+            /** Sizing Readiness */
+            sizing_readiness?: ("ready" | "review" | "blocked") | null;
+            /** Suggested Quantity */
+            suggested_quantity?: number | null;
+            /** Target Weight */
+            target_weight: number;
         };
         /**
          * DailyDecisionDataResponse
          * @description 策略所需数据、snapshot 与 DQ 证据。
          */
         DailyDecisionDataResponse: {
+            /** Dataset States */
+            dataset_states: components["schemas"]["DailyDecisionDatasetStateResponse"][];
+            /**
+             * Dq State
+             * @enum {string}
+             */
+            dq_state: "passed" | "failed";
+            /**
+             * Freshness
+             * @enum {string}
+             */
+            freshness: "ready" | "blocked";
             /** Required Datasets */
             required_datasets: string[];
             /** Snapshot Ids */
             snapshot_ids: {
                 [key: string]: string;
             };
-            /** Dataset States */
-            dataset_states: components["schemas"]["DailyDecisionDatasetStateResponse"][];
-            /**
-             * Freshness
-             * @enum {string}
-             */
-            freshness: "ready" | "blocked";
-            /**
-             * Dq State
-             * @enum {string}
-             */
-            dq_state: "passed" | "failed";
         };
         /**
          * DailyDecisionDatasetStateResponse
@@ -5328,29 +6430,29 @@ export interface components {
             /** Dataset */
             dataset: string;
             /**
-             * Status
-             * @enum {string}
-             */
-            status: "ready" | "missing" | "stale" | "dq_failed" | "unknown";
-            /** Snapshot Id */
-            snapshot_id?: string | null;
-            /**
              * Reason
              * @default
              */
             reason: string;
+            /** Snapshot Id */
+            snapshot_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "missing" | "stale" | "dq_failed" | "unknown";
         };
         /**
          * DailyDecisionExecutionReviewResponse
          * @description 当前有效成交、偏差、PnL 与未解决冲突。
          */
         DailyDecisionExecutionReviewResponse: {
+            deviation?: components["schemas"]["DeviationResponse"] | null;
             /** Effective Fills */
             effective_fills: components["schemas"]["FillResponse"][];
-            deviation?: components["schemas"]["DeviationResponse"] | null;
-            pnl?: components["schemas"]["PnlSummaryResponse"] | null;
             /** Exceptions */
             exceptions: string[];
+            pnl?: components["schemas"]["PnlSummaryResponse"] | null;
             /** Unresolved Conflicts */
             unresolved_conflicts: string[];
         };
@@ -5359,20 +6461,20 @@ export interface components {
          * @description 策略、账户与 D→D+1 日期身份。
          */
         DailyDecisionIdentityResponse: {
-            /** Strategy Id */
-            strategy_id: string;
-            /** Strategy Version */
-            strategy_version?: string | null;
             /** Account Id */
             account_id?: string | null;
-            /** Sleeve Id */
-            sleeve_id?: string | null;
-            /** Signal Date */
-            signal_date?: string | null;
             /** Decision Date */
             decision_date?: string | null;
             /** Intended Trade Date */
             intended_trade_date?: string | null;
+            /** Signal Date */
+            signal_date?: string | null;
+            /** Sleeve Id */
+            sleeve_id?: string | null;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Strategy Version */
+            strategy_version?: string | null;
         };
         /**
          * DailyDecisionReadinessResponse
@@ -5380,16 +6482,16 @@ export interface components {
          */
         DailyDecisionReadinessResponse: {
             /**
+             * Reasons
+             * @description 就绪/阻塞原因
+             */
+            reasons: string[];
+            /**
              * Status
              * @description 就绪状态
              * @enum {string}
              */
             status: "ready" | "blocked" | "review";
-            /**
-             * Reasons
-             * @description 就绪/阻塞原因
-             */
-            reasons: string[];
         };
         /** @enum {string} */
         DailyDecisionReasonCode: "NO_ACTIVE_STRATEGY" | "REQUIRED_DATA_NOT_READY" | "ACCOUNT_BASELINE_MISSING" | "EOD_RUN_MISSING" | "EOD_RUN_FAILED" | "EOD_RUN_INCOMPLETE" | "SIGNAL_PACKAGE_MISSING" | "SIGNAL_INTENT_MISMATCH" | "CHECKSUM_MISMATCH" | "NO_REBALANCE_REQUIRED" | "RISK_WARNING" | "TRADE_DATE_MISMATCH" | "RERUN_CONFLICT" | "FILL_QUANTITY_EXCEEDED" | "QUANTITY_UNAVAILABLE" | "READY_FOR_REVIEW";
@@ -5398,6 +6500,22 @@ export interface components {
          * @description 每日决策驾驶舱报告响应.
          */
         DailyDecisionReportResponse: {
+            /** @description 信号-成交偏差报告 */
+            deviation?: components["schemas"]["DeviationResponse"] | null;
+            /** @description P&L 汇总 */
+            pnl?: components["schemas"]["PnlSummaryResponse"] | null;
+            /**
+             * Positions
+             * @description 实际持仓快照
+             */
+            positions: components["schemas"]["PositionSnapshotResponse"][];
+            /** @description 就绪状态 */
+            readiness: components["schemas"]["DailyDecisionReadinessResponse"];
+            /**
+             * Signal Intents
+             * @description 信号意图列表
+             */
+            signal_intents: components["schemas"]["TradeIntentResponse"][];
             /**
              * Strategy Id
              * @description 策略 ID
@@ -5408,48 +6526,32 @@ export interface components {
              * @description 交易/信号日期
              */
             trade_date?: string | null;
-            /** @description 就绪状态 */
-            readiness: components["schemas"]["DailyDecisionReadinessResponse"];
-            /**
-             * Signal Intents
-             * @description 信号意图列表
-             */
-            signal_intents: components["schemas"]["TradeIntentResponse"][];
-            /**
-             * Positions
-             * @description 实际持仓快照
-             */
-            positions: components["schemas"]["PositionSnapshotResponse"][];
-            /** @description 信号-成交偏差报告 */
-            deviation?: components["schemas"]["DeviationResponse"] | null;
-            /** @description P&L 汇总 */
-            pnl?: components["schemas"]["PnlSummaryResponse"] | null;
         };
         /**
          * DailyDecisionRunPackageResponse
          * @description 确定性 EOD run 与持久化 Signal Package 证据。
          */
         DailyDecisionRunPackageResponse: {
-            /** Outcome */
-            outcome: string;
-            /** Batch Key */
-            batch_key?: string | null;
             /** Artifact Id */
             artifact_id?: string | null;
-            /** Conflict Artifact Id */
-            conflict_artifact_id?: string | null;
+            /** Batch Key */
+            batch_key?: string | null;
             /** Checksum */
             checksum?: string | null;
             /** Checksum Valid */
             checksum_valid: boolean;
-            /** No Rebalance */
-            no_rebalance: boolean;
+            /** Conflict Artifact Id */
+            conflict_artifact_id?: string | null;
             /** Factor Evidence */
             factor_evidence: {
                 [key: string]: {
                     [key: string]: number;
                 };
             };
+            /** No Rebalance */
+            no_rebalance: boolean;
+            /** Outcome */
+            outcome: string;
             /** Risk Evidence */
             risk_evidence: string[];
         };
@@ -5458,15 +6560,15 @@ export interface components {
          * @description 后端判定的 readiness 与稳定 reason code。
          */
         DailyDecisionV2ReadinessResponse: {
+            /** Details */
+            details: string[];
+            /** Reason Codes */
+            reason_codes: components["schemas"]["DailyDecisionReasonCode"][];
             /**
              * Status
              * @enum {string}
              */
             status: "ready" | "blocked" | "review";
-            /** Reason Codes */
-            reason_codes: components["schemas"]["DailyDecisionReasonCode"][];
-            /** Details */
-            details: string[];
         };
         /**
          * DailyDecisionV2Response
@@ -5497,14 +6599,14 @@ export interface components {
          *     }
          */
         DailyDecisionV2Response: {
-            identity: components["schemas"]["DailyDecisionIdentityResponse"];
-            readiness: components["schemas"]["DailyDecisionV2ReadinessResponse"];
-            data: components["schemas"]["DailyDecisionDataResponse"];
-            run_package: components["schemas"]["DailyDecisionRunPackageResponse"];
             account_positions: components["schemas"]["DailyDecisionAccountPositionsResponse"];
             /** Actions */
             actions: components["schemas"]["DailyDecisionActionResponse"][];
+            data: components["schemas"]["DailyDecisionDataResponse"];
             execution_review: components["schemas"]["DailyDecisionExecutionReviewResponse"];
+            identity: components["schemas"]["DailyDecisionIdentityResponse"];
+            readiness: components["schemas"]["DailyDecisionV2ReadinessResponse"];
+            run_package: components["schemas"]["DailyDecisionRunPackageResponse"];
         };
         /**
          * DataLineageAssetResponse
@@ -5540,20 +6642,20 @@ export interface components {
              */
             catalog_status: string;
             /**
-             * Storage Uri
-             * @description Catalog 存储 URI
+             * Freshness At
+             * @description Catalog freshness 时间
              */
-            storage_uri?: string | null;
+            freshness_at?: string | null;
             /**
-             * Source
-             * @description Catalog 数据源
+             * Freshness Sla Hours
+             * @description Catalog freshness SLA 小时数
              */
-            source?: string | null;
+            freshness_sla_hours?: number | null;
             /**
-             * Schema Hash
-             * @description Catalog schema 指纹
+             * Freshness Status
+             * @description Catalog freshness/SLA 状态
              */
-            schema_hash?: string | null;
+            freshness_status?: string | null;
             /**
              * Row Count
              * @description Catalog 记录数
@@ -5565,31 +6667,28 @@ export interface components {
              */
             schema_created_at?: string | null;
             /**
-             * Freshness At
-             * @description Catalog freshness 时间
+             * Schema Hash
+             * @description Catalog schema 指纹
              */
-            freshness_at?: string | null;
+            schema_hash?: string | null;
             /**
-             * Freshness Status
-             * @description Catalog freshness/SLA 状态
+             * Source
+             * @description Catalog 数据源
              */
-            freshness_status?: string | null;
+            source?: string | null;
             /**
-             * Freshness Sla Hours
-             * @description Catalog freshness SLA 小时数
+             * Storage Uri
+             * @description Catalog 存储 URI
              */
-            freshness_sla_hours?: number | null;
+            storage_uri?: string | null;
         };
         /**
          * DataLineageCatalogAttentionAssetResponse
          * @description 运行级 lineage catalog attention 资产响应.
          */
         DataLineageCatalogAttentionAssetResponse: {
-            /**
-             * Side
-             * @description 资产位于 run lineage input 或 output
-             */
-            side: string;
+            /** @description 需要关注的 lineage catalog 资产 */
+            asset: components["schemas"]["DataLineageCatalogAssetResponse"];
             /**
              * Attention Reasons
              * @description lineage catalog attention reason codes
@@ -5600,8 +6699,11 @@ export interface components {
              * @description lineage catalog attention severity (critical/warning/info)
              */
             attention_severity: string;
-            /** @description 需要关注的 lineage catalog 资产 */
-            asset: components["schemas"]["DataLineageCatalogAssetResponse"];
+            /**
+             * Side
+             * @description 资产位于 run lineage input 或 output
+             */
+            side: string;
         };
         /**
          * DataLineageCatalogAttentionReasonCountResponse
@@ -5609,15 +6711,15 @@ export interface components {
          */
         DataLineageCatalogAttentionReasonCountResponse: {
             /**
-             * Reason
-             * @description lineage catalog attention reason
-             */
-            reason: string;
-            /**
              * Count
              * @description 该 attention reason 的资产数量
              */
             count: number;
+            /**
+             * Reason
+             * @description lineage catalog attention reason
+             */
+            reason: string;
         };
         /**
          * DataLineageCatalogAttentionSeverityCountResponse
@@ -5625,15 +6727,15 @@ export interface components {
          */
         DataLineageCatalogAttentionSeverityCountResponse: {
             /**
-             * Severity
-             * @description lineage catalog attention severity
-             */
-            severity: string;
-            /**
              * Count
              * @description 该 attention severity 的资产数量
              */
             count: number;
+            /**
+             * Severity
+             * @description lineage catalog attention severity
+             */
+            severity: string;
         };
         /**
          * DataLineageCatalogFreshnessStatusCountResponse
@@ -5641,15 +6743,15 @@ export interface components {
          */
         DataLineageCatalogFreshnessStatusCountResponse: {
             /**
-             * Status
-             * @description Catalog freshness/SLA 状态
-             */
-            status: string;
-            /**
              * Count
              * @description 该状态的资产数量
              */
             count: number;
+            /**
+             * Status
+             * @description Catalog freshness/SLA 状态
+             */
+            status: string;
         };
         /**
          * DataLineageCatalogRunReportResponse
@@ -5657,15 +6759,35 @@ export interface components {
          */
         DataLineageCatalogRunReportResponse: {
             /**
-             * Run Id
-             * @description 运行 ID
+             * Attention Reason Counts
+             * @description 按 lineage catalog attention reason 聚合的资产数量
              */
-            run_id: string;
+            attention_reason_counts?: components["schemas"]["DataLineageCatalogAttentionReasonCountResponse"][];
+            /**
+             * Attention Required
+             * @description 需要后端治理关注的 input/output 资产
+             */
+            attention_required?: components["schemas"]["DataLineageCatalogAttentionAssetResponse"][];
+            /**
+             * Attention Severity Counts
+             * @description 按 lineage catalog attention severity 聚合的资产数量
+             */
+            attention_severity_counts?: components["schemas"]["DataLineageCatalogAttentionSeverityCountResponse"][];
+            /**
+             * Catalog Status Counts
+             * @description 按 Catalog 精确资产匹配状态聚合的资产数量
+             */
+            catalog_status_counts?: components["schemas"]["DataLineageCatalogStatusCountResponse"][];
             /**
              * Events
              * @description 该运行的 lineage 事件
              */
             events: components["schemas"]["DataLineageEventResponse"][];
+            /**
+             * Freshness Status Counts
+             * @description 按 Catalog freshness/SLA 状态聚合的资产数量
+             */
+            freshness_status_counts?: components["schemas"]["DataLineageCatalogFreshnessStatusCountResponse"][];
             /**
              * Input Assets
              * @description 去重输入资产及其 Catalog 证据
@@ -5677,30 +6799,10 @@ export interface components {
              */
             output_assets: components["schemas"]["DataLineageCatalogAssetResponse"][];
             /**
-             * Catalog Status Counts
-             * @description 按 Catalog 精确资产匹配状态聚合的资产数量
+             * Run Id
+             * @description 运行 ID
              */
-            catalog_status_counts?: components["schemas"]["DataLineageCatalogStatusCountResponse"][];
-            /**
-             * Freshness Status Counts
-             * @description 按 Catalog freshness/SLA 状态聚合的资产数量
-             */
-            freshness_status_counts?: components["schemas"]["DataLineageCatalogFreshnessStatusCountResponse"][];
-            /**
-             * Attention Required
-             * @description 需要后端治理关注的 input/output 资产
-             */
-            attention_required?: components["schemas"]["DataLineageCatalogAttentionAssetResponse"][];
-            /**
-             * Attention Reason Counts
-             * @description 按 lineage catalog attention reason 聚合的资产数量
-             */
-            attention_reason_counts?: components["schemas"]["DataLineageCatalogAttentionReasonCountResponse"][];
-            /**
-             * Attention Severity Counts
-             * @description 按 lineage catalog attention severity 聚合的资产数量
-             */
-            attention_severity_counts?: components["schemas"]["DataLineageCatalogAttentionSeverityCountResponse"][];
+            run_id: string;
             /**
              * Source Fallback Policy Effect Counts
              * @description 按 active source fallback policy effect 聚合的 run input 数量
@@ -5713,6 +6815,21 @@ export interface components {
          */
         DataLineageCatalogSourceFallbackPolicyEffectCountResponse: {
             /**
+             * Catalog Selected Source
+             * @description Catalog 原始选源
+             */
+            catalog_selected_source: string;
+            /**
+             * Count
+             * @description 该 policy effect 出现次数
+             */
+            count: number;
+            /**
+             * Effective Selected Source
+             * @description Policy 生效后的选源
+             */
+            effective_selected_source: string;
+            /**
              * Policy Id
              * @description Source fallback policy ID
              */
@@ -5722,21 +6839,6 @@ export interface components {
              * @description Source fallback policy status
              */
             policy_status: string;
-            /**
-             * Catalog Selected Source
-             * @description Catalog 原始选源
-             */
-            catalog_selected_source: string;
-            /**
-             * Effective Selected Source
-             * @description Policy 生效后的选源
-             */
-            effective_selected_source: string;
-            /**
-             * Count
-             * @description 该 policy effect 出现次数
-             */
-            count: number;
         };
         /**
          * DataLineageCatalogStatusCountResponse
@@ -5744,15 +6846,15 @@ export interface components {
          */
         DataLineageCatalogStatusCountResponse: {
             /**
-             * Status
-             * @description Catalog 精确资产匹配状态
-             */
-            status: string;
-            /**
              * Count
              * @description 该状态的资产数量
              */
             count: number;
+            /**
+             * Status
+             * @description Catalog 精确资产匹配状态
+             */
+            status: string;
         };
         /**
          * DataLineageEventResponse
@@ -5760,75 +6862,75 @@ export interface components {
          */
         DataLineageEventResponse: {
             /**
-             * Run Id
-             * @description 产生该 lineage 事件的运行 ID
+             * Inputs
+             * @description 输入资产
              */
-            run_id: string;
+            inputs: components["schemas"]["DataLineageRefResponse"][];
             /**
              * Operation
              * @description lineage 操作类型
              */
             operation: string;
             /**
-             * Timestamp
-             * @description lineage 事件时间戳
-             */
-            timestamp: string;
-            /**
-             * Inputs
-             * @description 输入资产
-             */
-            inputs: components["schemas"]["DataLineageRefResponse"][];
-            /**
              * Outputs
              * @description 输出资产
              */
             outputs: components["schemas"]["DataLineageRefResponse"][];
+            /**
+             * Run Id
+             * @description 产生该 lineage 事件的运行 ID
+             */
+            run_id: string;
+            /**
+             * Timestamp
+             * @description lineage 事件时间戳
+             */
+            timestamp: string;
         };
         /**
          * DataLineageGraphEdgeResponse
          * @description 数据血缘图有向边响应.
          */
         DataLineageGraphEdgeResponse: {
+            /** @description 产生该边的 lineage 事件 */
+            event: components["schemas"]["DataLineageEventResponse"];
             /** @description 来源资产 */
             source: components["schemas"]["DataLineageAssetResponse"];
             /** @description 目标资产 */
             target: components["schemas"]["DataLineageAssetResponse"];
-            /** @description 产生该边的 lineage 事件 */
-            event: components["schemas"]["DataLineageEventResponse"];
         };
         /**
          * DataLineageGraphResponse
          * @description 资产级数据血缘图响应.
          */
         DataLineageGraphResponse: {
-            /** @description 查询根资产 */
-            root: components["schemas"]["DataLineageAssetResponse"];
-            /**
-             * Direction
-             * @description 遍历方向
-             */
-            direction: string;
-            /**
-             * Max Depth
-             * @description 最大遍历深度
-             */
-            max_depth: number;
             /**
              * Assets
              * @description 图中去重资产
              */
             assets: components["schemas"]["DataLineageAssetResponse"][];
             /**
-             * Events
-             * @description 图中 lineage 事件
+             * Direction
+             * @description 遍历方向
              */
-            events: components["schemas"]["DataLineageEventResponse"][];
+            direction: string;
             /**
              * Edges
              * @description 图中有向边
              */
             edges: components["schemas"]["DataLineageGraphEdgeResponse"][];
+            /**
+             * Events
+             * @description 图中 lineage 事件
+             */
+            events: components["schemas"]["DataLineageEventResponse"][];
+            /**
+             * Max Depth
+             * @description 最大遍历深度
+             */
+            max_depth: number;
+            /** @description 查询根资产 */
+            root: components["schemas"]["DataLineageAssetResponse"];
         };
         /**
          * DataLineageRefResponse
@@ -5849,11 +6951,6 @@ export interface components {
          */
         DataLineageRunResponse: {
             /**
-             * Run Id
-             * @description 运行 ID
-             */
-            run_id: string;
-            /**
              * Events
              * @description 该运行的 lineage 事件
              */
@@ -5868,16 +6965,21 @@ export interface components {
              * @description 去重输出资产
              */
             output_assets: components["schemas"]["DataLineageAssetResponse"][];
+            /**
+             * Run Id
+             * @description 运行 ID
+             */
+            run_id: string;
         };
         /**
          * DataProductCheckResponse
          * @description One evidence check with an addressable artifact.
          */
         DataProductCheckResponse: {
-            /** Name */
-            name: string;
             /** Evidence Uri */
             evidence_uri: string;
+            /** Name */
+            name: string;
             /** Passed */
             passed: boolean;
         };
@@ -5886,22 +6988,22 @@ export interface components {
          * @description Coverage milestones and current partition gaps.
          */
         DataProductCoverageResponse: {
+            /** Actual Partitions */
+            actual_partitions: number;
+            /** Certified From */
+            certified_from: string | null;
+            /** Complete From */
+            complete_from: string | null;
             /** Dataset Id */
             dataset_id: string;
+            /** Expected Partitions */
+            expected_partitions: number;
+            /** Gaps */
+            gaps: string[];
             /** Profile */
             profile: string;
             /** Raw From */
             raw_from: string | null;
-            /** Complete From */
-            complete_from: string | null;
-            /** Certified From */
-            certified_from: string | null;
-            /** Expected Partitions */
-            expected_partitions: number;
-            /** Actual Partitions */
-            actual_partitions: number;
-            /** Gaps */
-            gaps: string[];
             /** Unapproved Gaps */
             unapproved_gaps: string[];
         };
@@ -5910,24 +7012,24 @@ export interface components {
          * @description Source, schema, snapshot, fallback, and override evidence.
          */
         DataProductEvidenceResponse: {
-            /** Dataset Id */
-            dataset_id: string;
-            /** Profile */
-            profile: string;
-            /** Report Id */
-            report_id: string;
             /** Content Hash */
             content_hash: string;
-            /** Source Ids */
-            source_ids: string[];
-            /** Schema Versions */
-            schema_versions: string[];
-            /** Snapshot Ids */
-            snapshot_ids: string[];
+            /** Dataset Id */
+            dataset_id: string;
             /** Fallback History */
             fallback_history: string[];
             /** Override History */
             override_history: string[];
+            /** Profile */
+            profile: string;
+            /** Report Id */
+            report_id: string;
+            /** Schema Versions */
+            schema_versions: string[];
+            /** Snapshot Ids */
+            snapshot_ids: string[];
+            /** Source Ids */
+            source_ids: string[];
         };
         /**
          * DataProductLicenseResponse
@@ -5936,12 +7038,12 @@ export interface components {
         DataProductLicenseResponse: {
             /** Dataset Id */
             dataset_id: string;
+            /** License Record Ids */
+            license_record_ids: string[];
             /** Profile */
             profile: string;
             /** Report Id */
             report_id: string;
-            /** License Record Ids */
-            license_record_ids: string[];
         };
         /**
          * DataProductOverviewResponse
@@ -5949,96 +7051,96 @@ export interface components {
          */
         DataProductOverviewResponse: {
             /**
-             * Dataset Id
-             * @description Canonical dataset identifier
+             * Active Certification Report Id
+             * @description Currently approved immutable report
              */
-            dataset_id: string;
-            /**
-             * R2 Scope
-             * @description R2 scope classification
-             */
-            r2_scope: string;
-            /**
-             * Maturity
-             * @description Effective catalog maturity
-             */
-            maturity: string;
-            /**
-             * Schedule
-             * @description Expected partition schedule
-             */
-            schedule: string;
-            /**
-             * Owner
-             * @description Accountable data-product owner
-             */
-            owner: string;
-            /**
-             * Raw Target From
-             * @description Raw history target
-             */
-            raw_target_from: string | null;
+            active_certification_report_id: string | null;
             /**
              * Certified Target From
              * @description Certification target
              */
             certified_target_from: string | null;
             /**
-             * Active Certification Report Id
-             * @description Currently approved immutable report
+             * Dataset Id
+             * @description Canonical dataset identifier
              */
-            active_certification_report_id: string | null;
+            dataset_id: string;
+            /**
+             * Maturity
+             * @description Effective catalog maturity
+             */
+            maturity: string;
+            /**
+             * Owner
+             * @description Accountable data-product owner
+             */
+            owner: string;
+            /**
+             * R2 Scope
+             * @description R2 scope classification
+             */
+            r2_scope: string;
+            /**
+             * Raw Target From
+             * @description Raw history target
+             */
+            raw_target_from: string | null;
+            /**
+             * Schedule
+             * @description Expected partition schedule
+             */
+            schedule: string;
         };
         /**
          * DataProductQualityResponse
          * @description Quality, PIT, freshness, recovery, and consumer evidence.
          */
         DataProductQualityResponse: {
-            /** Dataset Id */
-            dataset_id: string;
-            /** Profile */
-            profile: string;
-            /** Report Id */
-            report_id: string;
-            /** Dq Rule Version */
-            dq_rule_version: string;
-            /** Dq Results */
-            dq_results: components["schemas"]["DataProductCheckResponse"][];
-            /** Pit Replay Results */
-            pit_replay_results: components["schemas"]["DataProductCheckResponse"][];
-            /** Freshness Results */
-            freshness_results: components["schemas"]["DataProductCheckResponse"][];
-            /** Recovery Results */
-            recovery_results: components["schemas"]["DataProductCheckResponse"][];
             /** Consumer Results */
             consumer_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Dataset Id */
+            dataset_id: string;
+            /** Dq Results */
+            dq_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Dq Rule Version */
+            dq_rule_version: string;
+            /** Freshness Results */
+            freshness_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Pit Replay Results */
+            pit_replay_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Profile */
+            profile: string;
+            /** Recovery Results */
+            recovery_results: components["schemas"]["DataProductCheckResponse"][];
+            /** Report Id */
+            report_id: string;
         };
         /**
          * DataProductRunResponse
          * @description Immutable certification generation and review projection.
          */
         DataProductRunResponse: {
+            /** Content Hash */
+            content_hash: string;
             /** Dataset Id */
             dataset_id: string;
-            /** Profile */
-            profile: string;
-            /** Report Id */
-            report_id: string;
             /**
              * Generated At
              * Format: date-time
              */
             generated_at: string;
-            /** Content Hash */
-            content_hash: string;
-            /** Status */
-            status: string;
-            /** Reviewed By */
-            reviewed_by: string | null;
+            /** Profile */
+            profile: string;
+            /** Report Id */
+            report_id: string;
             /** Reviewed At */
             reviewed_at: string | null;
+            /** Reviewed By */
+            reviewed_by: string | null;
             /** Revocation Reason */
             revocation_reason: string | null;
+            /** Status */
+            status: string;
         };
         /**
          * DatasetMaturitySummaryResponse
@@ -6046,16 +7148,17 @@ export interface components {
          */
         DatasetMaturitySummaryResponse: {
             /**
-             * Maturity
-             * @description 能力成熟度
-             */
-            maturity: string;
-            /**
              * Dataset Count
              * @description 数据集数量
              * @default 0
              */
             dataset_count: number;
+            /**
+             * Failed Count
+             * @description 最新摄取状态为 failed 的数量
+             * @default 0
+             */
+            failed_count: number;
             /**
              * Fresh Count
              * @description Catalog freshness 为 fresh 的数量
@@ -6063,11 +7166,10 @@ export interface components {
              */
             fresh_count: number;
             /**
-             * Stale Count
-             * @description Catalog freshness 为 stale 的数量
-             * @default 0
+             * Maturity
+             * @description 能力成熟度
              */
-            stale_count: number;
+            maturity: string;
             /**
              * Missing Count
              * @description Catalog freshness 为 missing 的数量
@@ -6081,17 +7183,11 @@ export interface components {
              */
             not_applicable_count: number;
             /**
-             * Failed Count
-             * @description 最新摄取状态为 failed 的数量
+             * Promotion Blocked Count
+             * @description 晋级评估 blocked 数量
              * @default 0
              */
-            failed_count: number;
-            /**
-             * Warning Count
-             * @description 包含 maturity 警告的数据集数量
-             * @default 0
-             */
-            warning_count: number;
+            promotion_blocked_count: number;
             /**
              * Promotion Ready Count
              * @description 晋级评估 ready 数量
@@ -6099,11 +7195,17 @@ export interface components {
              */
             promotion_ready_count: number;
             /**
-             * Promotion Blocked Count
-             * @description 晋级评估 blocked 数量
+             * Stale Count
+             * @description Catalog freshness 为 stale 的数量
              * @default 0
              */
-            promotion_blocked_count: number;
+            stale_count: number;
+            /**
+             * Warning Count
+             * @description 包含 maturity 警告的数据集数量
+             * @default 0
+             */
+            warning_count: number;
         };
         /**
          * DatasetStatusResponse
@@ -6111,20 +7213,40 @@ export interface components {
          */
         DatasetStatusResponse: {
             /**
+             * Catalog Freshness At
+             * @description Catalog 记录的最新鲜度时间
+             */
+            catalog_freshness_at?: string | null;
+            /**
+             * Catalog Freshness Sla Hours
+             * @description Catalog freshness SLA 小时数
+             */
+            catalog_freshness_sla_hours?: number | null;
+            /**
+             * Catalog Freshness Status
+             * @description Catalog freshness SLA 状态 (fresh/stale/missing/not_applicable)
+             */
+            catalog_freshness_status?: string | null;
+            /**
+             * Catalog Row Count
+             * @description Catalog 最新资产记录数
+             */
+            catalog_row_count?: number | null;
+            /**
+             * Catalog Schema Hash
+             * @description Catalog 最新资产 schema 指纹
+             */
+            catalog_schema_hash?: string | null;
+            /**
+             * Catalog Storage Uri
+             * @description Catalog 最新资产存储 URI
+             */
+            catalog_storage_uri?: string | null;
+            /**
              * Dataset
              * @description 数据集名称
              */
             dataset: string;
-            /**
-             * Latest Date
-             * @description 最新成功摄取日期
-             */
-            latest_date?: string | null;
-            /**
-             * Latest Status
-             * @description 最新摄取状态 (success/failed)
-             */
-            latest_status?: string | null;
             /**
              * Dataset Maturity
              * @description 数据集能力成熟度 (initial-focus/experimental/reserved)
@@ -6141,78 +7263,58 @@ export interface components {
              */
             dataset_promotion_criteria?: string[];
             /**
-             * Dataset Promotion Status
-             * @description 数据集晋级评估状态 (not_applicable/blocked/ready)
-             */
-            dataset_promotion_status?: string | null;
-            /**
              * Dataset Promotion Missing Criteria
              * @description 当前缺失的晋级证据条件
              */
             dataset_promotion_missing_criteria?: string[];
+            /**
+             * Dataset Promotion Rejected Criteria
+             * @description 已审核但未通过的晋级证据条件
+             */
+            dataset_promotion_rejected_criteria?: string[];
             /**
              * Dataset Promotion Satisfied Criteria
              * @description 已满足的晋级证据条件
              */
             dataset_promotion_satisfied_criteria?: string[];
             /**
-             * Dataset Promotion Rejected Criteria
-             * @description 已审核但未通过的晋级证据条件
+             * Dataset Promotion Status
+             * @description 数据集晋级评估状态 (not_applicable/blocked/ready)
              */
-            dataset_promotion_rejected_criteria?: string[];
-            /** @description 最近一次晋级撤销原因分类 */
-            latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
-            /**
-             * Latest Revoked By
-             * @description 最近一次晋级撤销人或撤销主体
-             */
-            latest_revoked_by?: string | null;
-            /**
-             * Latest Revoked At
-             * @description 最近一次晋级撤销时间
-             */
-            latest_revoked_at?: string | null;
-            /**
-             * Record Count
-             * @description 最新成功摄取的记录数
-             * @default 0
-             */
-            record_count: number;
+            dataset_promotion_status?: string | null;
             /**
              * Last Attempt
              * @description 最近一次尝试时间
              */
             last_attempt?: string | null;
             /**
-             * Catalog Freshness At
-             * @description Catalog 记录的最新鲜度时间
+             * Latest Date
+             * @description 最新成功摄取日期
              */
-            catalog_freshness_at?: string | null;
+            latest_date?: string | null;
+            /** @description 最近一次晋级撤销原因分类 */
+            latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
             /**
-             * Catalog Storage Uri
-             * @description Catalog 最新资产存储 URI
+             * Latest Revoked At
+             * @description 最近一次晋级撤销时间
              */
-            catalog_storage_uri?: string | null;
+            latest_revoked_at?: string | null;
             /**
-             * Catalog Schema Hash
-             * @description Catalog 最新资产 schema 指纹
+             * Latest Revoked By
+             * @description 最近一次晋级撤销人或撤销主体
              */
-            catalog_schema_hash?: string | null;
+            latest_revoked_by?: string | null;
             /**
-             * Catalog Row Count
-             * @description Catalog 最新资产记录数
+             * Latest Status
+             * @description 最新摄取状态 (success/failed)
              */
-            catalog_row_count?: number | null;
+            latest_status?: string | null;
             /**
-             * Catalog Freshness Status
-             * @description Catalog freshness SLA 状态 (fresh/stale/missing/not_applicable)
+             * Record Count
+             * @description 最新成功摄取的记录数
+             * @default 0
              */
-            catalog_freshness_status?: string | null;
-            /**
-             * Catalog Freshness Sla Hours
-             * @description Catalog freshness SLA 小时数
-             */
-            catalog_freshness_sla_hours?: number | null;
+            record_count: number;
         };
         /**
          * DeviationResponse
@@ -6220,35 +7322,35 @@ export interface components {
          */
         DeviationResponse: {
             /**
-             * Strategy Id
-             * @description 策略 ID
+             * Filled
+             * @description 已成交数
              */
-            strategy_id: string;
+            filled: number;
+            /**
+             * Items
+             * @description 偏差明细列表
+             */
+            items: components["schemas"]["SignalDeviationItem"][];
             /**
              * Signal Date
              * @description 信号日期 (YYYY-MM-DD)
              */
             signal_date: string;
             /**
+             * Strategy Id
+             * @description 策略 ID
+             */
+            strategy_id: string;
+            /**
              * Total Signals
              * @description 信号总数
              */
             total_signals: number;
             /**
-             * Filled
-             * @description 已成交数
-             */
-            filled: number;
-            /**
              * Unfilled
              * @description 未成交数
              */
             unfilled: number;
-            /**
-             * Items
-             * @description 偏差明细列表
-             */
-            items: components["schemas"]["SignalDeviationItem"][];
         };
         /**
          * Dividend
@@ -6262,10 +7364,10 @@ export interface components {
          */
         Dividend: {
             /**
-             * Instrument Id
-             * @description 标的 ID
+             * Amount
+             * @description 分红金额
              */
-            instrument_id: number;
+            amount: number;
             /**
              * Announce Date
              * @description 公告日期
@@ -6277,10 +7379,705 @@ export interface components {
              */
             dividend_type: string;
             /**
-             * Amount
-             * @description 分红金额
+             * Instrument Id
+             * @description 标的 ID
              */
-            amount: number;
+            instrument_id: number;
+        };
+        /**
+         * ExperimentArtifactResponse
+         * @description API view of one immutable indexed experiment artifact.
+         */
+        ExperimentArtifactResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Artifact Kind */
+            artifact_kind: string;
+            /** Attempt Id */
+            attempt_id: string | null;
+            /** Byte Size */
+            byte_size: number;
+            /** Candidate Id */
+            candidate_id: string | null;
+            /** Content Hash */
+            content_hash: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Fold Id */
+            fold_id: string | null;
+            /** Is Pinned */
+            is_pinned: boolean;
+            manifest: components["schemas"]["JsonValue-Output"];
+            /** Pinned At */
+            pinned_at: string | null;
+            /** Relative Path */
+            relative_path: string;
+            /** Reproduction Fingerprint */
+            reproduction_fingerprint: string;
+            /** Revision */
+            revision: number;
+            /** Row Count */
+            row_count: number;
+            /** Schema Hash */
+            schema_hash: string;
+        };
+        /**
+         * ExperimentCandidateResponse
+         * @description API view of one immutable experiment candidate.
+         */
+        ExperimentCandidateResponse: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Is Baseline */
+            is_baseline: boolean;
+            /** Ordinal */
+            ordinal: number;
+            /** Parameters */
+            parameters: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+        };
+        /**
+         * ExperimentComparisonResponse
+         * @description API view of one experiment's candidate comparison projection.
+         */
+        ExperimentComparisonResponse: {
+            /** Experiment Id */
+            experiment_id: string;
+            payload: components["schemas"]["JsonValue-Output"];
+            /** Payload Hash */
+            payload_hash: string;
+            /** Revision */
+            revision: number;
+        };
+        /**
+         * ExperimentControlReceiptResponse
+         * @description API view of one durable control receipt (CAS post-state).
+         */
+        ExperimentControlReceiptResponse: {
+            /** Desired State */
+            desired_state: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Live Run Ids */
+            live_run_ids: string[];
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Revision */
+            revision: number;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ExperimentControlRequest
+         * @description Body for one revision-fenced experiment control action (pause/cancel/resume).
+         */
+        ExperimentControlRequest: {
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /**
+         * ExperimentDetailResponse
+         * @description API view of one durable experiment's current server truth.
+         */
+        ExperimentDetailResponse: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Candidate Limit */
+            candidate_limit: number;
+            /** Candidates */
+            candidates: components["schemas"]["ExperimentCandidateResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Desired State */
+            desired_state: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Failure Policy */
+            failure_policy: string;
+            /** Fold Count */
+            fold_count: number;
+            /** Fold Protocol Hash */
+            fold_protocol_hash: string;
+            /** Fold Protocol Id */
+            fold_protocol_id: string;
+            /** Fold Protocol Version */
+            fold_protocol_version: number;
+            /** Fold Run Limit */
+            fold_run_limit: number;
+            /** Folds */
+            folds: components["schemas"]["ExperimentFoldResponse"][];
+            /** Queue Ordinal */
+            queue_ordinal: number | null;
+            /** Research Cycle Hash */
+            research_cycle_hash: string;
+            /** Research Cycle Id */
+            research_cycle_id: string;
+            /** Revision */
+            revision: number;
+            /** Seed */
+            seed: number;
+            selection_state: components["schemas"]["ExperimentSelectionStateResponse"] | null;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Stage */
+            stage: string;
+            /** Status */
+            status: string;
+            /** Strategy Spec Hash */
+            strategy_spec_hash: string;
+            /** Strategy Version */
+            strategy_version: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Worker Count */
+            worker_count: number;
+        };
+        /**
+         * ExperimentFoldResponse
+         * @description API view of one persisted fold specification and projection.
+         */
+        ExperimentFoldResponse: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Claim Owner Token */
+            claim_owner_token: string | null;
+            /** Embargo Sessions */
+            embargo_sessions: number;
+            /** Fold Id */
+            fold_id: string;
+            /** Ordinal */
+            ordinal: number;
+            /** Purge Sessions */
+            purge_sessions: number;
+            /** Revision */
+            revision: number;
+            /** Role */
+            role: string;
+            /** Status */
+            status: string;
+            /**
+             * Test End
+             * Format: date
+             */
+            test_end: string;
+            /**
+             * Test Start
+             * Format: date
+             */
+            test_start: string;
+            /** Train End */
+            train_end: string | null;
+            /** Train Start */
+            train_start: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ExperimentGateResponse
+         * @description API view of one append-only gate evaluation.
+         */
+        ExperimentGateResponse: {
+            /** Artifact Id */
+            artifact_id: string | null;
+            /** Attempt Id */
+            attempt_id: string | null;
+            /** Candidate Id */
+            candidate_id: string | null;
+            /**
+             * Evaluated At
+             * Format: date-time
+             */
+            evaluated_at: string;
+            /** Evaluation Id */
+            evaluation_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Fold Id */
+            fold_id: string | null;
+            /** Layer */
+            layer: string;
+            observed: components["schemas"]["JsonValue-Output"];
+            /** Outcome */
+            outcome: string;
+            /** Payload Hash */
+            payload_hash: string;
+            policy: components["schemas"]["JsonValue-Output"];
+            /** Policy Version */
+            policy_version: string;
+            /** Rule Id */
+            rule_id: string;
+        };
+        /**
+         * ExperimentLaunchRequest
+         * @description Canonical planning document plus the operator-confirmed plan identity.
+         */
+        ExperimentLaunchRequest: {
+            budget: components["schemas"]["ExperimentPlanningBudgetRequest"];
+            /** Confirmed Plan Hash */
+            confirmed_plan_hash: string;
+            cost_model: components["schemas"]["ExperimentPlanningCostModelRequest"];
+            /** Created At */
+            created_at: string;
+            /** Dataset Requirements */
+            dataset_requirements: components["schemas"]["ExperimentPlanningDatasetRequirementRequest"][];
+            /** Experiment Id */
+            experiment_id: string;
+            /**
+             * Failure Policy
+             * @enum {string}
+             */
+            failure_policy: "continue_candidate_failures" | "fail_fast";
+            matrix: components["schemas"]["ExperimentPlanningMatrixRequest"];
+            /** Promotion Objective */
+            promotion_objective: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Research Cycle Hash */
+            research_cycle_hash: string;
+            /** Research Cycle Id */
+            research_cycle_id: string;
+            /** Seed */
+            seed: number;
+            snapshot: components["schemas"]["ExperimentPlanningSnapshotRequest"];
+            strategy: components["schemas"]["ExperimentPlanningStrategyRequest"];
+            /** Validation */
+            validation: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Worker Count */
+            worker_count: number;
+        };
+        /**
+         * ExperimentLaunchResponse
+         * @description Durable server truth returned after launch or exact replay.
+         */
+        ExperimentLaunchResponse: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Fold Count */
+            fold_count: number;
+            /** Plan Hash */
+            plan_hash: string;
+            /** Queue Ordinal */
+            queue_ordinal: number;
+            /** Revision */
+            revision: number;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ExperimentPlanningBaselineRequest
+         * @description Typed baseline descriptor envelope for the candidate matrix.
+         */
+        ExperimentPlanningBaselineRequest: {
+            /** Descriptor Type */
+            descriptor_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Schema Version */
+            schema_version: number;
+        };
+        /**
+         * ExperimentPlanningBudgetRequest
+         * @description Pre-registered hard resource ceilings.
+         */
+        ExperimentPlanningBudgetRequest: {
+            /** Candidate Limit */
+            candidate_limit: number;
+            /** Disk Byte Limit */
+            disk_byte_limit: number;
+            /** Fold Run Limit */
+            fold_run_limit: number;
+            /** Trading Session Limit */
+            trading_session_limit: number;
+        };
+        /**
+         * ExperimentPlanningCostModelRequest
+         * @description Deterministic resource-estimation coefficients.
+         */
+        ExperimentPlanningCostModelRequest: {
+            /** Bytes Per Run */
+            bytes_per_run: number;
+            /** Bytes Per Trading Session */
+            bytes_per_trading_session: number;
+        };
+        /**
+         * ExperimentPlanningDatasetRequirementRequest
+         * @description One exact certified dataset binding.
+         */
+        ExperimentPlanningDatasetRequirementRequest: {
+            /** Certified From */
+            certified_from: string | null;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Expected Snapshot Ids */
+            expected_snapshot_ids: string[];
+            /** Requires Pit Universe */
+            requires_pit_universe: boolean;
+        };
+        /**
+         * ExperimentPlanningMatrixRequest
+         * @description Complete candidate matrix preimage.
+         */
+        ExperimentPlanningMatrixRequest: {
+            /** Axes */
+            axes: components["schemas"]["ExperimentPlanningParameterAxisRequest"][];
+            baseline: components["schemas"]["ExperimentPlanningBaselineRequest"];
+            /** Candidate Limit */
+            candidate_limit: number;
+        };
+        /**
+         * ExperimentPlanningParameterAxisRequest
+         * @description One ordered candidate-matrix parameter axis.
+         */
+        ExperimentPlanningParameterAxisRequest: {
+            /** Name */
+            name: string;
+            /** Values */
+            values: components["schemas"]["ExperimentPlanningParameterValueRequest"][];
+        };
+        /**
+         * ExperimentPlanningParameterValueRequest
+         * @description One tagged scalar matrix value.
+         */
+        ExperimentPlanningParameterValueRequest: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "bool" | "int" | "float" | "string";
+            /** Value */
+            value: boolean | number | string;
+        };
+        /**
+         * ExperimentPlanningRequest
+         * @description Complete transport-only document passed unchanged to the builder.
+         */
+        ExperimentPlanningRequest: {
+            budget: components["schemas"]["ExperimentPlanningBudgetRequest"];
+            cost_model: components["schemas"]["ExperimentPlanningCostModelRequest"];
+            /** Created At */
+            created_at: string;
+            /** Dataset Requirements */
+            dataset_requirements: components["schemas"]["ExperimentPlanningDatasetRequirementRequest"][];
+            /** Experiment Id */
+            experiment_id: string;
+            /**
+             * Failure Policy
+             * @enum {string}
+             */
+            failure_policy: "continue_candidate_failures" | "fail_fast";
+            matrix: components["schemas"]["ExperimentPlanningMatrixRequest"];
+            /** Promotion Objective */
+            promotion_objective: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Research Cycle Hash */
+            research_cycle_hash: string;
+            /** Research Cycle Id */
+            research_cycle_id: string;
+            /** Seed */
+            seed: number;
+            snapshot: components["schemas"]["ExperimentPlanningSnapshotRequest"];
+            strategy: components["schemas"]["ExperimentPlanningStrategyRequest"];
+            /** Validation */
+            validation: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Worker Count */
+            worker_count: number;
+        };
+        /**
+         * ExperimentPlanningSnapshotRequest
+         * @description Exact certified research snapshot identity supplied to planning.
+         */
+        ExperimentPlanningSnapshotRequest: {
+            /** Manifest Hash */
+            manifest_hash: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+        };
+        /**
+         * ExperimentPlanningStrategyRequest
+         * @description Exact strategy-version content identity supplied to planning.
+         */
+        ExperimentPlanningStrategyRequest: {
+            /** Spec Hash */
+            spec_hash: string;
+            /** Spec Json */
+            spec_json: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * ExperimentPreflightCheckResponse
+         * @description Transport view of one deterministic planning gate result.
+         */
+        ExperimentPreflightCheckResponse: {
+            /** Code */
+            code: string | null;
+            /** Observed */
+            observed: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Outcome */
+            outcome: string;
+            /** Policy */
+            policy: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Reason */
+            reason: string | null;
+            /** Remediation */
+            remediation: string | null;
+            /** Rule Id */
+            rule_id: string;
+        };
+        /**
+         * ExperimentPreflightResponse
+         * @description Complete operator confirmation surface returned by read-only preflight.
+         */
+        ExperimentPreflightResponse: {
+            /** Budget Run Count */
+            budget_run_count: number;
+            /** Candidate Count */
+            candidate_count: number;
+            /** Checks */
+            checks: components["schemas"]["ExperimentPreflightCheckResponse"][];
+            /** Eligible Month Count */
+            eligible_month_count: number;
+            /** Estimated Disk Bytes */
+            estimated_disk_bytes: number;
+            /** Estimated Trading Sessions */
+            estimated_trading_sessions: number;
+            /** Isolation Width Sessions */
+            isolation_width_sessions: number;
+            /** Plan Hash */
+            plan_hash: string | null;
+            /** Planned Fold Count */
+            planned_fold_count: number;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ExperimentRetryFoldRequest
+         * @description Body for one revision-fenced terminal fold retry.
+         *
+         *     expected_revision is the fold projection revision (not experiment revision).
+         */
+        ExperimentRetryFoldRequest: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Fold Id */
+            fold_id: string;
+        };
+        /**
+         * ExperimentReviewPacketResponse
+         * @description API view of one immutable promotion review packet.
+         */
+        ExperimentReviewPacketResponse: {
+            /** Attempt Ids */
+            attempt_ids: string[];
+            /** Bundle Hash */
+            bundle_hash: string;
+            /** Candidate Id */
+            candidate_id: string | null;
+            /** Candidate Rationale */
+            candidate_rationale: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string | null;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Fold Ids */
+            fold_ids: string[];
+            /** Gate Outcomes */
+            gate_outcomes: components["schemas"]["ReviewGateOutcomeResponse"][];
+            /** Hard Review Blocked */
+            hard_review_blocked: boolean;
+            /** Holdout Claim Id */
+            holdout_claim_id: string | null;
+            /** Objective Payload Hash */
+            objective_payload_hash: string;
+            /** Parameter Hash */
+            parameter_hash: string;
+            /** R1 Impact Payload Hash */
+            r1_impact_payload_hash: string | null;
+            /** Registry Hash */
+            registry_hash: string;
+            /** Resolved Spec Hash */
+            resolved_spec_hash: string;
+            /** Schema Version */
+            schema_version: number;
+            /** Selection Evidence Artifact Id */
+            selection_evidence_artifact_id: string | null;
+            selection_exposure: components["schemas"]["ReviewSelectionExposureResponse"] | null;
+            /** Selection Trace Artifact Refs */
+            selection_trace_artifact_refs: components["schemas"]["ReviewSelectionTraceRefResponse"][];
+            /** Snapshot Hash */
+            snapshot_hash: string;
+            /** Spec Hash */
+            spec_hash: string;
+        };
+        /**
+         * ExperimentSelectionEvidenceResponse
+         * @description API view of one experiment's verified selection-evidence ledger.
+         */
+        ExperimentSelectionEvidenceResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Byte Size */
+            byte_size: number;
+            /** Content Hash */
+            content_hash: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Is Pinned */
+            is_pinned: boolean;
+            payload: components["schemas"]["JsonValue-Output"];
+        };
+        /**
+         * ExperimentSelectionStateResponse
+         * @description Persisted preselection and optional one-shot holdout consumption truth.
+         */
+        ExperimentSelectionStateResponse: {
+            /** Candidate Evidence Artifact Id */
+            candidate_evidence_artifact_id: string;
+            /** Candidate Evidence Content Hash */
+            candidate_evidence_content_hash: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Comparison Payload Hash */
+            comparison_payload_hash: string;
+            /** Event Id */
+            event_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Holdout Claim Id */
+            holdout_claim_id: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Revision */
+            revision: number;
+            /** Selection Evidence Content Hash */
+            selection_evidence_content_hash: string;
+            /** Selection Id */
+            selection_id: string;
+        };
+        /**
+         * ExperimentSummaryResponse
+         * @description API view of one experiment root in list views (no candidate/fold expansion).
+         */
+        ExperimentSummaryResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Desired State */
+            desired_state: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Queue Ordinal */
+            queue_ordinal: number | null;
+            /** Revision */
+            revision: number;
+            /** Stage */
+            stage: string;
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * FactorDescriptorResponse
+         * @description API view of one governed core-factor descriptor.
+         */
+        FactorDescriptorResponse: {
+            /** Factor Id */
+            factor_id: string;
+            /** Resolved Payload */
+            resolved_payload: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+        };
+        /**
+         * FactorDiagnosticsResponse
+         * @description Typed immutable factor diagnostics and their complete read identity.
+         */
+        FactorDiagnosticsResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Factor Id */
+            factor_id: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Provenance */
+            provenance: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Registry Hash */
+            registry_hash: string;
+            /** Snapshot Hash */
+            snapshot_hash: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
         };
         /**
          * FillAdjustmentResponse
@@ -6289,19 +8086,19 @@ export interface components {
         FillAdjustmentResponse: {
             /** Adjustment Id */
             adjustment_id: string;
-            /** Fill Id */
-            fill_id: string;
             /**
              * Adjustment Type
              * @enum {string}
              */
             adjustment_type: "void" | "replace";
-            /** Replacement Fill Id */
-            replacement_fill_id?: string | null;
-            /** Reason */
-            reason: string;
             /** Created At */
             created_at: string;
+            /** Fill Id */
+            fill_id: string;
+            /** Reason */
+            reason: string;
+            /** Replacement Fill Id */
+            replacement_fill_id?: string | null;
         };
         /**
          * FillComparisonResponse
@@ -6314,15 +8111,15 @@ export interface components {
              */
             identical: boolean;
             /**
-             * Mismatch Count
-             * @description 逐点不一致数量
-             */
-            mismatch_count: number;
-            /**
              * Length Mismatch
              * @description Fill 序列长度是否不一致
              */
             length_mismatch: boolean;
+            /**
+             * Mismatch Count
+             * @description 逐点不一致数量
+             */
+            mismatch_count: number;
             /**
              * Point Count
              * @description 原始 Fill 序列点数
@@ -6335,15 +8132,59 @@ export interface components {
          */
         FillResponse: {
             /**
+             * Direction
+             * @description 交易方向 (buy/sell)
+             */
+            direction: string;
+            /**
+             * Fee
+             * @description 手续费
+             * @default 0
+             */
+            fee: number;
+            /**
              * Fill Id
              * @description 成交唯一标识
              */
             fill_id: string;
             /**
+             * Fill Price
+             * @description 成交价格
+             */
+            fill_price: number;
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
              * Intent Id
              * @description 关联交易意图 ID
              */
             intent_id: string;
+            /**
+             * Notes
+             * @description 人工备注
+             * @default
+             */
+            notes: string;
+            /**
+             * Quantity
+             * @description 成交数量
+             */
+            quantity: number;
+            /**
+             * Settlement Date
+             * @description 交收日期
+             * @default
+             */
+            settlement_date: string;
+            /**
+             * Slippage
+             * @description 实际滑点
+             * @default 0
+             */
+            slippage: number;
             /**
              * Strategy Id
              * @description 策略 ID
@@ -6354,50 +8195,6 @@ export interface components {
              * @description 成交日期 (YYYY-MM-DD)
              */
             trade_date: string;
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
-            /**
-             * Direction
-             * @description 交易方向 (buy/sell)
-             */
-            direction: string;
-            /**
-             * Quantity
-             * @description 成交数量
-             */
-            quantity: number;
-            /**
-             * Fill Price
-             * @description 成交价格
-             */
-            fill_price: number;
-            /**
-             * Fee
-             * @description 手续费
-             * @default 0
-             */
-            fee: number;
-            /**
-             * Slippage
-             * @description 实际滑点
-             * @default 0
-             */
-            slippage: number;
-            /**
-             * Notes
-             * @description 人工备注
-             * @default
-             */
-            notes: string;
-            /**
-             * Settlement Date
-             * @description 交收日期
-             * @default
-             */
-            settlement_date: string;
         };
         /**
          * Financial
@@ -6410,6 +8207,13 @@ export interface components {
          *         data: 财务数据字典
          */
         Financial: {
+            /**
+             * Data
+             * @description 财务数据字典
+             */
+            data: {
+                [key: string]: unknown;
+            };
             /**
              * Instrument Id
              * @description 标的 ID
@@ -6425,13 +8229,6 @@ export interface components {
              * @description 报表类型
              */
             report_type: string;
-            /**
-             * Data
-             * @description 财务数据字典
-             */
-            data: {
-                [key: string]: unknown;
-            };
         };
         /**
          * FinancialType
@@ -6458,20 +8255,15 @@ export interface components {
          */
         FxBar: {
             /**
+             * Close
+             * @description 收盘价
+             */
+            close: number;
+            /**
              * Currency Pair
              * @description 货币对
              */
             currency_pair: string;
-            /**
-             * Trade Date Utc
-             * @description 交易日期 (UTC)
-             */
-            trade_date_utc: string;
-            /**
-             * Open
-             * @description 开盘价
-             */
-            open: number;
             /**
              * High
              * @description 最高价
@@ -6483,10 +8275,15 @@ export interface components {
              */
             low: number;
             /**
-             * Close
-             * @description 收盘价
+             * Open
+             * @description 开盘价
              */
-            close: number;
+            open: number;
+            /**
+             * Trade Date Utc
+             * @description 交易日期 (UTC)
+             */
+            trade_date_utc: string;
         };
         /**
          * FxQuery
@@ -6505,11 +8302,6 @@ export interface components {
              */
             currency_pairs?: string[] | null;
             /**
-             * Start Date
-             * @description 开始日期
-             */
-            start_date?: string | null;
-            /**
              * End Date
              * @description 结束日期
              */
@@ -6520,11 +8312,101 @@ export interface components {
              * @default 1000
              */
             limit: number;
+            /**
+             * Start Date
+             * @description 开始日期
+             */
+            start_date?: string | null;
+        };
+        /**
+         * GovernanceDecisionRequest
+         * @description Shared actor + reason body for one governance state-machine decision.
+         */
+        GovernanceDecisionRequest: {
+            /**
+             * Actor
+             * @description 决策执行者
+             */
+            actor: string;
+            /**
+             * Reason
+             * @description 决策原因
+             */
+            reason: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HoldoutEvaluationReceiptResponse
+         * @description API projection of one committed or exactly replayed holdout claim.
+         */
+        HoldoutEvaluationReceiptResponse: {
+            /** Candidate Evidence Content Hash */
+            candidate_evidence_content_hash: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Claim Id */
+            claim_id: string;
+            /** Claim Payload Hash */
+            claim_payload_hash: string;
+            /** Event Id */
+            event_id: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Fold Id */
+            fold_id: string;
+            /** Logical Run Id */
+            logical_run_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Reproduction Fingerprint */
+            reproduction_fingerprint: string;
+            /** Revision */
+            revision: number;
+            /** Selection Evidence Content Hash */
+            selection_evidence_content_hash: string;
+            /** Selection Id */
+            selection_id: string;
+            /**
+             * State
+             * @constant
+             */
+            state: "claimed";
+        };
+        /**
+         * HoldoutEvaluationRequest
+         * @description Body for the one-shot holdout claim of a persisted preselection.
+         */
+        HoldoutEvaluationRequest: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Expected Candidate Evidence Content Hash */
+            expected_candidate_evidence_content_hash: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Expected Selection Evidence Hash */
+            expected_selection_evidence_hash: string;
+            /** Operator Confirmation */
+            operator_confirmation: string;
+            /** Selection Id */
+            selection_id: string;
+            selection_reason: components["schemas"]["HoldoutSelectionReasonRequest"];
+        };
+        /**
+         * HoldoutSelectionReasonRequest
+         * @description Operator-authored reason bound into the immutable holdout claim.
+         */
+        HoldoutSelectionReasonRequest: {
+            /** Code */
+            code: string;
+            /** Summary */
+            summary: string;
         };
         /**
          * ImpactModel
@@ -6543,35 +8425,20 @@ export interface components {
              */
             account_id: string;
             /**
-             * Strategy Id
-             * @description 策略 ID
-             */
-            strategy_id: string;
-            /**
-             * Snapshot Date
-             * @description 快照日期 (YYYY-MM-DD)
-             */
-            snapshot_date: string;
-            /**
              * Cash Available
              * @description 可用现金
              */
             cash_available: number;
-            /**
-             * Cash Settled
-             * @description 已交收现金
-             */
-            cash_settled: number;
             /**
              * Cash Frozen
              * @description 冻结现金
              */
             cash_frozen: number;
             /**
-             * Total Value
-             * @description 账户总资产
+             * Cash Settled
+             * @description 已交收现金
              */
-            total_value: number;
+            cash_settled: number;
             /**
              * Nav
              * @description 单位净值
@@ -6585,6 +8452,21 @@ export interface components {
              * @default false
              */
             replace_confirmed: boolean;
+            /**
+             * Snapshot Date
+             * @description 快照日期 (YYYY-MM-DD)
+             */
+            snapshot_date: string;
+            /**
+             * Strategy Id
+             * @description 策略 ID
+             */
+            strategy_id: string;
+            /**
+             * Total Value
+             * @description 账户总资产
+             */
+            total_value: number;
         };
         /**
          * Indicator
@@ -6601,40 +8483,40 @@ export interface components {
          *         unit: 单位 (可选)
          */
         Indicator: {
-            /**
-             * Indicator Id
-             * @description 指标 ID
-             */
-            indicator_id: number;
+            /** @description 类别 */
+            category: components["schemas"]["MacroCategory"];
             /**
              * Code
              * @description 指标代码
              */
             code: string;
             /**
-             * Name
-             * @description 指标名称
-             */
-            name: string;
-            /** @description 类别 */
-            category: components["schemas"]["MacroCategory"];
-            /** @description 频率 */
-            frequency: components["schemas"]["MacroFrequency"];
-            /**
              * Date
              * @description 数据日期
              */
             date: string;
+            /** @description 频率 */
+            frequency: components["schemas"]["MacroFrequency"];
             /**
-             * Value
-             * @description 指标值
+             * Indicator Id
+             * @description 指标 ID
              */
-            value: number;
+            indicator_id: number;
+            /**
+             * Name
+             * @description 指标名称
+             */
+            name: string;
             /**
              * Unit
              * @description 单位
              */
             unit?: string | null;
+            /**
+             * Value
+             * @description 指标值
+             */
+            value: number;
         };
         /**
          * IndicatorQuery
@@ -6649,6 +8531,21 @@ export interface components {
          */
         IndicatorQuery: {
             /**
+             * Allow Experimental Data
+             * @description 显式允许 experimental 数据集进入研究态查询
+             * @default false
+             */
+            allow_experimental_data: boolean;
+            /** @description 类别过滤 */
+            category?: components["schemas"]["MacroCategory"] | null;
+            /**
+             * End Date
+             * @description 结束日期
+             */
+            end_date?: string | null;
+            /** @description 频率过滤 */
+            frequency?: components["schemas"]["MacroFrequency"] | null;
+            /**
              * Indicators
              * @description 指标 ID 或代码列表
              */
@@ -6658,21 +8555,6 @@ export interface components {
              * @description 开始日期
              */
             start_date?: string | null;
-            /**
-             * End Date
-             * @description 结束日期
-             */
-            end_date?: string | null;
-            /** @description 类别过滤 */
-            category?: components["schemas"]["MacroCategory"] | null;
-            /** @description 频率过滤 */
-            frequency?: components["schemas"]["MacroFrequency"] | null;
-            /**
-             * Allow Experimental Data
-             * @description 显式允许 experimental 数据集进入研究态查询
-             * @default false
-             */
-            allow_experimental_data: boolean;
         };
         /**
          * IngestionHistoryItem
@@ -6680,41 +8562,41 @@ export interface components {
          */
         IngestionHistoryItem: {
             /**
-             * Dataset
-             * @description 数据集名称
-             */
-            dataset: string;
-            /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
-            /**
-             * Status
-             * @description 摄取状态
-             */
-            status: string;
-            /**
-             * Rows
-             * @description 记录数
-             */
-            rows?: number | null;
-            /**
-             * Error Message
-             * @description 错误信息
-             */
-            error_message?: string | null;
-            /**
              * Attempts
              * @description 尝试次数
              * @default 1
              */
             attempts: number;
             /**
+             * Dataset
+             * @description 数据集名称
+             */
+            dataset: string;
+            /**
+             * Error Message
+             * @description 错误信息
+             */
+            error_message?: string | null;
+            /**
              * Last Attempt At
              * @description 最后尝试时间
              */
             last_attempt_at?: string | null;
+            /**
+             * Rows
+             * @description 记录数
+             */
+            rows?: number | null;
+            /**
+             * Status
+             * @description 摄取状态
+             */
+            status: string;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
         };
         /**
          * IngestionStatusResponse
@@ -6746,21 +8628,6 @@ export interface components {
          *         is_active: 是否活跃
          */
         Instrument: {
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
-            /**
-             * Ticker
-             * @description 裸代码
-             */
-            ticker: string;
-            /**
-             * Name
-             * @description 证券名称
-             */
-            name: string;
             /** @description 资产类别 */
             asset_class: components["schemas"]["AssetClass"];
             /**
@@ -6769,32 +8636,54 @@ export interface components {
              */
             exchange: string;
             /**
-             * List Date
-             * @description 上市日期
+             * Instrument Id
+             * @description 标的 ID
              */
-            list_date?: string | null;
+            instrument_id: number;
             /**
              * Is Active
              * @description 是否活跃
              */
             is_active: boolean;
+            /**
+             * List Date
+             * @description 上市日期
+             */
+            list_date?: string | null;
+            /**
+             * Name
+             * @description 证券名称
+             */
+            name: string;
+            /**
+             * Ticker
+             * @description 裸代码
+             */
+            ticker: string;
         };
         IsoCalendarDateStr: string;
+        JsonPrimitive: boolean | number | string | null;
+        "JsonValue-Input": components["schemas"]["JsonPrimitive"] | components["schemas"]["JsonValue-Input"][] | {
+            [key: string]: components["schemas"]["JsonValue-Input"];
+        };
+        "JsonValue-Output": components["schemas"]["JsonPrimitive"] | components["schemas"]["JsonValue-Output"][] | {
+            [key: string]: components["schemas"]["JsonValue-Output"];
+        };
         /**
          * LineageResponse
          * @description 运行血统链响应.
          */
         LineageResponse: {
             /**
-             * Runs
-             * @description 血统链运行记录
-             */
-            runs: components["schemas"]["RunResponse"][];
-            /**
              * Depth
              * @description 血统链深度
              */
             depth: number;
+            /**
+             * Runs
+             * @description 血统链运行记录
+             */
+            runs: components["schemas"]["RunResponse"][];
         };
         /**
          * MacroCategory
@@ -6824,21 +8713,21 @@ export interface components {
              */
             data_diffs?: string[];
             /**
-             * Version Diffs
-             * @description 版本差异列表
+             * Has Diff
+             * @description 是否存在差异
+             * @default false
              */
-            version_diffs?: string[];
+            has_diff: boolean;
             /**
              * Seed Diffs
              * @description 随机种子差异列表
              */
             seed_diffs?: string[];
             /**
-             * Has Diff
-             * @description 是否存在差异
-             * @default false
+             * Version Diffs
+             * @description 版本差异列表
              */
-            has_diff: boolean;
+            version_diffs?: string[];
         };
         /**
          * Margin
@@ -6859,41 +8748,36 @@ export interface components {
              */
             instrument_id: number;
             /**
-             * Trade Date
-             * @description 交易日期
-             */
-            trade_date: string;
-            /**
              * Margin Buy Balance
              * @description 融资余额
              */
             margin_buy_balance: number;
-            /**
-             * Short Sell Balance
-             * @description 融券余额
-             */
-            short_sell_balance: number;
             /**
              * Margin Buy Volume
              * @description 融资买入量
              */
             margin_buy_volume: number;
             /**
+             * Short Sell Balance
+             * @description 融券余额
+             */
+            short_sell_balance: number;
+            /**
              * Short Sell Volume
              * @description 融券卖出量
              */
             short_sell_volume: number;
+            /**
+             * Trade Date
+             * @description 交易日期
+             */
+            trade_date: string;
         };
         /**
          * MaturityGovernanceAttentionItemResponse
          * @description Maturity governance item requiring operator attention.
          */
         MaturityGovernanceAttentionItemResponse: {
-            /**
-             * Dataset Id
-             * @description 数据集 ID
-             */
-            dataset_id: string;
             /**
              * Attention Reasons
              * @description 需要后端消费者关注该数据集的结构化原因代码
@@ -6906,6 +8790,11 @@ export interface components {
             attention_severity: string;
             /** @description 对应的数据集成熟度治理明细 */
             dataset: components["schemas"]["MaturityGovernanceDatasetResponse"];
+            /**
+             * Dataset Id
+             * @description 数据集 ID
+             */
+            dataset_id: string;
         };
         /**
          * MaturityGovernanceAttentionReasonCountResponse
@@ -6913,15 +8802,15 @@ export interface components {
          */
         MaturityGovernanceAttentionReasonCountResponse: {
             /**
-             * Reason
-             * @description maturity governance attention reason code
-             */
-            reason: string;
-            /**
              * Count
              * @description 该 reason 覆盖的数据集数量
              */
             count: number;
+            /**
+             * Reason
+             * @description maturity governance attention reason code
+             */
+            reason: string;
         };
         /**
          * MaturityGovernanceAttentionSeverityCountResponse
@@ -6929,15 +8818,15 @@ export interface components {
          */
         MaturityGovernanceAttentionSeverityCountResponse: {
             /**
-             * Severity
-             * @description maturity governance attention severity
-             */
-            severity: string;
-            /**
              * Count
              * @description 该 severity 覆盖的数据集数量
              */
             count: number;
+            /**
+             * Severity
+             * @description maturity governance attention severity
+             */
+            severity: string;
         };
         /**
          * MaturityGovernanceDatasetResponse
@@ -6945,35 +8834,57 @@ export interface components {
          */
         MaturityGovernanceDatasetResponse: {
             /**
-             * Dataset Id
-             * @description 数据集 ID
+             * Active Maturity Promotion
+             * @description 当前是否存在 active maturity promotion override
              */
-            dataset_id: string;
-            /**
-             * Current Maturity
-             * @description 当前有效成熟度
-             */
-            current_maturity?: string | null;
+            active_maturity_promotion: boolean;
             /**
              * Catalog Freshness Status
              * @description Catalog freshness 状态
              */
             catalog_freshness_status?: string | null;
             /**
-             * Promotion Status
-             * @description 晋级评估状态
+             * Current Maturity
+             * @description 当前有效成熟度
              */
-            promotion_status: string;
+            current_maturity?: string | null;
             /**
-             * Active Maturity Promotion
-             * @description 当前是否存在 active maturity promotion override
+             * Dataset Id
+             * @description 数据集 ID
              */
-            active_maturity_promotion: boolean;
+            dataset_id: string;
             /**
              * Has Maturity Warning
              * @description 当前状态是否有 maturity 警告
              */
             has_maturity_warning: boolean;
+            /** @description 最近一次晋级撤销原因分类 */
+            latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
+            /**
+             * Latest Revoked At
+             * @description 最近一次晋级撤销时间
+             */
+            latest_revoked_at?: string | null;
+            /**
+             * Latest Revoked By
+             * @description 最近一次晋级撤销人或撤销主体
+             */
+            latest_revoked_by?: string | null;
+            /**
+             * Missing Criteria
+             * @description 当前缺失的晋级条件
+             */
+            missing_criteria?: string[];
+            /**
+             * Promotion Status
+             * @description 晋级评估状态
+             */
+            promotion_status: string;
+            /**
+             * Rejected Criteria
+             * @description 已审核但未通过的晋级条件
+             */
+            rejected_criteria?: string[];
             /**
              * Required Criteria
              * @description 晋级所需条件
@@ -6984,28 +8895,6 @@ export interface components {
              * @description 已满足条件
              */
             satisfied_criteria?: string[];
-            /** @description 最近一次晋级撤销原因分类 */
-            latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
-            /**
-             * Latest Revoked By
-             * @description 最近一次晋级撤销人或撤销主体
-             */
-            latest_revoked_by?: string | null;
-            /**
-             * Latest Revoked At
-             * @description 最近一次晋级撤销时间
-             */
-            latest_revoked_at?: string | null;
-            /**
-             * Missing Criteria
-             * @description 当前缺失的晋级条件
-             */
-            missing_criteria?: string[];
-            /**
-             * Rejected Criteria
-             * @description 已审核但未通过的晋级条件
-             */
-            rejected_criteria?: string[];
         };
         /**
          * MaturityGovernanceReportResponse
@@ -7013,81 +8902,96 @@ export interface components {
          */
         MaturityGovernanceReportResponse: {
             /**
-             * Dataset Count
-             * @description 报告覆盖的数据集数量
-             */
-            dataset_count: number;
-            /**
-             * Warning Count
-             * @description 带 maturity warning 的数据集数量
-             */
-            warning_count: number;
-            /**
-             * Promotable Count
-             * @description 晋级评估 ready 的数据集数量
-             */
-            promotable_count: number;
-            /**
              * Active Promotion Count
              * @description 当前存在 maturity promotion override 的数据集数量
              */
             active_promotion_count: number;
-            /**
-             * Revoked Promotion Count
-             * @description 存在最近晋级撤销上下文的数据集数量
-             */
-            revoked_promotion_count: number;
-            /**
-             * Maturity Summary
-             * @description 按当前 maturity 聚合的状态摘要
-             */
-            maturity_summary: components["schemas"]["DatasetMaturitySummaryResponse"][];
-            /**
-             * Promotion Status Counts
-             * @description 按晋级评估状态聚合的数据集数量
-             */
-            promotion_status_counts: components["schemas"]["PromotionStatusCountResponse"][];
-            /**
-             * Missing Criteria Counts
-             * @description 按缺失晋级条件聚合的数据集数量
-             */
-            missing_criteria_counts?: components["schemas"]["PromotionCriterionCountResponse"][];
-            /**
-             * Rejected Criteria Counts
-             * @description 按 rejected 晋级条件聚合的数据集数量
-             */
-            rejected_criteria_counts?: components["schemas"]["PromotionCriterionCountResponse"][];
-            /**
-             * Datasets
-             * @description 各数据集成熟度治理明细
-             */
-            datasets: components["schemas"]["MaturityGovernanceDatasetResponse"][];
             /**
              * Attention Reason Counts
              * @description 按 maturity governance attention reason 聚合的数据集数量
              */
             attention_reason_counts?: components["schemas"]["MaturityGovernanceAttentionReasonCountResponse"][];
             /**
+             * Attention Required
+             * @description 带有结构化 attention reason 的数据集治理明细
+             */
+            attention_required?: components["schemas"]["MaturityGovernanceAttentionItemResponse"][];
+            /**
              * Attention Severity Counts
              * @description 按 maturity governance attention severity 聚合的数据集数量
              */
             attention_severity_counts?: components["schemas"]["MaturityGovernanceAttentionSeverityCountResponse"][];
+            /**
+             * Dataset Count
+             * @description 报告覆盖的数据集数量
+             */
+            dataset_count: number;
+            /**
+             * Datasets
+             * @description 各数据集成熟度治理明细
+             */
+            datasets: components["schemas"]["MaturityGovernanceDatasetResponse"][];
+            /**
+             * Maturity Summary
+             * @description 按当前 maturity 聚合的状态摘要
+             */
+            maturity_summary: components["schemas"]["DatasetMaturitySummaryResponse"][];
+            /**
+             * Missing Criteria Counts
+             * @description 按缺失晋级条件聚合的数据集数量
+             */
+            missing_criteria_counts?: components["schemas"]["PromotionCriterionCountResponse"][];
+            /**
+             * Promotable Count
+             * @description 晋级评估 ready 的数据集数量
+             */
+            promotable_count: number;
+            /**
+             * Promotion Status Counts
+             * @description 按晋级评估状态聚合的数据集数量
+             */
+            promotion_status_counts: components["schemas"]["PromotionStatusCountResponse"][];
+            /**
+             * Rejected Criteria Counts
+             * @description 按 rejected 晋级条件聚合的数据集数量
+             */
+            rejected_criteria_counts?: components["schemas"]["PromotionCriterionCountResponse"][];
+            /**
+             * Revoked Promotion Count
+             * @description 存在最近晋级撤销上下文的数据集数量
+             */
+            revoked_promotion_count: number;
             /**
              * Source Fallback Policy Effect Counts
              * @description 按 active source fallback policy effect 聚合的 source decision 数量
              */
             source_fallback_policy_effect_counts?: components["schemas"]["MaturityGovernanceSourceFallbackPolicyEffectCountResponse"][];
             /**
-             * Attention Required
-             * @description 带有结构化 attention reason 的数据集治理明细
+             * Warning Count
+             * @description 带 maturity warning 的数据集数量
              */
-            attention_required?: components["schemas"]["MaturityGovernanceAttentionItemResponse"][];
+            warning_count: number;
         };
         /**
          * MaturityGovernanceSourceFallbackPolicyEffectCountResponse
          * @description Maturity governance count by source fallback policy effect.
          */
         MaturityGovernanceSourceFallbackPolicyEffectCountResponse: {
+            /**
+             * Catalog Selected Source
+             * @description Catalog freshness 策略原本选择的来源
+             */
+            catalog_selected_source: string;
+            /**
+             * Count
+             * @description 该 policy effect 影响的 source decision 数量
+             */
+            count: number;
+            /**
+             * Effective Selected Source
+             * @description 应用 active fallback policy 后的最终来源
+             */
+            effective_selected_source: string;
             /**
              * Policy Id
              * @description 触发 source fallback effect 的 policy ID
@@ -7098,21 +9002,6 @@ export interface components {
              * @description 触发 effect 的 policy lifecycle 状态
              */
             policy_status: string;
-            /**
-             * Catalog Selected Source
-             * @description Catalog freshness 策略原本选择的来源
-             */
-            catalog_selected_source: string;
-            /**
-             * Effective Selected Source
-             * @description 应用 active fallback policy 后的最终来源
-             */
-            effective_selected_source: string;
-            /**
-             * Count
-             * @description 该 policy effect 影响的 source decision 数量
-             */
-            count: number;
         };
         /**
          * MaturityPromotionHistoryItem
@@ -7120,47 +9009,47 @@ export interface components {
          */
         MaturityPromotionHistoryItem: {
             /**
-             * Dataset Id
-             * @description 数据集 ID
-             */
-            dataset_id: string;
-            /**
              * Action
              * @description 治理动作 (promoted/revoked)
              */
             action: string;
-            /**
-             * Previous Maturity
-             * @description 动作前成熟度
-             */
-            previous_maturity: string;
-            /**
-             * Next Maturity
-             * @description 动作后成熟度
-             */
-            next_maturity: string;
-            /**
-             * Actor
-             * @description 操作人或操作主体
-             */
-            actor: string;
             /**
              * Action At
              * @description 操作时间
              */
             action_at?: string | null;
             /**
+             * Actor
+             * @description 操作人或操作主体
+             */
+            actor: string;
+            /**
+             * Dataset Id
+             * @description 数据集 ID
+             */
+            dataset_id: string;
+            /**
              * Evidence Uri
              * @description 关联证据 URI
              */
             evidence_uri?: string | null;
-            /** @description 撤销原因分类 */
-            revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
+            /**
+             * Next Maturity
+             * @description 动作后成熟度
+             */
+            next_maturity: string;
             /**
              * Notes
              * @description 备注
              */
             notes?: string | null;
+            /**
+             * Previous Maturity
+             * @description 动作前成熟度
+             */
+            previous_maturity: string;
+            /** @description 撤销原因分类 */
+            revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
         };
         /** @enum {string} */
         MaturityPromotionRevocationReason: "policy_regression" | "failed_revalidation" | "manual_override" | "evidence_invalidated";
@@ -7175,17 +9064,17 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Revoked By
-             * @description 撤销人或撤销主体
-             */
-            revoked_by: string;
-            /** @description 撤销原因分类 */
-            revocation_reason: components["schemas"]["MaturityPromotionRevocationReason"];
-            /**
              * Notes
              * @description 撤销备注
              */
             notes?: string | null;
+            /** @description 撤销原因分类 */
+            revocation_reason: components["schemas"]["MaturityPromotionRevocationReason"];
+            /**
+             * Revoked By
+             * @description 撤销人或撤销主体
+             */
+            revoked_by: string;
         };
         /**
          * MaturityPromotionRevokeResponse
@@ -7198,37 +9087,37 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Revoked By
-             * @description 撤销人或撤销主体
+             * Dataset Maturity After
+             * @description 撤销后数据集成熟度
              */
-            revoked_by: string;
-            /**
-             * Revoked At
-             * @description 撤销时间
-             */
-            revoked_at: string;
+            dataset_maturity_after: string;
             /**
              * Dataset Maturity Before
              * @description 撤销前数据集成熟度
              */
             dataset_maturity_before: string;
             /**
-             * Dataset Maturity After
-             * @description 撤销后数据集成熟度
-             */
-            dataset_maturity_after: string;
-            /**
              * Evidence Uri
              * @description 原晋级证据 URI
              */
             evidence_uri?: string | null;
-            /** @description 撤销原因分类 */
-            revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
             /**
              * Notes
              * @description 撤销备注
              */
             notes?: string | null;
+            /** @description 撤销原因分类 */
+            revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
+            /**
+             * Revoked At
+             * @description 撤销时间
+             */
+            revoked_at: string;
+            /**
+             * Revoked By
+             * @description 撤销人或撤销主体
+             */
+            revoked_by: string;
         };
         /**
          * MemberResponse
@@ -7244,15 +9133,45 @@ export interface components {
          */
         NavPointResponse: {
             /**
-             * Trade Date
-             * @description 交易日期 (YYYY-MM-DD)
-             */
-            trade_date: string;
-            /**
              * Nav
              * @description 净值
              */
             nav: number;
+            /**
+             * Trade Date
+             * @description 交易日期 (YYYY-MM-DD)
+             */
+            trade_date: string;
+        };
+        /**
+         * NodeDescriptorResponse
+         * @description API view of one immutable strategy pipeline node descriptor.
+         */
+        NodeDescriptorResponse: {
+            /** Capability Tags */
+            capability_tags: string[];
+            /** Category */
+            category: string;
+            /** Config Schema */
+            config_schema: {
+                [key: string]: string;
+            };
+            /** Default Config */
+            default_config: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Deterministic */
+            deterministic: boolean;
+            /** Display Name */
+            display_name: string;
+            /** Implementation Key */
+            implementation_key: string;
+            /** Node Type */
+            node_type: string;
+            /** Required Datasets */
+            required_datasets: string[];
+            /** Version */
+            version: string;
         };
         NonBlankStr: string;
         /**
@@ -7267,10 +9186,10 @@ export interface components {
          */
         PaginationResponse: {
             /**
-             * Total
-             * @description 总记录数
+             * Has More
+             * @description 判断是否还有更多数据.
              */
-            total: number;
+            readonly has_more: boolean;
             /**
              * Limit
              * @description 每页数量
@@ -7282,16 +9201,26 @@ export interface components {
              */
             offset: number;
             /**
-             * Has More
-             * @description 判断是否还有更多数据.
+             * Total
+             * @description 总记录数
              */
-            readonly has_more: boolean;
+            total: number;
         };
         /**
          * PnlSummaryResponse
          * @description P&L 汇总响应.
          */
         PnlSummaryResponse: {
+            /**
+             * Net Pnl
+             * @description 净盈亏 (已实现 + 浮动 - 手续费)
+             */
+            net_pnl: number;
+            /**
+             * Total Fees
+             * @description 累计手续费
+             */
+            total_fees: number;
             /**
              * Total Realized Pnl
              * @description 已实现盈亏合计
@@ -7302,32 +9231,12 @@ export interface components {
              * @description 浮动盈亏合计
              */
             total_unrealized_pnl: number;
-            /**
-             * Total Fees
-             * @description 累计手续费
-             */
-            total_fees: number;
-            /**
-             * Net Pnl
-             * @description 净盈亏 (已实现 + 浮动 - 手续费)
-             */
-            net_pnl: number;
         };
         /**
          * PositionBaselineRequest
          * @description 账户基线中的单只标的持仓。
          */
         PositionBaselineRequest: {
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
-            /**
-             * Quantity
-             * @description 持仓数量
-             */
-            quantity: number;
             /**
              * Available Quantity
              * @description 可用数量
@@ -7339,16 +9248,20 @@ export interface components {
              */
             average_cost: number;
             /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
              * Market Value
              * @description 持仓市值
              */
             market_value: number;
             /**
-             * Unrealized Pnl
-             * @description 浮动盈亏
-             * @default 0
+             * Quantity
+             * @description 持仓数量
              */
-            unrealized_pnl: number;
+            quantity: number;
             /**
              * Realized Pnl
              * @description 已实现盈亏
@@ -7361,37 +9274,18 @@ export interface components {
              * @default 0
              */
             total_fees: number;
+            /**
+             * Unrealized Pnl
+             * @description 浮动盈亏
+             * @default 0
+             */
+            unrealized_pnl: number;
         };
         /**
          * PositionSnapshotResponse
          * @description 实际持仓快照响应.
          */
         PositionSnapshotResponse: {
-            /**
-             * Snapshot Id
-             * @description 快照唯一标识
-             */
-            snapshot_id: string;
-            /**
-             * Strategy Id
-             * @description 策略 ID
-             */
-            strategy_id: string;
-            /**
-             * Snapshot Date
-             * @description 快照日期 (YYYY-MM-DD)
-             */
-            snapshot_date: string;
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
-            /**
-             * Quantity
-             * @description 持仓数量
-             */
-            quantity: number;
             /**
              * Available Quantity
              * @description 可用数量
@@ -7403,25 +9297,50 @@ export interface components {
              */
             average_cost: number;
             /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
              * Market Value
              * @description 市值
              */
             market_value: number;
             /**
-             * Unrealized Pnl
-             * @description 浮动盈亏
+             * Quantity
+             * @description 持仓数量
              */
-            unrealized_pnl: number;
+            quantity: number;
             /**
              * Realized Pnl
              * @description 已实现盈亏
              */
             realized_pnl: number;
             /**
+             * Snapshot Date
+             * @description 快照日期 (YYYY-MM-DD)
+             */
+            snapshot_date: string;
+            /**
+             * Snapshot Id
+             * @description 快照唯一标识
+             */
+            snapshot_id: string;
+            /**
+             * Strategy Id
+             * @description 策略 ID
+             */
+            strategy_id: string;
+            /**
              * Total Fees
              * @description 累计手续费
              */
             total_fees: number;
+            /**
+             * Unrealized Pnl
+             * @description 浮动盈亏
+             */
+            unrealized_pnl: number;
         };
         /**
          * PromotionCriterionCountResponse
@@ -7429,15 +9348,15 @@ export interface components {
          */
         PromotionCriterionCountResponse: {
             /**
-             * Criterion
-             * @description 晋级条件
-             */
-            criterion: string;
-            /**
              * Count
              * @description 该条件出现次数
              */
             count: number;
+            /**
+             * Criterion
+             * @description 晋级条件
+             */
+            criterion: string;
         };
         /**
          * PromotionEvidenceReviewRequest
@@ -7445,25 +9364,25 @@ export interface components {
          */
         PromotionEvidenceReviewRequest: {
             /**
-             * Dataset Id
-             * @description 数据集 ID
-             */
-            dataset_id: string;
-            /**
              * Criterion
              * @description 被审核的晋级条件
              */
             criterion: string;
+            /**
+             * Dataset Id
+             * @description 数据集 ID
+             */
+            dataset_id: string;
             /**
              * Evidence Uri
              * @description 审核证据 URI
              */
             evidence_uri: string;
             /**
-             * Reviewed By
-             * @description 审核人或审核主体
+             * Notes
+             * @description 审核备注
              */
-            reviewed_by: string;
+            notes?: string | null;
             /**
              * Passed
              * @description 该条件是否审核通过
@@ -7471,10 +9390,10 @@ export interface components {
              */
             passed: boolean;
             /**
-             * Notes
-             * @description 审核备注
+             * Reviewed By
+             * @description 审核人或审核主体
              */
-            notes?: string | null;
+            reviewed_by: string;
         };
         /**
          * PromotionEvidenceReviewResponse
@@ -7487,65 +9406,65 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Reviewed Criterion
-             * @description 本次审核的晋级条件
+             * Dataset Maturity After
+             * @description 审核后数据集成熟度
              */
-            reviewed_criterion: string;
-            /**
-             * Evidence Uri
-             * @description 审核证据 URI
-             */
-            evidence_uri: string;
-            /**
-             * Reviewed By
-             * @description 审核人或审核主体
-             */
-            reviewed_by: string;
-            /**
-             * Passed
-             * @description 该条件是否审核通过
-             */
-            passed: boolean;
-            /**
-             * Reviewed At
-             * @description 审核时间
-             */
-            reviewed_at: string;
-            /**
-             * Promotion Status
-             * @description 审核后晋级评估状态
-             */
-            promotion_status: string;
-            /**
-             * Missing Criteria
-             * @description 缺失条件
-             */
-            missing_criteria?: string[];
-            /**
-             * Satisfied Criteria
-             * @description 通过条件
-             */
-            satisfied_criteria?: string[];
-            /**
-             * Rejected Criteria
-             * @description 已审核但未通过条件
-             */
-            rejected_criteria?: string[];
-            /**
-             * Metadata Promoted
-             * @description 本次审核是否触发 metadata 晋级
-             */
-            metadata_promoted: boolean;
+            dataset_maturity_after: string;
             /**
              * Dataset Maturity Before
              * @description 审核前数据集成熟度
              */
             dataset_maturity_before: string;
             /**
-             * Dataset Maturity After
-             * @description 审核后数据集成熟度
+             * Evidence Uri
+             * @description 审核证据 URI
              */
-            dataset_maturity_after: string;
+            evidence_uri: string;
+            /**
+             * Metadata Promoted
+             * @description 本次审核是否触发 metadata 晋级
+             */
+            metadata_promoted: boolean;
+            /**
+             * Missing Criteria
+             * @description 缺失条件
+             */
+            missing_criteria?: string[];
+            /**
+             * Passed
+             * @description 该条件是否审核通过
+             */
+            passed: boolean;
+            /**
+             * Promotion Status
+             * @description 审核后晋级评估状态
+             */
+            promotion_status: string;
+            /**
+             * Rejected Criteria
+             * @description 已审核但未通过条件
+             */
+            rejected_criteria?: string[];
+            /**
+             * Reviewed At
+             * @description 审核时间
+             */
+            reviewed_at: string;
+            /**
+             * Reviewed By
+             * @description 审核人或审核主体
+             */
+            reviewed_by: string;
+            /**
+             * Reviewed Criterion
+             * @description 本次审核的晋级条件
+             */
+            reviewed_criterion: string;
+            /**
+             * Satisfied Criteria
+             * @description 通过条件
+             */
+            satisfied_criteria?: string[];
         };
         /**
          * PromotionReadinessItemResponse
@@ -7553,30 +9472,52 @@ export interface components {
          */
         PromotionReadinessItemResponse: {
             /**
-             * Dataset Id
-             * @description 数据集 ID
+             * Active Maturity Promotion
+             * @description 当前是否存在 active maturity promotion override
              */
-            dataset_id: string;
-            /**
-             * Metadata Maturity
-             * @description DatasetMetadata 声明的原始 maturity
-             */
-            metadata_maturity?: string | null;
+            active_maturity_promotion: boolean;
             /**
              * Current Maturity
              * @description 应用当前 maturity promotion override 后的 maturity
              */
             current_maturity?: string | null;
             /**
+             * Dataset Id
+             * @description 数据集 ID
+             */
+            dataset_id: string;
+            /** @description 最近一次晋级撤销原因分类 */
+            latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
+            /**
+             * Latest Revoked At
+             * @description 最近一次晋级撤销时间
+             */
+            latest_revoked_at?: string | null;
+            /**
+             * Latest Revoked By
+             * @description 最近一次晋级撤销人或撤销主体
+             */
+            latest_revoked_by?: string | null;
+            /**
+             * Metadata Maturity
+             * @description DatasetMetadata 声明的原始 maturity
+             */
+            metadata_maturity?: string | null;
+            /**
+             * Missing Criteria
+             * @description 缺失条件
+             */
+            missing_criteria?: string[];
+            /**
              * Promotion Status
              * @description 晋级评估状态
              */
             promotion_status: string;
             /**
-             * Active Maturity Promotion
-             * @description 当前是否存在 active maturity promotion override
+             * Rejected Criteria
+             * @description 已审核但未通过条件
              */
-            active_maturity_promotion: boolean;
+            rejected_criteria?: string[];
             /**
              * Required Criteria
              * @description 晋级所需条件
@@ -7587,28 +9528,6 @@ export interface components {
              * @description 已满足条件
              */
             satisfied_criteria?: string[];
-            /**
-             * Missing Criteria
-             * @description 缺失条件
-             */
-            missing_criteria?: string[];
-            /**
-             * Rejected Criteria
-             * @description 已审核但未通过条件
-             */
-            rejected_criteria?: string[];
-            /** @description 最近一次晋级撤销原因分类 */
-            latest_revocation_reason?: components["schemas"]["MaturityPromotionRevocationReason"] | null;
-            /**
-             * Latest Revoked By
-             * @description 最近一次晋级撤销人或撤销主体
-             */
-            latest_revoked_by?: string | null;
-            /**
-             * Latest Revoked At
-             * @description 最近一次晋级撤销时间
-             */
-            latest_revoked_at?: string | null;
         };
         /**
          * PromotionReadinessReportResponse
@@ -7616,30 +9535,30 @@ export interface components {
          */
         PromotionReadinessReportResponse: {
             /**
-             * Dataset Count
-             * @description 报告覆盖的数据集数量
-             */
-            dataset_count: number;
-            /**
-             * Promotable Count
-             * @description 晋级评估 ready 的数据集数量
-             */
-            promotable_count: number;
-            /**
              * Active Promotion Count
              * @description 当前存在 maturity promotion override 的数据集数量
              */
             active_promotion_count: number;
             /**
-             * Status Counts
-             * @description 按晋级评估状态聚合的数据集数量
+             * Dataset Count
+             * @description 报告覆盖的数据集数量
              */
-            status_counts: components["schemas"]["PromotionStatusCountResponse"][];
+            dataset_count: number;
+            /**
+             * Datasets
+             * @description 各数据集晋级评估明细
+             */
+            datasets: components["schemas"]["PromotionReadinessItemResponse"][];
             /**
              * Missing Criteria Counts
              * @description 按缺失晋级条件聚合的数据集数量
              */
             missing_criteria_counts?: components["schemas"]["PromotionCriterionCountResponse"][];
+            /**
+             * Promotable Count
+             * @description 晋级评估 ready 的数据集数量
+             */
+            promotable_count: number;
             /**
              * Rejected Criteria Counts
              * @description 按 rejected 晋级条件聚合的数据集数量
@@ -7651,16 +9570,31 @@ export interface components {
              */
             source_fallback_policy_effect_counts?: components["schemas"]["PromotionReadinessSourceFallbackPolicyEffectCountResponse"][];
             /**
-             * Datasets
-             * @description 各数据集晋级评估明细
+             * Status Counts
+             * @description 按晋级评估状态聚合的数据集数量
              */
-            datasets: components["schemas"]["PromotionReadinessItemResponse"][];
+            status_counts: components["schemas"]["PromotionStatusCountResponse"][];
         };
         /**
          * PromotionReadinessSourceFallbackPolicyEffectCountResponse
          * @description Promotion readiness count by source fallback policy effect.
          */
         PromotionReadinessSourceFallbackPolicyEffectCountResponse: {
+            /**
+             * Catalog Selected Source
+             * @description Catalog freshness 策略原本选择的来源
+             */
+            catalog_selected_source: string;
+            /**
+             * Count
+             * @description 该 policy effect 影响的 source decision 数量
+             */
+            count: number;
+            /**
+             * Effective Selected Source
+             * @description 应用 active fallback policy 后的最终来源
+             */
+            effective_selected_source: string;
             /**
              * Policy Id
              * @description 触发 source fallback effect 的 policy ID
@@ -7671,21 +9605,6 @@ export interface components {
              * @description 触发 effect 的 policy lifecycle 状态
              */
             policy_status: string;
-            /**
-             * Catalog Selected Source
-             * @description Catalog freshness 策略原本选择的来源
-             */
-            catalog_selected_source: string;
-            /**
-             * Effective Selected Source
-             * @description 应用 active fallback policy 后的最终来源
-             */
-            effective_selected_source: string;
-            /**
-             * Count
-             * @description 该 policy effect 影响的 source decision 数量
-             */
-            count: number;
         };
         /**
          * PromotionStatusCountResponse
@@ -7693,45 +9612,58 @@ export interface components {
          */
         PromotionStatusCountResponse: {
             /**
-             * Status
-             * @description 晋级评估状态
-             */
-            status: string;
-            /**
              * Count
              * @description 该状态的数据集数量
              */
             count: number;
+            /**
+             * Status
+             * @description 晋级评估状态
+             */
+            status: string;
         };
         /**
-         * PublishStrategyRequest
-         * @description 发布策略请求.
+         * PublishStrategyVersionRequest
+         * @description Body for one evidence-gated strategy version publish.
          */
-        PublishStrategyRequest: {
+        PublishStrategyVersionRequest: {
+            /** Actor */
+            actor: string;
+            /** Bundle Hash */
+            bundle_hash: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * ReactivateStrategyRequest
+         * @description Reactivate one published version with an optimistic pointer CAS guard.
+         */
+        ReactivateStrategyRequest: {
             /**
-             * Version
-             * @description 版本号
+             * Actor
+             * @description 决策执行者
              */
-            version: number;
+            actor: string;
+            /**
+             * Confirmation
+             * @description 与目标版本及 pointer revision 精确绑定的确认语句
+             */
+            confirmation: string;
+            /**
+             * Expected Pointer Revision
+             * @description 最后读到的 active pointer revision (optimistic CAS)
+             */
+            expected_pointer_revision: number;
+            /** @description 当前版本切换到目标版本的影响摘要 */
+            impact_summary: components["schemas"]["NonBlankStr"];
+            /** @description 重新激活原因 */
+            reason: components["schemas"]["NonBlankStr"];
         };
         /**
          * RecordFillRequest
          * @description 录入成交请求.
          */
         RecordFillRequest: {
-            /** @description 成交唯一标识 */
-            fill_id: components["schemas"]["NonBlankStr"];
-            /** @description 关联交易意图 ID */
-            intent_id: components["schemas"]["NonBlankStr"];
-            /** @description 策略 ID */
-            strategy_id: components["schemas"]["NonBlankStr"];
-            /** @description 成交日期 (YYYY-MM-DD) */
-            trade_date: components["schemas"]["IsoCalendarDateStr"];
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
             /**
              * Direction
              * @description 方向 (buy/sell)
@@ -7739,33 +9671,46 @@ export interface components {
              */
             direction: "buy" | "sell";
             /**
-             * Quantity
-             * @description 成交数量
+             * Fee
+             * @description 手续费
+             * @default 0
              */
-            quantity: number;
+            fee: number;
+            /** @description 成交唯一标识 */
+            fill_id: components["schemas"]["NonBlankStr"];
             /**
              * Fill Price
              * @description 成交价格
              */
             fill_price: number;
             /**
-             * Fee
-             * @description 手续费
-             * @default 0
+             * Instrument Id
+             * @description 标的 ID
              */
-            fee: number;
-            /**
-             * Slippage
-             * @description 实际滑点
-             * @default 0
-             */
-            slippage: number;
+            instrument_id: number;
+            /** @description 关联交易意图 ID */
+            intent_id: components["schemas"]["NonBlankStr"];
             /**
              * Notes
              * @description 人工备注
              * @default
              */
             notes: string;
+            /**
+             * Quantity
+             * @description 成交数量
+             */
+            quantity: number;
+            /**
+             * Slippage
+             * @description 实际滑点
+             * @default 0
+             */
+            slippage: number;
+            /** @description 策略 ID */
+            strategy_id: components["schemas"]["NonBlankStr"];
+            /** @description 成交日期 (YYYY-MM-DD) */
+            trade_date: components["schemas"]["IsoCalendarDateStr"];
         };
         /**
          * ReplaceFillRequest
@@ -7774,22 +9719,6 @@ export interface components {
         ReplaceFillRequest: {
             /** @description 修正事件唯一标识 */
             adjustment_id: components["schemas"]["NonBlankStr"];
-            /** @description 替换成交唯一标识 */
-            replacement_fill_id: components["schemas"]["NonBlankStr"];
-            /** @description 替换成交日期 (YYYY-MM-DD) */
-            trade_date: components["schemas"]["IsoCalendarDateStr"];
-            /**
-             * Quantity
-             * @description 替换成交数量
-             */
-            quantity: number;
-            /**
-             * Fill Price
-             * @description 替换成交价格
-             */
-            fill_price: number;
-            /** @description 人工修正原因 */
-            reason: components["schemas"]["NonBlankStr"];
             /**
              * Fee
              * @description 手续费
@@ -7797,17 +9726,33 @@ export interface components {
              */
             fee: number;
             /**
-             * Slippage
-             * @description 实际滑点
-             * @default 0
+             * Fill Price
+             * @description 替换成交价格
              */
-            slippage: number;
+            fill_price: number;
             /**
              * Notes
              * @description 人工备注
              * @default
              */
             notes: string;
+            /**
+             * Quantity
+             * @description 替换成交数量
+             */
+            quantity: number;
+            /** @description 人工修正原因 */
+            reason: components["schemas"]["NonBlankStr"];
+            /** @description 替换成交唯一标识 */
+            replacement_fill_id: components["schemas"]["NonBlankStr"];
+            /**
+             * Slippage
+             * @description 实际滑点
+             * @default 0
+             */
+            slippage: number;
+            /** @description 替换成交日期 (YYYY-MM-DD) */
+            trade_date: components["schemas"]["IsoCalendarDateStr"];
         };
         /**
          * ReplayEvidenceSummaryResponse
@@ -7815,47 +9760,35 @@ export interface components {
          */
         ReplayEvidenceSummaryResponse: {
             /**
-             * Run Id
-             * @description 当前查询的运行 ID
+             * Account State Match
+             * @description 账户状态是否匹配
              */
-            run_id: string;
-            /**
-             * Original Run Id
-             * @description Replay proof 指向的原始运行 ID
-             */
-            original_run_id: string;
-            /**
-             * Replay Run Id
-             * @description Replay proof 记录的重放运行 ID
-             */
-            replay_run_id: string;
-            /**
-             * Is Reproducible
-             * @description 是否可复现
-             */
-            is_reproducible: boolean;
-            /**
-             * Input Data Match
-             * @description 输入数据是否匹配
-             */
-            input_data_match: boolean;
+            account_state_match?: boolean | null;
             /**
              * Fill Match
              * @description Fill 序列是否匹配
              */
             fill_match?: boolean | null;
             /**
-             * Account State Match
-             * @description 账户状态是否匹配
+             * Input Data Match
+             * @description 输入数据是否匹配
              */
-            account_state_match?: boolean | null;
+            input_data_match: boolean;
             /**
-             * Report Resume Provenance
-             * @description 原始 restored-run report 中记录的恢复来源证据
+             * Is Reproducible
+             * @description 是否可复现
              */
-            report_resume_provenance?: {
-                [key: string]: unknown;
-            } | null;
+            is_reproducible: boolean;
+            /**
+             * Missing Sections
+             * @description 缺失的证据段落
+             */
+            missing_sections?: string[];
+            /**
+             * Original Run Id
+             * @description Replay proof 指向的原始运行 ID
+             */
+            original_run_id: string;
             /**
              * Proof Resume Provenance
              * @description Replay proof 中记录的原始恢复来源证据
@@ -7864,78 +9797,75 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
+             * Replay Run Id
+             * @description Replay proof 记录的重放运行 ID
+             */
+            replay_run_id: string;
+            /**
+             * Report Resume Provenance
+             * @description 原始 restored-run report 中记录的恢复来源证据
+             */
+            report_resume_provenance?: {
+                [key: string]: unknown;
+            } | null;
+            /**
              * Resume Provenance Match
              * @description report 与 proof 中的恢复来源证据是否一致
              */
             resume_provenance_match: boolean;
             /**
-             * Missing Sections
-             * @description 缺失的证据段落
+             * Run Id
+             * @description 当前查询的运行 ID
              */
-            missing_sections?: string[];
+            run_id: string;
         };
         /**
          * ReplayProofResponse
          * @description 重放 proof 证据响应.
          */
         ReplayProofResponse: {
+            /** @description 账户状态对比详情 */
+            account_state_comparison?: components["schemas"]["AccountStateComparisonResponse"] | null;
             /**
-             * Proof Version
-             * @description Proof 格式版本
+             * Account State Match
+             * @description 账户状态是否匹配
              */
-            proof_version: number;
+            account_state_match?: boolean | null;
             /**
              * Created At
              * @description Proof 创建时间
              * @default
              */
             created_at: string;
-            /**
-             * Original Run Id
-             * @description 原始运行 ID
-             */
-            original_run_id: string;
-            /**
-             * Replay Run Id
-             * @description 重放运行 ID
-             */
-            replay_run_id: string;
-            /**
-             * Is Reproducible
-             * @description 是否可复现
-             */
-            is_reproducible: boolean;
-            /**
-             * Nav Correlation
-             * @description NAV 序列相关系数
-             */
-            nav_correlation: number;
-            /**
-             * Max Nav Diff Bps
-             * @description NAV 最大偏差 bps
-             */
-            max_nav_diff_bps: number;
-            /**
-             * Input Data Match
-             * @description 输入数据是否匹配
-             */
-            input_data_match: boolean;
-            /** @description Manifest 差异 */
-            manifest_diff: components["schemas"]["ManifestDiffResponse"];
+            /** @description Fill 序列对比详情 */
+            fill_comparison?: components["schemas"]["FillComparisonResponse"] | null;
             /**
              * Fill Match
              * @description Fill 序列是否匹配
              */
             fill_match?: boolean | null;
             /**
-             * Account State Match
-             * @description 账户状态是否匹配
+             * Input Data Match
+             * @description 输入数据是否匹配
              */
-            account_state_match?: boolean | null;
-            /** @description Fill 序列对比详情 */
-            fill_comparison?: components["schemas"]["FillComparisonResponse"] | null;
-            /** @description 账户状态对比详情 */
-            account_state_comparison?: components["schemas"]["AccountStateComparisonResponse"] | null;
+            input_data_match: boolean;
+            /**
+             * Is Reproducible
+             * @description 是否可复现
+             */
+            is_reproducible: boolean;
+            /** @description Manifest 差异 */
+            manifest_diff: components["schemas"]["ManifestDiffResponse"];
+            /**
+             * Max Nav Diff Bps
+             * @description NAV 最大偏差 bps
+             */
+            max_nav_diff_bps: number;
+            /**
+             * Nav Correlation
+             * @description NAV 序列相关系数
+             */
+            nav_correlation: number;
             /**
              * Original Resume Provenance
              * @description 原始运行若来自 checkpoint 恢复, 则记录其恢复来源证据
@@ -7943,6 +9873,21 @@ export interface components {
             original_resume_provenance?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Original Run Id
+             * @description 原始运行 ID
+             */
+            original_run_id: string;
+            /**
+             * Proof Version
+             * @description Proof 格式版本
+             */
+            proof_version: number;
+            /**
+             * Replay Run Id
+             * @description 重放运行 ID
+             */
+            replay_run_id: string;
         };
         /**
          * ReplayResponse
@@ -7950,42 +9895,42 @@ export interface components {
          */
         ReplayResponse: {
             /**
-             * New Run Id
-             * @description 重放生成的运行 ID
+             * Input Data Match
+             * @description 输入数据是否匹配
              */
-            new_run_id: string;
+            input_data_match: boolean;
             /**
              * Is Reproducible
              * @description 是否可复现
              */
             is_reproducible: boolean;
+            /** @description Manifest 差异详情 */
+            manifest_diff: components["schemas"]["ManifestDiffResponse"];
+            /**
+             * Max Nav Diff Bps
+             * @description 重放与原始净值序列最大偏差 (bps)
+             */
+            max_nav_diff_bps: number;
             /**
              * Nav Correlation
              * @description 重放与原始净值序列相关系数
              */
             nav_correlation: number;
             /**
-             * Max Nav Diff Bps
-             * @description 重放与原始净值序列最大偏差 (bps)
+             * New Run Id
+             * @description 重放生成的运行 ID
              */
-            max_nav_diff_bps: number;
-            /** @description Manifest 差异详情 */
-            manifest_diff: components["schemas"]["ManifestDiffResponse"];
-            /**
-             * Input Data Match
-             * @description 输入数据是否匹配
-             */
-            input_data_match: boolean;
+            new_run_id: string;
         };
         /**
          * ResumeRunResponse
          * @description checkpoint 恢复运行响应.
          */
         ResumeRunResponse: {
-            /** Run Id */
-            run_id: string;
             /** Parent Run Id */
             parent_run_id: string;
+            /** Run Id */
+            run_id: string;
             /**
              * Status
              * @default pending
@@ -7997,10 +9942,10 @@ export interface components {
          * @description 重试运行响应.
          */
         RetryRunResponse: {
-            /** Run Id */
-            run_id: string;
             /** Parent Run Id */
             parent_run_id: string;
+            /** Run Id */
+            run_id: string;
             /**
              * Status
              * @default pending
@@ -8008,15 +9953,123 @@ export interface components {
             status: string;
         };
         /**
+         * ReviewExposureWeightResponse
+         * @description One canonical exposure dimension and aggregate selected weight.
+         */
+        ReviewExposureWeightResponse: {
+            /** Key */
+            key: string;
+            /** Weight */
+            weight: number;
+        };
+        /**
+         * ReviewGateOutcomeResponse
+         * @description API view of one gate rule's identity and outcome in a review packet.
+         */
+        ReviewGateOutcomeResponse: {
+            /** Layer */
+            layer: string;
+            /** Outcome */
+            outcome: string;
+            /** Rule Id */
+            rule_id: string;
+        };
+        /**
+         * ReviewSelectionExposureResponse
+         * @description Explicit stock exposure or ETF not-applicable review evidence.
+         */
+        ReviewSelectionExposureResponse: {
+            /** Applicability */
+            applicability: string;
+            /** Artifact Refs */
+            artifact_refs: components["schemas"]["ReviewSelectionTraceRefResponse"][];
+            /** Industry Weights */
+            industry_weights: components["schemas"]["ReviewExposureWeightResponse"][];
+            /** Lane */
+            lane: string;
+            /** Size Bucket Weights */
+            size_bucket_weights: components["schemas"]["ReviewExposureWeightResponse"][];
+        };
+        /**
+         * ReviewSelectionTraceRefResponse
+         * @description API view of one verified selection-trace artifact reference.
+         */
+        ReviewSelectionTraceRefResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Artifact Kind */
+            artifact_kind: string;
+            /** Content Hash */
+            content_hash: string;
+        };
+        /**
          * RunResponse
          * @description 运行记录响应.
          */
         RunResponse: {
             /**
+             * Benchmark Return
+             * @description 基准收益率 (%)
+             */
+            benchmark_return?: number | null;
+            /**
+             * Completed At
+             * @description 完成时间 (ISO 8601)
+             * @default
+             */
+            completed_at: string;
+            /**
+             * Completed Days
+             * @description 已完成交易日数
+             * @default 0
+             */
+            completed_days: number;
+            /**
+             * Current Step
+             * @description 当前步骤描述
+             * @default
+             */
+            current_step: string;
+            /**
+             * Error Message
+             * @description 错误信息
+             * @default
+             */
+            error_message: string;
+            /**
+             * Mode
+             * @description 运行模式
+             * @default backtest
+             */
+            mode: string;
+            /**
+             * Parent Run Id
+             * @description 父运行 ID (重试场景)
+             * @default
+             */
+            parent_run_id: string;
+            /**
+             * Progress Pct
+             * @description 运行进度百分比
+             * @default 0
+             */
+            progress_pct: number;
+            /**
              * Run Id
              * @description 运行唯一标识
              */
             run_id: string;
+            /**
+             * Started At
+             * @description 开始时间 (ISO 8601)
+             * @default
+             */
+            started_at: string;
+            /**
+             * Status
+             * @description 运行状态
+             */
+            status: string;
             /**
              * Strategy Id
              * @description 策略 ID
@@ -8029,64 +10082,6 @@ export interface components {
              */
             strategy_version: string;
             /**
-             * Mode
-             * @description 运行模式
-             * @default backtest
-             */
-            mode: string;
-            /**
-             * Status
-             * @description 运行状态
-             */
-            status: string;
-            /**
-             * Started At
-             * @description 开始时间 (ISO 8601)
-             * @default
-             */
-            started_at: string;
-            /**
-             * Completed At
-             * @description 完成时间 (ISO 8601)
-             * @default
-             */
-            completed_at: string;
-            /**
-             * Error Message
-             * @description 错误信息
-             * @default
-             */
-            error_message: string;
-            /**
-             * Parent Run Id
-             * @description 父运行 ID (重试场景)
-             * @default
-             */
-            parent_run_id: string;
-            /**
-             * Benchmark Return
-             * @description 基准收益率 (%)
-             */
-            benchmark_return?: number | null;
-            /**
-             * Progress Pct
-             * @description 运行进度百分比
-             * @default 0
-             */
-            progress_pct: number;
-            /**
-             * Current Step
-             * @description 当前步骤描述
-             * @default
-             */
-            current_step: string;
-            /**
-             * Completed Days
-             * @description 已完成交易日数
-             * @default 0
-             */
-            completed_days: number;
-            /**
              * Total Days
              * @description 总交易日数
              * @default 0
@@ -8098,21 +10093,6 @@ export interface components {
          * @description 信号-成交偏差项.
          */
         SignalDeviationItem: {
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
-            /**
-             * Signal Action
-             * @description 信号动作 (buy/sell/hold)
-             */
-            signal_action: string;
-            /**
-             * Signal Weight
-             * @description 信号目标权重
-             */
-            signal_weight: number;
             /**
              * Actual Weight
              * @description 实际成交权重
@@ -8129,6 +10109,21 @@ export interface components {
              * @default unfilled
              */
             fill_status: string;
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
+             * Signal Action
+             * @description 信号动作 (buy/sell/hold)
+             */
+            signal_action: string;
+            /**
+             * Signal Weight
+             * @description 信号目标权重
+             */
+            signal_weight: number;
         };
         /**
          * SourceDataResponse
@@ -8142,97 +10137,261 @@ export interface components {
             data: {
                 [key: string]: unknown;
             }[];
-            /** @description 分页信息(可选) */
-            pagination?: components["schemas"]["PaginationResponse"] | null;
             /** Dataset */
             dataset: string;
-            /** Source */
-            source: string;
-            /** Ticker */
-            ticker?: string | null;
-            /** Standard Ticker */
-            standard_ticker?: string | null;
-            /** Instrument Id */
-            instrument_id?: number | null;
-            /** Resolved Source Ticker */
-            resolved_source_ticker: string;
-            /** Start Date */
-            start_date: string;
             /** End Date */
             end_date: string;
-            /** Row Count */
-            row_count: number;
+            /** Instrument Id */
+            instrument_id?: number | null;
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
             /** Query Time Ms */
             query_time_ms: number;
+            /** Resolved Source Ticker */
+            resolved_source_ticker: string;
+            /** Row Count */
+            row_count: number;
+            /** Source */
+            source: string;
+            /** Standard Ticker */
+            standard_ticker?: string | null;
+            /** Start Date */
+            start_date: string;
+            /** Ticker */
+            ticker?: string | null;
+        };
+        /**
+         * SpecChangeResponse
+         * @description One field-level change between two canonical spec payloads.
+         */
+        SpecChangeResponse: {
+            new?: components["schemas"]["JsonValue-Output"];
+            old?: components["schemas"]["JsonValue-Output"];
+            /** Op */
+            op: string;
+            /** Path */
+            path: string;
+        };
+        /**
+         * StrategyActivePointerResponse
+         * @description Active pointer returned after a reactivate decision.
+         */
+        StrategyActivePointerResponse: {
+            /** Active Version */
+            active_version: number;
+            /** Pointer Revision */
+            pointer_revision: number;
+            /** Strategy Id */
+            strategy_id: string;
+        };
+        /**
+         * StrategyActiveResponse
+         * @description Active pointer joined with its published payload (get-active view).
+         */
+        StrategyActiveResponse: {
+            /** Active Version */
+            active_version: number;
+            /** Pointer Revision */
+            pointer_revision: number;
+            spec: components["schemas"]["StrategyResponse"];
+            /** Strategy Id */
+            strategy_id: string;
+        };
+        /**
+         * StrategyGovernanceEventResponse
+         * @description Exact append-only decision or activation event projection.
+         */
+        StrategyGovernanceEventResponse: {
+            /** Actor */
+            actor: string;
+            /** Decision Or Activation Kind */
+            decision_or_activation_kind: string;
+            /** Event Id */
+            event_id: string;
+            /** Event Type */
+            event_type: string;
+            /** Occurred At */
+            occurred_at: string;
+            /** Reason */
+            reason: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Target Version */
+            target_version: number;
         };
         /**
          * StrategyResponse
          * @description 策略响应.
          */
         StrategyResponse: {
-            /** Strategy Id */
-            strategy_id: string;
-            /** Name */
-            name: string;
-            /** Spec Json */
-            spec_json: {
-                [key: string]: unknown;
-            };
-            /** Version */
-            version: number;
-            /** Status */
-            status: string;
             /**
              * Created At
              * @default
              */
             created_at: string;
-            /**
-             * Updated At
-             * @default
-             */
-            updated_at: string;
+            /** Name */
+            name: string;
+            /** Spec Json */
+            spec_json: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Status */
+            status: string;
+            /** Strategy Id */
+            strategy_id: string;
             /**
              * Tags
              * @default []
              */
             tags: string[];
+            /** Version */
+            version: number;
+        };
+        /**
+         * StrategySpecValidateRequest
+         * @description Pre-save candidate spec validation request (Strategy Studio 编辑校验).
+         */
+        StrategySpecValidateRequest: {
+            /**
+             * Spec Json
+             * @description candidate 策略定义 JSON
+             */
+            spec_json: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+        };
+        /**
+         * StrategySpecValidationResponse
+         * @description Canonical hash + validity + change-detection result for a candidate spec.
+         */
+        StrategySpecValidationResponse: {
+            /** Base Spec Hash */
+            base_spec_hash: string;
+            /** Canonical Hash */
+            canonical_hash: string;
+            /** Changed */
+            changed: boolean;
+            /**
+             * Errors
+             * @default []
+             */
+            errors: string[];
+            /** Strategy Id */
+            strategy_id: string;
+            /** Valid */
+            valid: boolean;
+            /** Version */
+            version: number;
+        };
+        /**
+         * StrategyVersionDetailResponse
+         * @description One immutable canonical strategy payload and governance state.
+         */
+        StrategyVersionDetailResponse: {
+            /** Canonical Spec */
+            canonical_spec: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Created At */
+            created_at: string;
+            /** Parent Version */
+            parent_version: number | null;
+            /** Review Outcome */
+            review_outcome: string;
+            /** Spec Hash */
+            spec_hash: string;
+            /** State */
+            state: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * StrategyVersionDiffResponse
+         * @description Field-level canonical spec diff of one version against its parent.
+         */
+        StrategyVersionDiffResponse: {
+            /** Base Spec Hash */
+            base_spec_hash: string;
+            /** Changed */
+            changed: boolean;
+            /**
+             * Changes
+             * @default []
+             */
+            changes: components["schemas"]["SpecChangeResponse"][];
+            /** Parent Version */
+            parent_version: number | null;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Target Spec Hash */
+            target_spec_hash: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * StrategyVersionResponse
+         * @description One immutable governance version (list-versions view, no payload bytes).
+         */
+        StrategyVersionResponse: {
+            /** Created At */
+            created_at: string;
+            /** Experiment Id */
+            experiment_id?: string | null;
+            /** Parent Version */
+            parent_version: number | null;
+            /** Review Outcome */
+            review_outcome: string;
+            /** Spec Hash */
+            spec_hash: string;
+            /** State */
+            state: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * StrategyVersionStateResponse
+         * @description Lifecycle projection returned after one governance state-machine decision.
+         */
+        StrategyVersionStateResponse: {
+            /** Review Outcome */
+            review_outcome: string;
+            /** State */
+            state: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * SubmitReviewRequest
+         * @description Evidence-bound request to move one immutable draft into review.
+         */
+        SubmitReviewRequest: {
+            /**
+             * Actor
+             * @description 决策执行者
+             */
+            actor: string;
+            /**
+             * Bundle Hash
+             * @description 持久化 review packet hash
+             */
+            bundle_hash: string;
+            /**
+             * Reason
+             * @description 决策原因
+             */
+            reason: string;
         };
         /**
          * TradeIntentResponse
          * @description 交易意图响应.
          */
         TradeIntentResponse: {
-            /**
-             * Intent Id
-             * @description 交易意图唯一标识
-             */
-            intent_id: string;
-            /**
-             * Strategy Id
-             * @description 策略 ID
-             */
-            strategy_id: string;
-            /**
-             * Signal Date
-             * @description 信号日期 (YYYY-MM-DD)
-             */
-            signal_date: string;
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             */
-            instrument_id: number;
-            /**
-             * Direction
-             * @description 交易方向 (buy/sell)
-             */
-            direction: string;
-            /**
-             * Target Weight
-             * @description 目标权重
-             */
-            target_weight: number;
             /**
              * Current Weight
              * @description 当前权重
@@ -8244,34 +10403,52 @@ export interface components {
              */
             delta_weight: number;
             /**
+             * Direction
+             * @description 交易方向 (buy/sell)
+             */
+            direction: string;
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
+             * Intent Id
+             * @description 交易意图唯一标识
+             */
+            intent_id: string;
+            /**
              * Quantity
              * @description 建议交易数量
              */
             quantity?: number | null;
+            /**
+             * Signal Date
+             * @description 信号日期 (YYYY-MM-DD)
+             */
+            signal_date: string;
             /**
              * Status
              * @description 意图状态
              * @default pending
              */
             status: string;
+            /**
+             * Strategy Id
+             * @description 策略 ID
+             */
+            strategy_id: string;
+            /**
+             * Target Weight
+             * @description 目标权重
+             */
+            target_weight: number;
         };
         /**
          * TradeResponse
          * @description 成交记录响应.
          */
         TradeResponse: {
-            /**
-             * Trade Date
-             * @description 成交日期 (YYYY-MM-DD)
-             * @default
-             */
-            trade_date: string;
-            /**
-             * Instrument Id
-             * @description 标的 ID
-             * @default 0
-             */
-            instrument_id: number;
             /**
              * Direction
              * @description 交易方向 (buy/sell)
@@ -8285,17 +10462,17 @@ export interface components {
              */
             entry_date: string;
             /**
-             * Exit Date
-             * @description 平仓日期 (YYYY-MM-DD)
-             * @default
-             */
-            exit_date: string;
-            /**
              * Entry Price
              * @description 建仓价格
              * @default 0
              */
             entry_price: number;
+            /**
+             * Exit Date
+             * @description 平仓日期 (YYYY-MM-DD)
+             * @default
+             */
+            exit_date: string;
             /**
              * Exit Price
              * @description 平仓价格
@@ -8303,36 +10480,48 @@ export interface components {
              */
             exit_price: number;
             /**
-             * Quantity
-             * @description 成交数量
+             * Instrument Id
+             * @description 标的 ID
              * @default 0
              */
-            quantity: number;
+            instrument_id: number;
             /**
              * Pnl
              * @description 盈亏金额
              * @default 0
              */
             pnl: number;
+            /**
+             * Quantity
+             * @description 成交数量
+             * @default 0
+             */
+            quantity: number;
+            /**
+             * Trade Date
+             * @description 成交日期 (YYYY-MM-DD)
+             * @default
+             */
+            trade_date: string;
         };
         /**
          * UniverseResponse
          * @description Universe 响应.
          */
         UniverseResponse: {
-            /** Universe Id */
-            universe_id: string;
-            /** Name */
-            name: string;
             /** Description */
             description?: string | null;
+            /** Name */
+            name: string;
+            /** Source Ref */
+            source_ref?: string | null;
+            /** Universe Id */
+            universe_id: string;
             /**
              * Universe Type
              * @default custom
              */
             universe_type: string;
-            /** Source Ref */
-            source_ref?: string | null;
         };
         /**
          * UpdateIntentStatusRequest
@@ -8361,7 +10550,7 @@ export interface components {
              * @description 策略定义 JSON
              */
             spec_json: {
-                [key: string]: unknown;
+                [key: string]: components["schemas"]["JsonValue-Input"];
             };
             /**
              * Tags
@@ -8380,38 +10569,38 @@ export interface components {
          */
         UpdateUniverseRequest: {
             /**
-             * Name
-             * @description 名称
-             */
-            name: string;
-            /**
              * Description
              * @description 描述
              */
             description?: string | null;
+            /**
+             * Effective Date
+             * @description 生效日期
+             */
+            effective_date?: string | null;
             /**
              * Members
              * @description 成分列表
              */
             members?: string[] | null;
             /**
-             * Effective Date
-             * @description 生效日期
+             * Name
+             * @description 名称
              */
-            effective_date?: string | null;
+            name: string;
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /**
          * Valuation
@@ -8428,40 +10617,40 @@ export interface components {
          */
         Valuation: {
             /**
+             * Dividend Yield
+             * @description 股息率
+             */
+            dividend_yield?: number | null;
+            /**
              * Instrument Id
              * @description 标的 ID
              */
             instrument_id: number;
             /**
-             * Trade Date
-             * @description 交易日期
+             * Market Cap
+             * @description 市值
              */
-            trade_date: string;
-            /**
-             * Pe Ratio
-             * @description 市盈率
-             */
-            pe_ratio?: number | null;
+            market_cap: number;
             /**
              * Pb Ratio
              * @description 市净率
              */
             pb_ratio: number;
             /**
+             * Pe Ratio
+             * @description 市盈率
+             */
+            pe_ratio?: number | null;
+            /**
              * Ps Ratio
              * @description 市销率
              */
             ps_ratio?: number | null;
             /**
-             * Dividend Yield
-             * @description 股息率
+             * Trade Date
+             * @description 交易日期
              */
-            dividend_yield?: number | null;
-            /**
-             * Market Cap
-             * @description 市值
-             */
-            market_cap: number;
+            trade_date: string;
         };
         /**
          * VoidFillRequest
@@ -8482,90 +10671,13 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    backtests_list_runs: {
-        parameters: {
-            query?: {
-                /** @description 策略 ID */
-                strategy_id?: string | null;
-                /** @description 运行状态筛选 */
-                status?: string | null;
-                /** @description 起始日期(含) */
-                start_date?: string | null;
-                /** @description 结束日期(含) */
-                end_date?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_RunResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_trigger_backtest: {
+    system_root: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateBacktestRunRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_BacktestRunTriggerResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_cancel_run: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
@@ -8574,249 +10686,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_CancelRunResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_retry_run: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_RetryRunResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_resume_run: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_ResumeRunResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_get_run: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_RunResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_get_trades: {
-        parameters: {
-            query?: {
-                /** @description 起始日期(含) */
-                start_date?: string | null;
-                /** @description 结束日期(含) */
-                end_date?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_TradeResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_get_audit: {
-        parameters: {
-            query?: {
-                /** @description 审计记录类型筛选 */
-                record_type?: string | null;
-                /** @description 起始日期(含) */
-                start_date?: string | null;
-                /** @description 结束日期(含) */
-                end_date?: string | null;
-            };
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_AuditRecordResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_get_report: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_BacktestReportResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_get_lineage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_LineageResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
         };
@@ -8901,7 +10773,82 @@ export interface operations {
             };
         };
     };
-    backtests_get_run_data_lineage: {
+    backtests_list_runs: {
+        parameters: {
+            query?: {
+                /** @description 策略 ID */
+                strategy_id?: string | null;
+                /** @description 运行状态筛选 */
+                status?: string | null;
+                /** @description 起始日期(含) */
+                start_date?: string | null;
+                /** @description 结束日期(含) */
+                end_date?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_RunResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_trigger_backtest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBacktestRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_BacktestRunTriggerResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -8918,7 +10865,138 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_DataLineageRunResponse_"];
+                    "application/json": components["schemas"]["APIResponse_RunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_audit: {
+        parameters: {
+            query?: {
+                /** @description 审计记录类型筛选 */
+                record_type?: string | null;
+                /** @description 起始日期(含) */
+                start_date?: string | null;
+                /** @description 结束日期(含) */
+                end_date?: string | null;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_AuditRecordResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_benchmark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_BenchmarkNavResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_cancel_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CancelRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_lineage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_LineageResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -8968,7 +11046,7 @@ export interface operations {
             };
         };
     };
-    backtests_replay_run: {
+    backtests_get_run_data_lineage: {
         parameters: {
             query?: never;
             header?: never;
@@ -8985,69 +11063,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_ReplayResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_get_replay_proof: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_ReplayProofResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    backtests_get_replay_evidence_summary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_ReplayEvidenceSummaryResponse_"];
+                    "application/json": components["schemas"]["APIResponse_DataLineageRunResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -9092,7 +11108,7 @@ export interface operations {
             };
         };
     };
-    backtests_get_benchmark: {
+    backtests_replay_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -9109,7 +11125,202 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_BenchmarkNavResponse_"];
+                    "application/json": components["schemas"]["APIResponse_ReplayResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_replay_evidence_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ReplayEvidenceSummaryResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_replay_proof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ReplayProofResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_BacktestReportResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_resume_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ResumeRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_retry_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_RetryRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtests_get_trades: {
+        parameters: {
+            query?: {
+                /** @description 起始日期(含) */
+                start_date?: string | null;
+                /** @description 结束日期(含) */
+                end_date?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_TradeResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -9302,74 +11513,6 @@ export interface operations {
             };
         };
     };
-    data_products_get_data_product_quality: {
-        parameters: {
-            query?: {
-                /** @description Certification consumer profile */
-                profile?: string;
-            };
-            header?: never;
-            path: {
-                dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DataProductQualityResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    data_products_list_data_product_runs: {
-        parameters: {
-            query?: {
-                /** @description Certification consumer profile */
-                profile?: string;
-            };
-            header?: never;
-            path: {
-                dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_DataProductRunResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     data_products_get_data_product_evidence: {
         parameters: {
             query?: {
@@ -9438,18 +11581,15 @@ export interface operations {
             };
         };
     };
-    fundamental_get_financials: {
+    data_products_get_data_product_quality: {
         parameters: {
-            query: {
-                instrument_id?: number | null;
-                ticker?: string | null;
-                standard_ticker?: string | null;
-                as_of_date: string;
-                allow_experimental_data?: boolean;
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
             };
             header?: never;
             path: {
-                report_type: components["schemas"]["FinancialType"];
+                dataset_id: string;
             };
             cookie?: never;
         };
@@ -9461,7 +11601,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_list_Financial__"];
+                    "application/json": components["schemas"]["APIResponse_DataProductQualityResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -9475,17 +11615,16 @@ export interface operations {
             };
         };
     };
-    fundamental_get_dividend: {
+    data_products_list_data_product_runs: {
         parameters: {
-            query: {
-                instrument_id?: number | null;
-                ticker?: string | null;
-                standard_ticker?: string | null;
-                as_of_date: string;
-                allow_experimental_data?: boolean;
+            query?: {
+                /** @description Certification consumer profile */
+                profile?: string;
             };
             header?: never;
-            path?: never;
+            path: {
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -9496,7 +11635,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_list_Dividend__"];
+                    "application/json": components["schemas"]["APIResponse_list_DataProductRunResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -9547,6 +11686,78 @@ export interface operations {
             };
         };
     };
+    fundamental_get_dividend: {
+        parameters: {
+            query: {
+                instrument_id?: number | null;
+                ticker?: string | null;
+                standard_ticker?: string | null;
+                as_of_date: string;
+                allow_experimental_data?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_Dividend__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fundamental_get_financials: {
+        parameters: {
+            query: {
+                instrument_id?: number | null;
+                ticker?: string | null;
+                standard_ticker?: string | null;
+                as_of_date: string;
+                allow_experimental_data?: boolean;
+            };
+            header?: never;
+            path: {
+                report_type: components["schemas"]["FinancialType"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_Financial__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     fx_post_bars: {
         parameters: {
             query?: never;
@@ -9567,6 +11778,250 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_FxBar__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_get_catalog_asset: {
+        parameters: {
+            query: {
+                /** @description 资产命名空间 */
+                namespace: string;
+                /** @description 数据集 ID */
+                dataset_id: string;
+                /** @description 资产分区键 */
+                partition_keys?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CatalogAssetResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_list_catalog_assets: {
+        parameters: {
+            query?: {
+                /** @description 资产命名空间 */
+                namespace?: string | null;
+                /** @description 数据集 ID */
+                dataset_id?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_CatalogAssetResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_get_catalog_maturity_governance_report: {
+        parameters: {
+            query?: {
+                /** @description 数据集 ID 列表; 缺省使用当前后端已知数据集集合 */
+                dataset_ids?: string[] | null;
+                /** @description 可选交易日期列表; 提供后聚合 active source fallback policy effect */
+                trade_dates?: string[] | null;
+                /** @description 可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合 */
+                available_sources?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_MaturityGovernanceReportResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_review_dataset_promotion_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionEvidenceReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PromotionEvidenceReviewResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_list_dataset_maturity_promotion_history: {
+        parameters: {
+            query: {
+                /** @description 数据集 ID */
+                dataset_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_MaturityPromotionHistoryItem__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_get_catalog_promotion_readiness_report: {
+        parameters: {
+            query?: {
+                /** @description 数据集 ID 列表; 缺省使用当前后端已知数据集集合 */
+                dataset_ids?: string[] | null;
+                /** @description 可选交易日期列表; 提供后聚合 active source fallback policy effect */
+                trade_dates?: string[] | null;
+                /** @description 可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合 */
+                available_sources?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PromotionReadinessReportResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_revoke_dataset_maturity_promotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaturityPromotionRevokeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_MaturityPromotionRevokeResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -9647,6 +12102,37 @@ export interface operations {
             };
         };
     };
+    ingestion_get_catalog_remediation_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CatalogRemediationApprovalResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ingestion_decide_catalog_remediation_approval: {
         parameters: {
             query?: never;
@@ -9669,41 +12155,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_CatalogRemediationApprovalResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_execute_catalog_remediation_approval: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                approval_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CatalogRemediationApprovalExecutionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_CatalogRemediationApprovalExecutionResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -9748,7 +12199,7 @@ export interface operations {
             };
         };
     };
-    ingestion_get_catalog_remediation_approval: {
+    ingestion_execute_catalog_remediation_approval: {
         parameters: {
             query?: never;
             header?: never;
@@ -9757,7 +12208,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogRemediationApprovalExecutionRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -9765,7 +12220,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_CatalogRemediationApprovalResponse_"];
+                    "application/json": components["schemas"]["APIResponse_CatalogRemediationApprovalExecutionResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -9955,7 +12410,7 @@ export interface operations {
             };
         };
     };
-    ingestion_list_catalog_source_fallback_policy_events: {
+    ingestion_activate_catalog_source_fallback_policy: {
         parameters: {
             query?: never;
             header?: never;
@@ -9964,7 +12419,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogSourceFallbackPolicyLifecycleRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -9972,7 +12431,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_list_CatalogSourceFallbackPolicyEventResponse__"];
+                    "application/json": components["schemas"]["APIResponse_CatalogSourceFallbackPolicyStateResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -10021,7 +12480,7 @@ export interface operations {
             };
         };
     };
-    ingestion_activate_catalog_source_fallback_policy: {
+    ingestion_list_catalog_source_fallback_policy_events: {
         parameters: {
             query?: never;
             header?: never;
@@ -10030,11 +12489,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CatalogSourceFallbackPolicyLifecycleRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -10042,7 +12497,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_CatalogSourceFallbackPolicyStateResponse_"];
+                    "application/json": components["schemas"]["APIResponse_list_CatalogSourceFallbackPolicyEventResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -10078,360 +12533,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_CatalogSourceFallbackPolicyStateResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_get_ingestion_status: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_IngestionStatusResponse_"];
-                };
-            };
-        };
-    };
-    ingestion_get_ingestion_history: {
-        parameters: {
-            query: {
-                /** @description 数据集名称 */
-                dataset: string;
-                /** @description 返回条数上限 */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_IngestionHistoryItem__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_get_dq_summary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DQSummaryResponse_"];
-                };
-            };
-        };
-    };
-    ingestion_review_dataset_promotion_evidence: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PromotionEvidenceReviewRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_PromotionEvidenceReviewResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_get_catalog_promotion_readiness_report: {
-        parameters: {
-            query?: {
-                /** @description 数据集 ID 列表; 缺省使用当前后端已知数据集集合 */
-                dataset_ids?: string[] | null;
-                /** @description 可选交易日期列表; 提供后聚合 active source fallback policy effect */
-                trade_dates?: string[] | null;
-                /** @description 可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合 */
-                available_sources?: string[] | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_PromotionReadinessReportResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_get_catalog_maturity_governance_report: {
-        parameters: {
-            query?: {
-                /** @description 数据集 ID 列表; 缺省使用当前后端已知数据集集合 */
-                dataset_ids?: string[] | null;
-                /** @description 可选交易日期列表; 提供后聚合 active source fallback policy effect */
-                trade_dates?: string[] | null;
-                /** @description 可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合 */
-                available_sources?: string[] | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_MaturityGovernanceReportResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_list_dataset_maturity_promotion_history: {
-        parameters: {
-            query: {
-                /** @description 数据集 ID */
-                dataset_id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_MaturityPromotionHistoryItem__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_revoke_dataset_maturity_promotion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MaturityPromotionRevokeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_MaturityPromotionRevokeResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_list_catalog_assets: {
-        parameters: {
-            query?: {
-                /** @description 资产命名空间 */
-                namespace?: string | null;
-                /** @description 数据集 ID */
-                dataset_id?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_CatalogAssetResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_get_catalog_asset: {
-        parameters: {
-            query: {
-                /** @description 资产命名空间 */
-                namespace: string;
-                /** @description 数据集 ID */
-                dataset_id: string;
-                /** @description 资产分区键 */
-                partition_keys?: string[] | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_CatalogAssetResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ingestion_get_catalog_source_health_report: {
-        parameters: {
-            query: {
-                /** @description 数据集 ID */
-                dataset_id: string;
-                /** @description 交易日期 */
-                trade_date: string;
-                /** @description source=auto 可用来源列表; 缺省使用当前后端默认数据源集合 */
-                available_sources?: string[] | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_CatalogSourceHealthReportResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -10517,6 +12618,42 @@ export interface operations {
             };
         };
     };
+    ingestion_get_catalog_source_health_report: {
+        parameters: {
+            query: {
+                /** @description 数据集 ID */
+                dataset_id: string;
+                /** @description 交易日期 */
+                trade_date: string;
+                /** @description source=auto 可用来源列表; 缺省使用当前后端默认数据源集合 */
+                available_sources?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CatalogSourceHealthReportResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ingestion_get_catalog_source_health_summary_report: {
         parameters: {
             query: {
@@ -10549,6 +12686,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_get_dq_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DQSummaryResponse_"];
+                };
+            };
+        };
+    };
+    ingestion_get_ingestion_history: {
+        parameters: {
+            query: {
+                /** @description 数据集名称 */
+                dataset: string;
+                /** @description 返回条数上限 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_IngestionHistoryItem__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingestion_get_ingestion_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_IngestionStatusResponse_"];
                 };
             };
         };
@@ -10657,37 +12868,6 @@ export interface operations {
             };
         };
     };
-    metadata_get_instrument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                instrument_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_Instrument_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     metadata_list_instruments: {
         parameters: {
             query?: {
@@ -10721,6 +12901,767 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    metadata_get_instrument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instrument_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_Instrument_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_candidate_exclusions: {
+        parameters: {
+            query: {
+                experiment_id: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateExclusionPageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_candidate_factor_contributions: {
+        parameters: {
+            query: {
+                experiment_id: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateFactorContributionPageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_candidate_selections: {
+        parameters: {
+            query: {
+                experiment_id: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateSelectionPageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_research_experiments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ExperimentSummaryResponse__"];
+                };
+            };
+        };
+    };
+    research_launch_experiment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentLaunchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentLaunchResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_get_experiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentDetailResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_experiment_artifacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ExperimentArtifactResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_cancel_experiment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_candidate_selection: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidateSelectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_CandidateSelectionReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_experiment_candidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ExperimentCandidateResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_get_experiment_comparison: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentComparisonResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_experiment_gates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ExperimentGateResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_research_holdout_evaluations: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoldoutEvaluationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_HoldoutEvaluationReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_pause_experiment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_preflight_experiment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentPlanningRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentPreflightResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_resume_experiment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_retry_fold_experiment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentRetryFoldRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentControlReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_get_research_experiment_review_packet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentReviewPacketResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_get_experiment_selection_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ExperimentSelectionEvidenceResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_research_factors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_FactorDescriptorResponse__"];
+                };
+            };
+        };
+    };
+    design_research_factor_diagnostics: {
+        parameters: {
+            query: {
+                snapshot_id: string;
+                start_date: string;
+                end_date: string;
+                registry_hash: string;
+            };
+            header?: never;
+            path: {
+                factor_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FactorDiagnosticsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_research_node_descriptors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_NodeDescriptorResponse__"];
+                };
+            };
+        };
+    };
+    research_list_research_reviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_StrategyVersionResponse__"];
                 };
             };
         };
@@ -10766,6 +13707,28 @@ export interface operations {
             };
         };
     };
+    system_get_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     strategies_list_strategies: {
         parameters: {
             query?: {
@@ -10803,7 +13766,9 @@ export interface operations {
     strategies_create_strategy: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -10867,7 +13832,9 @@ export interface operations {
     strategies_update_strategy: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 strategy_id: string;
             };
@@ -10899,7 +13866,7 @@ export interface operations {
             };
         };
     };
-    strategies_publish_strategy: {
+    strategies_get_active_strategy: {
         parameters: {
             query?: never;
             header?: never;
@@ -10908,9 +13875,140 @@ export interface operations {
             };
             cookie?: never;
         };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyActiveResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_strategy_events: {
+        parameters: {
+            query?: {
+                after_event_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_StrategyGovernanceEventResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_list_strategy_versions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_StrategyVersionResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_strategy_version_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionDetailResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_approve_strategy_review: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PublishStrategyRequest"];
+                "application/json": components["schemas"]["GovernanceDecisionRequest"];
             };
         };
         responses: {
@@ -10920,7 +14018,265 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_bool_"];
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_deprecate_strategy_version: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GovernanceDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_diff_strategy_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionDiffResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_publish_strategy_version: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishStrategyVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyActivePointerResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_reactivate_strategy_version: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateStrategyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyActivePointerResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_reject_strategy_review: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GovernanceDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_submit_strategy_review: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyVersionStateResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategies_validate_strategy_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategySpecValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategySpecValidationResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -11003,20 +14359,19 @@ export interface operations {
             };
         };
     };
-    trade_update_intent_status: {
+    trade_get_comparison: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                intent_id: string;
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 回测运行 ID */
+                run_id: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateIntentStatusRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -11024,7 +14379,153 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_bool_"];
+                    "application/json": components["schemas"]["APIResponse_ComparisonMetricsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trade_get_daily_decision: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 交易/信号日期 */
+                trade_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DailyDecisionReportResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trade_get_daily_decision_v2: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 交易/信号日期 */
+                trade_date?: string | null;
+                /** @description 人工账户 ID; 缺失时 V2 fail closed 为 ACCOUNT_BASELINE_MISSING */
+                account_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DailyDecisionV2Response_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trade_get_deviation: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 信号日期 */
+                signal_date: string;
+                /** @description 实际成交/持仓日期 */
+                execution_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DeviationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trade_list_fill_adjustments: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 目标成交 ID */
+                fill_id?: string | null;
+                /** @description 关联意图 ID */
+                intent_id?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_FillAdjustmentResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -11111,20 +14612,25 @@ export interface operations {
             };
         };
     };
-    trade_void_fill: {
+    trade_list_effective_fills: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                fill_id: string;
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 起始日期 */
+                start_date?: string | null;
+                /** @description 结束日期 */
+                end_date?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["VoidFillRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -11132,7 +14638,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_FillAdjustmentResponse_"];
+                    "application/json": components["schemas"]["APIResponse_list_FillResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -11181,19 +14687,20 @@ export interface operations {
             };
         };
     };
-    trade_get_daily_decision: {
+    trade_void_fill: {
         parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 交易/信号日期 */
-                trade_date?: string | null;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                fill_id: string;
+            };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidFillRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -11201,43 +14708,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_DailyDecisionReportResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_daily_decision_v2: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 交易/信号日期 */
-                trade_date?: string | null;
-                /** @description 人工账户 ID; 缺失时 V2 fail closed 为 ACCOUNT_BASELINE_MISSING */
-                account_id?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DailyDecisionV2Response_"];
+                    "application/json": components["schemas"]["APIResponse_FillAdjustmentResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -11291,25 +14762,20 @@ export interface operations {
             };
         };
     };
-    trade_list_effective_fills: {
+    trade_update_intent_status: {
         parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 起始日期 */
-                start_date?: string | null;
-                /** @description 结束日期 */
-                end_date?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                intent_id: string;
+            };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIntentStatusRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -11317,7 +14783,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_list_FillResponse__"];
+                    "application/json": components["schemas"]["APIResponse_bool_"];
                 };
             };
             /** @description Validation Error */
@@ -11331,19 +14797,13 @@ export interface operations {
             };
         };
     };
-    trade_list_fill_adjustments: {
+    trade_compute_pnl: {
         parameters: {
             query: {
                 /** @description 策略 ID */
                 strategy_id: string;
-                /** @description 目标成交 ID */
-                fill_id?: string | null;
-                /** @description 关联意图 ID */
-                intent_id?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
+                /** @description 快照日期 */
+                snapshot_date: string;
             };
             header?: never;
             path?: never;
@@ -11357,7 +14817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_list_FillAdjustmentResponse__"];
+                    "application/json": components["schemas"]["APIResponse_PnlSummaryResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -11396,40 +14856,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_PositionSnapshotResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_compute_pnl: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 快照日期 */
-                snapshot_date: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_PnlSummaryResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -11504,76 +14930,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_TradeIntentResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_deviation: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 信号日期 */
-                signal_date: string;
-                /** @description 实际成交/持仓日期 */
-                execution_date?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DeviationResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_comparison: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 回测运行 ID */
-                run_id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_ComparisonMetricsResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -11787,73 +15143,7 @@ export interface operations {
             };
         };
     };
-    debug_generate_test_logs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-        };
-    };
-    system_root: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-        };
-    };
     system_health_check: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    system_get_status: {
         parameters: {
             query?: never;
             header?: never;

@@ -24,7 +24,12 @@ const IA_ROUTES = [
 	"/research/backtest",
 	"/research/backtest/$id",
 	"/research/experiments",
+	"/research/experiments/new",
+	"/research/experiments/$id",
+	"/research/node-descriptors",
 	"/research/regime",
+	"/research/reviews",
+	"/research/reviews/$id",
 	"/research/universes",
 	"/trading",
 	"/trading/signals",
@@ -32,8 +37,9 @@ const IA_ROUTES = [
 	"/trading/portfolio",
 	"/trading/risk",
 	"/platform",
-	"/platform/settings",
 	"/platform/agents",
+	"/platform/data-products",
+	"/platform/settings",
 ];
 
 const DEV_ONLY_ROUTES = ["/showcase"];

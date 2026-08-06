@@ -4,10 +4,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { strategyHandlers } from "@/mocks/handlers/strategy";
 import { server } from "@/mocks/server";
-import { FactorBrowser } from "./factor-browser";
-import { StrategyEditor } from "./strategy-editor";
 import { StrategyHeader } from "./strategy-header";
-import { StrategyInspector } from "./strategy-inspector";
 import { StrategyListPage } from "./strategy-list-page";
 
 function createQueryClient(): QueryClient {
@@ -38,60 +35,28 @@ describe("Strategy route page contract handoffs", () => {
 describe("StrategyHeader", () => {
 	it("渲染策略名称", async () => {
 		render(<StrategyHeader id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("多因子动量策略 v3")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("ETF 行业轮动")).resolves.toBeInTheDocument();
 	});
 
-	it("显示策略版本", async () => {
+	it("显示策略版本与股票池", async () => {
 		render(<StrategyHeader id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("v3 · 沪深300")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("v3 · csi_etf_broad")).resolves.toBeInTheDocument();
 	});
 
-	it("显示因子列表", async () => {
+	it("显示策略标签", async () => {
 		render(<StrategyHeader id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("动量因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("波动率因子")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("etf")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("rotation")).resolves.toBeInTheDocument();
+	});
+
+	it("显示版本 hash、snapshot、eligible start 与 R2 hard-gate 上下文", async () => {
+		render(<StrategyHeader id="strat-001" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("h-v3")).resolves.toBeInTheDocument();
+		expect(screen.getByText("未绑定，Experiment preflight 时固定")).toBeInTheDocument();
+		expect(screen.getByText("待 preflight 计算")).toBeInTheDocument();
+		expect(screen.getByText("创建实验时按 live evidence 硬门禁")).toBeInTheDocument();
 	});
 });
 
-describe("FactorBrowser", () => {
-	it("渲染因子库标题", async () => {
-		render(<FactorBrowser />, { wrapper: createWrapper() });
-		await expect(screen.findByText("因子库")).resolves.toBeInTheDocument();
-	});
-
-	it("显示因子列表", async () => {
-		render(<FactorBrowser />, { wrapper: createWrapper() });
-		await expect(screen.findByText("价值因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("情绪因子")).resolves.toBeInTheDocument();
-	});
-});
-
-describe("StrategyEditor", () => {
-	it("渲染策略代码", async () => {
-		render(<StrategyEditor id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText(/def strategy/)).resolves.toBeInTheDocument();
-	});
-
-	it("显示当前版本代码", async () => {
-		render(<StrategyEditor id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText(/momentum/)).resolves.toBeInTheDocument();
-	});
-});
-
-describe("StrategyInspector", () => {
-	it("渲染策略参数", async () => {
-		render(<StrategyInspector id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("策略参数")).resolves.toBeInTheDocument();
-	});
-
-	it("显示股票池", async () => {
-		render(<StrategyInspector id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("沪深300")).resolves.toBeInTheDocument();
-	});
-
-	it("显示因子列表", async () => {
-		render(<StrategyInspector id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("动量因子")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("波动率因子")).resolves.toBeInTheDocument();
-	});
-});
+// StrategyEditor / NodeInspector 已迁移到独立 co-located 测试（API 改为受控 props）。
+// FactorBrowser 已删除（dead code，node-library 取代）。

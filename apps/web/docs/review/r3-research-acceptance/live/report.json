@@ -1,0 +1,1235 @@
+{
+  "schema": "ditto.r3-research-frontend-acceptance",
+  "version": 2,
+  "generated_at": "2026-08-03T14:22:18Z",
+  "source_commit": "23e690bb808d9b9539745de871a137a50b0dfcc8",
+  "mode": "real_data",
+  "passed": true,
+  "release_status": "RELEASE_ACCEPTANCE_PASSED",
+  "runtime": "VITE_USE_MOCK=false + Chromium + live loopback API",
+  "react_base": "http://127.0.0.1:5173",
+  "api_base": "http://127.0.0.1:8000",
+  "experiment_id": "r3-live-stock-backend-stock-c673f8d403456afd759f9571",
+  "planning_identity": {
+    "document_sha256": "ff2c1bb00057502a7a967367d40838c15afa0f2c5a24d263d60b3c5016c0f43f",
+    "strategy_id": "seed_stock_selection_rotation",
+    "strategy_version": 2,
+    "strategy_spec_hash": "80dcc1d80aeeebe403aafbf524d2280ff58aadc984326dbc2e387e6fca3eece8",
+    "snapshot_id": "r3-live-stock-2bd6587d6ef0153549ae497cd43de6095df78acef11a3a2d40beffa15f30fe0c",
+    "snapshot_manifest_hash": "c223c44e288dd2fa7a2cd6ccc5d8994b4c43d93fd9edbeadc5afc250a79c9316",
+    "research_cycle_hash": "6e0cab46a546a2949b67beb7737b05bd226cb4b5814c3eda84e0eb26b8783587",
+    "seed": 17
+  },
+  "timeout_ms": 300000,
+  "steps": [
+    {
+      "id": "studio-preflight-launch",
+      "description": "Studio identity plus read-only preflight/launch or exact published experiment recovery",
+      "passed": true,
+      "detail": "recovered completed published r3-live-stock-backend-stock-c673f8d403456afd759f9571 with 135 frozen eligible months",
+      "screenshot": "docs/review/r3-research-acceptance/live/studio-preflight-launch.png"
+    },
+    {
+      "id": "experiment-polling-control",
+      "description": "Live experiment polling and pause/resume control through the candidate-selection gate",
+      "passed": true,
+      "detail": "polling recovered experiment lifecycle truth; control=resumed-terminal-server-truth",
+      "screenshot": "docs/review/r3-research-acceptance/live/experiment-polling-control.png"
+    },
+    {
+      "id": "candidate-comparison-evidence",
+      "description": "Candidate pinning, comparison, and evidence drill-down",
+      "passed": true,
+      "detail": "inspected live comparison and evidence for Pin r3-live-stock-backend-stock-c673f8d403456afd759f9571:candidate:2:0b7862ac4ed7f11f831f8d9675ccda90b0ea4dd65546ae5e0683c7749d80dec7; recovered persisted candidate selection",
+      "screenshot": "docs/review/r3-research-acceptance/live/candidate-comparison-evidence.png"
+    },
+    {
+      "id": "one-shot-holdout",
+      "description": "Candidate selection, one-shot holdout evaluation, and successful terminal state",
+      "passed": true,
+      "detail": "claim holdout:003879596ef8a894b59c029e86e464bfe12aebb5a62b431d6d31347453e9835c recovered from immutable server truth; experiment reached a successful terminal state",
+      "screenshot": "docs/review/r3-research-acceptance/live/one-shot-holdout.png"
+    },
+    {
+      "id": "duplicate-holdout-blocked",
+      "description": "Holdout action remains disabled after the immutable claim",
+      "passed": true,
+      "detail": "duplicate holdout action is disabled after the first server claim",
+      "screenshot": "docs/review/r3-research-acceptance/live/duplicate-holdout-blocked.png"
+    },
+    {
+      "id": "review-approve-publish",
+      "description": "Submit review, approve the packet, and evidence-gated publish",
+      "passed": true,
+      "detail": "recovered evidence-gated published truth for seed_stock_selection_rotation@2",
+      "screenshot": "docs/review/r3-research-acceptance/live/review-approve-publish.png"
+    },
+    {
+      "id": "r1-active-version",
+      "description": "Browser observes the published R1 active pointer",
+      "passed": true,
+      "detail": "R1 active=2 pointer_revision=10",
+      "screenshot": "docs/review/r3-research-acceptance/live/r1-active-version.png"
+    },
+    {
+      "id": "historical-reactivate",
+      "description": "Historical published version is reactivated with pointer CAS confirmation",
+      "passed": true,
+      "detail": "reactivated historical seed_stock_selection_rotation@1",
+      "screenshot": "docs/review/r3-research-acceptance/live/historical-reactivate.png"
+    },
+    {
+      "id": "refresh-recovery",
+      "description": "Hard refresh recovers server state without mock fallback",
+      "passed": true,
+      "detail": "hard refresh recovered the live strategy versions and active-pointer view",
+      "screenshot": "docs/review/r3-research-acceptance/live/refresh-recovery.png"
+    }
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "network_errors": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/instruments/hooks/use-instrument-fundamentals.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/orders-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/components/a-shares-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/instruments/components/instrument-meta-strip.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/validation-panel.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/hooks/use-intelligence-fundamentals.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/layouts/studio.layout.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/instruments/hooks/use-instrument-detail.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/factor-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/components/watchlist-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/dittogrid/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/trading-overview-signals-panel.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/data-toolbar.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-risk-breaches.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/flow-bar.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/components/theme-switcher.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/hooks/use-intelligence-flow.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-order-detail.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/backtest/components/backtest-kpi-strip.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/review-packet-sections.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/backtest/components/backtest-trades.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/experiment-list-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/risk-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/experiment-create-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/factor-overview.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/hooks/use-regime-strategy-impact.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/backtest/components/backtest-returns-view.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-positions.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/page-contracts.generated.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-orders.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/positions-summary.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/platform/components/settings-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/screener/stores/screener.store.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/lib/api-client.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/layouts/ops-console.layout.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-risk-exposure.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategy-version.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/experiment-detail-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-equity.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-risk-summary.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/data-products/components/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/platform/components/health-strip.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategy-events.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/donut-gauge/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/hooks/use-regime-current.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/home/components/actions-section.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/instruments/hooks/use-instrument-chart.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/data-products/hooks/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/instruments/components/instrument-overview.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/regime-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/orders-list.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-signals.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/sparkline/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/home/components/signals-section.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/components/status-bar.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/hooks/use-scroll-reveal.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/hooks/use-market-calendar.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/layouts/analytical.layout.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-overview.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-list-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/research-sub-nav.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/status/status-badge/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-daily-decision.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/fill-ledger-list.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/home/components/alerts-indices-section.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/screener/components/screener-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/home/components/findings-health-section.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/home/components/home-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-risk-var.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/backtest/components/backtest-list-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/order-detail-panel.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/layouts/object-hub.layout.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/layouts/radar.layout.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-risk-drawdown.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategy-versions.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/hooks/use-intelligence-macro.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/components/view-preferences-menu.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/layouts/catalog.layout.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-update-intent-status.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/backtest/components/backtest-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/signals-list.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-fill-ledger.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/screener/components/screener-toolbar.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-editor.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-governance-audit.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/orders-health-strip.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/factor-list-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/equity-pnl-block.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/review-decision-panel.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/backtest/components/backtest-overview.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/platform/components/pipeline-table.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/lib/utils.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-trading-session.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-signals-queue.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-version-diff.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/universe-list-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/instruments/components/instrument-hub-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/risk-breaches-list.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/trading-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/trading-session-strip.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/signal-detail-panel.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/signal-to-order-pipeline-strip.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/platform/components/agents-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/instruments/components/instrument-chart-view.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/platform/components/alert-list.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/state/strategy-studio-store.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/number-ticker/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/skeleton/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/node-library.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/hooks/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/screener/components/compare-cart.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/home/components/pulse-section.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategy-save.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategy-active.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/risk-exposure-summary.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/components/research-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/components/markets-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-inspector.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/signals-health-strip.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/platform/components/provider-table.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/copilot/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/screener/components/screener-results.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/platform/components/platform-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-header.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/layouts/command-center.layout.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/trading-overview-orders-panel.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/metric/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/risk-alerts-block.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/screener/hooks/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-signal-detail.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/hooks/use-review-packet.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/node_modules/.vite/deps/react-error-boundary.js",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/components/calendar-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/data-products/api.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/domain/context-section/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/data/data-table/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/signals-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-record-fill.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/hooks/use-regime-drivers.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/home/components/banner-section.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/backtest/hooks/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategy.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-detail-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/components/intelligence-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-orders-summary.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-node-descriptors.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/hooks/use-comparison-attribution.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategies.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/hooks/use-strategy-validation.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/hooks/use-active-domain.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/components/status/status-dot/index.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/strategy/components/strategy-factors-view.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/trading/components/portfolio-page.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/hooks/use-atmosphere.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/markets/hooks/use-a-shares.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/shell/components/rail.tsx",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/src/features/research/hooks/use-regime-history.ts",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/api/v1/research/experiments/r3-live-stock-backend-stock-c673f8d403456afd759f9571/comparison",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/api/v1/research/candidates/r3-live-stock-backend-stock-c673f8d403456afd759f9571%3Acandidate%3A2%3A0b7862ac4ed7f11f831f8d9675ccda90b0ea4dd65546ae5e0683c7749d80dec7/exclusions",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/api/v1/research/candidates/r3-live-stock-backend-stock-c673f8d403456afd759f9571%3Acandidate%3A2%3A0b7862ac4ed7f11f831f8d9675ccda90b0ea4dd65546ae5e0683c7749d80dec7/factor-contributions",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/api/v1/research/experiments/r3-live-stock-backend-stock-c673f8d403456afd759f9571/selection-evidence",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:5173/api/v1/research/candidates/r3-live-stock-backend-stock-c673f8d403456afd759f9571%3Acandidate%3A2%3A0b7862ac4ed7f11f831f8d9675ccda90b0ea4dd65546ae5e0683c7749d80dec7/selections",
+      "status": null,
+      "error": "net::ERR_ABORTED",
+      "expected": true
+    }
+  ],
+  "trace": "docs/review/r3-research-acceptance/live/trace.zip"
+}

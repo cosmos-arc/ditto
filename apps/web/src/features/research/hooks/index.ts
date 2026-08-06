@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient, withQueryParams } from "@/lib/api-client";
 import type {
-	GetExperimentsResponse,
 	GetFactorsResponse,
 	GetResearchRunsResponse,
 	GetReviewQueueResponse,
@@ -30,12 +29,23 @@ export function useResearchRuns() {
 	});
 }
 
-export function useExperiments() {
-	return useQuery({
-		queryKey: ["research", "experiments"],
-		queryFn: () => apiClient.get<GetExperimentsResponse>("/research/experiments"),
-	});
-}
+export { useCandidateEvidence } from "./use-candidate-evidence";
+export { useCandidateSelection } from "./use-candidate-selection";
+export {
+	useExperiment,
+	useExperimentArtifacts,
+	useExperimentCandidates,
+	useExperimentComparison,
+	useExperimentGates,
+	useExperimentSelectionEvidence,
+} from "./use-experiment";
+export { useExperimentLaunch } from "./use-experiment-launch";
+export { useExperimentControl, useExperimentRetryFold } from "./use-experiment-mutations";
+export { useExperimentPreflight } from "./use-experiment-preflight";
+export { useExperiments } from "./use-experiments";
+export { useHoldoutEvaluation } from "./use-holdout-evaluation";
+export { useReviewPacket } from "./use-review-packet";
+export { useReviews } from "./use-reviews";
 
 export function useReviewQueue() {
 	return useQuery({
@@ -44,7 +54,7 @@ export function useReviewQueue() {
 	});
 }
 
-export { useFactorAnalysis, useFactorDetail } from "./use-factor-detail";
+export { useFactorAnalysis, useFactorDetail, useFactorDiagnostics } from "./use-factor-detail";
 export { useRegimeCurrent } from "./use-regime-current";
 export { useRegimeDrivers } from "./use-regime-drivers";
 export { useRegimeHistory } from "./use-regime-history";

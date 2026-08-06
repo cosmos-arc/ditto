@@ -30,38 +30,6 @@ export type GetBacktestResultRequest = {
 	readonly jobId: string;
 };
 
-export type GetStrategyRequest = {
-	readonly id: string;
-};
-
-export type PutStrategyRequest = {
-	readonly id: string;
-	readonly name?: string;
-	readonly factors?: readonly string[];
-	readonly pipeline?: StrategyPipeline;
-	readonly universe?: string;
-	readonly weightConfig?: Readonly<Record<string, number>>;
-	readonly riskRules?: readonly RiskRule[];
-	readonly code?: string;
-};
-
-export type ValidateStrategyRequest = {
-	readonly code?: string;
-	readonly pipeline?: StrategyPipeline;
-};
-
-export type DryRunStrategyRequest = {
-	readonly strategy: StrategySnapshot;
-	readonly universe: string;
-	readonly period: string;
-};
-
-export type GetStrategyVersionsRequest = {
-	readonly id: string;
-};
-
-export type GetFactorLibraryRequest = PaginatedRequest;
-
 export type GetRegimeCurrentRequest = undefined;
 
 export type GetRegimeDriversRequest = undefined;
@@ -169,6 +137,19 @@ export type Experiment = {
 
 export type GetExperimentsResponse = PaginatedResponse<Experiment>;
 
+/** 实验列表项（R3 live-shape，基于 `ExperimentSummaryResponse`）。完整工作台属 T19。 */
+export type ExperimentListItem = {
+	readonly experimentId: string;
+	readonly status: string;
+	readonly desiredState: string;
+	readonly stage: string;
+	readonly failureCode: string | null;
+	readonly queueOrdinal: number | null;
+	readonly revision: number;
+	readonly createdAt: string;
+	readonly updatedAt: string;
+};
+
 /** 审核队列项 */
 export type ReviewQueueItem = {
 	readonly id: string;
@@ -239,104 +220,6 @@ export type GetBacktestResultResponse = {
 	readonly monthlyReturns: readonly MonthlyReturn[];
 	readonly statistics: BacktestStatistics;
 };
-
-/** 策略管道节点 */
-export type StrategyPipelineNode = {
-	readonly id: string;
-	readonly name: string;
-	readonly type: string;
-	readonly config: Readonly<Record<string, unknown>>;
-};
-
-/** 策略管道 */
-export type StrategyPipeline = {
-	readonly nodes: readonly StrategyPipelineNode[];
-	readonly edges: readonly {
-		readonly from: string;
-		readonly to: string;
-	}[];
-};
-
-/** 风控规则 */
-export type RiskRule = {
-	readonly name: string;
-	readonly type: string;
-	readonly params: Readonly<Record<string, number>>;
-	readonly enabled: boolean;
-};
-
-/** 策略快照（用于 dry-run） */
-export type StrategySnapshot = {
-	readonly factors: readonly string[];
-	readonly pipeline: StrategyPipeline;
-	readonly weightConfig: Readonly<Record<string, number>>;
-	readonly riskRules: readonly RiskRule[];
-	readonly code?: string;
-};
-
-/** 策略详情 */
-export type StrategyDetail = {
-	readonly id: string;
-	readonly name: string;
-	readonly version: number;
-	readonly mode: "form" | "code";
-	readonly status: RunStatus;
-	readonly factors: readonly string[];
-	readonly pipeline: StrategyPipeline;
-	readonly universe: string;
-	readonly weightConfig: Readonly<Record<string, number>>;
-	readonly riskRules: readonly RiskRule[];
-	readonly code?: string;
-	readonly savedAt: string;
-};
-
-export type GetStrategyResponse = StrategyDetail;
-export type PutStrategyResponse = StrategyDetail;
-
-/** 策略校验结果 */
-export type ValidateStrategyResponse = {
-	readonly valid: boolean;
-	readonly errors: readonly string[];
-	readonly warnings: readonly string[];
-};
-
-/** 策略 dry-run 结果 */
-export type DryRunResult = {
-	readonly previewResults: {
-		readonly navSeries: readonly NavPoint[];
-		readonly statistics: Partial<BacktestStatistics>;
-	};
-	readonly warnings: readonly string[];
-};
-
-export type DryRunStrategyResponse = DryRunResult;
-
-/** 策略版本 */
-export type StrategyVersion = {
-	readonly version: number;
-	readonly code: string;
-	readonly savedAt: string;
-	readonly changeNote?: string;
-};
-
-export type GetStrategyVersionsResponse = {
-	readonly versions: readonly StrategyVersion[];
-};
-
-/** 因子库 */
-export type FactorLibraryItem = {
-	readonly id: string;
-	readonly name: string;
-	readonly family: string;
-	readonly description: string;
-	readonly source: string;
-	readonly preprocessorOptions: readonly {
-		readonly name: string;
-		readonly params: Readonly<Record<string, unknown>>;
-	}[];
-};
-
-export type GetFactorLibraryResponse = PaginatedResponse<FactorLibraryItem>;
 
 /** Regime 状态 */
 export type RegimeState = "risk_on" | "risk_off" | "transition" | "volatile";

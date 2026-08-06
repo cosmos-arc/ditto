@@ -1,0 +1,57 @@
+{
+  "id": "experiment-create",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-08-01",
+  "updatedAt": "2026-08-01",
+  "route": "/research/experiments/new",
+  "pagePattern": "studio-builder",
+  "shellFamily": "studio",
+  "prototypeRef": "docs/contracts/pages/experiment-create.contract.json",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/research",
+    "contractStatus": "generated",
+    "overlayStatus": "none",
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/research/components/experiment-create-page.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "ExperimentCreatePage"
+    ]
+  },
+  "viewports": [
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 900, "height": 768, "role": "compact" }
+  ],
+  "slots": [
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".studio-main",
+      "reactSelector": "main",
+      "a11yRole": "main"
+    },
+    {
+      "name": "actions",
+      "required": true,
+      "prototypeSelector": ".studio-modes",
+      "reactSelector": "[data-contract-slot='experiment-actions']",
+      "a11yRole": "toolbar",
+      "responsiveBehavior": { "compact": "reflow" }
+    }
+  ],
+  "states": {
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["preflight-ready", "preflight-blocked", "launch-unknown"]
+  },
+  "flags": { "hasStatusBar": true, "sidebarCollapsible": false },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  }
+}

@@ -1,12 +1,11 @@
+import { Link } from "@tanstack/react-router";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
-
-const STRATEGY_ROWS = [
-	["strat-001", "多因子动量策略 v3", "completed"],
-	["strat-002", "低波红利轮动", "running"],
-	["strat-003", "行业中性 Alpha", "draft"],
-] as const;
+import { useStrategies } from "../hooks";
 
 export function StrategyListPage() {
+	const { data, isLoading } = useStrategies();
+	const strategies = data ?? [];
+
 	return (
 		<CatalogLayout
 			toolbar={
@@ -19,16 +18,25 @@ export function StrategyListPage() {
 			}
 			main={
 				<Panel className="m-4">
-					<PanelHeader title="Strategies" count={STRATEGY_ROWS.length} />
+					<PanelHeader title="Strategies" count={strategies.length} />
 					<PanelBody>
 						<div className="divide-y divide-(--color-border-subtle)">
-							{STRATEGY_ROWS.map(([id, name, state]) => (
-								<div key={id} className="grid grid-cols-[7rem_1fr_6rem] items-center px-3 py-2 text-sm">
-									<span className="font-data text-(--color-foreground-tertiary)">{id}</span>
-									<span className="text-(--color-foreground)">{name}</span>
-									<span className="font-data text-(--color-foreground-secondary)">{state}</span>
-								</div>
-							))}
+							{isLoading && strategies.length === 0 ? (
+								<p className="px-3 py-2 text-sm text-(--color-foreground-tertiary)">加载中…</p>
+							) : (
+								strategies.map((s) => (
+									<Link
+										key={s.strategyId}
+										to="/research/strategies/$id"
+										params={{ id: s.strategyId }}
+										className="grid grid-cols-[7rem_1fr_6rem] items-center px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+									>
+										<span className="font-data text-(--color-foreground-tertiary)">{s.strategyId}</span>
+										<span className="text-(--color-foreground)">{s.name}</span>
+										<span className="font-data text-(--color-foreground-secondary)">{s.lifecycleState}</span>
+									</Link>
+								))
+							)}
 						</div>
 					</PanelBody>
 				</Panel>

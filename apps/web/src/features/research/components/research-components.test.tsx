@@ -13,6 +13,28 @@ import { ResearchPage } from "./research-page";
 import { ResearchPulseStrip } from "./research-pulse-strip";
 import { UniverseListPage } from "./universe-list-page";
 
+vi.mock("@tanstack/react-router", async () => {
+	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
+	return {
+		...actual,
+		Link: ({
+			to,
+			params,
+			children,
+			className,
+		}: {
+			readonly to: string;
+			readonly params?: Readonly<Record<string, string>>;
+			readonly children: ReactNode;
+			readonly className?: string;
+		}) => (
+			<a href={params?.id ? to.replace("$id", params.id) : to} className={className}>
+				{children}
+			</a>
+		),
+	};
+});
+
 function createQueryClient(): QueryClient {
 	return new QueryClient({
 		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -29,20 +51,21 @@ function createWrapper() {
 beforeEach(() => server.use(...researchHandlers));
 
 describe("Research route page contract handoffs", () => {
-	it("live 模式显示 prototype only 空态", () => {
+	it("live 模式渲染 frozen R3 research resources", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		render(<ResearchPage />, { wrapper: createWrapper() });
 
-		expect(screen.getByText("prototype only")).toBeInTheDocument();
-		expect(screen.getByText("prototype only，请切 VITE_USE_MOCK=true 查看原型数据。")).toBeInTheDocument();
+		expect(screen.queryByText(/prototype only/i)).not.toBeInTheDocument();
+		await expect(screen.findByText("研究实验")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("治理审查")).resolves.toBeInTheDocument();
 	});
 
 	it("covers ResearchPage route composition", async () => {
 		render(<ResearchPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("因子监控")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("近期运行")).resolves.toBeInTheDocument();
-		await expect(screen.findAllByText("实验")).resolves.not.toHaveLength(0);
+		await expect(screen.findByText("研究实验")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("治理审查")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("创建实验")).resolves.toBeInTheDocument();
 	});
 
 	it("covers FactorListPage route composition", () => {

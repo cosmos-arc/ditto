@@ -20,22 +20,17 @@ function StrategyFactorsViewContent({ id }: StrategyFactorsViewProps) {
 
 	return (
 		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-			<ContextSection title="因子配置">
+			<ContextSection title="策略参数">
 				<ul className="flex flex-col gap-[var(--section-gap)]">
-					{data.factors.map((factor) => {
-						const weight = data.weightConfig[factor];
-						return (
-							<li
-								key={factor}
-								className="flex items-center justify-between p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg) rounded-sm"
-							>
-								<span>{factor}</span>
-								<span className="text-(--color-foreground-tertiary)">
-									{weight !== undefined ? `${(weight * 100).toFixed(0)}%` : "—"}
-								</span>
-							</li>
-						);
-					})}
+					{Object.entries(data.spec.params).map(([key, value]) => (
+						<li
+							key={key}
+							className="flex items-center justify-between rounded-sm p-[var(--density-panel-padding)] hover:bg-(--color-interaction-hover-subtle-bg)"
+						>
+							<span>{key}</span>
+							<span className="text-(--color-foreground-tertiary)">{String(value)}</span>
+						</li>
+					))}
 				</ul>
 			</ContextSection>
 		</div>

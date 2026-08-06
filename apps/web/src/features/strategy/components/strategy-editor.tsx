@@ -1,41 +1,51 @@
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { ContextSection } from "@/components/domain/context-section";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useStrategyVersions } from "../hooks/use-strategy-versions";
+import type { ReactElement } from "react";
+import type { NodeDescriptorView, StrategySpec } from "@/types/strategy";
+import type { StudioMode } from "../state/strategy-studio-store";
+import { ParamConstraintsEditor } from "./param-constraints-editor";
+import { SignalExpressionsEditor } from "./signal-expressions-editor";
+import { ConstraintsPipeline } from "./strategy-pipeline-view";
+import { StrategySpecForm } from "./strategy-spec-form";
 
 interface StrategyEditorProps {
-	readonly id: string;
+	readonly spec: StrategySpec;
+	readonly mode: StudioMode;
+	readonly descriptors: readonly NodeDescriptorView[];
+	readonly selectedKey: string | null;
+	readonly onChange: (updater: (draft: StrategySpec) => StrategySpec) => void;
+	readonly onSelect: (key: string | null) => void;
 }
 
-function StrategyEditorContent({ id }: StrategyEditorProps) {
-	const { data, isLoading, isError } = useStrategyVersions(id);
-
-	if (isLoading) {
-		return <LoadingSkeleton />;
+/**
+ * 策略编辑容器（Studio main 区域）。
+ *
+ * `form` 模式编辑 legacy 表单；`pipeline` 模式只通过 descriptor registry 展示和编辑
+ * 固定语法节点。两种模式共享同一 working spec，最终都交给 backend validate 生成 hash。
+ */
+export function StrategyEditor({
+	spec,
+	mode,
+	descriptors,
+	selectedKey,
+	onChange,
+	onSelect,
+}: StrategyEditorProps): ReactElement {
+	if (mode === "pipeline") {
+		return (
+			<ConstraintsPipeline
+				spec={spec}
+				descriptors={descriptors}
+				onChange={onChange}
+				onSelect={onSelect}
+				selectedKey={selectedKey}
+			/>
+		);
 	}
-
-	if (isError || !data) {
-		throw new Error("Failed to load strategy versions");
-	}
-
-	const latestVersion = data.versions[data.versions.length - 1];
-	const code = latestVersion?.code ?? "";
 
 	return (
-		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-			<ContextSection title="策略代码">
-				<pre className="overflow-auto p-[var(--density-panel-padding)] text-sm text-(--color-foreground-tertiary)">
-					<code>{code}</code>
-				</pre>
-			</ContextSection>
+		<div className="flex flex-col gap-(--section-gap)">
+			<StrategySpecForm spec={spec} onChange={onChange} />
+			<SignalExpressionsEditor spec={spec} onChange={onChange} />
+			<ParamConstraintsEditor spec={spec} onChange={onChange} />
 		</div>
-	);
-}
-
-export function StrategyEditor(props: StrategyEditorProps) {
-	return (
-		<DittoErrorBoundary>
-			<StrategyEditorContent {...props} />
-		</DittoErrorBoundary>
 	);
 }
