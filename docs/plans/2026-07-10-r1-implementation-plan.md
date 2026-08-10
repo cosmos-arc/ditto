@@ -1,6 +1,6 @@
 # R1：日频人工交易 MVP 实施计划
 
-> **For Claude:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task by task.<br>
+> **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。<br>
 > **首次创建**：2026-07-10<br>
 > **最近复核**：2026-07-16<br>
 > **状态**：COMPLETED（R1 九个 task 与四层验收已完成）<br>

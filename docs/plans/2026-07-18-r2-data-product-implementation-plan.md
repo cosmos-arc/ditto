@@ -1,6 +1,6 @@
 # R2 A 股日频数据产品 Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 在现有 Ditto ingestion/catalog/lineage/promotion 主干上完成 R2 的数据产品契约、可恢复历史摄取、认证证据、19 数据集 readiness、R1 门禁和真实 API 数据工作台。
 

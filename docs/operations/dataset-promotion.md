@@ -1,7 +1,7 @@
 # 数据集晋级治理操作手册
 
 > 适用: experimental 数据集晋级到 initial-focus（生产默认可用）
-> 相关规范: [data/CLAUDE.md](../../packages/data/CLAUDE.md) 数据集成熟度、[application/CLAUDE.md](../../packages/application/CLAUDE.md) promotion governance
+> 相关规范: [data/AGENTS.md](../../packages/data/AGENTS.md) 数据集成熟度、[application/AGENTS.md](../../packages/application/AGENTS.md) promotion governance
 
 ## 一、治理模型
 

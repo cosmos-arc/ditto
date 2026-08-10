@@ -1,41 +1,18 @@
----
-last_synced: 2026-06-04
----
+# Platform 包指南
 
-# Platform Agent 指南
+## 定位与依赖
 
-## 定位
+缓存、并发、配置工具、数据库、存储基类、可观测性与通知等横切基础设施。除获准的 kernel 异常原语外，不依赖业务包。
 
-横切基础设施层 — 通用技术能力（缓存/日志/DB/存储基类/通知），零业务逻辑、零领域概念。
+## 关键不变量
 
-## 核心模块
+- 零业务逻辑、零领域概念，保持可独立提取。
+- 消费者从明确的 `foundation` 或 `services` 叶边界导入。
+- 本包只提供配置工具；环境配置加载发生在 apps。
+- 通用存储与数据库抽象不得吸收 data/execution/analysis 的领域 schema。
 
-| 模块 | 职责 |
-|------|------|
-| foundation/cache | 通用缓存（DataCache） |
-| foundation/concurrency | 文件锁、并发控制 |
-| foundation/config | 配置管理（Settings、路径、环境） |
-| foundation/db | SQLite 连接池 |
-| foundation/observability | 日志、追踪、指标、生命周期 |
-| foundation/storage | 通用存储基类（ParquetStore、SQLiteClient） |
-| services/notification | 通知服务（Telegram、Email、Webhook） |
+## 验证与参考
 
-## 依赖规则
-
-### 允许
-
-- platform → kernel ⚠️（仅 exceptions 继承 DittoError）
-
-### 禁止
-
-- platform → data/strategy/execution/backtest/application/apps ❌
-
-## 关键约束
-
-- 零业务逻辑、零领域概念、可独立提取为通用包
-- 导入必须从 `ditto_platform.foundation` 或 `ditto_platform.services` 入口
-- 配置仅在 Apps 层加载，Platform 只提供配置工具
-
-## 详细规范
-
-参见 [CLAUDE.md](CLAUDE.md)。
+- `pixi run -e dev pytest packages/platform/tests`
+- `pixi run -e dev arch-check`
+- [架构快速参考](../../docs/architecture/agent-context-pack.md) · [边界标准](../../docs/architecture/boundaries-and-abstraction-standards.md)

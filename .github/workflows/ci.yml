@@ -3,7 +3,7 @@
 #
 # 特点：
 # - 使用 Pixi 包管理器
-# - Monorepo 变更检测（packages/* + interfaces/*）
+# - Monorepo 与 Agent Harness 变更检测
 # - 分层测试策略（unit → integration）
 # - 前端工作流预留
 
@@ -41,11 +41,22 @@ jobs:
           filters: |
             python:
               - 'packages/**/*.py'
-              - 'interfaces/**/*.py'
               - 'scripts/**/*.py'
               - 'pyproject.toml'
               - 'pixi.toml'
               - 'pixi.lock'
+              - '.importlinter'
+              - 'AGENTS.md'
+              - 'CLAUDE.md'
+              - 'packages/*/AGENTS.md'
+              - 'packages/*/CLAUDE.md'
+              - '.agents/**'
+              - '.claude/**'
+              - '.codex/**'
+              - 'scripts/agent_harness/**'
+              - 'docs/engineering/agent-harness.md'
+              - 'docs/engineering/testing.md'
+              - '.pre-commit-config.yaml'
             infra:
               - '.github/**'
               - 'deploy/**'
@@ -79,6 +90,9 @@ jobs:
 
       - name: Fast tests
         run: pixi run -e dev test --fast
+
+      - name: Agent harness check
+        run: pixi run -e dev harness-check
 
   # ============================================================
   # Stage 3: Python 代码质量检查（并行）
@@ -149,18 +163,6 @@ jobs:
           pixi run -e dev pytest packages/*/tests/unit/ \
             -n auto \
             --cov=packages \
-            --cov-report=xml:coverage-unit.xml \
-            --cov-report=term-missing \
-            --cov-fail-under=80 \
-            --junitxml=junit-unit.xml \
-            -v \
-            --durations=10
-
-          # Interfaces 单元测试：有限并行
-          pixi run -e dev pytest interfaces/tests/unit/ \
-            -m "not integration and not slow" \
-            -n 2 \
-            --cov=packages --cov=interfaces \
             --cov-report=xml:coverage-unit.xml \
             --cov-report=term-missing \
             --cov-fail-under=80 \

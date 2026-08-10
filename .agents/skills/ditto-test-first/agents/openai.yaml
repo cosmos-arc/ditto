@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ditto Test First"
+  short_description: "Drive risky behavior changes from a failing test"
+  default_prompt: "Use $ditto-test-first to implement this behavior change from RED to GREEN."

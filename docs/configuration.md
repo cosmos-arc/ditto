@@ -146,6 +146,13 @@ vim config/development/data_store.env
 
 ## 环境配置详解
 
+### Pixi 主机平台
+
+`pixi.toml` 当前只声明 `linux-64` 和 `win-64`。`osx-arm64` 主机可以编辑与运行
+不依赖项目环境的标准库工具，但不能直接执行 `pixi run -e dev ...`；应在 Linux
+开发容器、远程环境或 CI 中运行完整质量门。不要为了本地临时验证绕过 lockfile
+或用 pip/poetry/conda 重建环境。
+
 ### 配置文件目录结构
 
 ```

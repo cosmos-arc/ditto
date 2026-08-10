@@ -89,5 +89,5 @@ ditto_kernel/
 ## 参考
 
 - `packages/kernel/src/ditto_kernel/trading.py` — 当前实现
-- `packages/kernel/CLAUDE.md` — Kernel 准入标准和增长控制规则
+- `packages/kernel/AGENTS.md` — Kernel 准入标准和增长控制规则
 - `docs/architecture/adr-runtime-spine.md` — Runtime Spine ADR（trading.py 过渡性质相关讨论）

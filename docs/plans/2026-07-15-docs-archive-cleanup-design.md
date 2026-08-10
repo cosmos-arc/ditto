@@ -102,7 +102,7 @@
 | `reviews/2026-06-16-quality-eval.md` | **最新**质量评估基线 |
 | `reviews/audit/2026-05-21-comprehensive-architecture-evaluation-v2.md` | 最新架构评估 v2 |
 | `reviews/audit/module-review-ledger.md` | 模块 review 台账 |
-| `superpowers/specs/2026-07-10-ditto-development-roadmap-design.md` | **母版**路线图 |
+| `roadmaps/ditto-development-roadmap.md` | **母版**路线图 |
 | `plans/README.md` / `plans/task-template.md` | 索引与模板（需修正） |
 | `design/README.md` | 设计索引（需更新） |
 
@@ -303,7 +303,7 @@ docs/
 - [数据集晋级治理](operations/dataset-promotion.md) · [因子 IC 诊断](operations/factor-ic-diagnosis.md)
 
 ### 当前路线与计划
-- [母版路线图](superpowers/specs/2026-07-10-ditto-development-roadmap-design.md)
+- [母版路线图](../roadmaps/ditto-development-roadmap.md)
 - [功能能力评级](plans/2026-07-10-capability-benchmark-design.md)
 - [阶段 A 实施](plans/2026-07-10-phase-a-implementation-plan.md) · [R1 MVP](plans/2026-07-10-r1-implementation-plan.md)
 

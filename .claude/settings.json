@@ -27,18 +27,46 @@
     "ask": [
       "Bash(rm -rf *)"
     ],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "default"
   },
   "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true,
-    "python-development@claude-code-workflows": true,
-    "unit-testing@claude-code-workflows": true,
-    "code-simplifier@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "quantitative-trading@claude-code-workflows": true,
-    "claude-md-management@claude-plugins-official": false,
-    "pyright-lsp@claude-plugins-official": true,
-    "compound-engineering@compound-engineering-plugin": false,
-    "codex@openai-codex": true
+    "pyright-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.py\" --host claude --event pre-tool",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.py\" --host claude --event post-tool",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.py\" --host claude --event stop",
+            "timeout": 900
+          }
+        ]
+      }
+    ]
   }
 }

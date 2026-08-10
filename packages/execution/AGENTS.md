@@ -1,44 +1,18 @@
----
-last_synced: 2026-06-04
----
+# Execution 包指南
 
-# Execution Agent 指南
+## 定位与依赖
 
-## 定位
+交易执行平面，负责 OMS、券商 gateway、成交、A 股执行现实、审计与对账。允许依赖 kernel/platform/portfolio；禁止依赖 data/features/strategy/risk/backtest/analysis/application/apps。
 
-交易执行平面 — 订单管理（OMS）、券商网关抽象、执行现实模拟（费用/滑点/交收）、交易审计与对账。
+## 关键不变量
 
-## 核心模块
+- Broker Gateway 是真实券商的唯一边界；真实操作必须先获明确批准。
+- 订单、成交和审计状态变化必须可追踪，不允许静默吞错。
+- A 股 T+1、涨跌停、费用与滑点语义集中在 execution reality。
+- 交易语义变化使用 `ditto-test-first`；高风险 diff 完成后使用 `ditto-change-review`。
 
-| 模块 | 职责 |
-|------|------|
-| broker/ | 券商网关抽象（BrokerGateway Protocol） |
-| orders/ | 订单管理 |
-| fills/ | 成交处理 |
-| reality/ | A 股执行现实（费用/滑点/交收） |
-| audit/ | 交易审计（不可篡改） |
-| storage/sqlite/ | 交易数据持久化 |
-| di/ | 依赖注入 Provider |
+## 验证与参考
 
-## 依赖规则
-
-### 允许
-
-- execution → kernel ✅
-- execution → portfolio ✅
-- execution → platform ✅（仅 foundation）
-
-### 禁止
-
-- execution → data/features/strategy/backtest/analysis/application/apps ❌
-
-## 关键约束
-
-- 不依赖回测或分析层
-- Broker Gateway 是与外部券商的唯一接口
-- 审计记录所有交易行为，不可篡改
-- 执行现实模拟封装 A 股规则（T+1/涨跌停/费用）
-
-## 详细规范
-
-参见 [CLAUDE.md](CLAUDE.md)。
+- `pixi run -e dev pytest packages/execution/tests`
+- `pixi run -e dev arch-check`
+- [架构快速参考](../../docs/architecture/agent-context-pack.md) · [测试指南](../../docs/engineering/testing.md)

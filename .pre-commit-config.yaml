@@ -64,6 +64,14 @@ repos:
         pass_filenames: false
         require_serial: true
 
+      - id: agent-harness
+        name: agent harness
+        entry: pixi run -e dev harness-check
+        language: system
+        pass_filenames: false
+        require_serial: true
+        files: '^(?:AGENTS\.md|CLAUDE\.md|packages/[^/]+/(?:AGENTS|CLAUDE)\.md|\.agents/|\.claude/|\.codex/|scripts/agent_harness/|docs/engineering/(?:agent-harness|testing)\.md|\.github/workflows/(?:ci|e2e-validation)\.yml|pixi\.toml|\.pre-commit-config\.yaml)'
+
       # --------------------------------------------------------
       # pytest (pre-push 阶段)
       # --------------------------------------------------------
@@ -132,6 +140,7 @@ ci:
     - ruff-lint
     - ruff-format
     - pyright
+    - agent-harness
     - pytest-fast
     - gitleaks
   autoupdate_schedule: monthly

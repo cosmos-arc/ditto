@@ -1,45 +1,18 @@
----
-last_synced: 2026-06-04
----
+# Apps 包指南
 
-# Apps Agent 指南
+## 定位与依赖
 
-## 定位
+HTTP API、CLI、Prefect Jobs 与 DI composition root。常规入口依赖 `application` 和 `platform`；只有 `registry` 可直接装配 data、features、strategy、portfolio、risk、execution、backtest、analysis 实现。
 
-应用边界层 — HTTP API（FastAPI）、CLI 命令、Prefect 任务调度、DI 容器组装（Composition Root）。
+## 关键不变量
 
-## 核心模块
+- API/CLI/Job 不承载业务逻辑，只做适配和调用应用用例。
+- `registry` 是能力实现与外部 adapter 的唯一组装边界。
+- API 使用显式 Pydantic 模型和完整类型；Flow 的业务行为下沉到 Task 或 application。
+- 运行时配置只在本包加载，再经 DI 传入其他包。
 
-| 模块 | 职责 |
-|------|------|
-| api/ | FastAPI 路由（backtest/capital/market/metadata/strategy/trade/universe） |
-| cli/ | CLI 命令入口（ingest/backfill/query/strategy） |
-| jobs/ | Prefect Flow/Task（daily/backtest/materialization/research） |
-| registry/ | DI 容器（Composition Root，唯一允许直接导入 Data/Capability 实现的位置） |
-| config/ | 环境配置加载 |
-| models/ | API 数据模型（Pydantic） |
+## 验证与参考
 
-## 依赖规则
-
-### 允许
-
-- apps → application ✅（commands/queries/processes）
-- apps → platform ✅（foundation + services）
-- apps.registry → data/features/strategy/portfolio/risk/execution/backtest/analysis ✅（DI 注册）
-
-### 禁止
-
-- 非 registry 代码直接导入 Data services/models ❌
-- 非 registry 代码直接导入 Capability 实现 ❌
-- API/CLI/Job 中包含业务逻辑 ❌
-
-## 关键约束
-
-- registry/ 是唯一允许直接导入能力包实现的位置（Composition Root 边界）
-- API 路由必须类型注解 100%，使用 Pydantic Model
-- Prefect Flow 中禁止写业务逻辑，抽取到 Task 或 ditto_application
-- 配置仅在 apps 层加载，其他层通过 DI 获取
-
-## 详细规范
-
-参见 [CLAUDE.md](CLAUDE.md)。
+- `pixi run -e dev pytest packages/apps/tests`
+- `pixi run -e dev arch-check`
+- [配置指南](../../docs/configuration.md) · [架构快速参考](../../docs/architecture/agent-context-pack.md)

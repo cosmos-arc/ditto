@@ -1,6 +1,6 @@
 # R4a cvxpy 组合优化实施计划（垂直切片）
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 交付第一个真实凸求解器全链路——`ShrinkageCovarianceProvider`（features，Ledoit-Wolf）经 application 注入 → `ConstrainedMVOSolver`（portfolio，cvxpy，硬约束烘进 + L1 交易成本罚项）→ EngineLoop A/B golden 对照 EqualWeight。
 

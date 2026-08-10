@@ -189,11 +189,25 @@ test-cov-xml = "python scripts/test.py --cov-xml"
 # Test fast（快速测试，用于 check 命令）
 test-fast = "python scripts/test.py --fast"
 
+# Agent Harness：标准库验证与 fixture 驱动测试
+sync-agent-skills = "python scripts/agent_harness/sync_skills.py"
+harness-validate = "python scripts/agent_harness/validate.py"
+harness-test = "python -m unittest discover -s scripts/agent_harness/tests -v"
+harness-check = { depends-on = ["harness-validate", "harness-test"] }
+check-changed = "python scripts/agent_harness/hook.py --event check-changed"
+
 # ──────────────────────────────────────────────────────────
 # 组合命令
 # ──────────────────────────────────────────────────────────
 # Check：快速验证（开发时用，包含快速测试）
-check = { depends-on = ["lint", "fmt", "type", "test-fast", "arch-check"] }
+check = { depends-on = [
+    "lint",
+    "fmt-check",
+    "type",
+    "test-fast",
+    "arch-check",
+    "harness-check",
+] }
 
 # CI：完整检查（CI 用）
 ci = { depends-on = [
@@ -202,6 +216,7 @@ ci = { depends-on = [
     "type-all",
     "test-cov-xml",
     "arch-check",
+    "harness-check",
 ] }
 
 # ──────────────────────────────────────────────────────────

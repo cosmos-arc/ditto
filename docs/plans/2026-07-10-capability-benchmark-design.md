@@ -26,7 +26,7 @@ Ditto 的北极星是全球全品类、AI 原生的量化研究与人工决策�
 1. 可重复运行的验收证据、数据库约束和真实 API 响应。
 2. 当前源码、测试、OpenAPI 与 CLI `--help`。
 3. 本文的能力事实与缺口。
-4. 母路线图 `docs/superpowers/specs/2026-07-10-ditto-development-roadmap-design.md`。
+4. 母路线图 `docs/roadmaps/ditto-development-roadmap.md`。
 5. 当前 release 的实施计划，例如 `docs/plans/2026-07-10-r1-implementation-plan.md`。
 6. 历史计划和探索记录。
 

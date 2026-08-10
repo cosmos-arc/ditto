@@ -1,5 +1,7 @@
 # ditto-kernel
 
+> 包级约束见 [AGENTS.md](AGENTS.md)；全局边界见 [架构快速参考](../../docs/architecture/agent-context-pack.md)。
+
 **版本**: v0.3.1 | **日期**: 2026-05-10 | **状态**: 稳定
 
 ## 概要
@@ -8,11 +10,11 @@
 
 ## 详细规范
 
-- 目录结构详见 [CLAUDE.md](CLAUDE.md)
-- 依赖规则详见 [CLAUDE.md](CLAUDE.md)
-- 类型清单详见 [CLAUDE.md](CLAUDE.md)
-- 架构规则和依赖约束详见 [CLAUDE.md](CLAUDE.md)
-- 导入规范详见 [CLAUDE.md](CLAUDE.md)
+- 目录结构详见 [AGENTS.md](AGENTS.md)
+- 依赖规则详见 [AGENTS.md](AGENTS.md)
+- 类型清单详见 [AGENTS.md](AGENTS.md)
+- 架构规则和依赖约束详见 [AGENTS.md](AGENTS.md)
+- 导入规范详见 [AGENTS.md](AGENTS.md)
 
 ## 三原则
 
@@ -30,7 +32,7 @@ pixi run -e dev pytest packages/kernel/tests/
 
 ## 相关文档
 
-- [Kernel 层规范](CLAUDE.md)
+- [Kernel 层规范](AGENTS.md)
 
 ## 变更记录
 

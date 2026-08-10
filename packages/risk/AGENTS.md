@@ -1,43 +1,18 @@
----
-last_synced: 2026-06-04
----
+# Risk 包指南
 
-# Risk Agent 指南
+## 定位与依赖
 
-## 定位
+盘前/盘后风控、约束、暴露与回撤能力。允许依赖 kernel、portfolio 和 import-linter 明确的 execution order 窄合同；禁止依赖其他业务平面或 platform。
 
-风险管理平面 — 盘前风控检查、盘后风控审计、风险约束定义与验证、暴露度管理、回撤控制。
+## 关键不变量
 
-## 核心模块
+- 风控是安全网，不承担策略或交易决策。
+- 正常 risk finding 用返回值表达；仅配置失败和契约误用抛异常。
+- 约束可组合、可配置，并对边界值提供测试证据。
+- 风控语义变化使用 `ditto-test-first`，完成后使用 `ditto-change-review`。
 
-| 模块 | 职责 |
-|------|------|
-| pre_trade.py | 盘前风控检查 |
-| post_trade.py | 盘后风控审计 |
-| constraints/ | 约束规则（checks/context） |
-| exposure/ | 暴露度管理 |
-| drawdown/ | 回撤控制 |
-| contracts.py | 风控契约（PostTradeGuard/RiskSlice） |
+## 验证与参考
 
-## 依赖规则
-
-### 允许
-
-- risk → kernel ✅
-- risk → portfolio ✅
-
-### 禁止
-
-- risk → data/features/strategy/execution/backtest/analysis/application/apps ❌
-- risk → platform ❌
-
-## 关键约束
-
-- 风控是安全网，不承担交易决策
-- 正常业务结果通过返回值表达，不通过异常（risk finding = return value）
-- 只有配置失败和契约误用才使用异常
-- 约束规则可组合、可配置
-
-## 详细规范
-
-参见 [CLAUDE.md](CLAUDE.md)。
+- `pixi run -e dev pytest packages/risk/tests`
+- `pixi run -e dev arch-check`
+- [架构快速参考](../../docs/architecture/agent-context-pack.md) · [测试指南](../../docs/engineering/testing.md)

@@ -1,6 +1,6 @@
 # Ditto 文档索引
 
-> **当前架构权威来源**：`packages/*/CLAUDE.md` + [`docs/architecture/`](architecture/README.md)
+> **当前架构权威来源**：`.importlinter` + `packages/*/AGENTS.md` + [`docs/architecture/`](architecture/README.md)
 > **历史文档**：各目录 `archive/` 子目录与 [`docs/archive/`](archive/)
 > **维护说明**：已完成里程碑、历史评审快照与被取代的设计统一归档（`git mv` 保留历史，`git log --follow` 可追溯）。
 
@@ -17,8 +17,11 @@
 - [配置系统](configuration.md) · [数据集手册](data-manual.md) · [运维手册](ops-manual.md)
 - [数据集晋级治理](operations/dataset-promotion.md) · [因子 IC 诊断](operations/factor-ic-diagnosis.md)
 
+### 工程约定
+- [测试指南](engineering/testing.md) · [Claude/Codex Agent Harness](engineering/agent-harness.md)
+
 ### 路线与计划（当前活跃）
-- [母版路线图](superpowers/specs/2026-07-10-ditto-development-roadmap-design.md) — 分阶段产品/工程路线
+- [母版路线图](roadmaps/ditto-development-roadmap.md) — 分阶段产品/工程路线
 - [功能能力评级与业界对标](plans/2026-07-10-capability-benchmark-design.md)
 - [阶段 A 实施计划](plans/2026-07-10-phase-a-implementation-plan.md)
 - [R1 日频人工交易 MVP](plans/2026-07-10-r1-implementation-plan.md)

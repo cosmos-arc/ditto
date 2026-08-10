@@ -67,7 +67,7 @@
 | 想找的工作 | 应阅读 |
 |---|---|
 | 当前能力评分与缺口 | `docs/plans/2026-07-10-capability-benchmark-design.md` |
-| R0-R7 全局顺序与商业 Gate | `docs/superpowers/specs/2026-07-10-ditto-development-roadmap-design.md` |
+| R0-R7 全局顺序与商业 Gate | `docs/roadmaps/ditto-development-roadmap.md` |
 | 日频人工交易闭环 | `docs/plans/2026-07-10-r1-implementation-plan.md` |
 | 数据扩张与 promotion | 未来 R2 实施计划 |
 | 回测/选股/策略产品化 | 未来 R3 实施计划 |

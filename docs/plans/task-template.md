@@ -1,191 +1,68 @@
-# [Sprint X] Task Y: 任务名称
+# [主题] 实施计划
 
-**日期**: YYYY-MM-DD
-**状态**: ❌ 未开始 | 🔄 进行中 | ✅ 已完成
-**分支**: `feat/task-name`
+**日期：** YYYY-MM-DD
+**状态：** 未开始 / 进行中 / 阻塞 / 完成
+**恢复点：** 下一 Task、最后验证结果或外部等待项
 
----
+## 目标
 
-## 🎯 技能使用计划
+说明交付结果、用户价值和成功边界。
 
-> 本任务的 Superpowers 工作流：
+## 约束与不做事项
 
-| 阶段 | 触发条件 | 使用 Skill | 产出 |
-|------|----------|-----------|------|
-| 设计 | 用户描述需求 | `brainstorming` | 交互式设计确认 |
-| 计划 | 设计确认后 | `writing-plans` | 详细实施计划 |
-| 执行 | 开始实施 | `executing-plans` + `test-driven-development` | 代码实现 |
-| 审查 | 任务间隙 | `requesting-code-review` | 代码质量检查 |
-| 完成 | 任务完成 | `finishing-a-development-branch` | PR/合并决策 |
+- 当前源码/配置/文档事实：
+- 不修改：
+- 兼容性与数据要求：
+- 需要的 Ditto skill：
 
----
+## 执行合同
 
-## 一、任务概述
+- 按 Task 和依赖顺序推进。
+- 风险变更使用根 `AGENTS.md` 路由的对应 Ditto skill。
+- 只读且独立的工作可用宿主原生 subagents 并行。
+- 每个波次以本文 exit gate 和当前 diff 的实际验证结果为准。
 
-### 目标
-简要描述这个任务要实现什么
+## Tasks
 
-### 依赖
-- 前置任务：[依赖的其他任务]
-- 需要的数据/接口：[...]
+### Task 1：名称
 
-### 复杂度评估
-- **任务规模**: S (简单) / M (中等) / L (复杂)
-- **是否需要 Plan 文件**: 是/否
-- **预估子任务数**: ___ 个
+**依赖：** 无
+**风险：** 普通 / 行为 / 高风险 / 发布或真实数据
+**状态：** [ ]
 
----
-
-## 二、设计阶段 (brainstorming)
-
-### 2.1 需求讨论
-
-> **使用 Skill**: `brainstorming`
-
-**用户确认项**:
-- [ ] 功能边界已明确
-- [ ] 接口设计已确认
-- [ ] 数据结构已定义
-- [ ] 边界条件已讨论
-
-**关键设计决策**:
-1. 决策1 → 理由
-2. 决策2 → 理由
-
----
-
-## 三、实施计划 (writing-plans)
-
-> **使用 Skill**: `executing-plans` + `test-driven-development`
-
-> **TDD 原则**: 红色测试 → 绿色实现 → 重构优化
-
-### Phase 1: xxx
-
-**1.1 子任务名称** (RED → GREEN → REFACTOR)
-- 文件：`packages/xxx/src/xxx.py`
-- 测试：`tests/xxx/test_xxx.py`
-- Commit: `feat(scope): implement xxx`
-- 状态：[ ] 未完成 / [x] 已完成
-
-**1.2 子任务名称**
-- ...
-
-### Phase 2: xxx
-
-**2.1 子任务名称**
-- ...
-
----
-
-## 四、Git 提交策略
-
-### 提交粒度原则
-
-| 何时 Commit | 说明 |
-|-------------|------|
-| ✅ 完成一个独立函数 | 如：SqlEngine._register_views |
-| ✅ 完成一个测试类 | 如：TestSqlEngine 基础测试 |
-| ✅ 测试通过后 | RED → GREEN 的完整循环 |
-| ✅ 重构完成后 | 行为不变但代码改善 |
-| ❌ 写到一半 | 不完整的代码不 commit |
-
-### 预期提交序列
+- 目标文件或边界：
+- RED/观察证据（适用时）：
+- 实施：
+- 验收：
 
 ```bash
-# 1. 测试骨架 (RED)
-git commit -m "test(sql_engine): add test skeleton for SqlEngine"
-
-# 2. 基础实现 (GREEN)
-git commit -m "feat(sql_engine): implement SqlEngine.__init__ and _setup"
-
-# 3. View 注册
-git commit -m "feat(sql_engine): implement _register_views for Parquet datasets"
-
-# 4. 宏注册
-git commit -m "feat(sql_engine): implement adjustment macros (qfq, qfq_now, market_hfq)"
-
-# 5. SQLite ATTACH
-git commit -m "feat(sql_engine): implement SQLite ATTACH on demand"
-
-# 6. DataHub Facade
-git commit -m "feat(datahub): implement DataHub facade with lazy loading"
-
-# 7. 包导出
-git commit -m "chore(datahub): export DataHub from __init__.py"
+# 精确目标验证命令
 ```
 
----
+### Task 2：名称
 
-## 五、验收标准
+**依赖：** Task 1
+**状态：** [ ]
 
-### 功能
-- [ ] 功能点 1
-- [ ] 功能点 2
+- 实施：
+- 验收：
 
-### 质量
-- [ ] 单元测试通过
-- [ ] 覆盖率达标 (≥80%)
-- [ ] Ruff/Pyright 检查通过
+## Approval 点
 
-### 性能（如适用）
-- [ ] 性能指标 1
+| 时机 | 需要批准的动作 | 获批证据 |
+|---|---|---|
+| Task N 前 | schema / 生产依赖 / 架构边界 / 真实数据 / 发布 | 待填 |
 
----
+## 波次 Exit Gates
 
-## 六、文件清单
+- Wave 1：目标测试和 changed-scope 检查。
+- 最终：`pixi run -e dev check`；发布前按需运行 `pixi run -e dev ci`。
+- 所有失败和未运行检查必须记录，不得静默跳过。
 
-```
-packages/xxx/src/xxx/
-├── module.py           # 描述
-└── tests/
-    └── test_module.py  # 测试
-```
+## 恢复状态
 
----
-
-## 七、完成阶段 (finishing-a-development-branch)
-
-> **使用 Skill**: `finishing-a-development-branch`
-
-### 7.1 完成前验证 (verification-before-completion)
-
-- [ ] `pixi run -e dev ci-check` 全部通过
-- [ ] 所有测试通过
-- [ ] 代码已 Polishing
-- [ ] DoD 全部勾选
-
-### 7.2 决策点
-
-**选项**:
-- [ ] 创建 PR → 继续下一步
-- [ ] 本地合并 → 适用于小型工具函数
-- [ ] 保留分支 → 适用于未完成的工作
-- [ ] 丢弃分支 → 适用于实验性代码
-
-### 7.3 创建 PR（如选择）
-
-```bash
-git push -u origin feat/task-name
-gh pr create --base main --title "feat: description"
-```
-
----
-
-## 八、完成总结
-
-<!-- 任务完成后填写 -->
-
-### 已实现
-- ✅ ...
-- ✅ ...
-
-### 遗留问题
-- [ ] ...
-
-### 经验教训
-- ...
-
----
-
-**最后更新**: YYYY-MM-DD
+- 已完成：
+- 下一步：
+- 未解决风险：
+- 最新命令与结果：
+- 外部等待或 approval：

@@ -1,5 +1,7 @@
 # ditto-platform
 
+> 包级约束见 [AGENTS.md](AGENTS.md)；全局边界见 [架构快速参考](../../docs/architecture/agent-context-pack.md)。
+
 **版本**: v0.2.0
 **最后更新**: 2026-04-27
 **状态**: 稳定
@@ -38,7 +40,7 @@
 
 **依赖规则**: Platform 层零依赖其他层，可被所有层访问。
 
-目录结构、核心功能、导入规范详见 [CLAUDE.md](CLAUDE.md)。
+目录结构、核心功能、导入规范详见 [AGENTS.md](AGENTS.md)。
 
 ## 测试
 

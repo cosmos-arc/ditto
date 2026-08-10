@@ -259,7 +259,7 @@ def factor_ic(factor_id: str, start: str, end: str) -> FactorICReport:
 
 1. 评审本设计 → 敲定开放问题（provider 选型、trace 存储、sync/async）。
 2. 起 `feat/agent-capability-plane` 分支。
-3. 用 superpowers:writing-plans 把 Phase A 拆成原子任务（LLM gateway → ditto_agent 骨架 → 3 个 read tool → CLI `ask` → trace → mock-LLM 测试）。
+3. 用宿主原生计划能力把 Phase A 拆成原子任务（LLM gateway → ditto_agent 骨架 → 3 个 read tool → CLI `ask` → trace → mock-LLM 测试）。
 4. TDD 推进 Phase A，独立可上线后再启 Phase B。
 
 ---
