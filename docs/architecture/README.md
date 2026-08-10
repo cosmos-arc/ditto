@@ -120,21 +120,21 @@
 
 ## 各包规范索引
 
-| 包 | CLAUDE.md | 定位 |
+| 包 | AGENTS.md | 定位 |
 |---|---|---|
-| kernel | [packages/kernel/CLAUDE.md](../../packages/kernel/CLAUDE.md) | 共享内核（类型 + Protocol） |
-| platform | [packages/platform/CLAUDE.md](../../packages/platform/CLAUDE.md) | 横切基础设施 |
-| data | [packages/data/CLAUDE.md](../../packages/data/CLAUDE.md) | 数据平台 |
-| features | [packages/features/CLAUDE.md](../../packages/features/CLAUDE.md) | 因子与表达式 |
-| strategy | [packages/strategy/CLAUDE.md](../../packages/strategy/CLAUDE.md) | 策略定义与信号 |
-| portfolio | [packages/portfolio/CLAUDE.md](../../packages/portfolio/CLAUDE.md) | 组合构建与管理 |
-| risk | [packages/risk/CLAUDE.md](../../packages/risk/CLAUDE.md) | 风险管理 |
-| execution | [packages/execution/CLAUDE.md](../../packages/execution/CLAUDE.md) | 交易执行 |
-| backtest | [packages/backtest/CLAUDE.md](../../packages/backtest/CLAUDE.md) | 回测引擎 |
-| analysis | [packages/analysis/CLAUDE.md](../../packages/analysis/CLAUDE.md) | 研究分析 |
-| application | [packages/application/CLAUDE.md](../../packages/application/CLAUDE.md) | 应用编排（CQRS） |
-| apps | [packages/apps/CLAUDE.md](../../packages/apps/CLAUDE.md) | 应用入口 |
+| kernel | [packages/kernel/AGENTS.md](../../packages/kernel/AGENTS.md) | 共享内核（类型 + Protocol） |
+| platform | [packages/platform/AGENTS.md](../../packages/platform/AGENTS.md) | 横切基础设施 |
+| data | [packages/data/AGENTS.md](../../packages/data/AGENTS.md) | 数据平台 |
+| features | [packages/features/AGENTS.md](../../packages/features/AGENTS.md) | 因子与表达式 |
+| strategy | [packages/strategy/AGENTS.md](../../packages/strategy/AGENTS.md) | 策略定义与信号 |
+| portfolio | [packages/portfolio/AGENTS.md](../../packages/portfolio/AGENTS.md) | 组合构建与管理 |
+| risk | [packages/risk/AGENTS.md](../../packages/risk/AGENTS.md) | 风险管理 |
+| execution | [packages/execution/AGENTS.md](../../packages/execution/AGENTS.md) | 交易执行 |
+| backtest | [packages/backtest/AGENTS.md](../../packages/backtest/AGENTS.md) | 回测引擎 |
+| analysis | [packages/analysis/AGENTS.md](../../packages/analysis/AGENTS.md) | 研究分析 |
+| application | [packages/application/AGENTS.md](../../packages/application/AGENTS.md) | 应用编排（CQRS） |
+| apps | [packages/apps/AGENTS.md](../../packages/apps/AGENTS.md) | 应用入口 |
 
 ## 使用方式
 
-开发或审查前先阅读对应包的 `CLAUDE.md`，再用本目录文档判断跨包边界和抽象层级。若两者出现冲突，以当前代码门禁和最新 `CLAUDE.md` 为执行约束，并补充 ADR 或修订本文档。
+开发或审查前先阅读对应包的 `AGENTS.md`，再用本目录文档判断跨包边界和抽象层级。若两者出现冲突，以当前代码门禁和最新 `AGENTS.md` 为执行约束，并补充 ADR 或修订本文档。

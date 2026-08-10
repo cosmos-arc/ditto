@@ -1,5 +1,7 @@
 # ditto-apps
 
+> 包级约束见 [AGENTS.md](AGENTS.md)；全局边界见 [架构快速参考](../../docs/architecture/agent-context-pack.md)。
+
 **版本**: v0.14.0 | **日期**: 2026-05-06 | **状态**: 稳定
 
 ## 概要
@@ -30,8 +32,8 @@ curl http://localhost:8000/healthz
 
 ## 相关文档
 
-- [Apps 层规范](CLAUDE.md) — 目录结构、架构规则和依赖约束、业务逻辑迁移规则、CLI 命令详情
-- [Application 层规范](../application/CLAUDE.md)
+- [Apps 层规范](AGENTS.md) — 目录结构、架构规则和依赖约束、业务逻辑迁移规则、CLI 命令详情
+- [Application 层规范](../application/AGENTS.md)
 
 ## 变更记录
 

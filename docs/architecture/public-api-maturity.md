@@ -14,14 +14,14 @@
 | **candidate** | 1-2 包消费，或接口仍在演进 | 变更需在 PR 描述通知消费者；尽量 additive |
 | **internal** | 私有/演进中/叶模块内部 | 不保证稳定；消费者应改走更稳定的路径 |
 
-> 导入总原则（CLAUDE.md）：消费者直接引用**叶模块**，避免跨包 re-export；re-export
+> 导入总原则（AGENTS.md）：消费者直接引用**叶模块**，避免跨包 re-export；re-export
 > 链深度 ≤ 2。
 
 ---
 
 ## kernel — 共享内核
 
-barrel `ditto_kernel/__init__.py` 导出 32 个符号。分级依据 `packages/kernel/CLAUDE.md`
+barrel `ditto_kernel/__init__.py` 导出 32 个符号。分级依据 `packages/kernel/AGENTS.md`
 的 Barrel 公共 API 分级 + 跨包消费者数量。
 
 ### stable（核心类型，2+ 跨包消费者，接口稳定）
@@ -50,7 +50,7 @@ barrel `ditto_kernel/__init__.py` 导出 32 个符号。分级依据 `packages/k
 
 | 符号 | 叶模块 | 说明 |
 |------|--------|------|
-| `CalendarId`, `GrainId` | `kernel.market` | CLAUDE.md 明确要求叶模块直导 |
+| `CalendarId`, `GrainId` | `kernel.market` | AGENTS.md 明确要求叶模块直导 |
 | `DEFAULT_PIT_TIME_COLUMN`, `PIT_POLICY_FAIL_CLOSED` | `kernel.trading` | 内部 PIT 常量 |
 | `pearson_correlation` | `kernel.math` | 纯计算工具，按需叶模块导入 |
 | `RuntimeLifecycle`, `BaseRuntimeKernel`, `TradingRuntimeKernel` | `kernel.runtime` | 运行时内核，Backtest/Execution 内部 |
@@ -130,7 +130,7 @@ application barrel **不导出**（`__all__ = []`）；消费者从 `queries` / 
 - **何时升级 candidate → stable**：符号稳定消费 2+ 包、接口无近期破坏性变更，且通过
   一轮质量评估复核。
 - **何时降级 → internal**：符号退化为单消费者或被更稳定路径取代。
-- **变更本表**：PR 必须同步更新本表 + 受影响包的 `CLAUDE.md` barrel 分级。
+- **变更本表**：PR 必须同步更新本表 + 受影响包的 `AGENTS.md` barrel 分级。
 - **自动守护（未实现）**：当前无 fitness function 校验本表与 `__all__` / 导入模式
   的一致性；如需守护，可扩展 `scripts/architecture/check_architecture_smells.py`
   增加 route_maturity 模块级检查（超出本计划范围）。

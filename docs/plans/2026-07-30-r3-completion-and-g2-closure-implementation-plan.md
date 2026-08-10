@@ -1,6 +1,6 @@
 # R3 剩余目标与 G2 闭环 Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 从当前 R3 feature branches 出发，修复已发现的质量与契约缺陷，完成 Experiment 写路径、Strategy Studio/Experiment/Review 工作台、selection/exposure evidence、OpenAPI/page contracts、deterministic acceptance，并在 R2 live Gate 关闭后生成双黄金路径的真实 G2 release evidence。
 
@@ -54,8 +54,8 @@
 ## 1. 实施规则与审批门
 
 - 每个 Task 独立执行 RED → GREEN → REFACTOR，并形成小提交。
-- 修复 bug/失败时先使用 `superpowers:systematic-debugging`；写实现前使用 `superpowers:test-driven-development`。
-- 每个波次结束使用 `superpowers:verification-before-completion`，不得用历史 GREEN 代替 fresh output。
+- 修复 bug/失败时使用宿主原生调试能力；行为变化按 `ditto-test-first` 先观察 RED。
+- 每个波次结束执行本文 Exit Gate，不得用历史 GREEN 代替当前 diff 的 fresh output。
 - backend 精确测试后至少运行：
 
 ```bash
@@ -2175,7 +2175,7 @@ notes
 
 **Step 4: 请求代码审查**
 
-使用 `superpowers:requesting-code-review`，分别审查 backend/frontend diff、跨仓 OpenAPI identity 和 release evidence。
+使用 `ditto-change-review`，分别审查 backend/frontend diff、跨仓 OpenAPI identity 和 release evidence。
 
 **Step 5: Commit documentation reconciliation**
 
@@ -2186,7 +2186,7 @@ git commit -m "docs(r3): reconcile final g2 completion evidence"
 
 **Step 6: 集成选择**
 
-只有所有验证通过后使用 `superpowers:finishing-a-development-branch`：
+只有所有验证通过后，才使用宿主原生分支/PR 工作流：
 
 1. 保留两个 feature branches；
 2. 分别 push；
@@ -2269,9 +2269,8 @@ Task 7 durable idempotency、Task 9 exposure evidence 和 Task 11 live evidence 
 
 ## 6. Execution Handoff
 
-计划按以下方式执行：
-
-1. **Subagent-Driven（当前会话）**：使用 `superpowers:subagent-driven-development`，每个 Task 派发独立 agent，主 agent 在 task 间审查、验证与提交。
-2. **Parallel Session（独立会话）**：新会话使用 `superpowers:executing-plans`，按 RC0 → RC1 → RC2 → RC3 → Live G2 分批执行并在波次门禁暂停。
+按 RC0 → RC1 → RC2 → RC3 → Live G2 的依赖顺序执行。只有互不依赖的
+只读探索/审查可使用宿主原生 subagents 并行；主 agent 在 task 间审查并运行
+当前波次门禁。
 
 无论选择哪种方式，先从 Task 1 开始；Task 4 的 API classification 获批后才能冻结后续 DTO；Task 18 必须等待新的 live execution 授权。

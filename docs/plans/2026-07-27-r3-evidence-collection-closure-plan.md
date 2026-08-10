@@ -1,6 +1,6 @@
 # R3 Evidence Collection 闭环 Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 接通 R3 evidence collection 链路,让一个真实 experiment 从 EVIDENCE
 stage 产出非空、11 个 hard gate 客观判定的 immutable review packet(含真实
@@ -696,9 +696,8 @@ pixi run -e dev check   # lint + fmt + type + test --fast
 
 ## Execution Handoff
 
-计划执行有两种方式:
-
-1. **Subagent-Driven(当前会话)**:使用 `superpowers:subagent-driven-development`,按 task 派发新 subagent,每个 task 后做 spec/compliance review。
-2. **Parallel Session(独立会话)**:在 worktree 中使用 `superpowers:executing-plans`,按 task 执行并在波次 Exit Gate 复核。
+按 task 依赖顺序执行；只有互不依赖的只读探索/审查可使用宿主原生
+subagents 并行。每个 task 后做 spec/compliance review，并在波次 Exit Gate
+用当前 diff 的结果复核。
 
 Task 2 的两个风险点(backtest report 读取、registry_hash)必须在 Step 0 探索确认后再 RED;若探索发现需要扩展 reader/authority(架构边界/契约微调),暂停并请求授权。

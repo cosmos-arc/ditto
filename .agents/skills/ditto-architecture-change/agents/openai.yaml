@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ditto Architecture Change"
+  short_description: "Guide cross-package architecture and API changes"
+  default_prompt: "Use $ditto-architecture-change to plan and validate this architecture change."

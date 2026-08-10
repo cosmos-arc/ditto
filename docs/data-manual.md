@@ -953,4 +953,4 @@ reader = InstrumentReader(...)  # ❌
 
 - [配置系统手册](/docs/configuration.md)
 - [运维手册](/docs/ops-manual.md)
-- [DataHub 架构规范](/packages/data/CLAUDE.md)
+- [DataHub 架构规范](/packages/data/AGENTS.md)

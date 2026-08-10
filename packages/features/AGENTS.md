@@ -1,42 +1,18 @@
----
-last_synced: 2026-06-04
----
+# Features 包指南
 
-# Features Agent 指南
+## 定位与依赖
 
-## 定位
+因子、表达式、衍生数据、物化与评估平面。允许依赖 kernel/platform；禁止直接依赖 data 或 strategy/portfolio/risk/execution/backtest/analysis/application/apps。
 
-因子、表达式、衍生数据与发布安全能力平面 — 表达式语言、因子定义、物化计划、因子评估。
+## 关键不变量
 
-## 核心模块
+- expression 不依赖 materialization；因子定义依赖 expression/spec，不依赖编排层。
+- 市场输入由 application/backtest 注入，不通过直接依赖 data 获取。
+- feature-owned storage/runtime 通过本包 contracts/Protocols 交互。
+- rolling、shift、join、因子可见性与发布截止改动使用 `ditto-pit-safety`。
 
-| 模块 | 职责 |
-|------|------|
-| expression/ | 表达式语言（lexer/parser/AST/compiler/codegen） |
-| factors/ | 因子定义（spec/primitives/category implementations） |
-| materialization/ | 物化计划（依赖推导/计划编排） |
-| evaluation/ | 因子评估（IC/Fama-MacBeth/暴露分析/归因） |
-| services/ | 衍生数据服务（catalog/persistence/concurrent materialization/GC） |
-| storage/ | Feature-owned 存储适配 |
+## 验证与参考
 
-## 依赖规则
-
-### 允许
-
-- features → kernel ✅
-- features → platform ✅
-
-### 禁止
-
-- features → strategy/portfolio/risk/execution/backtest/analysis/application/apps ❌
-
-## 关键约束
-
-- expression 不依赖 materialization（单向依赖）
-- 因子定义依赖表达式和 spec，不依赖上层编排
-- 纯计算层，feature-owned 运行时/存储适配通过 contracts/Protocols 交互
-- 不直接依赖 data（数据由 application 编排注入）
-
-## 详细规范
-
-参见 [CLAUDE.md](CLAUDE.md)。
+- `pixi run -e dev pytest packages/features/tests`
+- `pixi run -e dev pytest -m pit`
+- [架构快速参考](../../docs/architecture/agent-context-pack.md) · [PIT skill](../../.agents/skills/ditto-pit-safety/SKILL.md)

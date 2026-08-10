@@ -96,7 +96,6 @@ pixi.lock.backup
 /*.json
 config/**/*.json
 !config/**/*.example.json
-!.factory/settings.json
 
 # ===================================================================
 #                    Jupyter & IPython
@@ -148,6 +147,8 @@ deploy/docker/.env.local
 ehthumbs.db
 Thumbs.db
 desktop.ini
-.codex
+.codex/*
+!.codex/hooks.json
+.cache/ditto-agent-harness/
 .worktrees/
 .merge-backups/

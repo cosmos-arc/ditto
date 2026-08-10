@@ -341,15 +341,15 @@ pixi run -e dev arch-check       # 分层依赖检查
 
 ## 相关文档
 
-- [CLAUDE.md](CLAUDE.md) — 开发规范
-- [packages/strategy/CLAUDE.md](packages/strategy/CLAUDE.md) — Strategy 层规范
-- [packages/data/CLAUDE.md](packages/data/CLAUDE.md) — Data 层规范
-- [packages/application/CLAUDE.md](packages/application/CLAUDE.md) — Application 层规范
-- [packages/features/CLAUDE.md](packages/features/CLAUDE.md) — Features 层规范
-- [packages/analysis/CLAUDE.md](packages/analysis/CLAUDE.md) — Analysis 层规范
-- [packages/platform/CLAUDE.md](packages/platform/CLAUDE.md) — Platform 层规范
-- [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md) — Kernel 层规范
-- [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md) — Apps 层规范
+- [AGENTS.md](AGENTS.md) — 开发规范
+- [packages/strategy/AGENTS.md](packages/strategy/AGENTS.md) — Strategy 层规范
+- [packages/data/AGENTS.md](packages/data/AGENTS.md) — Data 层规范
+- [packages/application/AGENTS.md](packages/application/AGENTS.md) — Application 层规范
+- [packages/features/AGENTS.md](packages/features/AGENTS.md) — Features 层规范
+- [packages/analysis/AGENTS.md](packages/analysis/AGENTS.md) — Analysis 层规范
+- [packages/platform/AGENTS.md](packages/platform/AGENTS.md) — Platform 层规范
+- [packages/kernel/AGENTS.md](packages/kernel/AGENTS.md) — Kernel 层规范
+- [packages/apps/AGENTS.md](packages/apps/AGENTS.md) — Apps 层规范
 
 ## 变更记录
 

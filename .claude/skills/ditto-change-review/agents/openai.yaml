@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ditto Change Review"
+  short_description: "Review Ditto diffs for concrete high-risk defects"
+  default_prompt: "Use $ditto-change-review to review this diff and report evidence-backed findings."

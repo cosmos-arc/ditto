@@ -1,5 +1,7 @@
 # ditto-strategy
 
+> 包级约束见 [AGENTS.md](AGENTS.md)；全局边界见 [架构快速参考](../../docs/architecture/agent-context-pack.md)。
+
 **版本**: v0.5.0 | **日期**: 2026-05-07 | **状态**: 稳定
 
 ## 概要
@@ -34,7 +36,7 @@ Strategy 采用 Pipeline + Stage 架构，市场数据通过 StrategyInputBundle
 
 ## 模块结构
 
-目录结构详见 [CLAUDE.md](CLAUDE.md)。
+目录结构详见 [AGENTS.md](AGENTS.md)。
 
 ## 核心概念
 
@@ -60,7 +62,7 @@ DecisionFrame 通过列名约定流转数据：
 
 ## 依赖规则
 
-架构规则和依赖约束详见 [CLAUDE.md](CLAUDE.md)。
+架构规则和依赖约束详见 [AGENTS.md](AGENTS.md)。
 
 ## 策略模板
 
@@ -94,6 +96,6 @@ pixi run -e dev pytest packages/strategy/tests/integration -q  # 集成测试
 
 ## 相关文档
 
-- [Strategy 层规范](CLAUDE.md)
+- [Strategy 层规范](AGENTS.md)
 - [Alpha 模块详细说明](src/ditto_strategy/alpha/README.md)
 - [架构边界标准](../../docs/architecture/boundaries-and-abstraction-standards.md)

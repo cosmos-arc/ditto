@@ -15,7 +15,7 @@
 
 | 文档 | 主题 |
 |------|------|
-| [archive/PRD.md](archive/PRD.md) | 产品需求文档（产品路线已被 [母版路线图](../superpowers/specs/2026-07-10-ditto-development-roadmap-design.md) 取代） |
+| [archive/PRD.md](archive/PRD.md) | 产品需求文档（产品路线已被 [母版路线图](../roadmaps/ditto-development-roadmap.md) 取代） |
 | [archive/01_system_design.md](archive/01_system_design.md) | 旧系统架构（分层、目录、领域模型） |
 | [archive/02_data_design.md](archive/02_data_design.md) | 旧数据层（存储、PIT、复权、DQ） |
 | [archive/03_engine_design.md](archive/03_engine_design.md) | 旧引擎层（Regime/Factor/Backtest/Risk） |

@@ -7,8 +7,7 @@ on:
   pull_request:
     paths:
       - 'packages/**'
-      - 'interfaces/**'
-      - 'interfaces/tests/e2e/**'
+      - 'packages/apps/tests/e2e/**'
     types: [labeled]     # 带有 e2e 标签时触发
 
 jobs:
@@ -43,23 +42,23 @@ jobs:
           fi
 
           # 创建目录结构
-          pixi run -e dev python interfaces/tests/scripts/prepare_e2e_data.py --dirs-only
+          pixi run -e dev python packages/apps/tests/scripts/prepare_e2e_data.py --dirs-only
 
           # 生成 PIT 快照数据
-          pixi run -e dev python interfaces/tests/scripts/prepare_e2e_data.py --snapshots --date 2024-06-28
+          pixi run -e dev python packages/apps/tests/scripts/prepare_e2e_data.py --snapshots --date 2024-06-28
 
           # 验证数据完整性
-          pixi run -e dev python interfaces/tests/scripts/prepare_e2e_data.py --verify
+          pixi run -e dev python packages/apps/tests/scripts/prepare_e2e_data.py --verify
 
       - name: Run E2E Tests
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           ENVIRONMENT: testing
         run: |
-          pixi run -e dev pytest interfaces/tests/e2e/ \
+          pixi run -e dev pytest packages/apps/tests/e2e/ \
             --tb=short \
             -m "e2e" \
-            --junit-xml=interfaces/tests/reports/e2e-junit.xml
+            --junitxml=packages/apps/tests/reports/e2e-junit.xml
 
       - name: Upload Reports
         uses: actions/upload-artifact@v4
@@ -67,8 +66,8 @@ jobs:
         with:
           name: e2e-reports
           path: |
-            interfaces/tests/reports/*.md
-            interfaces/tests/reports/*.xml
+            packages/apps/tests/reports/*.md
+            packages/apps/tests/reports/*.xml
 
       - name: Comment PR
         if: ${{ github.event_name == 'pull_request' }}
@@ -77,7 +76,7 @@ jobs:
           script: |
             const fs = require('fs');
             const glob = require('glob');
-            const files = glob.sync('interfaces/tests/reports/e2e_validation_*.md');
+            const files = glob.sync('packages/apps/tests/reports/e2e_validation_*.md');
             if (files.length > 0) {
               const report = fs.readFileSync(files[0], 'utf8');
               github.rest.issues.createComment({

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ditto PIT Safety"
+  short_description: "Prevent point-in-time leakage in quant logic"
+  default_prompt: "Use $ditto-pit-safety to verify this data change against future leakage."

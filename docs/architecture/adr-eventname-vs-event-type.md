@@ -113,5 +113,5 @@ class DomainEvent:
 ## 参考
 
 - `packages/kernel/src/ditto_kernel/events.py` — 当前实现
-- `packages/kernel/CLAUDE.md` — DomainEvent 兼容策略
+- `packages/kernel/AGENTS.md` — DomainEvent 兼容策略
 - `docs/architecture/adr-runtime-spine.md` — Runtime Spine ADR（事件系统设计相关讨论）

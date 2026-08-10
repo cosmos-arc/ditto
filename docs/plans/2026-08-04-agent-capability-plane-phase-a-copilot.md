@@ -1,6 +1,6 @@
 # AI Agent Capability Plane — Phase A (Copilot) Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 交付研究 Copilot 的最小可运行垂直切片——`ditto ask "..."` 经 OpenAI Agents SDK 调用一个只读 Copilot agent，agent 通过 `@function_tool` 薄适配器调用既有 application facade（FactorEvaluationFacade），全程 trace 到自托管 Langfuse。
 

@@ -1,6 +1,6 @@
 # R3 A 股日频研究与策略治理 Beta Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 在现有 R2 certified data、因子、StrategySpec 和单次回测主干上，交付个股多因子与 ETF 双黄金路径的可复现实验、一次性 holdout、策略治理、真实工作台和 G2 evidence。
 
@@ -1204,9 +1204,8 @@ git commit -m "test(release): capture r3 browser evidence"
 
 ## Execution Handoff
 
-计划执行有两种方式：
-
-1. **Subagent-Driven（当前会话）**：使用 `superpowers:subagent-driven-development`，按 task 派发新 subagent，并在每个 task 后做 spec/compliance review。
-2. **Parallel Session（独立会话）**：在专用 worktree 中使用 `superpowers:executing-plans`，按波次执行并在 W0–W5 Exit Gate 检查点复核。
+按 task 依赖顺序执行；只有互不依赖的只读探索/审查可使用宿主原生
+subagents 并行。每个 task 后做 spec/compliance review，并在 W0–W5 Exit Gate
+用当前 diff 的验证结果复核。
 
 无论选择哪种方式，Task 7 和 Task 15 的数据库 schema approval、任何新前端依赖、架构边界或环境配置变更都必须暂停并单独请求授权。

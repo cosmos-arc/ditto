@@ -1,5 +1,7 @@
 # ditto-data
 
+> 包级约束见 [AGENTS.md](AGENTS.md)；全局边界见 [架构快速参考](../../docs/architecture/agent-context-pack.md)。
+
 **版本**: v0.19.0 | **日期**: 2026-04-27 | **状态**: 稳定
 
 ## 概要
@@ -30,11 +32,11 @@ Data 采用分层架构，storage 层实现 CQRS 模式（Reader/Writer 分离�
                                     └──────────────┘
 ```
 
-目录结构详见 [CLAUDE.md](CLAUDE.md)
+目录结构详见 [AGENTS.md](AGENTS.md)
 
-分层职责详见 [CLAUDE.md](CLAUDE.md)
+分层职责详见 [AGENTS.md](AGENTS.md)
 
-CQRS 模式详见 [CLAUDE.md](CLAUDE.md)
+CQRS 模式详见 [AGENTS.md](AGENTS.md)
 
 ## 数据源
 
@@ -56,11 +58,11 @@ Data 采用域驱动设计（DDD），按业务域组织：
 | Fundamental | financial / forecast / corporate | SQLite | 部分 |
 | Macro | indicator | SQLite | 是 |
 
-数据质量等级详见 [CLAUDE.md](CLAUDE.md)
+数据质量等级详见 [AGENTS.md](AGENTS.md)
 
-数据摄入流程详见 [CLAUDE.md](CLAUDE.md)
+数据摄入流程详见 [AGENTS.md](AGENTS.md)
 
-层级访问规则详见 [CLAUDE.md](CLAUDE.md)
+层级访问规则详见 [AGENTS.md](AGENTS.md)
 
 ## 使用示例
 
@@ -87,7 +89,7 @@ pixi run -e dev pytest packages/data/tests/
 
 ## 相关文档
 
-- [Data 层规范](CLAUDE.md)
+- [Data 层规范](AGENTS.md)
 - [PIT 安全指南](../../.claude/rules/pit.md)
 - [数据设计文档](../../docs/design/02_data_design.md)
 
