@@ -1,231 +1,83 @@
-# Ditto App 项目指南
+# Ditto App Agent Guide
 
-## 北极星原则
+Ditto App 是 Ditto A 股 ETF 量化平台的 React SPA。它负责研究、市场、交易和平台操作界面；后端 API 与运行时领域规则属于相邻 `ditto` 仓库。
 
-> 以**卓越代码质量**为底线、以**艺术般的可读性与一致风格**为追求，持续产出**清晰、整洁、可演进的架构**与**可长期维护的工程实现**。
+## 事实优先级
 
-**不可妥协：**
-- **质量**：正确性、可测试、可维护
-- **风格**：一致、克制、易读
-- **架构**：清晰边界、低耦合、高内聚、可演进
+冲突时按以下顺序处理，并显式报告不能自行化解的冲突：
 
-**遇事不决调研业界最佳实践！！！**
-**胆敢偷工减料我就换掉当前模型！！！**
+1. 源码与机器配置：`src/`、`package.json`、`biome.json`、`tsconfig*.json`、`vitest.config.ts`。
+2. 机器合同：`docs/contracts/pages/`、`.arch-manifest.json`、`.discovery-manifest.json`。
+3. 产品与设计事实：`PRODUCT.md`、`DESIGN.md`、`src/styles/design-tokens/`。
+4. 设计规格与工程文档：`docs/designs/specs/`、`docs/engineering/`。
+5. 历史计划和评审仅提供背景，不能覆盖当前源码或合同。
 
----
+## 架构地图
 
-## 🎯 三条铁律（5 秒必读）
+- `src/routes/`：TanStack Router 文件路由；`src/routeTree.gen.ts` 自动生成且不提交。
+- `src/features/`：业务能力；页面、hooks、API adapter 和 feature 状态在各自能力内聚。
+- `src/features/shell/`、`src/features/navigation/`：跨页面 shell/navigation 提供者。
+- `src/components/ui/`：无业务语义的基础组件；不得依赖 feature。
+- `src/components/{data,domain,indicator,status,chart}/`：跨 feature 展示能力。
+- `src/lib/`：API client、错误边界和纯工具；不得依赖 feature。
+- `src/styles/design-tokens/`：颜色、密度、交互、组件 token 的唯一值源。
+- `src/types/generated/api.d.ts`：后端 OpenAPI 生成类型，不手写复制 API schema。
 
-1. **先探索后编码** - 涉及 2+ 文件或架构变更 → 先读代码、理解上下文再动手
-2. **理解优先于修改** - 先读文件 → 搜索相关模式 → 再修改
-3. **验证后完成** - 声明完成前 → `bun run check`
+## 项目 Skills
 
----
+- `ditto-product-discovery`：新产品方向、新页面定位、竞品/领域调研、假设注册。
+- `ditto-product-arch`：信息架构、页面蓝图、用户流程、状态矩阵和产品架构审计。
+- `ditto-design-cycle`：HTML prototype 创建、设计评审、跨视口迭代和 edition 管理。
+- `ditto-page-contract`：页面合同创建、验证、提升、度量刷新和生成物同步。
+- `ditto-app-dev`：合同驱动的 React 页面/组件实现、交互打磨和视觉验证。
 
-## 🔄 执行决策流程
+通用 planning、debugging、review、worktree 和并行编排使用宿主原生能力，不包装成项目 skill。
 
-```
-用户请求
-  │
-  ├─ 涉及代码修改？
-  │   ├─ 涉及 2+ 文件或架构变更？
-  │   │   └─ 是 → 先探索后编码（阅读相关文件、理解依赖关系）
-  │   │
-  │   └─ TypeScript/TSX 代码修改？
-  │       └─ 是 → 读文件 → 搜索模式 → 修改
-  │
-  └─ 完成前？
-      └─ 运行验证 → 声明完成
-```
+## 风险与测试
 
----
+| 等级 | 示例 | 要求 |
+|---|---|---|
+| 普通 | 文档、格式、机械重命名 | 保持链接和格式有效；可豁免 RED |
+| 行为 | 组件交互、hook、store、API adapter、路由 | 先观察相关测试 RED，再做最小 GREEN |
+| 高风险 | 交易确认、风控展示、可访问性、公共组件契约、页面合同 | RED 必须覆盖用户可见行为或合同失败 |
+| 发布/真实系统 | 依赖、环境、部署、真实后端写操作 | 先取得批准，保留发布证据和恢复方式 |
 
-## 📋 项目规范
+测试优先适用于 bug、行为变化、公共契约、可访问性、交易/风控语义和页面合同。纯文档、格式化、纯移动与机械重命名豁免。不要用只验证实现细节的 mock 替代可观察失败。
 
-### 代码风格 — TypeScript strict + Biome
-- **语言**：中文回复/文档，UTF-8 编码
-- **TypeScript**：详见 [core.md](.claude/rules/core.md)
-- **类型**：禁止 `any` / `@ts-ignore` / `@ts-expect-error`（详见 [no-any-ignore.md](.claude/rules/no-any-ignore.md)）
-- **TDD**：RED → GREEN → REFACTOR
-- **分支**：从 main 拉开发分支，PR 合并
+## 验证矩阵
 
-### 测试标准 — Vitest + React Testing Library
-- **覆盖率**：分支覆盖率 ≥ 80%（详见 [react-test.md](.claude/rules/react-test.md)）
-- **新功能**：必须有单元测试
-- **API 变更**：必须有集成测试
-- **测试命令**：`bun run test`
+| 变更 | 最低验证 |
+|---|---|
+| Harness/agent 配置 | `bun run harness:check` |
+| 测试文件 | 目标 `vitest run <files>` + `bun run type` |
+| TS/TSX/路由/API | `bun run check` |
+| Design Token/主题/CSS | `bun run check && bun run audit:tokens && bun run build:tokens:check` |
+| 页面合同 | 合同 validator/generator + 消费方目标测试 |
+| 发布候选 | `bun run ci`；prototype 测试需要 Chromium |
 
-### 架构原则 — Feature-based 目录结构
-```
-src/
-├── features/        # 业务功能模块
-│   └── {name}/
-│       ├── components/
-│       ├── hooks/
-│       └── types.ts
-├── components/ui/   # 共享 UI 组件（shadcn）
-├── lib/api.ts       # 集中式 API 层（typed）
-└── styles/          # Design Tokens + 全局样式
-```
+`check` 是快速、可重复、无浏览器门；`ci` 才包含 coverage、prototype/Playwright 和构建。
 
-- **状态管理**：TanStack Query（服务端状态）+ Zustand（客户端状态）
-- **路由**：TanStack Router，文件路由约定
-- **禁止跨 feature 直接导入组件**（通过 barrel export）
+## 不可妥协项
 
-### 允许的依赖（严格限制）
+- 只使用 Bun；不要引入 npm/yarn/pnpm lockfile。
+- 生产 TypeScript 保持 strict；禁止 `any`、`@ts-ignore` 和 `@ts-expect-error`。
+- 服务端状态使用 TanStack Query；跨页面客户端偏好使用 Zustand；局部 UI 状态保持局部。
+- 基础 UI 与 `src/lib` 不得导入 feature。跨 feature 依赖优先公共 barrel；深层依赖需有明确能力契约。
+- 静态视觉值使用 Tailwind/Design Token。仅数据驱动几何可使用 inline style，且不得嵌入静态品牌色。
+- 数据界面覆盖 loading、empty、error、stale；破坏性操作必须显式确认。
+- 页面路由必须先运行 `bun run routes:generate`，不要编辑生成的 route tree。
+- Biome 是格式与 lint 事实源；不要通过扩大 ignore 绕过失败。
 
-| 功能 | ✅ 允许 | ❌ 禁止 |
-|------|--------|---------|
-| 包管理 | **bun** | npm/yarn/pnpm |
-| 构建 | Vite + Rolldown | webpack |
-| 样式 | Tailwind CSS v4 | CSS Modules / styled-components |
-| UI 组件 | shadcn/ui | antd / MUI |
-| 状态 | TanStack Query + Zustand | Redux / MobX |
-| 路由 | TanStack Router | react-router-dom |
-| 表单 | react-hook-form + zod | formik |
-| API 类型 | openapi-typescript | 手写类型 |
-| 测试 | Vitest + RTL | Jest |
-| API Mock | MSW | json-server |
+## 审批边界
 
-### 常用命令
+修改依赖/锁文件、环境变量契约、CI/部署、Design Token 文件架构、页面合同 schema、生成 API 流程、真实后端写操作或发布前必须取得用户批准。读取、搜索、目标测试、静态检查和仓库内可恢复编辑无需额外批准。禁止直接在 `main` commit/push、force push、hard reset、`--no-verify` 和递归强制删除。
+
+## 常用入口
 
 ```bash
-# 快速验证（开发时）
-bun run check              # lint + type + test
-
-# 测试
-bun run test               # 默认：vitest
-bun run test --coverage    # 测试 + 覆盖率
-
-# 类型检查
-bunx tsc --noEmit          # strict 类型检查
-
-# 代码质量
-bunx biome check .         # lint + format 检查
-bunx biome check --write . # lint + format 自动修复
+bun install --frozen-lockfile
+bun run check
+bun run ci
+bun run harness:check
+bun run check:changed
 ```
-
-### 禁止事项
-
-| ❌ 禁止 | 原因/替代 |
-|---------|-----------|
-| `any` 类型 | 使用 `unknown` + type guard |
-| `@ts-ignore` / `@ts-expect-error` | 修正类型（详见 no-any-ignore.md） |
-| inline styles | 使用 Tailwind CSS |
-| `@apply`（非 globals.css/shadcn） | 使用 utility classes |
-| 直接提交 main | 必须通过 PR |
-| 绕过 biome/tsc/vitest | 必须通过检测 |
-| 跨 feature 直接导入组件 | 通过 barrel export |
-| npm/yarn/pnpm | 必须用 bun |
-
----
-
-## 🚀 执行优先级
-
-### 1. 先理解再动手
-
-| 场景 | 要求 | 后果 |
-|------|------|------|
-| 创意/新功能 | 先理解现有架构，再设计方案 | 设计不完整，频繁重构 |
-| Bug/测试失败 | 分析根因，一次性修复 | 盲目重试，80% 失败率 |
-| 实现功能 | 先写测试（TDD），再实现 | 引入 bug，破坏功能 |
-| 多步骤任务 | 先拆分任务，明确依赖 | 遗漏边界情况 |
-| 完成任务 | 运行验证后再声明完成 | 提交未验证代码 |
-
-### 2. 读代码 ≥ 2x 改代码
-
-| 任务类型 | 最低阅读/修改比 |
-|---------|----------------|
-| 简单修改 | 2.0 |
-| 中等修改 | 3.0 |
-| 重构任务 | 5.0 |
-
-**标准流程**：
-1. 读实现文件 — 理解当前实现
-2. 读测试文件 — 理解预期行为
-3. 搜索相关模式 — 查找相关代码
-4. 修改文件 — 现在才修改
-
-**禁止模式**：
-| ❌ 禁止 | ✅ 正确 |
-|---------|---------|
-| 连续修改不读代码 | 读 → 修改 |
-| 修改失败后直接重试 | 分析根因 → 一次性修复 |
-| 不读代码直接改 | 先理解再修改 |
-
----
-
-## ✅ 完成前验证
-
-声明任务完成前，**必须**运行：
-
-```bash
-bun run check    # lint + type + test
-```
-
-**分支门禁**：
-- [ ] tsc 类型检查通过
-- [ ] biome lint 检查通过
-- [ ] 测试通过
-- [ ] 分支覆盖率 ≥ 80%
-
----
-
-## Boundaries
-
-### ✅ Always do（无需询问）
-- 修改前先阅读相关文件
-- 重构前搜索所有引用
-- 遵循 TDD 流程（RED → GREEN → REFACTOR）
-- 使用 Biome 格式化代码
-
-### ⚠️ Ask first（需要人工批准）
-- 添加新依赖
-- CI/CD 配置修改
-- 修改架构边界
-- 修改环境配置文件
-- Design Token 变更（需与架构文档同步）
-
-### 🚫 Never do（硬性禁止）
-- **使用 `any` 类型**（必须用 `unknown` + type guard）
-- **使用 npm/yarn/pnpm**（必须用 bun）
-- **使用 inline styles**（必须用 Tailwind CSS）
-- 跳过 biome、tsc、vitest 检测
-- 直接提交到 main 分支
-- 提交 secrets
-
----
-
-## 附录：详细参考
-
-### 项目架构
-
-```
-ditto-app/
-├── src/
-│   ├── features/       # 业务功能模块（Feature-based）
-│   │   └── {name}/
-│   │       ├── components/
-│   │       ├── hooks/
-│   │       └── types.ts
-│   ├── components/ui/  # 共享 UI 组件（shadcn/ui）
-│   ├── lib/            # 工具函数 + API 层
-│   ├── styles/         # Design Tokens + 全局样式
-│   └── routes/         # 路由定义
-├── public/             # 静态资源
-└── docs/               # 文档
-```
-
-### 工具链
-
-| 功能 | 工具 |
-|------|------|
-| 包管理 | bun |
-| 运行时 | Node.js (bun) |
-| 类型检查 | tsc (strict) |
-| Lint + Format | biome |
-| 测试 | vitest + React Testing Library |
-| 覆盖率 | @vitest/coverage-v8 |
-| API Mock | MSW |
-| 构建 | Vite + Rolldown |
-| 部署 | Cloudflare Pages |

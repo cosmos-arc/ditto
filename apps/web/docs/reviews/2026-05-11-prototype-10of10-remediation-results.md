@@ -2,7 +2,7 @@
 
 > 日期：2026-05-11
 > 范围：`docs/designs/specs/prototypes/` 28 个 active route prototypes
-> 上游计划：`docs/plans/2026-05-11-prototype-10of10-remediation-plan.md`
+> 上游计划：`docs/plans/archieve/superpowers/2026-05-11-prototype-10of10-remediation-plan.md`
 
 ## 1. P0 交互基础设施
 

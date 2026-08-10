@@ -18,9 +18,9 @@ describe("R1 trading visual acceptance contract", () => {
 		};
 
 		expect(packageJson.scripts?.["visual:audit"]).toBe(
-			"bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs --route /trading --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
+			"bun .agents/skills/ditto-app-dev/scripts/visual-audit.mjs --route /trading --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
 		);
-		expect(packageJson.scripts?.["visual:audit:cli"]).toBe("bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs");
+		expect(packageJson.scripts?.["visual:audit:cli"]).toBe("bun .agents/skills/ditto-app-dev/scripts/visual-audit.mjs");
 		expect(packageJson.scripts?.["acceptance:r1-trading"]).toBe("bun scripts/r1-trading-acceptance.ts");
 	});
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ditto Design Cycle"
+  short_description: "Create and review Ditto HTML prototypes"
+  default_prompt: "Use $ditto-design-cycle to create, review, or iterate this Ditto prototype."

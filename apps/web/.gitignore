@@ -62,12 +62,17 @@ scripts/visual-audit.config.generated.mjs
 .eslintcache
 .stylelintcache
 .biome/
+.cache/ditto-agent-harness/
 
 # ──────────────────────────────────────────────
 # Claude Code local settings (hooks, MCP, personal allow)
 # ──────────────────────────────────────────────
 .claude/settings.local.json
 .claude/worktrees/
+
+# Codex project hooks are tracked; local state remains ignored elsewhere.
+!.codex/
+!.codex/hooks.json
 
 # ──────────────────────────────────────────────
 # IDE

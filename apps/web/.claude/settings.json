@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "default",
     "allow": [
       "Read(**)",
       "Write(**)",
@@ -20,15 +21,46 @@
       "Bash(sudo *)",
       "Bash(chmod 777 *)",
       "Bash(git push --force *)",
-      "Bash(git reset --hard *)"
+      "Bash(git reset --hard *)",
+      "Bash(git * --no-verify *)"
     ]
   },
-  "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true,
-    "code-simplifier@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true,
-    "impeccable@impeccable": true,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": true
+  "enabledPlugins": {},
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.mjs\" --host claude --event pre-tool",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.mjs\" --host claude --event post-tool",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.mjs\" --host claude --event stop",
+            "timeout": 900
+          }
+        ]
+      }
+    ]
   }
 }
