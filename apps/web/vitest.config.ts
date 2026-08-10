@@ -16,11 +16,17 @@ export default defineConfig({
 		// 改进（waitUntil load + fonts.ready）可作为独立后续优化。
 		retry: 2,
 		setupFiles: ["./src/test/setup.ts"],
-		include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,mjs}", ".claude/skills/**/*.test.mjs"],
+		include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,mjs}", ".agents/skills/**/*.test.mjs"],
 		coverage: {
 			provider: "v8",
 			include: ["src/**/*.{ts,tsx}"],
 			exclude: ["src/**/*.test.{ts,tsx}", "src/**/*.d.ts", "src/test/**", "src/main.tsx"],
+			thresholds: {
+				statements: 80,
+				branches: 75,
+				functions: 80,
+				lines: 80,
+			},
 		},
 	},
 });

@@ -1,0 +1,43 @@
+{
+  "description": "Ditto App shared repository policy and changed-scope quality gates",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$(git rev-parse --show-toplevel)/scripts/agent_harness/hook.mjs\" --host codex --event pre-tool",
+            "timeout": 10,
+            "statusMessage": "Checking Ditto App command policy"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$(git rev-parse --show-toplevel)/scripts/agent_harness/hook.mjs\" --host codex --event post-tool",
+            "timeout": 120,
+            "statusMessage": "Formatting edited frontend files"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$(git rev-parse --show-toplevel)/scripts/agent_harness/hook.mjs\" --host codex --event stop",
+            "timeout": 900,
+            "statusMessage": "Verifying changed scope"
+          }
+        ]
+      }
+    ]
+  }
+}

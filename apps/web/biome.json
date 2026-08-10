@@ -1,7 +1,15 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
 	"files": {
-		"includes": ["src/**", "!!src/styles/fonts.css", "index.html", "*.config.*", "biome.json"]
+		"includes": [
+			"src/**",
+			"!!src/styles/fonts.css",
+			"scripts/agent_harness/**",
+			"scripts/generate-route-tree.mjs",
+			"index.html",
+			"*.config.*",
+			"biome.json"
+		]
 	},
 	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"linter": {

@@ -5,18 +5,29 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "bun run routes:generate && tsc -b && vite build",
     "preview": "vite preview",
-    "check": "bun run lint && tsc -b && vitest run",
+    "check": "bun run lint && bun run type && bun run test:unit && bun run arch:check && bun run harness:check",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "type": "tsc -b",
+    "type": "bun run routes:generate && tsc -b",
     "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:run": "bun run test:unit",
+    "test:unit": "vitest run src .agents/skills",
+    "test:prototype": "vitest run scripts --exclude 'scripts/agent_harness/**'",
+    "test:coverage": "bun run routes:generate && vitest run src --coverage",
+    "ci": "bun run check && bun run test:coverage && bun run test:prototype && bun run build",
+    "routes:generate": "bun scripts/generate-route-tree.mjs",
+    "arch:check": "bun scripts/agent_harness/arch-check.mjs",
+    "harness:sync": "bun scripts/agent_harness/sync-skills.mjs",
+    "harness:sync:check": "bun scripts/agent_harness/sync-skills.mjs --check",
+    "harness:validate": "bun scripts/agent_harness/validate.mjs",
+    "harness:test": "bun test scripts/agent_harness/tests",
+    "harness:check": "bun run harness:sync:check && bun run harness:validate && bun run harness:test",
+    "check:changed": "bun scripts/agent_harness/hook.mjs --event check-changed",
     "gen:api": "bash scripts/gen-api.sh",
-    "visual:audit": "bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs --route /trading --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
-    "visual:audit:cli": "bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs",
+    "visual:audit": "bun .agents/skills/ditto-app-dev/scripts/visual-audit.mjs --route /trading --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
+    "visual:audit:cli": "bun .agents/skills/ditto-app-dev/scripts/visual-audit.mjs",
     "acceptance:r1-trading": "bun scripts/r1-trading-acceptance.ts",
     "acceptance:r3-research": "bun scripts/r3-research-acceptance.ts",
     "prototype:gates": "bun scripts/run-prototype-gates.ts",
@@ -29,7 +40,7 @@
     "build:tokens": "bun scripts/export-tokens.ts",
     "build:tokens:check": "bun scripts/export-tokens.ts --check",
     "audit:tokens:diff": "bun scripts/audit-token-diff.mjs",
-    "generate-contracts": "bun .claude/skills/ditto-page-contract/scripts/generate.mjs"
+    "generate-contracts": "bun .agents/skills/ditto-page-contract/scripts/generate.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
@@ -66,7 +77,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/coverage-v8": "^4.1.2",
+    "@vitest/coverage-v8": "4.1.2",
     "ajv": "^8.18.0",
     "culori": "^4.0.2",
     "globals": "^17.4.0",
@@ -80,7 +91,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
     "vite": "^8.0.2",
-    "vitest": "^4.1.1"
+    "vitest": "4.1.2"
   },
   "msw": {
     "workerDirectory": [

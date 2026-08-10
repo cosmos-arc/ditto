@@ -1,0 +1,394 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ditto-app.internal/schemas/contract.schema.json",
+  "title": "Ditto Page Contract",
+  "description": "机器可读的页面合同，定义 prototype → React 的对版标准",
+
+  "type": "object",
+  "required": [
+    "id",
+    "version",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "route",
+    "pagePattern",
+    "shellFamily",
+    "prototypeRef",
+    "viewports",
+    "slots",
+    "states",
+    "flags",
+    "metrics",
+    "visualThresholds"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "页面 ID，与 edition-manifest pages[].id 对应"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "合同版本号，每次 --refresh-metrics 递增"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "contract-ready"],
+      "description": "合同状态门禁"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date",
+      "description": "合同创建日期"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date",
+      "description": "合同最后更新日期"
+    },
+
+    "route": {
+      "type": "string",
+      "pattern": "^/",
+      "description": "路由路径"
+    },
+    "pagePattern": {
+      "type": "string",
+      "enum": [
+        "global-command-center",
+        "analytical-overview",
+        "catalog-screener",
+        "object-hub",
+        "studio-builder",
+        "queue-ops-console",
+        "ledger-execution-console",
+        "config-integration-console"
+      ],
+      "description": "来自 spec §11"
+    },
+    "shellFamily": {
+      "type": "string",
+      "enum": [
+        "command-center",
+        "analytical",
+        "catalog",
+        "object-hub",
+        "studio",
+        "ops-console",
+        "radar"
+      ],
+      "description": "来自 spec §10"
+    },
+    "prototypeRef": {
+      "type": "string",
+      "pattern": "\\.html$",
+      "description": "Prototype HTML 文件路径"
+    },
+    "blueprintRefs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Blueprint 文档引用"
+    },
+
+    "landing": {
+      "$ref": "#/definitions/landingStatus",
+      "description": "React route / feature / contract / overlay / visual audit readiness"
+    },
+
+    "viewports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["width", "height", "role"],
+        "properties": {
+          "width": { "type": "integer", "minimum": 320 },
+          "height": { "type": "integer", "minimum": 240 },
+          "role": { "type": "string", "enum": ["primary", "compact"] }
+        }
+      },
+      "minItems": 1
+    },
+
+    "slots": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/slotMapping" },
+      "minItems": 1
+    },
+
+    "subSlots": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/subSlotMapping" }
+    },
+
+    "states": {
+      "type": "object",
+      "required": ["universal"],
+      "properties": {
+        "universal": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "必须包含 loading/empty/error/stale 四种通用状态"
+        },
+        "pageSpecific": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "interactions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/interaction" }
+    },
+
+    "overlays": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/overlayContract" },
+      "description": "页面默认流程中可触发的 drawer/sheet/modal/toast 等覆盖层"
+    },
+
+    "flags": {
+      "type": "object",
+      "required": ["hasStatusBar", "sidebarCollapsible"],
+      "properties": {
+        "hasStatusBar": { "type": "boolean" },
+        "sidebarCollapsible": { "type": "boolean" }
+      }
+    },
+
+    "metrics": {
+      "type": "object",
+      "required": ["capturedAt", "viewport", "baseline"],
+      "properties": {
+        "capturedAt": {
+          "type": "string",
+          "format": "date"
+        },
+        "viewport": {
+          "type": "string",
+          "pattern": "^\\d+x\\d+$"
+        },
+        "baseline": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/metricEntry" }
+        }
+      }
+    },
+
+    "visualThresholds": {
+      "type": "object",
+      "required": [
+        "consoleErrors",
+        "pageErrors",
+        "missingSelectors",
+        "targetMismatch",
+        "pixelDiffRatio"
+      ],
+      "properties": {
+        "consoleErrors": { "type": "integer", "minimum": 0 },
+        "pageErrors": { "type": "integer", "minimum": 0 },
+        "missingSelectors": { "type": "integer", "minimum": 0 },
+        "targetMismatch": { "type": "integer", "minimum": 0 },
+        "pixelDiffRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+
+    "motion": {
+      "type": "object",
+      "description": "Reserved: page-level motion/animation spec (not yet implemented)",
+      "properties": {}
+    }
+  },
+
+  "definitions": {
+    "landingStatus": {
+      "type": "object",
+      "required": [
+        "reactRouteStatus",
+        "featureModule",
+        "contractStatus",
+        "overlayStatus",
+        "visualAuditStatus"
+      ],
+      "properties": {
+        "reactRouteStatus": {
+          "type": "string",
+          "enum": ["missing", "scaffolded", "implemented"]
+        },
+        "featureModule": { "type": "string" },
+        "contractStatus": {
+          "type": "string",
+          "enum": ["missing", "draft", "generated", "verified"]
+        },
+        "overlayStatus": {
+          "type": "string",
+          "enum": ["none", "gallery-only", "triggerable", "implemented"]
+        },
+        "visualAuditStatus": {
+          "type": "string",
+          "enum": ["missing", "queued", "implemented", "verified"]
+        },
+        "reactTestRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^src/features/.+\\.test\\.(ts|tsx)$"
+          },
+          "description": "Existing React feature tests that cover this contract handoff"
+        },
+        "reactComponentRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Za-z0-9]+$"
+          },
+          "description": "React page or contract handoff component names covered by reactTestRefs"
+        }
+      }
+    },
+
+    "overlayContract": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "blocking",
+        "requiredInDefaultFlow",
+        "trigger",
+        "prototypeSelector",
+        "reactComponent",
+        "closeBehavior"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["drawer", "sheet", "modal", "alert-dialog", "toast", "inline"]
+        },
+        "blocking": { "type": "boolean" },
+        "requiredInDefaultFlow": { "type": "boolean" },
+        "trigger": { "$ref": "#/definitions/overlayTrigger" },
+        "prototypeSelector": { "type": "string" },
+        "reactComponent": { "type": "string" },
+        "closeBehavior": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["escape", "outside-click", "primary-action"]
+          },
+          "minItems": 1
+        }
+      }
+    },
+
+    "overlayTrigger": {
+      "type": "object",
+      "required": ["slot", "action"],
+      "properties": {
+        "slot": { "type": "string" },
+        "action": { "type": "string" }
+      }
+    },
+
+    "slotMapping": {
+      "type": "object",
+      "required": ["name", "required", "prototypeSelector", "reactSelector"],
+      "properties": {
+        "name": { "type": "string" },
+        "required": { "type": "boolean" },
+        "infoLevel": {
+          "type": "string",
+          "enum": ["l0", "l1", "l2", "l2.5", "l3"]
+        },
+        "prototypeSelector": { "type": "string" },
+        "reactSelector": { "type": "string" },
+        "layoutStrategy": {
+          "type": "string",
+          "enum": ["content-driven", "fixed-width", "flex"]
+        },
+        "threshold": { "$ref": "#/definitions/threshold" },
+        "a11yRole": {
+          "type": "string",
+          "description": "ARIA role: navigation, main, complementary, region, etc."
+        },
+        "a11yLabel": {
+          "type": "string",
+          "description": "aria-label or aria-labelledby reference"
+        },
+        "responsiveBehavior": {
+          "type": "object",
+          "properties": {
+            "compact": {
+              "type": "string",
+              "enum": ["hidden", "collapsed", "overlay", "reflow", "unchanged"]
+            }
+          },
+          "description": "Behavior under compact viewport (< 1024px)"
+        }
+      }
+    },
+
+    "subSlotMapping": {
+      "type": "object",
+      "required": ["name", "parentSlot", "prototypeSelector", "reactSelector"],
+      "properties": {
+        "name": { "type": "string" },
+        "parentSlot": { "type": "string" },
+        "infoLevel": {
+          "type": "string",
+          "enum": ["l0", "l1", "l2", "l2.5", "l3"]
+        },
+        "prototypeSelector": { "type": "string" },
+        "reactSelector": { "type": "string" },
+        "threshold": { "$ref": "#/definitions/threshold" },
+        "a11yRole": {
+          "type": "string",
+          "description": "ARIA role for content subSlots"
+        },
+        "a11yLabel": {
+          "type": "string",
+          "description": "aria-label or aria-labelledby reference"
+        }
+      }
+    },
+
+    "threshold": {
+      "type": "object",
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 },
+        "widthRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "heightRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+
+    "interaction": {
+      "type": "object",
+      "required": ["id", "trigger", "affectedSlots", "expectedBehavior"],
+      "properties": {
+        "id": { "type": "string" },
+        "trigger": { "type": "string" },
+        "affectedSlots": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "expectedBehavior": { "type": "string" }
+      }
+    },
+
+    "metricEntry": {
+      "type": "object",
+      "required": ["width", "height", "strategy"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 0 },
+        "height": { "type": "integer", "minimum": 0 },
+        "strategy": {
+          "type": "string",
+          "enum": ["content-driven", "fixed-width", "flex"]
+        }
+      }
+    }
+  }
+}

@@ -28,7 +28,7 @@ bun install
 bun dev
 
 # 验证
-bun run check   # lint + type + test
+bun run check   # lint + type + unit + architecture + harness
 ```
 
 ## 项目结构
@@ -56,19 +56,22 @@ ditto-app/
 ## 测试
 
 ```bash
-bun run test               # 运行测试
-bun run test --coverage    # 测试 + 覆盖率
+bun run test:unit          # 单元测试（不需要浏览器）
+bun run test:prototype     # Prototype/Playwright 合同测试
+bun run test:coverage      # src 覆盖率门
 ```
 
 ## 常用命令
 
 | 命令 | 说明 |
 |------|------|
-| `bun run check` | lint + type + test |
+| `bun run check` | 快速、无浏览器完成门 |
+| `bun run ci` | 覆盖率 + Prototype/Playwright + 构建 |
+| `bun run harness:check` | 双宿主 harness 静态验收 |
 | `bunx tsc --noEmit` | 类型检查 |
 | `bunx biome check .` | lint + format |
 | `bunx biome check --write .` | 自动修复 |
 
 ## 详细规范
 
-详见 [CLAUDE.md](CLAUDE.md)。
+详见 [AGENTS.md](AGENTS.md)、[Agent Harness](docs/engineering/agent-harness.md) 与 [Frontend Architecture](docs/engineering/frontend-architecture.md)。
