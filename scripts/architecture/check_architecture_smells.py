@@ -402,6 +402,16 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/infra/risk_persistence.py",
+        allowed_modules=frozenset({"ditto_risk.continuous_gate"}),
+        owner="apps R4 risk persistence composition adapter",
+        reason=(
+            "The SQLite composition adapter reconstructs the risk-owned canonical "
+            "snapshot type behind the application persistence port; schema and "
+            "runtime consumers remain isolated from risk implementation modules."
+        ),
+    ),
+    CompositionImportAllowance(
         path=("packages/apps/src/ditto_apps/registry/live/r2_live_certification.py"),
         allowed_modules=frozenset(
             {

@@ -90,6 +90,9 @@ class StepContext:
         account_view: 账户快照（由 DataFetchStep 设置）
         order_book: 订单簿只读视图（由 DataFetchStep 设置）
         target_portfolio: 目标组合（由 StrategyStep 设置，仅调仓日）
+        portfolio_construction_evidence: 组合构造的可审计输入/solver 证据
+        portfolio_construction_failure: 组合构造稳定失败码
+        daily_risk_evidence: 连续 RiskGate 日扫描证据
         execution_plan: 执行计划（由 PlanningStep 设置，仅调仓日）
         rules: 三层规则（由 PlanningStep 设置，仅调仓日）
         step_orders: 当日已提交订单（由 PreTradeStep 追加）
@@ -109,6 +112,9 @@ class StepContext:
     account_view: AccountView | None = None
     order_book: OrderBookReadOnly | None = None
     target_portfolio: TargetPortfolioLike | None = None
+    portfolio_construction_evidence: dict[str, object] = field(default_factory=dict)
+    portfolio_construction_failure: str | None = None
+    daily_risk_evidence: dict[str, object] = field(default_factory=dict)
     execution_plan: ExecutionPlan | None = None
     rules: dict[InstrumentId, InstrumentRules] | None = None
 

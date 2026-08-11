@@ -553,6 +553,30 @@
         "title": "APIResponse[DailyDecisionV2Response]",
         "type": "object"
       },
+      "APIResponse_DailyDecisionV3Response_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DailyDecisionV3Response",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[DailyDecisionV3Response]",
+        "type": "object"
+      },
       "APIResponse_DataLineageCatalogRunReportResponse_": {
         "properties": {
           "data": {
@@ -7566,6 +7590,415 @@
           "execution_review"
         ],
         "title": "DailyDecisionV2Response",
+        "type": "object"
+      },
+      "DailyDecisionV3FactorRiskResponse": {
+        "additionalProperties": false,
+        "description": "Factor-risk availability and Euler contribution evidence.",
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "partial",
+              "unavailable"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "euler_residual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Euler Residual"
+          },
+          "marginal_contributions": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Marginal Contributions",
+            "type": "object"
+          },
+          "percentage_contributions": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Percentage Contributions",
+            "type": "object"
+          },
+          "total_risk": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Risk"
+          }
+        },
+        "required": [
+          "availability",
+          "total_risk",
+          "marginal_contributions",
+          "percentage_contributions",
+          "euler_residual"
+        ],
+        "title": "DailyDecisionV3FactorRiskResponse",
+        "type": "object"
+      },
+      "DailyDecisionV3PortfolioConstructionResponse": {
+        "additionalProperties": false,
+        "description": "Portfolio construction outcome and solver evidence.",
+        "properties": {
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "policy_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Digest"
+          },
+          "solver": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solver"
+          },
+          "solver_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solver Status"
+          },
+          "solver_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solver Version"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "DailyDecisionV3PortfolioConstructionResponse",
+        "type": "object"
+      },
+      "DailyDecisionV3ProvenanceResponse": {
+        "additionalProperties": false,
+        "description": "Temporal cutoffs, source revisions, and report generation time.",
+        "properties": {
+          "decision_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Time"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "knowledge_cutoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowledge Cutoff"
+          },
+          "publication_cutoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Cutoff"
+          },
+          "source_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Snapshot Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "decision_time",
+          "knowledge_cutoff",
+          "publication_cutoff",
+          "source_snapshot_ids",
+          "generated_at"
+        ],
+        "title": "DailyDecisionV3ProvenanceResponse",
+        "type": "object"
+      },
+      "DailyDecisionV3ReconciliationResponse": {
+        "additionalProperties": false,
+        "description": "Three-layer reconciliation status without automatic repair controls.",
+        "properties": {
+          "alert_idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Idempotency Key"
+          },
+          "differences": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Differences",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "differences",
+          "alert_idempotency_key"
+        ],
+        "title": "DailyDecisionV3ReconciliationResponse",
+        "type": "object"
+      },
+      "DailyDecisionV3Response": {
+        "additionalProperties": false,
+        "description": "V2 cockpit plus the complete typed R4 risk decision surface.",
+        "properties": {
+          "blocking_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocking Reasons",
+            "type": "array"
+          },
+          "factor_risk": {
+            "$ref": "#/components/schemas/DailyDecisionV3FactorRiskResponse"
+          },
+          "portfolio_construction": {
+            "$ref": "#/components/schemas/DailyDecisionV3PortfolioConstructionResponse"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/DailyDecisionV3ProvenanceResponse"
+          },
+          "readiness": {
+            "enum": [
+              "ready",
+              "blocked",
+              "review"
+            ],
+            "title": "Readiness",
+            "type": "string"
+          },
+          "reconciliation": {
+            "$ref": "#/components/schemas/DailyDecisionV3ReconciliationResponse"
+          },
+          "stress_tests": {
+            "$ref": "#/components/schemas/DailyDecisionV3StressResponse"
+          },
+          "tail_risk": {
+            "$ref": "#/components/schemas/DailyDecisionV3TailRiskResponse"
+          },
+          "v2": {
+            "$ref": "#/components/schemas/DailyDecisionV2Response"
+          }
+        },
+        "required": [
+          "v2",
+          "readiness",
+          "blocking_reasons",
+          "portfolio_construction",
+          "tail_risk",
+          "factor_risk",
+          "stress_tests",
+          "reconciliation",
+          "provenance"
+        ],
+        "title": "DailyDecisionV3Response",
+        "type": "object"
+      },
+      "DailyDecisionV3StressResponse": {
+        "additionalProperties": false,
+        "description": "Versioned stress catalog result payload.",
+        "properties": {
+          "catalog_version": {
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "losses": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Losses",
+            "type": "object"
+          },
+          "unavailable_scenarios": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unavailable Scenarios",
+            "type": "array"
+          }
+        },
+        "required": [
+          "catalog_version",
+          "losses"
+        ],
+        "title": "DailyDecisionV3StressResponse",
+        "type": "object"
+      },
+      "DailyDecisionV3TailRiskResponse": {
+        "additionalProperties": false,
+        "description": "Positive-loss Historical ES99 headline and VaR diagnostics.",
+        "properties": {
+          "historical_es99": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Historical Es99"
+          },
+          "historical_var99": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Historical Var99"
+          },
+          "monte_carlo_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monte Carlo Seed"
+          },
+          "monte_carlo_var99": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monte Carlo Var99"
+          },
+          "parametric_var99": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parametric Var99"
+          }
+        },
+        "required": [
+          "historical_es99",
+          "historical_var99",
+          "parametric_var99",
+          "monte_carlo_var99",
+          "monte_carlo_seed"
+        ],
+        "title": "DailyDecisionV3TailRiskResponse",
         "type": "object"
       },
       "DataLineageAssetResponse": {
@@ -21899,6 +22332,88 @@
           }
         },
         "summary": "Get Daily Decision V2",
+        "tags": [
+          "trade"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/trade/daily-decision/v3": {
+      "get": {
+        "description": "Return V2 plus fail-closed portfolio, risk, and reconciliation evidence.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "trade_get_daily_decision_v3",
+        "parameters": [
+          {
+            "description": "策略 ID",
+            "in": "query",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "description": "策略 ID",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "交易/信号日期",
+            "in": "query",
+            "name": "trade_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "交易/信号日期",
+              "title": "Trade Date"
+            }
+          },
+          {
+            "description": "账户 ID",
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "账户 ID",
+              "title": "Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DailyDecisionV3Response_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Daily Decision V3",
         "tags": [
           "trade"
         ],

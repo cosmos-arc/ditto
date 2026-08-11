@@ -20,14 +20,12 @@ import time
 import uuid
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from datetime import timedelta
 from typing import cast, overload
 
-from ditto_execution.brokerage import Brokerage
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.ticket import OrderTicket
-from ditto_execution.planner import ExecutionPlanner
 from ditto_execution.targets import TargetPortfolioLike
 from ditto_execution.trade_builder import (
     FifoTradeBuilder,
@@ -37,16 +35,15 @@ from ditto_execution.trade_builder import (
 )
 from ditto_kernel import traced
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.synchronizer import Synchronizer, TimeSlice
+from ditto_kernel.synchronizer import TimeSlice
 from ditto_kernel.time_context import TimeContext
 from ditto_portfolio.accounting import AccountView, FillEvent
-from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.models import TargetPortfolio
-from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.pipeline import StrategyInputBundle
 from loguru import logger
 
 from ditto_backtest.config import EngineConfig, EngineMode
-from ditto_backtest.data_feed import DataFeed, Slice
+from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine_runtime import (
     EngineRuntimeCapture,
     capture_runtime_state,
@@ -61,6 +58,12 @@ from ditto_backtest.engine_steps import (
     build_steps,
     is_rebalance_day,
 )
+from ditto_backtest.engine_support import (
+    R4_CHECKPOINT_VERSION,
+    EngineLoopDeps,
+    canonical_json,
+    normalize_engine_loop_deps,
+)
 from ditto_backtest.manifest import (
     RuleRefCollector,
     RunManifestInputEvidence,
@@ -69,15 +72,19 @@ from ditto_backtest.manifest import (
 from ditto_backtest.result import (
     BacktestAccountStateSnapshot,
     BacktestCheckpoint,
+    BacktestFailureArtifact,
     BacktestRuntimeStateSnapshot,
     BacktestSettlementStateSnapshot,
     EngineResult,
 )
 from ditto_backtest.steps import (
+    DailyContinuousRiskStep,
     DataFetchStep,
     PlanningStep,
+    PortfolioConstructionStep,
     RiskScanStep,
     StepContext,
+    StepResult,
     StrategyStep,
     TradingStep,
 )
@@ -93,35 +100,6 @@ __all__ = [
     "assemble_engine_result",
 ]
 
-
-@dataclass(frozen=True)
-class EngineLoopDeps:
-    """Runtime collaborators required by EngineLoop."""
-
-    pipeline: StrategyPipeline
-    planner: ExecutionPlanner
-    brokerage: Brokerage
-    pre_trade_check: CompositePreTradeCheck
-    data_feed: DataFeed
-    synchronizer: Synchronizer
-    options: EngineOptions
-
-
-_LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES = (
-    "pipeline",
-    "planner",
-    "brokerage",
-    "pre_trade_check",
-    "data_feed",
-    "synchronizer",
-    "options",
-)
-
-_LEGACY_ENGINE_LOOP_DEPENDENCY_NAME_SET = frozenset(
-    _LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES
-)
-
-
 # ---------------------------------------------------------------------------
 # EngineLoop
 # ---------------------------------------------------------------------------
@@ -134,7 +112,8 @@ class EngineLoop:
     实现 TradingLoop Protocol（结构化子类型）。
 
     Step Chain:
-      DataFetchStep -> RiskScanStep -> StrategyStep -> PlanningStep
+      DataFetchStep -> RiskScanStep -> StrategyStep -> PortfolioConstructionStep
+      -> PlanningStep
       -> PreTradeStep -> ExecutionStep -> AuditStep
 
     Parameters
@@ -163,7 +142,7 @@ class EngineLoop:
         *legacy_args: object,
         **legacy_ports: object,
     ) -> None:
-        loop_deps = _normalize_engine_loop_deps(deps, legacy_args, legacy_ports)
+        loop_deps = normalize_engine_loop_deps(deps, legacy_args, legacy_ports)
         self._config = config
         self._pipeline = loop_deps.pipeline
         self._planner = loop_deps.planner
@@ -182,6 +161,7 @@ class EngineLoop:
             audit_collector=self._audit_collector,
         )
         self._recorded_trade_ids = self._restored_trade_ids()
+        self._restore_continuous_risk_state()
         self._steps = self._build_steps()
 
     # -- R1: __init__ helpers --------------------------------------------------
@@ -212,6 +192,8 @@ class EngineLoop:
         self._audit_collector = options.audit_collector
         self._event_bus = options.event_bus
         self._input_bundle_builder = options.input_bundle_builder
+        self._portfolio_constructor = options.portfolio_constructor
+        self._risk_runtime = options.risk_runtime
         self._random_seed = options.random_seed
         self._should_stop = options.should_stop
         self._on_progress = options.on_progress
@@ -224,6 +206,7 @@ class EngineLoop:
         """初始化跨日可变状态。"""
         self._fills: list[FillEvent] = []
         self._orders: list[Order] = []
+        self._failure_artifacts: list[BacktestFailureArtifact] = []
         self._strategy_context = strategy_context_from_runtime(
             self._restore_runtime_state,
         )
@@ -238,7 +221,35 @@ class EngineLoop:
         self._input_instruments: set[InstrumentId] = set()
         self._bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]] = {}
         self._source_snapshot_ids: dict[InstrumentId, set[str]] = {}
+        self._portfolio_construction_evidence_json = (
+            self._restore_runtime_state.portfolio_construction_evidence_json
+            if self._restore_runtime_state is not None
+            and self._restore_runtime_state.portfolio_construction_evidence_json
+            is not None
+            else "{}"
+        )
         self._last_checkpoint: BacktestCheckpoint | None = None
+        if (
+            (self._portfolio_constructor is not None or self._risk_runtime is not None)
+            and self._restore_runtime_state is not None
+            and (
+                self._restore_runtime_state.runtime_state_version
+                != R4_CHECKPOINT_VERSION
+            )
+        ):
+            raise ValueError("R4 capabilities require a V3 checkpoint")
+
+    def _restore_continuous_risk_state(self) -> None:
+        """Restore risk-owned state after authoritative accounting is available."""
+        if self._risk_runtime is None or self._restore_runtime_state is None:
+            return
+        risk_state_json = self._restore_runtime_state.risk_state_json
+        if risk_state_json is None:
+            raise ValueError("R4 checkpoint risk state is missing")
+        self._risk_runtime.restore_state_json(
+            risk_state_json,
+            self._brokerage.get_account(),
+        )
 
     def _restore_delayed_signals(self) -> None:
         """Restore delayed signal queue from checkpoint runtime state."""
@@ -278,6 +289,8 @@ class EngineLoop:
                 audit_collector=self._audit_collector,
                 event_bus=self._event_bus,
                 input_bundle_builder=self._input_bundle_builder,
+                portfolio_constructor=self._portfolio_constructor,
+                risk_runtime=self._risk_runtime,
                 strategy_context=self._strategy_context,
                 input_instruments=self._input_instruments,
                 bar_fingerprints=self._bar_fingerprints,
@@ -334,6 +347,7 @@ class EngineLoop:
                 fills=self._fills,
                 orders=self._orders,
                 skipped=skipped,
+                failure_artifacts=self._failure_artifacts,
                 cancelled=cancelled,
                 last_checkpoint=self._last_checkpoint,
             )
@@ -504,6 +518,18 @@ class EngineLoop:
                     self._trading_days[0] if self._trading_days else None
                 ),
                 audit_collector=self._audit_collector,
+                portfolio_construction_evidence_json=(
+                    self._portfolio_construction_evidence_json
+                ),
+                risk_state_json=(
+                    self._risk_runtime.snapshot_state_json()
+                    if self._risk_runtime is not None
+                    else "{}"
+                ),
+                r4_enabled=(
+                    self._portfolio_constructor is not None
+                    or self._risk_runtime is not None
+                ),
             )
         )
 
@@ -573,7 +599,16 @@ class EngineLoop:
         ctx.order_book = self._brokerage.get_order_book()
 
         for step in self._steps:
-            if isinstance(step, (DataFetchStep, RiskScanStep, StrategyStep)):
+            if isinstance(
+                step,
+                (
+                    DataFetchStep,
+                    DailyContinuousRiskStep,
+                    RiskScanStep,
+                    StrategyStep,
+                    PortfolioConstructionStep,
+                ),
+            ):
                 continue
             if isinstance(step, PlanningStep):
                 ctx.target_portfolio = signal
@@ -642,7 +677,12 @@ class EngineLoop:
             t0 = time.monotonic()
             result = step.execute(ctx)
             elapsed = time.monotonic() - t0
+            if isinstance(step, PortfolioConstructionStep):
+                self._portfolio_construction_evidence_json = canonical_json(
+                    ctx.portfolio_construction_evidence
+                )
             if not result.success:
+                self._record_failure_artifact(step, result, ctx)
                 self._log_step_failure(step, result, trade_date)
                 if self._on_step_complete is not None:
                     self._on_step_complete(type(step).__name__, elapsed, False)
@@ -691,14 +731,36 @@ class EngineLoop:
         msg = "; ".join(errors) if errors else "unknown"
         logger.warning("Step {} failed on {}: {}", step_name, trade_date, msg)
 
+    def _record_failure_artifact(
+        self,
+        step: TradingStep,
+        result: StepResult,
+        ctx: StepContext,
+    ) -> None:
+        """Persist structured evidence for a failed day without fallback."""
+        evidence = ctx.portfolio_construction_evidence or ctx.daily_risk_evidence
+        failure_code = (
+            ctx.portfolio_construction_failure
+            or type(step).__name__.removesuffix("Step").lower()
+        )
+        self._failure_artifacts.append(
+            BacktestFailureArtifact(
+                trade_date=ctx.time_context.trade_date,
+                step_name=type(step).__name__,
+                failure_code=failure_code,
+                message="; ".join(result.errors) or "unknown",
+                evidence_json=canonical_json(evidence),
+            )
+        )
+
     def _enqueue_signal(
         self,
         step: TradingStep,
         ctx: StepContext,
         delay: int,
     ) -> None:
-        """execution_delay: StrategyStep 后将当日信号入队并清除。"""
-        if delay > 0 and isinstance(step, StrategyStep):
+        """execution_delay: 组合构造完成后将当日目标入队并清除。"""
+        if delay > 0 and isinstance(step, PortfolioConstructionStep):
             if ctx.target_portfolio is not None:
                 self._signal_queue.append(ctx.target_portfolio)
             ctx.target_portfolio = None
@@ -713,10 +775,8 @@ class EngineLoop:
         """处理延迟信号逻辑 — 返回 True 表示应跳过当前 step。"""
         if delay <= 0 or not isinstance(step, PlanningStep):
             return False
-        # 无延迟信号时跳过 PlanningStep（信号已入队，等待 N 日后执行）
         if deferred_signal is None:
             return True
-        # PlanningStep 前恢复延迟信号
         ctx.target_portfolio = deferred_signal
         ctx.is_rebalance_day = True
         return False
@@ -737,62 +797,3 @@ class EngineLoop:
             self._trading_days,
             self._trading_day_index,
         )
-
-
-def _normalize_engine_loop_deps(
-    deps: object | None,
-    legacy_args: tuple[object, ...],
-    legacy_ports: dict[str, object],
-) -> EngineLoopDeps:
-    if isinstance(deps, EngineLoopDeps):
-        if legacy_args or legacy_ports:
-            raise TypeError("EngineLoopDeps cannot be combined with legacy ports")
-        return deps
-
-    if deps is None:
-        return _engine_loop_deps_from_legacy(legacy_args, legacy_ports)
-
-    return _engine_loop_deps_from_legacy((deps, *legacy_args), legacy_ports)
-
-
-def _engine_loop_deps_from_legacy(
-    legacy_args: tuple[object, ...],
-    legacy_ports: dict[str, object],
-) -> EngineLoopDeps:
-    if len(legacy_args) > len(_LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES):
-        raise TypeError("EngineLoop received too many positional dependencies")
-
-    ports = dict(legacy_ports)
-    for name, value in zip(
-        _LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES,
-        legacy_args,
-        strict=False,
-    ):
-        if name in ports:
-            raise TypeError(f"EngineLoop got duplicate dependency: {name}")
-        ports[name] = value
-
-    unexpected = sorted(set(ports) - _LEGACY_ENGINE_LOOP_DEPENDENCY_NAME_SET)
-    if unexpected:
-        names = ", ".join(unexpected)
-        raise TypeError(f"EngineLoop got unexpected dependencies: {names}")
-
-    missing = [
-        name for name in _LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES if name not in ports
-    ]
-    if missing:
-        names = ", ".join(missing)
-        raise TypeError(f"EngineLoop missing dependencies: {names}")
-
-    return EngineLoopDeps(
-        pipeline=cast(StrategyPipeline, ports["pipeline"]),
-        planner=cast(ExecutionPlanner, ports["planner"]),
-        brokerage=cast(Brokerage, ports["brokerage"]),
-        pre_trade_check=cast(
-            CompositePreTradeCheck,
-            ports["pre_trade_check"],
-        ),
-        data_feed=cast(DataFeed, ports["data_feed"]),
-        synchronizer=cast(Synchronizer, ports["synchronizer"]),
-        options=cast(EngineOptions, ports["options"]),
-    )

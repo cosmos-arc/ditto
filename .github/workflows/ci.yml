@@ -209,6 +209,64 @@ jobs:
         run: pixi run -e dev pytest packages/apps/tests/integration/test_golden_e2e.py packages/apps/tests/integration/test_stock_selection_golden_e2e.py -v
 
   # ============================================================
+  # Stage 3c: macOS Apple Silicon compatibility gate
+  # ============================================================
+  macos-arm64:
+    name: macos-arm64
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assert Apple Silicon runner
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
+          environments: dev
+
+      - name: Architecture and static checks
+        run: |
+          pixi run -e dev arch-check
+          pixi run -e dev fmt-check
+          pixi run -e dev lint
+          pixi run -e dev type --tests
+
+      - name: R4 target tests
+        run: |
+          pixi run -e dev pytest --no-cov \
+            packages/features/tests/unit/risk_estimation/test_covariance_estimator_unit.py \
+            packages/features/tests/unit/risk_estimation/test_factor_risk_estimator_unit.py \
+            packages/portfolio/tests/unit/rebalancing/test_cvxpy_optimizer_unit.py \
+            packages/portfolio/tests/unit/rebalancing/test_r4_benchmark_harness_unit.py \
+            packages/risk/tests/unit/test_risk_contracts_unit.py \
+            packages/risk/tests/unit/test_continuous_risk_gate_unit.py \
+            packages/risk/tests/unit/test_r4_tail_risk_unit.py \
+            packages/application/tests/unit/process/portfolio/ \
+            packages/application/tests/unit/process/risk/ \
+            packages/application/tests/unit/process/execution/test_paper_trading_process_unit.py \
+            packages/application/tests/unit/process/strategy/test_backtest_service_unit.py::TestBacktestServiceOptions::test_r4_ports_are_forwarded_to_engine_options \
+            packages/application/tests/unit/query/test_daily_decision_v3_unit.py \
+            packages/apps/tests/unit/registry/test_r4_risk_persistence_unit.py \
+            packages/apps/tests/integration/api/test_trade_api_integration.py::TestDailyDecision::test_v3_returns_typed_risk_and_reconciliation_sections \
+            packages/backtest/tests/unit/test_continuous_risk_runtime_steps.py \
+            packages/backtest/tests/unit/test_portfolio_construction_step.py \
+            packages/backtest/tests/unit/test_engine_result_unit.py::TestBacktestCheckpoint::test_r4_runtime_state_attests_optimizer_and_risk_evidence_v3 \
+            packages/backtest/tests/unit/test_engine_result_unit.py::TestBacktestCheckpoint::test_v3_runtime_state_rejects_missing_risk_state \
+            packages/backtest/tests/integration/test_risk_integration.py \
+            -q
+
+      - name: CVXPY solver smoke test
+        run: |
+          pixi run -e dev python -c 'import cvxpy as cp; installed = set(cp.installed_solvers()); assert {"OSQP", "CLARABEL"} <= installed, installed'
+
+  # ============================================================
   # Stage 4: 构建验证（仅 main 分支）
   # ============================================================
   build:
@@ -249,17 +307,20 @@ jobs:
   # ============================================================
   ci-success:
     name: ci-success
-    needs: [audit, lint, type-check, test-unit, golden-e2e]
+    needs: [audit, lint, type-check, test-unit, golden-e2e, macos-arm64]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check required jobs
         run: |
-          results=("${{ needs.audit.result }}" "${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}" "${{ needs.golden-e2e.result }}")
+          results=("${{ needs.audit.result }}" "${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}" "${{ needs.golden-e2e.result }}" "${{ needs.macos-arm64.result }}")
           for result in "${results[@]}"; do
-            if [[ "$result" == "failure" ]]; then
-              echo "::error::One or more required CI checks failed"
-              exit 1
-            fi
+            case "$result" in
+              success|skipped) ;;
+              *)
+                echo "::error::One or more required CI checks did not succeed"
+                exit 1
+                ;;
+            esac
           done
           echo "All required CI checks passed!"

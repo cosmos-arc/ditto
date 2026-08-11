@@ -470,6 +470,93 @@ class DailyDecisionV2Response(BaseModel):
     )
 
 
+class DailyDecisionV3PortfolioConstructionResponse(BaseModel):
+    """Portfolio construction outcome and solver evidence."""
+
+    status: str
+    mode: str | None = None
+    policy_digest: str | None = None
+    solver: str | None = None
+    solver_version: str | None = None
+    solver_status: str | None = None
+    duration_ms: float | None = None
+    failure_code: str | None = None
+
+    model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
+
+
+class DailyDecisionV3TailRiskResponse(BaseModel):
+    """Positive-loss Historical ES99 headline and VaR diagnostics."""
+
+    historical_es99: float | None
+    historical_var99: float | None
+    parametric_var99: float | None
+    monte_carlo_var99: float | None
+    monte_carlo_seed: int | None
+
+    model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
+
+
+class DailyDecisionV3FactorRiskResponse(BaseModel):
+    """Factor-risk availability and Euler contribution evidence."""
+
+    availability: Literal["available", "partial", "unavailable"]
+    total_risk: float | None
+    marginal_contributions: dict[str, float]
+    percentage_contributions: dict[str, float]
+    euler_residual: float | None
+
+    model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
+
+
+class DailyDecisionV3StressResponse(BaseModel):
+    """Versioned stress catalog result payload."""
+
+    catalog_version: str
+    losses: dict[str, float]
+    unavailable_scenarios: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
+
+
+class DailyDecisionV3ReconciliationResponse(BaseModel):
+    """Three-layer reconciliation status without automatic repair controls."""
+
+    status: str
+    differences: list[str]
+    alert_idempotency_key: str | None
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionV3ProvenanceResponse(BaseModel):
+    """Temporal cutoffs, source revisions, and report generation time."""
+
+    decision_time: str | None
+    knowledge_cutoff: str | None
+    publication_cutoff: str | None
+    source_snapshot_ids: list[str]
+    generated_at: str | None
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class DailyDecisionV3Response(BaseModel):
+    """V2 cockpit plus the complete typed R4 risk decision surface."""
+
+    v2: DailyDecisionV2Response
+    readiness: Literal["ready", "blocked", "review"]
+    blocking_reasons: list[str]
+    portfolio_construction: DailyDecisionV3PortfolioConstructionResponse
+    tail_risk: DailyDecisionV3TailRiskResponse
+    factor_risk: DailyDecisionV3FactorRiskResponse
+    stress_tests: DailyDecisionV3StressResponse
+    reconciliation: DailyDecisionV3ReconciliationResponse
+    provenance: DailyDecisionV3ProvenanceResponse
+
+    model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
+
+
 __all__ = [
     "AccountBaselineImportResponse",
     "AccountBaselineResponse",
@@ -485,6 +572,13 @@ __all__ = [
     "DailyDecisionRunPackageResponse",
     "DailyDecisionV2ReadinessResponse",
     "DailyDecisionV2Response",
+    "DailyDecisionV3FactorRiskResponse",
+    "DailyDecisionV3PortfolioConstructionResponse",
+    "DailyDecisionV3ProvenanceResponse",
+    "DailyDecisionV3ReconciliationResponse",
+    "DailyDecisionV3Response",
+    "DailyDecisionV3StressResponse",
+    "DailyDecisionV3TailRiskResponse",
     "DeviationResponse",
     "FillResponse",
     "ImportAccountBaselineRequest",

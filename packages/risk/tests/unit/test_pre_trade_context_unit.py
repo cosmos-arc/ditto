@@ -240,6 +240,8 @@ class TestWithOrderAccepted:
         estimated_cost = 100 * 10.0 + 10.0
         assert new_ctx.account_view.cash.available == 50_000.0 - estimated_cost
         assert new_ctx.account_view.cash.frozen == 0.0 + estimated_cost
+        assert new_ctx.pending_tickets is ctx.pending_tickets
+        assert new_ctx.accepted_orders == (order,)
 
     def test_with_order_accepted_sell(self) -> None:
         """SELL: 减少 available_quantity。"""

@@ -1,13 +1,13 @@
 """CLI 命令工厂函数单元测试."""
 
 import pytest
-from click.exceptions import Exit as ClickExit
 from ditto_apps.cli.commands.factory import (
     create_backfill_command,
     create_basic_command,
     create_daily_command,
 )
 from pytest_mock import MockerFixture
+from typer import Exit as TyperExit
 
 # Mock data root path for testing
 MOCK_DATA_ROOT = "D:/mock/ditto/data"
@@ -34,9 +34,9 @@ def test_create_daily_command_validates_date(app_ctx, mocker: MockerFixture):
 
     # 测试无效日期格式
     mock_validate = mocker.patch("ditto_apps.cli.commands.factory.validate_date_format")
-    mock_validate.side_effect = ClickExit(1)
+    mock_validate.side_effect = TyperExit(1)
 
-    with pytest.raises(ClickExit):
+    with pytest.raises(TyperExit):
         cmd(ctx, "invalid-date", False)
 
     mock_validate.assert_called_once_with("invalid-date")
@@ -135,7 +135,7 @@ def test_create_daily_command_exits_nonzero_after_failed_ingestion(
     mocker.patch("ditto_apps.cli.commands.factory.validate_date_format")
     mock_print = mocker.patch("ditto_apps.cli.commands.factory.print_ingestion_result")
 
-    with pytest.raises(ClickExit) as exc_info:
+    with pytest.raises(TyperExit) as exc_info:
         cmd(ctx, "2024-01-02", False)
 
     assert exc_info.value.exit_code == 1
@@ -263,7 +263,7 @@ def test_create_backfill_command_exits_nonzero_after_any_failed_date(
     mocker.patch("ditto_apps.cli.commands.factory.validate_date_format")
     mock_print = mocker.patch("ditto_apps.cli.commands.factory.print_backfill_summary")
 
-    with pytest.raises(ClickExit) as exc_info:
+    with pytest.raises(TyperExit) as exc_info:
         cmd(ctx, "2024-01-01", "2024-01-05", 1)
 
     assert exc_info.value.exit_code == 1
@@ -332,7 +332,7 @@ def test_create_basic_command_exits_nonzero_after_failed_ingestion(
     mock_create_exec.return_value.__enter__.return_value = mock_executor
     mock_print = mocker.patch("ditto_apps.cli.commands.factory.print_ingestion_result")
 
-    with pytest.raises(ClickExit) as exc_info:
+    with pytest.raises(TyperExit) as exc_info:
         cmd(ctx, force=False)
 
     assert exc_info.value.exit_code == 1

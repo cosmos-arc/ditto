@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+from contextlib import closing
 from importlib.resources import files
 from pathlib import Path
 
@@ -10,6 +12,12 @@ from ditto_platform.foundation import (
     InitScope,
     SQLitePool,
     logger,
+)
+
+from ditto_apps.registry.infra.risk_persistence import initialize_r4_risk_schema
+
+_R4_RISK_TABLES = frozenset(
+    {"risk_events", "risk_state_snapshots", "daily_risk_reports"}
 )
 
 
@@ -68,4 +76,52 @@ class MetadataDbInitProvider:
                 provider=self.name,
                 success=False,
                 message=f"Failed: {e}",
+            )
+
+
+class R4RiskSchemaInitProvider:
+    """Create the development-stage R4 risk tables during startup init."""
+
+    @property
+    def name(self) -> str:
+        """Return the stable coordinator result key."""
+        return "r4_risk_schema"
+
+    @property
+    def scope(self) -> InitScope:
+        """Initialize alongside the metadata database at startup."""
+        return InitScope.STARTUP
+
+    def check(self, data_root: Path) -> bool:
+        """Return whether any required R4 table is absent."""
+        database = data_root / "metadata" / "metadata.sqlite"
+        if not database.exists():
+            return True
+        with closing(sqlite3.connect(database)) as connection:
+            existing = {
+                str(row[0])
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+        return not existing >= _R4_RISK_TABLES
+
+    def initialize(self, data_root: Path) -> InitResult:
+        """Create R4 tables directly; no migration path is required in dev."""
+        database = data_root / "metadata" / "metadata.sqlite"
+        try:
+            database.parent.mkdir(parents=True, exist_ok=True)
+            with closing(sqlite3.connect(database)) as connection:
+                initialize_r4_risk_schema(connection)
+            return InitResult(
+                provider=self.name,
+                success=True,
+                message=f"R4 risk schema initialized at {database}",
+            )
+        except Exception as exc:
+            logger.exception("Failed to initialize R4 risk schema")
+            return InitResult(
+                provider=self.name,
+                success=False,
+                message=f"Failed: {exc}",
             )

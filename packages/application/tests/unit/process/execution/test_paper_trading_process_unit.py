@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
+import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.paper_trading_process import (
     PaperTradingRuntime,
+)
+from ditto_application.processes.risk.paper_adapter import (
+    ContinuousRiskPaperAdapter,
 )
 from ditto_execution.broker.contracts import BrokerGateway
 from ditto_execution.broker.gateways.paper import PaperBrokerGateway
@@ -17,9 +22,12 @@ from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.orders.trigger import OrderTrigger
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
-from ditto_portfolio.accounting import FillEvent
+from ditto_kernel.trading import MarketSnapshot
+from ditto_portfolio.accounting import BuyingPowerModel, FillEvent
 from ditto_portfolio.accounting.account import Account, AccountView
 from ditto_portfolio.accounting.cash import CashBook
+from ditto_risk.continuous_gate import ContinuousRiskGate
+from ditto_risk.pre_trade import PreTradeContext, PriceValidityCheck
 
 IID = InstrumentId(600519)
 
@@ -154,6 +162,100 @@ class TestPaperTradingRuntimeExecuteOrder:
         assert "slippage" not in source
         assert "matching" not in source
         assert "fee_calc" not in source
+
+    def test_continuous_gate_runs_before_gateway_and_records_fill(self) -> None:
+        gate = ContinuousRiskGate(account_id="paper-1", sleeve_id="core")
+        gateway = PaperBrokerGateway(initial_cash=100_000.0)
+        runtime = PaperTradingRuntime(
+            gateway=gateway,
+            risk_runtime=ContinuousRiskPaperAdapter(
+                gate=gate,
+                account_id="paper-1",
+                sleeve_id="core",
+            ),
+        )
+
+        ticket = runtime.execute_order(
+            _make_order(OrderSide.BUY, quantity=100, price=10.0),
+            trade_date="2026-04-01",
+        )
+
+        assert ticket.status is OrderStatus.FILLED
+        snapshot = gate.snapshot_state()
+        assert snapshot.event_sequence == 1
+        assert snapshot.daily_turnover_notional == 1_000.0
+
+    def test_continuous_gate_rejection_blocks_gateway_submission(self) -> None:
+        gate = ContinuousRiskGate(
+            account_id="paper-1",
+            sleeve_id="core",
+            max_daily_turnover=0.005,
+        )
+        gateway = PaperBrokerGateway(initial_cash=100_000.0)
+        runtime = PaperTradingRuntime(
+            gateway=gateway,
+            risk_runtime=ContinuousRiskPaperAdapter(
+                gate=gate,
+                account_id="paper-1",
+                sleeve_id="core",
+            ),
+        )
+        order = _make_order(OrderSide.BUY, quantity=100, price=10.0)
+
+        with pytest.raises(AppProcessError, match="continuous risk gate rejected"):
+            runtime.execute_order(order, trade_date="2026-04-01")
+
+        assert gateway.query_fills(order.order_id) == ()
+        assert gateway.get_account().cash.available == 100_000.0
+
+    def test_paper_runtime_forwards_pre_trade_context_to_configured_rules(
+        self,
+    ) -> None:
+        gate = ContinuousRiskGate(
+            account_id="paper-1",
+            sleeve_id="core",
+            pre_trade_checks=(PriceValidityCheck(),),
+        )
+        gateway = PaperBrokerGateway(initial_cash=100_000.0)
+        runtime = PaperTradingRuntime(
+            gateway=gateway,
+            risk_runtime=ContinuousRiskPaperAdapter(
+                gate=gate,
+                account_id="paper-1",
+                sleeve_id="core",
+            ),
+        )
+        account_view = gateway.get_account()
+        context = PreTradeContext(
+            account_view=account_view,
+            rules={},
+            market_snapshots={
+                IID: MarketSnapshot(
+                    trade_date="2026-04-01",
+                    instrument_id=IID,
+                    open=10.0,
+                    high=11.0,
+                    low=9.0,
+                    close=10.0,
+                    prev_close=10.0,
+                    volume=1_000_000.0,
+                    amount=10_000_000.0,
+                    limit_up=11.0,
+                    limit_down=9.0,
+                )
+            },
+            buying_power_model=Mock(spec=BuyingPowerModel),
+        )
+        order = _make_order(OrderSide.BUY, quantity=100, price=12.0)
+
+        with pytest.raises(AppProcessError, match="continuous risk gate rejected"):
+            runtime.execute_order(
+                order,
+                trade_date="2026-04-01",
+                pre_trade_context=context,
+            )
+
+        assert gateway.query_fills(order.order_id) == ()
 
 
 def _make_stub_gateway(order: Order) -> Mock:

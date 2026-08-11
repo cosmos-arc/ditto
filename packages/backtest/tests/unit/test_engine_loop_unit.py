@@ -223,6 +223,7 @@ def _make_synchronizer(
 
 
 def _make_engine_loop(
+    *,
     config: EngineConfig | None = None,
     pipeline: Mock | None = None,
     planner: Mock | None = None,
@@ -1320,6 +1321,9 @@ class TestStepChainFailureLogging:
         result = loop.run()
 
         assert result.skipped_dates == ("2026-03-02",)
+        assert len(result.failure_artifacts) == 1
+        assert result.failure_artifacts[0].trade_date == "2026-03-02"
+        assert result.failure_artifacts[0].message == "data fetch error"
 
     def test_all_steps_succeed_no_skipped_dates(self) -> None:
         """所有 Step 成功 → skipped_dates 为空."""

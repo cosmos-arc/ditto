@@ -21,6 +21,7 @@ from ditto_kernel.order import OrderSide, OrderType
 from ditto_risk.post_trade import RiskAction
 
 __all__ = [
+    "LegacyRiskGate",
     "PreTradeOrder",
     "PreTradeTicket",
     "RiskGate",
@@ -68,7 +69,7 @@ class PreTradeTicket(Protocol):
 # ---------------------------------------------------------------------------
 
 
-class RiskGate(Protocol):
+class LegacyRiskGate(Protocol):
     """
     风控门控统一契约 — backtest / paper-trading 共用。
 
@@ -96,4 +97,28 @@ class RiskGate(Protocol):
 
     def daily_scan(self) -> list[RiskAction]:
         """每日风控扫描 — 返回风控行为列表。"""
+        ...
+
+
+class RiskGate(Protocol):
+    """R4 continuous gate contract; orchestration supplies every state context."""
+
+    def pre_trade(self, order: object, context: object) -> object:
+        """Return an auditable ALLOW or REJECT decision."""
+        ...
+
+    def post_fill(self, fill: object, context: object, event_id: str) -> object:
+        """Idempotently apply the next ordered fill event."""
+        ...
+
+    def daily_scan(self, input_: object) -> object:
+        """Return one typed daily risk report."""
+        ...
+
+    def snapshot_state(self) -> object:
+        """Capture risk-owned state for persistence or checkpointing."""
+        ...
+
+    def restore_state(self, snapshot: object, **kwargs: object) -> None:
+        """Restore only verified state matching authoritative positions."""
         ...

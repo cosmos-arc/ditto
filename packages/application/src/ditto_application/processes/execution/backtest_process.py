@@ -19,7 +19,9 @@ from ditto_backtest.engine import (
     EngineResult,
 )
 from ditto_backtest.manifest import RunManifest
+from ditto_backtest.portfolio_construction import PortfolioConstructor
 from ditto_backtest.result import BacktestCheckpoint, BacktestRuntimeStateSnapshot
+from ditto_backtest.risk_runtime import BacktestRiskRuntime
 from ditto_backtest.simulation import SlippageModel
 from ditto_backtest.statistics import (
     BacktestReport,
@@ -65,6 +67,9 @@ from ditto_application.processes.execution.backtest_config_validation import (
 )
 from ditto_application.processes.execution.backtest_lineage import (
     record_backtest_lineage,
+)
+from ditto_application.processes.execution.backtest_metrics import (
+    build_step_metrics_callback,
 )
 from ditto_application.processes.execution.backtest_process_types import (
     BacktestLineageConfig,
@@ -252,6 +257,8 @@ class BacktestServiceOptions:
         lineage_recorder: 数据血缘记录器 (None = 跳过 lineage 记录)
         allow_experimental_data: 是否显式允许 experimental 数据集进入运行时
         restore_runtime_state: 已解析的 checkpoint runtime-state
+        portfolio_constructor: 策略候选组合之后的显式组合构造 port
+        risk_runtime: application 提供的连续风控运行时
 
     """
 
@@ -271,6 +278,8 @@ class BacktestServiceOptions:
     lineage_recorder: DataLineageRecorder | None = None
     allow_experimental_data: bool = False
     restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
+    portfolio_constructor: PortfolioConstructor | None = None
+    risk_runtime: BacktestRiskRuntime | None = None
 
 
 def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
@@ -278,34 +287,6 @@ def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
     if expected and expected != actual:
         msg = f"{label} mismatch: expected {expected}, got {actual}"
         raise AppProcessError(msg)
-
-
-def _build_step_metrics_callback() -> Callable[[str, float, bool], None] | None:
-    """Build optional Engine step metrics callback."""
-    try:
-        from ditto_platform.foundation import Metrics  # noqa: PLC0415
-    except Exception:
-        return None
-
-    def _on_step_complete(
-        step_name: str,
-        duration: float,
-        success: bool,
-    ) -> None:
-        try:
-            Metrics.backtest_step_duration.record(
-                duration,
-                {"step": step_name},
-            )
-            if not success:
-                Metrics.backtest_step_failures.add(
-                    1,
-                    {"step": step_name},
-                )
-        except AttributeError:
-            return
-
-    return _on_step_complete
 
 
 # ---------------------------------------------------------------------------
@@ -640,7 +621,9 @@ class BacktestService:
             on_checkpoint=on_checkpoint,
             checkpoint_interval_days=self._options.checkpoint_interval_days,
             restore_runtime_state=self._restore_runtime_state(),
-            on_step_complete=_build_step_metrics_callback(),
+            portfolio_constructor=self._options.portfolio_constructor,
+            risk_runtime=self._options.risk_runtime,
+            on_step_complete=build_step_metrics_callback(),
         )
 
     def _restore_runtime_state(self) -> BacktestRuntimeStateSnapshot | None:

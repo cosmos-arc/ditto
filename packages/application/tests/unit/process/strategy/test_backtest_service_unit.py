@@ -363,6 +363,23 @@ class TestBacktestServiceOptions:
         assert options.fee_model is mock_fee
         assert options.audit_service is mock_audit
 
+    def test_r4_ports_are_forwarded_to_engine_options(self) -> None:
+        portfolio_constructor = MagicMock()
+        risk_runtime = MagicMock()
+        service = _make_minimal_service()
+        service._options = BacktestServiceOptions(
+            portfolio_constructor=portfolio_constructor,
+            risk_runtime=risk_runtime,
+        )
+
+        engine_options = service._build_engine_options(
+            "run-r4-ports",
+            ExecutionAuditCollector(),
+        )
+
+        assert engine_options.portfolio_constructor is portfolio_constructor
+        assert engine_options.risk_runtime is risk_runtime
+
     @pytest.mark.parametrize("value", [0, -1, True, 1.5])
     def test_engine_rejects_invalid_checkpoint_interval(self, value: object) -> None:
         """Invalid cadence must fail before any execution side effect."""

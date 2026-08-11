@@ -1,5 +1,7 @@
 """ConfigProvider init coordinator wiring tests."""
 
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from ditto_apps.registry.infra.config import ConfigProvider
@@ -30,3 +32,18 @@ def test_config_provider_init_coordinator_creates_feature_artifact_dirs(
     assert (data_root / "features" / "technical" / "price").is_dir()
     assert (data_root / "factors" / "factors_narrow").is_dir()
     assert results["data_source_validation"].success
+    assert results["r4_risk_schema"].success
+
+    database = data_root / "metadata" / "metadata.sqlite"
+    with closing(sqlite3.connect(database)) as connection:
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+    assert {
+        "risk_events",
+        "risk_state_snapshots",
+        "daily_risk_reports",
+    } <= tables

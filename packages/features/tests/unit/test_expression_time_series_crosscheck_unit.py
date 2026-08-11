@@ -35,13 +35,19 @@ def _ts_pct_change(x: pl.Expr, period: int) -> pl.Expr:
 
 
 def _ts_rank(x: pl.Expr, window: int) -> pl.Expr:
+    def _rank_latest(s: pl.Series) -> float:
+        valid = s.drop_nulls()
+        latest = valid[-1]
+        below = sum(value < latest for value in valid)
+        equal = sum(value == latest for value in valid)
+        return float(below + (equal + 1) / 2)
+
     shifted = x.shift(1)
-    return (
-        shifted.rolling_rank(window_size=window, min_samples=window)
-        .cast(pl.Float64)
-        .over(_ENTITY)
-        / window
-    )
+    ranked = shifted.rolling_map(_rank_latest, window_size=window, min_samples=1).over(
+        _ENTITY
+    ) / float(window)
+    position = pl.int_range(0, pl.len()).over(_ENTITY)
+    return pl.when(position >= window - 1).then(ranked).otherwise(None)
 
 
 def _ts_argmax(x: pl.Expr, window: int) -> pl.Expr:

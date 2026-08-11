@@ -1,5 +1,6 @@
 """EodCoordinator 的逐策略就绪与 outcome 契约。"""
 
+from collections.abc import Mapping
 from dataclasses import replace
 from unittest.mock import MagicMock
 
@@ -8,6 +9,7 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.eod_coordinator import (
     DatasetReadiness,
     EodCoordinator,
+    EodCoordinatorOptions,
     EodStrategyRequest,
 )
 from ditto_application.processes.execution.signal_package import SignalPackage
@@ -118,6 +120,86 @@ def test_missing_required_dataset_fails_closed_without_running() -> None:
     run_service.mark_pending_failed.assert_called_once_with(
         "eod-2026-07-16-stock-2",
         "blocked:REQUIRED_DATA_NOT_READY",
+    )
+
+
+def test_portfolio_construction_failure_blocks_before_signal_publication() -> None:
+    run_service = MagicMock(spec=RunLifecycleService)
+    publish_signals = MagicMock()
+
+    def construct(
+        target: object,
+        request: EodStrategyRequest,
+        signal_date: str,
+        snapshots: Mapping[str, str],
+    ) -> object:
+        raise AppProcessError(
+            "optimizer input unavailable",
+            code="PORTFOLIO_CONSTRUCTION_BLOCKED",
+        )
+
+    outcome = EodCoordinator(
+        run_strategy=lambda request, date, batch: object(),
+        publish_signals=publish_signals,
+        finalize_signals=_finalize,
+        find_staged_signals=_no_staged,
+        run_service=run_service,
+        options=EodCoordinatorOptions(construct_portfolio=construct),
+    ).run(
+        signal_date="2026-07-16",
+        strategies=(EodStrategyRequest("stock", "2", ("stock_daily",)),),
+        dataset_states={
+            "stock_daily": DatasetReadiness(
+                "stock_daily",
+                "ready",
+                "snap-stock",
+            )
+        },
+    )[0]
+
+    assert outcome.status == "blocked"
+    assert outcome.reason == "PORTFOLIO_CONSTRUCTION_BLOCKED"
+    publish_signals.assert_not_called()
+    run_service.mark_failed.assert_called_once_with(
+        "eod-2026-07-16-stock-2",
+        "blocked:PORTFOLIO_CONSTRUCTION_BLOCKED",
+    )
+
+
+def test_prior_reconciliation_mismatch_blocks_next_suggestion() -> None:
+    run_service = MagicMock(spec=RunLifecycleService)
+    run_service.mark_pending_failed.return_value = True
+    run_strategy = MagicMock()
+
+    outcome = EodCoordinator(
+        run_strategy=run_strategy,
+        publish_signals=MagicMock(),
+        finalize_signals=_finalize,
+        find_staged_signals=_no_staged,
+        run_service=run_service,
+        options=EodCoordinatorOptions(
+            suggestion_block_reason=lambda request, signal_date: (
+                "RECONCILIATION_MISMATCH"
+            ),
+        ),
+    ).run(
+        signal_date="2026-07-16",
+        strategies=(EodStrategyRequest("stock", "2", ("stock_daily",)),),
+        dataset_states={
+            "stock_daily": DatasetReadiness(
+                "stock_daily",
+                "ready",
+                "snap-stock",
+            )
+        },
+    )[0]
+
+    assert outcome.status == "blocked"
+    assert outcome.reason == "RECONCILIATION_MISMATCH"
+    run_strategy.assert_not_called()
+    run_service.mark_pending_failed.assert_called_once_with(
+        "eod-2026-07-16-stock-2",
+        "blocked:RECONCILIATION_MISMATCH",
     )
 
 

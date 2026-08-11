@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -46,6 +47,16 @@ from ditto_application.queries.daily_decision import (
     DailyDecisionQueryFacade,
     DailyDecisionReport,
     DailyDecisionV2Report,
+)
+from ditto_application.queries.daily_decision_v3 import (
+    DailyDecisionV3QueryFacade,
+    DailyDecisionV3Report,
+    FactorRiskSection,
+    PortfolioConstructionSection,
+    ProvenanceSection,
+    ReconciliationSection,
+    StressTestSection,
+    TailRiskSection,
 )
 from ditto_application.queries.deviation import (
     SignalDeviationItem,
@@ -96,6 +107,11 @@ def mock_daily_decision_facade() -> MagicMock:
 
 
 @pytest.fixture
+def mock_daily_decision_v3_facade() -> MagicMock:
+    return MagicMock(spec=DailyDecisionV3QueryFacade)
+
+
+@pytest.fixture
 def mock_deviation_facade() -> MagicMock:
     return MagicMock(spec=SignalDeviationQueryFacade)
 
@@ -131,20 +147,23 @@ def mock_account_query() -> MagicMock:
 
 
 @pytest.fixture
-def app(
-    mock_trade_facade: MagicMock,
-    mock_portfolio_facade: MagicMock,
-    mock_signal_facade: MagicMock,
-    mock_comparison_facade: MagicMock,
-    mock_daily_decision_facade: MagicMock,
-    mock_deviation_facade: MagicMock,
-    mock_fill_handler: MagicMock,
-    mock_void_fill_handler: MagicMock,
-    mock_replace_fill_handler: MagicMock,
-    mock_status_handler: MagicMock,
-    mock_account_handler: MagicMock,
-    mock_account_query: MagicMock,
-) -> FastAPI:
+def app(request: pytest.FixtureRequest) -> FastAPI:
+    def mock(name: str) -> MagicMock:
+        return cast(MagicMock, request.getfixturevalue(name))
+
+    mock_trade_facade = mock("mock_trade_facade")
+    mock_portfolio_facade = mock("mock_portfolio_facade")
+    mock_signal_facade = mock("mock_signal_facade")
+    mock_comparison_facade = mock("mock_comparison_facade")
+    mock_daily_decision_facade = mock("mock_daily_decision_facade")
+    mock_daily_decision_v3_facade = mock("mock_daily_decision_v3_facade")
+    mock_deviation_facade = mock("mock_deviation_facade")
+    mock_fill_handler = mock("mock_fill_handler")
+    mock_void_fill_handler = mock("mock_void_fill_handler")
+    mock_replace_fill_handler = mock("mock_replace_fill_handler")
+    mock_status_handler = mock("mock_status_handler")
+    mock_account_handler = mock("mock_account_handler")
+    mock_account_query = mock("mock_account_query")
     app = FastAPI()
 
     class TestProvider(Provider):
@@ -169,6 +188,10 @@ def app(
         @provide
         def daily_decision_facade(self) -> DailyDecisionQueryFacade:
             return mock_daily_decision_facade
+
+        @provide
+        def daily_decision_v3_facade(self) -> DailyDecisionV3QueryFacade:
+            return mock_daily_decision_v3_facade
 
         @provide
         def deviation_facade(self) -> SignalDeviationQueryFacade:
@@ -241,6 +264,67 @@ def _make_intent(**overrides: object) -> TradeIntent:
     }
     defaults.update(overrides)
     return TradeIntent(**defaults)  # type: ignore[arg-type]
+
+
+def _make_daily_decision_v2_report() -> DailyDecisionV2Report:
+    return DailyDecisionV2Report(
+        identity={
+            "strategy_id": "strat-a",
+            "strategy_version": "1",
+            "account_id": "account-1",
+            "sleeve_id": "core",
+            "signal_date": "2024-01-15",
+            "decision_date": "2024-01-15",
+            "intended_trade_date": "2024-01-16",
+        },
+        readiness={"status": "ready", "reason_codes": (), "details": ()},
+        data={
+            "required_datasets": ("stock_daily",),
+            "snapshot_ids": {"stock_daily": "snapshot-stock"},
+            "dataset_states": (
+                {
+                    "dataset": "stock_daily",
+                    "status": "ready",
+                    "snapshot_id": "snapshot-stock",
+                    "reason": "",
+                },
+            ),
+            "freshness": "ready",
+            "dq_state": "passed",
+        },
+        run_package={
+            "outcome": "completed",
+            "batch_key": "eod-2024-01-15-strat-a-1",
+            "artifact_id": "package-1",
+            "conflict_artifact_id": None,
+            "checksum": "sha256:package",
+            "checksum_valid": True,
+            "no_rebalance": False,
+            "factor_evidence": {},
+            "risk_evidence": (),
+        },
+        account_positions={
+            "baseline_id": "baseline-1",
+            "account_id": "account-1",
+            "sleeve_id": "core",
+            "cash_available": 10_000.0,
+            "cash_settled": 10_000.0,
+            "cash_frozen": 0.0,
+            "total_value": 10_000.0,
+            "nav": 1.0,
+            "exposure": 0.0,
+            "as_of": "2024-01-15",
+            "positions": (),
+        },
+        actions=(),
+        execution_review={
+            "effective_fills": (),
+            "deviation": None,
+            "pnl": None,
+            "exceptions": (),
+            "unresolved_conflicts": (),
+        },
+    )
 
 
 class TestAccountBaseline:
@@ -895,6 +979,80 @@ class TestDailyDecision:
         assert (
             "conflict_artifact_id"
             in schemas["DailyDecisionRunPackageResponse"]["properties"]
+        )
+
+    def test_v3_returns_typed_risk_and_reconciliation_sections(
+        self,
+        client: TC,
+        mock_daily_decision_v3_facade: MC,
+    ) -> None:
+        mock_daily_decision_v3_facade.get_report_v3.return_value = (
+            DailyDecisionV3Report(
+                v2=_make_daily_decision_v2_report(),
+                readiness="blocked",
+                blocking_reasons=("RECONCILIATION_MISMATCH",),
+                portfolio_construction=PortfolioConstructionSection(
+                    status="optimal",
+                    mode="enforced",
+                    policy_digest="sha256:policy",
+                    solver="OSQP",
+                    solver_version="1.1.3",
+                    solver_status="optimal",
+                    duration_ms=12.0,
+                ),
+                tail_risk=TailRiskSection(0.04, 0.03, 0.02, 0.025, 42),
+                factor_risk=FactorRiskSection(
+                    availability="partial",
+                    total_risk=0.10,
+                    marginal_contributions={"size": 0.2},
+                    percentage_contributions={"size": 1.0},
+                    euler_residual=0.0,
+                ),
+                stress_tests=StressTestSection(
+                    catalog_version="r4-v1",
+                    losses={"hypothetical:market-minus-10pct": 0.08},
+                    unavailable_scenarios=(
+                        "hypothetical:style-factor-plus-minus-3sigma",
+                    ),
+                ),
+                reconciliation=ReconciliationSection(
+                    status="mismatch",
+                    differences=("risk_position_fingerprint",),
+                    alert_idempotency_key="reconciliation:abc",
+                ),
+                provenance=ProvenanceSection(
+                    decision_time="2024-01-15T15:00:00Z",
+                    knowledge_cutoff="2024-01-15T14:59:00Z",
+                    publication_cutoff="2024-01-15T14:59:00Z",
+                    source_snapshot_ids=("snapshot-stock",),
+                    generated_at="2024-01-15T15:01:00Z",
+                ),
+            )
+        )
+
+        response = client.get(
+            "/api/v1/trade/daily-decision/v3",
+            params={
+                "strategy_id": "strat-a",
+                "trade_date": "2024-01-15",
+                "account_id": "account-1",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["readiness"] == "blocked"
+        assert data["tail_risk"]["historical_es99"] == 0.04
+        assert data["factor_risk"]["availability"] == "partial"
+        assert data["factor_risk"]["marginal_contributions"] == {"size": 0.2}
+        assert data["stress_tests"]["unavailable_scenarios"] == [
+            "hypothetical:style-factor-plus-minus-3sigma"
+        ]
+        assert data["reconciliation"]["status"] == "mismatch"
+        mock_daily_decision_v3_facade.get_report_v3.assert_called_once_with(
+            strategy_id="strat-a",
+            trade_date="2024-01-15",
+            account_id="account-1",
         )
 
     def test_returns_report(

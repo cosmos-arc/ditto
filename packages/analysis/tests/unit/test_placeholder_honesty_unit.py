@@ -91,6 +91,8 @@ def test_analysis_guides_describe_experiments_as_contracts_not_runtime(
     guide_name: str,
 ) -> None:
     guide = (ANALYSIS_ROOT / guide_name).read_text(encoding="utf-8")
+    if guide.strip() == "@AGENTS.md":
+        guide = (ANALYSIS_ROOT / "AGENTS.md").read_text(encoding="utf-8")
 
     assert "experiments" in guide
     assert "领域与持久化合同" in guide

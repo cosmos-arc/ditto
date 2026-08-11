@@ -18,6 +18,11 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.daily_decision import DailyDecisionQueryFacade
+from ditto_application.queries.daily_decision_v3 import (
+    DailyDecisionV3ProjectionReader,
+    DailyDecisionV3QueryFacade,
+    NullDailyDecisionV3ProjectionReader,
+)
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
 from ditto_application.queries.signal import SignalQueryFacade
@@ -31,6 +36,13 @@ class AppPortfolioQueryProvider(Provider):
     """App Query 层 DI Provider — 组合/交易查询服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def daily_decision_v3_projection_reader(
+        self,
+    ) -> DailyDecisionV3ProjectionReader:
+        """Fail closed until the apps composition root binds durable evidence."""
+        return NullDailyDecisionV3ProjectionReader()
 
     @provide
     def account_baseline_query(
@@ -105,4 +117,16 @@ class AppPortfolioQueryProvider(Provider):
             account_query=account_query,
             strategy_query=strategy_query,
             run_reader=run_service,
+        )
+
+    @provide
+    def daily_decision_v3_query_facade(
+        self,
+        v2_facade: DailyDecisionQueryFacade,
+        projection_reader: DailyDecisionV3ProjectionReader,
+    ) -> DailyDecisionV3QueryFacade:
+        """Daily Decision V3 facade with apps-provided R4 persistence reader."""
+        return DailyDecisionV3QueryFacade(
+            v2_facade=v2_facade,
+            projection_reader=projection_reader,
         )

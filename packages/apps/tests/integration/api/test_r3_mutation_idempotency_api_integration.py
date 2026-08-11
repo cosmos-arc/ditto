@@ -39,6 +39,7 @@ from ditto_application.commands.strategy_governance import (
     SubmitReviewHandler,
     reactivate_confirmation_phrase,
 )
+from ditto_application.commands.strategy_governance_clock import utc_now_iso
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
@@ -376,7 +377,7 @@ async def test_update_and_deprecate_replay_without_second_durable_event(
             version=1,
             actor="fixture",
             reason="publish fixture version",
-            decided_at="2026-07-31T00:00:00Z",
+            decided_at=utc_now_iso(),
         )
 
         update_headers = {"Idempotency-Key": "strategy.update-001"}
@@ -487,14 +488,14 @@ async def test_reactivate_replay_returns_original_pointer_after_later_activation
             version=1,
             actor="fixture",
             reason="activate v1",
-            decided_at="2026-07-31T00:00:00Z",
+            decided_at=utc_now_iso(),
         )
         pointer = harness.governance.publish_and_activate(
             strategy_id=strategy_id,
             version=2,
             actor="fixture",
             reason="activate v2",
-            decided_at="2026-07-31T00:00:01Z",
+            decided_at=utc_now_iso(),
         )
 
         first_body = {

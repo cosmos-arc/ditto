@@ -40,6 +40,9 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentWriter,
 )
 from ditto_application.commands.experiments import LaunchExperimentHandler
+from ditto_application.processes.experiments._launch_idempotency import (
+    bind_prepared_launch_idempotency,
+)
 from ditto_application.processes.experiments.baseline_planning import (
     resolve_planning_baseline,
 )
@@ -95,10 +98,12 @@ from ditto_application.strategy_spec_deserialization import (
 )
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.maturity import build_maturity_openapi_schema
+from ditto_apps.api.research_mutations import launch_mutation_idempotency
 from ditto_apps.api.routes import research_experiment_routes
 from ditto_apps.api.routes.research_experiment_routes import router
 from ditto_apps.main import _generate_stable_operation_id
 from ditto_apps.middleware import api_error_handler
+from ditto_apps.models.research import ExperimentLaunchRequest
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.models import StrategySpecRecord
 from fastapi import FastAPI
@@ -476,6 +481,7 @@ async def _assert_planning_http_state(
     stale = await client.post(
         "/api/v1/research/experiments",
         json={**document, "confirmed_plan_hash": "0" * 64},
+        headers={"Idempotency-Key": "planning-stale-hash-001"},
     )
     blocked_document = deepcopy(document)
     blocked_budget = cast("dict[str, object]", blocked_document["budget"])
@@ -483,6 +489,7 @@ async def _assert_planning_http_state(
     blocked = await client.post(
         "/api/v1/research/experiments",
         json={**blocked_document, "confirmed_plan_hash": plan_hash},
+        headers={"Idempotency-Key": "planning-budget-blocked-001"},
     )
     assert identity_drift.status_code == 422
     assert identity_drift.json()["error_code"] == "SPEC_INVALID"
@@ -493,23 +500,33 @@ async def _assert_planning_http_state(
     assert connection.total_changes == writes_before_preflight
     assert reader.get_experiment_projection(ExperimentId(experiment_id)) is None
     launch_body = {**document, "confirmed_plan_hash": plan_hash}
-    first = await client.post("/api/v1/research/experiments", json=launch_body)
+    launch_headers = {"Idempotency-Key": "planning-launch-001"}
+    first = await client.post(
+        "/api/v1/research/experiments",
+        json=launch_body,
+        headers=launch_headers,
+    )
     assert first.status_code == 200, first.text
     writes_after_first_launch = connection.total_changes
     assert writes_after_first_launch > writes_before_preflight
     first_projection = reader.get_experiment_projection(ExperimentId(experiment_id))
     assert first_projection is not None
-    replay = await client.post("/api/v1/research/experiments", json=launch_body)
+    replay = await client.post(
+        "/api/v1/research/experiments",
+        json=launch_body,
+        headers=launch_headers,
+    )
     drifted_document = deepcopy(document)
     drifted_document["seed"] = 43
     drift = await client.post(
         "/api/v1/research/experiments",
         json={**drifted_document, "confirmed_plan_hash": plan_hash},
+        headers={"Idempotency-Key": "planning-launch-drift-001"},
     )
     assert replay.status_code == 200, replay.text
     assert connection.total_changes == writes_after_first_launch
     assert first.json() == replay.json()
-    assert drift.status_code == 409
+    assert drift.status_code == 409, drift.text
     assert drift.json()["error_code"] == "EXPERIMENT_ALREADY_EXISTS"
     assert connection.total_changes == writes_after_first_launch
     assert first.json()["data"]["experiment_id"] == experiment_id
@@ -614,11 +631,19 @@ async def test_partial_draft_identity_drift_is_409_and_zero_write(
     prepared = planning._prepare(request)
     assert prepared.launch is not None
     assert prepared.report.plan_hash is not None
+    partial_key = "planning-partial-exact-001"
+    transport_request = ExperimentLaunchRequest.model_validate(
+        {**document, "confirmed_plan_hash": prepared.report.plan_hash}
+    )
+    bound_launch = bind_prepared_launch_idempotency(
+        prepared.launch,
+        launch_mutation_idempotency(transport_request, partial_key),
+    )
     writer.create_experiment(
-        prepared.launch.cycle,
-        prepared.launch.spec,
-        prepared.launch.initial_record,
-        creation_detail=prepared.launch.creation_detail,
+        bound_launch.cycle,
+        bound_launch.spec,
+        bound_launch.initial_record,
+        creation_detail=bound_launch.creation_detail,
     )
     connection = database.get_connection()
     writes_after_partial_draft = connection.total_changes
@@ -641,9 +666,10 @@ async def test_partial_draft_identity_drift_is_409_and_zero_write(
                     **drifted_document,
                     "confirmed_plan_hash": prepared.report.plan_hash,
                 },
+                headers={"Idempotency-Key": "planning-partial-drift-001"},
             )
 
-            assert drift.status_code == 409
+            assert drift.status_code == 409, drift.text
             assert drift.json()["error_code"] == "EXPERIMENT_ALREADY_EXISTS"
             assert connection.total_changes == writes_after_partial_draft
 
@@ -653,6 +679,7 @@ async def test_partial_draft_identity_drift_is_409_and_zero_write(
                     **document,
                     "confirmed_plan_hash": prepared.report.plan_hash,
                 },
+                headers={"Idempotency-Key": partial_key},
             )
             assert exact.status_code == 200, exact.text
             assert exact.json()["data"]["status"] == "queued"
@@ -712,6 +739,7 @@ async def test_persistence_failure_is_stable_typed_500(
             failed = await client.post(
                 "/api/v1/research/experiments",
                 json={**document, "confirmed_plan_hash": plan_hash},
+                headers={"Idempotency-Key": "planning-persistence-failure-001"},
             )
 
             assert failed.status_code == 500

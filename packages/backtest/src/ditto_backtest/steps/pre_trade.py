@@ -31,6 +31,7 @@ from ditto_risk.pre_trade import (
 )
 
 from ditto_backtest.audit.records import PreTradeDecisionRecord
+from ditto_backtest.risk_runtime import BacktestRiskContext, BacktestRiskRuntime
 from ditto_backtest.steps.types import StepContext, StepResult
 
 __all__ = ["PreTradeStep"]
@@ -52,12 +53,14 @@ class PreTradeStep:
         fee_model: FeeModel | None,
         event_bus: EventBus | None,
         clock: Clock,
+        risk_runtime: BacktestRiskRuntime | None = None,
     ) -> None:
         self._pre_trade_check = pre_trade_check
         self._brokerage = brokerage
         self._fee_model = fee_model
         self._event_bus = event_bus
         self._clock = clock
+        self._risk_runtime = risk_runtime
 
     @traced("backtest.step.pre_trade")
     def execute(self, ctx: StepContext) -> StepResult:
@@ -78,6 +81,54 @@ class PreTradeStep:
         decisions: list[PreTradeDecisionRecord] = []
         for order in ctx.execution_plan.orders:
             result = self._check_order(order, pre_trade_context)
+
+            if (
+                result.decision is not Decision.REJECT
+                and self._risk_runtime is not None
+            ):
+                legacy_order = (
+                    order.with_quantity(result.resized_quantity)
+                    if result.resized_quantity is not None
+                    else order
+                )
+                risk_result = self._risk_runtime.pre_trade(
+                    legacy_order,
+                    BacktestRiskContext(
+                        trade_date=ctx.time_context.trade_date,
+                        account_view=ctx.require_account_view(),
+                        bars=ctx.bars,
+                        pre_trade_context=pre_trade_context,
+                    ),
+                )
+                if not risk_result.allow or risk_result.adjusted_order is None:
+                    result = OrderCheckResult(
+                        decision=Decision.REJECT,
+                        order_id=order.order_id,
+                        reason=_risk_reason(
+                            risk_result.reason_code,
+                            risk_result.reason,
+                        ),
+                        triggered_checks=risk_result.triggered_checks,
+                    )
+                else:
+                    result = OrderCheckResult(
+                        decision=(
+                            Decision.RESIZE
+                            if risk_result.adjusted_order.quantity != order.quantity
+                            else Decision.ACCEPT
+                        ),
+                        order_id=order.order_id,
+                        resized_quantity=(
+                            risk_result.adjusted_order.quantity
+                            if risk_result.adjusted_order.quantity != order.quantity
+                            else None
+                        ),
+                        reason=None,
+                        triggered_checks=(
+                            *result.triggered_checks,
+                            *risk_result.triggered_checks,
+                        ),
+                    )
 
             # 计算最终数量
             if result.decision == Decision.REJECT:
@@ -170,3 +221,11 @@ class PreTradeStep:
                     timestamp=self._clock.now(),
                 ),
             )
+
+
+def _risk_reason(code: str | None, reason: str | None) -> str:
+    if code is None:
+        return reason or "continuous risk gate rejected order"
+    if reason is None:
+        return code
+    return f"{code}: {reason}"

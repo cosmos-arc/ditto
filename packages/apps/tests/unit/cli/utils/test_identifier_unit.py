@@ -2,9 +2,9 @@
 
 from unittest.mock import MagicMock
 
-import click
 import pytest
 from ditto_apps.cli.utils.identifier import resolve_identifier_for_cli
+from typer import Exit
 
 
 @pytest.mark.unit
@@ -14,7 +14,7 @@ class TestResolveIdentifierForCli:
     def test_no_identifier_exits_with_code_1(self) -> None:
         """No identifier provided should exit with code 1."""
         mock_meta = MagicMock()
-        with pytest.raises(click.exceptions.Exit) as exc_info:
+        with pytest.raises(Exit) as exc_info:
             resolve_identifier_for_cli(
                 mock_meta,
                 instrument_id=None,

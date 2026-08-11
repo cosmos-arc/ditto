@@ -33,6 +33,10 @@ from ditto_application.queries.daily_decision import (
     DailyDecisionReport,
     DailyDecisionV2Report,
 )
+from ditto_application.queries.daily_decision_v3 import (
+    DailyDecisionV3QueryFacade,
+    DailyDecisionV3Report,
+)
 from ditto_application.queries.deviation import (
     SignalDeviationQueryFacade,
     SignalDeviationReport,
@@ -64,6 +68,13 @@ from ditto_apps.models.trade import (
     DailyDecisionRunPackageResponse,
     DailyDecisionV2ReadinessResponse,
     DailyDecisionV2Response,
+    DailyDecisionV3FactorRiskResponse,
+    DailyDecisionV3PortfolioConstructionResponse,
+    DailyDecisionV3ProvenanceResponse,
+    DailyDecisionV3ReconciliationResponse,
+    DailyDecisionV3Response,
+    DailyDecisionV3StressResponse,
+    DailyDecisionV3TailRiskResponse,
     DeviationResponse,
     FillAdjustmentResponse,
     FillResponse,
@@ -262,6 +273,7 @@ def to_daily_decision_v2_response(
     readiness["reason_codes"] = list(
         cast(tuple[str, ...], readiness.get("reason_codes", ()))
     )
+
     readiness["details"] = list(cast(tuple[str, ...], readiness.get("details", ())))
 
     data = dict(report.data)
@@ -338,6 +350,59 @@ def to_daily_decision_v2_response(
     )
 
 
+def to_daily_decision_v3_response(
+    report: DailyDecisionV3Report,
+) -> DailyDecisionV3Response:
+    """Map typed application R4 sections without changing V2 mapping."""
+    return DailyDecisionV3Response(
+        v2=to_daily_decision_v2_response(report.v2),
+        readiness=report.readiness,
+        blocking_reasons=list(report.blocking_reasons),
+        portfolio_construction=(
+            DailyDecisionV3PortfolioConstructionResponse.model_validate(
+                report.portfolio_construction,
+                from_attributes=True,
+            )
+        ),
+        tail_risk=DailyDecisionV3TailRiskResponse.model_validate(
+            report.tail_risk,
+            from_attributes=True,
+        ),
+        factor_risk=DailyDecisionV3FactorRiskResponse.model_validate(
+            {
+                **report.factor_risk.__dict__,
+                "marginal_contributions": dict(
+                    report.factor_risk.marginal_contributions
+                ),
+                "percentage_contributions": dict(
+                    report.factor_risk.percentage_contributions
+                ),
+            }
+        ),
+        stress_tests=DailyDecisionV3StressResponse.model_validate(
+            {
+                **report.stress_tests.__dict__,
+                "losses": dict(report.stress_tests.losses),
+                "unavailable_scenarios": list(
+                    report.stress_tests.unavailable_scenarios
+                ),
+            }
+        ),
+        reconciliation=DailyDecisionV3ReconciliationResponse.model_validate(
+            {
+                **report.reconciliation.__dict__,
+                "differences": list(report.reconciliation.differences),
+            }
+        ),
+        provenance=DailyDecisionV3ProvenanceResponse.model_validate(
+            {
+                **report.provenance.__dict__,
+                "source_snapshot_ids": list(report.provenance.source_snapshot_ids),
+            }
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Daily Decision
 # ---------------------------------------------------------------------------
@@ -384,6 +449,27 @@ async def get_daily_decision_v2(
         account_id=account_id,
     )
     return APIResponse(data=to_daily_decision_v2_response(report))
+
+
+@router.get(
+    "/daily-decision/v3",
+    response_model=APIResponse[DailyDecisionV3Response],
+)
+@inject
+async def get_daily_decision_v3(
+    facade: Annotated[DailyDecisionV3QueryFacade, FromComponent()],
+    strategy_id: str = Query(..., description="策略 ID"),
+    trade_date: str | None = Query(None, description="交易/信号日期"),
+    account_id: str | None = Query(None, description="账户 ID"),
+) -> APIResponse[DailyDecisionV3Response]:
+    """Return V2 plus fail-closed portfolio, risk, and reconciliation evidence."""
+    report = await asyncio.to_thread(
+        facade.get_report_v3,
+        strategy_id=strategy_id,
+        trade_date=trade_date,
+        account_id=account_id,
+    )
+    return APIResponse(data=to_daily_decision_v3_response(report))
 
 
 # ---------------------------------------------------------------------------

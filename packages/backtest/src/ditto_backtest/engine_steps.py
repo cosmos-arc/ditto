@@ -29,17 +29,22 @@ from loguru import logger
 from ditto_backtest.config import EngineConfig
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.manifest import RuleRefCollector, RunManifest
+from ditto_backtest.portfolio_construction import PortfolioConstructor
 from ditto_backtest.result import (
     BacktestCheckpoint,
+    BacktestFailureArtifact,
     BacktestRuntimeStateSnapshot,
     EngineResult,
 )
+from ditto_backtest.risk_runtime import BacktestRiskRuntime
 from ditto_backtest.statistics import ExecutionAuditCollector
 from ditto_backtest.steps import (
     AuditStep,
+    DailyContinuousRiskStep,
     DataFetchStep,
     ExecutionStep,
     PlanningStep,
+    PortfolioConstructionStep,
     PreTradeStep,
     RiskScanStep,
     StepContext,
@@ -72,6 +77,7 @@ class EngineOptions:
         event_bus: 事件总线 (None = 不发布域事件)
         input_bundle_builder: 自定义 input bundle 构建器
             (None = 使用默认构建器)
+        portfolio_constructor: 策略候选目标后的组合构造 provider
         random_seed: 随机种子（用于可复现性，默认 42）
         should_stop: 协作式取消回调 (None = 不支持取消)
         on_progress: 进度回调 (completed_days, total_days)
@@ -88,6 +94,8 @@ class EngineOptions:
     audit_collector: ExecutionAuditCollector | None = None
     event_bus: EventBus | None = None
     input_bundle_builder: Callable[[StepContext], StrategyInputBundle] | None = None
+    portfolio_constructor: PortfolioConstructor | None = None
+    risk_runtime: BacktestRiskRuntime | None = None
     random_seed: int = 42
     should_stop: Callable[[], bool] | None = None
     on_progress: Callable[[int, int], None] | None = None
@@ -122,6 +130,8 @@ class StepDeps:
     audit_collector: ExecutionAuditCollector | None
     event_bus: EventBus | None
     input_bundle_builder: Callable[[StepContext], StrategyInputBundle] | None
+    portfolio_constructor: PortfolioConstructor | None
+    risk_runtime: BacktestRiskRuntime | None
     strategy_context: StrategyContext
     input_instruments: set[InstrumentId]
     bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]]
@@ -145,6 +155,7 @@ class EngineResultAssemblyContext:
     orders: list[Order]
     skipped: list[str]
     cancelled: bool
+    failure_artifacts: list[BacktestFailureArtifact] | None = None
     last_checkpoint: BacktestCheckpoint | None = None
 
 
@@ -163,6 +174,7 @@ def assemble_engine_result(
         account_view=ctx.account_view,
         manifest=ctx.manifest,
         skipped_dates=tuple(ctx.skipped),
+        failure_artifacts=tuple(ctx.failure_artifacts or ()),
         last_checkpoint=ctx.last_checkpoint,
         cancelled=ctx.cancelled,
     )
@@ -238,6 +250,11 @@ def _build_risk_scan_step(deps: StepDeps) -> RiskScanStep:
     )
 
 
+def _build_daily_continuous_risk_step(deps: StepDeps) -> DailyContinuousRiskStep:
+    """Build the fail-closed daily continuous RiskGate step."""
+    return DailyContinuousRiskStep(deps.risk_runtime)
+
+
 def _build_strategy_step(deps: StepDeps) -> StrategyStep:
     """构建 StrategyStep — 策略 Pipeline -> TargetPortfolio。"""
     builder = deps.input_bundle_builder
@@ -270,6 +287,13 @@ def _build_planning_step(deps: StepDeps) -> PlanningStep:
     )
 
 
+def _build_portfolio_construction_step(
+    deps: StepDeps,
+) -> PortfolioConstructionStep:
+    """构建 PortfolioConstructionStep — 候选组合 -> 受约束目标组合。"""
+    return PortfolioConstructionStep(deps.portfolio_constructor)
+
+
 def _build_pre_trade_step(deps: StepDeps) -> PreTradeStep:
     """构建 PreTradeStep — PreTrade 校验 + 订单提交。"""
     return PreTradeStep(
@@ -278,6 +302,7 @@ def _build_pre_trade_step(deps: StepDeps) -> PreTradeStep:
         fee_model=deps.fee_model,
         event_bus=deps.event_bus,
         clock=deps.clock,
+        risk_runtime=deps.risk_runtime,
     )
 
 
@@ -287,6 +312,7 @@ def _build_execution_step(deps: StepDeps) -> ExecutionStep:
         brokerage=deps.brokerage,
         event_bus=deps.event_bus,
         clock=deps.clock,
+        risk_runtime=deps.risk_runtime,
     )
 
 
@@ -304,8 +330,10 @@ def build_steps(deps: StepDeps) -> tuple[TradingStep, ...]:
     """构建 TradingStep chain。"""
     return (
         _build_data_fetch_step(deps),
+        _build_daily_continuous_risk_step(deps),
         _build_risk_scan_step(deps),
         _build_strategy_step(deps),
+        _build_portfolio_construction_step(deps),
         _build_planning_step(deps),
         _build_pre_trade_step(deps),
         _build_execution_step(deps),

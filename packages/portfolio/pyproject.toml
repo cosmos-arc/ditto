@@ -3,6 +3,7 @@ name = "ditto-portfolio"
 requires-python = ">= 3.13"
 version = "0.1.0"
 dependencies = [
+    "cvxpy>=1.9,<2",
     "ditto-kernel",
     "numpy",
     "polars",

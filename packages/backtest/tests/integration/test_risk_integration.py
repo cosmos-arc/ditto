@@ -327,20 +327,22 @@ class TestPostTradeRiskLockIntegration:
         conc_records = [r for r in risk_log if r.rule_id == "concentration_limit"]
         assert len(conc_records) > 0, "审计日志应包含 concentration_limit 记录"
 
-        # ConcentrationLimitRule 触发后, 标的 1 被锁定
-        # 后续不应有标的 1 的买单 (锁定后 Pipeline 过滤)
+        # ConcentrationLimitRule 触发后, 实际超限标的被锁定。
+        # 后续不应有该标的买单 (锁定后 Pipeline/Planner 双重过滤)。
         fills = result.fills
         # 找到 concentration rule 触发的日期
         trigger_date = conc_records[0].trade_date
+        locked_instrument = conc_records[0].instrument_id
+        assert locked_instrument is not None
         post_lock_buys = [
             f
             for f in fills
             if f.event_time.strftime("%Y-%m-%d") >= trigger_date
             and f.direction.value == "buy"
-            and f.instrument_id == 1
+            and f.instrument_id == locked_instrument
         ]
         assert len(post_lock_buys) == 0, (
-            f"标的 1 在 {trigger_date} 被锁定后, 不应有新买单"
+            f"标的 {locked_instrument} 在 {trigger_date} 被锁定后, 不应有新买单"
         )
 
     def test_market_anomaly_creates_audit_records(self, tmp_path: Path) -> None:

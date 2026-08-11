@@ -17,6 +17,7 @@ from ditto_features.di import get_features_providers
 from ditto_strategy.di import get_strategy_providers
 
 from .infra import R2LiveGateEvidenceProvider, get_infra_providers
+from .infra.risk_persistence import RiskPersistenceProvider
 
 __all__ = ["make_app_container", "make_async_app_container"]
 
@@ -31,6 +32,7 @@ def _get_base_providers() -> tuple[Provider, ...]:
         *get_analysis_providers(),  # Analysis 存储层
         *get_execution_providers(),  # Execution 存储层
         *get_app_providers(),  # App 层
+        RiskPersistenceProvider(),  # 显式覆盖 V3 fail-closed reader
         R2LiveGateEvidenceProvider(),  # 显式实盘证据覆盖 fail-closed 默认值
     )
 

@@ -311,6 +311,13 @@ def _seed_holdout(
     del database
     launch, _lease = _persist_candidate_selection(writer)
     provider = _SelectionEvidenceProvider(launch)
+    clock_value = [NOW + timedelta(minutes=2)]
+
+    def advancing_clock() -> datetime:
+        value = clock_value[0]
+        clock_value[0] = value + timedelta(microseconds=1)
+        return value
+
     coordinator = ExperimentExecutionCoordinator(
         store=ExperimentSchedulerStore(writer._reader, writer),
         first_attempt_factory=_FirstAttemptFactory(),
@@ -318,7 +325,7 @@ def _seed_holdout(
         lease_duration=timedelta(minutes=5),
         selection_evidence_provider=provider,
         selection_evidence_publisher=provider,
-        clock=lambda: NOW + timedelta(minutes=2),
+        clock=advancing_clock,
     )
     assert (
         coordinator.tick(occurred_at=NOW + timedelta(minutes=2)).state

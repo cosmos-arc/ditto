@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import date
 from hashlib import sha256
 from typing import cast
 
@@ -27,11 +26,17 @@ from ditto_backtest._checkpoint_codec import (
     payload_str,
     require_exact_keys,
 )
+from ditto_backtest._checkpoint_validation import (
+    is_canonical_audit_state_json,
+    require_canonical_audit_state_json,
+    require_canonical_json,
+    require_iso_date,
+    require_non_negative_counter,
+)
 from ditto_backtest._trade_builder_checkpoint import (
     trade_builder_from_payload,
     trade_builder_to_payload,
 )
-from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 
 __all__ = [
     "BacktestDelayedSignalSnapshot",
@@ -44,7 +49,8 @@ __all__ = [
     "BacktestTargetWeightSnapshot",
 ]
 
-_EXACT_RUNTIME_STATE_VERSION = 2
+_LEGACY_EXACT_RUNTIME_STATE_VERSION = 2
+_R4_EXACT_RUNTIME_STATE_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -198,7 +204,7 @@ class BacktestDelayedSignalSnapshot:
         """Validate ordering identity and all delayed signal values."""
         if type(self.queue_index) is not int or self.queue_index < 0:
             raise ValueError("checkpoint delayed queue index must be non-negative")
-        _require_iso_date("trade_date", self.trade_date)
+        require_iso_date("trade_date", self.trade_date)
         finite_float(self.cash_target, "cash_target")
         _require_unique_instruments(
             "delayed_signal.positions",
@@ -277,7 +283,7 @@ class BacktestRiskLockSnapshot:
     def __post_init__(self) -> None:
         """Validate optional cooldown dates before they enter evidence JSON."""
         if self.cooldown_until is not None:
-            _require_iso_date("cooldown_until", self.cooldown_until)
+            require_iso_date("cooldown_until", self.cooldown_until)
 
     def to_payload(self) -> dict[str, int | str | None]:
         """Return stable JSON data for one risk lock."""
@@ -426,6 +432,9 @@ class BacktestRuntimeStateCapture:
     trade_builder_state: TradeBuilderStateSnapshot | None = None
     rebalance_calendar_start: str | None = None
     audit_state_json: str | None = None
+    portfolio_construction_evidence_json: str | None = None
+    risk_state_json: str | None = None
+    r4_enabled: bool = False
     attest_exact: bool = True
 
 
@@ -443,20 +452,26 @@ class BacktestRuntimeStateSnapshot:
     trade_builder_state: TradeBuilderStateSnapshot | None = None
     rebalance_calendar_start: str | None = None
     audit_state_json: str | None = None
+    portfolio_construction_evidence_json: str | None = None
+    risk_state_json: str | None = None
     runtime_state_version: int | None = None
 
     def __post_init__(self) -> None:
         """Reject invalid persisted counter values at the DTO boundary."""
-        _require_non_negative_counter("planner_id_counter", self.planner_id_counter)
-        _require_non_negative_counter(
+        require_non_negative_counter("planner_id_counter", self.planner_id_counter)
+        require_non_negative_counter(
             "brokerage_fill_counter",
             self.brokerage_fill_counter,
         )
-        if self.runtime_state_version not in (None, _EXACT_RUNTIME_STATE_VERSION):
+        if self.runtime_state_version not in (
+            None,
+            _LEGACY_EXACT_RUNTIME_STATE_VERSION,
+            _R4_EXACT_RUNTIME_STATE_VERSION,
+        ):
             msg = "checkpoint runtime state version is unsupported"
             raise ValueError(msg)
         if self.rebalance_calendar_start is not None:
-            _require_iso_date(
+            require_iso_date(
                 "rebalance_calendar_start",
                 self.rebalance_calendar_start,
             )
@@ -465,6 +480,15 @@ class BacktestRuntimeStateSnapshot:
         ):
             msg = "checkpoint audit_state_json must be a non-empty string"
             raise ValueError(msg)
+        for name, payload_json in (
+            (
+                "portfolio_construction_evidence_json",
+                self.portfolio_construction_evidence_json,
+            ),
+            ("risk_state_json", self.risk_state_json),
+        ):
+            if payload_json is not None:
+                require_canonical_json(name, payload_json)
         queue_indices = tuple(item.queue_index for item in self.delayed_signals)
         if queue_indices != tuple(range(len(queue_indices))):
             msg = "checkpoint delayed signal queue indices must be contiguous"
@@ -493,12 +517,27 @@ class BacktestRuntimeStateSnapshot:
             trade_builder_state=state.trade_builder_state,
             rebalance_calendar_start=state.rebalance_calendar_start,
             audit_state_json=state.audit_state_json,
+            portfolio_construction_evidence_json=(
+                state.portfolio_construction_evidence_json
+            ),
+            risk_state_json=state.risk_state_json,
             runtime_state_version=(
-                _EXACT_RUNTIME_STATE_VERSION
+                (
+                    _R4_EXACT_RUNTIME_STATE_VERSION
+                    if state.r4_enabled
+                    else _LEGACY_EXACT_RUNTIME_STATE_VERSION
+                )
                 if state.attest_exact
                 and state.trade_builder_state is not None
                 and state.rebalance_calendar_start is not None
                 and state.audit_state_json is not None
+                and (
+                    not state.r4_enabled
+                    or (
+                        state.portfolio_construction_evidence_json is not None
+                        and state.risk_state_json is not None
+                    )
+                )
                 else None
             ),
         )
@@ -507,12 +546,23 @@ class BacktestRuntimeStateSnapshot:
     def is_exact_resume_state(self) -> bool:
         """Whether the producer attested every state owner required by V2."""
         return (
-            self.runtime_state_version == _EXACT_RUNTIME_STATE_VERSION
+            self.runtime_state_version
+            in (
+                _LEGACY_EXACT_RUNTIME_STATE_VERSION,
+                _R4_EXACT_RUNTIME_STATE_VERSION,
+            )
             and self.trade_builder_state is not None
             and self.rebalance_calendar_start is not None
             and self.audit_state_json is not None
-            and _is_canonical_audit_state_json(self.audit_state_json)
+            and is_canonical_audit_state_json(self.audit_state_json)
             and self.planner_id_counter >= _pending_order_counter(self.pending_orders)
+            and (
+                self.runtime_state_version != _R4_EXACT_RUNTIME_STATE_VERSION
+                or (
+                    self.portfolio_construction_evidence_json is not None
+                    and self.risk_state_json is not None
+                )
+            )
         )
 
     @property
@@ -531,25 +581,7 @@ class BacktestRuntimeStateSnapshot:
             "pending_orders": [order.to_payload() for order in self.pending_orders],
         }
         if self.runtime_state_version is not None:
-            if not self.is_exact_resume_state:
-                msg = "versioned checkpoint runtime state is incomplete"
-                raise ValueError(msg)
-            payload.update(
-                {
-                    "audit_state_json": self.audit_state_json,
-                    "brokerage_fill_counter": self.brokerage_fill_counter,
-                    "planner_id_counter": self.planner_id_counter,
-                    "rebalance_calendar_start": self.rebalance_calendar_start,
-                    "runtime_state_version": self.runtime_state_version,
-                    "strategy_context": self.strategy_context.to_payload(),
-                }
-            )
-            if self.trade_builder_state is None:
-                raise ValueError("versioned checkpoint trade-builder state is missing")
-            payload["trade_builder_state"] = trade_builder_to_payload(
-                self.trade_builder_state,
-            )
-            return payload
+            return self._versioned_payload(payload)
         if self.rebalance_calendar_start is not None:
             payload["rebalance_calendar_start"] = self.rebalance_calendar_start
         if self.audit_state_json is not None:
@@ -564,6 +596,36 @@ class BacktestRuntimeStateSnapshot:
             payload["trade_builder_state"] = trade_builder_to_payload(
                 self.trade_builder_state,
             )
+        return payload
+
+    def _versioned_payload(
+        self,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        """Add strict V2/V3 fields to a shared checkpoint payload."""
+        if not self.is_exact_resume_state:
+            msg = "versioned checkpoint runtime state is incomplete"
+            raise ValueError(msg)
+        payload.update(
+            {
+                "audit_state_json": self.audit_state_json,
+                "brokerage_fill_counter": self.brokerage_fill_counter,
+                "planner_id_counter": self.planner_id_counter,
+                "rebalance_calendar_start": self.rebalance_calendar_start,
+                "runtime_state_version": self.runtime_state_version,
+                "strategy_context": self.strategy_context.to_payload(),
+            }
+        )
+        if self.runtime_state_version == _R4_EXACT_RUNTIME_STATE_VERSION:
+            payload["portfolio_construction_evidence_json"] = (
+                self.portfolio_construction_evidence_json
+            )
+            payload["risk_state_json"] = self.risk_state_json
+        if self.trade_builder_state is None:
+            raise ValueError("versioned checkpoint trade-builder state is missing")
+        payload["trade_builder_state"] = trade_builder_to_payload(
+            self.trade_builder_state,
+        )
         return payload
 
     def to_json(self) -> str:
@@ -586,8 +648,12 @@ class BacktestRuntimeStateSnapshot:
         if version_payload is not None and type(version_payload) is not int:
             msg = "checkpoint field 'runtime_state_version' must be an integer"
             raise ValueError(msg)
-        is_v2 = version_payload == _EXACT_RUNTIME_STATE_VERSION
-        if is_v2:
+        is_exact = version_payload in (
+            _LEGACY_EXACT_RUNTIME_STATE_VERSION,
+            _R4_EXACT_RUNTIME_STATE_VERSION,
+        )
+        is_r4 = version_payload == _R4_EXACT_RUNTIME_STATE_VERSION
+        if is_exact:
             require_exact_keys(
                 data,
                 (
@@ -596,7 +662,9 @@ class BacktestRuntimeStateSnapshot:
                     "delayed_signals",
                     "pending_orders",
                     "planner_id_counter",
+                    *(("portfolio_construction_evidence_json",) if is_r4 else ()),
                     "rebalance_calendar_start",
+                    *(("risk_state_json",) if is_r4 else ()),
                     "runtime_state_version",
                     "strategy_context",
                     "trade_builder_state",
@@ -606,18 +674,18 @@ class BacktestRuntimeStateSnapshot:
                 payload_mapping(context_payload),
                 ("position_costs", "risk_locks"),
             )
-        if is_v2:
+        if is_exact:
             audit_state_json = payload_str(data, "audit_state_json")
-            _require_canonical_audit_state_json(audit_state_json)
+            require_canonical_audit_state_json(audit_state_json)
         else:
             audit_state_json = payload_optional_str(data, "audit_state_json")
         return cls(
             pending_orders=tuple(
-                BacktestPendingOrderSnapshot.from_payload(order, strict=is_v2)
+                BacktestPendingOrderSnapshot.from_payload(order, strict=is_exact)
                 for order in payload_sequence(data, "pending_orders")
             ),
             delayed_signals=tuple(
-                BacktestDelayedSignalSnapshot.from_payload(signal, strict=is_v2)
+                BacktestDelayedSignalSnapshot.from_payload(signal, strict=is_exact)
                 for signal in payload_sequence(data, "delayed_signals")
             ),
             strategy_context=(
@@ -625,17 +693,17 @@ class BacktestRuntimeStateSnapshot:
                 if context_payload is None
                 else BacktestStrategyContextSnapshot.from_payload(
                     context_payload,
-                    strict=is_v2,
+                    strict=is_exact,
                 )
             ),
             planner_id_counter=(
                 payload_int(data, "planner_id_counter")
-                if is_v2
+                if is_exact
                 else payload_optional_int(data, "planner_id_counter")
             ),
             brokerage_fill_counter=(
                 payload_int(data, "brokerage_fill_counter")
-                if is_v2
+                if is_exact
                 else payload_optional_int(data, "brokerage_fill_counter")
             ),
             trade_builder_state=(
@@ -643,7 +711,7 @@ class BacktestRuntimeStateSnapshot:
                 if trade_builder_payload is None
                 else trade_builder_from_payload(
                     trade_builder_payload,
-                    strict=is_v2,
+                    strict=is_exact,
                 )
             ),
             rebalance_calendar_start=payload_optional_str(
@@ -651,6 +719,19 @@ class BacktestRuntimeStateSnapshot:
                 "rebalance_calendar_start",
             ),
             audit_state_json=audit_state_json,
+            portfolio_construction_evidence_json=(
+                payload_str(data, "portfolio_construction_evidence_json")
+                if is_r4
+                else payload_optional_str(
+                    data,
+                    "portfolio_construction_evidence_json",
+                )
+            ),
+            risk_state_json=(
+                payload_str(data, "risk_state_json")
+                if is_r4
+                else payload_optional_str(data, "risk_state_json")
+            ),
             runtime_state_version=version_payload,
         )
 
@@ -697,23 +778,6 @@ def _pending_order_counter(orders: tuple[BacktestPendingOrderSnapshot, ...]) -> 
     return highest
 
 
-def _require_non_negative_counter(name: str, counter: int) -> None:
-    if type(counter) is not int or counter < 0:
-        msg = f"checkpoint field {name!r} must be a non-negative integer"
-        raise ValueError(msg)
-
-
-def _require_iso_date(name: str, value: str) -> None:
-    if not value:
-        msg = f"checkpoint field {name!r} must be a non-empty ISO date"
-        raise ValueError(msg)
-    try:
-        date.fromisoformat(value)
-    except ValueError:
-        msg = f"checkpoint field {name!r} must be an ISO date"
-        raise ValueError(msg) from None
-
-
 def _require_unique_instruments(
     name: str,
     instrument_ids: tuple[InstrumentId, ...],
@@ -721,16 +785,3 @@ def _require_unique_instruments(
     if len(set(instrument_ids)) != len(instrument_ids):
         msg = f"checkpoint field {name!r} contains duplicate instruments"
         raise ValueError(msg)
-
-
-def _is_canonical_audit_state_json(payload_json: str) -> bool:
-    try:
-        _require_canonical_audit_state_json(payload_json)
-    except (TypeError, ValueError):
-        return False
-    return True
-
-
-def _require_canonical_audit_state_json(payload_json: str) -> None:
-    """Typed-decode the complete audit tree before accepting V2 evidence."""
-    ExecutionAuditStateSnapshot.from_canonical_json(payload_json)

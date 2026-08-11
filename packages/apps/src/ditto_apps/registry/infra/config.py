@@ -32,7 +32,10 @@ from ditto_platform.foundation import (
 from ditto_platform.services import NotificationSettings
 
 from ditto_apps.config import load_env_file
-from ditto_apps.registry.infra.init_providers import MetadataDbInitProvider
+from ditto_apps.registry.infra.init_providers import (
+    MetadataDbInitProvider,
+    R4RiskSchemaInitProvider,
+)
 
 __all__ = [
     "ConfigProvider",
@@ -189,6 +192,7 @@ class ConfigProvider(Provider):
         )
         coordinator.register(DataSourceValidationProvider(data_source_settings))
         coordinator.register(MetadataDbInitProvider())
+        coordinator.register(R4RiskSchemaInitProvider())
         return coordinator
 
     @provide

@@ -10,6 +10,12 @@ from typing import Literal, cast
 import orjson
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.eod_failure import (
+    RunLifecycleTransitionError as _RunLifecycleTransitionError,
+)
+from ditto_application.processes.execution.eod_failure import (
+    failure_outcome as _failure_outcome,
+)
 from ditto_application.processes.execution.signal_package import SignalPackage
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.queries.data_readiness import (
@@ -22,6 +28,7 @@ from ditto_application.queries.data_readiness import (
 __all__ = [
     "DatasetReadiness",
     "EodCoordinator",
+    "EodCoordinatorOptions",
     "EodStrategyOutcome",
     "EodStrategyRequest",
     "R2PreflightPolicy",
@@ -84,13 +91,24 @@ type EodOutcomeStatus = Literal[
 
 
 type _RunStrategy = Callable[[EodStrategyRequest, str, str], object]
+type _ConstructPortfolio = Callable[
+    [object, EodStrategyRequest, str, Mapping[str, str]],
+    object,
+]
 type _PublishSignals = Callable[[object, Mapping[str, str]], SignalPackage]
 type _FinalizeSignals = Callable[[SignalPackage], SignalPackage]
 type _FindStagedSignals = Callable[[EodStrategyRequest, str, str], SignalPackage | None]
+type _SuggestionBlockReason = Callable[[EodStrategyRequest, str], str | None]
 
 
-class _RunLifecycleTransitionError(RuntimeError):
-    """运行生命周期持久化未完成；不得把业务结果暴露为 completed。"""
+@dataclass(frozen=True, slots=True)
+class EodCoordinatorOptions:
+    """Optional EOD capability providers and migration policy."""
+
+    construct_portfolio: _ConstructPortfolio | None = None
+    suggestion_block_reason: _SuggestionBlockReason | None = None
+    data_readiness_query: DataReadinessQueryFacade | None = None
+    r2_preflight_policy: R2PreflightPolicy = R2PreflightPolicy()
 
 
 class EodCoordinator:
@@ -104,16 +122,17 @@ class EodCoordinator:
         finalize_signals: _FinalizeSignals,
         find_staged_signals: _FindStagedSignals,
         run_service: RunLifecycleService,
-        data_readiness_query: DataReadinessQueryFacade | None = None,
-        r2_preflight_policy: R2PreflightPolicy = R2PreflightPolicy(),
+        options: EodCoordinatorOptions = EodCoordinatorOptions(),
     ) -> None:
         self._run_strategy = run_strategy
+        self._construct_portfolio = options.construct_portfolio
+        self._suggestion_block_reason = options.suggestion_block_reason
         self._publish_signals = publish_signals
         self._finalize_signals = finalize_signals
         self._find_staged_signals = find_staged_signals
         self._run_service = run_service
-        self._data_readiness_query = data_readiness_query
-        self._r2_preflight_policy = r2_preflight_policy
+        self._data_readiness_query = options.data_readiness_query
+        self._r2_preflight_policy = options.r2_preflight_policy
 
     def run(
         self,
@@ -179,6 +198,21 @@ class EodCoordinator:
                     )
                 )
                 continue
+            risk_block_reason = self._risk_block_reason(request, signal_date)
+            if risk_block_reason is not None:
+                outcomes.append(
+                    replace(
+                        self._persist_blocked_outcome(
+                            request=request,
+                            batch_key=batch_key,
+                            signal_date=signal_date,
+                            required=required,
+                            reason=risk_block_reason,
+                        ),
+                        r2_preflight_status=r2_preflight_status,
+                    )
+                )
+                continue
             recovered = self._recover_completed_staged(
                 request=request,
                 signal_date=signal_date,
@@ -202,6 +236,23 @@ class EodCoordinator:
                 )
             )
         return tuple(outcomes)
+
+    def _risk_block_reason(
+        self,
+        request: EodStrategyRequest,
+        signal_date: str,
+    ) -> str | None:
+        """Read prior risk readiness before producing or recovering suggestions."""
+        reader = self._suggestion_block_reason
+        if reader is None:
+            return None
+        try:
+            reason = reader(request, signal_date)
+        except Exception:
+            return "RISK_READINESS_UNAVAILABLE"
+        if reason is None:
+            return None
+        return reason if reason.strip() else "RISK_READINESS_UNAVAILABLE"
 
     def _apply_r2_preflight(
         self,
@@ -313,11 +364,19 @@ class EodCoordinator:
             claimed = True
             stage = "run_strategy"
             target = self._run_strategy(request, signal_date, batch_key)
+            snapshots = {
+                state.dataset: cast(str, state.snapshot_id) for state in required
+            }
+            if self._construct_portfolio is not None:
+                stage = "construct_portfolio"
+                target = self._construct_portfolio(
+                    target,
+                    request,
+                    signal_date,
+                    snapshots,
+                )
             stage = "publish_signals"
-            package = self._publish_signals(
-                target,
-                {state.dataset: cast(str, state.snapshot_id) for state in required},
-            )
+            package = self._publish_signals(target, snapshots)
             if _package_status(package) == "failed":
                 self._run_service.mark_failed(
                     batch_key,
@@ -467,6 +526,13 @@ class EodCoordinator:
                 if state.status == "ready" and state.snapshot_id is not None
             }
             target = self._run_strategy(request, signal_date, batch_key)
+            if self._construct_portfolio is not None:
+                target = self._construct_portfolio(
+                    target,
+                    request,
+                    signal_date,
+                    snapshots,
+                )
             current = self._publish_signals(target, snapshots)
         except Exception:
             return _recovery_failure_outcome(
@@ -730,24 +796,3 @@ def _validated_readiness(state: DatasetReadiness) -> DatasetReadiness:
         snapshot_id=None,
         reason="SNAPSHOT_ID_MISSING",
     )
-
-
-def _failure_outcome(
-    exc: Exception,
-    *,
-    stage: str,
-) -> tuple[str, Literal["blocked", "failed"]]:
-    """把内部异常压缩为稳定、无敏感原文的机器码。"""
-    if isinstance(exc, AppProcessError):
-        code = exc.details.get("code")
-        if code == "ACCOUNT_BASELINE_MISSING":
-            return "ACCOUNT_BASELINE_MISSING", "blocked"
-    if isinstance(exc, _RunLifecycleTransitionError) or stage.startswith("mark_"):
-        return "RUN_LIFECYCLE_TRANSITION_FAILED", "failed"
-    if stage == "create_run":
-        return "RUN_LIFECYCLE_CREATE_FAILED", "failed"
-    if stage == "publish_signals":
-        return "SIGNAL_PACKAGE_PUBLISH_FAILED", "failed"
-    if stage == "finalize_signals":
-        return "SIGNAL_PACKAGE_FINALIZE_FAILED", "failed"
-    return "STRATEGY_EXECUTION_FAILED", "failed"

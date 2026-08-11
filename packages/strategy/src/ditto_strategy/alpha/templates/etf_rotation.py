@@ -64,7 +64,7 @@ class ETFRotationConfig:
     Attributes:
         top_k: 选取标的数量。
         scoring_method: 评分方法。
-        scoring_ascending: True 表示信号值大的得分高（动量策略默认 True）。
+        scoring_ascending: False 表示信号值大的得分高（动量策略默认 False）。
         allocation_method: 分配方式（``"equal_weight"`` / ``"score_weight"``
             / ``"mean_variance"``）。
         cash_target: 目标现金比例（0.0 = 全仓）。
@@ -77,7 +77,7 @@ class ETFRotationConfig:
 
     top_k: int = 10
     scoring_method: ScoringMethod = ScoringMethod.RANK
-    scoring_ascending: bool = True
+    scoring_ascending: bool = False
     allocation_method: str = "equal_weight"
     cash_target: float = 0.0
     signal_column: str = "signal_value"

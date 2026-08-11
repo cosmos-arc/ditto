@@ -1,5 +1,10 @@
 # R4a cvxpy 组合优化实施计划（垂直切片）
 
+> **已取代（2026-08-10）**：最终范围、架构与发布门禁以
+> [R4 Portfolio / Risk / G3 最终执行计划](2026-08-10-r4-portfolio-risk-g3-execution-plan.md)
+> 为准。保留旧 `MeanVarianceAllocator` 仅用于兼容；新优化器是候选组合与订单规划
+> 之间的独立步骤，禁止静默回退。
+
 > **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 交付第一个真实凸求解器全链路——`ShrinkageCovarianceProvider`（features，Ledoit-Wolf）经 application 注入 → `ConstrainedMVOSolver`（portfolio，cvxpy，硬约束烘进 + L1 交易成本罚项）→ EngineLoop A/B golden 对照 EqualWeight。

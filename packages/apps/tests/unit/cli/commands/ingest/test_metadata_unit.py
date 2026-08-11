@@ -2,12 +2,11 @@
 
 from unittest.mock import MagicMock, Mock
 
-import click
 import pytest
 from ditto_apps.cli.commands.ingest import metadata
 from ditto_apps.cli.main import app
 from pytest_mock import MockerFixture
-from typer import Context
+from typer import Context, Exit
 from typer.testing import CliRunner
 
 
@@ -88,8 +87,7 @@ class TestMetadataCommands:
         mocker.patch.object(metadata, "_etf_basic_impl")
         mocker.patch.object(metadata, "_index_basic_impl")
 
-        # typer.Exit raises click.exceptions.Exit
-        with pytest.raises(click.exceptions.Exit):
+        with pytest.raises(Exit):
             metadata.basic(mock_ctx, "unknown", False)
 
     def test_ingest_metadata_basic_case_insensitive(
