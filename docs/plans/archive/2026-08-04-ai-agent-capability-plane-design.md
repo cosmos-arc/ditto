@@ -1,8 +1,10 @@
 # AI/Agent 能力平面设计
 
+> **归档说明（2026-08-12）**：本文已被 [R5 治理型量化研究 Agent 设计](../2026-08-12-r5-governed-quant-research-agent-design.md) 取代，仅保留为历史决策记录。新的权威设计修正了 Agent/application 依赖方向、取消通用 Platform LLM Gateway 与强制 Langfuse、采用单 Agent 确定性运行时，并加入自主研究 Campaign、PIT、隐藏 holdout、OCI 沙箱和模型风险控制。请勿按本文实施。
+
 > **日期**：2026-08-04
 > **状态**：设计稿（待评审）
-> **关联**：定位纠偏见 [2026-08-04-comprehensive-architecture-audit.md](../reviews/2026-08-04-comprehensive-architecture-audit.md) §定位校准；架构边界见 [boundaries-and-abstraction-standards.md](../architecture/boundaries-and-abstraction-standards.md)
+> **关联**：定位纠偏见 [2026-08-04-comprehensive-architecture-audit.md](../../reviews/2026-08-04-comprehensive-architecture-audit.md) §定位校准；架构边界见 [boundaries-and-abstraction-standards.md](../../architecture/boundaries-and-abstraction-standards.md)
 > **决策（已敲定）**：① Agent runtime + tool 层 → 新增 `ditto_agent` 包（application 编排层 peer）；② Provider = **OpenAI**；③ Runtime = **OpenAI Agents SDK**（非自造 loop）；④ Trace = **OTel GenAI 语义约定 + 自托管 Langfuse**；⑤ 同步（对话）/异步（长任务）双模。详情见 §6（新依赖 `openai-agents` / `langfuse` **已批准 2026-08-04**）
 
 ---
@@ -89,7 +91,7 @@ capability 包 → 仍仅 kernel + platform（零改动）
 - `ditto_agent must not import ditto_{strategy,portfolio,risk,execution,backtest,features,data,analysis}` 直接实现（须经 application facade / read-model）
 - `application must not import ditto_agent`（防反向依赖）
 - `ditto_agent must not import ditto_platform.config`（与 application 同纪律，settings 经 dishka 注入）
-- 更新 [boundaries-and-abstraction-standards.md](../architecture/boundaries-and-abstraction-standards.md) 编排层章节
+- 更新 [boundaries-and-abstraction-standards.md](../../architecture/boundaries-and-abstraction-standards.md) 编排层章节
 
 > 这是对"capability 包禁依赖 application"规则的**补充而非破坏**：ditto_agent 不是 capability 包，而是 application 的编排层 peer（与 apps 同级消费 application 输出）。
 
@@ -169,7 +171,7 @@ def factor_ic(factor_id: str, start: str, end: str) -> FactorICReport:
 > - **隐私**：`set_trace_processors()` **替换** SDK 默认处理器，**禁止 trace 回传 OpenAI**，只发自托管 Langfuse；`trace_include_sensitive_data` 按需关。治理写入的审计仍以既有 R3 governance（durable/immutable）为准，agent trace 为辅助。
 > - **新依赖（已批准 2026-08-04）**：`openai-agents`、`langfuse`。Langfuse server 独立部署，不进 Python 依赖树。
 
-填审计 [platform §2.2](../reviews/2026-08-04-comprehensive-architecture-audit.md) flag 的"缺统一 http client / tenacity / limits 封装"——**LLM 网关就是其第一个正经消费者**。
+填审计 [platform §2.2](../../reviews/2026-08-04-comprehensive-architecture-audit.md) flag 的"缺统一 http client / tenacity / limits 封装"——**LLM 网关就是其第一个正经消费者**。
 
 | 组件 | 职责 |
 |------|------|

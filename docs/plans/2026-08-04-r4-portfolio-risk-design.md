@@ -203,5 +203,5 @@ R4 交付 pre-trade（每单）+ EOD 全量重算 + daily-scan；持久化可恢
 
 - 路线图状态：`docs/reviews/2026-08-04-roadmap-status.md`
 - 全量审计：`docs/reviews/2026-08-04-comprehensive-architecture-audit.md`（§2.6 portfolio、§2.7 risk）
-- AI 能力平面：`docs/plans/2026-08-04-ai-agent-capability-plane-design.md`（R4 是 AI Phase C/D 的写入靶点根基）
+- 当前 R5 设计：`docs/plans/2026-08-12-r5-governed-quant-research-agent-design.md`（R4 是 R5 evidence 与 shadow decision 的确定性宿主）
 - 边界标准：`docs/architecture/boundaries-and-abstraction-standards.md`

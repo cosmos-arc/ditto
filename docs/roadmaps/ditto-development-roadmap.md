@@ -1,7 +1,7 @@
 # Ditto 后续发展规划与分阶段开发设计
 
 > **首次创建**：2026-07-10<br>
-> **最近复核**：2026-07-19<br>
+> **最近复核**：2026-08-12<br>
 > **状态**：母路线图（Roadmap Source of Truth）<br>
 > **北极星**：全球全品类、AI 原生、以证据驱动人工决策的量化平台；十个能力维度最终全部达到 10/10。
 
@@ -17,6 +17,8 @@
 | `docs/plans/2026-07-17-r2-data-product-design.md` | R2 确定性工程实现、详细范围、发布 evidence 缺口与 live Gate；实施 task 见 2026-07-18 R2 implementation plan |
 | `docs/plans/2026-07-19-r3-a-share-research-strategy-governance-design.md` | R3 已确认的发布边界、双黄金路径、架构、研究协议、治理状态机、工作台与 G2 验收 |
 | `docs/plans/2026-07-19-r3-a-share-research-strategy-governance-implementation-plan.md` | R3 W0-W5、22 个 TDD task、精确文件/测试、审批点和跨仓库施工顺序 |
+| `docs/plans/2026-08-12-r5-governed-quant-research-agent-design.md` | R5 产品、架构、PIT、自主研究、沙箱、模型风险与发布门的权威设计 |
+| `docs/plans/2026-08-12-r5-governed-quant-research-agent-implementation-plan.md` | R5.0-R5.5、38 个 TDD task、审批点、波次 Gate 与恢复合同 |
 | `docs/plans/2026-07-10-phase-a-implementation-plan.md` | 已废弃施工属性的历史迁移索引 |
 
 事实冲突时，以验收证据、当前源码/OpenAPI/CLI、能力基准、母路线图、release 计划的顺序判定。
@@ -42,12 +44,10 @@
 - R1 日频人工交易就绪度：**7.9/10，G1 已通过**。
 - 最强项：PIT、promotion evidence、数据血缘、回测严谨性、OMS/对账协议和工程边界。
 - 最大空白：正式 AI runtime、分钟/盘中、全球资产统一模型。
-- R2 确定性工程实现：**DEVELOPMENT PASS**；代码、测试、API、CLI、工作台和
-  fail-closed acceptance runner 已落地。
-- R2 发布缺口：真实 provider entitlement/license、2015/2016 起历史 bootstrap、
-  19 份 live certification、真实性能/恢复和连续运行 evidence 尚未关闭。
-- 当前产品主线：R3 A 股日频研究与策略治理；R1 仍保持本机单操作者、日频、
-  人工审批边界。
+- R2 确定性工程与 live Gate 已完成，R3/G2 已以可复现 evidence 通过。
+- R3 A 股日频研究与策略治理、R4 组合风险与 G3 控制已经完成。
+- 当前产品主线：R5 治理型量化研究 Agent；仍保持本机单操作者、日频、人工审批
+  和非自动交易边界。
 
 ### 3.2 R1 原五个硬阻塞（已清零）
 
@@ -72,9 +72,9 @@
 | I 日频闭环 | R0 产品边界固化 | 目标、评分、文档职责和架构边界稳定 | 已完成，持续维护 | 1-2 人周/次复核 |
 | I 日频闭环 | R1 日频人工交易 MVP | 单操作者本机 Beta，从 EOD 到成交复盘闭环 | 已完成，G1 通过 | 8-12 人周 |
 | I 日频闭环 | R2 A 股日频数据产品 | 19 个核心数据集有区间认证、PIT、DQ、恢复和工作台 | 工程开发完成；真实发布 Gate 并行收口 | 13-19 人周 |
-| II 研究产品化 | R3 A 股日频研究与策略治理 Beta | 双黄金路径的可复现研究、审查、发布与历史版本重新激活闭环 | 设计和实施计划已确认；实施待启动 | 19-26 人周 |
-| II 研究产品化 | R4 组合、风险与复盘 | 组合优化、风险与执行后复盘产品化 | 未开始 | 12-18 人周 |
-| III AI 与盘中 | R5 AI Copilot / Agent v1 | grounded、可评测、HITL 的 AI 投研与建议 | 未开始 | 14-22 人周 |
+| II 研究产品化 | R3 A 股日频研究与策略治理 Beta | 双黄金路径的可复现研究、审查、发布与历史版本重新激活闭环 | 已完成，G2 通过 | 19-26 人周 |
+| II 研究产品化 | R4 组合、风险与复盘 | 组合优化、风险与执行后复盘产品化 | 已完成，G3 控制落地 | 12-18 人周 |
+| III AI 与盘中 | R5 治理型量化研究 Agent | grounded、可评测、HITL、PIT-safe 的 AI 投研、自治研究与 shadow 建议 | 设计与 38-task 实施计划已确认；实施待启动 | 18-26 人周 |
 | III AI 与盘中 | R6 分钟级与盘中 Beta | 分钟数据、增量因子和盘中信号 | 未开始 | 24-36 人周 |
 | IV 全球机构化 | R7 全球全品类扩展 | 多市场、多资产、多账户与机构运营 | 未开始 | 40+ 人周，滚动规划 |
 
@@ -229,7 +229,7 @@ PIT、质量、来源、恢复和 promotion 证据的数据产品，服务本地
 
 ## 9. R3：A 股日频研究与策略治理 Beta
 
-**状态：设计与实施计划已确认（2026-07-19），实施待启动。**
+**状态：已完成，G2 已通过。**
 
 详细设计事实源：
 `docs/plans/2026-07-19-r3-a-share-research-strategy-governance-design.md`；
@@ -305,6 +305,11 @@ R3 保持日频、人工审批和本机边界。
 
 ## 10. R4：组合优化、风险与复盘工作台
 
+**状态：已完成（`9ee6c48c`，PR #72），G3 组合风险控制已落地。**
+
+详细设计事实源：`docs/plans/2026-08-04-r4-portfolio-risk-design.md`；最终施工与
+验收入口：`docs/plans/2026-08-10-r4-portfolio-risk-g3-execution-plan.md`。
+
 ### 目标
 
 把“有信号”提升为“仓位可解释、风险可控、执行后可复盘”的日频决策产品。
@@ -328,54 +333,87 @@ R3 只提供为回测和选股语义服务的确定性基础分配方式，例�
 - 账本重建与存量快照一致，偏差和 PnL 可解释。
 - G3 决策工作台 Beta 的 SLO、告警、runbook 和恢复 Gate 通过。
 
-## 11. R5：AI Copilot / Agent v1
+## 11. R5：治理型量化研究 Agent
 
 ### 目标
 
-在稳定数据、策略、回测、组合和 Daily Decision 上增加 grounded AI，不让模型成为新的事实源或隐形交易者。
+在 R3 可复现研究、R4 组合风险和 Daily Decision V3 之上增加 grounded、可评测、
+可恢复的 AI 研究与决策辅助，不让模型成为新的事实源、回测裁判或隐形交易者。
+
+权威设计：`docs/plans/2026-08-12-r5-governed-quant-research-agent-design.md`；
+逐 Task 施工图：
+`docs/plans/2026-08-12-r5-governed-quant-research-agent-implementation-plan.md`。
 
 ### 技术选择
 
-首个 runtime 采用 OpenAI Agents SDK，使用其 agents、function tools、handoffs、guardrails、sessions、tracing 与 human-in-the-loop interruption/resume。选择是当前路线，不等于当前已有能力，也不阻止未来在模型边界接入其他 provider。
+新增第 13 包 `ditto_agent`，依赖方向固定为
+`apps -> agent -> application -> capabilities`。生产默认采用单 Agent、确定性状态机、
+function tools、服务端状态与 HITL；OpenAI Agents SDK 通过 Agent-owned port 接入，
+不在 platform 建通用 LLM Gateway。OTel 是主观测协议，Langfuse 仅可选 exporter。
+
+首发只使用 Ditto 内部 evidence；禁用开放 Web/RAG/MCP、Hosted Code Interpreter、
+Conversations、Files、Vector Stores 和 Background mode。多 Agent 只做离线对照，
+没有量化增益证据不进入生产运行时。
 
 ### 分层交付
 
-**R5.0 评测与安全底座**
+**R5.0 治理、评测与重放底座**
 
-- 建立宏观解读、报告解读、策略生成、仓位建议的黄金样本与评分 rubric。
-- 定义 token/成本/延迟预算、模型版本、prompt/version、结构化输出 schema。
-- 处理 prompt injection、越权工具调用、敏感数据、幻觉引用和 trace 脱敏。
+- 建立 Agent contracts、canonical action hash、状态机、Agent SQLite、Episode/replay。
+- 建立 Fake/OpenAI provider contract、模型/提示/tool schema 版本与本地 eval harness。
+- 服务端注入 decision/knowledge/publication/snapshot/execution/egress/authority 上下文。
 
-**R5.1 只读 Copilot**
+**R5.1 Evidence Copilot**
 
-- 回测、因子、组合、风险和 Daily Decision 报告解读。
-- 宏观/市场信息分析、带来源 RAG、受控自然语言查询。
-- AI 生成的结论必须附 snapshot、artifact、tool result 与不确定性。
+- 只读解释实验、因子、策略、回测、组合、风险和 Daily Decision V3。
+- 每个 claim 绑定 `EvidenceEnvelope`、snapshot、artifact、PIT 和不确定性。
+- API + SSE + CLI；断线只重放持久化事件，不重复工具副作用。
 
-**R5.2 策略与建议辅助**
+**R5.2 Author Copilot**
 
-- StrategySpec/DSL 生成、参数解释、代码审计和测试建议。
-- 仓位与买卖建议只调用 Ditto tools，并经过 deterministic risk guardrail。
-- 所有写操作与建议发布使用 HITL；状态可序列化并恢复。
+- 生成 StrategySpec/DSL/配置草案，调用现有 compiler/validator 产生诊断与 diff。
+- 正式保存/提交只经 application command，并绑定不可变审批 hash 和幂等 receipt。
+- 不注册 publish、权重、订单或券商工具。
 
-**R5.3 多 Agent（有证据才启用）**
+**R5.3 Autonomous Research Campaign**
 
-- analyst/researcher/portfolio/risk 角色采用 manager-as-tools 或 handoff。
-- 只有单 Agent 基线评测证明多 Agent 提升质量时才增加复杂度。
-- Experience Memory 只保存经验证反馈，不自动把模型输出当经验真相。
+- 一次人工审批不可变 Campaign hash 后，在单一搜索轴和预算内迭代假设、代码、
+  fold 与非 holdout 反馈。
+- 生成代码只在无网 hardened OCI 沙箱运行，输出 score/prediction；财务指标、组合、
+  风险和统计全部由 Ditto 宿主计算。
+- SearchLedger 区分 operational attempt/statistical trial；fork 不能重置多重检验。
+- Holdout 对 Agent 不可见，只允许一次独立审批的签名 aggregate pass/fail。
+
+**R5.4 Decision Briefing**
+
+- 在持久化 Daily Decision V3 之后生成只读 `DecisionOpinion`。
+- opinion 独立存储和评测，不得改变 V3、权重、risk status、订单或执行结果。
+- outcome feedback 必须满足 `outcome_known_at <= knowledge_cutoff`。
+
+**R5.5 发布硬化**
+
+- OTel、tamper-evident audit、成本/预算、30 天允许原文 retention、备份恢复和降级。
+- 120 条正式 eval 覆盖 grounded、author、campaign/PIT/holdout、permission、sandbox
+  attack 与 shadow decision。
+- 所有 feature flags 默认关闭，Agent 依赖失败不影响 Ditto 核心流程。
 
 ### 运营要求
 
-- tracing 记录模型、tool、handoff 和 guardrail，但敏感输入/输出默认不上传。
-- sessions 负责会话连续性，不替代 Ditto 的长期研究 artifact 和审计账本。
-- 每次运行记录模型、prompt、tools、usage、cost、latency、result 和人工反馈。
-- Agent 不直接连接券商；R5 仍以人工建议为边界。
+- balanced profile 为 `gpt-5.6-terra`/medium，quality profile 为
+  `gpt-5.6-sol`/high；任何变更重跑相关 eval。
+- 使用专用 OpenAI project、MAM 或 ZDR、`store=false` 和显式 license/egress policy。
+- 普通 read P95 不超过 30 秒/0.25 美元；复杂任务不超过 60 秒/0.75 美元。
+- 研究 Campaign 默认最多 6 代、128 个唯一候选、384 fold、并发 2、4 小时、
+  20 GiB 临时空间和 8 美元模型预算。
+- Agent 不直接连接券商；R5 始终保持人工决策与非自动交易边界。
 
 ### 验收
 
-- 黄金集质量、grounding、拒答、安全、成本和延迟指标达到预设阈值。
-- 无来源结论、tool 失败和越权请求 fail closed。
-- 敏感 tool 调用可暂停、批准/拒绝并恢复，审批记录可审计。
+- forbidden action、PIT sentinel、审批绕过、holdout 泄漏和 sandbox escape 100% 通过。
+- tool choice/evidence coverage 至少 95%，factual correctness 至少 90%，必须拒答 100%。
+- Author compile/validate 至少 90%，Episode tool/event replay 100% 确定。
+- 多 Agent 只有相同 Episode 上成功率提高至少 5 个百分点或候选接受率提高至少
+  10%、安全无回退且成本/延迟不超过 2 倍，才允许另立 ADR。
 - G4 外部 Beta 前完成认证/RBAC、数据权利、隐私和安全 Gate。
 
 ## 12. R6：分钟级与盘中信号 Beta
@@ -472,34 +510,31 @@ R0
                          └─ R7 ── G6
 ```
 
-允许的准备性并行：
+当前依赖裁决：
 
-- R2 真实 provider、历史、certification、性能、恢复与连续运行 evidence 可和
-  R3 工程实施并行；fixture 或 research-only 结果不能替代 G2 所需 live evidence。
-- R3 后期可制作 AI eval 数据集，但 R5 runtime 仍依赖 R4 稳定 artifacts。
+- R2/R3/G2 与 R4/G3 的确定性宿主已经落地，R5.0、R5.1 可立即开始。
+- R5.3 自主研究复用 R3 experiment/holdout/ledger，R5.4 shadow briefing 复用
+  Daily Decision V3；实施前仍按 Task 1 核对真实叶级合同。
 - R5 与 R6 可在团队资源充足时并行，但共享 API/schema 需先冻结。
 - 安全、备份、SLO、许可和合规按 Gate 持续推进，不受功能 release 串行限制。
 
 ## 17. 优先级与资源配置
 
-### P0：当前 release 与并行 Gate 收口
+### P0：当前 release
 
 - R1 与 G1 保持已完成状态、本机运行边界和回归门禁。
-- R2 确定性工程开发已完成；按 R2 evidence index 并行关闭 entitlement/license、
-  历史、19 份 certification、性能、恢复和连续运行 Gate，不以 fixture 替代。
-- R3 设计与 W0-W5 implementation plan 已确认；下一步从 StrategySpec/registry/
-  typed parameter binding 开始实施，并在数据库 task 前执行显式审批。
+- R2/R3/G2 与 R4/G3 保持已完成状态和回归门禁。
+- R5 从 R5.0 治理基础开始，先冻结真实消费合同，再按四个 Approval 点推进。
 
-### P1：G2 收口
+### P1：R5.1/R5.2
 
-- 在真实 certified snapshot 上完成个股主线和 ETF 回归线，关闭 96 月协议、
-  一次性 holdout、真实 UI、重放和恢复 evidence。
-- 只有 R2 live Gate 与 R3 双黄金路径同时通过，才宣称 G2 日频研究 Beta。
+- 先交付 grounded read 与本地 eval，再增加 Author Copilot 的逐动作 HITL。
+- 不因自然语言体验提前开放 Web/RAG/MCP 或正式 publish/交易动作。
 
-### P2：G2/G3 后
+### P2：R5.3/R5.4
 
-- R4 完成可靠组合与风险事实，R5 才接 AI 建议。
-- AI 与分钟级分别立项，避免两个高不确定性架构改造同时压在核心团队上。
+- 在 hardened OCI、PIT、holdout 与 trial ledger 证据完整后开放受控研究 Campaign。
+- DecisionOpinion 保持 shadow-only，以 outcome analysis 验证价值。
 
 ### P3：验证产品价值后
 
@@ -573,7 +608,6 @@ R1 已按以下顺序完成：
   → G1 evidence
 ```
 
-R1 已通过 G1；R2 确定性工程开发完成、live release evidence 并行收口；R3 设计
-与 22-task implementation plan 已确认，下一实施入口为 W0 StrategySpec v2、
-NodeDescriptor、canonical hash 和 typed parameter binding。AI runtime 和分钟级改造
-继续分别留在 R5、R6，不因 R3 启动而提前进入当前范围。
+R1/G1、R2、R3/G2 和 R4/G3 已完成。R5 治理型量化研究 Agent 的权威设计与
+38-task implementation plan 已于 2026-08-12 冻结，下一实施入口是 Wave 0
+当前合同/SDK/OCI 预检，再进入 R5.0 第 13 包和治理底座。分钟级改造继续留在 R6。
