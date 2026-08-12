@@ -1,8 +1,28 @@
 # Ditto 开发路线图状态评估（2026-08-04）
 
 > **视角**：首席架构师，整合全量源码审计 + AI 能力平面设计 + Capability Benchmark 路线图
-> **基准文档**：[capability-benchmark-design.md §7-§8](../plans/2026-07-10-capability-benchmark-design.md)（阶段与 Release Gate）、[2026-08-04-comprehensive-architecture-audit.md](2026-08-04-comprehensive-architecture-audit.md)（全 12 包审计）、[2026-08-04-ai-agent-capability-plane-design.md](../plans/2026-08-04-ai-agent-capability-plane-design.md)（AI 平面设计）
+> **基准文档**：[capability-benchmark-design.md §7-§8](../plans/2026-07-10-capability-benchmark-design.md)（阶段与 Release Gate）、[2026-08-04-comprehensive-architecture-audit.md](2026-08-04-comprehensive-architecture-audit.md)（全 12 包审计）、[已归档的 2026-08-04 AI 平面设计](../plans/archive/2026-08-04-ai-agent-capability-plane-design.md)（当时的 AI 判断）
 > **状态日期**：2026-08-06（G2 重跑验证通过日 2026-08-05）
+
+---
+
+## 2026-08-12 状态补充（当前裁决）
+
+本文主体是 2026-08-04—08-06 的历史状态快照，不回写当时的审计过程。其“R4
+未开始、旧 Phase A 计划就绪”的当前性结论已经失效：
+
+1. R4 portfolio/risk 与 G3 controls 已由提交 `9ee6c48c`（PR #72）完成。
+2. R5 当前方向已在 GitHub 交易/Stock Agent、成熟交易引擎、OpenAI 官方资料和
+   金融/程序化交易治理材料复核后重构为**治理型量化研究 Agent**。
+3. 新的当前事实源为 [R5 设计](../plans/2026-08-12-r5-governed-quant-research-agent-design.md)
+   与 [38-task 实施计划](../plans/2026-08-12-r5-governed-quant-research-agent-implementation-plan.md)。
+4. 生产默认改为单 Agent + 确定性状态机；R5.3 是预算受限的自主研究 Campaign，
+   多 Agent 仅保留为离线对照，不再作为 R5.3 产品阶段。
+5. `ditto_agent` 的当前依赖方向是 `apps -> agent -> application`，不再使用本文所引
+   旧设计中的 “application peer”、Platform LLM Gateway 或强制 Langfuse 方案。
+
+以下各节保留历史文字，用于说明当时为什么先完成 R4；执行工作不得引用其中的旧
+AI 路径、旧 SDK 示例或旧任务顺序。
 
 ---
 
@@ -100,7 +120,7 @@ G2 经历了一次"假 PASS → 审计推翻 → 合法重过"的完整闭环，
 | **C Agentic 发现** | L3 自主 | evaluation 引擎 + R3 治理 + **R4 组合** | R4 后 |
 | **D 决策回路** | L2/L3 advisory | live daily-decision + **G2 unblock**（策略 publish） | R4 + G2 落地后 |
 
-> AI 平面设计见 [2026-08-04-ai-agent-capability-plane-design.md](../plans/2026-08-04-ai-agent-capability-plane-design.md)；Phase A 实施计划见 [2026-08-04-agent-capability-plane-phase-a-copilot.md](../plans/2026-08-04-agent-capability-plane-phase-a-copilot.md)。
+> 当时的 AI 平面设计见 [归档设计](../plans/archive/2026-08-04-ai-agent-capability-plane-design.md)；Phase A 计划见 [归档计划](../plans/archive/2026-08-04-agent-capability-plane-phase-a-copilot.md)。两者已被 2026-08-12 R5 文档取代。
 
 ---
 
@@ -155,6 +175,8 @@ pixi run -e dev check        # lint + fmt + type + test --fast
 
 - 路线图母版：`docs/plans/2026-07-10-capability-benchmark-design.md`
 - 全量审计：`docs/reviews/2026-08-04-comprehensive-architecture-audit.md`
-- AI 平面设计：`docs/plans/2026-08-04-ai-agent-capability-plane-design.md`
-- Phase A 计划：`docs/plans/2026-08-04-agent-capability-plane-phase-a-copilot.md`
+- 当前 R5 设计：`docs/plans/2026-08-12-r5-governed-quant-research-agent-design.md`
+- 当前 R5 实施计划：`docs/plans/2026-08-12-r5-governed-quant-research-agent-implementation-plan.md`
+- 历史 AI 平面设计：`docs/plans/archive/2026-08-04-ai-agent-capability-plane-design.md`
+- 历史 Phase A 计划：`docs/plans/archive/2026-08-04-agent-capability-plane-phase-a-copilot.md`
 - R3 源码审计（G2 闭环经过）：`docs/reviews/2026-08-04-r3-source-audit.md`

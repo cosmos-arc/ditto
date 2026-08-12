@@ -1,5 +1,7 @@
 # AI Agent Capability Plane — Phase A (Copilot) Implementation Plan
 
+> **归档说明（2026-08-12）**：本文已被 [R5 详细实施计划](../2026-08-12-r5-governed-quant-research-agent-implementation-plan.md) 取代，仅保留为历史施工记录。旧任务中的 SDK 签名、Platform LLM Gateway、Langfuse 强依赖、Agent/application peer 关系和任务顺序均不得作为当前实现依据。
+
 > **执行合同：** 按 Task 顺序推进；风险变更使用对应 Ditto skill；只读且独立的工作可用宿主原生 subagents；每个波次以本文 Exit Gate 与当前 diff 的验证结果为准。
 
 **Goal:** 交付研究 Copilot 的最小可运行垂直切片——`ditto ask "..."` 经 OpenAI Agents SDK 调用一个只读 Copilot agent，agent 通过 `@function_tool` 薄适配器调用既有 application facade（FactorEvaluationFacade），全程 trace 到自托管 Langfuse。
@@ -171,7 +173,7 @@ source_modules = ditto_agent.**
 forbidden_modules = ditto_platform.config.**
 ```
 
-> 同时更新 [boundaries-and-abstraction-standards.md](../architecture/boundaries-and-abstraction-standards.md) 编排层章节，记录 ditto_agent 为 application 同层 peer。
+> 同时更新 [boundaries-and-abstraction-standards.md](../../architecture/boundaries-and-abstraction-standards.md) 编排层章节，记录 ditto_agent 为 application 同层 peer。
 
 **Step 4: 运行验证**
 
