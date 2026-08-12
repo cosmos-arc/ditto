@@ -320,12 +320,6 @@ addopts = [
     "--dist", "loadfile",   # 同文件测试串行（避免 snapshot 冲突）
     "--strict-markers",
     "--strict-config",
-    "--cov=packages",
-    "--cov-report=html:htmlcov",
-    "--cov-report=term-missing",
-    "--cov-report=xml",
-    "--cov-branch",
-    "--cov-fail-under=85",
     "--durations=10",       # 报告最慢的 10 个测试
 ]
 

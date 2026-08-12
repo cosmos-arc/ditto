@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 from ditto_application.processes.execution.eod_coordinator import (
     DatasetReadiness,
     EodCoordinator,
+    EodCoordinatorOptions,
     EodStrategyRequest,
     R2PreflightPolicy,
 )
@@ -69,8 +70,10 @@ def _coordinator(
         finalize_signals=lambda package: package,
         find_staged_signals=lambda request, signal_date, batch_key: None,
         run_service=run_service,
-        data_readiness_query=readiness,
-        r2_preflight_policy=R2PreflightPolicy(mode=mode),
+        options=EodCoordinatorOptions(
+            data_readiness_query=readiness,
+            r2_preflight_policy=R2PreflightPolicy(mode=mode),
+        ),
     )
 
 

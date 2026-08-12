@@ -71,24 +71,21 @@ def test_risk_gate_is_protocol() -> None:
 
 
 def test_risk_gate_has_lifecycle_hooks() -> None:
-    """RiskGate defines pre_submit, pre_cancel, post_fill, daily_scan."""
-    assert hasattr(RiskGate, "pre_submit")
-    assert hasattr(RiskGate, "pre_cancel")
+    """RiskGate defines continuous decision and recovery hooks."""
+    assert hasattr(RiskGate, "pre_trade")
     assert hasattr(RiskGate, "post_fill")
     assert hasattr(RiskGate, "daily_scan")
+    assert hasattr(RiskGate, "snapshot_state")
+    assert hasattr(RiskGate, "restore_state")
 
 
-def test_risk_gate_pre_submit_returns_optional_order() -> None:
-    """pre_submit returns PreTradeOrder | None."""
-    sig = inspect.signature(RiskGate.pre_submit)
-    ret = sig.return_annotation
-    ret_str = ret if isinstance(ret, str) else str(ret)
-    assert "PreTradeOrder" in ret_str
-    assert "None" in ret_str
+def test_risk_gate_pre_trade_accepts_order_and_context() -> None:
+    sig = inspect.signature(RiskGate.pre_trade)
+    assert list(sig.parameters) == ["self", "order", "context"]
 
 
 def test_risk_gate_post_fill_signature() -> None:
-    """post_fill accepts instrument_id, side, qty, price."""
+    """post_fill accepts a fill, context, and idempotency event id."""
     sig = inspect.signature(RiskGate.post_fill)
     params = list(sig.parameters.keys())
-    assert params[1:] == ["instrument_id", "side", "qty", "price"]
+    assert params[1:] == ["fill", "context", "event_id"]

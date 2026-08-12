@@ -4,11 +4,21 @@
 避免与 CliRunner 的 I/O 捕获机制冲突。
 """
 
+import logging
 from collections.abc import Generator
 from io import StringIO
 
 import pytest
 from loguru import logger
+
+
+@pytest.fixture(autouse=True)
+def isolate_stdlib_logging_for_cli() -> Generator[None]:
+    """Prevent pytest live logging from replacing CliRunner's captured streams."""
+    previous_level = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(previous_level)
 
 
 @pytest.fixture(autouse=True)

@@ -66,6 +66,9 @@ class EngineRuntimeCapture:
     trade_builder: TradeBuilder
     rebalance_calendar_start: str | None
     audit_collector: ExecutionAuditCollector | None
+    portfolio_construction_evidence_json: str | None = None
+    risk_state_json: str | None = None
+    r4_enabled: bool = False
 
 
 def strategy_context_from_runtime(
@@ -135,6 +138,11 @@ def capture_runtime_state(
             trade_builder_state=capture.trade_builder.snapshot_state(),
             rebalance_calendar_start=capture.rebalance_calendar_start,
             audit_state_json=audit_state_json,
+            portfolio_construction_evidence_json=(
+                capture.portfolio_construction_evidence_json
+            ),
+            risk_state_json=capture.risk_state_json,
+            r4_enabled=capture.r4_enabled,
             attest_exact=(
                 planner_counter is not None
                 and brokerage_counter is not None

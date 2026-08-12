@@ -23,6 +23,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
+import pytest
 from ditto_features.derived_types import (
     DerivedRole,
     DerivedSpec,
@@ -437,6 +438,19 @@ class TestTsRank:
         df = _single_entity_frame("x", [5.0, 1.0, 3.0, 4.0, 2.0], start=10)
         result = _eval_expr(df, "ts_rank(x, 3)")
         _assert_values(result, "value", [None, None, 1.0 / 3.0, 2.0 / 3.0, 1.0])
+
+    @pytest.mark.pit
+    def test_ts_rank_excludes_current_row_future_sentinel(self) -> None:
+        """Changing the final row cannot affect its own left-closed rank."""
+        baseline = _single_entity_frame("x", [1.0, 2.0, 3.0, 4.0, 5.0])
+        future_sentinel = _single_entity_frame(
+            "x", [1.0, 2.0, 3.0, 4.0, 1_000_000_000.0]
+        )
+
+        baseline_result = _eval_expr(baseline, "ts_rank(x, 3)")
+        sentinel_result = _eval_expr(future_sentinel, "ts_rank(x, 3)")
+
+        assert baseline_result["value"].to_list() == sentinel_result["value"].to_list()
 
 
 class TestTsEma:

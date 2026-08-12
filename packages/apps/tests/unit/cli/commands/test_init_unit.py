@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from ditto_apps.cli.commands import init
 from pytest_mock import MockerFixture
-from typer import Context
+from typer import Context, Exit
 
 
 @pytest.fixture
@@ -112,10 +112,7 @@ class TestInitConfigCommand:
         )
 
         # Act & Assert
-        # typer.Exit 实际上是 click.exceptions.Exit
-        import click
-
-        with pytest.raises(click.exceptions.Exit):
+        with pytest.raises(Exit):
             init.config(mock_ctx, data_root=None, force=False)
 
     def test_make_coordinator_registers_feature_artifact_dirs(

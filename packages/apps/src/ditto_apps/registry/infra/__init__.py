@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ._factory import get_infra_providers
 from .config import ConfigProvider
-from .init_providers import MetadataDbInitProvider
+from .init_providers import MetadataDbInitProvider, R4RiskSchemaInitProvider
 from .notification import NotificationProvider
 from .observability import ObservabilityProvider
 from .protocol_adapters import ProtocolAdapterProvider, R2LiveGateEvidenceProvider
@@ -17,6 +17,7 @@ __all__ = [
     "ObservabilityProvider",
     "ProtocolAdapterProvider",
     "R2LiveGateEvidenceProvider",
+    "R4RiskSchemaInitProvider",
     "SignalDeliveryProvider",
     "get_infra_providers",
 ]

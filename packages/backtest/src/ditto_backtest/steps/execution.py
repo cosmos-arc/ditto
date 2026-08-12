@@ -16,6 +16,7 @@ from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 
+from ditto_backtest.risk_runtime import BacktestRiskContext, BacktestRiskRuntime
 from ditto_backtest.steps.types import StepContext, StepResult
 
 __all__ = ["ExecutionStep"]
@@ -29,10 +30,12 @@ class ExecutionStep:
         brokerage: Brokerage,
         event_bus: EventBus | None,
         clock: Clock,
+        risk_runtime: BacktestRiskRuntime | None = None,
     ) -> None:
         self._brokerage = brokerage
         self._event_bus = event_bus
         self._clock = clock
+        self._risk_runtime = risk_runtime
 
     @traced("backtest.step.execution")
     def execute(self, ctx: StepContext) -> StepResult:
@@ -51,6 +54,16 @@ class ExecutionStep:
 
         # 追加到 ctx.step_fills
         ctx.step_fills.extend(fills)
+
+        if self._risk_runtime is not None:
+            account_view = self._brokerage.get_account()
+            risk_context = BacktestRiskContext(
+                trade_date=ctx.time_context.trade_date,
+                account_view=account_view,
+                bars=ctx.bars,
+            )
+            for fill in fills:
+                self._risk_runtime.post_fill(fill, risk_context, fill.fill_id)
 
         # 发布 OrderFilled 事件
         if self._event_bus is not None:

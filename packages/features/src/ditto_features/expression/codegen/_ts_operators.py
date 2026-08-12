@@ -57,12 +57,16 @@ def _ts_rank(
     # PIT safety: shift(1) excludes current row T; Expr.rolling_rank has
     # no ``closed`` parameter, so shift is the sole defense.
     shifted = arguments[0].shift(1)
-    return (
-        shifted.rolling_rank(window_size=window, min_samples=window)
-        .cast(pl.Float64)
-        .over(entity_keys)
-        / window
-    )
+    ranked = shifted.rolling_rank(window_size=window, min_samples=1).cast(
+        pl.Float64
+    ).over(entity_keys) / float(window)
+    # Polars >= 1.39 counts non-null values for ``min_samples``.  The public
+    # operator contract instead counts window slots: the first complete slot
+    # window contains the structural null introduced by shift(1), while rank
+    # itself ignores that null.  Gate by group position to preserve that
+    # contract without treating later source nulls as extra warm-up rows.
+    group_position = pl.int_range(0, pl.len()).over(entity_keys)
+    return pl.when(group_position >= window - 1).then(ranked).otherwise(None)
 
 
 def _ts_argmax(

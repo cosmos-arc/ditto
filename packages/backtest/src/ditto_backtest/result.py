@@ -42,6 +42,7 @@ __all__ = [
     "BacktestAccountStateSnapshot",
     "BacktestCheckpoint",
     "BacktestDelayedSignalSnapshot",
+    "BacktestFailureArtifact",
     "BacktestFrozenQuantitySnapshot",
     "BacktestPendingOrderSnapshot",
     "BacktestPositionSnapshot",
@@ -53,6 +54,17 @@ __all__ = [
     "EngineResult",
     "EngineResultBuilder",
 ]
+
+
+@dataclass(frozen=True)
+class BacktestFailureArtifact:
+    """Structured fail-closed evidence for one unsuccessful backtest step."""
+
+    trade_date: str
+    step_name: str
+    failure_code: str
+    message: str
+    evidence_json: str = "{}"
 
 
 @dataclass(frozen=True)
@@ -260,6 +272,7 @@ class EngineResult:
     account_view: AccountView | None = None
     manifest: RunManifest | None = None
     skipped_dates: tuple[str, ...] = ()
+    failure_artifacts: tuple[BacktestFailureArtifact, ...] = ()
     last_checkpoint: BacktestCheckpoint | None = None
     cancelled: bool = False
 

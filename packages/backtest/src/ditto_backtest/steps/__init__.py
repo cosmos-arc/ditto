@@ -16,10 +16,12 @@ TradingStep Protocol + StepResult + StepContext + 所有 Step 实现。
 """
 
 from ditto_backtest.steps.audit import AuditStep
+from ditto_backtest.steps.continuous_risk import DailyContinuousRiskStep
 from ditto_backtest.steps.data_fetch import DataFetchStep
 from ditto_backtest.steps.execution import ExecutionStep
 from ditto_backtest.steps.input_bundle import build_input_bundle
 from ditto_backtest.steps.planning import PlanningStep
+from ditto_backtest.steps.portfolio_construction import PortfolioConstructionStep
 from ditto_backtest.steps.pre_trade import PreTradeStep
 from ditto_backtest.steps.risk_scan import RiskScanStep
 from ditto_backtest.steps.strategy import StrategyStep
@@ -27,9 +29,11 @@ from ditto_backtest.steps.types import StepContext, StepResult, TradingStep
 
 __all__ = [
     "AuditStep",
+    "DailyContinuousRiskStep",
     "DataFetchStep",
     "ExecutionStep",
     "PlanningStep",
+    "PortfolioConstructionStep",
     "PreTradeStep",
     "RiskScanStep",
     "StepContext",

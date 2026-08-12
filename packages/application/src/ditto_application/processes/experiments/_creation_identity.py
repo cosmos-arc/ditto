@@ -243,20 +243,6 @@ def verify_durable_creation_identity(
                 experiment_id=str(experiment_id),
             )
         return
-    if expected_idempotency is not None:
-        try:
-            fenced = find_mutation_fence((event.detail,), expected_idempotency)
-        except AppCommandError as exc:
-            raise AppProcessError(str(exc), details=exc.details) from exc
-        if (
-            event.detail.get("schema_version")
-            != _IDEMPOTENT_CREATION_IDENTITY_SCHEMA_VERSION
-            or not fenced
-        ):
-            raise _identity_error(
-                "durable_creation_identity_invalid",
-                experiment_id=str(experiment_id),
-            )
     if identity.request_hash != expected_request_hash:
         raise AppProcessError(
             "experiment already exists with a different planning request",
@@ -276,6 +262,20 @@ def verify_durable_creation_identity(
                 "confirmed_plan_hash": expected_plan_hash,
             },
         )
+    if expected_idempotency is not None:
+        try:
+            fenced = find_mutation_fence((event.detail,), expected_idempotency)
+        except AppCommandError as exc:
+            raise AppProcessError(str(exc), details=exc.details) from exc
+        if (
+            event.detail.get("schema_version")
+            != _IDEMPOTENT_CREATION_IDENTITY_SCHEMA_VERSION
+            or not fenced
+        ):
+            raise _identity_error(
+                "durable_creation_identity_invalid",
+                experiment_id=str(experiment_id),
+            )
 
 
 def fence_durable_draft_launch(

@@ -395,6 +395,55 @@ class TestBacktestCheckpoint:
             == snapshot
         )
 
+    def test_r4_runtime_state_attests_optimizer_and_risk_evidence_v3(self) -> None:
+        """R4 exact resume carries canonical construction evidence and risk state."""
+        snapshot = result_module.BacktestRuntimeStateSnapshot.from_state(
+            result_module.BacktestRuntimeStateCapture(
+                trade_builder_state=TradeBuilderStateSnapshot(
+                    method=TradeMatchingMethod.FIFO,
+                    counter=0,
+                ),
+                rebalance_calendar_start="2026-03-01",
+                audit_state_json=ExecutionAuditStateSnapshot().to_json(),
+                portfolio_construction_evidence_json=(
+                    '{"policy_digest":"sha256:policy"}'
+                ),
+                risk_state_json='{"event_sequence":7}',
+                r4_enabled=True,
+            )
+        )
+
+        assert snapshot.runtime_state_version == 3
+        assert snapshot.is_exact_resume_state is True
+        assert snapshot.portfolio_construction_evidence_json is not None
+        assert snapshot.risk_state_json == '{"event_sequence":7}'
+        assert (
+            result_module.BacktestRuntimeStateSnapshot.from_json(snapshot.to_json())
+            == snapshot
+        )
+
+    def test_v3_runtime_state_rejects_missing_risk_state(self) -> None:
+        """R4 checkpoints cannot silently restore without risk-owned state."""
+        payload = {
+            "audit_state_json": ExecutionAuditStateSnapshot().to_json(),
+            "brokerage_fill_counter": 0,
+            "delayed_signals": [],
+            "pending_orders": [],
+            "planner_id_counter": 0,
+            "portfolio_construction_evidence_json": "{}",
+            "rebalance_calendar_start": "2026-03-01",
+            "runtime_state_version": 3,
+            "strategy_context": {"position_costs": [], "risk_locks": []},
+            "trade_builder_state": {
+                "counter": 0,
+                "fifo_open_entries": [],
+                "method": "fifo",
+            },
+        }
+
+        with pytest.raises(ValueError, match="missing required fields"):
+            result_module.BacktestRuntimeStateSnapshot.from_payload(payload)
+
     def test_v2_runtime_requires_nullable_pending_order_fields(self) -> None:
         """V2 cannot silently default an omitted result-affecting nullable field."""
         ticket = OrderTicket(

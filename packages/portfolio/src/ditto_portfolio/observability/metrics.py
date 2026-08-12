@@ -29,6 +29,18 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "gauge",
         "description": "3-day rolling portfolio drawdown",
     },
+    {
+        "name": "optimizer_runs",
+        "instrument_name": "ditto.portfolio.optimizer.runs_total",
+        "type": "counter",
+        "description": "Portfolio optimization outcomes by method and status",
+    },
+    {
+        "name": "optimizer_duration",
+        "instrument_name": "ditto.portfolio.optimizer.duration",
+        "type": "histogram",
+        "description": "Portfolio optimization duration in seconds",
+    },
 ]
 
 __all__ = ["METRIC_DEFINITIONS"]

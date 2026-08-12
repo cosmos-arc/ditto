@@ -33,6 +33,10 @@ from ditto_analysis.experiments.persistence import (
     validate_artifact_relative_path,
 )
 from ditto_analysis.research._artifact_file_primitives import (
+    ArtifactFilePath,
+    DirectoryEntryPath,
+)
+from ditto_analysis.research._artifact_file_primitives import (
     measure_json_artifact as _measure_json_artifact,
 )
 from ditto_analysis.research._artifact_file_primitives import (
@@ -165,8 +169,8 @@ class IndexedArtifactIO:
         self._writer = writer
 
     @staticmethod
-    def _fd_path(parent_fd: int, name: str) -> Path:
-        return Path(f"/proc/self/fd/{parent_fd}/{name}")
+    def _fd_entry(parent_fd: int, name: str) -> DirectoryEntryPath:
+        return DirectoryEntryPath(parent_fd=parent_fd, name=name)
 
     @staticmethod
     def _open_absolute_directory(path: Path) -> int:
@@ -299,7 +303,7 @@ class IndexedArtifactIO:
     @staticmethod
     def _measurement_for(
         artifact_format: ArtifactFormat,
-    ) -> Callable[[Path], _ArtifactMeasurement]:
+    ) -> Callable[[ArtifactFilePath], _ArtifactMeasurement]:
         return (
             _measure_json_artifact
             if artifact_format is ArtifactFormat.JSON
@@ -455,8 +459,8 @@ class IndexedArtifactIO:
                 self._sidecar_bytes(record),
             )
             _publish_no_clobber(
-                self._fd_path(parent_fd, sidecar_temporary_name),
-                self._fd_path(parent_fd, sidecar_name),
+                self._fd_entry(parent_fd, sidecar_temporary_name),
+                self._fd_entry(parent_fd, sidecar_name),
             )
             os.unlink(sidecar_temporary_name, dir_fd=parent_fd)
             os.fsync(parent_fd)
@@ -532,9 +536,9 @@ class IndexedArtifactIO:
         artifact_format: ArtifactFormat,
         parent_fd: int,
         temporary_name: str,
-        write: Callable[[Path], None],
+        write: Callable[[ArtifactFilePath], None],
     ) -> tuple[ArtifactRecord, _ArtifactMeasurement]:
-        temporary_path = self._fd_path(parent_fd, temporary_name)
+        temporary_path = self._fd_entry(parent_fd, temporary_name)
         write(temporary_path)
         descriptor = os.open(temporary_name, _READ_FLAGS, dir_fd=parent_fd)
         try:
@@ -606,7 +610,7 @@ class IndexedArtifactIO:
         spec: ArtifactPublicationSpec,
         *,
         artifact_format: ArtifactFormat,
-        write: Callable[[Path], None],
+        write: Callable[[ArtifactFilePath], None],
         lease_fence: LeaseFence,
         now_epoch_us: int,
     ) -> ArtifactRecord:
@@ -643,8 +647,8 @@ class IndexedArtifactIO:
                 self._ensure_publication_sidecar(parent_fd, target_name, record)
                 self._assert_open_parent_is_current(spec.relative_path, parent_fd)
                 _publish_no_clobber(
-                    self._fd_path(parent_fd, temporary_name),
-                    self._fd_path(parent_fd, target_name),
+                    self._fd_entry(parent_fd, temporary_name),
+                    self._fd_entry(parent_fd, target_name),
                 )
                 with suppress(FileNotFoundError):
                     os.unlink(temporary_name, dir_fd=parent_fd)

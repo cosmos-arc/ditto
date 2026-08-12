@@ -41,6 +41,7 @@ from ditto_application.exceptions import AppConfigurationError
 from ditto_application.processes.execution.eod_coordinator import (
     DatasetReadiness,
     EodCoordinator,
+    EodCoordinatorOptions,
     EodStrategyOutcome,
     EodStrategyRequest,
     R2PreflightPolicy,
@@ -89,6 +90,32 @@ class EodPipelineDependencies:
     check_trading_day: Callable[..., bool]
     daily_ingestion: Callable[..., dict[str, object]]
     daily_materialization: Callable[..., dict[str, object]]
+    portfolio_constructor: (
+        Callable[
+            [object, EodStrategyRequest, str, Mapping[str, str]],
+            object,
+        ]
+        | None
+    ) = None
+    suggestion_block_reason: Callable[[EodStrategyRequest, str], str | None] | None = (
+        None
+    )
+
+
+@dataclass(frozen=True)
+class _EodR4RuntimeOptions:
+    """Explicit opt-in R4 callbacks passed to one EOD strategy run."""
+
+    construct_portfolio: (
+        Callable[
+            [object, EodStrategyRequest, str, Mapping[str, str]],
+            object,
+        ]
+        | None
+    ) = None
+    suggestion_block_reason: Callable[[EodStrategyRequest, str], str | None] | None = (
+        None
+    )
 
 
 @dataclass(frozen=True)
@@ -252,6 +279,43 @@ def _resolve_published_eod_request(strategy_id: str) -> EodStrategyRequest | Non
         return _eod_request(spec) if spec is not None else None
 
 
+def _run_selected_strategies(
+    trade_date: str,
+    *,
+    dataset_states: dict[str, DatasetReadiness],
+    strategy: EodStrategyRequest,
+    account_id: str,
+    source: str,
+    allow_experimental_data: bool,
+    runners: EodPipelineDependencies,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Preserve the legacy call contract unless R4 callbacks are explicit."""
+    if (
+        runners.portfolio_constructor is None
+        and runners.suggestion_block_reason is None
+    ):
+        return _run_strategies(
+            trade_date,
+            dataset_states=dataset_states,
+            strategy=strategy,
+            account_id=account_id,
+            source=source,
+            allow_experimental_data=allow_experimental_data,
+        )
+    return _run_strategies(
+        trade_date,
+        dataset_states=dataset_states,
+        strategy=strategy,
+        account_id=account_id,
+        source=source,
+        allow_experimental_data=allow_experimental_data,
+        r4_options=_EodR4RuntimeOptions(
+            construct_portfolio=runners.portfolio_constructor,
+            suggestion_block_reason=runners.suggestion_block_reason,
+        ),
+    )
+
+
 def _run_strategies(
     trade_date: str,
     *,
@@ -260,6 +324,7 @@ def _run_strategies(
     account_id: str,
     source: str,
     allow_experimental_data: bool,
+    r4_options: _EodR4RuntimeOptions = _EodR4RuntimeOptions(),
 ) -> tuple[list[dict[str, Any]], bool]:
     """
     运行显式选择的单个已发布策略。
@@ -271,6 +336,7 @@ def _run_strategies(
         account_id: 人工交易账户 ID。
         source: 与摄取一致的数据源名称。
         allow_experimental_data: 是否显式允许实验级数据集进入策略输入。
+        r4_options: 已启用 R4 sleeve 的组合构建与前序风险阻断回调。
 
     Returns:
         (策略结果列表, 是否全部成功)
@@ -356,8 +422,12 @@ def _run_strategies(
             finalize_signals=finalize_signals,
             find_staged_signals=find_staged_signals,
             run_service=run_service,
-            data_readiness_query=bundle.data_readiness_query,
-            r2_preflight_policy=R2PreflightPolicy(mode="shadow"),
+            options=EodCoordinatorOptions(
+                construct_portfolio=r4_options.construct_portfolio,
+                suggestion_block_reason=r4_options.suggestion_block_reason,
+                data_readiness_query=bundle.data_readiness_query,
+                r2_preflight_policy=R2PreflightPolicy(mode="shadow"),
+            ),
         ).run(
             signal_date=trade_date,
             strategies=(request,),
@@ -493,13 +563,14 @@ def run_eod_pipeline(
     try:
         resolve_ingestion_scope(strategy.required_datasets)
     except AppConfigurationError:
-        strategy_results, _ = _run_strategies(
+        strategy_results, _ = _run_selected_strategies(
             trade_date,
             dataset_states={},
             strategy=strategy,
             account_id=account_id,
             source=source,
             allow_experimental_data=allow_experimental_data,
+            runners=runners,
         )
         return _pre_ingestion_blocked_result(
             trade_date=trade_date,
@@ -583,13 +654,14 @@ def run_eod_pipeline(
                 container.close()
 
     # 6. 运行策略（策略依赖摄取数据，不依赖物化结果）
-    strategy_results, strategy_all_success = _run_strategies(
+    strategy_results, strategy_all_success = _run_selected_strategies(
         trade_date,
         dataset_states=dataset_states,
         strategy=strategy,
         account_id=account_id,
         source=source,
         allow_experimental_data=allow_experimental_data,
+        runners=runners,
     )
 
     # 7. 计算整体状态

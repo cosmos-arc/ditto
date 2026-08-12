@@ -105,6 +105,9 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
             "ditto_strategy.storage.sqlite.strategy_governance_store",
         }
     )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/infra/risk_persistence.py"
+    ] == frozenset({"ditto_risk.continuous_gate"})
 
 
 def test_apps_capability_import_guard_reports_non_registry_routes() -> None:

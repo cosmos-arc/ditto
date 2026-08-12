@@ -1,5 +1,10 @@
 # R4 完整设计：cvxpy 组合优化 + 连续风控 + G3 收口
 
+> **已取代（2026-08-10）**：最终范围、架构与发布门禁以
+> [R4 Portfolio / Risk / G3 最终执行计划](2026-08-10-r4-portfolio-risk-g3-execution-plan.md)
+> 为准。本文中的静态 allocator 注入、risk 直接依赖 platform、Black–Litterman
+> 首发及任何静默 fallback 设计均不得继续实施。
+
 > **日期**：2026-08-04
 > **状态**：设计稿（待评审）
 > **关联**：[roadmap-status](../reviews/2026-08-04-roadmap-status.md)（R4 = 阶段 II 收尾，冲 G3）、[comprehensive-architecture-audit](../reviews/2026-08-04-comprehensive-architecture-audit.md)（CAP-001/RiskGate 短板）、[boundaries-and-abstraction-standards](../architecture/boundaries-and-abstraction-standards.md)
