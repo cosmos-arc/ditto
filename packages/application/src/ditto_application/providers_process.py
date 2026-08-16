@@ -10,6 +10,10 @@ from ditto_analysis.experiments import (
     ExperimentReaderProtocol,
     ExperimentWriterProtocol,
 )
+from ditto_analysis.experiments.campaign_persistence import (
+    CampaignReaderProtocol,
+    CampaignWriterProtocol,
+)
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
@@ -60,6 +64,7 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
 
+from ditto_application.agent_campaign_contracts import AutonomousCampaignCommandPort
 from ditto_application.builders.published_baseline_runtime_builder import (
     PublishedBaselineRuntimeBuilder,
 )
@@ -102,6 +107,13 @@ from ditto_application.processes.experiments._selection_evidence_artifact import
 )
 from ditto_application.processes.experiments._walk_forward_evidence_collection import (
     WalkForwardEvidenceAssembler,
+)
+from ditto_application.processes.experiments.autonomous_campaign import (
+    AutonomousCampaignCoordinator,
+    CampaignTrialSchedulerPort,
+)
+from ditto_application.processes.experiments.campaign_scheduler import (
+    ExistingExperimentCampaignScheduler,
 )
 from ditto_application.processes.experiments.comparison_reader import (
     ExperimentComparisonReader,
@@ -353,6 +365,36 @@ class AppProcessProvider(Provider):
     ) -> ExperimentSchedulerStore:
         """Bind Task 9 scheduling to the approved durable experiment ports."""
         return ExperimentSchedulerStore(reader, writer)
+
+    @provide
+    def autonomous_campaign_coordinator(
+        self,
+        reader: CampaignReaderProtocol,
+        writer: CampaignWriterProtocol,
+        scheduler: CampaignTrialSchedulerPort,
+    ) -> AutonomousCampaignCoordinator:
+        """Wire Campaign state to Analysis facts and a host scheduler port."""
+        return AutonomousCampaignCoordinator(
+            reader=reader,
+            writer=writer,
+            scheduler=scheduler,
+        )
+
+    @provide
+    def campaign_trial_scheduler(
+        self,
+        store: ExperimentSchedulerStore,
+    ) -> CampaignTrialSchedulerPort:
+        """Reuse the durable R3 scheduler slot and lease-fence implementation."""
+        return ExistingExperimentCampaignScheduler(store=store)
+
+    @provide
+    def autonomous_campaign_command_port(
+        self,
+        coordinator: AutonomousCampaignCoordinator,
+    ) -> AutonomousCampaignCommandPort:
+        """Expose only the Agent-consumable candidate proposal command."""
+        return coordinator
 
     @provide
     def experiment_control_notifier(self) -> ExperimentControlNotifier:

@@ -1206,6 +1206,54 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "and reader ports and the adapter performs no direct storage I/O."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_contracts.py"
+        ),
+        owner="application governed Campaign contract boundary",
+        reason=(
+            "The immutable Campaign contracts bind analysis-owned campaign, metric, "
+            "lease, and statistical-trial values into the finite authorization and "
+            "scheduler ports consumed by the host coordinator; they perform no I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_support.py"
+        ),
+        owner="application governed Campaign persistence boundary",
+        reason=(
+            "The private support boundary reconstructs and validates exact "
+            "analysis-owned campaign, lineage, ledger, and lease facts through "
+            "injected reader and writer protocols; it owns no storage implementation."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "autonomous_campaign.py"
+        ),
+        owner="application governed Campaign coordinator",
+        reason=(
+            "The host-owned coordinator applies immutable authorization, finite "
+            "budgets, stopping, cancellation, and crash recovery over analysis-owned "
+            "campaign facts through narrow injected ports."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "campaign_scheduler.py"
+        ),
+        owner="application governed Campaign scheduler adapter",
+        reason=(
+            "The adapter maps Campaign trial and retry requests onto the existing "
+            "analysis-owned R3 fold matrix and lease fence through the established "
+            "application scheduler-store protocol."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (

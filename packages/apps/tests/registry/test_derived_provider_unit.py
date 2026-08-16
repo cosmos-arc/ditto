@@ -223,6 +223,10 @@ class TestStorageProviderWiring:
             "research_experiment_reader",
             "research_experiment_writer_port",
             "research_experiment_writer",
+            "research_campaign_reader",
+            "research_campaign_reader_port",
+            "research_campaign_writer",
+            "research_campaign_writer_port",
         }
         assert expected == provide_methods
 

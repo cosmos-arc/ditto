@@ -476,6 +476,22 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
             "packages/application/src/ditto_application/processes/experiments/"
             "_fold_selection_trace_artifacts.py"
         ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_contracts.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_support.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "autonomous_campaign.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "campaign_scheduler.py"
+        ),
     } == {allowance.path for allowance in allowances}
     assert not any(hasattr(allowance, "match") for allowance in allowances)
 
