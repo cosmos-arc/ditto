@@ -37,6 +37,7 @@ from ditto_apps.registry.agent.database_provider import (
 )
 from ditto_apps.registry.agent.provider import AgentRuntimeProvider
 from ditto_apps.registry.agent.runtime import PersistedAgentRuntime
+from ditto_apps.registry.agent.settings import AgentFeatureSettings
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
@@ -205,11 +206,9 @@ async def test_http_sse_honors_last_event_id_and_remains_read_only(
 
 @pytest.mark.asyncio
 async def test_default_http_runtime_returns_structured_unavailable() -> None:
-    container = make_async_container(AgentRuntimeProvider())
-    app = FastAPI()
-    setup_dishka(container=container, app=app)
-    app.include_router(router, prefix="/api/v1")
-    app.add_exception_handler(APIError, api_error_handler)
+    provider = AgentRuntimeProvider()
+    runtime = provider.runtime(AgentFeatureSettings.from_environment({}))
+    app, container = _http_app(runtime)
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://testserver"

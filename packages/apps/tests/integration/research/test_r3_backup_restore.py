@@ -125,6 +125,11 @@ from ditto_strategy.storage.sqlite.strategy_governance_store import (
 
 NOW = datetime(2026, 7, 28, 4, 0, tzinfo=UTC)
 NOW_US = int(NOW.timestamp() * 1_000_000)
+RESEARCH_USER_VERSION = 2
+RESEARCH_SCHEMA_ROW_COUNT = 95
+RESEARCH_SCHEMA_FINGERPRINT = (
+    "7b4a6d03f4ba879ca54fd47220b7d28728bcb58c87cdca3cdfe27a5466cd51e0"
+)
 EXPERIMENT_ID = ExperimentId("r3-backup-experiment")
 HOLDOUT_WINDOW = DateWindow(date(2026, 3, 1), date(2026, 3, 31))
 RESEARCH_CYCLE = ResearchCycleIdentity(
@@ -993,7 +998,7 @@ def test_r3_dry_run_reads_committed_research_wal_pins(tmp_path: Path) -> None:
 
     assert report.research.table_row_counts["gate_evaluation"] == 7
     assert report.pinned_artifacts[0].artifact_id == artifact_id
-    assert report.schemas.research.user_version == 1
+    assert report.schemas.research.user_version == RESEARCH_USER_VERSION
     live.close_all()
 
 
@@ -1025,8 +1030,13 @@ def _assert_manifest(
         "user_version": 0,
     }
     assert manifest["schemas"]["research"]["application_id"] == 1_146_376_755
-    assert manifest["schemas"]["research"]["user_version"] == 1
-    assert manifest["schemas"]["research"]["schema_row_count"] == 50
+    assert manifest["schemas"]["research"]["user_version"] == (RESEARCH_USER_VERSION)
+    assert manifest["schemas"]["research"]["schema_fingerprint"] == (
+        RESEARCH_SCHEMA_FINGERPRINT
+    )
+    assert manifest["schemas"]["research"]["schema_row_count"] == (
+        RESEARCH_SCHEMA_ROW_COUNT
+    )
     assert manifest["domain"]["active_strategies"][0]["strategy_id"] == (
         "stock-selection"
     )
