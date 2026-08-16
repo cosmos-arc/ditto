@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "suite": "sandbox_live",
+  "status": "not_run",
+  "approval_gate": "A3",
+  "approval_status": "pending_fail_closed",
+  "command": "pixi run -e dev pytest -m sandbox_live -q",
+  "exit_code": 5,
+  "observed_result": "no tests ran; the repository intentionally has no physical runner or live acceptance case before A3",
+  "missing_requirements": [
+    "approved_runtime_and_version",
+    "approved_image_repository_and_digest",
+    "approved_sbom_hash",
+    "approved_dependency_lock_and_exact_dependencies",
+    "approved_seccomp_profile_and_hash",
+    "approved_physical_command_runner",
+    "available_oci_or_gvisor_runtime"
+  ],
+  "fake_report_treated_as_live": false,
+  "physical_acceptance_claimed": false,
+  "resume_condition": "After exact A3 approval, Task 25 must add the physical runner, fixed build artifacts, and marked live attack acceptance before this status can become passed."
+}

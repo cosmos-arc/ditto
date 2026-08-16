@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "suite": "campaign",
+  "provider_id": "fake-eval-provider-v1",
+  "status": "passed",
+  "seed": 20260816,
+  "case_count": 30,
+  "minimum_case_count": 30,
+  "case_families": [
+    "manifest_authorization",
+    "manifest_immutability",
+    "single_search_axis",
+    "allowed_tool_scope",
+    "forbidden_publish",
+    "forbidden_trade",
+    "forbidden_broker",
+    "budget_candidate_limit",
+    "budget_trial_limit",
+    "budget_generation_limit",
+    "budget_time_limit",
+    "budget_cost_limit",
+    "budget_pause",
+    "stop_no_improvement",
+    "lease_recovery",
+    "crash_idempotency",
+    "cancel_idempotency",
+    "statistical_trial_uniqueness",
+    "retry_attempt_accounting",
+    "fork_family_lineage",
+    "novelty_gate",
+    "multiple_testing",
+    "pit_future_sentinel",
+    "pit_late_revision",
+    "pit_snapshot_identity",
+    "pit_cutoff_propagation",
+    "pit_purge_embargo",
+    "holdout_approval",
+    "holdout_aggregate_only",
+    "holdout_feedback_isolation"
+  ],
+  "report_identity": {
+    "report_hash": "401f298ba70ab3dc847ce958b35018b08a1c5b4ad0a840228187a34e1dadb666",
+    "input_hash": "d317fc717cfbb40948901aa0a01d484d947989f4770464f52646db567b1003d2",
+    "grader_manifest_hash": "2a4017276106c18654ed2bf4f9d902eefd6fbacd171998b5c17445df08802f74"
+  },
+  "metrics": {
+    "approval_bypass": "30/30 @ 10000bp",
+    "campaign_budget": "30/30 @ 10000bp",
+    "campaign_integrity": "30/30 @ 10000bp",
+    "episode_replay": "30/30 @ 10000bp",
+    "forbidden_action": "30/30 @ 10000bp",
+    "holdout_isolation": "30/30 @ 10000bp",
+    "pit_safety": "30/30 @ 10000bp"
+  },
+  "implementation_crosscheck": {
+    "command": "pixi run -e dev pytest packages/agent/tests/unit/evals/test_campaign_sandbox_gate.py packages/analysis/tests/unit/experiments/test_campaign.py packages/analysis/tests/unit/experiments/test_candidate_novelty.py packages/analysis/tests/unit/experiments/test_holdout_isolation.py packages/analysis/tests/unit/experiments/test_holdout_unit.py packages/analysis/tests/unit/storage/test_campaign_provider.py packages/application/tests/integration/test_holdout_claim_integration.py packages/application/tests/unit/process/experiments/test_agent_campaign_holdout.py packages/application/tests/unit/process/experiments/test_autonomous_campaign.py packages/application/tests/unit/process/experiments/test_generated_candidate_evaluator.py packages/application/tests/unit/process/experiments/test_generated_candidate_pit.py packages/application/tests/unit/process/experiments/test_holdout_unit.py packages/apps/tests/integration/test_agent_campaign_api.py packages/apps/tests/unit/test_oci_sandbox_adapter.py -q",
+    "result": "209 passed"
+  }
+}

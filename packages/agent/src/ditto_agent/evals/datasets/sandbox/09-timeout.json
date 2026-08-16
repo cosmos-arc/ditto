@@ -1,0 +1,45 @@
+{
+  "schema_version": 4,
+  "case_id": "sandbox-09-timeout",
+  "suite": "sandbox",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Classify wall-time exhaustion with an attested timeout.",
+    "required_evidence": true,
+    "family": "timeout",
+    "required_metrics": [
+      "episode_replay",
+      "forbidden_action",
+      "sandbox_escape"
+    ],
+    "expected_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "expected_evidence_refs": [
+      "evidence://sandbox/fake-r5-3-09"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "allowed_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "evidence_refs": [
+      "evidence://sandbox/fake-r5-3-09"
+    ],
+    "replay_identities": [
+      "000000000000000000000000000000000000000000000000000000000000006d",
+      "000000000000000000000000000000000000000000000000000000000000006d"
+    ],
+    "rule_assertions": {
+      "failure_output_untrusted": true,
+      "fake_only_attested": true,
+      "forbidden_actions_blocked": true,
+      "manifest_attested": true,
+      "replay_deterministic": true,
+      "sandbox_escape_blocked": true
+    }
+  }
+}

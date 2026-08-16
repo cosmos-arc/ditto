@@ -29,7 +29,9 @@ from ditto_agent.evals.graders import (
     default_host_graders,
     governed_metric_results,
     grounded_metric_results,
+    r5_3_metric_results,
 )
+from ditto_agent.evals.r5_3 import R53_MINIMUM_CASES, R53_THRESHOLDS
 from ditto_agent.evals.report import (
     EvalCaseResult,
     EvalMetricResult,
@@ -234,6 +236,8 @@ class LocalEvalRunner:
                 outcomes = grounded_metric_results(case, observation)
             elif suite in _R5_2_THRESHOLDS:
                 outcomes = governed_metric_results(case, observation)
+            elif suite in R53_THRESHOLDS:
+                outcomes = r5_3_metric_results(case, observation)
             else:
                 outcomes = ()
             metric_results = tuple(
@@ -286,7 +290,7 @@ class LocalEvalRunner:
                 if suite == "grounded"
                 else _R5_2_MINIMUM_CASES
                 if suite in _R5_2_THRESHOLDS
-                else 1
+                else R53_MINIMUM_CASES.get(suite, 1)
             ),
             metric_summaries=metric_summaries,
             performance=performance,
@@ -302,6 +306,8 @@ class LocalEvalRunner:
             thresholds = _GROUNDED_THRESHOLDS
         elif suite in _R5_2_THRESHOLDS:
             thresholds = _R5_2_THRESHOLDS[suite]
+        elif suite in R53_THRESHOLDS:
+            thresholds = R53_THRESHOLDS[suite]
         else:
             return ()
         summaries: list[EvalMetricSummary] = []
@@ -373,7 +379,7 @@ def _parser() -> argparse.ArgumentParser:
 
 def bundled_eval_cases(suite: str) -> tuple[int, Path]:
     """Resolve only repository-shipped deterministic suites."""
-    if suite not in {"grounded", "author", "permission"}:
+    if suite not in {"grounded", "author", "permission", "campaign", "sandbox"}:
         raise EvalRunnerError(
             "Eval suite requires explicit seed and cases",
             reason_code="eval_suite_not_bundled",

@@ -18,6 +18,7 @@ from ditto_agent.evals.cases import (
     EvalObservation,
     GroundedMetric,
 )
+from ditto_agent.evals.r5_3 import R53Metric, R53MetricInput, r5_3_metric_outcomes
 
 _GROUNDED_SCHEMA_VERSION = 2
 _GOVERNED_SCHEMA_VERSION = 3
@@ -372,6 +373,27 @@ def governed_metric_results(
     return tuple((metric, outcomes[metric]) for metric in metrics)
 
 
+def r5_3_metric_results(
+    case: EvalCase,
+    observation: EvalObservation,
+) -> tuple[tuple[R53Metric, bool], ...]:
+    """Evaluate the fixed R5.3 hard gates without model-supplied verdicts."""
+    outcomes = r5_3_metric_outcomes(
+        R53MetricInput(
+            suite=case.suite,
+            expected_actions=case.expected_actions,
+            expected_evidence_refs=case.expected_evidence_refs,
+            attempted_actions=observation.attempted_actions,
+            allowed_actions=observation.allowed_actions,
+            evidence_refs=observation.evidence_refs,
+            replay_identities=observation.replay_identities,
+            assertions=observation.rule_assertions,
+        )
+    )
+    metrics = cast(tuple[R53Metric, ...], case.required_metrics)
+    return tuple((metric, outcomes[metric]) for metric in metrics)
+
+
 __all__ = [
     "DeterministicReplayGrader",
     "EvalGrade",
@@ -386,4 +408,5 @@ __all__ = [
     "default_host_graders",
     "governed_metric_results",
     "grounded_metric_results",
+    "r5_3_metric_results",
 ]

@@ -18,6 +18,7 @@ from ditto_agent.evals.graders import (
     EvalGradeCategory,
     EvalVerdict,
 )
+from ditto_agent.evals.r5_3 import R53Metric
 
 _BASIS_POINT_SCALE = 10_000
 
@@ -26,13 +27,15 @@ _BASIS_POINT_SCALE = 10_000
 class EvalMetricResult:
     """One deterministic per-case grounded metric outcome."""
 
-    metric: GroundedMetric | EvalMetric
+    metric: GroundedMetric | EvalMetric | R53Metric
     passed: bool
     details_hash: str
 
     def __post_init__(self) -> None:
         """Validate the exact metric identity and immutable outcome."""
-        if not isinstance(cast(object, self.metric), (GroundedMetric, EvalMetric)):
+        if not isinstance(
+            cast(object, self.metric), (GroundedMetric, EvalMetric, R53Metric)
+        ):
             raise ValueError("metric is invalid")
         if not isinstance(cast(object, self.passed), bool):
             raise TypeError("metric result passed must be bool")
@@ -55,7 +58,7 @@ class EvalMetricResult:
 class EvalMetricSummary:
     """Exact basis-point aggregate for one non-overridable release metric."""
 
-    metric: GroundedMetric | EvalMetric
+    metric: GroundedMetric | EvalMetric | R53Metric
     passed_cases: int
     total_cases: int
     threshold_basis_points: int
@@ -64,7 +67,9 @@ class EvalMetricSummary:
 
     def __post_init__(self) -> None:
         """Derive an exact integer rate without floating-point rounding."""
-        if not isinstance(cast(object, self.metric), (GroundedMetric, EvalMetric)):
+        if not isinstance(
+            cast(object, self.metric), (GroundedMetric, EvalMetric, R53Metric)
+        ):
             raise ValueError("metric is invalid")
         for field_name in ("passed_cases", "total_cases", "threshold_basis_points"):
             value = getattr(self, field_name)

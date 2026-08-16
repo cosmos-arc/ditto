@@ -18,9 +18,17 @@ from ditto_agent.contracts._validation import (
     normalized_text,
     sha256_hex,
 )
+from ditto_agent.evals.r5_3 import (
+    CampaignCaseFamily,
+    R53Metric,
+    SandboxCaseFamily,
+    family_for_suite,
+    validate_r5_3_input,
+)
 
 _GROUNDED_SCHEMA_VERSION = 2
 _GOVERNED_SCHEMA_VERSION = 3
+_R5_3_SCHEMA_VERSION = 4
 _AUTHOR_ALLOWED_ACTIONS = frozenset(
     {
         "author_compile_expression",
@@ -249,7 +257,7 @@ class EvalCase:
 
     def __post_init__(self) -> None:
         """Validate versioned case fields and derive stable input/case hashes."""
-        if self.schema_version not in {1, 2, 3}:
+        if self.schema_version not in {1, 2, 3, 4}:
             raise ValueError("schema_version is not supported")
         object.__setattr__(
             self, "case_id", normalized_text(self.case_id, field="case_id")
@@ -274,6 +282,8 @@ class EvalCase:
             self._validate_grounded_input()
         elif self.schema_version == _GOVERNED_SCHEMA_VERSION:
             self._validate_governed_input()
+        elif self.schema_version == _R5_3_SCHEMA_VERSION:
+            self._validate_r5_3_input()
         object.__setattr__(self, "input_hash", canonical_sha256(self.input_identity()))
         object.__setattr__(self, "case_hash", canonical_sha256(self.identity_payload()))
 
@@ -351,6 +361,29 @@ class EvalCase:
         if not set(expected_actions).issubset(allowed_actions):
             raise ValueError("governed case expects an action outside the allowlist")
 
+    def _validate_r5_3_input(self) -> None:
+        expected_fields = {
+            "objective",
+            "required_evidence",
+            "family",
+            "required_metrics",
+            "expected_actions",
+            "expected_evidence_refs",
+        }
+        if set(self.input_payload) != expected_fields:
+            raise ValueError("R5.3 input_payload has an invalid field set")
+        _ = normalized_text(self.objective, field="objective", maximum=4096)
+        _ = self.r5_3_family
+        validate_r5_3_input(
+            suite=self.suite,
+            required_metrics=cast(tuple[R53Metric, ...], self.required_metrics),
+            expected_actions=self.expected_actions,
+            expected_evidence_refs=self.expected_evidence_refs,
+            allowed_actions=self.observation.allowed_actions,
+            rule_assertions=self.observation.rule_assertions,
+            requires_evidence=self.requires_evidence,
+        )
+
     @property
     def requires_evidence(self) -> bool:
         """Return the strictly decoded evidence requirement."""
@@ -390,7 +423,19 @@ class EvalCase:
             raise ValueError("input_payload.family is unsupported") from exc
 
     @property
-    def required_metrics(self) -> tuple[GroundedMetric | EvalMetric, ...]:
+    def r5_3_family(self) -> CampaignCaseFamily | SandboxCaseFamily:
+        """Return the suite-owned R5.3 Campaign or sandbox family."""
+        if self.schema_version != _R5_3_SCHEMA_VERSION:
+            raise ValueError("R5.3 family requires schema_version 4")
+        value = self.input_payload.get("family")
+        if not isinstance(value, str):
+            raise ValueError("input_payload.family must be text")
+        return family_for_suite(self.suite, value)
+
+    @property
+    def required_metrics(
+        self,
+    ) -> tuple[GroundedMetric | EvalMetric | R53Metric, ...]:
         """Return the fixed metric membership of a release case."""
         raw = cast(object, self.input_payload.get("required_metrics"))
         if not isinstance(raw, tuple):
@@ -401,7 +446,9 @@ class EvalCase:
         metrics = cast(tuple[str, ...], items)
         try:
             metric_type = (
-                EvalMetric
+                R53Metric
+                if self.schema_version == _R5_3_SCHEMA_VERSION
+                else EvalMetric
                 if self.schema_version == _GOVERNED_SCHEMA_VERSION
                 else GroundedMetric
             )
@@ -663,6 +710,7 @@ def load_eval_cases(directory: Path) -> tuple[EvalCase, ...]:
 
 __all__ = [
     "AuthorCaseFamily",
+    "CampaignCaseFamily",
     "EvalCase",
     "EvalCaseError",
     "EvalMetric",
@@ -670,6 +718,8 @@ __all__ = [
     "GroundedCaseFamily",
     "GroundedMetric",
     "PermissionCaseFamily",
+    "R53Metric",
+    "SandboxCaseFamily",
     "decode_eval_case",
     "load_eval_cases",
 ]

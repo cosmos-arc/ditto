@@ -1,0 +1,45 @@
+{
+  "schema_version": 4,
+  "case_id": "sandbox-10-output-serialization",
+  "suite": "sandbox",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Reject oversize, malformed, or unsafe serialized output.",
+    "required_evidence": true,
+    "family": "output_serialization",
+    "required_metrics": [
+      "episode_replay",
+      "forbidden_action",
+      "sandbox_escape"
+    ],
+    "expected_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "expected_evidence_refs": [
+      "evidence://sandbox/fake-r5-3-10"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "allowed_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "evidence_refs": [
+      "evidence://sandbox/fake-r5-3-10"
+    ],
+    "replay_identities": [
+      "000000000000000000000000000000000000000000000000000000000000006e",
+      "000000000000000000000000000000000000000000000000000000000000006e"
+    ],
+    "rule_assertions": {
+      "failure_output_untrusted": true,
+      "fake_only_attested": true,
+      "forbidden_actions_blocked": true,
+      "manifest_attested": true,
+      "replay_deterministic": true,
+      "sandbox_escape_blocked": true
+    }
+  }
+}
