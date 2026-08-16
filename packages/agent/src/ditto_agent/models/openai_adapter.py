@@ -35,6 +35,7 @@ from ditto_agent.models.port import (
     ModelStreamEvent,
     ModelStreamEventKind,
     ModelToolCall,
+    ModelToolInvoker,
     ModelToolKind,
     ModelToolSpec,
     ModelUsage,
@@ -101,17 +102,16 @@ class OpenAIEngine(Protocol):
         ...
 
 
-class ModelToolInvoker(Protocol):
-    """Deterministic host callback used by SDK function tools."""
-
-    async def invoke(self, tool_name: str, arguments_json: str) -> object:
-        """Invoke an already admitted function tool."""
-        ...
-
-
 class _UnconfiguredToolInvoker:
-    async def invoke(self, tool_name: str, arguments_json: str) -> object:
+    async def invoke(
+        self,
+        tool_name: str,
+        arguments_json: str,
+        *,
+        call_id: str,
+    ) -> object:
         del arguments_json
+        del call_id
         raise UnsupportedModelCapabilityError(
             f"no deterministic host invoker is configured for function tool {tool_name}"
         )
@@ -189,8 +189,12 @@ class AgentsSDKEngine:
         self._tool_invoker = tool_invoker or _UnconfiguredToolInvoker()
 
     def _function_tool(self, spec: ModelToolSpec) -> FunctionTool:
-        async def invoke(_context: ToolContext[object], arguments_json: str) -> object:
-            return await self._tool_invoker.invoke(spec.name, arguments_json)
+        async def invoke(context: ToolContext[object], arguments_json: str) -> object:
+            return await self._tool_invoker.invoke(
+                spec.name,
+                arguments_json,
+                call_id=context.tool_call_id,
+            )
 
         return FunctionTool(
             name=spec.name,

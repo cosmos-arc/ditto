@@ -334,6 +334,20 @@ class AgentModelPort(Protocol):
         ...
 
 
+class ModelToolInvoker(Protocol):
+    """Deterministic host callback used by provider function tools."""
+
+    async def invoke(
+        self,
+        tool_name: str,
+        arguments_json: str,
+        *,
+        call_id: str,
+    ) -> object:
+        """Invoke one already admitted function tool identity."""
+        ...
+
+
 __all__ = [
     "AgentModelPort",
     "ApprovalDecision",
@@ -346,6 +360,7 @@ __all__ = [
     "ModelStreamEvent",
     "ModelStreamEventKind",
     "ModelToolCall",
+    "ModelToolInvoker",
     "ModelToolKind",
     "ModelToolSpec",
     "ModelUsage",

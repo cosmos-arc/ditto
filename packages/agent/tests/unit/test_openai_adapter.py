@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 import pytest
+from agents.tool_context import ToolContext
 from ditto_agent.models.openai_adapter import (
+    AgentsSDKEngine,
     OpenAIAgentsModel,
     OpenAIInvocation,
 )
@@ -73,6 +75,47 @@ class RecordingEngine:
     async def resume(self, invocation: OpenAIInvocation) -> ModelResult:
         self.invocations.append(invocation)
         return _result()
+
+
+class RecordingToolInvoker:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+
+    async def invoke(
+        self,
+        tool_name: str,
+        arguments_json: str,
+        *,
+        call_id: str,
+    ) -> object:
+        self.calls.append((tool_name, arguments_json, call_id))
+        return {"status": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_sdk_function_tool_preserves_provider_call_id_for_host_audit() -> None:
+    invoker = RecordingToolInvoker()
+    sdk_tool = AgentsSDKEngine(tool_invoker=invoker)._function_tool(_request().tools[0])
+    context = ToolContext(
+        context={},
+        tool_name=sdk_tool.name,
+        tool_call_id="call-provider-001",
+        tool_arguments='{"experiment_id":"experiment-001"}',
+    )
+
+    result = await sdk_tool.on_invoke_tool(
+        context,
+        '{"experiment_id":"experiment-001"}',
+    )
+
+    assert result == {"status": "ok"}
+    assert invoker.calls == [
+        (
+            "experiment_summary",
+            '{"experiment_id":"experiment-001"}',
+            "call-provider-001",
+        )
+    ]
 
 
 @pytest.mark.asyncio
