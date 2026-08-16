@@ -60,7 +60,7 @@
 
 | Artifact | Version | SHA-256/fingerprint | 状态 |
 |---|---:|---|---|
-| Agent `schema_v1.sql` | 1 | Task 7 尚未生成；生成后先更新此行，再用于非临时数据库 | PENDING ARTIFACT |
+| Agent `schema_v1.sql` | 1 | DDL SHA-256 `b929ba78672f7c3eab83f502fdfad9e522d367b46021d7163aa3227078a5dc99`；SQLite catalog fingerprint `c88a91fe672be70ab679435da07ae989d07160d3a5ffce3186c9fcd51e495bdb`；17 个 catalog objects；实现 commit `be530cb5` | VERIFIED 2026-08-16T03:20:12Z |
 | Research migration/schema | 2 | Task 22 尚未生成；生成后先更新此行，再用于非临时数据库 | PENDING ARTIFACT |
 
 `PENDING ARTIFACT` 不阻塞在临时 fixture 上按已批准 scope 编写并测试 schema；它阻塞任何非临时数据库应用。
@@ -107,4 +107,4 @@
 3. A3/A4 为空的精确版本/hash/项目/数据/预算字段以 `PENDING` 明示，因此对应 live Task 保持阻塞；不能用 Fake GREEN 冒充 live acceptance。
 4. 任何批准扩展都作为本文件独立 evidence commit，记录 approver、UTC time、canonical scope、scope/artifact hashes、限制和撤销条件。
 
-下一恢复入口：Task 4。A3 在 Task 25 live acceptance 前暂停，A4 在首次 live model call 前暂停。
+下一恢复入口：Task 8。Agent v1 DDL artifact 已冻结；Research v2 artifact 仍待 Task 22。A3 在 Task 25 live acceptance 前暂停，A4 在首次 live model call 前暂停。
