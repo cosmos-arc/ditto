@@ -10,9 +10,14 @@ from threading import Lock
 from typing import cast
 
 from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_backup import (
+    SQLiteBackupError,
+    backup_database,
+)
 
 from ditto_analysis.errors import (
     ExperimentDatabaseClosedError,
+    ExperimentPersistenceError,
     ExperimentSchemaError,
 )
 from ditto_analysis.storage.sqlite.experiments import schema
@@ -105,7 +110,7 @@ class ResearchExperimentDatabase:
             raise
 
     def initialize(self) -> None:
-        """Create or verify the exact approved schema while holding a write lock."""
+        """Create, migrate, or verify the approved schema under a write lock."""
         with _INITIALIZE_LOCK:
             self._initialize_locked()
 
@@ -121,22 +126,27 @@ class ResearchExperimentDatabase:
             rows = schema.schema_rows(connection)
 
             if application_id == 0 and user_version == 0 and not rows:
-                sql = schema.load_schema_sql()
-                statements = schema.iter_schema_statements(sql)
-                application_marker = f"PRAGMA application_id = {schema.APPLICATION_ID};"
-                version_marker = f"PRAGMA user_version = {schema.USER_VERSION};"
-                if (
-                    len(statements) < _MARKER_COUNT
-                    or not statements[-2].endswith(application_marker)
-                    or statements[-1] != version_marker
-                ):
+                statements = schema.schema_body_statements(schema.load_v1_schema_sql())
+                if len(statements) < _MARKER_COUNT:
                     raise _schema_error(
-                        "approved schema markers are absent or not last",
+                        "approved base schema is unexpectedly empty",
                         "research_schema_marker_order_invalid",
                     )
-                for statement in statements[:-2]:
+                for statement in statements:
                     connection.execute(statement)
+                self._apply_v2_migration(connection)
                 connection.execute(f"PRAGMA application_id={schema.APPLICATION_ID}")
+                connection.execute(f"PRAGMA user_version={schema.USER_VERSION}")
+                self._verify_current_schema(connection)
+                connection.commit()
+                return
+
+            if (
+                application_id == schema.APPLICATION_ID
+                and user_version == schema.V1_USER_VERSION
+            ):
+                self._verify_v1_schema(connection)
+                self._apply_v2_migration(connection)
                 connection.execute(f"PRAGMA user_version={schema.USER_VERSION}")
                 self._verify_current_schema(connection)
                 connection.commit()
@@ -166,6 +176,21 @@ class ResearchExperimentDatabase:
             raise
 
     @staticmethod
+    def _apply_v2_migration(connection: sqlite3.Connection) -> None:
+        try:
+            statements = schema.migration_body_statements(schema.load_migration_sql())
+            for statement in statements:
+                connection.execute(statement)
+        except ExperimentSchemaError:
+            raise
+        except sqlite3.Error as exc:
+            raise _schema_error(
+                "research schema migration failed and was rolled back",
+                "research_schema_migration_failed",
+                sqlite_error=type(exc).__name__,
+            ) from exc
+
+    @staticmethod
     def _marker_error(
         application_id: int,
         user_version: int,
@@ -188,6 +213,23 @@ class ResearchExperimentDatabase:
             application_id=application_id,
             user_version=user_version,
         )
+
+    @staticmethod
+    def _verify_v1_schema(connection: sqlite3.Connection) -> None:
+        rows = schema.schema_rows(connection)
+        fingerprint = schema.schema_fingerprint(rows)
+        if (
+            len(rows) != schema.V1_SCHEMA_ROW_COUNT
+            or fingerprint != schema.V1_SCHEMA_FINGERPRINT
+        ):
+            raise _schema_error(
+                "research database v1 markers are valid but schema has drifted",
+                "research_schema_v1_drift",
+                expected_fingerprint=schema.V1_SCHEMA_FINGERPRINT,
+                actual_fingerprint=fingerprint,
+                expected_rows=schema.V1_SCHEMA_ROW_COUNT,
+                actual_rows=len(rows),
+            )
 
     @staticmethod
     def _verify_current_schema(connection: sqlite3.Connection) -> None:
@@ -215,6 +257,57 @@ class ResearchExperimentDatabase:
                 "research schema markers changed during verification",
                 "research_schema_invalid_marker_combination",
             )
+
+    @staticmethod
+    def _verify_database_integrity(connection: sqlite3.Connection) -> None:
+        integrity_rows = tuple(
+            str(row[0]) for row in connection.execute("PRAGMA integrity_check")
+        )
+        if integrity_rows != ("ok",):
+            raise _schema_error(
+                "research database failed SQLite integrity verification",
+                "research_database_integrity_failed",
+                integrity_results=integrity_rows,
+            )
+        foreign_key_rows = tuple(
+            tuple(row) for row in connection.execute("PRAGMA foreign_key_check")
+        )
+        if foreign_key_rows:
+            raise _schema_error(
+                "research database contains broken foreign-key references",
+                "research_database_foreign_key_violation",
+                violation_count=len(foreign_key_rows),
+            )
+
+    def backup_to(self, destination: Path) -> Path:
+        """Create one verified, non-overwriting online backup of schema v2."""
+        if not isinstance(cast("object", destination), Path):
+            raise TypeError("destination must be pathlib.Path")
+        if destination.resolve(strict=False) == self._path.resolve(strict=False):
+            raise ValueError("backup destination must differ from the live database")
+        if destination.exists():
+            raise FileExistsError(destination)
+        source = self.get_connection()
+        self._verify_current_schema(source)
+        self._verify_database_integrity(source)
+        try:
+            backup_database(self._path, destination)
+        except SQLiteBackupError as exc:
+            raise ExperimentPersistenceError(
+                "research database backup failed",
+                details={"reason_code": "research_database_backup_failed"},
+            ) from exc
+        try:
+            with sqlite3.connect(destination) as verified:
+                self._verify_current_schema(verified)
+                self._verify_database_integrity(verified)
+        except BaseException:
+            for suffix in ("", "-wal", "-shm", "-journal"):
+                destination.with_name(f"{destination.name}{suffix}").unlink(
+                    missing_ok=True
+                )
+            raise
+        return destination
 
     def close_all(self) -> None:
         """Permanently close every thread connection and forbid resurrection."""
