@@ -2,39 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.daily_decision_v3 import DailyDecisionV3QueryFacade
 from ditto_application.queries.evidence_contracts import (
+    DecisionEvidenceReadModel,
     EvidenceArtifactReference,
     EvidencePayloadReadModel,
     EvidenceTemporalContext,
 )
 
-__all__ = [
-    "DecisionEvidenceQueryFacade",
-    "DecisionEvidenceReadModel",
-    "EvidenceTemporalContext",
-]
-
-
-@dataclass(frozen=True, slots=True)
-class DecisionEvidenceReadModel:
-    """One exact, ready V3 portfolio/risk evidence projection."""
-
-    strategy_id: str
-    strategy_version: str
-    trade_date: str
-    account_id: str
-    sleeve_id: str
-    readiness: Literal["ready", "review"]
-    temporal_context: EvidenceTemporalContext
-    payload: EvidencePayloadReadModel
-    artifact_refs: tuple[EvidenceArtifactReference, ...]
-    lineage: tuple[str, ...]
+__all__ = ["DecisionEvidenceQueryFacade"]
 
 
 def _error(code: str, reason: str, **details: object) -> AppQueryError:

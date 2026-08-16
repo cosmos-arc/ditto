@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from enum import StrEnum
+from dataclasses import replace
 from typing import cast
 
 import orjson
@@ -18,6 +17,9 @@ from ditto_application.queries.evidence_contracts import (
     EvidenceArtifactReference,
     EvidencePayloadReadModel,
     EvidenceTemporalContext,
+    FactorEvidenceQuery,
+    ResearchEvidenceKind,
+    ResearchEvidenceReadModel,
 )
 from ditto_application.queries.experiments import (
     ExperimentArtifactReadModel,
@@ -27,53 +29,11 @@ from ditto_application.queries.experiments import (
 from ditto_application.queries.strategy import StrategyQueryFacade
 
 __all__ = [
-    "EvidenceTemporalContext",
-    "FactorEvidenceQuery",
-    "ResearchEvidenceKind",
     "ResearchEvidenceQueryFacade",
-    "ResearchEvidenceReadModel",
 ]
 
 _MAX_EXPERIMENT_RECORDS = 1_000
 _SHA256_HEX_LENGTH = 64
-
-
-class ResearchEvidenceKind(StrEnum):
-    """Closed set of read-only research evidence capabilities."""
-
-    EXPERIMENT = "experiment"
-    FACTOR = "factor"
-    STRATEGY = "strategy"
-    BACKTEST = "backtest"
-
-
-@dataclass(frozen=True, slots=True)
-class FactorEvidenceQuery:
-    """Exact factor evaluation identity without any latest-version fallback."""
-
-    factor_id: str
-    factor_version: int
-    dataset_id: str
-    catalog_snapshot_id: str
-    universe: str
-    start: str | None = None
-    end: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class ResearchEvidenceReadModel:
-    """One application-owned evidence result with explicit PIT provenance."""
-
-    kind: ResearchEvidenceKind
-    subject_id: str
-    subject_version: str
-    strategy_id: str | None
-    strategy_version: str | None
-    dataset_id: str | None
-    temporal_context: EvidenceTemporalContext
-    payload: EvidencePayloadReadModel
-    artifact_refs: tuple[EvidenceArtifactReference, ...]
-    lineage: tuple[str, ...]
 
 
 def _error(code: str, reason: str, **details: object) -> AppQueryError:

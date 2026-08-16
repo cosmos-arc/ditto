@@ -20,10 +20,8 @@ from ditto_application.queries.daily_decision_v3 import (
     StressTestSection,
     TailRiskSection,
 )
-from ditto_application.queries.decision_evidence import (
-    DecisionEvidenceQueryFacade,
-    EvidenceTemporalContext,
-)
+from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
+from ditto_application.queries.evidence_contracts import EvidenceTemporalContext
 
 
 def _context() -> EvidenceTemporalContext:

@@ -13,6 +13,11 @@ from ditto_application.exceptions import AppQueryError
 from ditto_application.providers_strategy import AppStrategyQueryProvider
 from ditto_application.queries.backtest import BacktestQueryFacade, RunSummary
 from ditto_application.queries.evaluation import FactorEvaluationFacade
+from ditto_application.queries.evidence_contracts import (
+    EvidenceTemporalContext,
+    FactorEvidenceQuery,
+    ResearchEvidenceKind,
+)
 from ditto_application.queries.experiments import (
     ExperimentArtifactReadModel,
     ExperimentCandidateReadModel,
@@ -21,12 +26,7 @@ from ditto_application.queries.experiments import (
     ExperimentGateReadModel,
     ExperimentQueryFacade,
 )
-from ditto_application.queries.research_evidence import (
-    EvidenceTemporalContext,
-    FactorEvidenceQuery,
-    ResearchEvidenceKind,
-    ResearchEvidenceQueryFacade,
-)
+from ditto_application.queries.research_evidence import ResearchEvidenceQueryFacade
 from ditto_application.queries.strategy import StrategyQueryFacade
 
 _NOW = datetime(2026, 8, 16, 8, tzinfo=UTC)

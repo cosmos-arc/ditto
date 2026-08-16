@@ -6,20 +6,26 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, fields, is_dataclass
 from datetime import UTC, date, datetime, timedelta
-from enum import Enum
+from enum import Enum, StrEnum
 from hashlib import sha256
 from types import MappingProxyType
-from typing import cast
+from typing import Literal, Protocol, cast
 
 import orjson
 
 from ditto_application.exceptions import AppQueryError
 
 __all__ = [
+    "DecisionEvidenceQueryPort",
+    "DecisionEvidenceReadModel",
     "EvidenceArtifactReference",
     "EvidencePayloadReadModel",
     "EvidenceTemporalContext",
     "EvidenceValue",
+    "FactorEvidenceQuery",
+    "ResearchEvidenceKind",
+    "ResearchEvidenceQueryPort",
+    "ResearchEvidenceReadModel",
 ]
 
 type EvidenceScalar = str | bool | int | float | None
@@ -181,6 +187,124 @@ class EvidencePayloadReadModel:
             value=cast("Mapping[str, EvidenceValue]", normalized),
             payload_hash=digest,
         )
+
+
+class ResearchEvidenceKind(StrEnum):
+    """Closed set of read-only research evidence capabilities."""
+
+    EXPERIMENT = "experiment"
+    FACTOR = "factor"
+    STRATEGY = "strategy"
+    BACKTEST = "backtest"
+
+
+@dataclass(frozen=True, slots=True)
+class FactorEvidenceQuery:
+    """Exact factor evaluation identity without any latest-version fallback."""
+
+    factor_id: str
+    factor_version: int
+    dataset_id: str
+    catalog_snapshot_id: str
+    universe: str
+    start: str | None = None
+    end: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchEvidenceReadModel:
+    """One application-owned evidence result with explicit PIT provenance."""
+
+    kind: ResearchEvidenceKind
+    subject_id: str
+    subject_version: str
+    strategy_id: str | None
+    strategy_version: str | None
+    dataset_id: str | None
+    temporal_context: EvidenceTemporalContext
+    payload: EvidencePayloadReadModel
+    artifact_refs: tuple[EvidenceArtifactReference, ...]
+    lineage: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class DecisionEvidenceReadModel:
+    """One exact, ready V3 portfolio/risk evidence projection."""
+
+    strategy_id: str
+    strategy_version: str
+    trade_date: str
+    account_id: str
+    sleeve_id: str
+    readiness: Literal["ready", "review"]
+    temporal_context: EvidenceTemporalContext
+    payload: EvidencePayloadReadModel
+    artifact_refs: tuple[EvidenceArtifactReference, ...]
+    lineage: tuple[str, ...]
+
+
+class ResearchEvidenceQueryPort(Protocol):
+    """Pure read contract implemented by the application research facade."""
+
+    def get_experiment_evidence(
+        self,
+        *,
+        experiment_id: str,
+        context: EvidenceTemporalContext,
+        candidate_id: str | None = None,
+        fold_id: str | None = None,
+    ) -> ResearchEvidenceReadModel:
+        """Read one exact experiment scope."""
+        ...
+
+    def get_factor_evidence(
+        self,
+        *,
+        query: FactorEvidenceQuery,
+        context: EvidenceTemporalContext,
+    ) -> ResearchEvidenceReadModel:
+        """Read one exact factor evaluation."""
+        ...
+
+    def get_strategy_evidence(
+        self,
+        *,
+        strategy_id: str,
+        version: int,
+        context: EvidenceTemporalContext,
+    ) -> ResearchEvidenceReadModel:
+        """Read one exact strategy version."""
+        ...
+
+    def get_backtest_evidence(
+        self,
+        *,
+        run_id: str,
+        strategy_id: str,
+        strategy_version: str,
+        dataset_id: str,
+        context: EvidenceTemporalContext,
+        include_replay_proof: bool = False,
+    ) -> ResearchEvidenceReadModel:
+        """Read one exact completed backtest."""
+        ...
+
+
+class DecisionEvidenceQueryPort(Protocol):
+    """Pure read contract implemented by the application decision facade."""
+
+    def get_evidence(
+        self,
+        *,
+        strategy_id: str,
+        strategy_version: str,
+        trade_date: str,
+        account_id: str,
+        sleeve_id: str,
+        context: EvidenceTemporalContext,
+    ) -> DecisionEvidenceReadModel:
+        """Read one exact DailyDecision V3 projection."""
+        ...
 
 
 def _normalize_value(value: object, *, field_name: str) -> EvidenceValue:
