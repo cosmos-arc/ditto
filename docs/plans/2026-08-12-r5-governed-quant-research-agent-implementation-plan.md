@@ -2,7 +2,7 @@
 
 **日期：** 2026-08-12
 **状态：** 进行中
-**恢复点：** Wave 1 / Task 6，`AgentModelPort`、Fake provider 与 OpenAI adapter
+**恢复点：** Wave 1 / Task 7，Agent SQLite、幂等、lease 与 hash-chain audit
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -169,7 +169,7 @@ pixi run -e dev check
 
 **依赖：** Task 5；真实调用另依赖 Approval A4
 **风险：** 行为/第三方 adapter
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `ditto_agent.models.{port,fake,openai_adapter}`、`ditto_apps.registry.agent.model_provider`。
 - **RED/观察证据：** 先以 shared contract suite 证明 Fake 与 adapter 未实现 typed response、usage、interruptions 和 continuation state。
@@ -904,8 +904,8 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试。
-- **下一步：** Wave 1 / Task 6，先以 shared provider contract 写出 `AgentModelPort`、Fake provider、OpenAI adapter 与 apps registry wiring 的 RED；A4 未获批，因此只允许注入式、零网络 adapter 测试。
+- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射。
+- **下一步：** Wave 1 / Task 7，先针对未标记/未知版本/损坏 Agent SQLite、事务回滚、幂等冲突、lease 丢失、hash-chain 篡改和 close 后访问写 RED；只在 A2 scoped authorization 允许的临时数据库上实现与验证。
 - **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的最终 DDL artifact hashes 在 Tasks 7/22 生成后追加，非临时 DB 应用前必须存在。
-- **最新命令与结果：** Task 5 RED 为 3 个 collection error（核心合同模块不存在）；聚焦 GREEN 为 32 passed。首次仓库门禁分别发现并促使移除非 Typer `PLR0913` 豁免、打破 contracts/runtime 包内环；最终 `pixi run -e dev check` 为 lint/fmt/type 通过、12,339 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed；`git diff --cached --check` 通过。
+- **最新命令与结果：** Task 6 初始 RED 为 3 个 collection error（model/provider 模块不存在）；首轮 GREEN 暴露并修复流式 delta 尾随空格被错误拒绝，首轮全库门禁又暴露第 13 包及 `agents` distribution 的 metadata 映射缺口。最终 shared provider suite 为 21 passed；`pixi run -e dev arch-check` 为 43 kept / 0 broken 且 architecture smells 通过；`pixi run -e dev check` 为 lint/fmt/type 通过、12,360 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed；`git diff --cached --check` 通过。A4 未使用，测试未发网络请求。
 - **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 只阻塞 Task 25 live acceptance，A4 只阻塞任何 live model 调用；Fake provider 工作可继续。
