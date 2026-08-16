@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import typer
 
+from ditto_apps.cli.commands.agent import app as agent_app
 from ditto_apps.cli.commands.backfill import app as backfill_app
 from ditto_apps.cli.commands.data_products import app as data_products_app
 from ditto_apps.cli.commands.experiments import app as experiments_app
@@ -31,6 +32,7 @@ app.add_typer(query_app, name="query")
 app.add_typer(research_app, name="research")
 app.add_typer(strategy_app, name="strategy")
 app.add_typer(ops_app, name="ops")
+app.add_typer(agent_app, name="agent")
 
 
 @app.callback()
