@@ -16,10 +16,15 @@ from ditto_analysis.experiments.campaign import (
     ResearchCandidateSpec,
     SearchAxis,
 )
+from ditto_analysis.experiments.campaign_persistence import (
+    CampaignEventRecord,
+    CandidateLineageRecord,
+)
+from ditto_analysis.experiments.candidate_novelty import CandidateNoveltyEvidence
 from ditto_analysis.experiments.metric_schema import ResearchMetricId
 from ditto_analysis.experiments.models import ContentHash, ExperimentId
 from ditto_analysis.experiments.persistence import LeaseFence, canonical_payload
-from ditto_analysis.experiments.search_ledger import StatisticalTrial
+from ditto_analysis.experiments.search_ledger import SearchLedger, StatisticalTrial
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.mutation_idempotency import canonical_request_hash
@@ -361,6 +366,7 @@ class CampaignEvaluationObservation:
     result: EvaluationResult
     primary_metric_value: float
     generation_complete: bool
+    novelty_evidence: CandidateNoveltyEvidence
 
     def __post_init__(self) -> None:
         """Reject model-like, non-finite, or partial observations."""
@@ -386,6 +392,15 @@ class CampaignEvaluationObservation:
                 "generation_complete must be bool",
                 code="CAMPAIGN_EVALUATION_INVALID",
                 reason="campaign_evaluation_invalid",
+            )
+        if (
+            type(self.novelty_evidence) is not CandidateNoveltyEvidence
+            or not self.novelty_evidence.verify_integrity()
+        ):
+            raise campaign_error(
+                "novelty_evidence must be trusted and intact",
+                code="CAMPAIGN_EVALUATION_INVALID",
+                reason="campaign_novelty_evidence_invalid",
             )
 
 
@@ -418,3 +433,87 @@ class CampaignManifestView:
     temporary_storage_limit_bytes: int
     model_spend_limit_usd_micros: int
     allowed_tools: tuple[str, ...]
+
+
+def require_novel_parent(
+    parent_candidate_id: str,
+    events: Sequence[CampaignEventRecord],
+) -> None:
+    """Accept a non-baseline parent only after one trusted novelty event."""
+    parent_is_novel = any(
+        detail.get("candidate_id") == parent_candidate_id
+        and detail.get("novelty_accepted") is True
+        for detail in (
+            decode_campaign_detail(event.detail_payload)
+            for event in events
+            if event.event_type == "candidate_evaluated"
+        )
+    )
+    if not parent_is_novel:
+        raise campaign_error(
+            "candidate parent lacks accepted novelty evidence",
+            code="CAMPAIGN_LINEAGE_INVALID",
+            reason="campaign_parent_not_novel",
+        )
+
+
+def require_novelty_replay(
+    event: CampaignEventRecord,
+    evidence: CandidateNoveltyEvidence,
+) -> None:
+    """Reject an event replay that substitutes different novelty evidence."""
+    detail = decode_campaign_detail(event.detail_payload)
+    if detail.get("novelty_evidence_hash") != str(evidence.evidence_hash):
+        raise campaign_error(
+            "evaluation replay changed candidate novelty evidence",
+            code="CAMPAIGN_EVALUATION_INVALID",
+            reason="campaign_novelty_evidence_drift",
+        )
+
+
+def evaluation_identity_matches(
+    candidate_record: CandidateLineageRecord | None,
+    observation: CampaignEvaluationObservation,
+    view: CampaignManifestView,
+    search_ledger: SearchLedger | None,
+) -> bool:
+    """Bind host evaluation and novelty evidence to one registered trial."""
+    if candidate_record is None:
+        return False
+    result = observation.result
+    trial_is_registered = candidate_record.generation == 0 or (
+        search_ledger is not None
+        and any(
+            trial.logical_trial.candidate_id == result.candidate_id
+            and trial.candidate_hash == result.candidate_hash
+            and trial.validation_protocol_hash == result.validation_protocol_hash
+            and trial.lineage_root == view.lineage_root
+            for trial in search_ledger.statistical_trials
+        )
+    )
+    return (
+        trial_is_registered
+        and result.candidate_hash == candidate_record.candidate.candidate_hash
+        and result.validation_protocol_hash == view.validation_protocol_hash
+        and observation.novelty_evidence.candidate_hash == result.candidate_hash
+        and observation.novelty_evidence.validation_protocol_hash
+        == view.validation_protocol_hash
+        and observation.novelty_evidence.lineage_root == view.lineage_root
+    )
+
+
+def candidate_novelty_event_detail(
+    evidence: CandidateNoveltyEvidence,
+) -> dict[str, object]:
+    """Project integrity-bound novelty without exposing output observations."""
+    return {
+        "novelty_accepted": evidence.accepted,
+        "novelty_reason": evidence.reason,
+        "novelty_evidence_hash": str(evidence.evidence_hash),
+        "candidate_profile_hash": str(evidence.candidate_profile_hash),
+        "canonical_ast_hash": str(evidence.canonical_ast_hash),
+        "compared_candidate_hashes": [
+            str(item) for item in evidence.compared_candidate_hashes
+        ],
+        "max_abs_output_correlation": evidence.max_abs_output_correlation,
+    }

@@ -46,9 +46,13 @@ from ditto_application.processes.experiments._autonomous_campaign_contracts impo
     campaign_error,
     campaign_event_id,
     campaign_tool_is_forbidden,
+    candidate_novelty_event_detail,
     datetime_from_epoch_us,
     decode_campaign_detail,
+    evaluation_identity_matches,
     require_content_hash,
+    require_novel_parent,
+    require_novelty_replay,
     require_text,
     require_utc,
 )
@@ -247,6 +251,11 @@ class AutonomousCampaignCoordinator(AutonomousCampaignSupport):
                 "candidate parent is absent",
                 code="CAMPAIGN_LINEAGE_INVALID",
                 reason="campaign_parent_not_found",
+            )
+        if parent.generation > 0:
+            require_novel_parent(
+                command.parent_candidate_id,
+                self._reader.list_campaign_events(campaign_id),
             )
         candidate_id = CandidateId(
             "candidate-"
@@ -631,12 +640,11 @@ class AutonomousCampaignCoordinator(AutonomousCampaignSupport):
             ),
             None,
         )
-        if (
-            candidate_record is None
-            or observation.result.candidate_hash
-            != candidate_record.candidate.candidate_hash
-            or observation.result.validation_protocol_hash
-            != view.validation_protocol_hash
+        if candidate_record is None or not evaluation_identity_matches(
+            candidate_record,
+            observation,
+            view,
+            self._reader.get_search_ledger(campaign_id),
         ):
             raise campaign_error(
                 "evaluation does not match the immutable candidate protocol",
@@ -647,14 +655,21 @@ class AutonomousCampaignCoordinator(AutonomousCampaignSupport):
             "candidate_id": str(observation.result.candidate_id),
             "metrics_artifact_hash": str(observation.result.metrics_artifact_hash),
         }
-        event_id = campaign_event_id("candidate-evaluated", event_identity)
-        if self._find_event(campaign_id, event_id) is not None:
+        event_id = campaign_event_id(
+            "candidate-evaluated",
+            {"campaign_id": str(campaign_id), **event_identity},
+        )
+        existing_event = self._find_event(campaign_id, event_id)
+        if existing_event is not None:
+            require_novelty_replay(existing_event, observation.novelty_evidence)
             return self.get_state(campaign_id)
         previous = self.get_state(campaign_id).best_primary_metric_value
-        improved = observation.result.constraints_passed and self._improved(
-            view.primary_metric_id,
-            observation.primary_metric_value,
-            previous,
+        effective_constraints_passed = (
+            observation.result.constraints_passed
+            and observation.novelty_evidence.accepted
+        )
+        improved = effective_constraints_passed and self._improved(
+            view.primary_metric_id, observation.primary_metric_value, previous
         )
         self._append_event(
             campaign_id,
@@ -665,7 +680,9 @@ class AutonomousCampaignCoordinator(AutonomousCampaignSupport):
                 "candidate_hash": str(observation.result.candidate_hash),
                 "generation": candidate_record.generation,
                 "primary_metric_value": observation.primary_metric_value,
-                "constraints_passed": observation.result.constraints_passed,
+                "constraints_passed": effective_constraints_passed,
+                "host_constraints_passed": observation.result.constraints_passed,
+                **candidate_novelty_event_detail(observation.novelty_evidence),
                 "generation_complete": observation.generation_complete,
                 "improved": improved,
             },

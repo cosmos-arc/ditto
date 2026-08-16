@@ -20,7 +20,13 @@ from ditto_analysis.experiments.campaign import (
 )
 from ditto_analysis.experiments.campaign_persistence import (
     CampaignEventRecord,
+    CampaignReaderProtocol,
     CampaignWriterProtocol,
+)
+from ditto_analysis.experiments.candidate_novelty import (
+    CandidateNoveltyPolicy,
+    CandidateOutputProfile,
+    evaluate_candidate_novelty,
 )
 from ditto_analysis.experiments.generated_code import SandboxResourceLimits
 from ditto_analysis.experiments.metric_schema import ResearchMetricId
@@ -52,6 +58,9 @@ from ditto_application.agent_campaign_contracts import (
     CampaignCandidateProposalCommand,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments._autonomous_campaign_contracts import (
+    decode_campaign_detail,
+)
 from ditto_application.processes.experiments.autonomous_campaign import (
     AutonomousCampaignCoordinator,
     CampaignAuthorizationProof,
@@ -292,6 +301,17 @@ class _CrashAfterRetryWriter:
         self._delegate.append_campaign_event(record)
 
 
+class _MissingSearchLedgerReader:
+    def __init__(self, delegate: SQLiteCampaignReader) -> None:
+        self._delegate = delegate
+
+    def get_search_ledger(self, campaign_id: ExperimentId) -> None:
+        assert campaign_id == ExperimentId("campaign-autonomous")
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._delegate, name)
+
+
 def _coordinator(
     tmp_path: Path,
     scheduler: CampaignTrialSchedulerPort,
@@ -332,7 +352,11 @@ def _evaluation(
     candidate: ResearchCandidateSpec,
     manifest: ResearchCampaignManifest,
     score: float,
+    *,
+    outputs: tuple[float, ...] | None = None,
+    references: tuple[ResearchCandidateSpec, ...] = (),
 ) -> CampaignEvaluationObservation:
+    profile = _output_profile(candidate, manifest, outputs=outputs)
     return CampaignEvaluationObservation(
         result=EvaluationResult(
             candidate_id=candidate.candidate.candidate_id,
@@ -348,6 +372,43 @@ def _evaluation(
         ),
         primary_metric_value=score,
         generation_complete=True,
+        novelty_evidence=evaluate_candidate_novelty(
+            profile,
+            references=tuple(
+                _output_profile(reference, manifest) for reference in references
+            ),
+            policy=CandidateNoveltyPolicy(),
+        ),
+    )
+
+
+def _output_profile(
+    candidate: ResearchCandidateSpec,
+    manifest: ResearchCampaignManifest,
+    *,
+    outputs: tuple[float, ...] | None = None,
+) -> CandidateOutputProfile:
+    patterns = {
+        1: (1.0, 1.0, -1.0, -1.0),
+        2: (1.0, -1.0, -1.0, 1.0),
+        3: (1.0, -1.0, 1.0, -1.0),
+    }
+    ast_hash = (
+        candidate.factor_code_hash
+        or candidate.model_code_hash
+        or candidate.candidate.parameter_hash
+    )
+    return CandidateOutputProfile(
+        candidate_hash=candidate.candidate_hash,
+        canonical_ast_hash=ast_hash,
+        validation_protocol_hash=manifest.experiment_plan.validation_protocol_hash,
+        lineage_root=manifest.lineage_root,
+        observation_grid_hash=_hash("9"),
+        outputs=outputs
+        or patterns.get(
+            candidate.candidate.ordinal,
+            (1.0, 0.5, -0.5, -1.0),
+        ),
     )
 
 
@@ -537,6 +598,128 @@ def test_two_candidates_in_one_generation_count_as_one_completed_generation(
     assert state.no_improvement_generations == 1
 
 
+def test_correlated_candidate_cannot_improve_or_parent_next_generation(
+    tmp_path: Path,
+) -> None:
+    coordinator, reader = _coordinator(tmp_path, _Scheduler())
+    manifest = _manifest(candidate_limit=4)
+    coordinator.authorize(
+        manifest,
+        _authorization(manifest),
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+    baseline = manifest.baseline_candidate
+    coordinator.record_evaluation(
+        manifest.campaign_id,
+        _evaluation(baseline, manifest, 1.0),
+        occurred_at=NOW + timedelta(seconds=2),
+    )
+    receipt = coordinator.propose_candidate(
+        _proposal(lookback=10), occurred_at=NOW + timedelta(seconds=3)
+    )
+    candidate = next(
+        item.candidate
+        for item in reader.list_candidates(manifest.campaign_id)
+        if str(item.candidate.candidate.candidate_id) == receipt.candidate_id
+    )
+
+    state = coordinator.record_evaluation(
+        manifest.campaign_id,
+        _evaluation(
+            candidate,
+            manifest,
+            2.0,
+            outputs=(2.0, 2.0, -2.0, -2.0),
+            references=(baseline,),
+        ),
+        occurred_at=NOW + timedelta(seconds=4),
+    )
+
+    assert state.best_primary_metric_value == 1.0
+    evaluation_event = next(
+        event
+        for event in reader.list_campaign_events(manifest.campaign_id)
+        if event.event_type == "candidate_evaluated"
+        and decode_campaign_detail(event.detail_payload).get("candidate_id")
+        == receipt.candidate_id
+    )
+    detail = decode_campaign_detail(evaluation_event.detail_payload)
+    assert "outputs" not in detail
+    assert "candidate_outputs" not in detail
+    assert detail["novelty_accepted"] is False
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.propose_candidate(
+            _proposal(parent=receipt.candidate_id, lookback=5),
+            occurred_at=NOW + timedelta(seconds=5),
+        )
+    assert exc_info.value.details["reason"] == "campaign_parent_not_novel"
+
+
+def test_evaluation_replay_rejects_novelty_evidence_drift(tmp_path: Path) -> None:
+    coordinator, _ = _coordinator(tmp_path, _Scheduler())
+    manifest = _manifest()
+    coordinator.authorize(
+        manifest,
+        _authorization(manifest),
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+    first = _evaluation(manifest.baseline_candidate, manifest, 1.0)
+    coordinator.record_evaluation(
+        manifest.campaign_id,
+        first,
+        occurred_at=NOW + timedelta(seconds=2),
+    )
+    changed_policy_evidence = evaluate_candidate_novelty(
+        _output_profile(manifest.baseline_candidate, manifest),
+        references=(),
+        policy=CandidateNoveltyPolicy(max_abs_output_correlation=0.9),
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.record_evaluation(
+            manifest.campaign_id,
+            replace(first, novelty_evidence=changed_policy_evidence),
+            occurred_at=NOW + timedelta(seconds=3),
+        )
+
+    assert exc_info.value.details["reason"] == "campaign_novelty_evidence_drift"
+
+
+def test_nonbaseline_evaluation_requires_registered_statistical_trial(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    coordinator, reader = _coordinator(tmp_path, _Scheduler())
+    manifest = _manifest()
+    coordinator.authorize(
+        manifest,
+        _authorization(manifest),
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+    receipt = coordinator.propose_candidate(
+        _proposal(), occurred_at=NOW + timedelta(seconds=2)
+    )
+    candidate = next(
+        item.candidate
+        for item in reader.list_candidates(manifest.campaign_id)
+        if str(item.candidate.candidate.candidate_id) == receipt.candidate_id
+    )
+    monkeypatch.setattr(
+        coordinator,
+        "_reader",
+        cast(CampaignReaderProtocol, _MissingSearchLedgerReader(reader)),
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        coordinator.record_evaluation(
+            manifest.campaign_id,
+            _evaluation(candidate, manifest, 2.0),
+            occurred_at=NOW + timedelta(seconds=3),
+        )
+
+    assert exc_info.value.details["reason"] == ("campaign_evaluation_identity_mismatch")
+
+
 def test_lease_loss_pauses_and_restart_replays_one_statistical_trial(
     tmp_path: Path,
 ) -> None:
@@ -590,9 +773,19 @@ def test_retry_does_not_recount_trial_and_fork_keeps_family_lineage(
         retry_id="retry-001",
         occurred_at=NOW + timedelta(seconds=3),
     )
+    first_candidate = next(
+        item.candidate
+        for item in reader.list_candidates(manifest.campaign_id)
+        if str(item.candidate.candidate.candidate_id) == first.candidate_id
+    )
+    coordinator.record_evaluation(
+        manifest.campaign_id,
+        _evaluation(first_candidate, manifest, 1.0),
+        occurred_at=NOW + timedelta(seconds=4),
+    )
     fork = coordinator.propose_candidate(
         _proposal(parent=first.candidate_id, lookback=5),
-        occurred_at=NOW + timedelta(seconds=4),
+        occurred_at=NOW + timedelta(seconds=5),
     )
 
     state = coordinator.get_state(manifest.campaign_id)
