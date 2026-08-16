@@ -3,6 +3,7 @@ name = "ditto-agent"
 requires-python = ">= 3.13"
 version = "0.1.0"
 dependencies = [
+    "ditto-platform",
     "openai-agents>=0.20.0,<0.21",
     "orjson",
     "pydantic",
@@ -17,3 +18,6 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools.package-data]
+"ditto_agent.storage.sqlite" = ["schema_v1.sql"]
