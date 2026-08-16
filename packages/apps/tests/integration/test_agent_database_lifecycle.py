@@ -5,6 +5,10 @@ from pathlib import Path
 
 import pytest
 from ditto_agent.contracts.runtime import AgentSession, RetentionClass
+from ditto_agent.storage.sqlite.episode_store import (
+    AgentEpisodeReader,
+    AgentEpisodeWriter,
+)
 from ditto_agent.storage.sqlite.errors import AgentDatabaseClosedError
 from ditto_apps.registry.agent.database_provider import build_agent_database
 
@@ -22,6 +26,8 @@ def test_apps_owns_agent_database_lifecycle_without_exposing_pool(
     bundle.writer.create_session(session)
 
     assert bundle.reader.get_session(session.session_id) == session
+    assert isinstance(bundle.episode_reader, AgentEpisodeReader)
+    assert isinstance(bundle.episode_writer, AgentEpisodeWriter)
     assert bundle.database.path == tmp_path / "agent" / "agent.sqlite"
     assert not hasattr(bundle, "pool")
 

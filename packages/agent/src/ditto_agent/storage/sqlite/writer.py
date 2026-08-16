@@ -17,6 +17,7 @@ from ditto_agent.contracts.runtime import (
     AgentSession,
     RunStatus,
 )
+from ditto_agent.runtime.episode import episode_event_hash
 from ditto_agent.runtime.state_machine import transition_run
 from ditto_agent.storage.sqlite._codec import decimal_text, epoch_us
 from ditto_agent.storage.sqlite._coordination_writer import AgentCoordinationWriter
@@ -48,29 +49,6 @@ def _conflict(message: str, reason_code: str) -> AgentConflictError:
 
 def _objective_hash(objective: str) -> str:
     return hashlib.sha256(objective.encode()).hexdigest()
-
-
-def _event_hash(
-    *,
-    event_id: int,
-    run_id: str,
-    run_sequence: int,
-    event_type: str,
-    payload_hash: str,
-    occurred_at: datetime,
-    prev_hash: str | None,
-) -> str:
-    return canonical_sha256(
-        {
-            "event_id": event_id,
-            "run_id": run_id,
-            "run_sequence": run_sequence,
-            "event_type": event_type,
-            "payload_hash": payload_hash,
-            "occurred_at": occurred_at,
-            "prev_hash": prev_hash,
-        }
-    )
 
 
 class AgentStoreWriter:
@@ -369,7 +347,7 @@ class AgentStoreWriter:
                 "SELECT COALESCE(MAX(event_id), 0) + 1 FROM agent_run_events"
             ).fetchone()
             event_id = int(global_row[0])
-            event_hash = _event_hash(
+            event_hash = episode_event_hash(
                 event_id=event_id,
                 run_id=run_id,
                 run_sequence=run_sequence,

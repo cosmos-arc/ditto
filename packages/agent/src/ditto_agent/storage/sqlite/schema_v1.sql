@@ -71,6 +71,36 @@ BEGIN
     SELECT RAISE(ABORT, 'agent run events are append-only');
 END;
 
+CREATE TABLE agent_episode_manifests (
+    episode_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL UNIQUE REFERENCES agent_runs(run_id),
+    manifest_hash TEXT NOT NULL UNIQUE CHECK(length(manifest_hash) = 64),
+    replay_identity TEXT NOT NULL UNIQUE CHECK(length(replay_identity) = 64),
+    payload_json BLOB NOT NULL CHECK(length(payload_json) > 0),
+    sealed_at_us INTEGER NOT NULL CHECK(sealed_at_us > 0)
+) STRICT;
+
+CREATE TRIGGER agent_episode_manifests_no_update
+BEFORE UPDATE ON agent_episode_manifests
+BEGIN
+    SELECT RAISE(ABORT, 'agent episode manifests are immutable');
+END;
+
+CREATE TRIGGER agent_episode_manifests_no_delete
+BEFORE DELETE ON agent_episode_manifests
+BEGIN
+    SELECT RAISE(ABORT, 'agent episode manifests are immutable');
+END;
+
+CREATE TRIGGER agent_run_events_after_episode
+BEFORE INSERT ON agent_run_events
+WHEN EXISTS (
+    SELECT 1 FROM agent_episode_manifests WHERE run_id = NEW.run_id
+)
+BEGIN
+    SELECT RAISE(ABORT, 'sealed agent episodes forbid new run events');
+END;
+
 CREATE TABLE agent_approvals (
     request_id TEXT PRIMARY KEY,
     run_id TEXT NOT NULL REFERENCES agent_runs(run_id),
