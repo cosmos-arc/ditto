@@ -1,0 +1,1 @@
+{"approval_gate":"A4","profile":"quality","prohibited_actions_observed":{"api_key_read":false,"live_endpoint_called":false,"model_cost_incurred":false,"model_data_exported":false},"provider":"openai","reason_code":"a4_approval_required","release_gate_passed":false,"schema_version":1,"status":"not_run"}

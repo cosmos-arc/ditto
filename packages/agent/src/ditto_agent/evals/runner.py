@@ -10,7 +10,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Protocol, cast
 
-from ditto_agent._canonical import canonical_sha256
+from ditto_agent._canonical import canonical_bytes, canonical_sha256
 from ditto_agent.contracts._validation import normalized_text
 from ditto_agent.evals.cases import (
     EvalCase,
@@ -37,6 +37,11 @@ from ditto_agent.evals.r5_4 import (
     SHADOW_MINIMUM_CASES,
     SHADOW_THRESHOLDS,
     ShadowMetric,
+)
+from ditto_agent.evals.release import (
+    RELEASE_SUITE_COUNTS,
+    ReleaseEvalReport,
+    build_release_eval_report,
 )
 from ditto_agent.evals.report import (
     EvalCaseResult,
@@ -206,6 +211,17 @@ class LocalEvalRunner:
         cases: tuple[EvalCase, ...],
     ) -> EvalReport:
         """Grade authenticated local cases and derive one deterministic report."""
+        report, _ = self._run_observed(suite=suite, seed=seed, cases=cases)
+        return report
+
+    def _run_observed(
+        self,
+        *,
+        suite: str,
+        seed: int,
+        cases: tuple[EvalCase, ...],
+    ) -> tuple[EvalReport, tuple[EvalObservation, ...]]:
+        """Grade once and retain normalized observations for aggregate SLOs."""
         suite = normalized_text(suite, field="suite")
         if isinstance(seed, bool) or seed < 0:
             raise ValueError("seed must be a non-negative integer")
@@ -272,7 +288,7 @@ class LocalEvalRunner:
         grader_manifest = self._grader_manifest(host_graders)
         metric_summaries = self._metric_summaries(tuple(results), suite=suite)
         performance = self._performance(tuple(observations), suite=suite)
-        return EvalReport(
+        report = EvalReport(
             suite=suite,
             provider_id=self._provider.provider_id,
             seed=seed,
@@ -301,6 +317,72 @@ class LocalEvalRunner:
             metric_summaries=metric_summaries,
             performance=performance,
         )
+        return report, tuple(observations)
+
+    def run_release(
+        self,
+        *,
+        seed: int,
+        cases: Mapping[str, tuple[EvalCase, ...]],
+        profile: str,
+    ) -> ReleaseEvalReport:
+        """Run each frozen suite once and produce the aggregate 120-case gate."""
+        self._preflight_release_cases(cases=cases, seed=seed)
+        reports: dict[str, EvalReport] = {}
+        observations: dict[str, tuple[EvalObservation, ...]] = {}
+        for suite in sorted(RELEASE_SUITE_COUNTS):
+            suite_report, suite_observations = self._run_observed(
+                suite=suite,
+                seed=seed,
+                cases=cases[suite],
+            )
+            reports[suite] = suite_report
+            observations[suite] = suite_observations
+        return build_release_eval_report(
+            provider_id=self._provider.provider_id,
+            profile=profile,
+            seed=seed,
+            reports=reports,
+            cases=cases,
+            observations=observations,
+        )
+
+    def _preflight_release_cases(
+        self,
+        *,
+        cases: Mapping[str, tuple[EvalCase, ...]],
+        seed: int,
+    ) -> None:
+        """Reject the complete release dataset before any provider side effect."""
+        if set(cases) != set(RELEASE_SUITE_COUNTS):
+            raise EvalRunnerError(
+                "Release eval requires the exact six-suite dataset",
+                reason_code="eval_release_dataset_invalid",
+            )
+        for suite in sorted(RELEASE_SUITE_COUNTS):
+            suite_cases = tuple(sorted(cases[suite], key=lambda case: case.case_id))
+            case_ids = tuple(case.case_id for case in suite_cases)
+            if len(suite_cases) != RELEASE_SUITE_COUNTS[suite] or len(case_ids) != len(
+                set(case_ids)
+            ):
+                raise EvalRunnerError(
+                    "Release eval dataset count or identity is invalid",
+                    reason_code="eval_release_dataset_invalid",
+                    details={"suite": suite},
+                )
+            for case in suite_cases:
+                try:
+                    self._validate_case(case, suite=suite, seed=seed)
+                except EvalRunnerError as error:
+                    raise EvalRunnerError(
+                        "Release eval dataset authentication failed",
+                        reason_code="eval_release_dataset_invalid",
+                        details={
+                            "suite": suite,
+                            "case_id": case.case_id,
+                            "cause_reason_code": error.reason_code,
+                        },
+                    ) from error
 
     @staticmethod
     def _metric_outcomes(
@@ -405,7 +487,8 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run offline governed Agent evals")
     parser.add_argument("--suite", required=True)
     parser.add_argument("--seed", type=int)
-    parser.add_argument("--provider", choices=("fake",), default="fake")
+    parser.add_argument("--provider", choices=("fake", "openai"), default="fake")
+    parser.add_argument("--profile", choices=("balanced", "quality"))
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--output", type=Path)
     return parser
@@ -429,26 +512,81 @@ def bundled_eval_cases(suite: str) -> tuple[int, Path]:
     return _GROUNDED_SEED, directory
 
 
+def _write_output(payload: bytes, output: Path | None) -> None:
+    if output is None:
+        sys.stdout.buffer.write(payload + b"\n")
+        return
+    output.write_bytes(payload)
+
+
+def _live_not_run_payload(*, profile: str) -> bytes:
+    """Record the A4 boundary without reading credentials or calling a provider."""
+    return canonical_bytes(
+        {
+            "schema_version": 1,
+            "status": "not_run",
+            "approval_gate": "A4",
+            "reason_code": "a4_approval_required",
+            "provider": "openai",
+            "profile": profile,
+            "release_gate_passed": False,
+            "prohibited_actions_observed": {
+                "api_key_read": False,
+                "live_endpoint_called": False,
+                "model_cost_incurred": False,
+                "model_data_exported": False,
+            },
+        }
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the local Fake-provider eval CLI and optionally write canonical JSON."""
+    """Run Fake release evals or emit explicit A4-blocked live evidence."""
     arguments = _parser().parse_args(argv)
     suite = str(arguments.suite)
+    provider = str(arguments.provider)
+    profile = None if arguments.profile is None else str(arguments.profile)
+    output = None if arguments.output is None else Path(arguments.output)
+    if provider == "openai":
+        if suite != "all" or profile is None:
+            raise EvalRunnerError(
+                "OpenAI comparison requires suite all and an explicit profile",
+                reason_code="eval_live_request_invalid",
+            )
+        _write_output(_live_not_run_payload(profile=profile), output)
+        return 5
+    if profile is not None:
+        raise EvalRunnerError(
+            "Fake eval does not accept a live model profile",
+            reason_code="eval_fake_profile_invalid",
+        )
     seed = arguments.seed
     cases_path = arguments.cases
+    runner = LocalEvalRunner(provider=FakeEvalProvider())
+    if suite == "all":
+        if cases_path is not None:
+            raise EvalRunnerError(
+                "Release eval uses only the six bundled datasets",
+                reason_code="eval_release_cases_override_forbidden",
+            )
+        release_seed = _GROUNDED_SEED if seed is None else int(seed)
+        cases = {
+            item: load_eval_cases(Path(__file__).with_name("datasets") / item)
+            for item in RELEASE_SUITE_COUNTS
+        }
+        report = runner.run_release(seed=release_seed, cases=cases, profile="fake")
+        _write_output(report.to_bytes(), output)
+        return 0 if report.passed else 1
     if seed is None or cases_path is None:
         bundled_seed, bundled_cases = bundled_eval_cases(suite)
         seed = bundled_seed if seed is None else seed
         cases_path = bundled_cases if cases_path is None else cases_path
-    report = LocalEvalRunner(provider=FakeEvalProvider()).run(
+    report = runner.run(
         suite=suite,
         seed=int(seed),
         cases=load_eval_cases(Path(cases_path)),
     )
-    payload = report.to_bytes()
-    if arguments.output is None:
-        sys.stdout.buffer.write(payload + b"\n")
-    else:
-        Path(arguments.output).write_bytes(payload)
+    _write_output(report.to_bytes(), output)
     return 0 if report.passed else 1
 
 
@@ -461,6 +599,7 @@ __all__ = [
     "EvalRunnerError",
     "FakeEvalProvider",
     "LocalEvalRunner",
+    "ReleaseEvalReport",
     "bundled_eval_cases",
     "main",
 ]
