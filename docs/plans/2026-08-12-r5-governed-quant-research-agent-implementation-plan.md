@@ -2,7 +2,7 @@
 
 **日期：** 2026-08-12
 **状态：** 进行中
-**恢复点：** Wave 1 / Task 4，建立 `ditto_agent` 包和机器边界
+**恢复点：** Wave 1 / Task 5，核心合同、canonical codec 与状态机
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -130,7 +130,7 @@ git diff --check
 
 **依赖：** Task 3 / Approval A1
 **风险：** 高风险，架构和生产依赖
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `packages/agent/{pyproject.toml,AGENTS.md,src/ditto_agent,tests}`、`pixi.toml`、`.importlinter`、架构文档。
 - **RED/观察证据：** 先增加 import/boundary tests，观察 `ditto_agent` 不存在或缺少机器合同。
@@ -850,10 +850,10 @@ git status --short
 
 | ID | 时机 | 必须批准的动作 | 获批证据 |
 |---|---|---|---|
-| A1 | Task 4 前 | 新 `ditto_agent` 包边界、`.importlinter` 规则、精确 `openai-agents` 生产版本范围 | `docs/evidence/r5/preflight/approvals.md`，待填 |
-| A2 | Tasks 7、22 前 | Agent SQLite v1、Research SQLite migration、备份/恢复和 retention schema | 同上，待填 |
-| A3 | Task 25 前 | OCI/gVisor runtime、固定 image digest/SBOM、新运行依赖和安全 profile | 同上，待填 |
-| A4 | 任何 live model 调用前 | 专用 OpenAI project、MAM/ZDR、凭证、预算、license/egress class 和允许数据集 | 同上，待填 |
+| A1 | Task 4 前 | 新 `ditto_agent` 包边界、`.importlinter` 规则、精确 `openai-agents` 生产版本范围 | `docs/evidence/r5/preflight/approvals.md`，GRANTED rev2 |
+| A2 | Tasks 7、22 前 | Agent SQLite v1、Research SQLite migration、备份/恢复和 retention schema | 同上，scoped GRANTED；最终 DDL hash 待追加 |
+| A3 | Task 25 前 | OCI/gVisor runtime、固定 image digest/SBOM、新运行依赖和安全 profile | 同上，PENDING |
+| A4 | 任何 live model 调用前 | 专用 OpenAI project、MAM/ZDR、凭证、预算、license/egress class 和允许数据集 | 同上，PENDING |
 
 历史 2026-08-04 对 `openai-agents` 的原则性批准不能替代 A1 的当前版本/API/transitive 证据。Langfuse 不作为生产必需依赖；如后续新增，同样按新生产依赖审批。
 
@@ -904,8 +904,8 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。
-- **下一步：** Wave 1 / Task 4，先写 package import/boundary RED，再建立 `ditto_agent`、Pixi 依赖和 import-linter 机器合同。
+- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同。
+- **下一步：** Wave 1 / Task 5，先写核心合同、状态转换、canonical bytes 与 action hash 篡改 RED。
 - **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的最终 DDL artifact hashes 在 Tasks 7/22 生成后追加，非临时 DB 应用前必须存在。
-- **最新命令与结果：** Tasks 1—3 各自运行 `git diff --cached --check` 通过并形成独立 evidence commit；Wave 0 没有生产 Python 变更，不继承后续 `arch-check`/`check` 证据。
+- **最新命令与结果：** Task 4 RED 为 package/boundary 测试 5 failed；GREEN 为 5 passed。`pixi run -e dev arch-check` 为 43 kept / 0 broken；`pixi run -e dev check` 为 lint/fmt/type 通过、12,307 passed / 1 个既有 xfail、Harness 16 passed；`git diff --cached --check` 通过。
 - **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 只阻塞 Task 25 live acceptance，A4 只阻塞任何 live model 调用；Fake provider 工作可继续。
