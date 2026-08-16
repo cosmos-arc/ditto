@@ -2,7 +2,7 @@
 
 **日期：** 2026-08-12
 **状态：** 进行中
-**恢复点：** Wave 1 / Task 10，本地 eval 数据集与 grader 框架
+**恢复点：** Wave 2 / Task 11，只读 evidence facades
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -247,7 +247,7 @@ pixi run -e dev check
 
 **依赖：** Task 9
 **风险：** 行为/质量门
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `ditto_agent.evals.{cases,runner,graders,report}`、`packages/agent/tests/fixtures/evals/**`。
 - **RED/观察证据：** 添加最小安全失败 case，证明 runner 会把 forbidden action、缺 evidence 和 nondeterministic replay 判失败。
@@ -904,8 +904,8 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射；Task 7 由 `be530cb5` 落地 Agent SQLite v1、typed reader/writer、幂等、lease/fence、append-only audit chain、备份恢复及 apps lifecycle；Task 8 由 `a9740d23` 落地 server-only temporal factory、全字段 cache identity、默认 deny-all license/egress gate 和 tamper/context-bound model evidence codec；Task 9 由 `ff15f7fa` 落地 versioned Episode manifest、严格 codec、terminal run/event binding、immutable SQLite seal、100 次稳定性证明和无 live model/无副作用 replay，`8f91dda1` 冻结最终 A2 Agent DDL/hash artifact。
-- **下一步：** Wave 1 / Task 10，先以 forbidden action、缺 evidence 和 nondeterministic replay 三类安全失败 fixture 写 RED，再实现 versioned local eval case、deterministic/rule-based grader、byte-stable report 和 Fake runner。
+- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射；Task 7 由 `be530cb5` 落地 Agent SQLite v1、typed reader/writer、幂等、lease/fence、append-only audit chain、备份恢复及 apps lifecycle；Task 8 由 `a9740d23` 落地 server-only temporal factory、全字段 cache identity、默认 deny-all license/egress gate 和 tamper/context-bound model evidence codec；Task 9 由 `ff15f7fa` 落地 versioned Episode manifest、严格 codec、terminal run/event binding、immutable SQLite seal、100 次稳定性证明和无 live model/无副作用 replay，`8f91dda1` 冻结最终 A2 Agent DDL/hash artifact；Task 10 由 `b31d000c` 落地 versioned local eval case、deterministic/rule-based grader、不可覆盖安全结论的 optional critic、byte-stable report 和 Fake runner，完成 Wave 1 Exit Gate。
+- **下一步：** Wave 2 / Task 11，先为 experiment/factor/strategy/backtest/portfolio/risk/DailyDecision V3 写只读 facade contract RED，再组合 application 既有 leaf queries，补齐 typed evidence、时间语义和 provenance。
 - **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的 Agent v1 final artifact 已冻结，Research v2 artifact 仍须在 Task 22 追加，所有真实用户数据库 mutation 仍未授权。
-- **最新命令与结果：** Task 9 初始 RED 为 2 个 collection error（Episode/replay runtime 模块不存在），Apps DI RED 为缺少 `episode_reader`；最终 Task 9 定向 suite 为 5 passed，schema/持久化回归为 11 passed，ruff 与 production/tests basedpyright 均为 0 error；`pixi run -e dev arch-check` 为 43 kept / 0 broken 且 architecture smells 通过；`pixi run -e dev check` 为 lint/fmt/type 通过、12,387 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed；`git diff --check` 通过。只使用临时数据库和 Fake/offline 路径，A4 未使用，未构造或发送任何模型请求。
+- **最新命令与结果：** Task 10 初始 RED 为 3 个 collection error（`ditto_agent.evals` 不存在）；最终定向 suite 为 6 passed，覆盖三类最小安全失败、100 次 byte-stable report、schema/hash drift fail-closed 和 optional critic 无权覆盖 host safety；ruff、production/tests basedpyright 均为 0 error；`pixi run -e dev check` 为 lint/fmt/type 通过、12,393 passed / 1 个既有 xfail、43 kept / 0 broken、architecture smells 通过、Harness 16 passed；`git diff --check` 通过。只使用 fixtures、Fake provider 和本地 runner，未使用 `/v1/evals`、云端 trace 或 live model，A4 未使用。
 - **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 只阻塞 Task 25 live acceptance，A4 只阻塞任何 live model 调用；Fake provider 工作可继续。
