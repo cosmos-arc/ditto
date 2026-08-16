@@ -556,6 +556,42 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
     ProductionAnalysisWiringAllowance(
         path=(
+            "packages/application/src/ditto_application/providers_research_memory.py"
+        ),
+        owner="R5 research-memory DI provider",
+        reason=(
+            "The dedicated composition boundary wires Analysis-owned Campaign "
+            "persistence ports into PIT read and governed mutation facades."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=("packages/application/src/ditto_application/commands/research_memory.py"),
+        owner="R5 governed research-memory command boundary",
+        reason=(
+            "The command boundary validates Analysis-owned immutable memory facts "
+            "before append-only writes; Agent consumers use pure leaf contracts."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=("packages/application/src/ditto_application/queries/research_memory.py"),
+        owner="R5 PIT research-memory query boundary",
+        reason=(
+            "The query boundary projects Analysis-owned PIT facts into a pure, "
+            "content-addressed Application read model."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/research_memory_contracts.py"
+        ),
+        owner="R5 research-memory mutation contracts",
+        reason=(
+            "Human-approved promote and revoke commands retain the Analysis-owned "
+            "scope and content-hash value types at the governed write boundary."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
             "packages/application/src/ditto_application/processes/execution/"
             "_research_replay_artifacts.py"
         ),

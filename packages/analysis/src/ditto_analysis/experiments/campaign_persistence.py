@@ -330,6 +330,19 @@ class CampaignReaderProtocol(Protocol):
         self, campaign_id: ExperimentId, knowledge_cutoff: datetime
     ) -> tuple[KnowledgeItem, ...]: ...
 
+    def get_knowledge_visible_at(
+        self,
+        knowledge_id: str,
+        knowledge_cutoff: datetime,
+    ) -> KnowledgeItem | None: ...
+
+    def list_knowledge_visible_for_scope(
+        self,
+        campaign_id: ExperimentId,
+        strategy_family_ref: str | None,
+        knowledge_cutoff: datetime,
+    ) -> tuple[KnowledgeItem, ...]: ...
+
     def list_knowledge_status_events(
         self, knowledge_id: str
     ) -> tuple[KnowledgeStatusEvent, ...]: ...

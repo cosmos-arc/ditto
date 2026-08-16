@@ -49,6 +49,7 @@ from ditto_agent.models.port import (
     ModelUsage,
     ResumeModelRequest,
 )
+from ditto_agent.research_memory_approval import ApprovalRuntimeResearchMemoryVerifier
 from ditto_agent.storage.sqlite.audit import verify_audit_chain
 from ditto_agent.storage.sqlite.database import AgentDatabase
 from ditto_agent.storage.sqlite.errors import (
@@ -60,6 +61,9 @@ from ditto_agent.storage.sqlite.records import ApprovalStatus
 from ditto_agent.storage.sqlite.writer import AgentStoreWriter
 from ditto_application.agent_authoring_contracts import AgentAuthoringApprovalCheck
 from ditto_application.exceptions import AppCommandError
+from ditto_application.research_memory_approval_contracts import (
+    ResearchMemoryApprovalCheck,
+)
 
 NOW = datetime(2026, 8, 16, 8, tzinfo=UTC)
 HASH_A = "a" * 64
@@ -686,6 +690,7 @@ def test_physical_write_boundary_revalidates_approved_action_and_operator(
     assert authorized.action_hash == approval.action_hash
     assert authorized.operator_id == "operator-write-boundary"
     assert authorized.approved_at == NOW + timedelta(minutes=1)
+    assert authorized.expires_at == approval.expires_at
 
     check = AgentAuthoringApprovalCheck(
         run_id="run-r52",
@@ -698,6 +703,20 @@ def test_physical_write_boundary_revalidates_approved_action_and_operator(
     assert proof.matches(check)
     assert proof.verify_integrity()
     assert proof.operator_id == "operator-write-boundary"
+
+    memory_check = ResearchMemoryApprovalCheck(
+        run_id="run-r52",
+        episode_id="episode-run-r52",
+        call_id=interruption.call_id,
+        tool_name=interruption.tool_name,
+        arguments=interruption.arguments,
+    )
+    memory_proof = ApprovalRuntimeResearchMemoryVerifier(runtime=runtime).verify(
+        memory_check
+    )
+    assert memory_proof.matches(memory_check)
+    assert memory_proof.verify_integrity()
+    assert memory_proof.expires_at == approval.expires_at
 
     resolver.authority_hash = HASH_B
     with pytest.raises(ApprovalRuntimeViolation, match="action"):

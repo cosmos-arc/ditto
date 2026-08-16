@@ -33,6 +33,7 @@ class AuthorizedToolApproval:
     action_hash: str
     operator_id: str
     approved_at: datetime
+    expires_at: datetime
 
 
 class ApprovalAuthorizationReader(Protocol):
@@ -131,6 +132,7 @@ def authorize_tool_execution(
             action_hash=stored.action_hash,
             operator_id=stored.operator_id,
             approved_at=stored.decided_at,
+            expires_at=stored.expires_at,
         )
     except AgentPersistenceError as exc:
         raise ApprovalRuntimeUnavailable(

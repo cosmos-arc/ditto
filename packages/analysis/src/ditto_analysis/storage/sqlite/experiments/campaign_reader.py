@@ -96,6 +96,32 @@ def _logical_trial(row: sqlite3.Row) -> LogicalTrialIdentity:
     )
 
 
+def _knowledge_item(row: sqlite3.Row) -> KnowledgeItem:
+    return KnowledgeItem(
+        knowledge_id=row["knowledge_id"],
+        campaign_id=ExperimentId(row["campaign_id"]),
+        claim=row["claim"],
+        scope=KnowledgeScope(row["scope"]),
+        scope_ref=row["scope_ref"],
+        evidence_refs=_json_hashes(row["evidence_refs_json"], "evidence_refs_json"),
+        outcome_known_at=datetime_from_epoch_us(row["outcome_known_at_epoch_us"]),
+        snapshot_id=SnapshotId(row["snapshot_id"]),
+        source=KnowledgeSource(row["source"]),
+        source_hash=ContentHash(row["source_hash"]),
+        status=KnowledgeStatus(row["visible_status"]),
+        promotion_receipt_hash=(
+            None
+            if row["promotion_receipt_hash"] is None
+            else ContentHash(row["promotion_receipt_hash"])
+        ),
+        independent_evidence_hash=(
+            None
+            if row["independent_evidence_hash"] is None
+            else ContentHash(row["independent_evidence_hash"])
+        ),
+    )
+
+
 class SQLiteCampaignReader:
     """Read lossless campaign values and enforce PIT cutoffs in the adapter."""
 
@@ -429,36 +455,80 @@ class SQLiteCampaignReader:
             """,
             (epoch_us(cutoff), str(campaign_id), epoch_us(cutoff)),
         )
-        return tuple(
-            KnowledgeItem(
-                knowledge_id=row["knowledge_id"],
-                campaign_id=ExperimentId(row["campaign_id"]),
-                claim=row["claim"],
-                scope=KnowledgeScope(row["scope"]),
-                scope_ref=row["scope_ref"],
-                evidence_refs=_json_hashes(
-                    row["evidence_refs_json"], "evidence_refs_json"
-                ),
-                outcome_known_at=datetime_from_epoch_us(
-                    row["outcome_known_at_epoch_us"]
-                ),
-                snapshot_id=SnapshotId(row["snapshot_id"]),
-                source=KnowledgeSource(row["source"]),
-                source_hash=ContentHash(row["source_hash"]),
-                status=KnowledgeStatus(row["visible_status"]),
-                promotion_receipt_hash=(
-                    None
-                    if row["promotion_receipt_hash"] is None
-                    else ContentHash(row["promotion_receipt_hash"])
-                ),
-                independent_evidence_hash=(
-                    None
-                    if row["independent_evidence_hash"] is None
-                    else ContentHash(row["independent_evidence_hash"])
-                ),
-            )
-            for row in rows
+        return tuple(_knowledge_item(row) for row in rows)
+
+    def list_knowledge_visible_for_scope(
+        self,
+        campaign_id: ExperimentId,
+        strategy_family_ref: str | None,
+        knowledge_cutoff: datetime,
+    ) -> tuple[KnowledgeItem, ...]:
+        """Return local, matching-family, and global PIT projections only."""
+        cutoff = require_utc_datetime(knowledge_cutoff, "knowledge_cutoff")
+        rows = self._database.get_connection().execute(
+            """
+            SELECT knowledge.*,
+                   COALESCE(
+                       (
+                           SELECT event.status
+                           FROM research_knowledge_status_event event
+                           WHERE event.knowledge_id=knowledge.knowledge_id
+                             AND event.outcome_known_at_epoch_us<=?
+                           ORDER BY event.ordinal DESC LIMIT 1
+                       ),
+                       knowledge.initial_status
+                   ) AS visible_status
+            FROM research_knowledge knowledge
+            WHERE knowledge.outcome_known_at_epoch_us<=?
+              AND (
+                    (knowledge.scope='campaign-local' AND knowledge.campaign_id=?)
+                 OR (knowledge.scope='strategy-family' AND ? IS NOT NULL
+                     AND knowledge.scope_ref=?)
+                 OR knowledge.scope='global'
+              )
+            ORDER BY knowledge.outcome_known_at_epoch_us, knowledge.knowledge_id
+            """,
+            (
+                epoch_us(cutoff),
+                epoch_us(cutoff),
+                str(campaign_id),
+                strategy_family_ref,
+                strategy_family_ref,
+            ),
         )
+        return tuple(_knowledge_item(row) for row in rows)
+
+    def get_knowledge_visible_at(
+        self,
+        knowledge_id: str,
+        knowledge_cutoff: datetime,
+    ) -> KnowledgeItem | None:
+        """Return one exact knowledge projection only when visible at cutoff."""
+        cutoff = require_utc_datetime(knowledge_cutoff, "knowledge_cutoff")
+        row = (
+            self._database.get_connection()
+            .execute(
+                """
+            SELECT knowledge.*,
+                   COALESCE(
+                       (
+                           SELECT event.status
+                           FROM research_knowledge_status_event event
+                           WHERE event.knowledge_id=knowledge.knowledge_id
+                             AND event.outcome_known_at_epoch_us<=?
+                           ORDER BY event.ordinal DESC LIMIT 1
+                       ),
+                       knowledge.initial_status
+                   ) AS visible_status
+            FROM research_knowledge knowledge
+            WHERE knowledge.knowledge_id=?
+              AND knowledge.outcome_known_at_epoch_us<=?
+            """,
+                (epoch_us(cutoff), knowledge_id, epoch_us(cutoff)),
+            )
+            .fetchone()
+        )
+        return None if row is None else _knowledge_item(row)
 
     def list_knowledge_status_events(
         self, knowledge_id: str

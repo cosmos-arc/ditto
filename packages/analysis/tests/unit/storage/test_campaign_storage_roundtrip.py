@@ -57,10 +57,12 @@ def _hash(character: str) -> ContentHash:
     return ContentHash(character * 64)
 
 
-def _campaign_record() -> CampaignManifestRecord:
+def _campaign_record(
+    campaign_id: str = "campaign-round-trip",
+) -> CampaignManifestRecord:
     payload = json.dumps(
         {
-            "campaign_id": "campaign-round-trip",
+            "campaign_id": campaign_id,
             "lineage_root": "d" * 64,
             "schema_id": "r5-research-campaign-manifest",
             "schema_version": 1,
@@ -70,7 +72,7 @@ def _campaign_record() -> CampaignManifestRecord:
         separators=(",", ":"),
     ).encode()
     return CampaignManifestRecord(
-        campaign_id=ExperimentId("campaign-round-trip"),
+        campaign_id=ExperimentId(campaign_id),
         manifest_hash=ContentHash(hashlib.sha256(payload).hexdigest()),
         manifest_payload=payload,
         search_axis=SearchAxis.FACTOR_CODE,
@@ -316,13 +318,96 @@ def test_feedback_and_knowledge_reads_fail_closed_at_known_at(tmp_path: Path) ->
     assert reader.list_knowledge_visible_at(campaign.campaign_id, KNOWN_AT) == (
         knowledge,
     )
+    assert reader.get_knowledge_visible_at(knowledge.knowledge_id, before) is None
+    assert (
+        reader.get_knowledge_visible_at(knowledge.knowledge_id, KNOWN_AT) == knowledge
+    )
     after = reader.list_knowledge_visible_at(
         campaign.campaign_id, KNOWN_AT + timedelta(hours=1)
     )
     assert len(after) == 1
     assert after[0].status is KnowledgeStatus.CONTRADICTED
+    assert (
+        reader.get_knowledge_visible_at(
+            knowledge.knowledge_id,
+            KNOWN_AT + timedelta(hours=1),
+        )
+        == after[0]
+    )
     assert reader.list_knowledge_status_events(knowledge.knowledge_id) == (
         contradicted,
+    )
+
+
+def test_scope_read_includes_only_own_local_matching_family_and_global(
+    tmp_path: Path,
+) -> None:
+    writer, reader = _storage(tmp_path)
+    current = _campaign_record()
+    other = _campaign_record("campaign-other")
+    writer.add_campaign(current)
+    writer.add_campaign(other)
+
+    def item(
+        knowledge_id: str,
+        campaign_id: ExperimentId,
+        scope: KnowledgeScope,
+        *,
+        scope_ref: str | None = None,
+        known_at: datetime = KNOWN_AT,
+    ) -> KnowledgeItem:
+        promoted = scope is not KnowledgeScope.CAMPAIGN_LOCAL
+        return KnowledgeItem(
+            knowledge_id=knowledge_id,
+            campaign_id=campaign_id,
+            claim=f"Verified claim {knowledge_id}",
+            scope=scope,
+            scope_ref=scope_ref,
+            evidence_refs=(_hash("7"),),
+            outcome_known_at=known_at,
+            snapshot_id=SnapshotId("snapshot-scope"),
+            source=KnowledgeSource.HOST_VALIDATION,
+            source_hash=_hash("8"),
+            status=KnowledgeStatus.ACTIVE,
+            promotion_receipt_hash=_hash("9") if promoted else None,
+            independent_evidence_hash=_hash("a") if promoted else None,
+        )
+
+    for knowledge in (
+        item("local-current", current.campaign_id, KnowledgeScope.CAMPAIGN_LOCAL),
+        item("local-other", other.campaign_id, KnowledgeScope.CAMPAIGN_LOCAL),
+        item(
+            "family-current",
+            other.campaign_id,
+            KnowledgeScope.STRATEGY_FAMILY,
+            scope_ref="family-current",
+        ),
+        item(
+            "family-other",
+            other.campaign_id,
+            KnowledgeScope.STRATEGY_FAMILY,
+            scope_ref="family-other",
+        ),
+        item("global-visible", other.campaign_id, KnowledgeScope.GLOBAL),
+        item(
+            "global-future",
+            other.campaign_id,
+            KnowledgeScope.GLOBAL,
+            known_at=KNOWN_AT + timedelta(microseconds=1),
+        ),
+    ):
+        writer.add_knowledge(knowledge)
+
+    visible = reader.list_knowledge_visible_for_scope(
+        current.campaign_id,
+        "family-current",
+        KNOWN_AT,
+    )
+
+    assert tuple(value.knowledge_id for value in visible) == (
+        "family-current",
+        "global-visible",
+        "local-current",
     )
 
 

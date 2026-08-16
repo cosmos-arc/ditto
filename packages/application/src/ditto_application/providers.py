@@ -27,6 +27,7 @@ from ditto_application.providers_process import AppProcessProvider
 from ditto_application.providers_research_execution import (
     AppResearchExecutionProvider,
 )
+from ditto_application.providers_research_memory import AppResearchMemoryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "AppPortfolioQueryProvider",
     "AppProcessProvider",
     "AppResearchExecutionProvider",
+    "AppResearchMemoryProvider",
     "AppStrategyQueryProvider",
     "get_app_providers",
     "get_trading_calendar_range",
@@ -52,4 +54,5 @@ def get_app_providers() -> list[Provider]:
         AppProcessProvider(),
         AppBuilderFactory(),
         AppResearchExecutionProvider(),
+        AppResearchMemoryProvider(),
     ]
