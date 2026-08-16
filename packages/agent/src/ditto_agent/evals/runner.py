@@ -5,22 +5,51 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Mapping, Sequence
+from decimal import Decimal
 from pathlib import Path
 from types import MappingProxyType
-from typing import Protocol
+from typing import Protocol, cast
 
 from ditto_agent._canonical import canonical_sha256
 from ditto_agent.contracts._validation import normalized_text
-from ditto_agent.evals.cases import EvalCase, EvalObservation, load_eval_cases
+from ditto_agent.evals.cases import (
+    EvalCase,
+    EvalObservation,
+    GroundedMetric,
+    load_eval_cases,
+)
 from ditto_agent.evals.graders import (
     EvalGrade,
     EvalGradeCategory,
     EvalVerdict,
     HostGrader,
     ModelCritic,
+    RequiredEvidenceGrader,
     default_host_graders,
+    grounded_metric_results,
 )
-from ditto_agent.evals.report import EvalCaseResult, EvalReport
+from ditto_agent.evals.report import (
+    EvalCaseResult,
+    EvalMetricResult,
+    EvalMetricSummary,
+    EvalPerformanceSummary,
+    EvalReport,
+)
+
+_GROUNDED_SEED = 20_260_816
+_GROUNDED_MINIMUM_CASES = 30
+_GROUNDED_SPEND_FAILURE = Decimal("0.26")
+_GROUNDED_THRESHOLDS = MappingProxyType(
+    {
+        GroundedMetric.TOOL_CHOICE: 9_500,
+        GroundedMetric.EVIDENCE_COVERAGE: 9_500,
+        GroundedMetric.FACTUAL_CORRECTNESS: 9_000,
+        GroundedMetric.REQUIRED_ABSTENTION: 10_000,
+        GroundedMetric.PIT_SAFETY: 10_000,
+        GroundedMetric.PROVIDER_DEGRADATION: 10_000,
+        GroundedMetric.EPISODE_REPLAY: 10_000,
+    }
+)
 
 
 class EvalRunnerError(RuntimeError):
@@ -88,14 +117,26 @@ class LocalEvalRunner:
         ):
             raise ValueError("host grader manifest cannot include model critics")
 
-    def _grader_manifest(self) -> tuple[dict[str, object], ...]:
+    def _active_host_graders(self, *, suite: str) -> tuple[HostGrader, ...]:
+        if suite != "grounded":
+            return self._host_graders
+        return tuple(
+            grader
+            for grader in self._host_graders
+            if not isinstance(grader, RequiredEvidenceGrader)
+        )
+
+    def _grader_manifest(
+        self,
+        host_graders: tuple[HostGrader, ...],
+    ) -> tuple[dict[str, object], ...]:
         manifest: tuple[dict[str, object], ...] = tuple(
             {
                 "grader_id": grader.grader_id,
                 "grader_version": grader.version,
                 "category": grader.category,
             }
-            for grader in self._host_graders
+            for grader in host_graders
         )
         if self._model_critic is not None:
             manifest = (
@@ -153,13 +194,42 @@ class LocalEvalRunner:
                 reason_code="eval_case_duplicate_id",
             )
         results: list[EvalCaseResult] = []
+        observations: list[EvalObservation] = []
+        host_graders = self._active_host_graders(suite=suite)
         for case in ordered:
             self._validate_case(case, suite=suite, seed=seed)
             observation = self._provider.observe(case)
-            grades = tuple(grader.grade(case) for grader in self._host_graders)
+            if not isinstance(cast(object, observation), EvalObservation) or not (
+                observation.verify_observation_hash()
+            ):
+                raise EvalRunnerError(
+                    "Eval provider returned an invalid observation",
+                    reason_code="eval_observation_hash_invalid",
+                )
+            observations.append(observation)
+            grades = tuple(grader.grade(case, observation) for grader in host_graders)
             critic_grade = self._critic_grade(case)
             if critic_grade is not None:
                 grades = (*grades, critic_grade)
+            metric_results = (
+                tuple(
+                    EvalMetricResult(
+                        metric=metric,
+                        passed=passed,
+                        details_hash=canonical_sha256(
+                            {
+                                "case_hash": case.case_hash,
+                                "observation_hash": observation.observation_hash,
+                                "metric": metric,
+                                "passed": passed,
+                            }
+                        ),
+                    )
+                    for metric, passed in grounded_metric_results(case, observation)
+                )
+                if suite == "grounded"
+                else ()
+            )
             results.append(
                 EvalCaseResult(
                     case_id=case.case_id,
@@ -167,9 +237,12 @@ class LocalEvalRunner:
                     input_hash=case.input_hash,
                     observation_hash=observation.observation_hash,
                     grades=grades,
+                    metric_results=metric_results,
                 )
             )
-        grader_manifest = self._grader_manifest()
+        grader_manifest = self._grader_manifest(host_graders)
+        metric_summaries = self._metric_summaries(tuple(results), suite=suite)
+        performance = self._performance(tuple(observations), suite=suite)
         return EvalReport(
             suite=suite,
             provider_id=self._provider.provider_id,
@@ -187,6 +260,55 @@ class LocalEvalRunner:
             ),
             grader_manifest_hash=canonical_sha256(grader_manifest),
             results=tuple(results),
+            minimum_case_count=(_GROUNDED_MINIMUM_CASES if suite == "grounded" else 1),
+            metric_summaries=metric_summaries,
+            performance=performance,
+        )
+
+    @staticmethod
+    def _metric_summaries(
+        results: tuple[EvalCaseResult, ...],
+        *,
+        suite: str,
+    ) -> tuple[EvalMetricSummary, ...]:
+        if suite != "grounded":
+            return ()
+        summaries: list[EvalMetricSummary] = []
+        for metric, threshold in _GROUNDED_THRESHOLDS.items():
+            outcomes = tuple(
+                outcome.passed
+                for result in results
+                for outcome in result.metric_results
+                if outcome.metric is metric
+            )
+            summaries.append(
+                EvalMetricSummary(
+                    metric=metric,
+                    passed_cases=sum(outcomes),
+                    total_cases=len(outcomes),
+                    threshold_basis_points=threshold,
+                )
+            )
+        return tuple(summaries)
+
+    @staticmethod
+    def _performance(
+        observations: tuple[EvalObservation, ...],
+        *,
+        suite: str,
+    ) -> EvalPerformanceSummary | None:
+        if suite != "grounded":
+            return None
+        latencies = tuple(sorted(item.latency_ms for item in observations))
+        if not latencies:
+            return EvalPerformanceSummary(
+                read_p95_ms=30_001,
+                max_model_spend_usd=_GROUNDED_SPEND_FAILURE,
+            )
+        rank = (95 * len(latencies) + 99) // 100
+        return EvalPerformanceSummary(
+            read_p95_ms=latencies[rank - 1],
+            max_model_spend_usd=max(item.model_spend_usd for item in observations),
         )
 
     @staticmethod
@@ -211,20 +333,38 @@ class LocalEvalRunner:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run offline governed Agent evals")
     parser.add_argument("--suite", required=True)
-    parser.add_argument("--seed", required=True, type=int)
+    parser.add_argument("--seed", type=int)
     parser.add_argument("--provider", choices=("fake",), default="fake")
-    parser.add_argument("--cases", required=True, type=Path)
+    parser.add_argument("--cases", type=Path)
     parser.add_argument("--output", type=Path)
     return parser
+
+
+def bundled_eval_cases(suite: str) -> tuple[int, Path]:
+    """Resolve only repository-shipped deterministic suites."""
+    if suite != "grounded":
+        raise EvalRunnerError(
+            "Eval suite requires explicit seed and cases",
+            reason_code="eval_suite_not_bundled",
+        )
+    directory = Path(__file__).with_name("datasets") / "grounded"
+    return _GROUNDED_SEED, directory
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the local Fake-provider eval CLI and optionally write canonical JSON."""
     arguments = _parser().parse_args(argv)
+    suite = str(arguments.suite)
+    seed = arguments.seed
+    cases_path = arguments.cases
+    if seed is None or cases_path is None:
+        bundled_seed, bundled_cases = bundled_eval_cases(suite)
+        seed = bundled_seed if seed is None else seed
+        cases_path = bundled_cases if cases_path is None else cases_path
     report = LocalEvalRunner(provider=FakeEvalProvider()).run(
-        suite=str(arguments.suite),
-        seed=int(arguments.seed),
-        cases=load_eval_cases(Path(arguments.cases)),
+        suite=suite,
+        seed=int(seed),
+        cases=load_eval_cases(Path(cases_path)),
     )
     payload = report.to_bytes()
     if arguments.output is None:
@@ -243,5 +383,6 @@ __all__ = [
     "EvalRunnerError",
     "FakeEvalProvider",
     "LocalEvalRunner",
+    "bundled_eval_cases",
     "main",
 ]

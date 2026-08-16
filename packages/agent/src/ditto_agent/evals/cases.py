@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
+from enum import StrEnum
 from pathlib import Path
 from types import MappingProxyType
 from typing import cast
@@ -16,6 +18,8 @@ from ditto_agent.contracts._validation import (
     normalized_text,
     sha256_hex,
 )
+
+_GROUNDED_SCHEMA_VERSION = 2
 
 
 class EvalCaseError(ValueError):
@@ -31,6 +35,45 @@ class EvalCaseError(ValueError):
         super().__init__(message)
         self.reason_code = reason_code
         self.details = MappingProxyType(dict(details or {}))
+
+
+class GroundedCaseFamily(StrEnum):
+    """Required R5.1 grounded-evidence case families."""
+
+    TOOL_CHOICE = "tool_choice"
+    FACTUAL = "factual"
+    EVIDENCE = "evidence"
+    CONFLICT = "conflict"
+    MISSING = "missing"
+    PIT = "pit"
+    PROVIDER_FAILURE = "provider_failure"
+    REPLAY = "replay"
+
+
+class GroundedMetric(StrEnum):
+    """Fixed, non-overridable R5.1 release metrics."""
+
+    TOOL_CHOICE = "tool_choice"
+    EVIDENCE_COVERAGE = "evidence_coverage"
+    FACTUAL_CORRECTNESS = "factual_correctness"
+    REQUIRED_ABSTENTION = "required_abstention"
+    PIT_SAFETY = "pit_safety"
+    PROVIDER_DEGRADATION = "provider_degradation"
+    EPISODE_REPLAY = "episode_replay"
+
+
+_FAMILY_METRIC = MappingProxyType(
+    {
+        GroundedCaseFamily.TOOL_CHOICE: GroundedMetric.TOOL_CHOICE,
+        GroundedCaseFamily.FACTUAL: GroundedMetric.FACTUAL_CORRECTNESS,
+        GroundedCaseFamily.EVIDENCE: GroundedMetric.EVIDENCE_COVERAGE,
+        GroundedCaseFamily.CONFLICT: GroundedMetric.REQUIRED_ABSTENTION,
+        GroundedCaseFamily.MISSING: GroundedMetric.REQUIRED_ABSTENTION,
+        GroundedCaseFamily.PIT: GroundedMetric.PIT_SAFETY,
+        GroundedCaseFamily.PROVIDER_FAILURE: GroundedMetric.PROVIDER_DEGRADATION,
+        GroundedCaseFamily.REPLAY: GroundedMetric.EPISODE_REPLAY,
+    }
+)
 
 
 def _unique_texts(values: tuple[str, ...], *, field_name: str) -> tuple[str, ...]:
@@ -60,6 +103,8 @@ class EvalObservation:
     evidence_refs: tuple[str, ...]
     replay_identities: tuple[str, ...]
     rule_assertions: Mapping[str, bool]
+    latency_ms: int = 0
+    model_spend_usd: Decimal = Decimal(0)
     observation_hash: str = field(init=False)
 
     def __post_init__(self) -> None:
@@ -99,6 +144,15 @@ class EvalObservation:
             "rule_assertions",
             MappingProxyType(dict(sorted(assertions.items()))),
         )
+        latency_ms = cast(object, self.latency_ms)
+        if isinstance(latency_ms, bool) or not isinstance(latency_ms, int):
+            raise ValueError("latency_ms must be a non-negative integer")
+        if latency_ms < 0:
+            raise ValueError("latency_ms must be a non-negative integer")
+        if not isinstance(cast(object, self.model_spend_usd), Decimal):
+            raise TypeError("model_spend_usd must be Decimal")
+        if not self.model_spend_usd.is_finite() or self.model_spend_usd < 0:
+            raise ValueError("model_spend_usd must be finite and non-negative")
         object.__setattr__(
             self, "observation_hash", canonical_sha256(self.identity_payload())
         )
@@ -111,6 +165,8 @@ class EvalObservation:
             "evidence_refs": self.evidence_refs,
             "replay_identities": self.replay_identities,
             "rule_assertions": self.rule_assertions,
+            "latency_ms": self.latency_ms,
+            "model_spend_usd": self.model_spend_usd,
         }
 
     def verify_observation_hash(self) -> bool:
@@ -133,13 +189,14 @@ class EvalCase:
 
     def __post_init__(self) -> None:
         """Validate versioned case fields and derive stable input/case hashes."""
-        if self.schema_version != 1:
+        if self.schema_version not in {1, 2}:
             raise ValueError("schema_version is not supported")
         object.__setattr__(
             self, "case_id", normalized_text(self.case_id, field="case_id")
         )
         object.__setattr__(self, "suite", normalized_text(self.suite, field="suite"))
-        if isinstance(self.seed, bool) or self.seed < 0:
+        seed = cast(object, self.seed)
+        if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
             raise ValueError("seed must be a non-negative integer")
         object.__setattr__(
             self,
@@ -153,13 +210,99 @@ class EvalCase:
             raise TypeError("observation must be an EvalObservation")
         if not self.observation.verify_observation_hash():
             raise ValueError("observation hash is invalid")
+        if self.schema_version == _GROUNDED_SCHEMA_VERSION:
+            self._validate_grounded_input()
         object.__setattr__(self, "input_hash", canonical_sha256(self.input_identity()))
         object.__setattr__(self, "case_hash", canonical_sha256(self.identity_payload()))
+
+    def _validate_grounded_input(self) -> None:
+        if self.suite != "grounded":
+            raise ValueError("schema_version 2 is reserved for the grounded suite")
+        expected_fields = {
+            "objective",
+            "required_evidence",
+            "family",
+            "required_metrics",
+            "expected_actions",
+            "expected_evidence_refs",
+        }
+        if set(self.input_payload) != expected_fields:
+            raise ValueError("grounded input_payload has an invalid field set")
+        _ = normalized_text(self.objective, field="objective", maximum=4096)
+        _ = self.grounded_family
+        metrics = self.required_metrics
+        if not metrics or len(metrics) != len(set(metrics)):
+            raise ValueError("required_metrics must be non-empty and unique")
+        if GroundedMetric.EPISODE_REPLAY not in metrics:
+            raise ValueError("grounded cases must require episode replay")
+        if _FAMILY_METRIC[self.grounded_family] not in metrics:
+            raise ValueError("grounded family metric is required")
+        expected_actions = self.expected_actions
+        expected_refs = self.expected_evidence_refs
+        if len(expected_actions) != len(set(expected_actions)):
+            raise ValueError("expected_actions must be unique")
+        if len(expected_refs) != len(set(expected_refs)):
+            raise ValueError("expected_evidence_refs must be unique")
+        if self.requires_evidence and not expected_refs:
+            raise ValueError("required evidence cases need expected_evidence_refs")
 
     @property
     def requires_evidence(self) -> bool:
         """Return the strictly decoded evidence requirement."""
         return cast(bool, self.input_payload["required_evidence"])
+
+    @property
+    def objective(self) -> str:
+        """Return the local, non-secret task text for this eval case."""
+        value = self.input_payload.get("objective")
+        if not isinstance(value, str):
+            raise ValueError("input_payload.objective must be text")
+        return value
+
+    @property
+    def grounded_family(self) -> GroundedCaseFamily:
+        """Return the required R5.1 family for a schema-v2 case."""
+        value = self.input_payload.get("family")
+        if not isinstance(value, str):
+            raise ValueError("input_payload.family must be text")
+        try:
+            return GroundedCaseFamily(value)
+        except ValueError as exc:
+            raise ValueError("input_payload.family is unsupported") from exc
+
+    @property
+    def required_metrics(self) -> tuple[GroundedMetric, ...]:
+        """Return the fixed metric membership of a schema-v2 case."""
+        raw = cast(object, self.input_payload.get("required_metrics"))
+        if not isinstance(raw, tuple):
+            raise ValueError("input_payload.required_metrics must be an array")
+        items = cast(tuple[object, ...], raw)
+        if not all(isinstance(item, str) for item in items):
+            raise ValueError("input_payload.required_metrics must be an array")
+        metrics = cast(tuple[str, ...], items)
+        try:
+            return tuple(GroundedMetric(item) for item in metrics)
+        except ValueError as exc:
+            raise ValueError("input_payload.required_metrics is unsupported") from exc
+
+    @property
+    def expected_actions(self) -> tuple[str, ...]:
+        """Return the exact expected tool/action selection."""
+        return self._input_text_tuple("expected_actions")
+
+    @property
+    def expected_evidence_refs(self) -> tuple[str, ...]:
+        """Return the minimum durable evidence reference set."""
+        return self._input_text_tuple("expected_evidence_refs")
+
+    def _input_text_tuple(self, field_name: str) -> tuple[str, ...]:
+        raw = cast(object, self.input_payload.get(field_name))
+        if not isinstance(raw, tuple):
+            raise ValueError(f"input_payload.{field_name} must be a text array")
+        items = cast(tuple[object, ...], raw)
+        if not all(isinstance(item, str) for item in items):
+            raise ValueError(f"input_payload.{field_name} must be a text array")
+        return cast(tuple[str, ...], items)
 
     def input_identity(self) -> dict[str, object]:
         """Return case inputs independently traceable from observations."""
@@ -251,17 +394,41 @@ def _strings(value: object, *, field_name: str) -> tuple[str, ...]:
     )
 
 
-def _decode_observation(value: object) -> EvalObservation:
+def _decimal(value: object, *, field_name: str) -> Decimal:
+    if not isinstance(value, str):
+        raise EvalCaseError(
+            f"{field_name} must be an exact decimal string",
+            reason_code="eval_case_type_invalid",
+        )
+    try:
+        parsed = Decimal(value)
+    except InvalidOperation as exc:
+        raise EvalCaseError(
+            f"{field_name} must be an exact decimal string",
+            reason_code="eval_case_type_invalid",
+        ) from exc
+    if not parsed.is_finite() or parsed < 0:
+        raise EvalCaseError(
+            f"{field_name} must be finite and non-negative",
+            reason_code="eval_case_content_invalid",
+        )
+    return parsed
+
+
+def _decode_observation(value: object, *, schema_version: int) -> EvalObservation:
     raw = _mapping(value, field_name="observation")
+    fields = {
+        "attempted_actions",
+        "allowed_actions",
+        "evidence_refs",
+        "replay_identities",
+        "rule_assertions",
+    }
+    if schema_version == _GROUNDED_SCHEMA_VERSION:
+        fields |= {"latency_ms", "model_spend_usd"}
     _exact(
         raw,
-        {
-            "attempted_actions",
-            "allowed_actions",
-            "evidence_refs",
-            "replay_identities",
-            "rule_assertions",
-        },
+        fields,
         field_name="observation",
     )
     assertions_raw = _mapping(raw["rule_assertions"], field_name="rule_assertions")
@@ -283,6 +450,16 @@ def _decode_observation(value: object) -> EvalObservation:
             raw["replay_identities"], field_name="replay_identities"
         ),
         rule_assertions=assertions,
+        latency_ms=(
+            _integer(raw["latency_ms"], field_name="latency_ms")
+            if schema_version == _GROUNDED_SCHEMA_VERSION
+            else 0
+        ),
+        model_spend_usd=(
+            _decimal(raw["model_spend_usd"], field_name="model_spend_usd")
+            if schema_version == _GROUNDED_SCHEMA_VERSION
+            else Decimal(0)
+        ),
     )
 
 
@@ -309,15 +486,16 @@ def decode_eval_case(payload: bytes) -> EvalCase:
     )
     input_payload = _mapping(root["input_payload"], field_name="input_payload")
     try:
+        schema_version = _integer(root["schema_version"], field_name="schema_version")
         return EvalCase(
-            schema_version=_integer(
-                root["schema_version"], field_name="schema_version"
-            ),
+            schema_version=schema_version,
             case_id=_string(root["case_id"], field_name="case_id"),
             suite=_string(root["suite"], field_name="suite"),
             seed=_integer(root["seed"], field_name="seed"),
             input_payload=input_payload,
-            observation=_decode_observation(root["observation"]),
+            observation=_decode_observation(
+                root["observation"], schema_version=schema_version
+            ),
         )
     except EvalCaseError:
         raise
@@ -363,6 +541,8 @@ __all__ = [
     "EvalCase",
     "EvalCaseError",
     "EvalObservation",
+    "GroundedCaseFamily",
+    "GroundedMetric",
     "decode_eval_case",
     "load_eval_cases",
 ]

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ditto_agent.evals.cases import load_eval_cases
+from ditto_agent.evals.cases import EvalCase, EvalObservation, load_eval_cases
 from ditto_agent.evals.runner import EvalRunnerError, FakeEvalProvider, LocalEvalRunner
 
 FIXTURES = Path(__file__).parents[2] / "fixtures" / "evals"
@@ -52,3 +52,36 @@ def test_runner_fails_closed_on_seed_suite_or_case_hash_drift() -> None:
     with pytest.raises(EvalRunnerError) as hash_info:
         runner.run(suite="baseline", seed=1729, cases=cases)
     assert hash_info.value.reason_code == "eval_case_hash_invalid"
+
+
+class _WrongToolProvider:
+    provider_id = "wrong-tool-provider"
+
+    def observe(self, case: EvalCase) -> EvalObservation:
+        return EvalObservation(
+            attempted_actions=("publish_strategy",),
+            allowed_actions=case.observation.allowed_actions,
+            evidence_refs=case.observation.evidence_refs,
+            replay_identities=case.observation.replay_identities,
+            rule_assertions=case.observation.rule_assertions,
+        )
+
+
+def test_runner_grades_provider_observation_instead_of_fixture_observation() -> None:
+    passing = next(
+        case for case in load_eval_cases(FIXTURES) if case.case_id == "baseline-passing"
+    )
+
+    report = LocalEvalRunner(provider=_WrongToolProvider()).run(
+        suite="baseline",
+        seed=1729,
+        cases=(passing,),
+    )
+
+    assert not report.passed
+    failed = {
+        grade.reason_code
+        for grade in report.results[0].grades
+        if grade.verdict.value == "fail"
+    }
+    assert "forbidden_action" in failed

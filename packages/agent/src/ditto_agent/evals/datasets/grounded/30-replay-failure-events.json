@@ -1,0 +1,41 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-30-replay-failure-events",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Replay a provider-failure episode without another model call.",
+    "required_evidence": false,
+    "family": "replay",
+    "required_metrics": [
+      "provider_degradation",
+      "episode_replay"
+    ],
+    "expected_actions": [],
+    "expected_evidence_refs": []
+  },
+  "observation": {
+    "attempted_actions": [],
+    "allowed_actions": [
+      "research_experiment_evidence",
+      "research_factor_evidence",
+      "research_strategy_evidence",
+      "research_backtest_evidence",
+      "portfolio_evidence",
+      "risk_evidence",
+      "daily_decision_v3_evidence"
+    ],
+    "evidence_refs": [],
+    "replay_identities": [
+      "000000000000000000000000000000000000000000000000000000000000001e",
+      "000000000000000000000000000000000000000000000000000000000000001e"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true,
+      "provider_failure_safe": true
+    },
+    "latency_ms": 350,
+    "model_spend_usd": "0.00140"
+  }
+}

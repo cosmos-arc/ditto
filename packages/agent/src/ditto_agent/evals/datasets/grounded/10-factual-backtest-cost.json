@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-10-factual-backtest-cost",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Report the host-computed backtest cost assumption.",
+    "required_evidence": true,
+    "family": "factual",
+    "required_metrics": [
+      "tool_choice",
+      "evidence_coverage",
+      "factual_correctness",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "research_backtest_evidence"
+    ],
+    "expected_evidence_refs": [
+      "evidence://backtest/cost-010"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "research_backtest_evidence"
+    ],
+    "allowed_actions": [
+      "research_experiment_evidence",
+      "research_factor_evidence",
+      "research_strategy_evidence",
+      "research_backtest_evidence",
+      "portfolio_evidence",
+      "risk_evidence",
+      "daily_decision_v3_evidence"
+    ],
+    "evidence_refs": [
+      "evidence://backtest/cost-010"
+    ],
+    "replay_identities": [
+      "000000000000000000000000000000000000000000000000000000000000000a",
+      "000000000000000000000000000000000000000000000000000000000000000a"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true,
+      "factual_correctness": true
+    },
+    "latency_ms": 170,
+    "model_spend_usd": "0.00080"
+  }
+}

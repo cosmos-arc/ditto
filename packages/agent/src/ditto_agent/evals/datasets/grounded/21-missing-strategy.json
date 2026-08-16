@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-21-missing-strategy",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Abstain when the immutable strategy version is missing.",
+    "required_evidence": false,
+    "family": "missing",
+    "required_metrics": [
+      "tool_choice",
+      "required_abstention",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "research_strategy_evidence"
+    ],
+    "expected_evidence_refs": []
+  },
+  "observation": {
+    "attempted_actions": [
+      "research_strategy_evidence"
+    ],
+    "allowed_actions": [
+      "research_experiment_evidence",
+      "research_factor_evidence",
+      "research_strategy_evidence",
+      "research_backtest_evidence",
+      "portfolio_evidence",
+      "risk_evidence",
+      "daily_decision_v3_evidence"
+    ],
+    "evidence_refs": [],
+    "replay_identities": [
+      "0000000000000000000000000000000000000000000000000000000000000015",
+      "0000000000000000000000000000000000000000000000000000000000000015"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true,
+      "required_abstention": true
+    },
+    "latency_ms": 269,
+    "model_spend_usd": "0.00113"
+  }
+}

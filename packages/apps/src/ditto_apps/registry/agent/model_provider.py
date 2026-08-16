@@ -7,8 +7,12 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from ditto_agent.models.fake import ScriptedAgentModel, ScriptedStep
-from ditto_agent.models.openai_adapter import OpenAIAgentsModel, OpenAIEngine
-from ditto_agent.models.port import AgentModelPort
+from ditto_agent.models.openai_adapter import (
+    AgentsSDKEngine,
+    OpenAIAgentsModel,
+    OpenAIEngine,
+)
+from ditto_agent.models.port import AgentModelPort, ModelToolInvoker
 
 
 class AgentModelProviderKind(StrEnum):
@@ -61,10 +65,11 @@ def build_agent_model(
     *,
     script: tuple[ScriptedStep, ...] = (),
     openai_engine: OpenAIEngine | None = None,
+    tool_invoker: ModelToolInvoker | None = None,
 ) -> AgentModelPort:
     """Build an offline fake or an explicitly authorized OpenAI adapter."""
     if settings.provider is AgentModelProviderKind.FAKE:
-        return ScriptedAgentModel(script=script)
+        return ScriptedAgentModel(script=script, tool_invoker=tool_invoker)
     if not settings.model_calls_enabled:
         raise ValueError("OpenAI model calls are disabled")
     if not settings.a4_approved:
@@ -73,7 +78,7 @@ def build_agent_model(
         model_id=_required(settings.model_id, field_name="model_id"),
         api_key=_required(settings.api_key, field_name="api_key"),
         project_id=_required(settings.project_id, field_name="project_id"),
-        engine=openai_engine,
+        engine=openai_engine or AgentsSDKEngine(tool_invoker=tool_invoker),
     )
 
 
