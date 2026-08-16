@@ -335,6 +335,8 @@ R3 只提供为回测和选股语义服务的确定性基础分配方式，例�
 
 ## 11. R5：治理型量化研究 Agent
 
+**实施状态（2026-08-17）：** R5.0—R5.4 与 R5.5 的确定性/Fake/运营检查点已实现；**R5.5 BLOCKED** 于 A3 物理 sandbox acceptance 和 A4 balanced/quality live-model comparison。所有 Agent flags 仍默认关闭，不声明 G4/G5、自动交易或 broker 能力。当前 evidence 与恢复入口见 [R5 implementation plan](../plans/2026-08-12-r5-governed-quant-research-agent-implementation-plan.md) 和 [R5 Agent runbook](../operations/r5-agent-runbook.md)。
+
 ### 目标
 
 在 R3 可复现研究、R4 组合风险和 Daily Decision V3 之上增加 grounded、可评测、
@@ -608,6 +610,6 @@ R1 已按以下顺序完成：
   → G1 evidence
 ```
 
-R1/G1、R2、R3/G2 和 R4/G3 已完成。R5 治理型量化研究 Agent 的权威设计与
-38-task implementation plan 已于 2026-08-12 冻结，下一实施入口是 Wave 0
-当前合同/SDK/OCI 预检，再进入 R5.0 第 13 包和治理底座。分钟级改造继续留在 R6。
+R1/G1、R2、R3/G2 和 R4/G3 已完成。R5 治理型量化研究 Agent 已完成 A3/A4
+之外的实现与发布硬化检查点；R5.5 继续 fail closed，等待 A3 物理 sandbox 与 A4
+live-model acceptance 后才能收口。分钟级改造继续留在 R6。

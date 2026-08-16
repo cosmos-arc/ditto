@@ -1,0 +1,1 @@
+{"approval_gate":"A3","profile":"hardened","prohibited_actions_observed":{"container_daemon_called":false,"generated_code_executed":false,"host_process_spawned":false,"runtime_artifact_created":false},"provider":"oci","reason_code":"a3_approval_required","release_gate_passed":false,"schema_version":1,"status":"not_run"}

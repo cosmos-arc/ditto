@@ -1,0 +1,51 @@
+{
+  "schema_id": "r5-release-operational-exercises",
+  "schema_version": 1,
+  "real_data_touched": false,
+  "environment": "pytest tmp_path, Fake providers, and injected dependency failures only",
+  "exercises": [
+    {
+      "name": "backup_restore",
+      "status": "passed",
+      "command": "pixi run -e dev pytest packages/agent/tests/unit/storage/test_database.py::test_agent_database_initializes_reopens_and_restores_exact_schema packages/apps/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet -q --no-cov -n 0",
+      "result": "2 passed",
+      "safety_boundary": "non-overwriting test-owned Agent and Research v2 SQLite paths; governance, holdout, and pinned artifact identities preserved"
+    },
+    {
+      "name": "crash_resume",
+      "status": "passed",
+      "command": "pixi run -e dev pytest packages/apps/tests/integration/test_agent_campaign_api.py::test_pending_create_recovers_after_completion_crash_without_duplicate_event packages/apps/tests/integration/test_agent_approval_resume.py::test_api_decision_resumes_persisted_interruption_after_restart -q --no-cov -n 0",
+      "result": "3 passed",
+      "safety_boundary": "injected completion crash and process restart; durable idempotency and approval continuation prevent duplicate effects"
+    },
+    {
+      "name": "retention_dry_run",
+      "status": "passed",
+      "command": "pixi run -e dev pytest packages/agent/tests/unit/test_retention.py::test_dry_run_uses_closed_30_day_boundary_and_is_content_addressed packages/apps/tests/unit/test_agent_retention_cli.py::test_retention_cleanup_defaults_to_auditable_dry_run -q --no-cov -n 0",
+      "result": "2 passed",
+      "safety_boundary": "30-day content-addressed preview only; no cleanup execution and no real database"
+    },
+    {
+      "name": "provider_outage",
+      "status": "passed",
+      "command": "pixi run -e dev pytest packages/apps/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k model_provider -q --no-cov -n 0",
+      "result": "1 passed, 3 deselected",
+      "safety_boundary": "injected provider failure returns Agent unavailable while core Ditto container remains usable"
+    },
+    {
+      "name": "sandbox_outage",
+      "status": "passed",
+      "command": "pixi run -e dev pytest packages/apps/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k sandbox -q --no-cov -n 0",
+      "result": "1 passed, 3 deselected",
+      "safety_boundary": "injected sandbox failure pauses Agent-only capability and does not execute generated code"
+    },
+    {
+      "name": "feature_rollback",
+      "status": "passed",
+      "command": "pixi run -e dev pytest packages/apps/tests/unit/test_agent_settings.py packages/apps/tests/integration/test_agent_degradation.py::test_disabled_agent_does_not_probe_optional_dependencies -q --no-cov -n 0",
+      "result": "5 passed",
+      "safety_boundary": "all fixed flags default false; disabled master prevents optional dependency probes"
+    }
+  ],
+  "evidence_hash": "3ca33df7a90fa9cf7ce13c3297d5b21c4e9830cd4ef45cf781f6e4f4632da250"
+}

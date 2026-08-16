@@ -46,3 +46,10 @@ Campaign's 30 cases remain governed by `campaign_authorization_budget` and are n
 - `pixi run -e dev check`: 12,823 passed, 1 existing xfail; 43 architecture contracts kept and 0 broken; architecture-smell and Harness gates passed.
 
 No API key was read, no live endpoint was called, no model data was exported, no model cost was incurred, and no Fake result is claimed as live acceptance.
+
+## Release evidence index
+
+- [release-preflight.json](release-preflight.json): content-addressed current verdict; `release_status=blocked`, no failed deterministic checks, blockers A3/A4.
+- [release-exercises.json](release-exercises.json): exact commands and results for backup/restore, crash resume, retention dry-run, provider/sandbox outage, and feature rollback; all use isolated fixtures.
+- [sandbox-live-status.json](sandbox-live-status.json): explicit A3 `not_run` evidence; no daemon, host process, generated-code execution, or runtime artifact.
+- [R5 Agent operations runbook](../../../operations/r5-agent-runbook.md) and [security boundary](../../../security/r5-agent-security-boundary.md).

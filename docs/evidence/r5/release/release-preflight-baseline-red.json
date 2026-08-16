@@ -1,0 +1,1 @@
+{"command":"pixi run -e dev pytest packages/apps/tests/unit/scripts/test_r5_agent_release_preflight_unit.py -q --no-cov -n 0","exit_code":2,"failure":"ModuleNotFoundError: ditto_apps.scripts.r5_agent_release_preflight","result":"red","schema_id":"r5-release-preflight-baseline-red","schema_version":1}
