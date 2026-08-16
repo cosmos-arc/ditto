@@ -18,6 +18,7 @@ from ditto_application.research_memory_approval_contracts import (
 from ditto_apps.registry.agent.campaign_runtime import DisabledCampaignRuntime
 from ditto_apps.registry.agent.observability import build_agent_observability
 from ditto_apps.registry.agent.runtime import DisabledAgentRuntime
+from ditto_apps.registry.agent.settings import AgentFeatureSettings
 
 
 class AgentRuntimeProvider(Provider):
@@ -26,14 +27,27 @@ class AgentRuntimeProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def runtime(self) -> AgentRuntimePort:
-        """Keep every Agent API write fail-closed by default."""
-        return DisabledAgentRuntime()
+    def feature_settings(self) -> AgentFeatureSettings:
+        """Read the closed R5 flag set at the composition root."""
+        return AgentFeatureSettings.from_environment()
 
     @provide
-    def agent_observability(self) -> AgentObservability:
+    def runtime(self, settings: AgentFeatureSettings) -> AgentRuntimePort:
+        """Keep every Agent API write fail-closed by default."""
+        reason = (
+            "agent_runtime_profile_unconfigured"
+            if settings.agent_enabled
+            else "agent_feature_disabled"
+        )
+        return DisabledAgentRuntime(reason)
+
+    @provide
+    def agent_observability(
+        self,
+        settings: AgentFeatureSettings,
+    ) -> AgentObservability:
         """Keep Agent OTel export disabled pending an explicit feature profile."""
-        return build_agent_observability(enabled=False)
+        return build_agent_observability(enabled=settings.agent_enabled)
 
     @provide
     def campaign_runtime(self) -> CampaignRuntimePort:

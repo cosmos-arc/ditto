@@ -126,8 +126,11 @@ def _raise_persistence(exc: AgentPersistenceError) -> Never:
 class DisabledAgentRuntime(AgentRuntimePort):
     """Fail-closed runtime used while the R5 Agent feature flag is disabled."""
 
+    def __init__(self, reason_code: str = "agent_feature_disabled") -> None:
+        self._reason_code = reason_code
+
     def _unavailable(self) -> Never:
-        raise AgentRuntimeUnavailable("agent_feature_disabled")
+        raise AgentRuntimeUnavailable(self._reason_code)
 
     def create_session(self, command: AgentSessionCreateCommand) -> AgentSessionView:
         """Reject session creation while the feature is disabled."""

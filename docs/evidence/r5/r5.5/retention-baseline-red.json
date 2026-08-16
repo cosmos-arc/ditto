@@ -1,0 +1,29 @@
+{
+  "schema_id": "r5-retention-baseline-red",
+  "schema_version": 1,
+  "observed_at": "2026-08-17T12:00:00+08:00",
+  "command": "pixi run -e dev pytest packages/agent/tests/unit/test_retention.py packages/apps/tests/integration/test_agent_degradation.py packages/apps/tests/unit/test_agent_settings.py -v --no-cov",
+  "exit_code": 1,
+  "result": "red",
+  "failures": [
+    "ModuleNotFoundError: ditto_agent.retention",
+    "ModuleNotFoundError: ditto_apps.registry.agent.degradation",
+    "ModuleNotFoundError: ditto_apps.registry.agent.settings",
+    "No such command: retention-cleanup"
+  ],
+  "review_red": {
+    "command": "pixi run -e dev pytest packages/agent/tests/unit/test_retention.py -q --no-cov -n 0",
+    "exit_code": 1,
+    "failures": [
+      "RetentionPlan accepted a nonstandard 31-day cutoff",
+      "RetentionPlan accepted a forged public plan_hash"
+    ]
+  },
+  "scope": [
+    "29/30/31-day raw-content boundary",
+    "formal-artifact and legal-hold preservation",
+    "content-addressed dry-run and stale-plan fence",
+    "fixed feature-flag defaults",
+    "provider/database/sandbox/exporter degradation isolation"
+  ]
+}

@@ -43,6 +43,7 @@ from ditto_application.agent_campaign_runtime import (
     CampaignView,
 )
 
+from ditto_apps.cli.commands.agent_retention import cleanup_agent_retention
 from ditto_apps.registry.container import make_app_container
 
 app = typer.Typer(
@@ -54,6 +55,7 @@ campaign_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(campaign_app, name="campaign")
+app.command("retention-cleanup")(cleanup_agent_retention)
 
 _TERMINAL_RUN_STATUSES = frozenset(
     {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.CANCELLED}
