@@ -10,7 +10,7 @@
 | ID | 状态 | 可越过的 Gate | 仍然阻塞 |
 |---|---|---|---|
 | A1 | GRANTED | Task 4 的第 13 包、机器边界和精确 SDK minor range | SDK range/license/边界超出 scope 的任何变更 |
-| A2 | GRANTED, SCOPED | Task 7 Agent SQLite v1；Task 22 Research SQLite v1→v2 migration 的代码、临时 fixture、备份/恢复测试 | 真实用户 DB migration、真实 retention delete、超出列明对象的 schema |
+| A2 | GRANTED, SCOPED | Tasks 7/9 Agent SQLite v1；Task 22 Research SQLite v1→v2 migration 的代码、临时 fixture、备份/恢复测试 | 真实用户 DB migration、真实 retention delete、超出列明对象的 schema |
 | A3 | PENDING | 只允许 Fake/in-process sandbox port 与只读 OCI 设计 | Task 25 live OCI acceptance、镜像/运行依赖落地 |
 | A4 | PENDING | Fake provider、注入 stub、无网络 adapter tests | 任何 live model 调用、API key 读取、数据外发或费用 |
 
@@ -43,9 +43,9 @@
 |---|---|
 | decision | GRANTED, SCOPED |
 | approver | 当前 task 的 requesting workspace user |
-| approval basis | 用户明确要求全面实施包含 Tasks 7/22/36 的计划；真实数据操作没有被隐含授权 |
+| approval basis | 用户明确要求全面实施包含 Tasks 7/9/22/36 的计划；真实数据操作没有被隐含授权 |
 | effective time | 2026-08-16，随本 task 的 `/goal` 请求生效；审计记录于 2026-08-16T01:32:55Z |
-| Agent DB exact object | 新库 `data_root/agent/agent.sqlite`；`application_id=1146372423` (`0x44544147`, `DTAG`)；`user_version=1`；保存 session/run/event/approval/idempotency/lease/audit/retention metadata；独立于 research DB |
+| Agent DB exact object | 新库 `data_root/agent/agent.sqlite`；`application_id=1146372423` (`0x44544147`, `DTAG`)；`user_version=1`；保存 session/run/event/episode manifest/approval/idempotency/lease/audit/retention metadata；独立于 research DB |
 | Research DB exact object | 复用 `data_root/research/research.sqlite`；保持 `application_id=1146376755` (`0x44545233`, `DTR3`)；前向 `user_version=1 -> 2`；新增 campaign/search ledger/research memory/research code/sandbox manifest 与 append-only event/lineage tables；保留全部 R3 数据 |
 | canonical scope | `{"agent_db":{"application_id":1146372423,"path":"data_root/agent/agent.sqlite","user_version":1},"research_db":{"application_id":1146376755,"migration":"v1->v2","path":"data_root/research/research.sqlite"},"retention":"metadata-only,no-live-delete","version":1}` |
 | scope SHA-256 | `f0d633c301b75da031bc4c2b48ea23986f0a172c470993184574e99d16a277aa` |
@@ -60,10 +60,13 @@
 
 | Artifact | Version | SHA-256/fingerprint | 状态 |
 |---|---:|---|---|
-| Agent `schema_v1.sql` | 1 | DDL SHA-256 `b929ba78672f7c3eab83f502fdfad9e522d367b46021d7163aa3227078a5dc99`；SQLite catalog fingerprint `c88a91fe672be70ab679435da07ae989d07160d3a5ffce3186c9fcd51e495bdb`；17 个 catalog objects；实现 commit `be530cb5` | VERIFIED 2026-08-16T03:20:12Z |
+| Agent `schema_v1.sql` Task 7 prerelease | 1 | DDL SHA-256 `b929ba78672f7c3eab83f502fdfad9e522d367b46021d7163aa3227078a5dc99`；SQLite catalog fingerprint `c88a91fe672be70ab679435da07ae989d07160d3a5ffce3186c9fcd51e495bdb`；17 个 catalog objects；实现 commit `be530cb5` | SUPERSEDED；从未应用到非临时数据库 |
+| Agent `schema_v1.sql` Task 9 sealed artifact | 1 | DDL SHA-256 `f804109efd0888d468d7732fa3254619522a6ee3948a34ada2d22c0a1887d054`；SQLite catalog fingerprint `7d99081c2ae9dc2467f72d2889e150560a0f4a14f715d062783cdfe29f5b3341`；21 个 catalog objects；实现 commit `ff15f7fa` | VERIFIED 2026-08-16T03:50:20Z |
 | Research migration/schema | 2 | Task 22 尚未生成；生成后先更新此行，再用于非临时数据库 | PENDING ARTIFACT |
 
 `PENDING ARTIFACT` 不阻塞在临时 fixture 上按已批准 scope 编写并测试 schema；它阻塞任何非临时数据库应用。
+
+Task 9 在同一未发布 `user_version=1` 中加入 immutable Episode manifest 表和三个封存 trigger；路径、application ID、version、数据保留语义均未改变。Task 7 artifact 在任何非临时数据库应用前即被本行替代，因此不需要迁移或真实数据 mutation。
 
 ## A3 — OCI/gVisor runtime 与固定镜像
 
@@ -107,4 +110,4 @@
 3. A3/A4 为空的精确版本/hash/项目/数据/预算字段以 `PENDING` 明示，因此对应 live Task 保持阻塞；不能用 Fake GREEN 冒充 live acceptance。
 4. 任何批准扩展都作为本文件独立 evidence commit，记录 approver、UTC time、canonical scope、scope/artifact hashes、限制和撤销条件。
 
-下一恢复入口：Task 8。Agent v1 DDL artifact 已冻结；Research v2 artifact 仍待 Task 22。A3 在 Task 25 live acceptance 前暂停，A4 在首次 live model call 前暂停。
+下一恢复入口：Task 10。Agent v1 DDL artifact 已按 Task 9 最终冻结；Research v2 artifact 仍待 Task 22。A3 在 Task 25 live acceptance 前暂停，A4 在首次 live model call 前暂停。
