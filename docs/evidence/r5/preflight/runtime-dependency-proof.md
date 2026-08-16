@@ -2,7 +2,7 @@
 
 **核对日期：** 2026-08-16
 **代码基线：** `b5dbb921`
-**性质：** 只读 preflight；没有安装依赖、拉取镜像、创建 OpenAI project 或发起模型请求
+**性质：** preflight 与 Task 4 Pixi lock 证据；没有拉取镜像、创建 OpenAI project 或发起模型请求
 
 ## 结论
 
@@ -34,24 +34,24 @@
 | wheel | `openai_agents-0.20.0-py3-none-any.whl` |
 | wheel SHA-256 | `aaff662b802fa90762ad539e131b9ea387e12e3664b87bc75157ad1b3fc88850`（下载后本地复算一致） |
 | 下载地址 | `https://files.pythonhosted.org/packages/9f/8b/18528f00cb1a5d0b8e00f457f7dc88e7b17439bc520861aae2b638b88710/openai_agents-0.20.0-py3-none-any.whl` |
-| 当前仓库 | Python 3.13；`openai`、`openai-agents` 和 `mcp` 尚未出现在 `pixi.toml`/package metadata/lock 中 |
-| 安装方式 | 仅在 A1 后修改 package/root Pixi metadata 并重解 `pixi.lock`；不用 pip/poetry/conda 手工改环境 |
+| 当前仓库 | Python 3.13；Task 4 已把 `openai-agents>=0.20.0,<0.21` 写入 `pixi.toml` 和 `ditto-agent` metadata，并由 `pixi.lock` 固定 0.20.0 |
+| 安装方式 | A1 rev2 后通过 Pixi metadata 重解 `pixi.lock`；没有用 pip/poetry/conda 手工改环境 |
 
-候选范围必须在 Task 4 后以新 lock 的每平台解析结果复核；本文件不把 PyPI 当前版本当成已安装版本。
+Task 4 已以新 lock 复核全部三平台。`openai-agents==0.20.0` 与 `openai==2.54.0` 在 `osx-arm64`、`linux-64`、`win-64` 一致；SDK 的宽 `mcp>=1.19,<3` 约束在 macOS 解析为 2.0.0，在 Linux/Windows 解析为 1.29.0。该平台差异不改变 R5 能力面，因为产品不注册 MCP server、connector 或 tool；后续 SDK 升级仍须重新审批和锁定。
 
 ### 直接 transitive review
 
 | SDK 约束 | 2026-08-16 metadata 观察 | License | 与当前 Ditto 的关系/风险 |
 |---|---|---|---|
-| `openai>=2.45,<3` | 2.50.0 | Apache-2.0 | 新增；保留 `httpx<1` 路径，网络 client 与 Responses 数据控制是主要安全面 |
-| `mcp>=1.19,<3` | 2.0.0 | MIT | 新增且依赖面较大；R5 不注册 MCP server/tool/connectors，SDK 间接安装不代表产品启用 |
+| `openai>=2.45,<3` | lock 2.54.0（全平台） | Apache-2.0 | 新增；保留 `httpx<1` 路径，网络 client 与 Responses 数据控制是主要安全面 |
+| `mcp>=1.19,<3` | lock 2.0.0（macOS）；1.29.0（Linux/Windows） | MIT | 新增且依赖面较大；R5 不注册 MCP server/tool/connectors，SDK 间接安装不代表产品启用；平台差异已显式保留 |
 | `griffelib>=2,<3` | 2.1.0 | ISC | 当前 lock 已有兼容 2.x；重解 lock 后核对平台一致性 |
 | `pydantic>=2.12.2,<3` | 2.13.4 | MIT | 项目约束 `>=2.10,<3`，当前 lock 有兼容 2.13.x |
 | `requests>=2,<3` | 2.34.2 | Apache-2.0 | 当前 lock 有兼容 2.x；不用于 Agent tool 任意出网 |
 | `typing-extensions>=4.12.2,<5` | 4.16.0 | PSF-2.0 | 兼容；低风险 typing runtime |
 | `websockets>=15,<17` | 上游最新已到 17.x；SDK 上限排除 17 | BSD-3-Clause | 当前 lock 为兼容 16.x；Task 4 不应突破 SDK 上限 |
 
-Task 4 需要保存 Pixi solver diff 并确认：没有 license 禁止项、没有 Python 3.13 平台缺包、没有把 MCP/hosted tools 暴露为 R5 能力、没有覆盖 Ditto 已有 OTel 或 HTTP 配置。
+Task 4 的 Pixi solver 和三平台 `pixi tree` 证据确认：没有已识别的 license 禁止项，没有 Python 3.13 平台缺包，没有把 MCP/hosted tools 暴露为 R5 能力，也没有覆盖 Ditto 已有 OTel 或 HTTP 配置。Pixi 对 `pyjwt[crypto]` 输出 extra metadata warning；lock 仍成功且 R5 不使用 MCP/JWT 能力，该 warning 记为后续依赖升级复核项，不把它解释为产品能力授权。
 
 ## Agents SDK adapter API 证据
 
@@ -133,8 +133,8 @@ macOS 与 Linux 不共享一份“已验证”结论：macOS acceptance 必须�
 
 | Gate | 精确对象 | 当前状态 |
 |---|---|---|
-| A1 | `openai-agents>=0.20.0,<0.21` 与 solver/lock transitive diff | GRANTED rev2；0.21.0 的 unsatisfiable 证据已记录，最终 lock 仍需通过 |
+| A1 | `openai-agents>=0.20.0,<0.21` 与 solver/lock transitive diff | GRANTED rev2；0.21.0 的 unsatisfiable 证据已记录，0.20.0 三平台 lock 已通过 |
 | A3 | 指定 OCI runtime/profile、image digest、SBOM 和攻击测试矩阵 | 阻塞：本机无可用 daemon/runtime/image evidence |
 | A4 | 专用 project、MAM/ZDR、API key source、model snapshot、egress/license dataset、token/spend budget | 阻塞：不进行 live 调用 |
 
-下一恢复入口是 Approval A1（Task 3）；Fake provider、contracts 和不依赖 live OCI 的 deterministic 工作可以在相应审批范围内继续。
+下一恢复入口是 Task 5 的纯合同、canonical codec 与状态机；Fake provider、contracts 和不依赖 live OCI 的 deterministic 工作可以在相应审批范围内继续。

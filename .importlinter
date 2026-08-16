@@ -20,6 +20,7 @@ root_packages =
     ditto_execution
     ditto_backtest
     ditto_application
+    ditto_agent
     ditto_apps
 
 # 不包含外部包
@@ -46,6 +47,7 @@ type = layers
 # the explicit forbidden contracts below.
 layers =
     ditto_apps
+    ditto_agent
     ditto_application
     ditto_portfolio
     ditto_analysis
@@ -76,6 +78,7 @@ forbidden_modules =
     ditto_risk.**
     ditto_execution.**
     ditto_backtest.**
+    ditto_agent.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Platform 层隔离：禁止依赖业务层（允许依赖 kernel）
@@ -375,6 +378,80 @@ forbidden_modules =
     ditto_apps.**
 
 # ═══════════════════════════════════════════════════════════════════
+# R5 Agent 平面边界
+# apps -> agent -> application；Agent 只能通过 application 访问业务能力。
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:agent-capability-isolation]
+name = Agent must not import capability or analysis packages
+type = forbidden
+source_modules =
+    ditto_agent.**
+forbidden_modules =
+    ditto_analysis.**
+    ditto_backtest.**
+    ditto_data.**
+    ditto_execution.**
+    ditto_features.**
+    ditto_portfolio.**
+    ditto_risk.**
+    ditto_strategy.**
+
+[importlinter:contract:agent-no-apps]
+name = Agent must not import Apps
+type = forbidden
+source_modules =
+    ditto_agent.**
+forbidden_modules =
+    ditto_apps.**
+
+[importlinter:contract:application-no-agent]
+name = Application must not import Agent
+type = forbidden
+source_modules =
+    ditto_application.**
+forbidden_modules =
+    ditto_agent.**
+
+[importlinter:contract:capabilities-no-agent]
+name = Capability and analysis packages must not import Agent
+type = forbidden
+source_modules =
+    ditto_analysis.**
+    ditto_backtest.**
+    ditto_data.**
+    ditto_execution.**
+    ditto_features.**
+    ditto_portfolio.**
+    ditto_risk.**
+    ditto_strategy.**
+forbidden_modules =
+    ditto_agent.**
+
+[importlinter:contract:platform-no-agent]
+name = Platform must not import Agent business concepts
+type = forbidden
+source_modules =
+    ditto_platform.**
+forbidden_modules =
+    ditto_agent.**
+
+[importlinter:contract:apps-agent-physical-adapter-isolation]
+name = Apps outside registry must not import Agent physical adapters
+type = forbidden
+source_modules =
+    ditto_apps.**
+forbidden_modules =
+    ditto_agent.models.openai_adapter
+    ditto_agent.sandbox.**
+    ditto_agent.storage.sqlite.**
+ignore_imports =
+    ditto_apps.registry.** -> ditto_agent.models.openai_adapter
+    ditto_apps.registry.** -> ditto_agent.sandbox.**
+    ditto_apps.registry.** -> ditto_agent.storage.sqlite.**
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
 # Application → Platform 范围约束：允许 foundation + services，禁止 config
 # config 加载由 Apps 层负责
 # ═══════════════════════════════════════════════════════════════════
@@ -595,6 +672,7 @@ ancestors =
     ditto_execution
     ditto_backtest
     ditto_application
+    ditto_agent
     ditto_apps
 depth = 10
 unmatched_ignore_imports_alerting = warn

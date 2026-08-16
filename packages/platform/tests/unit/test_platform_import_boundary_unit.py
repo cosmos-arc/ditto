@@ -14,6 +14,7 @@ def test_platform_does_not_import_business_packages() -> None:
 
     new_modules = set(sys.modules) - before
     forbidden_prefixes = (
+        "ditto_agent",
         "ditto_data",
         "ditto_features",
         "ditto_strategy",

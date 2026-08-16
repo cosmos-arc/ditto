@@ -1,0 +1,19 @@
+[project]
+name = "ditto-agent"
+requires-python = ">= 3.13"
+version = "0.1.0"
+dependencies = [
+    "openai-agents>=0.20.0,<0.21",
+    "orjson",
+    "pydantic",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

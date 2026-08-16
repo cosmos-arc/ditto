@@ -4,7 +4,7 @@
 
 ## 概要
 
-面向 A 股 ETF 的全栈量化投资平台，对标 QuantConnect LEAN 架构。12 包模块化分层设计，追求长期稳定 Alpha。
+面向 A 股 ETF 的全栈量化投资平台，对标 QuantConnect LEAN 架构。13 包模块化分层设计，追求长期稳定 Alpha。
 
 ## 核心功能
 
@@ -73,6 +73,7 @@
 **依赖方向**（import-linter 强制检查）：
 
 ```
+apps → agent → application → capability packages
 apps → application → {strategy, portfolio, risk, execution, backtest} → kernel
 apps → application → data → kernel, platform
 apps → features → kernel
@@ -96,6 +97,8 @@ ditto/
 │   │       ├── models/              # API 模型
 │   │       ├── registry/            # Dishka DI 容器（contexts/ + infra/）
 │   │       └── config/              # 接口层配置
+│   ├── agent/                   # 治理型 Agent（runtime / tools / model / audit / eval）
+│   │   └── src/ditto_agent/
 │   ├── application/             # 应用编排层（CQRS）
 │   │   └── src/ditto_application/
 │   │       ├── queries/         # 查询编排（27 Facade）

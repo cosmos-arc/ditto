@@ -1,6 +1,6 @@
 # Ditto Agent 指南
 
-Ditto 是面向 A 股 ETF 的 T1 全栈量化交易平台。后端是 12 包 Python 模块化单体；前端 `ditto-app` 是独立仓库，不在本仓库范围内。
+Ditto 是面向 A 股 ETF 的 T1 全栈量化交易平台。后端是 13 包 Python 模块化单体；前端 `ditto-app` 是独立仓库，不在本仓库范围内。
 
 ## 事实优先级
 
@@ -12,7 +12,7 @@ Ditto 是面向 A 股 ETF 的 T1 全栈量化交易平台。后端是 12 包 Pyt
 4. [边界与抽象标准](docs/architecture/boundaries-and-abstraction-standards.md) 说明命名、分层和新概念准入。
 5. 包目录内的 `AGENTS.md` 补充该包约束，越接近改动位置的规则优先。
 
-## 12 包架构地图
+## 13 包架构地图
 
 - `kernel`：共享原语与 Protocol；零第三方依赖、零 I/O。
 - `platform`：横切技术基础设施；不得承载业务概念。
@@ -25,9 +25,10 @@ Ditto 是面向 A 股 ETF 的 T1 全栈量化交易平台。后端是 12 包 Pyt
 - `backtest`：模拟运行时、回放、统计与报告。
 - `analysis`：研究 control-plane 与独立研究存储。
 - `application`：CQRS 用例和跨能力编排。
+- `agent`：治理型 Agent 运行时、工具、模型端口、审计与 eval；只消费 application。
 - `apps`：API、CLI、Jobs 与唯一 composition root。
 
-`application` 编排能力包，`apps` 负责入口和装配；不要把 import-linter 的线性表达误读成业务层级。
+`application` 编排能力包，`agent` 只通过 application 使用业务能力，`apps` 负责入口和装配；不要把 import-linter 的线性表达误读成业务层级。
 
 ## 项目 Skills 路由
 

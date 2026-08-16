@@ -41,7 +41,7 @@ BANNED_WORKFLOW = re.compile(
 MAX_TEXT_BYTES = 2_000_000
 ROOT_AGENTS_MAX_LINES = 150
 ROOT_CLAUDE_MAX_LINES = 10
-PACKAGE_COUNT = 12
+PACKAGE_COUNT = 13
 PACKAGE_AGENTS_MAX_LINES = 60
 PACKAGE_CLAUDE_MAX_LINES = 3
 SKILL_MAX_LINES = 120
@@ -103,7 +103,9 @@ def _validate_instruction_files(errors: list[str]) -> None:
 
     packages = sorted(path.parent for path in (ROOT / "packages").glob("*/AGENTS.md"))
     if len(packages) != PACKAGE_COUNT:
-        errors.append(f"expected 12 package AGENTS.md files, found {len(packages)}")
+        errors.append(
+            f"expected {PACKAGE_COUNT} package AGENTS.md files, found {len(packages)}"
+        )
     for package in packages:
         agents = package / "AGENTS.md"
         wrapper = package / "CLAUDE.md"

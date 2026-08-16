@@ -9,6 +9,7 @@ This manifest makes root package imports reviewer-visible. A symbol listed here 
 
 | Package | Stable Root Exports | Root Policy | Leaf-Only / Internal API |
 |---|---|---|---|
+| `ditto_agent` | `[]` | No stable root exports. | Runtime contracts, tools, models, storage and eval stay leaf-only so consumers import from the defining module. |
 | `ditto_analysis` | `AnalysisError`<br>`ResearchDatasetError`<br>`ResearchDatasetSpec` | Narrow research control-plane root. | Snapshots, reports, diagnostics, screeners and experiments stay leaf/reserved until promoted. |
 | `ditto_application` | `[]` | No stable root exports. | Commands, queries, builders and process ports stay leaf-only to preserve CQRS boundaries. |
 | `ditto_apps` | `[]` | No stable root exports. | FastAPI app, CLI, jobs and registry composition stay explicit leaf imports. |
