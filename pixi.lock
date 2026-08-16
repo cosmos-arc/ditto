@@ -12281,6 +12281,7 @@ packages:
 - pypi: ./packages/apps
   name: ditto-apps
   requires_dist:
+  - ditto-agent
   - ditto-analysis
   - ditto-application
   - ditto-backtest

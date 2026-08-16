@@ -2248,6 +2248,7 @@ _IMPORT_TO_PKG: dict[str, str] = {
     "ditto_backtest": "backtest",
     "ditto_analysis": "analysis",
     "ditto_application": "application",
+    "ditto_agent": "agent",
     "ditto_apps": "apps",
 }
 
@@ -2255,6 +2256,7 @@ _PKG_TO_DEP = {v: f"ditto-{v}" for v in _IMPORT_TO_PKG.values()}
 _PKG_TO_IMPORT = {v: k for k, v in _IMPORT_TO_PKG.items()}
 
 _EXTERNAL_IMPORT_TO_DEP: dict[str, str] = {
+    "agents": "openai-agents",
     "cachebox": "cachebox",
     "click": "click",
     "cvxpy": "cvxpy",
