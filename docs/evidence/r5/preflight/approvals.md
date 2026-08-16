@@ -62,7 +62,7 @@
 |---|---:|---|---|
 | Agent `schema_v1.sql` Task 7 prerelease | 1 | DDL SHA-256 `b929ba78672f7c3eab83f502fdfad9e522d367b46021d7163aa3227078a5dc99`；SQLite catalog fingerprint `c88a91fe672be70ab679435da07ae989d07160d3a5ffce3186c9fcd51e495bdb`；17 个 catalog objects；实现 commit `be530cb5` | SUPERSEDED；从未应用到非临时数据库 |
 | Agent `schema_v1.sql` Task 9 sealed artifact | 1 | DDL SHA-256 `f804109efd0888d468d7732fa3254619522a6ee3948a34ada2d22c0a1887d054`；SQLite catalog fingerprint `7d99081c2ae9dc2467f72d2889e150560a0f4a14f715d062783cdfe29f5b3341`；21 个 catalog objects；实现 commit `ff15f7fa` | VERIFIED 2026-08-16T03:50:20Z |
-| Research migration/schema | 2 | Task 22 尚未生成；生成后先更新此行，再用于非临时数据库 | PENDING ARTIFACT |
+| Research `migration_v1_to_v2.sql` sealed artifact | 2 | v1 base DDL SHA-256 `697d10854fb12e324ddcff349bad55b9b442425b244cb5f1852d7192cfb7a8fd`；migration SHA-256 `34916eab0f426dc6a2c0401a76f8abc2b610e0e4c8a2c5fffb81919b7c7f0b78`；最终 SQLite catalog fingerprint `7b4a6d03f4ba879ca54fd47220b7d28728bcb58c87cdca3cdfe27a5466cd51e0`；95 个 catalog objects；实现 commit `672722c8` | VERIFIED 2026-08-16T10:01:40Z |
 
 `PENDING ARTIFACT` 不阻塞在临时 fixture 上按已批准 scope 编写并测试 schema；它阻塞任何非临时数据库应用。
 
@@ -110,4 +110,4 @@ Task 9 在同一未发布 `user_version=1` 中加入 immutable Episode manifest 
 3. A3/A4 为空的精确版本/hash/项目/数据/预算字段以 `PENDING` 明示，因此对应 live Task 保持阻塞；不能用 Fake GREEN 冒充 live acceptance。
 4. 任何批准扩展都作为本文件独立 evidence commit，记录 approver、UTC time、canonical scope、scope/artifact hashes、限制和撤销条件。
 
-下一恢复入口：Task 10。Agent v1 DDL artifact 已按 Task 9 最终冻结；Research v2 artifact 仍待 Task 22。A3 在 Task 25 live acceptance 前暂停，A4 在首次 live model call 前暂停。
+下一恢复入口：Task 23。Agent v1 DDL artifact 已按 Task 9 最终冻结；Research v2 artifact 已按 Task 22 冻结。A3 在 Task 25 live acceptance 前暂停，A4 在首次 live model call 前暂停。
