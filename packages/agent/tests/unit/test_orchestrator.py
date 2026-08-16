@@ -33,6 +33,7 @@ from ditto_agent.models.port import (
     ModelUsage,
     ResumeModelRequest,
 )
+from ditto_agent.observability import AgentObservability, InMemoryAgentTelemetrySink
 from ditto_agent.runtime.budgets import BudgetLedger, BudgetLimits, ModelPricing
 from ditto_agent.runtime.egress_policy import EvidenceEgressPolicy
 from ditto_agent.runtime.guardrails import GuardedEvidenceToolExecutor
@@ -157,6 +158,16 @@ class _RecordingApprovalSuspender:
     def suspend(self, *, request: ModelRequest, result: ModelResult) -> object:
         self.calls.append((request, result))
         return object()
+
+
+class _FailingSink:
+    def emit_span(self, record: object) -> None:
+        del record
+        raise RuntimeError("span exporter unavailable")
+
+    def emit_metric(self, record: object) -> None:
+        del record
+        raise RuntimeError("metric exporter unavailable")
 
 
 def _context() -> TemporalToolContext:
@@ -452,6 +463,8 @@ async def test_registered_approval_suspender_yields_waiting_approval() -> None:
     )
     model = ScriptedAgentModel(script=(ScriptedOutcome(result=interrupted),))
     suspender = _RecordingApprovalSuspender()
+    sink = InMemoryAgentTelemetrySink()
+    observability = AgentObservability(sink=sink, monotonic=clock.monotonic)
 
     outcome = await GovernedAgentOrchestrator(
         model=model,
@@ -459,6 +472,7 @@ async def test_registered_approval_suspender_yields_waiting_approval() -> None:
         budget=budget,
         clock=clock,
         approval_suspender=suspender,
+        observability=observability,
     ).execute(request)
 
     assert outcome.status is RunStatus.WAITING_APPROVAL
@@ -467,3 +481,49 @@ async def test_registered_approval_suspender_yields_waiting_approval() -> None:
     assert outcome.events[-1].event_type == "approval_waiting"
     assert suspender.calls[0][0].run_id == request.run.run_id
     assert suspender.calls[0][1] == interrupted
+    assert {record.name for record in sink.spans} >= {
+        "ditto.agent.run",
+        "ditto.agent.model",
+        "ditto.agent.approval",
+        "ditto.agent.cost",
+    }
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_emits_tool_span_without_raw_business_content() -> None:
+    clock, budget, executor, request = _runtime()
+    sink = InMemoryAgentTelemetrySink()
+    outcome = await GovernedAgentOrchestrator(
+        model=_InvokingModel(executor),
+        tool_executor=executor,
+        budget=budget,
+        clock=clock,
+        observability=AgentObservability(sink=sink, monotonic=clock.monotonic),
+    ).execute(request)
+
+    assert outcome.status is RunStatus.COMPLETED
+    tool_span = next(item for item in sink.spans if item.name == "ditto.agent.tool")
+    assert tool_span.attributes["agent.tool_name"] == ("research_experiment_evidence")
+    assert tool_span.attributes["agent.arguments_hash"] == (
+        executor.executions[0].arguments_hash
+    )
+    assert "metric" not in repr(tool_span).lower()
+
+
+@pytest.mark.asyncio
+async def test_failing_observability_sink_cannot_change_orchestration_outcome() -> None:
+    clock, budget, executor, request = _runtime()
+
+    outcome = await GovernedAgentOrchestrator(
+        model=_InvokingModel(executor),
+        tool_executor=executor,
+        budget=budget,
+        clock=clock,
+        observability=AgentObservability(
+            sink=_FailingSink(),
+            monotonic=clock.monotonic,
+        ),
+    ).execute(request)
+
+    assert outcome.status is RunStatus.COMPLETED
+    assert outcome.answer is not None

@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 from dishka import Provider, Scope, provide
+from ditto_agent.observability import METRIC_DEFINITIONS as AGENT_METRICS
 from ditto_backtest.observability.metrics import (
     METRIC_DEFINITIONS as BACKTEST_METRICS,
 )
@@ -118,6 +119,7 @@ def _register_app_metric_definitions() -> None:
         RISK_METRICS,
         BACKTEST_METRICS,
         EXECUTION_METRICS,
+        AGENT_METRICS,
     ):
         register_metric_definitions(definitions)
 

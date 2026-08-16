@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_agent.observability import AgentObservability
 from ditto_agent.runtime.service import AgentRuntimePort
 from ditto_agent.tools.campaign import CampaignProposalTool
 from ditto_agent.tools.memory import ResearchMemoryTool
@@ -15,6 +16,7 @@ from ditto_application.research_memory_approval_contracts import (
 )
 
 from ditto_apps.registry.agent.campaign_runtime import DisabledCampaignRuntime
+from ditto_apps.registry.agent.observability import build_agent_observability
 from ditto_apps.registry.agent.runtime import DisabledAgentRuntime
 
 
@@ -27,6 +29,11 @@ class AgentRuntimeProvider(Provider):
     def runtime(self) -> AgentRuntimePort:
         """Keep every Agent API write fail-closed by default."""
         return DisabledAgentRuntime()
+
+    @provide
+    def agent_observability(self) -> AgentObservability:
+        """Keep Agent OTel export disabled pending an explicit feature profile."""
+        return build_agent_observability(enabled=False)
 
     @provide
     def campaign_runtime(self) -> CampaignRuntimePort:

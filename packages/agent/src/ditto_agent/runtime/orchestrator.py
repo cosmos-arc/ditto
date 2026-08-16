@@ -20,6 +20,11 @@ from ditto_agent.models.port import (
     ModelResult,
     ModelToolCall,
 )
+from ditto_agent.observability import (
+    AgentBudgetTelemetry,
+    AgentObservability,
+    AgentToolTelemetry,
+)
 from ditto_agent.runtime.budgets import BudgetExceeded, BudgetLedger, BudgetSnapshot
 from ditto_agent.runtime.egress_policy import EvidenceEgressPolicyError
 from ditto_agent.runtime.episode import (
@@ -132,6 +137,19 @@ def _structured_refusal(reason: str) -> GroundedAnswer:
     )
 
 
+def _budget_telemetry(snapshot: BudgetSnapshot) -> AgentBudgetTelemetry:
+    return AgentBudgetTelemetry(
+        model_attempts=snapshot.model_attempts,
+        model_turns=snapshot.model_turns,
+        tool_calls=snapshot.tool_calls,
+        retries=snapshot.retries,
+        total_tokens=snapshot.total_tokens,
+        model_spend_usd=snapshot.model_spend_usd,
+        elapsed_seconds=snapshot.elapsed_seconds,
+        exhausted_reason=snapshot.exhausted_reason,
+    )
+
+
 def _drafts(result: ModelResult) -> tuple[tuple[GroundingDraft, ...], str | None]:
     output = result.final_output
     if not isinstance(output, Mapping) or set(output) != {"claims", "uncertainty"}:
@@ -185,12 +203,16 @@ class GovernedAgentOrchestrator:
         budget: BudgetLedger,
         clock: RuntimeClock,
         approval_suspender: ApprovalSuspender | None = None,
+        observability: AgentObservability | None = None,
     ) -> None:
         self._model = model
         self._tool_executor = tool_executor
         self._budget = budget
         self._clock = clock
         self._approval_suspender = approval_suspender
+        self._observability = observability or AgentObservability(
+            monotonic=clock.monotonic
+        )
 
     def _validate_request(self, request: AgentOrchestrationRequest) -> None:
         if request.run.status is not RunStatus.QUEUED:
@@ -300,7 +322,7 @@ class GovernedAgentOrchestrator:
             if status in {RunStatus.COMPLETED, RunStatus.FAILED}
             else None
         )
-        return AgentOrchestrationOutcome(
+        outcome = AgentOrchestrationOutcome(
             status=status,
             failure_code=failure_code,
             answer=answer,
@@ -308,6 +330,13 @@ class GovernedAgentOrchestrator:
             events=chain.events,
             episode=episode,
         )
+        self._observability.finish_run(
+            run_id=request.run.run_id,
+            status=status,
+            budget=_budget_telemetry(outcome.budget),
+            failure_code=failure_code,
+        )
+        return outcome
 
     def _failed(
         self,
@@ -354,6 +383,8 @@ class GovernedAgentOrchestrator:
     ) -> ModelResult | AgentOrchestrationOutcome:
         while True:
             executions_before = len(self._tool_executor.executions)
+            attempt_started = self._clock.monotonic()
+            result: ModelResult | None = None
             try:
                 self._budget.before_model_attempt()
                 chain.append(
@@ -362,19 +393,53 @@ class GovernedAgentOrchestrator:
                 )
                 result = await self._model.run(model_request)
                 self._budget.record_model_usage(result.usage)
+                self._observability.record_model(
+                    run_id=request.run.run_id,
+                    usage=result.usage,
+                    budget=_budget_telemetry(self._budget.snapshot()),
+                    latency_seconds=max(0.0, self._clock.monotonic() - attempt_started),
+                )
             except BudgetExceeded as exc:
+                self._observability.record_model(
+                    run_id=request.run.run_id,
+                    usage=(result.usage if result is not None else None),
+                    budget=_budget_telemetry(self._budget.snapshot()),
+                    latency_seconds=max(0.0, self._clock.monotonic() - attempt_started),
+                    status="paused",
+                    failure_code=exc.reason_code,
+                )
                 return self._paused(
                     request=request,
                     chain=chain,
                     reason=exc.reason_code,
                 )
             except (EvidenceEgressPolicyError, ToolGuardrailViolation) as exc:
+                self._observability.record_model(
+                    run_id=request.run.run_id,
+                    usage=None,
+                    budget=_budget_telemetry(self._budget.snapshot()),
+                    latency_seconds=max(0.0, self._clock.monotonic() - attempt_started),
+                    status="blocked",
+                    failure_code=exc.reason_code,
+                )
+                self._observability.record_guardrail(
+                    run_id=request.run.run_id,
+                    failure_code=exc.reason_code,
+                )
                 return self._failed(
                     request=request,
                     chain=chain,
                     reason=exc.reason_code,
                 )
             except (TimeoutError, ModelProviderError) as exc:
+                self._observability.record_model(
+                    run_id=request.run.run_id,
+                    usage=None,
+                    budget=_budget_telemetry(self._budget.snapshot()),
+                    latency_seconds=max(0.0, self._clock.monotonic() - attempt_started),
+                    status="failed",
+                    failure_code="model_provider_failed",
+                )
                 no_tool_effect = (
                     len(self._tool_executor.executions) == executions_before
                 )
@@ -409,6 +474,22 @@ class GovernedAgentOrchestrator:
                     "arguments_hash": execution.arguments_hash,
                 },
             )
+            self._observability.record_tool(
+                run_id=chain.events[0].run_id,
+                tool=AgentToolTelemetry(
+                    call_id=execution.call_id,
+                    tool_name=execution.tool_name,
+                    arguments_hash=execution.arguments_hash,
+                    result_hash=execution.evidence.integrity_hash,
+                    evidence_refs_hash=canonical_sha256(
+                        (execution.evidence.evidence_id,)
+                    ),
+                    artifact_refs_hash=canonical_sha256(
+                        execution.evidence.artifact_refs
+                    ),
+                    latency_seconds=0.0,
+                ),
+            )
             chain.append(
                 "tool_result",
                 {
@@ -441,6 +522,11 @@ class GovernedAgentOrchestrator:
     ) -> AgentOrchestrationOutcome:
         """Execute one bounded run and seal every terminal outcome."""
         self._validate_request(request)
+        self._observability.start_run(
+            run=request.run,
+            manifest=request.manifest,
+            temporal_context_hash=self._tool_executor.temporal_context_hash,
+        )
         _ = transition_run(RunStatus.QUEUED, RunStatus.RUNNING)
         chain = _EventChain(run_id=request.run.run_id, clock=self._clock)
         chain.append(
@@ -493,6 +579,21 @@ class GovernedAgentOrchestrator:
                         for item in result.interruptions
                     ),
                 },
+            )
+            self._observability.record_approval(
+                run_id=request.run.run_id,
+                provider=continuation.provider,
+                action_hash=canonical_sha256(
+                    tuple(
+                        {
+                            "call_id": item.call_id,
+                            "tool_name": item.tool_name,
+                            "arguments_hash": canonical_sha256(item.arguments),
+                        }
+                        for item in result.interruptions
+                    )
+                ),
+                approval_count=len(result.interruptions),
             )
             return self._outcome(
                 request=request,
