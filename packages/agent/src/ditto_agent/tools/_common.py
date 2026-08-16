@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Protocol, cast
@@ -93,6 +93,23 @@ def function_spec(
     )
 
 
+def approval_function_spec(
+    *,
+    name: str,
+    description: str,
+    properties: Mapping[str, object],
+    required: tuple[str, ...],
+) -> ModelToolSpec:
+    """Create one closed function tool that always interrupts for HITL."""
+    return ModelToolSpec(
+        kind=ModelToolKind.FUNCTION,
+        name=name,
+        description=description,
+        input_schema=object_schema(properties=properties, required=required),
+        requires_approval=True,
+    )
+
+
 class Arguments:
     """Exact typed reader for provider-supplied JSON arguments."""
 
@@ -134,6 +151,31 @@ class Arguments:
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
             raise ValueError(f"{field} must be a positive integer")
         return value
+
+    def nullable_positive_integer(self, field: str) -> int | None:
+        """Read one explicit null or positive integer, excluding booleans."""
+        value = self._value[field]
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{field} must be null or a positive integer")
+        return value
+
+    def text_tuple(self, field: str) -> tuple[str, ...]:
+        """Read an explicit array of unique canonical strings."""
+        value = self._value[field]
+        if not isinstance(value, (tuple, list)):
+            raise ValueError(f"{field} must be an array of strings")
+        items = tuple(cast("Sequence[object]", value))
+        if any(
+            not isinstance(item, str) or not item or item != item.strip()
+            for item in items
+        ):
+            raise ValueError(f"{field} must contain canonical strings")
+        strings = cast("tuple[str, ...]", items)
+        if len(set(strings)) != len(strings):
+            raise ValueError(f"{field} must contain unique strings")
+        return strings
 
     def boolean(self, field: str, *, default: bool = False) -> bool:
         """Read one optional strict boolean."""

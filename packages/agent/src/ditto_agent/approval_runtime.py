@@ -12,6 +12,11 @@ from decimal import Decimal
 from typing import Protocol
 
 from ditto_agent._canonical import canonical_bytes, canonical_sha256
+from ditto_agent.approval_authorization import (
+    ApprovalAuthorizationDependencies,
+    AuthorizedToolApproval,
+    authorize_tool_execution,
+)
 from ditto_agent.approval_codec import (
     MAX_CONTINUATION_BYTES,
     InterruptionBinding,
@@ -467,6 +472,29 @@ class AgentApprovalRuntime:
         if any(decision is None for decision in decisions):
             return None
         return tuple(decision for decision in decisions if decision is not None)
+
+    def authorize_tool_execution(
+        self,
+        *,
+        run_id: str,
+        call_id: str,
+        tool_name: str,
+        arguments: Mapping[str, object],
+    ) -> AuthorizedToolApproval:
+        """Revalidate one approved action immediately before its side effect."""
+        return authorize_tool_execution(
+            dependencies=ApprovalAuthorizationDependencies(
+                reader=self._reader,
+                load_envelope=self._load_envelope,
+                resolve_request=self._resolve_request,
+                validate_decision=self._validated_decision,
+                clock=self._clock,
+            ),
+            run_id=run_id,
+            call_id=call_id,
+            tool_name=tool_name,
+            arguments=arguments,
+        )
 
     def _ready_resume(self, run_id: str) -> _ReadyResume | None:
         envelope, continuation_hash = self._load_envelope(run_id)

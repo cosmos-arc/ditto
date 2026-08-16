@@ -18,6 +18,7 @@ from ditto_agent.approval_runtime import (
     ApprovalRuntimeUnavailable,
     ApprovalRuntimeViolation,
 )
+from ditto_agent.authoring_approval import ApprovalRuntimeAuthoringVerifier
 from ditto_agent.contracts.approval import ActionBudget, ApprovalAction
 from ditto_agent.contracts.runtime import (
     AgentManifest,
@@ -57,6 +58,8 @@ from ditto_agent.storage.sqlite.errors import (
 from ditto_agent.storage.sqlite.reader import AgentStoreReader
 from ditto_agent.storage.sqlite.records import ApprovalStatus
 from ditto_agent.storage.sqlite.writer import AgentStoreWriter
+from ditto_application.agent_authoring_contracts import AgentAuthoringApprovalCheck
+from ditto_application.exceptions import AppCommandError
 
 NOW = datetime(2026, 8, 16, 8, tzinfo=UTC)
 HASH_A = "a" * 64
@@ -643,6 +646,131 @@ def test_sensitive_provider_continuation_is_never_persisted(tmp_path: Path) -> N
     assert reader.get_continuation("run-r52") is None
     assert reader.list_run_approvals("run-r52") == ()
     assert not model.requests
+
+
+def test_physical_write_boundary_revalidates_approved_action_and_operator(
+    tmp_path: Path,
+) -> None:
+    runtime, _database, reader, writer, _model, resolver, _clock = _runtime(tmp_path)
+    interrupted = _interrupted()
+    batch = runtime.suspend(request=_request(), result=interrupted)
+    approval = batch.approvals[0]
+    writer.decide_approval(
+        request_id=approval.request_id,
+        expected_action_hash=approval.action_hash,
+        approved=True,
+        operator_id="operator-write-boundary",
+        reason="Approve the exact formal author write.",
+        decided_at=NOW + timedelta(minutes=1),
+    )
+    waiting = reader.get_run("run-r52")
+    assert waiting is not None
+    writer.transition_run(
+        run_id="run-r52",
+        expected_revision=waiting.revision,
+        target=RunStatus.RUNNING,
+        occurred_at=NOW + timedelta(minutes=1),
+        event_type="approval_resume_started",
+        event_payload_hash=HASH_B,
+    )
+    interruption = interrupted.interruptions[0]
+
+    authorized = runtime.authorize_tool_execution(
+        run_id="run-r52",
+        call_id=interruption.call_id,
+        tool_name=interruption.tool_name,
+        arguments=interruption.arguments,
+    )
+
+    assert authorized.approval_id == approval.request_id
+    assert authorized.action_hash == approval.action_hash
+    assert authorized.operator_id == "operator-write-boundary"
+    assert authorized.approved_at == NOW + timedelta(minutes=1)
+
+    check = AgentAuthoringApprovalCheck(
+        run_id="run-r52",
+        episode_id="episode-run-r52",
+        call_id=interruption.call_id,
+        tool_name=interruption.tool_name,
+        arguments=interruption.arguments,
+    )
+    proof = ApprovalRuntimeAuthoringVerifier(runtime=runtime).verify(check)
+    assert proof.matches(check)
+    assert proof.verify_integrity()
+    assert proof.operator_id == "operator-write-boundary"
+
+    resolver.authority_hash = HASH_B
+    with pytest.raises(ApprovalRuntimeViolation, match="action"):
+        runtime.authorize_tool_execution(
+            run_id="run-r52",
+            call_id=interruption.call_id,
+            tool_name=interruption.tool_name,
+            arguments=interruption.arguments,
+        )
+    with pytest.raises(AppCommandError) as exc_info:
+        ApprovalRuntimeAuthoringVerifier(runtime=runtime).verify(check)
+    assert exc_info.value.details["reason"] == "agent_approval_authority_mismatch"
+
+
+def test_physical_write_boundary_rejects_argument_or_call_mismatch(
+    tmp_path: Path,
+) -> None:
+    runtime, _database, reader, writer, _model, _resolver, _clock = _runtime(tmp_path)
+    interrupted = _interrupted()
+    batch = runtime.suspend(request=_request(), result=interrupted)
+    approval = batch.approvals[0]
+    writer.decide_approval(
+        request_id=approval.request_id,
+        expected_action_hash=approval.action_hash,
+        approved=True,
+        operator_id="operator-write-boundary",
+        reason=None,
+        decided_at=NOW + timedelta(minutes=1),
+    )
+    waiting = reader.get_run("run-r52")
+    assert waiting is not None
+    writer.transition_run(
+        run_id="run-r52",
+        expected_revision=waiting.revision,
+        target=RunStatus.RUNNING,
+        occurred_at=NOW + timedelta(minutes=1),
+        event_type="approval_resume_started",
+        event_payload_hash=HASH_B,
+    )
+    interruption = interrupted.interruptions[0]
+
+    with pytest.raises(ApprovalRuntimeViolation, match="does not match"):
+        runtime.authorize_tool_execution(
+            run_id="run-r52",
+            call_id=interruption.call_id,
+            tool_name=interruption.tool_name,
+            arguments={**interruption.arguments, "candidate_hash": HASH_B},
+        )
+    with pytest.raises(ApprovalRuntimeViolation, match="not bound"):
+        runtime.authorize_tool_execution(
+            run_id="run-r52",
+            call_id="call-other",
+            tool_name=interruption.tool_name,
+            arguments=interruption.arguments,
+        )
+
+
+def test_physical_write_boundary_fails_closed_when_storage_is_unavailable(
+    tmp_path: Path,
+) -> None:
+    runtime, database, _reader, _writer, _model, _resolver, _clock = _runtime(tmp_path)
+    interrupted = _interrupted()
+    runtime.suspend(request=_request(), result=interrupted)
+    database.close_all()
+    interruption = interrupted.interruptions[0]
+
+    with pytest.raises(ApprovalRuntimeUnavailable, match="storage"):
+        runtime.authorize_tool_execution(
+            run_id="run-r52",
+            call_id=interruption.call_id,
+            tool_name=interruption.tool_name,
+            arguments=interruption.arguments,
+        )
 
 
 def test_suspension_storage_unavailable_uses_runtime_failure_boundary(
