@@ -7,9 +7,13 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Protocol, cast
 
+from ditto_application.queries.authoring_preview_contracts import (
+    AuthoringPreviewReadModel,
+)
 from ditto_application.queries.evidence_contracts import (
     DecisionEvidenceReadModel,
     EvidenceArtifactReference,
+    EvidencePayloadReadModel,
     EvidenceTemporalContext,
     ResearchEvidenceReadModel,
 )
@@ -138,6 +142,16 @@ class Arguments:
             raise ValueError(f"{field} must be a boolean")
         return value
 
+    def mapping(self, field: str) -> Mapping[str, object]:
+        """Read one JSON object while preserving its structured payload."""
+        value = self._value[field]
+        if not isinstance(value, Mapping):
+            raise ValueError(f"{field} must be a string-keyed object")
+        raw_mapping = cast("Mapping[object, object]", value)
+        if not all(isinstance(key, str) for key in raw_mapping):
+            raise ValueError(f"{field} must be a string-keyed object")
+        return cast("Mapping[str, object]", raw_mapping)
+
 
 def application_context(context: TemporalToolContext) -> EvidenceTemporalContext:
     """Project a trusted Agent context into the application leaf contract."""
@@ -178,6 +192,7 @@ class _EnvelopeSource:
     payload_value: Mapping[str, object]
     artifacts: tuple[EvidenceArtifactReference, ...]
     lineage: tuple[str, ...]
+    payload_artifact_kind: str = "payload"
 
 
 def _seal(
@@ -198,7 +213,7 @@ def _seal(
     artifact_refs = tuple(
         dict.fromkeys(
             (
-                f"payload:sha256:{source.payload_hash}",
+                f"{source.payload_artifact_kind}:sha256:{source.payload_hash}",
                 *(_artifact_ref(item) for item in source.artifacts),
             )
         )
@@ -287,6 +302,53 @@ def seal_decision_evidence(
     )
 
 
+def seal_authoring_preview(
+    *,
+    tool_name: str,
+    expected_kind: str,
+    read_model: AuthoringPreviewReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Verify and seal a detached, non-publishable application preview."""
+    if read_model.kind.value != expected_kind:
+        raise ValueError("application authoring preview kind mismatch")
+    verified = EvidencePayloadReadModel.seal(
+        schema_version=read_model.payload.schema_version,
+        value=cast("Mapping[str, object]", read_model.payload.value),
+    )
+    if verified.payload_hash != read_model.payload.payload_hash:
+        raise ValueError("application authoring preview payload hash mismatch")
+    if read_model.payload.value.get("operation") != expected_kind:
+        raise ValueError("application authoring preview operation mismatch")
+    if read_model.payload.value.get("valid") is not read_model.valid:
+        raise ValueError("application authoring preview validity mismatch")
+    if read_model.payload.value.get("changed") is not read_model.changed:
+        raise ValueError("application authoring preview change flag mismatch")
+    if read_model.payload.value.get("publishable") is not False:
+        raise ValueError("application authoring preview must not be publishable")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="authoring_preview",
+            identity={
+                "preview_kind": expected_kind,
+                "subject_id": read_model.subject_id,
+                "subject_version": read_model.subject_version,
+                "valid": read_model.valid,
+                "changed": read_model.changed,
+                "publishable": False,
+            },
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast("Mapping[str, object]", read_model.payload.value),
+            artifacts=(),
+            lineage=read_model.lineage,
+            payload_artifact_kind="author-preview",
+        ),
+        context=context,
+    )
+
+
 def read_only_tools(
     tools: Mapping[str, EvidenceFunctionTool],
 ) -> Mapping[str, EvidenceFunctionTool]:
@@ -300,6 +362,7 @@ __all__ = [
     "application_context",
     "function_spec",
     "read_only_tools",
+    "seal_authoring_preview",
     "seal_decision_evidence",
     "seal_research_evidence",
 ]

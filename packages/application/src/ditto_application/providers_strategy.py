@@ -23,6 +23,7 @@ from ditto_strategy.storage.sqlite.strategy_governance_store import (
     SQLiteStrategyGovernanceStore,
 )
 
+from ditto_application.queries.authoring_preview import AuthoringPreviewFacade
 from ditto_application.queries.backtest import BacktestQueryFacade
 from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
@@ -99,6 +100,14 @@ class AppStrategyQueryProvider(Provider):
             experiment_resolver=experiment_query_facade,
             governance_event_reader=strategy_governance_store,
         )
+
+    @provide
+    def authoring_preview_facade(
+        self,
+        catalog_service: StrategyCatalogReader,
+    ) -> AuthoringPreviewFacade:
+        """Compose detached authoring previews over the exact strategy catalog."""
+        return AuthoringPreviewFacade(catalog=catalog_service)
 
     @provide
     def experiment_query_facade(

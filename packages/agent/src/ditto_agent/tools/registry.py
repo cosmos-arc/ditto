@@ -1,4 +1,4 @@
-"""Deterministic, capability-narrowable registry for evidence tools."""
+"""Deterministic, capability-narrowable registry for no-approval tools."""
 
 from __future__ import annotations
 
@@ -24,6 +24,17 @@ READ_EVIDENCE_TOOL_NAMES = frozenset(
     }
 )
 
+AUTHOR_PREVIEW_TOOL_NAMES = frozenset(
+    {
+        "author_draft_strategy",
+        "author_compile_expression",
+        "author_validate_strategy",
+        "author_diff_strategy",
+    }
+)
+
+NO_APPROVAL_TOOL_NAMES = READ_EVIDENCE_TOOL_NAMES | AUTHOR_PREVIEW_TOOL_NAMES
+
 
 class ToolNotAllowedError(ValueError):
     """A model requested a tool outside the host-selected read allowlist."""
@@ -38,11 +49,11 @@ class EvidenceToolRegistry:
             spec = tool.spec
             if spec.name in index:
                 raise ValueError(f"duplicate tool name: {spec.name}")
-            if spec.name not in READ_EVIDENCE_TOOL_NAMES:
-                raise ToolNotAllowedError(f"tool is not read-allowlisted: {spec.name}")
+            if spec.name not in NO_APPROVAL_TOOL_NAMES:
+                raise ToolNotAllowedError(f"tool is not allowlisted: {spec.name}")
             if spec.kind is not ModelToolKind.FUNCTION or spec.requires_approval:
                 raise ValueError(
-                    "evidence registry accepts no-approval function tools only"
+                    "tool registry accepts no-approval function tools only"
                 )
             index[spec.name] = tool
         self._tools = read_only_tools(index)
@@ -80,6 +91,8 @@ class EvidenceToolRegistry:
 
 
 __all__ = [
+    "AUTHOR_PREVIEW_TOOL_NAMES",
+    "NO_APPROVAL_TOOL_NAMES",
     "READ_EVIDENCE_TOOL_NAMES",
     "EvidenceToolRegistry",
     "ToolNotAllowedError",
