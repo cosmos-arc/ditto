@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Literal, cast
 from unittest.mock import MagicMock
@@ -147,6 +148,44 @@ def test_decision_facade_fails_closed_on_readiness_or_snapshot(
         )
 
     assert exc_info.value.details["code"] == expected_code
+
+
+def test_briefing_evidence_preserves_a_blocked_v3_without_model_authority() -> None:
+    facade, _ = _facade(_report(readiness="blocked"))
+
+    result = facade.get_briefing_evidence(
+        strategy_id="strategy-1",
+        strategy_version="3",
+        trade_date="2026-08-15",
+        account_id="account-1",
+        sleeve_id="sleeve-1",
+        context=_context(),
+    )
+
+    assert result.readiness == "blocked"
+    assert result.blocking_reasons == ("RISK_BLOCKED",)
+    assert result.payload.value["readiness"] == "blocked"
+    assert result.artifact_refs[0].content_hash == result.payload.payload_hash
+
+
+def test_briefing_evidence_rejects_missing_v3_provenance() -> None:
+    missing = replace(
+        _report(),
+        provenance=ProvenanceSection(None, None, None, (), None),
+    )
+    facade, _ = _facade(missing)
+
+    with pytest.raises(AppQueryError) as exc_info:
+        facade.get_briefing_evidence(
+            strategy_id="strategy-1",
+            strategy_version="3",
+            trade_date="2026-08-15",
+            account_id="account-1",
+            sleeve_id="sleeve-1",
+            context=_context(),
+        )
+
+    assert exc_info.value.details["code"] == "EVIDENCE_PROVENANCE_INCOMPLETE"
 
 
 def test_decision_facade_rejects_missing_identity_before_provider_call() -> None:

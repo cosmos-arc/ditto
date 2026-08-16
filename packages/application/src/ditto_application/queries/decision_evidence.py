@@ -7,6 +7,9 @@ from typing import Literal
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.daily_decision_v3 import DailyDecisionV3QueryFacade
+from ditto_application.queries.decision_briefing_contracts import (
+    DecisionBriefingEvidenceReadModel,
+)
 from ditto_application.queries.evidence_contracts import (
     DecisionEvidenceReadModel,
     EvidenceArtifactReference,
@@ -75,6 +78,45 @@ class DecisionEvidenceQueryFacade:
         context: EvidenceTemporalContext,
     ) -> DecisionEvidenceReadModel:
         """Return portfolio/risk/V3 evidence only when every boundary matches."""
+        briefing = self.get_briefing_evidence(
+            strategy_id=strategy_id,
+            strategy_version=strategy_version,
+            trade_date=trade_date,
+            account_id=account_id,
+            sleeve_id=sleeve_id,
+            context=context,
+        )
+        if briefing.readiness == "blocked":
+            raise _error(
+                "DECISION_EVIDENCE_NOT_READY",
+                "daily_decision_v3_blocked",
+                blocking_reasons=briefing.blocking_reasons,
+            )
+        readiness: Literal["ready", "review"] = briefing.readiness
+        return DecisionEvidenceReadModel(
+            strategy_id=briefing.strategy_id,
+            strategy_version=briefing.strategy_version,
+            trade_date=briefing.trade_date,
+            account_id=briefing.account_id,
+            sleeve_id=briefing.sleeve_id,
+            readiness=readiness,
+            temporal_context=briefing.temporal_context,
+            payload=briefing.payload,
+            artifact_refs=briefing.artifact_refs,
+            lineage=briefing.lineage,
+        )
+
+    def get_briefing_evidence(
+        self,
+        *,
+        strategy_id: str,
+        strategy_version: str,
+        trade_date: str,
+        account_id: str,
+        sleeve_id: str,
+        context: EvidenceTemporalContext,
+    ) -> DecisionBriefingEvidenceReadModel:
+        """Return immutable V3 facts for shadow explanation, even when blocked."""
         identities = {
             "strategy_id": _required(strategy_id, field_name="strategy_id"),
             "strategy_version": _required(
@@ -100,12 +142,6 @@ class DecisionEvidenceQueryFacade:
                     expected=expected,
                     actual=actual,
                 )
-        if report.readiness == "blocked":
-            raise _error(
-                "DECISION_EVIDENCE_NOT_READY",
-                "daily_decision_v3_blocked",
-                blocking_reasons=report.blocking_reasons,
-            )
         provenance = report.provenance
         expected_times = {
             "decision_time": context.decision_time,
@@ -153,14 +189,14 @@ class DecisionEvidenceQueryFacade:
             artifact_kind="daily_decision_v3",
             content_hash=payload.payload_hash,
         )
-        readiness: Literal["ready", "review"] = report.readiness
-        return DecisionEvidenceReadModel(
+        return DecisionBriefingEvidenceReadModel(
             strategy_id=identities["strategy_id"],
             strategy_version=identities["strategy_version"],
             trade_date=identities["signal_date"],
             account_id=identities["account_id"],
             sleeve_id=identities["sleeve_id"],
-            readiness=readiness,
+            readiness=report.readiness,
+            blocking_reasons=report.blocking_reasons,
             temporal_context=context,
             payload=payload,
             artifact_refs=(reference,),
