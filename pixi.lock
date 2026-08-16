@@ -12276,6 +12276,7 @@ packages:
   - dishka
   - httpx
   - loguru
+  - numpy
   - orjson
   - polars
   - pydantic

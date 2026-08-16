@@ -1254,6 +1254,30 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "application scheduler-store protocol."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "candidate_sandbox_port.py"
+        ),
+        owner="application generated-candidate sandbox contract boundary",
+        reason=(
+            "The consumer-owned port binds raw sandbox I/O and attestations to "
+            "analysis-owned research-code, snapshot, and resource-limit values; "
+            "it performs no sandbox or storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "generated_candidate_evaluator.py"
+        ),
+        owner="application trusted generated-candidate evaluator",
+        reason=(
+            "The host-owned evaluator validates untrusted code and score artifacts "
+            "before handing typed scores to the existing numerical authority; it "
+            "consumes analysis-owned campaign identities without storage access."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (

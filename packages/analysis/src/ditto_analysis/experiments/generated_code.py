@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -17,6 +18,8 @@ __all__ = [
     "SandboxExecutionManifest",
     "SandboxExitStatus",
     "SandboxResourceLimits",
+    "canonical_research_ast_hash",
+    "validate_research_code_contract",
 ]
 
 
@@ -63,6 +66,137 @@ def _freeze_dependencies(value: object) -> tuple[str, ...]:
             "invalid_research_code_dependencies",
         )
     return tuple(sorted(typed))
+
+
+def canonical_research_ast_hash(source_code: str) -> ContentHash:
+    """Return a location-independent hash of one parsed research module."""
+    try:
+        tree = ast.parse(source_code, mode="exec")
+    except (SyntaxError, ValueError, TypeError) as exc:
+        raise _code_error(
+            "generated research code is not valid Python",
+            "invalid_generated_code_syntax",
+            parser_error=type(exc).__name__,
+        ) from exc
+    canonical = ast.dump(tree, annotate_fields=True, include_attributes=False)
+    return ContentHash(hashlib.sha256(canonical.encode("utf-8")).hexdigest())
+
+
+def _immutable_module_constant(node: ast.Assign | ast.AnnAssign) -> bool:
+    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+    if len(targets) != 1 or not isinstance(targets[0], ast.Name):
+        return False
+    if not targets[0].id.isupper():
+        return False
+    value = node.value
+    if value is None:
+        return False
+    try:
+        literal = ast.literal_eval(value)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return False
+
+    def _immutable(item: object) -> bool:
+        if item is None or type(item) in (bool, int, float, complex, str, bytes):
+            return True
+        if not isinstance(item, tuple):
+            return False
+        parts = cast("tuple[object, ...]", item)
+        return all(_immutable(part) for part in parts)
+
+    return _immutable(literal)
+
+
+def _exact_signature(function: ast.FunctionDef, names: tuple[str, ...]) -> bool:
+    arguments = function.args
+    return (
+        tuple(argument.arg for argument in arguments.posonlyargs + arguments.args)
+        == names
+        and not arguments.kwonlyargs
+        and arguments.vararg is None
+        and arguments.kwarg is None
+        and not arguments.defaults
+        and not arguments.kw_defaults
+        and not function.decorator_list
+    )
+
+
+def _collect_contract_functions(tree: ast.Module) -> dict[str, ast.FunctionDef]:
+    functions: dict[str, ast.FunctionDef] = {}
+    for statement in tree.body:
+        if isinstance(statement, ast.FunctionDef):
+            if statement.name in functions:
+                raise _code_error(
+                    "generated research function names must be unique",
+                    "invalid_generated_code_signature",
+                    function=statement.name,
+                )
+            functions[statement.name] = statement
+        elif isinstance(statement, (ast.Import, ast.ImportFrom)) or (
+            isinstance(statement, ast.Expr)
+            and isinstance(statement.value, ast.Constant)
+            and isinstance(statement.value.value, str)
+        ):
+            continue
+        elif isinstance(statement, (ast.Assign, ast.AnnAssign)):
+            if not _immutable_module_constant(statement):
+                raise _code_error(
+                    "generated research modules cannot own mutable state",
+                    "mutable_generated_code_state",
+                )
+        elif isinstance(statement, ast.AsyncFunctionDef):
+            raise _code_error(
+                "generated research entry points must be synchronous",
+                "invalid_generated_code_signature",
+                function=statement.name,
+            )
+        else:
+            raise _code_error(
+                "generated research modules contain an unsupported top-level statement",
+                "mutable_generated_code_state",
+                statement_type=type(statement).__name__,
+            )
+    return functions
+
+
+def validate_research_code_contract(artifact: ResearchCodeArtifact) -> None:
+    """Validate the fixed, stateless fit/score research-code surface."""
+    if type(artifact) is not ResearchCodeArtifact:
+        raise _code_error(
+            "artifact must be ResearchCodeArtifact",
+            "invalid_generated_code_contract",
+        )
+    try:
+        tree = ast.parse(artifact.source_code, mode="exec")
+    except (SyntaxError, ValueError, TypeError) as exc:
+        raise _code_error(
+            "generated research code is not valid Python",
+            "invalid_generated_code_syntax",
+            parser_error=type(exc).__name__,
+        ) from exc
+    functions = _collect_contract_functions(tree)
+    expected = {
+        "fit": ("training_stream",),
+        "score": ("visible_window", "immutable_model_state"),
+    }
+    for name, arguments in expected.items():
+        function = functions.get(name)
+        if function is None or not _exact_signature(function, arguments):
+            raise _code_error(
+                f"{name} must use the fixed generated-code signature",
+                "invalid_generated_code_signature",
+                function=name,
+            )
+    if any(isinstance(node, (ast.Global, ast.Nonlocal)) for node in ast.walk(tree)):
+        raise _code_error(
+            "generated research functions cannot mutate outer state",
+            "mutable_generated_code_state",
+        )
+    if artifact.canonical_ast_hash != canonical_research_ast_hash(artifact.source_code):
+        raise _code_error(
+            "canonical_ast_hash does not match source_code",
+            "generated_code_ast_hash_mismatch",
+        )
 
 
 @dataclass(frozen=True, slots=True)
