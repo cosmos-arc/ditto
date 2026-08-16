@@ -2,7 +2,7 @@
 
 **日期：** 2026-08-12
 **状态：** 进行中
-**恢复点：** Wave 1 / Task 5，核心合同、canonical codec 与状态机
+**恢复点：** Wave 1 / Task 6，`AgentModelPort`、Fake provider 与 OpenAI adapter
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -150,7 +150,7 @@ pixi run -e dev check
 
 **依赖：** Task 4
 **风险：** 行为/公共契约
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `ditto_agent.contracts.{runtime,temporal,evidence,approval}`、`runtime.{codec,state_machine}`。
 - **RED/观察证据：** 先测试 Run 合法/非法转换、UTC/enum/identity 校验、canonical bytes 稳定性和 action hash 篡改。
@@ -904,8 +904,8 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同。
-- **下一步：** Wave 1 / Task 5，先写核心合同、状态转换、canonical bytes 与 action hash 篡改 RED。
+- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试。
+- **下一步：** Wave 1 / Task 6，先以 shared provider contract 写出 `AgentModelPort`、Fake provider、OpenAI adapter 与 apps registry wiring 的 RED；A4 未获批，因此只允许注入式、零网络 adapter 测试。
 - **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的最终 DDL artifact hashes 在 Tasks 7/22 生成后追加，非临时 DB 应用前必须存在。
-- **最新命令与结果：** Task 4 RED 为 package/boundary 测试 5 failed；GREEN 为 5 passed。`pixi run -e dev arch-check` 为 43 kept / 0 broken；`pixi run -e dev check` 为 lint/fmt/type 通过、12,307 passed / 1 个既有 xfail、Harness 16 passed；`git diff --cached --check` 通过。
+- **最新命令与结果：** Task 5 RED 为 3 个 collection error（核心合同模块不存在）；聚焦 GREEN 为 32 passed。首次仓库门禁分别发现并促使移除非 Typer `PLR0913` 豁免、打破 contracts/runtime 包内环；最终 `pixi run -e dev check` 为 lint/fmt/type 通过、12,339 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed；`git diff --cached --check` 通过。
 - **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 只阻塞 Task 25 live acceptance，A4 只阻塞任何 live model 调用；Fake provider 工作可继续。
