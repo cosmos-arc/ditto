@@ -1,8 +1,8 @@
 # R5 治理型量化研究 Agent 详细实施计划
 
 **日期：** 2026-08-12
-**状态：** 未开始
-**恢复点：** Wave 0 / Task 1，先核对当前 R4/R3/application 叶级合同
+**状态：** 进行中
+**恢复点：** Wave 1 / Task 4，建立 `ditto_agent` 包和机器边界
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -72,7 +72,7 @@
 
 **依赖：** 无
 **风险：** 普通，只读
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `DailyDecisionV3QueryFacade`、experiment query/command/process、StrategySpec/DSL、portfolio/risk read model、apps registry provider。
 - **RED/观察证据：** 用 `rg` 和类型签名列出真实叶模块；若设计文档中的任何符号不存在，记录 mapping，不靠 re-export 或猜测补齐。
@@ -91,7 +91,7 @@ git diff --check
 
 **依赖：** Task 1
 **风险：** 普通，只读；结论触发后续审批
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** OpenAI Agents SDK 当前 Python API、Responses `store=false`、MAM/ZDR、模型 profile、Docker Desktop/rootless OCI/gVisor 能力。
 - **RED/观察证据：** 当前项目没有 `openai-agents` 直接依赖；不得依赖历史 2026-08-04 的示例签名。
@@ -110,7 +110,7 @@ git diff --check
 
 **依赖：** Task 2
 **风险：** 高风险，暂停点
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** Approval A1—A4。
 - **RED/观察证据：** 任一批准为空即阻塞对应 Task，不把本文设计接受等同于未来生产依赖/schema/外发批准。
@@ -904,8 +904,8 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** 设计与实施计划文档已接受；代码任务尚未开始。
-- **下一步：** Task 1，冻结 R3/R4/application 真实消费面。
-- **未解决风险：** A1—A4 均待实施时以精确对象收集批准；OpenAI SDK/API 与 OCI runtime 需重新核验当前版本。
-- **最新命令与结果：** 尚无代码实施验证，不得继承本次文档落地检查作为 Wave 证据。
-- **外部等待或 approval：** 无；到对应 Task 前再暂停。
+- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。
+- **下一步：** Wave 1 / Task 4，先写 package import/boundary RED，再建立 `ditto_agent`、Pixi 依赖和 import-linter 机器合同。
+- **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的最终 DDL artifact hashes 在 Tasks 7/22 生成后追加，非临时 DB 应用前必须存在。
+- **最新命令与结果：** Tasks 1—3 各自运行 `git diff --cached --check` 通过并形成独立 evidence commit；Wave 0 没有生产 Python 变更，不继承后续 `arch-check`/`check` 证据。
+- **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 只阻塞 Task 25 live acceptance，A4 只阻塞任何 live model 调用；Fake provider 工作可继续。
