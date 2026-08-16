@@ -97,12 +97,16 @@ def _window() -> FrozenSandboxWindow:
             row_count=1,
         ),
         snapshot_id=SnapshotId("snapshot-r5-oci"),
+        decision_time_epoch_us=1_700_000_000_000_000,
         knowledge_cutoff_epoch_us=1_700_000_000_000_000,
+        publication_cutoff_epoch_us=1_699_999_000_000_000,
         score_keys=(
             SandboxScoreKey(
                 entity_id="510300.SH",
                 event_time_epoch_us=1_700_000_000_000_000,
                 known_at_epoch_us=1_699_999_000_000_000,
+                publication_time_epoch_us=1_699_998_000_000_000,
+                execution_eligible_at_epoch_us=1_700_001_000_000_000,
             ),
         ),
     )

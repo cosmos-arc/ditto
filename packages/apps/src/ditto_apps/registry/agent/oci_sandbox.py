@@ -337,12 +337,16 @@ def _window_payload(window: FrozenSandboxWindow) -> dict[str, object]:
     return {
         "artifact": _artifact_payload(window.artifact),
         "snapshot_id": str(window.snapshot_id),
+        "decision_time_epoch_us": window.decision_time_epoch_us,
         "knowledge_cutoff_epoch_us": window.knowledge_cutoff_epoch_us,
+        "publication_cutoff_epoch_us": window.publication_cutoff_epoch_us,
         "score_keys": [
             {
                 "entity_id": key.entity_id,
                 "event_time_epoch_us": key.event_time_epoch_us,
                 "known_at_epoch_us": key.known_at_epoch_us,
+                "publication_time_epoch_us": key.publication_time_epoch_us,
+                "execution_eligible_at_epoch_us": (key.execution_eligible_at_epoch_us),
             }
             for key in window.score_keys
         ],

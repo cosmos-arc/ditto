@@ -1295,6 +1295,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "consumes analysis-owned campaign identities without storage access."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "generated_candidate_pit.py"
+        ),
+        owner="application generated-candidate PIT evaluation boundary",
+        reason=(
+            "The host-owned feed materializes one exact analysis-owned fold and "
+            "snapshot behind an injected row-reader port, then supplies frozen "
+            "PIT windows to a fresh sandbox without owning storage I/O."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (

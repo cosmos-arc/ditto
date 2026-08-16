@@ -93,10 +93,13 @@ class TrustedCandidateEvaluationRequest:
     candidate_hash: ContentHash
     validation_protocol_hash: ContentHash
     snapshot_id: SnapshotId
+    decision_time_epoch_us: int
     knowledge_cutoff_epoch_us: int
+    publication_cutoff_epoch_us: int
     code_artifact_hash: ContentHash
     score_artifact_hash: ContentHash
     scores: Sequence[CandidateScoreRow]
+    score_keys: Sequence[SandboxScoreKey]
 
     def __post_init__(self) -> None:
         """Freeze one exact typed handoff to trusted numerical evaluation."""
@@ -110,9 +113,18 @@ class TrustedCandidateEvaluationRequest:
         )
         if any(type(value) is not expected for value, expected in typed):
             raise _error("trusted_evaluation_request_identity_invalid")
-        if (
-            type(self.knowledge_cutoff_epoch_us) is not int
-            or self.knowledge_cutoff_epoch_us < 0
+        for field_name in (
+            "decision_time_epoch_us",
+            "knowledge_cutoff_epoch_us",
+            "publication_cutoff_epoch_us",
+        ):
+            value = getattr(self, field_name)
+            if type(value) is not int or value < 0:
+                raise _error("trusted_evaluation_request_cutoff_invalid")
+        if not (
+            self.publication_cutoff_epoch_us
+            <= self.knowledge_cutoff_epoch_us
+            <= self.decision_time_epoch_us
         ):
             raise _error("trusted_evaluation_request_cutoff_invalid")
         rows = _freeze_runtime_sequence(
@@ -120,7 +132,28 @@ class TrustedCandidateEvaluationRequest:
         )
         if not rows or any(type(row) is not CandidateScoreRow for row in rows):
             raise _error("trusted_evaluation_scores_invalid")
-        object.__setattr__(self, "scores", cast("tuple[CandidateScoreRow, ...]", rows))
+        typed_rows = cast("tuple[CandidateScoreRow, ...]", rows)
+        keys = _freeze_runtime_sequence(
+            cast("object", self.score_keys),
+            reason="trusted_evaluation_score_keys_invalid",
+        )
+        if len(keys) != len(typed_rows) or any(
+            type(key) is not SandboxScoreKey for key in keys
+        ):
+            raise _error("trusted_evaluation_score_keys_invalid")
+        typed_keys = cast("tuple[SandboxScoreKey, ...]", keys)
+        if tuple(
+            (row.entity_id, row.event_time_epoch_us) for row in typed_rows
+        ) != tuple(
+            (key.entity_id, key.event_time_epoch_us) for key in typed_keys
+        ) or any(
+            key.known_at_epoch_us > self.knowledge_cutoff_epoch_us
+            or key.publication_time_epoch_us > self.publication_cutoff_epoch_us
+            for key in typed_keys
+        ):
+            raise _error("trusted_evaluation_score_keys_invalid")
+        object.__setattr__(self, "scores", typed_rows)
+        object.__setattr__(self, "score_keys", typed_keys)
 
 
 class TrustedCandidateEvaluationPort(Protocol):
@@ -328,12 +361,17 @@ class GeneratedCandidateEvaluator:
             candidate_hash=request.candidate.candidate_hash,
             validation_protocol_hash=request.experiment_plan.validation_protocol_hash,
             snapshot_id=request.visible_window.snapshot_id,
+            decision_time_epoch_us=request.visible_window.decision_time_epoch_us,
             knowledge_cutoff_epoch_us=(
                 request.visible_window.knowledge_cutoff_epoch_us
+            ),
+            publication_cutoff_epoch_us=(
+                request.visible_window.publication_cutoff_epoch_us
             ),
             code_artifact_hash=request.code_artifact.artifact_hash,
             score_artifact_hash=first_output.content_hash,
             scores=rows,
+            score_keys=request.visible_window.score_keys,
         )
         result = self._trusted.evaluate(trusted_request)
         self._validate_trusted_result(result, trusted_request)
@@ -357,6 +395,16 @@ class GeneratedCandidateEvaluator:
             raise _error("generated_code_candidate_identity_mismatch")
         if request.seed != request.experiment_plan.seed:
             raise _error("generated_candidate_seed_mismatch")
+        temporal_contexts = {
+            (
+                window.decision_time_epoch_us,
+                window.knowledge_cutoff_epoch_us,
+                window.publication_cutoff_epoch_us,
+            )
+            for window in (request.training_stream, request.visible_window)
+        }
+        if len(temporal_contexts) != 1:
+            raise _error("sandbox_window_temporal_context_mismatch")
         for window in (request.training_stream, request.visible_window):
             if window.snapshot_id != request.experiment_plan.snapshot_id:
                 raise _error("sandbox_window_snapshot_mismatch")

@@ -110,6 +110,8 @@ class SandboxScoreKey:
     entity_id: str
     event_time_epoch_us: int
     known_at_epoch_us: int
+    publication_time_epoch_us: int
+    execution_eligible_at_epoch_us: int
 
     def __post_init__(self) -> None:
         """Reject ambiguous row identities and timestamps."""
@@ -119,10 +121,19 @@ class SandboxScoreKey:
             or self.entity_id != self.entity_id.strip()
         ):
             raise _error("sandbox_score_identity_invalid")
-        for field_name in ("event_time_epoch_us", "known_at_epoch_us"):
+        for field_name in (
+            "event_time_epoch_us",
+            "known_at_epoch_us",
+            "publication_time_epoch_us",
+            "execution_eligible_at_epoch_us",
+        ):
             value = getattr(self, field_name)
             if type(value) is not int or value < 0:
                 raise _error("sandbox_score_time_invalid", field=field_name)
+        if self.publication_time_epoch_us > self.known_at_epoch_us:
+            raise _error("sandbox_score_publication_after_knowledge")
+        if self.execution_eligible_at_epoch_us <= self.event_time_epoch_us:
+            raise _error("same_close_execution_forbidden")
 
 
 def _freeze_score_keys(value: object) -> tuple[SandboxScoreKey, ...]:
@@ -140,7 +151,9 @@ class FrozenSandboxWindow:
 
     artifact: FrozenSandboxArtifact
     snapshot_id: SnapshotId
+    decision_time_epoch_us: int
     knowledge_cutoff_epoch_us: int
+    publication_cutoff_epoch_us: int
     score_keys: Sequence[SandboxScoreKey]
 
     def __post_init__(self) -> None:
@@ -149,11 +162,20 @@ class FrozenSandboxWindow:
             raise _error("sandbox_window_artifact_invalid")
         if type(self.snapshot_id) is not SnapshotId:
             raise _error("sandbox_window_snapshot_invalid")
-        if (
-            type(self.knowledge_cutoff_epoch_us) is not int
-            or self.knowledge_cutoff_epoch_us < 0
+        for field_name in (
+            "decision_time_epoch_us",
+            "knowledge_cutoff_epoch_us",
+            "publication_cutoff_epoch_us",
         ):
-            raise _error("sandbox_window_cutoff_invalid")
+            value = getattr(self, field_name)
+            if type(value) is not int or value < 0:
+                raise _error("sandbox_window_cutoff_invalid", field=field_name)
+        if not (
+            self.publication_cutoff_epoch_us
+            <= self.knowledge_cutoff_epoch_us
+            <= self.decision_time_epoch_us
+        ):
+            raise _error("sandbox_window_temporal_order_invalid")
         typed = _freeze_score_keys(cast("object", self.score_keys))
         if len(typed) != self.artifact.row_count:
             raise _error("sandbox_window_row_count_mismatch")
@@ -164,6 +186,11 @@ class FrozenSandboxWindow:
             item.known_at_epoch_us > self.knowledge_cutoff_epoch_us for item in typed
         ):
             raise _error("sandbox_window_future_visibility")
+        if any(
+            item.publication_time_epoch_us > self.publication_cutoff_epoch_us
+            for item in typed
+        ):
+            raise _error("sandbox_window_future_publication")
         object.__setattr__(self, "score_keys", typed)
 
     @property
@@ -175,12 +202,18 @@ class FrozenSandboxWindow:
                 "schema_hash": str(self.artifact.schema_hash),
                 "row_count": self.artifact.row_count,
                 "snapshot_id": str(self.snapshot_id),
+                "decision_time_epoch_us": self.decision_time_epoch_us,
                 "knowledge_cutoff_epoch_us": self.knowledge_cutoff_epoch_us,
+                "publication_cutoff_epoch_us": self.publication_cutoff_epoch_us,
                 "score_keys": [
                     {
                         "entity_id": item.entity_id,
                         "event_time_epoch_us": item.event_time_epoch_us,
                         "known_at_epoch_us": item.known_at_epoch_us,
+                        "publication_time_epoch_us": item.publication_time_epoch_us,
+                        "execution_eligible_at_epoch_us": (
+                            item.execution_eligible_at_epoch_us
+                        ),
                     }
                     for item in self.score_keys
                 ],

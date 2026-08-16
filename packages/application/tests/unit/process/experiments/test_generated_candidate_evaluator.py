@@ -100,8 +100,20 @@ def _artifact(
 
 def _window() -> FrozenSandboxWindow:
     keys = (
-        SandboxScoreKey("510300.SH", 1_700_000_000_000_000, 1_699_999_000_000_000),
-        SandboxScoreKey("510500.SH", 1_700_000_000_000_000, 1_699_999_100_000_000),
+        SandboxScoreKey(
+            "510300.SH",
+            1_700_000_000_000_000,
+            1_699_999_000_000_000,
+            1_699_998_000_000_000,
+            1_700_001_000_000_000,
+        ),
+        SandboxScoreKey(
+            "510500.SH",
+            1_700_000_000_000_000,
+            1_699_999_100_000_000,
+            1_699_998_100_000_000,
+            1_700_001_000_000_000,
+        ),
     )
     return FrozenSandboxWindow(
         artifact=_artifact(
@@ -122,7 +134,9 @@ def _window() -> FrozenSandboxWindow:
             row_count=2,
         ),
         snapshot_id=SNAPSHOT_ID,
+        decision_time_epoch_us=1_700_000_000_000_000,
         knowledge_cutoff_epoch_us=1_700_000_000_000_000,
+        publication_cutoff_epoch_us=1_699_999_000_000_000,
         score_keys=keys,
     )
 
@@ -353,11 +367,31 @@ def test_future_visible_row_fails_closed_before_sandbox_execution() -> None:
         FrozenSandboxWindow(
             artifact=window.artifact,
             snapshot_id=window.snapshot_id,
+            decision_time_epoch_us=window.decision_time_epoch_us,
             knowledge_cutoff_epoch_us=window.knowledge_cutoff_epoch_us,
+            publication_cutoff_epoch_us=window.publication_cutoff_epoch_us,
             score_keys=(future_key, window.score_keys[1]),
         )
 
     assert _reason(exc_info) == "sandbox_window_future_visibility"
+
+
+def test_training_and_visible_windows_cannot_use_different_temporal_contexts() -> None:
+    sandbox = _FakeSandbox()
+    request = _request()
+    drifted_training = replace(
+        request.training_stream,
+        decision_time_epoch_us=request.training_stream.decision_time_epoch_us + 1,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        GeneratedCandidateEvaluator(
+            sandbox=sandbox,
+            trusted=_TrustedEvaluator(),
+        ).evaluate(replace(request, training_stream=drifted_training))
+
+    assert _reason(exc_info) == "sandbox_window_temporal_context_mismatch"
+    assert sandbox.fit_requests == []
 
 
 def test_invalid_signature_is_rejected_before_sandbox_execution() -> None:
