@@ -6,6 +6,10 @@ import pytest
 from ditto_agent.tools.campaign import CampaignProposalTool
 from ditto_agent.tools.memory import ResearchMemoryTool
 from ditto_application.agent_campaign_contracts import AutonomousCampaignCommandPort
+from ditto_application.agent_campaign_runtime import (
+    CampaignCreateCommand,
+    CampaignRuntimeUnavailable,
+)
 from ditto_application.exceptions import AppCommandError
 from ditto_application.queries.research_memory import ResearchMemoryQueryFacade
 from ditto_application.research_memory_approval_contracts import (
@@ -48,3 +52,17 @@ def test_default_memory_promotion_approval_fails_closed() -> None:
         verifier.verify(check)
 
     assert exc_info.value.details["reason"] == "agent_feature_disabled"
+
+
+def test_default_campaign_runtime_fails_closed() -> None:
+    runtime = AgentRuntimeProvider().campaign_runtime()
+
+    with pytest.raises(CampaignRuntimeUnavailable) as exc_info:
+        runtime.create_campaign(
+            CampaignCreateCommand(
+                manifest_document={},
+                idempotency_key="campaign-disabled",
+            )
+        )
+
+    assert exc_info.value.reason_code == "agent_campaign_feature_disabled"

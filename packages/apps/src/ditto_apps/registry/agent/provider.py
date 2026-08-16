@@ -7,12 +7,14 @@ from ditto_agent.runtime.service import AgentRuntimePort
 from ditto_agent.tools.campaign import CampaignProposalTool
 from ditto_agent.tools.memory import ResearchMemoryTool
 from ditto_application.agent_campaign_contracts import AutonomousCampaignCommandPort
+from ditto_application.agent_campaign_runtime import CampaignRuntimePort
 from ditto_application.queries.research_memory import ResearchMemoryQueryFacade
 from ditto_application.research_memory_approval_contracts import (
     DisabledResearchMemoryApprovalVerifier,
     ResearchMemoryApprovalVerifier,
 )
 
+from ditto_apps.registry.agent.campaign_runtime import DisabledCampaignRuntime
 from ditto_apps.registry.agent.runtime import DisabledAgentRuntime
 
 
@@ -25,6 +27,11 @@ class AgentRuntimeProvider(Provider):
     def runtime(self) -> AgentRuntimePort:
         """Keep every Agent API write fail-closed by default."""
         return DisabledAgentRuntime()
+
+    @provide
+    def campaign_runtime(self) -> CampaignRuntimePort:
+        """Keep Campaign public mutations unavailable until explicitly enabled."""
+        return DisabledCampaignRuntime()
 
     @provide
     def research_memory_approval_verifier(self) -> ResearchMemoryApprovalVerifier:

@@ -235,6 +235,22 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
 
 APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/campaign_runtime.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.errors",
+                "ditto_analysis.experiments.campaign_persistence",
+                "ditto_analysis.experiments.models",
+            }
+        ),
+        owner="apps governed Campaign runtime adapter",
+        reason=(
+            "The physical composition adapter projects Analysis-owned persisted "
+            "Campaign facts through an Application-owned public runtime and joins "
+            "them to Agent-owned durable idempotency records."
+        ),
+    ),
+    CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/registry/agent/oci_sandbox.py",
         allowed_modules=frozenset(
             {
@@ -562,6 +578,16 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
         reason=(
             "The dedicated composition boundary wires Analysis-owned Campaign "
             "persistence ports into PIT read and governed mutation facades."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/commands/campaign_manifest.py"
+        ),
+        owner="application governed Campaign manifest command boundary",
+        reason=(
+            "The strict command builder compiles an explicit public document into "
+            "Analysis-owned immutable Campaign values without storage or execution I/O."
         ),
     ),
     ProductionAnalysisWiringAllowance(
@@ -1269,6 +1295,18 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "The immutable Campaign contracts bind analysis-owned campaign, metric, "
             "lease, and statistical-trial values into the finite authorization and "
             "scheduler ports consumed by the host coordinator; they perform no I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_authorization.py"
+        ),
+        owner="application governed Campaign authorization lifecycle",
+        reason=(
+            "The private lifecycle boundary freezes Analysis-owned Campaign drafts "
+            "and binds exact human authority before coordinator execution; all "
+            "persistence remains behind injected protocols."
         ),
     ),
     ProductionAnalysisWiringAllowance(

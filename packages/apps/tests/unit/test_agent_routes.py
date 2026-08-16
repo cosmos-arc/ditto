@@ -123,6 +123,37 @@ def test_openapi_registers_stable_r51_agent_surface() -> None:
     )
 
 
+def test_openapi_registers_fixed_campaign_surface_and_write_fences() -> None:
+    schema = create_openapi_app().openapi()
+    campaign_paths = {
+        "/api/v1/agent/campaigns",
+        "/api/v1/agent/campaigns/{campaign_id}/approve",
+        "/api/v1/agent/campaigns/{campaign_id}",
+        "/api/v1/agent/campaigns/{campaign_id}/events",
+        "/api/v1/agent/campaigns/{campaign_id}/cancel",
+    }
+
+    assert campaign_paths <= schema["paths"].keys()
+    assert all("patch" not in schema["paths"][path] for path in campaign_paths)
+    for path in (
+        "/api/v1/agent/campaigns",
+        "/api/v1/agent/campaigns/{campaign_id}/approve",
+        "/api/v1/agent/campaigns/{campaign_id}/cancel",
+    ):
+        parameters = schema["paths"][path]["post"]["parameters"]
+        assert any(
+            item["name"] == "Idempotency-Key" and item["required"] is True
+            for item in parameters
+        )
+
+    create_schema = schema["components"]["schemas"]["AgentCampaignCreateRequest"]
+    approve_schema = schema["components"]["schemas"]["AgentCampaignApproveRequest"]
+    cancel_schema = schema["components"]["schemas"]["AgentCampaignCancelRequest"]
+    assert create_schema["additionalProperties"] is False
+    assert approve_schema["additionalProperties"] is False
+    assert cancel_schema["additionalProperties"] is False
+
+
 @pytest.mark.asyncio
 async def test_create_routes_translate_dtos_to_runtime_commands() -> None:
     runtime = _RecordingRuntime()

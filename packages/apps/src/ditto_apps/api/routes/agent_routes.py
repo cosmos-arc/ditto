@@ -27,6 +27,19 @@ from ditto_agent.runtime.service import (
     AgentSessionView,
     ApprovalDecisionKind,
 )
+from ditto_application.agent_campaign_runtime import (
+    CampaignApproveCommand,
+    CampaignCancelCommand,
+    CampaignCreateCommand,
+    CampaignEventView,
+    CampaignInvalidRequest,
+    CampaignRequestConflict,
+    CampaignResourceNotFound,
+    CampaignRuntimeError,
+    CampaignRuntimePort,
+    CampaignRuntimeUnavailable,
+    CampaignView,
+)
 from fastapi import APIRouter, Header, Response
 
 from ditto_apps.api.errors import APIError
@@ -34,6 +47,12 @@ from ditto_apps.api.mutation_idempotency import IdempotencyKeyHeader
 from ditto_apps.models.agent import (
     AgentApprovalDecisionRequest,
     AgentApprovalDecisionResponse,
+    AgentCampaignApproveRequest,
+    AgentCampaignBudget,
+    AgentCampaignCancelRequest,
+    AgentCampaignCreateRequest,
+    AgentCampaignResponse,
+    AgentCampaignSandboxLimits,
     AgentRunCancelRequest,
     AgentRunCreateRequest,
     AgentRunResponse,
@@ -71,6 +90,30 @@ def _raise_runtime_error(exc: AgentRuntimeError) -> Never:
         ) from exc
     raise APIError(
         "Agent runtime failed", status_code=500, error_code=exc.reason_code.upper()
+    ) from exc
+
+
+def _raise_campaign_error(exc: CampaignRuntimeError) -> Never:
+    if isinstance(exc, CampaignRuntimeUnavailable):
+        raise APIError(
+            str(exc), status_code=503, error_code=exc.reason_code.upper()
+        ) from exc
+    if isinstance(exc, CampaignResourceNotFound):
+        raise APIError(
+            str(exc), status_code=404, error_code=exc.reason_code.upper()
+        ) from exc
+    if isinstance(exc, CampaignRequestConflict):
+        raise APIError(
+            str(exc), status_code=409, error_code=exc.reason_code.upper()
+        ) from exc
+    if isinstance(exc, CampaignInvalidRequest):
+        raise APIError(
+            str(exc), status_code=422, error_code=exc.reason_code.upper()
+        ) from exc
+    raise APIError(
+        "Campaign runtime failed",
+        status_code=500,
+        error_code=exc.reason_code.upper(),
     ) from exc
 
 
@@ -114,6 +157,45 @@ def _approval_response(
     )
 
 
+def _campaign_response(campaign: CampaignView) -> AgentCampaignResponse:
+    sandbox = campaign.budget.sandbox_resource_limits
+    return AgentCampaignResponse(
+        campaign_id=campaign.campaign_id,
+        status=campaign.status,
+        manifest_hash=campaign.manifest_hash,
+        authorization_hash=campaign.authorization_hash,
+        authorized_by=campaign.authorized_by,
+        authorization_expires_at=campaign.authorization_expires_at,
+        search_axis=campaign.search_axis,
+        source_snapshot_id=campaign.source_snapshot_id,
+        allowed_tools=campaign.allowed_tools,
+        budget=AgentCampaignBudget(
+            candidate_limit=campaign.budget.candidate_limit,
+            fold_run_limit=campaign.budget.fold_run_limit,
+            generation_limit=campaign.budget.generation_limit,
+            concurrent_sandbox_limit=campaign.budget.concurrent_sandbox_limit,
+            wall_time_limit_seconds=campaign.budget.wall_time_limit_seconds,
+            temporary_storage_limit_bytes=(
+                campaign.budget.temporary_storage_limit_bytes
+            ),
+            model_spend_limit_usd_micros=(campaign.budget.model_spend_limit_usd_micros),
+            sandbox_resource_limits=AgentCampaignSandboxLimits(
+                cpu_count=sandbox.cpu_count,
+                memory_bytes=sandbox.memory_bytes,
+                process_limit=sandbox.process_limit,
+                temporary_storage_bytes=sandbox.temporary_storage_bytes,
+                wall_time_seconds=sandbox.wall_time_seconds,
+                output_bytes=sandbox.output_bytes,
+            ),
+        ),
+        best_primary_metric_value=campaign.best_primary_metric_value,
+        no_improvement_generations=campaign.no_improvement_generations,
+        statistical_trial_count=campaign.statistical_trial_count,
+        operational_attempt_count=campaign.operational_attempt_count,
+        revision=campaign.revision,
+    )
+
+
 def encode_agent_sse(events: tuple[AgentEventView, ...]) -> bytes:
     """Serialize an ordered persisted replay without creating business events."""
     chunks: list[bytes] = []
@@ -133,6 +215,42 @@ def encode_agent_sse(events: tuple[AgentEventView, ...]) -> bytes:
                 "occurred_at": event.occurred_at,
                 "prev_hash": event.prev_hash,
                 "event_hash": event.event_hash,
+            },
+            option=orjson.OPT_SORT_KEYS | orjson.OPT_UTC_Z,
+        )
+        chunks.append(
+            b"".join(
+                (
+                    f"id: {event.event_id}\n".encode(),
+                    f"event: {event.event_type}\n".encode(),
+                    b"data: ",
+                    data,
+                    b"\n\n",
+                )
+            )
+        )
+    return b"".join(chunks)
+
+
+def encode_campaign_sse(events: tuple[CampaignEventView, ...]) -> bytes:
+    """Serialize ordered persisted Campaign events without executing work."""
+    chunks: list[bytes] = []
+    previous_event_id = 0
+    for event in events:
+        if event.event_id <= previous_event_id:
+            raise ValueError("Campaign SSE events must have strictly increasing IDs")
+        previous_event_id = event.event_id
+        data = orjson.dumps(
+            {
+                "schema_version": event.schema_version,
+                "event_id": event.event_id,
+                "durable_event_id": event.durable_event_id,
+                "campaign_id": event.campaign_id,
+                "event_type": event.event_type,
+                "previous_status": event.previous_status,
+                "status": event.status,
+                "payload_hash": event.payload_hash,
+                "occurred_at": event.occurred_at,
             },
             option=orjson.OPT_SORT_KEYS | orjson.OPT_UTC_Z,
         )
@@ -301,4 +419,149 @@ async def decide_agent_approval(
     return APIResponse(data=_approval_response(decision))
 
 
-__all__ = ["encode_agent_sse", "router"]
+@router.post(
+    "/campaigns",
+    response_model=APIResponse[AgentCampaignResponse],
+    status_code=201,
+)
+@inject
+async def create_agent_campaign(
+    request: AgentCampaignCreateRequest,
+    runtime: Annotated[CampaignRuntimePort, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
+) -> APIResponse[AgentCampaignResponse]:
+    """Create or recover one immutable Campaign draft."""
+    try:
+        campaign = await _run_blocking(
+            runtime.create_campaign,
+            CampaignCreateCommand(
+                manifest_document=request.manifest.model_dump(mode="python"),
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except (ValueError, CampaignRuntimeError) as exc:
+        if isinstance(exc, CampaignRuntimeError):
+            _raise_campaign_error(exc)
+        _raise_campaign_error(
+            CampaignInvalidRequest(
+                "Campaign request is invalid",
+                reason_code="campaign_request_invalid",
+            )
+        )
+    return APIResponse(data=_campaign_response(campaign))
+
+
+@router.post(
+    "/campaigns/{campaign_id}/approve",
+    response_model=APIResponse[AgentCampaignResponse],
+)
+@inject
+async def approve_agent_campaign(
+    campaign_id: str,
+    request: AgentCampaignApproveRequest,
+    runtime: Annotated[CampaignRuntimePort, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
+) -> APIResponse[AgentCampaignResponse]:
+    """Approve one exact immutable manifest and finite budget."""
+    try:
+        campaign = await _run_blocking(
+            runtime.approve_campaign,
+            CampaignApproveCommand(
+                campaign_id=campaign_id,
+                expected_manifest_hash=request.expected_manifest_hash,
+                operator_id=request.operator_id,
+                expires_at=request.expires_at,
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except (ValueError, CampaignRuntimeError) as exc:
+        if isinstance(exc, CampaignRuntimeError):
+            _raise_campaign_error(exc)
+        _raise_campaign_error(
+            CampaignInvalidRequest(
+                "Campaign approval request is invalid",
+                reason_code="campaign_request_invalid",
+            )
+        )
+    return APIResponse(data=_campaign_response(campaign))
+
+
+@router.get(
+    "/campaigns/{campaign_id}",
+    response_model=APIResponse[AgentCampaignResponse],
+)
+@inject
+async def get_agent_campaign(
+    campaign_id: str,
+    runtime: Annotated[CampaignRuntimePort, FromComponent()],
+) -> APIResponse[AgentCampaignResponse]:
+    """Read one persisted Campaign projection."""
+    try:
+        campaign = await _run_blocking(runtime.get_campaign, campaign_id)
+    except CampaignRuntimeError as exc:
+        _raise_campaign_error(exc)
+    return APIResponse(data=_campaign_response(campaign))
+
+
+@router.get(
+    "/campaigns/{campaign_id}/events",
+    response_model=None,
+    response_class=Response,
+    responses={200: {"content": {"text/event-stream": {}}}},
+)
+@inject
+async def get_agent_campaign_events(
+    campaign_id: str,
+    runtime: Annotated[CampaignRuntimePort, FromComponent()],
+    last_event_id: LastEventIdHeader = None,
+) -> Response:
+    """Replay persisted Campaign events after Last-Event-ID."""
+    try:
+        events = await _run_blocking(
+            runtime.list_campaign_events,
+            campaign_id,
+            after_event_id=last_event_id,
+        )
+    except CampaignRuntimeError as exc:
+        _raise_campaign_error(exc)
+    return Response(
+        content=encode_campaign_sse(events),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post(
+    "/campaigns/{campaign_id}/cancel",
+    response_model=APIResponse[AgentCampaignResponse],
+)
+@inject
+async def cancel_agent_campaign(
+    campaign_id: str,
+    request: AgentCampaignCancelRequest,
+    runtime: Annotated[CampaignRuntimePort, FromComponent()],
+    idempotency_key: IdempotencyKeyHeader,
+) -> APIResponse[AgentCampaignResponse]:
+    """Cancel or recover cancellation under exact immutable authority."""
+    try:
+        campaign = await _run_blocking(
+            runtime.cancel_campaign,
+            CampaignCancelCommand(
+                campaign_id=campaign_id,
+                expected_authorization_hash=request.expected_authorization_hash,
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except (ValueError, CampaignRuntimeError) as exc:
+        if isinstance(exc, CampaignRuntimeError):
+            _raise_campaign_error(exc)
+        _raise_campaign_error(
+            CampaignInvalidRequest(
+                "Campaign cancellation request is invalid",
+                reason_code="campaign_request_invalid",
+            )
+        )
+    return APIResponse(data=_campaign_response(campaign))
+
+
+__all__ = ["encode_agent_sse", "encode_campaign_sse", "router"]

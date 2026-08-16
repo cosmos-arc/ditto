@@ -12,7 +12,6 @@ from ditto_analysis.experiments.campaign import (
 )
 from ditto_analysis.experiments.campaign_persistence import (
     CampaignEventRecord,
-    CampaignManifestRecord,
     CampaignReaderProtocol,
     CampaignWriterProtocol,
     CandidateLineageRecord,
@@ -30,6 +29,9 @@ from ditto_application.agent_campaign_contracts import (
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.mutation_idempotency import canonical_request_hash
+from ditto_application.processes.experiments._autonomous_campaign_authorization import (
+    AutonomousCampaignAuthorization,
+)
 from ditto_application.processes.experiments._autonomous_campaign_contracts import (
     NO_IMPROVEMENT_GENERATION_LIMIT,
     TERMINAL_CAMPAIGN_STATUSES,
@@ -45,9 +47,7 @@ from ditto_application.processes.experiments._autonomous_campaign_contracts impo
     campaign_epoch_us,
     campaign_error,
     campaign_event_id,
-    campaign_tool_is_forbidden,
     candidate_novelty_event_detail,
-    datetime_from_epoch_us,
     decode_campaign_detail,
     evaluation_identity_matches,
     require_content_hash,
@@ -55,9 +55,6 @@ from ditto_application.processes.experiments._autonomous_campaign_contracts impo
     require_novelty_replay,
     require_text,
     require_utc,
-)
-from ditto_application.processes.experiments._autonomous_campaign_support import (
-    AutonomousCampaignSupport,
 )
 
 __all__ = [
@@ -73,7 +70,7 @@ __all__ = [
 ]
 
 
-class AutonomousCampaignCoordinator(AutonomousCampaignSupport):
+class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
     """Coordinate bounded proposals while the trusted host owns all decisions."""
 
     def __init__(
@@ -94,91 +91,52 @@ class AutonomousCampaignCoordinator(AutonomousCampaignSupport):
         *,
         occurred_at: datetime,
     ) -> CampaignCoordinatorState:
-        """Freeze an exact manifest/authority pair and seed its baseline lineage."""
-        now = require_utc(occurred_at, "occurred_at")
-        if (
-            type(manifest) is not ResearchCampaignManifest
-            or type(proof) is not CampaignAuthorizationProof
-        ):
-            raise campaign_error(
-                "campaign authorization inputs are invalid",
-                code="CAMPAIGN_AUTHORIZATION_INVALID",
-                reason="campaign_authorization_integrity_invalid",
-            )
-        if not proof.verify_integrity():
-            raise campaign_error(
-                "campaign authorization proof was modified",
-                code="CAMPAIGN_AUTHORIZATION_INVALID",
-                reason="campaign_authorization_integrity_invalid",
-            )
-        if any(campaign_tool_is_forbidden(tool) for tool in manifest.allowed_tools):
-            raise campaign_error(
-                "campaign authority includes a forbidden capability",
-                code="CAMPAIGN_AUTHORITY_FORBIDDEN",
-                reason="campaign_authority_forbidden",
-            )
-        expected = self._manifest_authority(manifest)
-        observed = (
-            proof.campaign_manifest_hash,
-            proof.search_axis,
-            tuple(proof.allowed_tools),
-            proof.source_snapshot_id,
-            proof.candidate_limit,
-            proof.fold_run_limit,
-            proof.generation_limit,
-            proof.concurrent_sandbox_limit,
-            proof.wall_time_limit_seconds,
-            proof.temporary_storage_limit_bytes,
-            proof.model_spend_limit_usd_micros,
+        """Compatibility entry point that creates and approves one exact manifest."""
+        return super().authorize(manifest, proof, occurred_at=occurred_at)
+
+    def create(
+        self,
+        manifest: ResearchCampaignManifest,
+        *,
+        occurred_at: datetime,
+    ) -> CampaignCoordinatorState:
+        """Persist or exactly replay an immutable Campaign draft."""
+        return super().create(manifest, occurred_at=occurred_at)
+
+    def approve(
+        self,
+        campaign_id: ExperimentId,
+        proof: CampaignAuthorizationProof,
+        *,
+        expected_manifest_hash: str,
+        occurred_at: datetime,
+    ) -> CampaignCoordinatorState:
+        """Approve a persisted draft without allowing manifest or budget patches."""
+        return super().approve(
+            campaign_id,
+            proof,
+            expected_manifest_hash=expected_manifest_hash,
+            occurred_at=occurred_at,
         )
-        if observed != expected or now < proof.authorized_at or now > proof.expires_at:
-            raise campaign_error(
-                "campaign authority does not exactly match the manifest",
-                code="CAMPAIGN_AUTHORITY_MISMATCH",
-                reason="campaign_authority_mismatch",
-            )
-        existing = self._reader.get_campaign(manifest.campaign_id)
-        if existing is not None and existing.manifest_hash != manifest.manifest_hash:
-            raise campaign_error(
-                "campaign identity is already bound to another manifest",
-                code="CAMPAIGN_AUTHORITY_MISMATCH",
-                reason="campaign_authority_mismatch",
-            )
-        epoch = (
-            campaign_epoch_us(now) if existing is None else existing.created_at_epoch_us
+
+    @staticmethod
+    def _validate_manifest(manifest: ResearchCampaignManifest) -> None:
+        AutonomousCampaignAuthorization._validate_manifest(manifest)
+
+    @staticmethod
+    def _validate_authorization(
+        *,
+        manifest_hash: str,
+        expected: tuple[object, ...],
+        proof: CampaignAuthorizationProof,
+        occurred_at: datetime,
+    ) -> None:
+        AutonomousCampaignAuthorization._validate_authorization(
+            manifest_hash=manifest_hash,
+            expected=expected,
+            proof=proof,
+            occurred_at=occurred_at,
         )
-        event_time = datetime_from_epoch_us(epoch)
-        self._writer.add_campaign(
-            CampaignManifestRecord.from_manifest(manifest, created_at_epoch_us=epoch)
-        )
-        self._writer.add_candidate(
-            CandidateLineageRecord(
-                campaign_id=manifest.campaign_id,
-                candidate=manifest.baseline_candidate,
-                generation=0,
-                created_at_epoch_us=epoch,
-            )
-        )
-        self._append_event(
-            manifest.campaign_id,
-            event_type="campaign_created",
-            status=CampaignCoordinatorStatus.DRAFT,
-            detail={"manifest_hash": str(manifest.manifest_hash)},
-            occurred_at=event_time,
-            identity={"manifest_hash": str(manifest.manifest_hash)},
-        )
-        self._append_event(
-            manifest.campaign_id,
-            event_type="campaign_authorized",
-            status=CampaignCoordinatorStatus.AUTHORIZED,
-            detail={
-                "proof": proof.canonical_payload(),
-                "verification_hash": proof.verification_hash,
-            },
-            occurred_at=event_time,
-            identity={"authorization_hash": proof.authorization_hash},
-        )
-        return self.get_state(manifest.campaign_id)
 
     def propose_candidate(
         self,

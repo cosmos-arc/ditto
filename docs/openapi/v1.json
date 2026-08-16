@@ -49,6 +49,30 @@
         "title": "APIResponse[AgentApprovalDecisionResponse]",
         "type": "object"
       },
+      "APIResponse_AgentCampaignResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentCampaignResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentCampaignResponse]",
+        "type": "object"
+      },
       "APIResponse_AgentRunResponse_": {
         "properties": {
           "data": {
@@ -3039,6 +3063,548 @@
         "title": "AgentApprovalDecisionResponse",
         "type": "object"
       },
+      "AgentCampaignApproveRequest": {
+        "additionalProperties": false,
+        "description": "Human approval of one exact persisted manifest hash.",
+        "properties": {
+          "expected_manifest_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Expected Manifest Hash",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "operator_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Operator Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_manifest_hash",
+          "operator_id",
+          "expires_at"
+        ],
+        "title": "AgentCampaignApproveRequest",
+        "type": "object"
+      },
+      "AgentCampaignBaselineCandidate": {
+        "additionalProperties": false,
+        "description": "Exact immutable baseline and its one authorized search axis.",
+        "properties": {
+          "candidate_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "data_requirement_hashes": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Data Requirement Hashes",
+            "type": "array"
+          },
+          "factor_code_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Code Hash"
+          },
+          "model_code_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Code Hash"
+          },
+          "ordinal": {
+            "exclusiveMinimum": 0.0,
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "ordinal",
+          "parameters",
+          "data_requirement_hashes"
+        ],
+        "title": "AgentCampaignBaselineCandidate",
+        "type": "object"
+      },
+      "AgentCampaignBudget": {
+        "additionalProperties": false,
+        "description": "Finite Campaign-wide budget that cannot be patched after creation.",
+        "properties": {
+          "candidate_limit": {
+            "exclusiveMinimum": 0.0,
+            "title": "Candidate Limit",
+            "type": "integer"
+          },
+          "concurrent_sandbox_limit": {
+            "exclusiveMinimum": 0.0,
+            "title": "Concurrent Sandbox Limit",
+            "type": "integer"
+          },
+          "fold_run_limit": {
+            "exclusiveMinimum": 0.0,
+            "title": "Fold Run Limit",
+            "type": "integer"
+          },
+          "generation_limit": {
+            "exclusiveMinimum": 0.0,
+            "title": "Generation Limit",
+            "type": "integer"
+          },
+          "model_spend_limit_usd_micros": {
+            "exclusiveMinimum": 0.0,
+            "title": "Model Spend Limit Usd Micros",
+            "type": "integer"
+          },
+          "sandbox_resource_limits": {
+            "$ref": "#/components/schemas/AgentCampaignSandboxLimits"
+          },
+          "temporary_storage_limit_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Temporary Storage Limit Bytes",
+            "type": "integer"
+          },
+          "wall_time_limit_seconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Wall Time Limit Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "candidate_limit",
+          "fold_run_limit",
+          "generation_limit",
+          "concurrent_sandbox_limit",
+          "wall_time_limit_seconds",
+          "temporary_storage_limit_bytes",
+          "model_spend_limit_usd_micros",
+          "sandbox_resource_limits"
+        ],
+        "title": "AgentCampaignBudget",
+        "type": "object"
+      },
+      "AgentCampaignCancelRequest": {
+        "additionalProperties": false,
+        "description": "Cancellation bound to the immutable Campaign authorization.",
+        "properties": {
+          "expected_authorization_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Expected Authorization Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_authorization_hash"
+        ],
+        "title": "AgentCampaignCancelRequest",
+        "type": "object"
+      },
+      "AgentCampaignCreateRequest": {
+        "additionalProperties": false,
+        "description": "Create one durable immutable Campaign draft.",
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/AgentCampaignManifest"
+          }
+        },
+        "required": [
+          "manifest"
+        ],
+        "title": "AgentCampaignCreateRequest",
+        "type": "object"
+      },
+      "AgentCampaignExperimentPlan": {
+        "additionalProperties": false,
+        "description": "PIT-sensitive fold/snapshot/cost inputs frozen before approval.",
+        "properties": {
+          "cost_model_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Cost Model Hash",
+            "type": "string"
+          },
+          "embargo_sessions": {
+            "minimum": 0.0,
+            "title": "Embargo Sessions",
+            "type": "integer"
+          },
+          "fold_protocol_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fold Protocol Hash",
+            "type": "string"
+          },
+          "fold_protocol_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Fold Protocol Id",
+            "type": "string"
+          },
+          "fold_protocol_version": {
+            "exclusiveMinimum": 0.0,
+            "title": "Fold Protocol Version",
+            "type": "integer"
+          },
+          "purge_sessions": {
+            "minimum": 0.0,
+            "title": "Purge Sessions",
+            "type": "integer"
+          },
+          "seed": {
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "validation_objective_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Validation Objective Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fold_protocol_id",
+          "fold_protocol_version",
+          "fold_protocol_hash",
+          "snapshot_id",
+          "validation_objective_hash",
+          "cost_model_hash",
+          "seed",
+          "purge_sessions",
+          "embargo_sessions"
+        ],
+        "title": "AgentCampaignExperimentPlan",
+        "type": "object"
+      },
+      "AgentCampaignHypothesis": {
+        "additionalProperties": false,
+        "description": "Falsifiable hypothesis embedded in a Campaign manifest.",
+        "properties": {
+          "expected_signal": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Expected Signal",
+            "type": "string"
+          },
+          "failure_condition": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Failure Condition",
+            "type": "string"
+          },
+          "mechanism": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Mechanism",
+            "type": "string"
+          },
+          "statement": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          },
+          "universe_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Universe Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement",
+          "mechanism",
+          "universe_hash",
+          "expected_signal",
+          "failure_condition"
+        ],
+        "title": "AgentCampaignHypothesis",
+        "type": "object"
+      },
+      "AgentCampaignManifest": {
+        "additionalProperties": false,
+        "description": "Versioned public document compiled into ResearchCampaignManifest.",
+        "properties": {
+          "allowed_tools": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Allowed Tools",
+            "type": "array"
+          },
+          "baseline_candidate": {
+            "$ref": "#/components/schemas/AgentCampaignBaselineCandidate"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/AgentCampaignBudget"
+          },
+          "campaign_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "experiment_plan": {
+            "$ref": "#/components/schemas/AgentCampaignExperimentPlan"
+          },
+          "hypothesis": {
+            "$ref": "#/components/schemas/AgentCampaignHypothesis"
+          },
+          "lineage_root": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Lineage Root",
+            "type": "string"
+          },
+          "objective": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Objective",
+            "type": "string"
+          },
+          "primary_metric_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Primary Metric Id",
+            "type": "string"
+          },
+          "prohibited_actions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Prohibited Actions",
+            "type": "array"
+          },
+          "search_axis": {
+            "enum": [
+              "factor_code",
+              "model_code",
+              "parameters"
+            ],
+            "title": "Search Axis",
+            "type": "string"
+          },
+          "search_space_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Search Space Hash",
+            "type": "string"
+          },
+          "stopping_rule": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Stopping Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "campaign_id",
+          "objective",
+          "primary_metric_id",
+          "hypothesis",
+          "baseline_candidate",
+          "experiment_plan",
+          "budget",
+          "search_axis",
+          "search_space_hash",
+          "lineage_root",
+          "stopping_rule",
+          "allowed_tools",
+          "prohibited_actions"
+        ],
+        "title": "AgentCampaignManifest",
+        "type": "object"
+      },
+      "AgentCampaignResponse": {
+        "additionalProperties": false,
+        "description": "Persisted Campaign projection with immutable authority and budget.",
+        "properties": {
+          "allowed_tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Tools",
+            "type": "array"
+          },
+          "authorization_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorization Expires At"
+          },
+          "authorization_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorization Hash"
+          },
+          "authorized_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorized By"
+          },
+          "best_primary_metric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Primary Metric Value"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/AgentCampaignBudget"
+          },
+          "campaign_id": {
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "manifest_hash": {
+            "title": "Manifest Hash",
+            "type": "string"
+          },
+          "no_improvement_generations": {
+            "title": "No Improvement Generations",
+            "type": "integer"
+          },
+          "operational_attempt_count": {
+            "title": "Operational Attempt Count",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "search_axis": {
+            "title": "Search Axis",
+            "type": "string"
+          },
+          "source_snapshot_id": {
+            "title": "Source Snapshot Id",
+            "type": "string"
+          },
+          "statistical_trial_count": {
+            "title": "Statistical Trial Count",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CampaignStatus"
+          }
+        },
+        "required": [
+          "campaign_id",
+          "status",
+          "manifest_hash",
+          "authorization_hash",
+          "authorized_by",
+          "authorization_expires_at",
+          "search_axis",
+          "source_snapshot_id",
+          "allowed_tools",
+          "budget",
+          "best_primary_metric_value",
+          "no_improvement_generations",
+          "statistical_trial_count",
+          "operational_attempt_count",
+          "revision"
+        ],
+        "title": "AgentCampaignResponse",
+        "type": "object"
+      },
+      "AgentCampaignSandboxLimits": {
+        "additionalProperties": false,
+        "description": "Per-execution resource ceilings displayed with Campaign authority.",
+        "properties": {
+          "cpu_count": {
+            "exclusiveMinimum": 0.0,
+            "title": "Cpu Count",
+            "type": "integer"
+          },
+          "memory_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Memory Bytes",
+            "type": "integer"
+          },
+          "output_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Output Bytes",
+            "type": "integer"
+          },
+          "process_limit": {
+            "exclusiveMinimum": 0.0,
+            "title": "Process Limit",
+            "type": "integer"
+          },
+          "temporary_storage_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Temporary Storage Bytes",
+            "type": "integer"
+          },
+          "wall_time_seconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Wall Time Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cpu_count",
+          "memory_bytes",
+          "process_limit",
+          "temporary_storage_bytes",
+          "wall_time_seconds",
+          "output_bytes"
+        ],
+        "title": "AgentCampaignSandboxLimits",
+        "type": "object"
+      },
       "AgentRunCancelRequest": {
         "additionalProperties": false,
         "description": "Optimistic cancellation fence.",
@@ -3806,6 +4372,23 @@
         ],
         "title": "BenchmarkNavResponse",
         "type": "object"
+      },
+      "CampaignStatus": {
+        "description": "Stable public projection of the host-owned Campaign state machine.",
+        "enum": [
+          "draft",
+          "authorized",
+          "running",
+          "paused",
+          "paused_budget",
+          "cancel_requested",
+          "cancelled",
+          "completed",
+          "completed_with_failures",
+          "failed"
+        ],
+        "title": "CampaignStatus",
+        "type": "string"
       },
       "CancelRunResponse": {
         "description": "取消运行响应.",
@@ -15767,6 +16350,287 @@
           }
         },
         "summary": "Decide Agent Approval",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/campaigns": {
+      "post": {
+        "description": "Create or recover one immutable Campaign draft.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_create_agent_campaign",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCampaignCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentCampaignResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Agent Campaign",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/campaigns/{campaign_id}": {
+      "get": {
+        "description": "Read one persisted Campaign projection.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_get_agent_campaign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentCampaignResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agent Campaign",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/campaigns/{campaign_id}/approve": {
+      "post": {
+        "description": "Approve one exact immutable manifest and finite budget.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_approve_agent_campaign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCampaignApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentCampaignResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Agent Campaign",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/campaigns/{campaign_id}/cancel": {
+      "post": {
+        "description": "Cancel or recover cancellation under exact immutable authority.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_cancel_agent_campaign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCampaignCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentCampaignResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Agent Campaign",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/campaigns/{campaign_id}/events": {
+      "get": {
+        "description": "Replay persisted Campaign events after Last-Event-ID.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_get_agent_campaign_events",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agent Campaign Events",
         "tags": [
           "agent"
         ],

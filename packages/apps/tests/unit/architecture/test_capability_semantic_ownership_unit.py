@@ -272,6 +272,7 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         "packages/application/src/ditto_application/providers_process.py",
         "packages/application/src/ditto_application/providers_strategy.py",
         "packages/application/src/ditto_application/providers_research_memory.py",
+        "packages/application/src/ditto_application/commands/campaign_manifest.py",
         "packages/application/src/ditto_application/commands/research_memory.py",
         "packages/application/src/ditto_application/queries/research_memory.py",
         "packages/application/src/ditto_application/research_memory_contracts.py",
@@ -483,6 +484,10 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         (
             "packages/application/src/ditto_application/processes/experiments/"
             "_autonomous_campaign_contracts.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_authorization.py"
         ),
         (
             "packages/application/src/ditto_application/processes/experiments/"

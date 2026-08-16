@@ -447,6 +447,68 @@ def test_authorization_hash_budget_and_search_axis_are_immutable(
     assert state.authorization_hash == proof.authorization_hash
 
 
+def test_campaign_is_durable_draft_before_exact_manifest_approval(
+    tmp_path: Path,
+) -> None:
+    coordinator, reader = _coordinator(tmp_path, _Scheduler())
+    manifest = _manifest()
+
+    draft = coordinator.create(manifest, occurred_at=NOW)
+    replay = coordinator.create(
+        manifest,
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+
+    assert draft == replay
+    assert draft.status is CampaignCoordinatorStatus.DRAFT
+    assert draft.authorization_hash is None
+    assert tuple(
+        event.event_type for event in reader.list_campaign_events(manifest.campaign_id)
+    ) == ("campaign_created",)
+
+    approved = coordinator.approve(
+        manifest.campaign_id,
+        _authorization(manifest),
+        expected_manifest_hash=str(manifest.manifest_hash),
+        occurred_at=NOW + timedelta(seconds=2),
+    )
+
+    assert approved.status is CampaignCoordinatorStatus.AUTHORIZED
+    assert approved.authorization_hash == "3" * 64
+    assert tuple(
+        event.event_type for event in reader.list_campaign_events(manifest.campaign_id)
+    ) == ("campaign_created", "campaign_authorized")
+
+
+def test_campaign_approval_rejects_manifest_drift_without_patching_budget(
+    tmp_path: Path,
+) -> None:
+    coordinator, _ = _coordinator(tmp_path, _Scheduler())
+    manifest = _manifest()
+    coordinator.create(manifest, occurred_at=NOW)
+
+    with pytest.raises(AppProcessError) as drifted_manifest:
+        coordinator.approve(
+            manifest.campaign_id,
+            _authorization(manifest),
+            expected_manifest_hash="9" * 64,
+            occurred_at=NOW + timedelta(seconds=1),
+        )
+    with pytest.raises(AppProcessError) as expanded_budget:
+        coordinator.approve(
+            manifest.campaign_id,
+            _authorization(manifest, candidate_limit=9),
+            expected_manifest_hash=str(manifest.manifest_hash),
+            occurred_at=NOW + timedelta(seconds=1),
+        )
+
+    assert drifted_manifest.value.details["reason"] == "campaign_manifest_hash_drift"
+    assert expanded_budget.value.details["reason"] == "campaign_authority_mismatch"
+    assert coordinator.get_state(manifest.campaign_id).status is (
+        CampaignCoordinatorStatus.DRAFT
+    )
+
+
 def test_authorization_replay_after_restart_is_idempotent(tmp_path: Path) -> None:
     manifest = _manifest()
     proof = _authorization(manifest)

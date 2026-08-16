@@ -5,8 +5,10 @@ from __future__ import annotations
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Never
+from pathlib import Path
+from typing import Annotated, Never, cast
 
 import orjson
 import typer
@@ -28,6 +30,18 @@ from ditto_agent.runtime.service import (
     AgentSessionView,
     ApprovalDecisionKind,
 )
+from ditto_application.agent_campaign_runtime import (
+    CampaignApproveCommand,
+    CampaignCancelCommand,
+    CampaignCreateCommand,
+    CampaignInvalidRequest,
+    CampaignRequestConflict,
+    CampaignResourceNotFound,
+    CampaignRuntimeError,
+    CampaignRuntimePort,
+    CampaignRuntimeUnavailable,
+    CampaignView,
+)
 
 from ditto_apps.registry.container import make_app_container
 
@@ -35,6 +49,11 @@ app = typer.Typer(
     help="治理型量化研究 Agent (experimental, 默认关闭)",
     no_args_is_help=True,
 )
+campaign_app = typer.Typer(
+    help="不可变授权与预算约束的 Autonomous Research Campaign",
+    no_args_is_help=True,
+)
+app.add_typer(campaign_app, name="campaign")
 
 _TERMINAL_RUN_STATUSES = frozenset(
     {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.CANCELLED}
@@ -84,6 +103,44 @@ def _exit_invalid_request(*, json_output: bool) -> Never:
     _exit_runtime_error(error, json_output=json_output)
 
 
+def _campaign_exit_code(exc: CampaignRuntimeError) -> int:
+    if isinstance(exc, CampaignRuntimeUnavailable):
+        return 3
+    if isinstance(exc, CampaignResourceNotFound):
+        return 4
+    if isinstance(exc, CampaignRequestConflict):
+        return 5
+    if isinstance(exc, CampaignInvalidRequest):
+        return 2
+    return 1
+
+
+def _exit_campaign_error(
+    exc: CampaignRuntimeError,
+    *,
+    json_output: bool,
+) -> Never:
+    code = exc.reason_code.upper()
+    if json_output:
+        _emit_json(
+            {"error": {"code": code, "message": str(exc)}},
+            err=True,
+        )
+    else:
+        typer.echo(f"{code}: {exc}", err=True)
+    raise typer.Exit(_campaign_exit_code(exc))
+
+
+def _exit_campaign_invalid(*, json_output: bool) -> Never:
+    _exit_campaign_error(
+        CampaignInvalidRequest(
+            "Campaign CLI request is invalid",
+            reason_code="campaign_request_invalid",
+        ),
+        json_output=json_output,
+    )
+
+
 @contextmanager
 def _agent_runtime(*, json_output: bool) -> Generator[AgentRuntimePort]:
     try:
@@ -103,6 +160,33 @@ def _agent_runtime(*, json_output: bool) -> Generator[AgentRuntimePort]:
             _exit_runtime_error(exc, json_output=json_output)
         except ValueError:
             _exit_invalid_request(json_output=json_output)
+    finally:
+        container.close()
+
+
+@contextmanager
+def _campaign_runtime(*, json_output: bool) -> Generator[CampaignRuntimePort]:
+    try:
+        container = make_app_container()
+    except Exception:
+        _exit_campaign_error(
+            CampaignRuntimeUnavailable("campaign_runtime_resolution_failed"),
+            json_output=json_output,
+        )
+    try:
+        try:
+            runtime = container.get(CampaignRuntimePort)
+        except Exception:
+            _exit_campaign_error(
+                CampaignRuntimeUnavailable("campaign_runtime_resolution_failed"),
+                json_output=json_output,
+            )
+        try:
+            yield runtime
+        except CampaignRuntimeError as exc:
+            _exit_campaign_error(exc, json_output=json_output)
+        except (OSError, ValueError, orjson.JSONDecodeError):
+            _exit_campaign_invalid(json_output=json_output)
     finally:
         container.close()
 
@@ -159,6 +243,87 @@ def _approval_payload(decision: AgentApprovalDecision) -> dict[str, object]:
         "reason": decision.reason,
         "decided_at": decision.decided_at.isoformat(),
     }
+
+
+def _campaign_payload(campaign: CampaignView) -> dict[str, object]:
+    sandbox = campaign.budget.sandbox_resource_limits
+    return {
+        "campaign_id": campaign.campaign_id,
+        "status": campaign.status.value,
+        "manifest_hash": campaign.manifest_hash,
+        "authorization_hash": campaign.authorization_hash,
+        "authorized_by": campaign.authorized_by,
+        "authorization_expires_at": (
+            None
+            if campaign.authorization_expires_at is None
+            else campaign.authorization_expires_at.isoformat()
+        ),
+        "search_axis": campaign.search_axis,
+        "source_snapshot_id": campaign.source_snapshot_id,
+        "allowed_tools": list(campaign.allowed_tools),
+        "budget": {
+            "candidate_limit": campaign.budget.candidate_limit,
+            "fold_run_limit": campaign.budget.fold_run_limit,
+            "generation_limit": campaign.budget.generation_limit,
+            "concurrent_sandbox_limit": campaign.budget.concurrent_sandbox_limit,
+            "wall_time_limit_seconds": campaign.budget.wall_time_limit_seconds,
+            "temporary_storage_limit_bytes": (
+                campaign.budget.temporary_storage_limit_bytes
+            ),
+            "model_spend_limit_usd_micros": (
+                campaign.budget.model_spend_limit_usd_micros
+            ),
+            "sandbox_resource_limits": {
+                "cpu_count": sandbox.cpu_count,
+                "memory_bytes": sandbox.memory_bytes,
+                "process_limit": sandbox.process_limit,
+                "temporary_storage_bytes": sandbox.temporary_storage_bytes,
+                "wall_time_seconds": sandbox.wall_time_seconds,
+                "output_bytes": sandbox.output_bytes,
+            },
+        },
+        "best_primary_metric_value": campaign.best_primary_metric_value,
+        "no_improvement_generations": campaign.no_improvement_generations,
+        "statistical_trial_count": campaign.statistical_trial_count,
+        "operational_attempt_count": campaign.operational_attempt_count,
+        "revision": campaign.revision,
+    }
+
+
+def _emit_campaign(campaign: CampaignView, *, json_output: bool) -> None:
+    if json_output:
+        _emit_json(_campaign_payload(campaign))
+        return
+    typer.echo(
+        " ".join(
+            (
+                f"campaign_id={campaign.campaign_id}",
+                f"status={campaign.status.value}",
+                f"manifest_hash={campaign.manifest_hash}",
+                f"revision={campaign.revision}",
+            )
+        )
+    )
+
+
+def _read_manifest(path: str) -> dict[str, object]:
+    payload = Path(path).read_bytes()
+    if not payload or len(payload) > 1024 * 1024:
+        raise ValueError("Campaign manifest file size is invalid")
+    decoded = cast("object", orjson.loads(payload))
+    if not isinstance(decoded, dict):
+        raise ValueError("Campaign manifest must be a JSON object")
+    raw = cast("dict[object, object]", decoded)
+    if any(type(key) is not str for key in raw):
+        raise ValueError("Campaign manifest must be a JSON object")
+    return cast("dict[str, object]", raw)
+
+
+def _parse_expiry(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("expires_at must be timezone-aware")
+    return parsed
 
 
 def _parse_spend_budget(value: str) -> Decimal:
@@ -441,4 +606,111 @@ def reject_agent_action(
     )
 
 
-__all__ = ["app"]
+@campaign_app.command("create")
+def create_agent_campaign(
+    manifest: Annotated[
+        str,
+        typer.Argument(help="完整 Campaign manifest JSON 文件"),
+    ],
+    idempotency_key: Annotated[
+        str,
+        typer.Option(help="创建请求的 durable idempotency key"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="输出稳定 JSON"),
+    ] = False,
+) -> None:
+    """创建一个尚未授权、不可变且可恢复的 Campaign draft。"""
+    with _campaign_runtime(json_output=json_output) as runtime:
+        document = _read_manifest(manifest)
+        campaign = runtime.create_campaign(
+            CampaignCreateCommand(
+                manifest_document=document,
+                idempotency_key=idempotency_key,
+            )
+        )
+    _emit_campaign(campaign, json_output=json_output)
+
+
+@campaign_app.command("approve")
+def approve_agent_campaign(
+    campaign_id: Annotated[str, typer.Argument(help="Campaign ID")],
+    expected_manifest_hash: Annotated[
+        str,
+        typer.Option(help="人工已复核的 immutable manifest SHA-256"),
+    ],
+    operator_id: Annotated[
+        str,
+        typer.Option(help="审批操作者审计 identity"),
+    ],
+    expires_at: Annotated[
+        str,
+        typer.Option(help="Campaign authority RFC 3339 过期时间"),
+    ],
+    idempotency_key: Annotated[
+        str,
+        typer.Option(help="审批请求的 durable idempotency key"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="输出稳定 JSON"),
+    ] = False,
+) -> None:
+    """审批一个 exact manifest hash 与完整有限预算。"""
+    with _campaign_runtime(json_output=json_output) as runtime:
+        campaign = runtime.approve_campaign(
+            CampaignApproveCommand(
+                campaign_id=campaign_id,
+                expected_manifest_hash=expected_manifest_hash,
+                operator_id=operator_id,
+                expires_at=_parse_expiry(expires_at),
+                idempotency_key=idempotency_key,
+            )
+        )
+    _emit_campaign(campaign, json_output=json_output)
+
+
+@campaign_app.command("show")
+def show_agent_campaign(
+    campaign_id: Annotated[str, typer.Argument(help="Campaign ID")],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="输出稳定 JSON"),
+    ] = False,
+) -> None:
+    """读取持久化状态、immutable manifest hash 和有限预算。"""
+    with _campaign_runtime(json_output=json_output) as runtime:
+        campaign = runtime.get_campaign(campaign_id)
+    _emit_campaign(campaign, json_output=json_output)
+
+
+@campaign_app.command("cancel")
+def cancel_agent_campaign(
+    campaign_id: Annotated[str, typer.Argument(help="Campaign ID")],
+    expected_authorization_hash: Annotated[
+        str,
+        typer.Option(help="当前 immutable Campaign authorization SHA-256"),
+    ],
+    idempotency_key: Annotated[
+        str,
+        typer.Option(help="取消请求的 durable idempotency key"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="输出稳定 JSON"),
+    ] = False,
+) -> None:
+    """幂等取消 Campaign；不会隐式增加预算或恢复运行。"""
+    with _campaign_runtime(json_output=json_output) as runtime:
+        campaign = runtime.cancel_campaign(
+            CampaignCancelCommand(
+                campaign_id=campaign_id,
+                expected_authorization_hash=expected_authorization_hash,
+                idempotency_key=idempotency_key,
+            )
+        )
+    _emit_campaign(campaign, json_output=json_output)
+
+
+__all__ = ["app", "campaign_app"]
