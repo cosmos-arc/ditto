@@ -242,8 +242,20 @@ class AgentStoreWriter:
         expected_revision: int,
         target: RunStatus,
         occurred_at: datetime,
+        event_type: str | None = None,
+        event_payload_hash: str | None = None,
     ) -> StoredAgentRun:
-        """Apply one legal lifecycle transition under optimistic revision CAS."""
+        """Apply one legal lifecycle transition and optional event atomically."""
+        if (event_type is None) != (event_payload_hash is None):
+            raise ValueError(
+                "event_type and event_payload_hash must be supplied together"
+            )
+        if event_type is not None:
+            event_type = normalized_text(event_type, field="event_type")
+        if event_payload_hash is not None:
+            event_payload_hash = sha256_hex(
+                event_payload_hash, field="event_payload_hash"
+            )
         occurred_at_us = epoch_us(occurred_at, field="transition occurred_at")
         with self._transaction() as connection:
             row = connection.execute(
@@ -260,7 +272,10 @@ class AgentStoreWriter:
             source = RunStatus(str(row["status"]))
             transition_run(source, target)
             started_at_us = row["started_at_us"]
-            if source is RunStatus.QUEUED and target is RunStatus.RUNNING:
+            if source is RunStatus.QUEUED and target in {
+                RunStatus.RUNNING,
+                RunStatus.CANCELLED,
+            }:
                 started_at_us = occurred_at_us
             finished_at_us = (
                 occurred_at_us
@@ -303,6 +318,15 @@ class AgentStoreWriter:
                 },
                 occurred_at=occurred_at,
             )
+            if event_type is not None and event_payload_hash is not None:
+                self._append_run_event(
+                    connection,
+                    run_id=run_id,
+                    event_type=event_type,
+                    payload_hash=event_payload_hash,
+                    occurred_at=occurred_at,
+                    occurred_at_us=occurred_at_us,
+                )
         stored = self._reader.get_run(run_id)
         if stored is None:
             raise AgentPersistenceError(
@@ -324,56 +348,75 @@ class AgentStoreWriter:
         payload_hash = sha256_hex(payload_hash, field="payload_hash")
         occurred_at_us = epoch_us(occurred_at, field="event occurred_at")
         with self._transaction() as connection:
-            if (
-                connection.execute(
-                    "SELECT 1 FROM agent_runs WHERE run_id=?", (run_id,)
-                ).fetchone()
-                is None
-            ):
-                raise _conflict("Agent run does not exist", "agent_run_missing")
-            last = connection.execute(
-                """
-                SELECT run_sequence, event_hash
-                FROM agent_run_events
-                WHERE run_id=?
-                ORDER BY run_sequence DESC
-                LIMIT 1
-                """,
-                (run_id,),
-            ).fetchone()
-            run_sequence = 1 if last is None else int(last["run_sequence"]) + 1
-            prev_hash = None if last is None else str(last["event_hash"])
-            global_row = connection.execute(
-                "SELECT COALESCE(MAX(event_id), 0) + 1 FROM agent_run_events"
-            ).fetchone()
-            event_id = int(global_row[0])
-            event_hash = episode_event_hash(
-                event_id=event_id,
+            return self._append_run_event(
+                connection,
                 run_id=run_id,
-                run_sequence=run_sequence,
                 event_type=event_type,
                 payload_hash=payload_hash,
                 occurred_at=occurred_at,
-                prev_hash=prev_hash,
+                occurred_at_us=occurred_at_us,
             )
+
+    @staticmethod
+    def _append_run_event(
+        connection: sqlite3.Connection,
+        *,
+        run_id: str,
+        event_type: str,
+        payload_hash: str,
+        occurred_at: datetime,
+        occurred_at_us: int,
+    ) -> StoredRunEvent:
+        if (
             connection.execute(
-                """
-                INSERT INTO agent_run_events (
-                    event_id, run_id, run_sequence, event_type, payload_hash,
-                    occurred_at_us, prev_hash, event_hash
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    event_id,
-                    run_id,
-                    run_sequence,
-                    event_type,
-                    payload_hash,
-                    occurred_at_us,
-                    prev_hash,
-                    event_hash,
-                ),
-            )
+                "SELECT 1 FROM agent_runs WHERE run_id=?", (run_id,)
+            ).fetchone()
+            is None
+        ):
+            raise _conflict("Agent run does not exist", "agent_run_missing")
+        last = connection.execute(
+            """
+            SELECT run_sequence, event_hash
+            FROM agent_run_events
+            WHERE run_id=?
+            ORDER BY run_sequence DESC
+            LIMIT 1
+            """,
+            (run_id,),
+        ).fetchone()
+        run_sequence = 1 if last is None else int(last["run_sequence"]) + 1
+        prev_hash = None if last is None else str(last["event_hash"])
+        global_row = connection.execute(
+            "SELECT COALESCE(MAX(event_id), 0) + 1 FROM agent_run_events"
+        ).fetchone()
+        event_id = int(global_row[0])
+        event_hash = episode_event_hash(
+            event_id=event_id,
+            run_id=run_id,
+            run_sequence=run_sequence,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            occurred_at=occurred_at,
+            prev_hash=prev_hash,
+        )
+        connection.execute(
+            """
+            INSERT INTO agent_run_events (
+                event_id, run_id, run_sequence, event_type, payload_hash,
+                occurred_at_us, prev_hash, event_hash
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event_id,
+                run_id,
+                run_sequence,
+                event_type,
+                payload_hash,
+                occurred_at_us,
+                prev_hash,
+                event_hash,
+            ),
+        )
         return StoredRunEvent(
             event_id=event_id,
             run_id=run_id,

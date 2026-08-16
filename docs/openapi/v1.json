@@ -25,6 +25,78 @@
         "title": "APIResponse[AccountBaselineImportResponse]",
         "type": "object"
       },
+      "APIResponse_AgentApprovalDecisionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentApprovalDecisionResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentApprovalDecisionResponse]",
+        "type": "object"
+      },
+      "APIResponse_AgentRunResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentRunResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentRunResponse]",
+        "type": "object"
+      },
+      "APIResponse_AgentSessionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentSessionResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentSessionResponse]",
+        "type": "object"
+      },
       "APIResponse_BacktestReportResponse_": {
         "properties": {
           "data": {
@@ -2864,6 +2936,317 @@
         ],
         "title": "Adjustment",
         "type": "string"
+      },
+      "AgentApprovalDecisionRequest": {
+        "additionalProperties": false,
+        "description": "Human decision over one exact immutable action hash.",
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "expected_action_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Expected Action Hash",
+            "type": "string"
+          },
+          "operator_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Operator Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "decision",
+          "expected_action_hash",
+          "operator_id"
+        ],
+        "title": "AgentApprovalDecisionRequest",
+        "type": "object"
+      },
+      "AgentApprovalDecisionResponse": {
+        "additionalProperties": false,
+        "description": "Durable terminal approval receipt.",
+        "properties": {
+          "action_hash": {
+            "title": "Action Hash",
+            "type": "string"
+          },
+          "approval_id": {
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          },
+          "operator_id": {
+            "title": "Operator Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval_id",
+          "run_id",
+          "action_hash",
+          "status",
+          "operator_id",
+          "reason",
+          "decided_at"
+        ],
+        "title": "AgentApprovalDecisionResponse",
+        "type": "object"
+      },
+      "AgentRunCancelRequest": {
+        "additionalProperties": false,
+        "description": "Optimistic cancellation fence.",
+        "properties": {
+          "expected_revision": {
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ],
+        "title": "AgentRunCancelRequest",
+        "type": "object"
+      },
+      "AgentRunCreateRequest": {
+        "additionalProperties": false,
+        "description": "Create a governed read-only run without exposing provider state.",
+        "properties": {
+          "authority_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Authority Hash",
+            "type": "string"
+          },
+          "max_model_spend_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1",
+            "title": "Max Model Spend Usd"
+          },
+          "max_model_tokens": {
+            "default": 4096,
+            "exclusiveMinimum": 0.0,
+            "title": "Max Model Tokens",
+            "type": "integer"
+          },
+          "model_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "quality"
+            ],
+            "title": "Model Profile",
+            "type": "string"
+          },
+          "objective": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Objective",
+            "type": "string"
+          },
+          "session_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "objective",
+          "authority_hash"
+        ],
+        "title": "AgentRunCreateRequest",
+        "type": "object"
+      },
+      "AgentRunResponse": {
+        "additionalProperties": false,
+        "description": "Non-sensitive durable run projection.",
+        "properties": {
+          "authority_hash": {
+            "title": "Authority Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "manifest_hash": {
+            "title": "Manifest Hash",
+            "type": "string"
+          },
+          "max_model_spend_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Max Model Spend Usd",
+            "type": "string"
+          },
+          "max_model_tokens": {
+            "title": "Max Model Tokens",
+            "type": "integer"
+          },
+          "model_profile": {
+            "$ref": "#/components/schemas/ModelProfile"
+          },
+          "objective_hash": {
+            "title": "Objective Hash",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "session_id",
+          "status",
+          "objective_hash",
+          "authority_hash",
+          "max_model_tokens",
+          "max_model_spend_usd",
+          "model_profile",
+          "manifest_hash",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "revision"
+        ],
+        "title": "AgentRunResponse",
+        "type": "object"
+      },
+      "AgentSessionCreateRequest": {
+        "additionalProperties": false,
+        "description": "Create one short-lived local Agent session.",
+        "properties": {
+          "retention_class": {
+            "default": "standard",
+            "enum": [
+              "ephemeral",
+              "standard",
+              "audit"
+            ],
+            "title": "Retention Class",
+            "type": "string"
+          }
+        },
+        "title": "AgentSessionCreateRequest",
+        "type": "object"
+      },
+      "AgentSessionResponse": {
+        "additionalProperties": false,
+        "description": "Created session identity and retention contract.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "retention_class": {
+            "$ref": "#/components/schemas/RetentionClass"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "created_at",
+          "retention_class"
+        ],
+        "title": "AgentSessionResponse",
+        "type": "object"
       },
       "AggregatedTradeStatsResponse": {
         "description": "汇总交易统计.",
@@ -12760,6 +13143,15 @@
         "title": "MemberResponse",
         "type": "object"
       },
+      "ModelProfile": {
+        "description": "Approved model-quality profiles; concrete model IDs stay in manifests.",
+        "enum": [
+          "balanced",
+          "quality"
+        ],
+        "title": "ModelProfile",
+        "type": "string"
+      },
       "NavPointResponse": {
         "description": "NAV 序列数据点.",
         "properties": {
@@ -13974,6 +14366,16 @@
         "title": "ResumeRunResponse",
         "type": "object"
       },
+      "RetentionClass": {
+        "description": "Local retention policy class for a short-lived Agent session.",
+        "enum": [
+          "ephemeral",
+          "standard",
+          "audit"
+        ],
+        "title": "RetentionClass",
+        "type": "string"
+      },
       "RetryRunResponse": {
         "description": "重试运行响应.",
         "properties": {
@@ -14206,6 +14608,20 @@
         ],
         "title": "RunResponse",
         "type": "object"
+      },
+      "RunStatus": {
+        "description": "Host-controlled lifecycle states for one Agent run.",
+        "enum": [
+          "queued",
+          "running",
+          "waiting_approval",
+          "paused",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "title": "RunStatus",
+        "type": "string"
       },
       "SignalDeviationItem": {
         "description": "信号-成交偏差项.",
@@ -15301,6 +15717,323 @@
         },
         "summary": "Root",
         "x-ditto-maturity": "infrastructure"
+      }
+    },
+    "/api/v1/agent/approvals/{approval_id}/decision": {
+      "post": {
+        "description": "Record a human approve/reject decision for one exact action hash.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_decide_agent_approval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentApprovalDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentApprovalDecisionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Agent Approval",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/runs": {
+      "post": {
+        "description": "Create or exactly replay one governed read-only run.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_create_agent_run",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentRunResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Agent Run",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/runs/{run_id}": {
+      "get": {
+        "description": "Read one non-sensitive persisted run projection.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_get_agent_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentRunResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agent Run",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/runs/{run_id}/cancel": {
+      "post": {
+        "description": "Cancel one queued/running run under an optimistic revision fence.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_cancel_agent_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentRunResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Agent Run",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/runs/{run_id}/events": {
+      "get": {
+        "description": "Replay persisted run events after Last-Event-ID without executing tools.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_get_agent_run_events",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agent Run Events",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/sessions": {
+      "post": {
+        "description": "Create or exactly replay a local Agent session.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_create_agent_session",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSessionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentSessionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Agent Session",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
       }
     },
     "/api/v1/backtests/lineage/events": {
@@ -23782,6 +24515,11 @@
     }
   },
   "tags": [
+    {
+      "description": "Capability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+      "name": "agent",
+      "x-ditto-maturity": "experimental"
+    },
     {
       "description": "Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
       "name": "backtests",

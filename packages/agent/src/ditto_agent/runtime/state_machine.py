@@ -5,7 +5,7 @@ from __future__ import annotations
 from ditto_agent.contracts.runtime import RunStatus
 
 _TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
-    RunStatus.QUEUED: frozenset({RunStatus.RUNNING}),
+    RunStatus.QUEUED: frozenset({RunStatus.RUNNING, RunStatus.CANCELLED}),
     RunStatus.RUNNING: frozenset(
         {
             RunStatus.COMPLETED,

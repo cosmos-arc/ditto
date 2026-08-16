@@ -9,6 +9,7 @@ from ditto_agent.runtime.state_machine import InvalidRunTransition, transition_r
     ("source", "target"),
     [
         (RunStatus.QUEUED, RunStatus.RUNNING),
+        (RunStatus.QUEUED, RunStatus.CANCELLED),
         (RunStatus.RUNNING, RunStatus.COMPLETED),
         (RunStatus.RUNNING, RunStatus.WAITING_APPROVAL),
         (RunStatus.WAITING_APPROVAL, RunStatus.RUNNING),

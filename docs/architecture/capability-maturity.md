@@ -163,6 +163,7 @@ OpenAPI prefix registry.
 | `/metadata` | initial-focus | `api/routes/metadata.py` |
 | `/strategies` | initial-focus | `api/routes/strategy.py` |
 | `/universes` | initial-focus | `api/routes/universe.py` |
+| `/agent` | experimental | `api/routes/agent_routes.py` |
 | `/capital` | experimental | `api/routes/capital.py` |
 | `/commodity` | experimental | `api/routes/commodity.py` |
 | `/fundamental` | experimental | `api/routes/fundamental.py` |
