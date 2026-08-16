@@ -235,6 +235,23 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
 
 APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/oci_sandbox.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments.generated_code",
+                "ditto_analysis.experiments.models",
+                "ditto_analysis.experiments.persistence",
+            }
+        ),
+        owner="apps generated-candidate OCI sandbox adapter",
+        reason=(
+            "The physical composition adapter binds the Analysis-owned generated-code, "
+            "resource-limit, manifest, and content-hash contracts to an "
+            "Application-owned sandbox port; no ordinary Apps module may import these "
+            "capability types."
+        ),
+    ),
+    CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/registry/container.py",
         allowed_modules=frozenset(
             {

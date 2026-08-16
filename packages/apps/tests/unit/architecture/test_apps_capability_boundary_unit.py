@@ -62,6 +62,15 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
     assert all(allowance.owner for allowance in allowances)
     assert all(allowance.reason for allowance in allowances)
     assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/agent/oci_sandbox.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.experiments.generated_code",
+            "ditto_analysis.experiments.models",
+            "ditto_analysis.experiments.persistence",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
         "packages/apps/src/ditto_apps/registry/contexts/query.py"
     ] == frozenset(
         {
