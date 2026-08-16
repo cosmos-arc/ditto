@@ -27,6 +27,7 @@ from ditto_application.queries.backtest import BacktestQueryFacade
 from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.comparison import ComparisonQueryFacade
+from ditto_application.queries.evaluation import FactorEvaluationFacade
 from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
@@ -40,6 +41,7 @@ from ditto_application.queries.research_catalog import (
     ResearchCatalogQueryFacade,
     default_research_catalog_facade,
 )
+from ditto_application.queries.research_evidence import ResearchEvidenceQueryFacade
 from ditto_application.queries.run import RunReadModel
 from ditto_application.queries.source_fallback_policy_state import (
     CatalogSourceFallbackPolicyQueryFacade,
@@ -105,6 +107,22 @@ class AppStrategyQueryProvider(Provider):
     ) -> ExperimentQueryFacade:
         """Expose durable research experiments through application read models."""
         return ExperimentQueryFacade(reader=reader)
+
+    @provide
+    def research_evidence_query_facade(
+        self,
+        experiment_query: ExperimentQueryFacade,
+        factor_evaluation: FactorEvaluationFacade,
+        strategy_query: StrategyQueryFacade,
+        backtest_query: BacktestQueryFacade,
+    ) -> ResearchEvidenceQueryFacade:
+        """Compose exact research evidence reads from existing leaf facades."""
+        return ResearchEvidenceQueryFacade(
+            experiment_query=experiment_query,
+            factor_evaluation=factor_evaluation,
+            strategy_query=strategy_query,
+            backtest_query=backtest_query,
+        )
 
     @provide
     def research_catalog_query_facade(self) -> ResearchCatalogQueryFacade:
