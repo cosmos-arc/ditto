@@ -2,7 +2,7 @@
 
 **日期：** 2026-08-12
 **状态：** 进行中
-**恢复点：** Wave 1 / Task 7，Agent SQLite、幂等、lease 与 hash-chain audit
+**恢复点：** Wave 1 / Task 8，Temporal context、EvidenceEnvelope 与外发策略
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -188,7 +188,7 @@ pixi run -e dev check
 
 **依赖：** Task 5 / Approval A2
 **风险：** 高风险，schema/持久化
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `ditto_agent.storage.sqlite.{database,schema,reader,writer,audit}`、`schema_v1.sql`，路径 `data_root/agent/agent.sqlite`。
 - **RED/观察证据：** 先测试未标记/未知版本/损坏 schema、事务回滚、幂等冲突、lease 丢失、hash chain 篡改和 close 后访问。
@@ -904,8 +904,8 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射。
-- **下一步：** Wave 1 / Task 7，先针对未标记/未知版本/损坏 Agent SQLite、事务回滚、幂等冲突、lease 丢失、hash-chain 篡改和 close 后访问写 RED；只在 A2 scoped authorization 允许的临时数据库上实现与验证。
-- **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的最终 DDL artifact hashes 在 Tasks 7/22 生成后追加，非临时 DB 应用前必须存在。
-- **最新命令与结果：** Task 6 初始 RED 为 3 个 collection error（model/provider 模块不存在）；首轮 GREEN 暴露并修复流式 delta 尾随空格被错误拒绝，首轮全库门禁又暴露第 13 包及 `agents` distribution 的 metadata 映射缺口。最终 shared provider suite 为 21 passed；`pixi run -e dev arch-check` 为 43 kept / 0 broken 且 architecture smells 通过；`pixi run -e dev check` 为 lint/fmt/type 通过、12,360 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed；`git diff --cached --check` 通过。A4 未使用，测试未发网络请求。
+- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射；Task 7 由 `be530cb5` 落地 Agent SQLite v1、typed reader/writer、幂等、lease/fence、append-only audit chain、备份恢复及 apps lifecycle，`b8b8623d` 冻结 A2 Agent DDL/hash artifact。
+- **下一步：** Wave 1 / Task 8，先写 future sentinel、缺 snapshot/cutoff、模型覆盖 context、cache identity 漏字段和 local-only evidence 外发的 RED；实现只消费既有 owner contract 的服务端 temporal context factory 与 fail-closed egress policy。
+- **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的 Agent v1 artifact 已冻结，Research v2 artifact 仍须在 Task 22 追加，所有真实用户数据库 mutation 仍未授权。
+- **最新命令与结果：** Task 7 初始 RED 为 4 个 collection error（`ditto_agent.storage` 不存在），显式 lease release RED 为缺少 `release_lease`；最终 storage/apps lifecycle suite 为 11 passed，focused ruff 和 basedpyright 均为 0 error；`pixi run -e dev arch-check` 为 43 kept / 0 broken 且 architecture smells 通过；`pixi run -e dev check` 为 lint/fmt/type 通过、12,370 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed；DDL SHA-256 为 `b929ba78…dc99`，catalog fingerprint 为 `c88a91fe…bdb`。额外 wheel smoke 尝试因 dev 环境未安装 `build` 模块而未执行，已通过 setuptools package-data 声明和 `importlib.resources` 读取验证 SQL 资源；没有操作非临时数据库。
 - **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 只阻塞 Task 25 live acceptance，A4 只阻塞任何 live model 调用；Fake provider 工作可继续。
