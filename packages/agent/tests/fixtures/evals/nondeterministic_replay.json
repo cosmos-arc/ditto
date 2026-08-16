@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "case_id": "baseline-nondeterministic-replay",
+  "suite": "baseline",
+  "seed": 1729,
+  "input_payload": {
+    "objective": "Replay the same sealed episode twice.",
+    "required_evidence": true
+  },
+  "observation": {
+    "attempted_actions": ["experiment_summary"],
+    "allowed_actions": ["experiment_summary"],
+    "evidence_refs": ["evidence://experiment/003"],
+    "replay_identities": [
+      "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true
+    }
+  }
+}
