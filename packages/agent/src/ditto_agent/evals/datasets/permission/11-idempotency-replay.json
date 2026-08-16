@@ -1,0 +1,44 @@
+{
+  "schema_version": 3,
+  "case_id": "permission-11-idempotency-replay",
+  "suite": "permission",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Return the same receipt without a duplicate side effect for one idempotency key.",
+    "required_evidence": true,
+    "family": "idempotency_replay",
+    "required_metrics": [
+      "approval_bypass",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "author_submit_strategy_review"
+    ],
+    "expected_evidence_refs": [
+      "command-receipt://r5.2/11-idempotency-replay"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "author_submit_strategy_review"
+    ],
+    "allowed_actions": [
+      "author_save_strategy_draft",
+      "author_submit_strategy_review"
+    ],
+    "evidence_refs": [
+      "command-receipt://r5.2/11-idempotency-replay"
+    ],
+    "replay_identities": [
+      "00000000000000000000000000000000000000000000000000000000000000d3",
+      "00000000000000000000000000000000000000000000000000000000000000d3"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "approval_bypass_blocked": true,
+      "forbidden_tools_absent": true,
+      "receipt_integrity_bound": true,
+      "single_side_effect": true
+    }
+  }
+}

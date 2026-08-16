@@ -20,6 +20,18 @@ from ditto_agent.contracts._validation import (
 )
 
 _GROUNDED_SCHEMA_VERSION = 2
+_GOVERNED_SCHEMA_VERSION = 3
+_AUTHOR_ALLOWED_ACTIONS = frozenset(
+    {
+        "author_compile_expression",
+        "author_diff_strategy",
+        "author_draft_strategy",
+        "author_validate_strategy",
+    }
+)
+_PERMISSION_ALLOWED_ACTIONS = frozenset(
+    {"author_save_strategy_draft", "author_submit_strategy_review"}
+)
 
 
 class EvalCaseError(ValueError):
@@ -60,6 +72,54 @@ class GroundedMetric(StrEnum):
     PIT_SAFETY = "pit_safety"
     PROVIDER_DEGRADATION = "provider_degradation"
     EPISODE_REPLAY = "episode_replay"
+
+
+class EvalMetric(StrEnum):
+    """Fixed, non-overridable R5.2 governed-write release metrics."""
+
+    AUTHOR_COMPILE_VALIDATE = "author_compile_validate"
+    APPROVAL_BYPASS = "approval_bypass"
+    EPISODE_REPLAY = "episode_replay"
+
+
+class AuthorCaseFamily(StrEnum):
+    """Required R5.2 Author quality and adversarial families."""
+
+    DRAFT = "draft"
+    COMPILE = "compile"
+    VALIDATE = "validate"
+    DIFF = "diff"
+    PROMPT_INJECTION = "prompt_injection"
+    ARGUMENT_SMUGGLING = "argument_smuggling"
+    UNKNOWN_NODE = "unknown_node"
+    PAYLOAD_TAMPER = "payload_tamper"
+    PROVIDER_FAILURE = "provider_failure"
+    REPLAY = "replay"
+
+
+class PermissionCaseFamily(StrEnum):
+    """Required R5.2 formal-write permission and approval families."""
+
+    MISSING_APPROVAL = "missing_approval"
+    REJECTED_APPROVAL = "rejected_approval"
+    EXPIRED_APPROVAL = "expired_approval"
+    ACTION_HASH_TAMPER = "action_hash_tamper"
+    ARGUMENTS_HASH_TAMPER = "arguments_hash_tamper"
+    CALL_ID_TAMPER = "call_id_tamper"
+    AUTHORITY_DRIFT = "authority_drift"
+    CONTEXT_DRIFT = "context_drift"
+    APPROVAL_REPLAY = "approval_replay"
+    CONCURRENT_REPLAY = "concurrent_replay"
+    IDEMPOTENCY_REPLAY = "idempotency_replay"
+    RECEIPT_TAMPER = "receipt_tamper"
+    STORAGE_FAILURE = "storage_failure"
+    PROVIDER_FAILURE = "provider_failure"
+    PROMPT_INJECTION = "prompt_injection"
+    ARGUMENT_SMUGGLING = "argument_smuggling"
+    PUBLISH_DENIED = "publish_denied"
+    TRADE_DENIED = "trade_denied"
+    BROKER_DENIED = "broker_denied"
+    IDENTITY_OVERRIDE = "identity_override"
 
 
 _FAMILY_METRIC = MappingProxyType(
@@ -189,7 +249,7 @@ class EvalCase:
 
     def __post_init__(self) -> None:
         """Validate versioned case fields and derive stable input/case hashes."""
-        if self.schema_version not in {1, 2}:
+        if self.schema_version not in {1, 2, 3}:
             raise ValueError("schema_version is not supported")
         object.__setattr__(
             self, "case_id", normalized_text(self.case_id, field="case_id")
@@ -212,6 +272,8 @@ class EvalCase:
             raise ValueError("observation hash is invalid")
         if self.schema_version == _GROUNDED_SCHEMA_VERSION:
             self._validate_grounded_input()
+        elif self.schema_version == _GOVERNED_SCHEMA_VERSION:
+            self._validate_governed_input()
         object.__setattr__(self, "input_hash", canonical_sha256(self.input_identity()))
         object.__setattr__(self, "case_hash", canonical_sha256(self.identity_payload()))
 
@@ -246,6 +308,49 @@ class EvalCase:
         if self.requires_evidence and not expected_refs:
             raise ValueError("required evidence cases need expected_evidence_refs")
 
+    def _validate_governed_input(self) -> None:
+        if self.suite not in {"author", "permission"}:
+            raise ValueError("schema_version 3 is reserved for governed write suites")
+        expected_fields = {
+            "objective",
+            "required_evidence",
+            "family",
+            "required_metrics",
+            "expected_actions",
+            "expected_evidence_refs",
+        }
+        if set(self.input_payload) != expected_fields:
+            raise ValueError("governed input_payload has an invalid field set")
+        _ = normalized_text(self.objective, field="objective", maximum=4096)
+        _ = self.governed_family
+        expected_metric = (
+            EvalMetric.AUTHOR_COMPILE_VALIDATE
+            if self.suite == "author"
+            else EvalMetric.APPROVAL_BYPASS
+        )
+        if set(self.required_metrics) != {
+            expected_metric,
+            EvalMetric.EPISODE_REPLAY,
+        }:
+            raise ValueError("governed case has an invalid metric set")
+        expected_actions = self.expected_actions
+        expected_refs = self.expected_evidence_refs
+        if len(expected_actions) != len(set(expected_actions)):
+            raise ValueError("expected_actions must be unique")
+        if len(expected_refs) != len(set(expected_refs)):
+            raise ValueError("expected_evidence_refs must be unique")
+        if self.requires_evidence and not expected_refs:
+            raise ValueError("required evidence cases need expected_evidence_refs")
+        allowed_actions = (
+            _AUTHOR_ALLOWED_ACTIONS
+            if self.suite == "author"
+            else _PERMISSION_ALLOWED_ACTIONS
+        )
+        if frozenset(self.observation.allowed_actions) != allowed_actions:
+            raise ValueError("governed case has an invalid action allowlist")
+        if not set(expected_actions).issubset(allowed_actions):
+            raise ValueError("governed case expects an action outside the allowlist")
+
     @property
     def requires_evidence(self) -> bool:
         """Return the strictly decoded evidence requirement."""
@@ -271,8 +376,22 @@ class EvalCase:
             raise ValueError("input_payload.family is unsupported") from exc
 
     @property
-    def required_metrics(self) -> tuple[GroundedMetric, ...]:
-        """Return the fixed metric membership of a schema-v2 case."""
+    def governed_family(self) -> AuthorCaseFamily | PermissionCaseFamily:
+        """Return the suite-owned R5.2 adversarial family."""
+        value = self.input_payload.get("family")
+        if not isinstance(value, str):
+            raise ValueError("input_payload.family must be text")
+        family_type = (
+            AuthorCaseFamily if self.suite == "author" else PermissionCaseFamily
+        )
+        try:
+            return family_type(value)
+        except ValueError as exc:
+            raise ValueError("input_payload.family is unsupported") from exc
+
+    @property
+    def required_metrics(self) -> tuple[GroundedMetric | EvalMetric, ...]:
+        """Return the fixed metric membership of a release case."""
         raw = cast(object, self.input_payload.get("required_metrics"))
         if not isinstance(raw, tuple):
             raise ValueError("input_payload.required_metrics must be an array")
@@ -281,7 +400,12 @@ class EvalCase:
             raise ValueError("input_payload.required_metrics must be an array")
         metrics = cast(tuple[str, ...], items)
         try:
-            return tuple(GroundedMetric(item) for item in metrics)
+            metric_type = (
+                EvalMetric
+                if self.schema_version == _GOVERNED_SCHEMA_VERSION
+                else GroundedMetric
+            )
+            return tuple(metric_type(item) for item in metrics)
         except ValueError as exc:
             raise ValueError("input_payload.required_metrics is unsupported") from exc
 
@@ -538,11 +662,14 @@ def load_eval_cases(directory: Path) -> tuple[EvalCase, ...]:
 
 
 __all__ = [
+    "AuthorCaseFamily",
     "EvalCase",
     "EvalCaseError",
+    "EvalMetric",
     "EvalObservation",
     "GroundedCaseFamily",
     "GroundedMetric",
+    "PermissionCaseFamily",
     "decode_eval_case",
     "load_eval_cases",
 ]

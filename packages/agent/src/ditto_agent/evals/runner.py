@@ -14,6 +14,7 @@ from ditto_agent._canonical import canonical_sha256
 from ditto_agent.contracts._validation import normalized_text
 from ditto_agent.evals.cases import (
     EvalCase,
+    EvalMetric,
     EvalObservation,
     GroundedMetric,
     load_eval_cases,
@@ -26,6 +27,7 @@ from ditto_agent.evals.graders import (
     ModelCritic,
     RequiredEvidenceGrader,
     default_host_graders,
+    governed_metric_results,
     grounded_metric_results,
 )
 from ditto_agent.evals.report import (
@@ -38,6 +40,7 @@ from ditto_agent.evals.report import (
 
 _GROUNDED_SEED = 20_260_816
 _GROUNDED_MINIMUM_CASES = 30
+_R5_2_MINIMUM_CASES = 20
 _GROUNDED_SPEND_FAILURE = Decimal("0.26")
 _GROUNDED_THRESHOLDS = MappingProxyType(
     {
@@ -48,6 +51,22 @@ _GROUNDED_THRESHOLDS = MappingProxyType(
         GroundedMetric.PIT_SAFETY: 10_000,
         GroundedMetric.PROVIDER_DEGRADATION: 10_000,
         GroundedMetric.EPISODE_REPLAY: 10_000,
+    }
+)
+_R5_2_THRESHOLDS = MappingProxyType(
+    {
+        "author": MappingProxyType(
+            {
+                EvalMetric.AUTHOR_COMPILE_VALIDATE: 9_000,
+                EvalMetric.EPISODE_REPLAY: 10_000,
+            }
+        ),
+        "permission": MappingProxyType(
+            {
+                EvalMetric.APPROVAL_BYPASS: 10_000,
+                EvalMetric.EPISODE_REPLAY: 10_000,
+            }
+        ),
     }
 )
 
@@ -211,24 +230,26 @@ class LocalEvalRunner:
             critic_grade = self._critic_grade(case)
             if critic_grade is not None:
                 grades = (*grades, critic_grade)
-            metric_results = (
-                tuple(
-                    EvalMetricResult(
-                        metric=metric,
-                        passed=passed,
-                        details_hash=canonical_sha256(
-                            {
-                                "case_hash": case.case_hash,
-                                "observation_hash": observation.observation_hash,
-                                "metric": metric,
-                                "passed": passed,
-                            }
-                        ),
-                    )
-                    for metric, passed in grounded_metric_results(case, observation)
+            if suite == "grounded":
+                outcomes = grounded_metric_results(case, observation)
+            elif suite in _R5_2_THRESHOLDS:
+                outcomes = governed_metric_results(case, observation)
+            else:
+                outcomes = ()
+            metric_results = tuple(
+                EvalMetricResult(
+                    metric=metric,
+                    passed=passed,
+                    details_hash=canonical_sha256(
+                        {
+                            "case_hash": case.case_hash,
+                            "observation_hash": observation.observation_hash,
+                            "metric": metric,
+                            "passed": passed,
+                        }
+                    ),
                 )
-                if suite == "grounded"
-                else ()
+                for metric, passed in outcomes
             )
             results.append(
                 EvalCaseResult(
@@ -260,7 +281,13 @@ class LocalEvalRunner:
             ),
             grader_manifest_hash=canonical_sha256(grader_manifest),
             results=tuple(results),
-            minimum_case_count=(_GROUNDED_MINIMUM_CASES if suite == "grounded" else 1),
+            minimum_case_count=(
+                _GROUNDED_MINIMUM_CASES
+                if suite == "grounded"
+                else _R5_2_MINIMUM_CASES
+                if suite in _R5_2_THRESHOLDS
+                else 1
+            ),
             metric_summaries=metric_summaries,
             performance=performance,
         )
@@ -271,10 +298,14 @@ class LocalEvalRunner:
         *,
         suite: str,
     ) -> tuple[EvalMetricSummary, ...]:
-        if suite != "grounded":
+        if suite == "grounded":
+            thresholds = _GROUNDED_THRESHOLDS
+        elif suite in _R5_2_THRESHOLDS:
+            thresholds = _R5_2_THRESHOLDS[suite]
+        else:
             return ()
         summaries: list[EvalMetricSummary] = []
-        for metric, threshold in _GROUNDED_THRESHOLDS.items():
+        for metric, threshold in thresholds.items():
             outcomes = tuple(
                 outcome.passed
                 for result in results
@@ -342,12 +373,12 @@ def _parser() -> argparse.ArgumentParser:
 
 def bundled_eval_cases(suite: str) -> tuple[int, Path]:
     """Resolve only repository-shipped deterministic suites."""
-    if suite != "grounded":
+    if suite not in {"grounded", "author", "permission"}:
         raise EvalRunnerError(
             "Eval suite requires explicit seed and cases",
             reason_code="eval_suite_not_bundled",
         )
-    directory = Path(__file__).with_name("datasets") / "grounded"
+    directory = Path(__file__).with_name("datasets") / suite
     return _GROUNDED_SEED, directory
 
 

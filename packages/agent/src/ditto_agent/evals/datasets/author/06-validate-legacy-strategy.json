@@ -1,0 +1,46 @@
+{
+  "schema_version": 3,
+  "case_id": "author-06-validate-legacy-strategy",
+  "suite": "author",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Validate a legacy StrategySpec without weakening the current schema.",
+    "required_evidence": true,
+    "family": "validate",
+    "required_metrics": [
+      "author_compile_validate",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "author_validate_strategy"
+    ],
+    "expected_evidence_refs": [
+      "author-preview://r5.2/06-validate-legacy-strategy"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "author_validate_strategy"
+    ],
+    "allowed_actions": [
+      "author_draft_strategy",
+      "author_compile_expression",
+      "author_validate_strategy",
+      "author_diff_strategy"
+    ],
+    "evidence_refs": [
+      "author-preview://r5.2/06-validate-legacy-strategy"
+    ],
+    "replay_identities": [
+      "000000000000000000000000000000000000000000000000000000000000006a",
+      "000000000000000000000000000000000000000000000000000000000000006a"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "compiler_gate_enforced": true,
+      "preview_non_publishable": true,
+      "payload_integrity_bound": true,
+      "author_compile_validate": true
+    }
+  }
+}

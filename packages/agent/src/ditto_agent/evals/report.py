@@ -8,12 +8,11 @@ from typing import cast
 
 from ditto_agent._canonical import canonical_bytes, canonical_sha256
 from ditto_agent.contracts._validation import (
-    enum_value,
     nonnegative_decimal,
     normalized_text,
     sha256_hex,
 )
-from ditto_agent.evals.cases import GroundedMetric
+from ditto_agent.evals.cases import EvalMetric, GroundedMetric
 from ditto_agent.evals.graders import (
     EvalGrade,
     EvalGradeCategory,
@@ -27,13 +26,14 @@ _BASIS_POINT_SCALE = 10_000
 class EvalMetricResult:
     """One deterministic per-case grounded metric outcome."""
 
-    metric: GroundedMetric
+    metric: GroundedMetric | EvalMetric
     passed: bool
     details_hash: str
 
     def __post_init__(self) -> None:
         """Validate the exact metric identity and immutable outcome."""
-        enum_value(self.metric, GroundedMetric, field="metric")
+        if not isinstance(cast(object, self.metric), (GroundedMetric, EvalMetric)):
+            raise ValueError("metric is invalid")
         if not isinstance(cast(object, self.passed), bool):
             raise TypeError("metric result passed must be bool")
         object.__setattr__(
@@ -55,7 +55,7 @@ class EvalMetricResult:
 class EvalMetricSummary:
     """Exact basis-point aggregate for one non-overridable release metric."""
 
-    metric: GroundedMetric
+    metric: GroundedMetric | EvalMetric
     passed_cases: int
     total_cases: int
     threshold_basis_points: int
@@ -64,7 +64,8 @@ class EvalMetricSummary:
 
     def __post_init__(self) -> None:
         """Derive an exact integer rate without floating-point rounding."""
-        enum_value(self.metric, GroundedMetric, field="metric")
+        if not isinstance(cast(object, self.metric), (GroundedMetric, EvalMetric)):
+            raise ValueError("metric is invalid")
         for field_name in ("passed_cases", "total_cases", "threshold_basis_points"):
             value = getattr(self, field_name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:

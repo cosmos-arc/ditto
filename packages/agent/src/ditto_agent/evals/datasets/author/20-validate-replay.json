@@ -1,0 +1,46 @@
+{
+  "schema_version": 3,
+  "case_id": "author-20-validate-replay",
+  "suite": "author",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Replay the same validate Episode with an identical tool and event identity.",
+    "required_evidence": true,
+    "family": "replay",
+    "required_metrics": [
+      "author_compile_validate",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "author_validate_strategy"
+    ],
+    "expected_evidence_refs": [
+      "author-preview://r5.2/20-validate-replay"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "author_validate_strategy"
+    ],
+    "allowed_actions": [
+      "author_draft_strategy",
+      "author_compile_expression",
+      "author_validate_strategy",
+      "author_diff_strategy"
+    ],
+    "evidence_refs": [
+      "author-preview://r5.2/20-validate-replay"
+    ],
+    "replay_identities": [
+      "0000000000000000000000000000000000000000000000000000000000000078",
+      "0000000000000000000000000000000000000000000000000000000000000078"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "compiler_gate_enforced": true,
+      "preview_non_publishable": true,
+      "payload_integrity_bound": true,
+      "author_compile_validate": true
+    }
+  }
+}
