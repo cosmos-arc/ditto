@@ -82,6 +82,17 @@ class StoredApproval:
 
 
 @dataclass(frozen=True, slots=True)
+class StoredRunContinuation:
+    """Authenticated provider state and redacted resume bindings for one run."""
+
+    run_id: str
+    provider: str
+    payload_json: bytes
+    payload_hash: str
+    updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class IdempotencyRecord:
     """Request-hash fence and optional committed result identity."""
 
@@ -136,5 +147,6 @@ __all__ = [
     "RetentionMetadata",
     "StoredAgentRun",
     "StoredApproval",
+    "StoredRunContinuation",
     "StoredRunEvent",
 ]

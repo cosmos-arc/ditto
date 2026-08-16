@@ -94,6 +94,22 @@ class _ContractOpenAIEngine:
         return _completed_result()
 
 
+class _RecordingToolInvoker:
+    def __init__(self) -> None:
+        self.call_ids: list[str] = []
+
+    async def invoke(
+        self,
+        tool_name: str,
+        arguments_json: str,
+        *,
+        call_id: str,
+    ) -> object:
+        del tool_name, arguments_json
+        self.call_ids.append(call_id)
+        return {"status": "ok"}
+
+
 def _contract_provider(kind: str) -> AgentModelPort:
     if kind == "fake":
         return ScriptedAgentModel(
@@ -147,6 +163,40 @@ async def test_providers_satisfy_shared_run_stream_and_resume_contract(
         )
     )
     assert resumed.final_output == {"answer": "The experiment completed."}
+
+
+@pytest.mark.parametrize(("approved", "expected_calls"), [(True, 1), (False, 0)])
+@pytest.mark.asyncio
+async def test_scripted_resume_executes_only_approved_interrupted_calls(
+    approved: bool,
+    expected_calls: int,
+) -> None:
+    invoker = _RecordingToolInvoker()
+    interrupted = _interrupted_result()
+    resumed = ModelResult(
+        final_output={"answer": "The reviewed call was handled."},
+        tool_calls=interrupted.tool_calls,
+        usage=ModelUsage(requests=1, input_tokens=25, output_tokens=9),
+        interruptions=(),
+        continuation=None,
+    )
+    provider = ScriptedAgentModel(
+        script=(ScriptedOutcome(result=resumed),),
+        tool_invoker=invoker,
+    )
+
+    await provider.resume(
+        ResumeModelRequest(
+            request=_request(),
+            continuation=ModelContinuation(
+                provider="scripted",
+                payload={"cursor": "step-002"},
+            ),
+            decisions=(ApprovalDecision(call_id="call-001", approved=approved),),
+        )
+    )
+
+    assert len(invoker.call_ids) == expected_calls
 
 
 @pytest.mark.parametrize(

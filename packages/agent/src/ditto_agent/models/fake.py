@@ -82,7 +82,12 @@ class ScriptedAgentModel:
             raise ModelProviderError(f"{step.kind.value}: {step.message}")
         return step
 
-    async def _execute_tools(self, result: ModelResult) -> None:
+    async def _execute_tools(
+        self,
+        result: ModelResult,
+        *,
+        rejected_call_ids: frozenset[str] = frozenset(),
+    ) -> None:
         interrupted_call_ids = {
             interruption.call_id for interruption in result.interruptions
         }
@@ -90,6 +95,7 @@ class ScriptedAgentModel:
             call
             for call in result.tool_calls
             if call.call_id not in interrupted_call_ids
+            and call.call_id not in rejected_call_ids
         )
         if self._tool_invoker is None:
             return
@@ -125,7 +131,14 @@ class ScriptedAgentModel:
         if request.continuation.provider != "scripted":
             raise ValueError("continuation provider must be scripted")
         result = self._next(request).result
-        await self._execute_tools(result)
+        await self._execute_tools(
+            result,
+            rejected_call_ids=frozenset(
+                decision.call_id
+                for decision in request.decisions
+                if not decision.approved
+            ),
+        )
         return result
 
 

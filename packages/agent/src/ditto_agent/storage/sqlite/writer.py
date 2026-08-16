@@ -21,6 +21,10 @@ from ditto_agent.runtime.episode import episode_event_hash
 from ditto_agent.runtime.state_machine import transition_run
 from ditto_agent.storage.sqlite._codec import decimal_text, epoch_us
 from ditto_agent.storage.sqlite._coordination_writer import AgentCoordinationWriter
+from ditto_agent.storage.sqlite.approval_batch_writer import (
+    ApprovalBatchWrite,
+    ApprovalBatchWriter,
+)
 from ditto_agent.storage.sqlite.audit import append_audit_event
 from ditto_agent.storage.sqlite.database import AgentDatabase
 from ditto_agent.storage.sqlite.errors import (
@@ -58,6 +62,7 @@ class AgentStoreWriter:
         self._database = database
         self._reader = AgentStoreReader(database)
         self._coordination = AgentCoordinationWriter(database)
+        self._approval_batches = ApprovalBatchWriter(database)
 
     @contextmanager
     def _transaction(self) -> Generator[sqlite3.Connection]:
@@ -491,6 +496,30 @@ class AgentStoreWriter:
                 reason_code="agent_write_visibility_failed",
             )
         return stored
+
+    def store_approval_batch(
+        self, write: ApprovalBatchWrite
+    ) -> tuple[StoredApproval, ...]:
+        """Atomically suspend one run with an exact approval batch."""
+        return self._approval_batches.store_approval_batch(write)
+
+    def complete_approval_resume(
+        self,
+        *,
+        run_id: str,
+        expected_run_revision: int,
+        expected_continuation_hash: str,
+        occurred_at: datetime,
+        event_payload_hash: str,
+    ) -> StoredAgentRun:
+        """Atomically complete a resumed run and consume its continuation."""
+        return self._approval_batches.complete_approval_resume(
+            run_id=run_id,
+            expected_run_revision=expected_run_revision,
+            expected_continuation_hash=expected_continuation_hash,
+            occurred_at=occurred_at,
+            event_payload_hash=event_payload_hash,
+        )
 
     def decide_approval(
         self,

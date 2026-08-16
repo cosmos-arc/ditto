@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import Callable
 from datetime import datetime
 from typing import Never
 
 from ditto_agent._canonical import canonical_sha256
+from ditto_agent.approval_runtime import (
+    AgentApprovalRuntime,
+    ApprovalRuntimeConflict,
+    ApprovalRuntimeUnavailable,
+    ApprovalRuntimeViolation,
+)
 from ditto_agent.contracts.runtime import (
     AgentManifest,
     AgentRun,
@@ -161,11 +168,13 @@ class PersistedAgentRuntime(AgentRuntimePort):
         writer: AgentStoreWriter,
         manifest: AgentManifest,
         clock: Callable[[], datetime],
+        approval_runtime: AgentApprovalRuntime | None = None,
     ) -> None:
         self._reader = reader
         self._writer = writer
         self._manifest = manifest
         self._clock = clock
+        self._approval_runtime = approval_runtime
 
     def create_session(self, command: AgentSessionCreateCommand) -> AgentSessionView:
         """Create or replay a session under its durable request hash."""
@@ -366,14 +375,35 @@ class PersistedAgentRuntime(AgentRuntimePort):
     ) -> AgentApprovalDecision:
         """Persist an approve/reject decision over the exact action hash."""
         try:
-            approval = self._writer.decide_approval(
-                request_id=command.approval_id,
-                expected_action_hash=command.expected_action_hash,
-                approved=command.decision is ApprovalDecisionKind.APPROVE,
-                operator_id=command.operator_id,
-                reason=command.reason,
-                decided_at=self._clock(),
-            )
+            if self._approval_runtime is None:
+                pending = self._reader.get_approval(command.approval_id)
+                if pending is not None and (
+                    self._reader.get_continuation(pending.run_id) is not None
+                ):
+                    raise AgentRuntimeUnavailable("agent_approval_resume_unconfigured")
+                approval = self._writer.decide_approval(
+                    request_id=command.approval_id,
+                    expected_action_hash=command.expected_action_hash,
+                    approved=command.decision is ApprovalDecisionKind.APPROVE,
+                    operator_id=command.operator_id,
+                    reason=command.reason,
+                    decided_at=self._clock(),
+                )
+            else:
+                outcome = asyncio.run(
+                    self._approval_runtime.decide_and_resume(
+                        request_id=command.approval_id,
+                        expected_action_hash=command.expected_action_hash,
+                        approved=(command.decision is ApprovalDecisionKind.APPROVE),
+                        operator_id=command.operator_id,
+                        reason=command.reason,
+                    )
+                )
+                approval = outcome.approval
+        except ApprovalRuntimeUnavailable as exc:
+            raise AgentRuntimeUnavailable(exc.reason_code) from exc
+        except (ApprovalRuntimeConflict, ApprovalRuntimeViolation) as exc:
+            raise AgentRequestConflict(str(exc), reason_code=exc.reason_code) from exc
         except AgentPersistenceError as exc:
             if exc.reason_code == "agent_approval_missing":
                 raise AgentResourceNotFound(

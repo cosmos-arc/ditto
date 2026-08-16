@@ -19,7 +19,9 @@ from ditto_agent.contracts.temporal import (
 )
 from ditto_agent.models.fake import ScriptedAgentModel, ScriptedFailure, ScriptedOutcome
 from ditto_agent.models.port import (
+    ModelContinuation,
     ModelFailureKind,
+    ModelInterruption,
     ModelProviderError,
     ModelRequest,
     ModelResult,
@@ -146,6 +148,15 @@ class _ToolThenFailureModel:
     async def resume(self, request: ResumeModelRequest) -> ModelResult:
         del request
         raise AssertionError("read-only orchestration must not resume an interruption")
+
+
+class _RecordingApprovalSuspender:
+    def __init__(self) -> None:
+        self.calls: list[tuple[ModelRequest, ModelResult]] = []
+
+    def suspend(self, *, request: ModelRequest, result: ModelResult) -> object:
+        self.calls.append((request, result))
+        return object()
 
 
 def _context() -> TemporalToolContext:
@@ -418,3 +429,41 @@ async def test_reported_tool_call_without_host_execution_fails_closed() -> None:
     assert outcome.failure_code == "tool_execution_mismatch"
     assert outcome.answer is None
     assert outcome.episode is not None
+
+
+@pytest.mark.asyncio
+async def test_registered_approval_suspender_yields_waiting_approval() -> None:
+    clock, budget, executor, request = _runtime()
+    interrupted = ModelResult(
+        final_output=None,
+        tool_calls=(),
+        usage=ModelUsage(requests=1, input_tokens=10, output_tokens=5),
+        interruptions=(
+            ModelInterruption(
+                call_id="call-approval",
+                tool_name="research_experiment_evidence",
+                arguments={"experiment_id": "experiment-001"},
+            ),
+        ),
+        continuation=ModelContinuation(
+            provider="scripted",
+            payload={"pending_call_ids": ["call-approval"]},
+        ),
+    )
+    model = ScriptedAgentModel(script=(ScriptedOutcome(result=interrupted),))
+    suspender = _RecordingApprovalSuspender()
+
+    outcome = await GovernedAgentOrchestrator(
+        model=model,
+        tool_executor=executor,
+        budget=budget,
+        clock=clock,
+        approval_suspender=suspender,
+    ).execute(request)
+
+    assert outcome.status is RunStatus.WAITING_APPROVAL
+    assert outcome.failure_code is None
+    assert outcome.episode is None
+    assert outcome.events[-1].event_type == "approval_waiting"
+    assert suspender.calls[0][0].run_id == request.run.run_id
+    assert suspender.calls[0][1] == interrupted

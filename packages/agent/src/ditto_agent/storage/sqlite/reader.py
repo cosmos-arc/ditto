@@ -25,6 +25,7 @@ from ditto_agent.storage.sqlite.records import (
     RetentionMetadata,
     StoredAgentRun,
     StoredApproval,
+    StoredRunContinuation,
     StoredRunEvent,
 )
 
@@ -157,6 +158,55 @@ class AgentStoreReader:
             reason=None if row["reason"] is None else str(row["reason"]),
             decided_at=optional_datetime_from_epoch_us(
                 _optional_int(row["decided_at_us"]), field="approval decided_at"
+            ),
+        )
+
+    def list_run_approvals(self, run_id: str) -> tuple[StoredApproval, ...]:
+        """Return every immutable approval identity for a run in issue order."""
+        try:
+            rows = (
+                self._database.get_connection()
+                .execute(
+                    """
+                    SELECT request_id FROM agent_approvals
+                    WHERE run_id=?
+                    ORDER BY requested_at_us, request_id
+                    """,
+                    (run_id,),
+                )
+                .fetchall()
+            )
+        except sqlite3.Error as exc:
+            raise AgentPersistenceError(
+                "Agent approval list read failed",
+                reason_code="agent_read_failed",
+            ) from exc
+        approvals: list[StoredApproval] = []
+        for row in rows:
+            approval = self.get_approval(str(row["request_id"]))
+            if approval is None:
+                raise AgentPersistenceError(
+                    "Listed Agent approval is not readable",
+                    reason_code="agent_read_failed",
+                )
+            approvals.append(approval)
+        return tuple(approvals)
+
+    def get_continuation(self, run_id: str) -> StoredRunContinuation | None:
+        """Return the authenticated resumable state for one interrupted run."""
+        row = self._one(
+            "SELECT * FROM agent_run_continuations WHERE run_id=?",
+            (run_id,),
+        )
+        if row is None:
+            return None
+        return StoredRunContinuation(
+            run_id=str(row["run_id"]),
+            provider=str(row["provider"]),
+            payload_json=bytes(row["payload_json"]),
+            payload_hash=str(row["payload_hash"]),
+            updated_at=datetime_from_epoch_us(
+                int(row["updated_at_us"]), field="continuation updated_at"
             ),
         )
 

@@ -14,6 +14,7 @@ from ditto_agent.contracts.temporal import TemporalToolContext
 from ditto_agent.grounding import GroundingBuilder, GroundingDraft
 from ditto_agent.models.port import (
     AgentModelPort,
+    ModelContinuation,
     ModelProviderError,
     ModelRequest,
     ModelResult,
@@ -35,6 +36,10 @@ from ditto_agent.runtime.guardrails import (
 from ditto_agent.runtime.state_machine import transition_run
 
 
+class ApprovalSuspensionError(RuntimeError):
+    """The durable HITL boundary failed before human control could return."""
+
+
 class RuntimeClock(Protocol):
     """Explicit time boundary required by orchestration and episode sealing."""
 
@@ -44,6 +49,14 @@ class RuntimeClock(Protocol):
 
     def now(self) -> datetime:
         """Return the current aware wall-clock timestamp."""
+        ...
+
+
+class ApprovalSuspender(Protocol):
+    """Durably record an interrupted model result before human control returns."""
+
+    def suspend(self, *, request: ModelRequest, result: ModelResult) -> object:
+        """Persist exact provider state and immutable per-action approvals."""
         ...
 
 
@@ -171,11 +184,13 @@ class GovernedAgentOrchestrator:
         tool_executor: GuardedEvidenceToolExecutor,
         budget: BudgetLedger,
         clock: RuntimeClock,
+        approval_suspender: ApprovalSuspender | None = None,
     ) -> None:
         self._model = model
         self._tool_executor = tool_executor
         self._budget = budget
         self._clock = clock
+        self._approval_suspender = approval_suspender
 
     def _validate_request(self, request: AgentOrchestrationRequest) -> None:
         if request.run.status is not RunStatus.QUEUED:
@@ -445,10 +460,46 @@ class GovernedAgentOrchestrator:
             return invocation
         result = invocation
         if result.interruptions:
-            return self._failed(
+            continuation = cast(ModelContinuation, result.continuation)
+            if self._approval_suspender is None:
+                return self._failed(
+                    request=request,
+                    chain=chain,
+                    reason="model_interruption_not_supported",
+                )
+            try:
+                self._approval_suspender.suspend(
+                    request=model_request,
+                    result=result,
+                )
+            except ApprovalSuspensionError:
+                return self._failed(
+                    request=request,
+                    chain=chain,
+                    reason="approval_suspension_failed",
+                )
+            self._append_tool_events(chain)
+            status = transition_run(RunStatus.RUNNING, RunStatus.WAITING_APPROVAL)
+            chain.append(
+                "approval_waiting",
+                {
+                    "provider": continuation.provider,
+                    "interruptions": tuple(
+                        {
+                            "call_id": item.call_id,
+                            "tool_name": item.tool_name,
+                            "arguments_hash": canonical_sha256(item.arguments),
+                        }
+                        for item in result.interruptions
+                    ),
+                },
+            )
+            return self._outcome(
                 request=request,
+                status=status,
+                failure_code=None,
+                answer=None,
                 chain=chain,
-                reason="model_interruption_not_supported",
             )
         if not self._tool_calls_match(result.tool_calls, self._tool_executor):
             return self._failed(
@@ -485,6 +536,8 @@ class GovernedAgentOrchestrator:
 __all__ = [
     "AgentOrchestrationOutcome",
     "AgentOrchestrationRequest",
+    "ApprovalSuspender",
+    "ApprovalSuspensionError",
     "GovernedAgentOrchestrator",
     "RuntimeClock",
 ]
