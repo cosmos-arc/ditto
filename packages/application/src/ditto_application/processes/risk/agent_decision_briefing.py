@@ -23,6 +23,7 @@ __all__ = [
     "DecisionOpinionGeneratorPort",
     "DecisionOpinionRecord",
     "DecisionOpinionView",
+    "DecisionOpinionWriteError",
     "DecisionOpinionWriterPort",
 ]
 
@@ -34,6 +35,16 @@ class DecisionOpinionGenerationError(AppProcessError):
 
     def __init__(self, message: str, *, reason_code: str) -> None:
         super().__init__(message, details={"reason_code": reason_code})
+
+
+class DecisionOpinionWriteError(AppProcessError):
+    """Typed shadow persistence failure that cannot fail the core decision."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            message,
+            details={"reason_code": "decision_opinion_write_failed"},
+        )
 
 
 class _DecisionOpinionContractError(AppProcessError):
@@ -143,7 +154,7 @@ class DecisionOpinionWriterPort(Protocol):
     """Append opinions only to an isolated, idempotent shadow store."""
 
     def append_opinion(self, record: DecisionOpinionRecord) -> bool:
-        """Append once; return False only for an exact replay."""
+        """Append once or raise DecisionOpinionWriteError without touching core."""
         ...
 
 
@@ -209,7 +220,12 @@ class DecisionBriefingProcess:
             integrity_verified=opinion.verify_integrity(),
         ):
             return _refused("decision_opinion_evidence_conflict")
-        appended = self._writer.append_opinion(record)
+        try:
+            appended = self._writer.append_opinion(record)
+        except DecisionOpinionWriteError as exc:
+            return _refused(
+                str(exc.details.get("reason_code", "decision_opinion_write_failed"))
+            )
         return DecisionBriefingOutcome(
             status="persisted",
             reason_code=None,
