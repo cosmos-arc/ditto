@@ -25,10 +25,16 @@ from ditto_agent.evals.r5_3 import (
     family_for_suite,
     validate_r5_3_input,
 )
+from ditto_agent.evals.r5_4 import (
+    ShadowCaseFamily,
+    ShadowMetric,
+    validate_shadow_input,
+)
 
 _GROUNDED_SCHEMA_VERSION = 2
 _GOVERNED_SCHEMA_VERSION = 3
 _R5_3_SCHEMA_VERSION = 4
+_R5_4_SCHEMA_VERSION = 5
 _AUTHOR_ALLOWED_ACTIONS = frozenset(
     {
         "author_compile_expression",
@@ -257,7 +263,7 @@ class EvalCase:
 
     def __post_init__(self) -> None:
         """Validate versioned case fields and derive stable input/case hashes."""
-        if self.schema_version not in {1, 2, 3, 4}:
+        if self.schema_version not in {1, 2, 3, 4, 5}:
             raise ValueError("schema_version is not supported")
         object.__setattr__(
             self, "case_id", normalized_text(self.case_id, field="case_id")
@@ -284,6 +290,8 @@ class EvalCase:
             self._validate_governed_input()
         elif self.schema_version == _R5_3_SCHEMA_VERSION:
             self._validate_r5_3_input()
+        elif self.schema_version == _R5_4_SCHEMA_VERSION:
+            self._validate_r5_4_input()
         object.__setattr__(self, "input_hash", canonical_sha256(self.input_identity()))
         object.__setattr__(self, "case_hash", canonical_sha256(self.identity_payload()))
 
@@ -384,6 +392,30 @@ class EvalCase:
             requires_evidence=self.requires_evidence,
         )
 
+    def _validate_r5_4_input(self) -> None:
+        expected_fields = {
+            "objective",
+            "required_evidence",
+            "family",
+            "required_metrics",
+            "expected_actions",
+            "expected_evidence_refs",
+        }
+        if set(self.input_payload) != expected_fields:
+            raise ValueError("R5.4 input_payload has an invalid field set")
+        if self.suite != "shadow":
+            raise ValueError("schema_version 5 is reserved for the shadow suite")
+        _ = normalized_text(self.objective, field="objective", maximum=4096)
+        _ = self.shadow_family
+        validate_shadow_input(
+            required_metrics=cast(tuple[ShadowMetric, ...], self.required_metrics),
+            expected_actions=self.expected_actions,
+            expected_evidence_refs=self.expected_evidence_refs,
+            allowed_actions=self.observation.allowed_actions,
+            rule_assertions=self.observation.rule_assertions,
+            requires_evidence=self.requires_evidence,
+        )
+
     @property
     def requires_evidence(self) -> bool:
         """Return the strictly decoded evidence requirement."""
@@ -433,9 +465,22 @@ class EvalCase:
         return family_for_suite(self.suite, value)
 
     @property
+    def shadow_family(self) -> ShadowCaseFamily:
+        """Return the exact R5.4 shadow decision failure family."""
+        if self.schema_version != _R5_4_SCHEMA_VERSION:
+            raise ValueError("shadow family requires schema_version 5")
+        value = self.input_payload.get("family")
+        if not isinstance(value, str):
+            raise ValueError("input_payload.family must be text")
+        try:
+            return ShadowCaseFamily(value)
+        except ValueError as exc:
+            raise ValueError("input_payload.family is unsupported") from exc
+
+    @property
     def required_metrics(
         self,
-    ) -> tuple[GroundedMetric | EvalMetric | R53Metric, ...]:
+    ) -> tuple[GroundedMetric | EvalMetric | R53Metric | ShadowMetric, ...]:
         """Return the fixed metric membership of a release case."""
         raw = cast(object, self.input_payload.get("required_metrics"))
         if not isinstance(raw, tuple):
@@ -446,7 +491,9 @@ class EvalCase:
         metrics = cast(tuple[str, ...], items)
         try:
             metric_type = (
-                R53Metric
+                ShadowMetric
+                if self.schema_version == _R5_4_SCHEMA_VERSION
+                else R53Metric
                 if self.schema_version == _R5_3_SCHEMA_VERSION
                 else EvalMetric
                 if self.schema_version == _GOVERNED_SCHEMA_VERSION
@@ -720,6 +767,8 @@ __all__ = [
     "PermissionCaseFamily",
     "R53Metric",
     "SandboxCaseFamily",
+    "ShadowCaseFamily",
+    "ShadowMetric",
     "decode_eval_case",
     "load_eval_cases",
 ]

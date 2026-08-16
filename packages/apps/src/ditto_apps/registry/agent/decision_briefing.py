@@ -10,6 +10,10 @@ from ditto_agent.storage.sqlite.decision_opinion_store import (
     DecisionOpinionShadowReader,
     DecisionOpinionShadowWriter,
 )
+from ditto_agent.storage.sqlite.decision_outcome_feedback_store import (
+    DecisionOutcomeFeedbackShadowReader,
+    DecisionOutcomeFeedbackShadowWriter,
+)
 from ditto_agent.storage.sqlite.errors import AgentPersistenceError
 from ditto_application.processes.risk.agent_decision_briefing import (
     DecisionOpinionRecord,
@@ -39,6 +43,8 @@ class DecisionOpinionShadowStoreBundle:
     database: DecisionOpinionShadowDatabase
     reader: DecisionOpinionShadowReader
     writer: _DecisionOpinionWriterAdapter
+    feedback_reader: DecisionOutcomeFeedbackShadowReader
+    feedback_writer: DecisionOutcomeFeedbackShadowWriter
 
     def close(self) -> None:
         """Permanently close this explicit shadow-only lifecycle."""
@@ -55,6 +61,8 @@ def build_decision_opinion_shadow_store(
         database=database,
         reader=DecisionOpinionShadowReader(database),
         writer=_DecisionOpinionWriterAdapter(DecisionOpinionShadowWriter(database)),
+        feedback_reader=DecisionOutcomeFeedbackShadowReader(database),
+        feedback_writer=DecisionOutcomeFeedbackShadowWriter(database),
     )
 
 

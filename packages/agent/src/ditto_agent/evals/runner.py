@@ -30,8 +30,14 @@ from ditto_agent.evals.graders import (
     governed_metric_results,
     grounded_metric_results,
     r5_3_metric_results,
+    shadow_metric_results,
 )
-from ditto_agent.evals.r5_3 import R53_MINIMUM_CASES, R53_THRESHOLDS
+from ditto_agent.evals.r5_3 import R53_MINIMUM_CASES, R53_THRESHOLDS, R53Metric
+from ditto_agent.evals.r5_4 import (
+    SHADOW_MINIMUM_CASES,
+    SHADOW_THRESHOLDS,
+    ShadowMetric,
+)
 from ditto_agent.evals.report import (
     EvalCaseResult,
     EvalMetricResult,
@@ -43,6 +49,7 @@ from ditto_agent.evals.report import (
 _GROUNDED_SEED = 20_260_816
 _GROUNDED_MINIMUM_CASES = 30
 _R5_2_MINIMUM_CASES = 20
+type _ReleaseMetric = GroundedMetric | EvalMetric | R53Metric | ShadowMetric
 _GROUNDED_SPEND_FAILURE = Decimal("0.26")
 _GROUNDED_THRESHOLDS = MappingProxyType(
     {
@@ -232,14 +239,11 @@ class LocalEvalRunner:
             critic_grade = self._critic_grade(case)
             if critic_grade is not None:
                 grades = (*grades, critic_grade)
-            if suite == "grounded":
-                outcomes = grounded_metric_results(case, observation)
-            elif suite in _R5_2_THRESHOLDS:
-                outcomes = governed_metric_results(case, observation)
-            elif suite in R53_THRESHOLDS:
-                outcomes = r5_3_metric_results(case, observation)
-            else:
-                outcomes = ()
+            outcomes = self._metric_outcomes(
+                case=case,
+                observation=observation,
+                suite=suite,
+            )
             metric_results = tuple(
                 EvalMetricResult(
                     metric=metric,
@@ -291,10 +295,38 @@ class LocalEvalRunner:
                 else _R5_2_MINIMUM_CASES
                 if suite in _R5_2_THRESHOLDS
                 else R53_MINIMUM_CASES.get(suite, 1)
+                if suite in R53_THRESHOLDS
+                else SHADOW_MINIMUM_CASES.get(suite, 1)
             ),
             metric_summaries=metric_summaries,
             performance=performance,
         )
+
+    @staticmethod
+    def _metric_outcomes(
+        *, case: EvalCase, observation: EvalObservation, suite: str
+    ) -> tuple[tuple[_ReleaseMetric, bool], ...]:
+        if suite == "grounded":
+            return cast(
+                tuple[tuple[_ReleaseMetric, bool], ...],
+                grounded_metric_results(case, observation),
+            )
+        if suite in _R5_2_THRESHOLDS:
+            return cast(
+                tuple[tuple[_ReleaseMetric, bool], ...],
+                governed_metric_results(case, observation),
+            )
+        if suite in R53_THRESHOLDS:
+            return cast(
+                tuple[tuple[_ReleaseMetric, bool], ...],
+                r5_3_metric_results(case, observation),
+            )
+        if suite in SHADOW_THRESHOLDS:
+            return cast(
+                tuple[tuple[_ReleaseMetric, bool], ...],
+                shadow_metric_results(case, observation),
+            )
+        return ()
 
     @staticmethod
     def _metric_summaries(
@@ -308,6 +340,8 @@ class LocalEvalRunner:
             thresholds = _R5_2_THRESHOLDS[suite]
         elif suite in R53_THRESHOLDS:
             thresholds = R53_THRESHOLDS[suite]
+        elif suite in SHADOW_THRESHOLDS:
+            thresholds = SHADOW_THRESHOLDS[suite]
         else:
             return ()
         summaries: list[EvalMetricSummary] = []
@@ -379,7 +413,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def bundled_eval_cases(suite: str) -> tuple[int, Path]:
     """Resolve only repository-shipped deterministic suites."""
-    if suite not in {"grounded", "author", "permission", "campaign", "sandbox"}:
+    if suite not in {
+        "grounded",
+        "author",
+        "permission",
+        "campaign",
+        "sandbox",
+        "shadow",
+    }:
         raise EvalRunnerError(
             "Eval suite requires explicit seed and cases",
             reason_code="eval_suite_not_bundled",

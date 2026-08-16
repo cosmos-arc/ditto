@@ -14,6 +14,12 @@ from ditto_agent._canonical import canonical_bytes
 from ditto_agent.decision_opinion import DecisionOpinionGenerator
 from ditto_agent.models.fake import ScriptedAgentModel, ScriptedOutcome
 from ditto_agent.models.port import ModelResult, ModelUsage
+from ditto_agent.outcome_feedback import (
+    DecisionOpinionAdoption,
+    DecisionOutcomeLinker,
+    DecisionOutcomeObservation,
+    DecisionOutcomeObservationInput,
+)
 from ditto_agent.storage.sqlite.errors import AgentIntegrityError
 from ditto_agent.tools.registry import NO_APPROVAL_TOOL_NAMES
 from ditto_application.processes.risk.agent_decision_briefing import (
@@ -367,6 +373,13 @@ def test_shadow_store_has_independent_database_and_event_namespace(
         "shadow_decision_opinions",
         "shadow_decision_opinions_no_delete",
         "shadow_decision_opinions_no_update",
+        "shadow_outcome_feedback",
+        "shadow_outcome_feedback_events",
+        "shadow_outcome_feedback_events_no_delete",
+        "shadow_outcome_feedback_events_no_update",
+        "shadow_outcome_feedback_no_delete",
+        "shadow_outcome_feedback_no_update",
+        "shadow_outcome_feedback_opinion_binding",
     )
     assert bundle.database.path != tmp_path / "agent" / "agent.sqlite"
     bundle.close()
@@ -503,5 +516,69 @@ async def test_malicious_opinion_cannot_write_or_mutate_downstream_outputs(
     assert outcome.status == "refused"
     assert outcome.reason_code == "decision_opinion_evidence_conflict"
     assert bundle.reader.count_opinions() == 0
+    _assert_core_outputs_equal(baseline, _core_outputs())
+    bundle.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.pit
+async def test_late_outcome_feedback_never_enters_prompt_or_downstream_outputs(
+    tmp_path: Path,
+) -> None:
+    from ditto_apps.registry.agent.decision_briefing import (
+        build_decision_opinion_shadow_store,
+    )
+
+    evidence = _evidence()
+    model = _model(evidence)
+    bundle = build_decision_opinion_shadow_store(tmp_path)
+    baseline = _core_outputs()
+    outcome = await DecisionBriefingProcess(
+        evidence_reader=_EvidenceReader(evidence),
+        generator=DecisionOpinionGenerator(
+            model=model,
+            model_profile="balanced",
+            provider_id="scripted",
+            max_output_tokens=512,
+        ),
+        writer=bundle.writer,
+    ).execute(_input())
+    assert outcome.opinion_id is not None
+    opinion = bundle.reader.get_opinion(outcome.opinion_id)
+    assert opinion is not None
+    future_sentinel = "outcome:FUTURE_SENTINEL:2026-08-17"
+    observation = DecisionOutcomeObservation.create(
+        DecisionOutcomeObservationInput(
+            opinion_id=opinion.opinion_id,
+            shadow_outcome_id=opinion.shadow_outcome_id,
+            outcome_kind="next_session_review",
+            outcome_period_start=datetime(2026, 8, 17, 1, 30, tzinfo=UTC),
+            outcome_period_end=datetime(2026, 8, 17, 7, 0, tzinfo=UTC),
+            outcome_known_at=datetime(2026, 8, 17, 8, 0, tzinfo=UTC),
+            published_at=datetime(2026, 8, 17, 7, 30, tzinfo=UTC),
+            source_snapshot_id="outcome-snapshot-1",
+            evidence_refs=(future_sentinel,),
+            adoption=DecisionOpinionAdoption.REVIEWED,
+            accuracy_basis_points=10_000,
+            calibration_basis_points=9_000,
+            is_holdout=False,
+        )
+    )
+    feedback = DecisionOutcomeLinker().link(
+        opinion=opinion,
+        observation=observation,
+        context=EvidenceTemporalContext(
+            decision_time=datetime(2026, 8, 17, 9, 0, tzinfo=UTC),
+            knowledge_cutoff=datetime(2026, 8, 17, 8, 30, tzinfo=UTC),
+            publication_cutoff=datetime(2026, 8, 17, 8, 0, tzinfo=UTC),
+            source_snapshot_id="outcome-snapshot-1",
+        ),
+        linked_at=datetime(2026, 8, 17, 9, 0, tzinfo=UTC),
+    )
+
+    assert bundle.feedback_writer.append_feedback(feedback)
+    assert bundle.feedback_reader.get_feedback(feedback.feedback_id) == feedback
+    assert future_sentinel not in model.requests[0].input_text
+    assert "holdout" not in model.requests[0].input_text.lower()
     _assert_core_outputs_equal(baseline, _core_outputs())
     bundle.close()

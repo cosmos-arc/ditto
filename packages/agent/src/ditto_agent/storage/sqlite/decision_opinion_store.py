@@ -130,18 +130,37 @@ class DecisionOpinionShadowDatabase:
                 rows = schema.schema_rows(connection)
                 if markers == (0, 0) and not rows:
                     for statement in schema.schema_body_statements(
-                        schema.load_schema_sql()
+                        schema.load_schema_sql(version=1), version=1
                     ):
                         connection.execute(statement)
                     connection.execute(f"PRAGMA application_id={schema.APPLICATION_ID}")
-                    connection.execute(f"PRAGMA user_version={schema.USER_VERSION}")
-                elif markers != (schema.APPLICATION_ID, schema.USER_VERSION):
+                    connection.execute("PRAGMA user_version=1")
+                    current_version = 1
+                elif (
+                    markers[0] != schema.APPLICATION_ID
+                    or markers[1] < 1
+                    or markers[1] > schema.USER_VERSION
+                ):
                     raise _schema_error(
                         "DecisionOpinion database markers are not approved",
                         "decision_opinion_schema_marker_invalid",
                         application_id=markers[0],
                         user_version=markers[1],
                     )
+                else:
+                    current_version = int(markers[1])
+                self._verify_schema_version(connection, current_version)
+                for target_version in range(
+                    current_version + 1, schema.USER_VERSION + 1
+                ):
+                    for statement in schema.schema_body_statements(
+                        schema.load_schema_sql(version=target_version),
+                        version=target_version,
+                    ):
+                        connection.execute(statement)
+                    connection.execute(f"PRAGMA application_id={schema.APPLICATION_ID}")
+                    connection.execute(f"PRAGMA user_version={target_version}")
+                    self._verify_schema_version(connection, target_version)
                 self._verify_current_schema(connection)
                 connection.commit()
             except AgentSchemaError:
@@ -156,24 +175,32 @@ class DecisionOpinionShadowDatabase:
                 ) from exc
 
     @staticmethod
-    def _verify_current_schema(connection: sqlite3.Connection) -> None:
+    def _verify_schema_version(connection: sqlite3.Connection, version: int) -> None:
         rows = schema.schema_rows(connection)
         fingerprint = schema.schema_fingerprint(rows)
+        expected_count, expected_fingerprint = schema.expected_schema(version)
         markers = (
             connection.execute("PRAGMA application_id").fetchone()[0],
             connection.execute("PRAGMA user_version").fetchone()[0],
         )
         if (
-            markers != (schema.APPLICATION_ID, schema.USER_VERSION)
-            or len(rows) != schema.SCHEMA_ROW_COUNT
-            or fingerprint != schema.SCHEMA_FINGERPRINT
+            markers != (schema.APPLICATION_ID, version)
+            or len(rows) != expected_count
+            or fingerprint != expected_fingerprint
         ):
             raise _schema_error(
                 "DecisionOpinion schema has drifted",
                 "decision_opinion_schema_drift",
-                expected_fingerprint=schema.SCHEMA_FINGERPRINT,
+                expected_fingerprint=expected_fingerprint,
                 actual_fingerprint=fingerprint,
+                version=version,
             )
+
+    @staticmethod
+    def _verify_current_schema(connection: sqlite3.Connection) -> None:
+        DecisionOpinionShadowDatabase._verify_schema_version(
+            connection, schema.USER_VERSION
+        )
 
     def catalog_names(self) -> tuple[str, ...]:
         """Expose only authenticated object names for isolation evidence."""
