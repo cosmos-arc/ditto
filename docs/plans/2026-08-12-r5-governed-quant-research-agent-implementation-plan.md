@@ -2,7 +2,7 @@
 
 **日期：** 2026-08-12
 **状态：** 进行中
-**恢复点：** Wave 1 / Task 8，Temporal context、EvidenceEnvelope 与外发策略
+**恢复点：** Wave 1 / Task 9，Episode、事件重放与版本身份
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -208,7 +208,7 @@ pixi run -e dev check
 
 **依赖：** Tasks 5、7
 **风险：** 高风险，PIT/数据权利
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `ditto_agent.runtime.{temporal_context,egress_policy}`、evidence codec。
 - **RED/观察证据：** future sentinel、缺 snapshot/cutoff、模型覆盖 context、cache key 漏字段、local-only 外发用例先失败。
@@ -904,8 +904,8 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射；Task 7 由 `be530cb5` 落地 Agent SQLite v1、typed reader/writer、幂等、lease/fence、append-only audit chain、备份恢复及 apps lifecycle，`b8b8623d` 冻结 A2 Agent DDL/hash artifact。
-- **下一步：** Wave 1 / Task 8，先写 future sentinel、缺 snapshot/cutoff、模型覆盖 context、cache identity 漏字段和 local-only evidence 外发的 RED；实现只消费既有 owner contract 的服务端 temporal context factory 与 fail-closed egress policy。
+- **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射；Task 7 由 `be530cb5` 落地 Agent SQLite v1、typed reader/writer、幂等、lease/fence、append-only audit chain、备份恢复及 apps lifecycle，`b8b8623d` 冻结 A2 Agent DDL/hash artifact；Task 8 由 `a9740d23` 落地 server-only temporal factory、全字段 cache identity、默认 deny-all license/egress gate 和 tamper/context-bound model evidence codec。
+- **下一步：** Wave 1 / Task 9，先对 scripted episode 的事件顺序、逐 run hash chain、manifest 版本身份、replay 缺失引用和副作用重复执行写 RED，再实现 Episode seal/persist/replay。
 - **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的 Agent v1 artifact 已冻结，Research v2 artifact 仍须在 Task 22 追加，所有真实用户数据库 mutation 仍未授权。
-- **最新命令与结果：** Task 7 初始 RED 为 4 个 collection error（`ditto_agent.storage` 不存在），显式 lease release RED 为缺少 `release_lease`；最终 storage/apps lifecycle suite 为 11 passed，focused ruff 和 basedpyright 均为 0 error；`pixi run -e dev arch-check` 为 43 kept / 0 broken 且 architecture smells 通过；`pixi run -e dev check` 为 lint/fmt/type 通过、12,370 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed；DDL SHA-256 为 `b929ba78…dc99`，catalog fingerprint 为 `c88a91fe…bdb`。额外 wheel smoke 尝试因 dev 环境未安装 `build` 模块而未执行，已通过 setuptools package-data 声明和 `importlib.resources` 读取验证 SQL 资源；没有操作非临时数据库。
+- **最新命令与结果：** Task 8 初始 RED 为 2 个 collection error（temporal/egress runtime 模块不存在）；最终定向 suite 为 13 passed，focused ruff 和 basedpyright 均为 0 error；`pixi run -e dev pytest -m pit -q` 为 18 passed / 1 个既有样本数据缺失 skip；`pixi run -e dev arch-check` 为 43 kept / 0 broken 且 architecture smells 通过；`pixi run -e dev check` 为 lint/fmt/type 通过、12,383 passed / 1 个既有 xfail、43 kept / 0 broken、Harness 16 passed。A4 未使用，未构造或发送任何模型请求。
 - **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 只阻塞 Task 25 live acceptance，A4 只阻塞任何 live model 调用；Fake provider 工作可继续。
