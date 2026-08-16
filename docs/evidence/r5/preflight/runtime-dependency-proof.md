@@ -6,7 +6,7 @@
 
 ## 结论
 
-- 建议生产依赖范围为 `openai-agents>=0.21.0,<0.22`，由 Pixi lock 固定实际 wheel；本轮核对的候选 wheel 是 `openai-agents==0.21.0`。
+- 建议生产依赖范围为 `openai-agents>=0.20.0,<0.21`，由 Pixi lock 固定实际 wheel；本轮核对的候选 wheel 是 `openai-agents==0.20.0`。0.21.0 已被实际 Pixi solver 证据排除。
 - adapter 能用当前 Python API 实现 typed run/stream/resume、function-tool approval 和本地 continuation state；普通测试必须使用 scripted fake 或注入的 runner/model stub，不访问网络。
 - 每个 Responses 调用必须显式设置 `ModelSettings(store=False)`；SDK hosted tracing 禁用，Ditto 在 model/tool 边界写既有 OpenTelemetry spans。
 - 当前官方 profile 映射仍可用：balanced=`gpt-5.6-terra`/medium，quality=`gpt-5.6-sol`/high。真实调用仍被 Approval A4、专用 project、MAM/ZDR、egress/license 和预算 gate 阻塞。
@@ -29,11 +29,11 @@
 | 项 | 证据/裁决 |
 |---|---|
 | package | `openai-agents` |
-| 核对版本 | `0.21.0`，Python `>=3.10`，MIT |
-| 建议范围 | `>=0.21.0,<0.22`；快速演进 API 不跨 minor 自动升级 |
-| wheel | `openai_agents-0.21.0-py3-none-any.whl` |
-| wheel SHA-256 | `06cec842ed681ce51fbbf466891d194eb25771511067f927892b8689d75516ca` |
-| 下载地址 | `https://files.pythonhosted.org/packages/f5/2a/0903d04d448531a6d1f4f246ba72e184c11d8814cfc71f7082861efd6882/openai_agents-0.21.0-py3-none-any.whl` |
+| 核对版本 | `0.20.0`，Python `>=3.10`，MIT |
+| 建议范围 | `>=0.20.0,<0.21`；快速演进 API 不跨 minor 自动升级 |
+| wheel | `openai_agents-0.20.0-py3-none-any.whl` |
+| wheel SHA-256 | `aaff662b802fa90762ad539e131b9ea387e12e3664b87bc75157ad1b3fc88850`（下载后本地复算一致） |
+| 下载地址 | `https://files.pythonhosted.org/packages/9f/8b/18528f00cb1a5d0b8e00f457f7dc88e7b17439bc520861aae2b638b88710/openai_agents-0.20.0-py3-none-any.whl` |
 | 当前仓库 | Python 3.13；`openai`、`openai-agents` 和 `mcp` 尚未出现在 `pixi.toml`/package metadata/lock 中 |
 | 安装方式 | 仅在 A1 后修改 package/root Pixi metadata 并重解 `pixi.lock`；不用 pip/poetry/conda 手工改环境 |
 
@@ -43,7 +43,7 @@
 
 | SDK 约束 | 2026-08-16 metadata 观察 | License | 与当前 Ditto 的关系/风险 |
 |---|---|---|---|
-| `openai>=3,<4` | 3.1.0 | Apache-2.0 | 新增；网络 client 与 Responses 数据控制是主要安全面 |
+| `openai>=2.45,<3` | 2.50.0 | Apache-2.0 | 新增；保留 `httpx<1` 路径，网络 client 与 Responses 数据控制是主要安全面 |
 | `mcp>=1.19,<3` | 2.0.0 | MIT | 新增且依赖面较大；R5 不注册 MCP server/tool/connectors，SDK 间接安装不代表产品启用 |
 | `griffelib>=2,<3` | 2.1.0 | ISC | 当前 lock 已有兼容 2.x；重解 lock 后核对平台一致性 |
 | `pydantic>=2.12.2,<3` | 2.13.4 | MIT | 项目约束 `>=2.10,<3`，当前 lock 有兼容 2.13.x |
@@ -57,7 +57,11 @@ Task 4 需要保存 Pixi solver diff 并确认：没有 license 禁止项、没�
 
 候选 wheel 的公开 API 与签名核对结果：
 
-| R5 需要 | SDK 0.21.0 surface | adapter 裁决 |
+### 0.21.0 solver rejection
+
+2026-08-16 在仓库三平台 lock 上实际运行 `pixi lock`。`openai-agents==0.21.0 -> openai>=3 -> httpx2>=2.7`，而可用 `httpx2` 要求 `idna>=3.18`，当前 conda solve 固定 `idna==3.13`，且没有可满足版本；solver 明确判定 requirements unsatisfiable。0.20.0 保留 `openai>=2.45,<3 -> httpx<1`，同时 wheel 检查确认 R5 所需 API 未丢失。该结果是把 A1 从候选 rev1 收窄到 rev2 的原因，不通过跳过 lock 或手工 pip 绕过。
+
+| R5 需要 | SDK 0.20.0 surface | adapter 裁决 |
 |---|---|---|
 | agent/run | `Agent`、`Runner.run`/`run_sync`/streaming、`RunConfig`、`ModelSettings` | `AgentModelPort` 只公开 R5 所需 typed run/stream/resume；SDK 类型不穿过 agent 公共合同 |
 | 自定义/注入模型 | `agents.models.interface.Model` 的 `get_response`/`stream_response`；`ModelProvider.get_model` | OpenAI adapter 注入 client/model/runner；Fake 不继承网络 client |
@@ -129,7 +133,7 @@ macOS 与 Linux 不共享一份“已验证”结论：macOS acceptance 必须�
 
 | Gate | 精确对象 | 当前状态 |
 |---|---|---|
-| A1 | `openai-agents>=0.21.0,<0.22` 与 solver/lock transitive diff | 待 approvals evidence；用户目标允许实施计划，但 Task 3 仍需记录审计范围 |
+| A1 | `openai-agents>=0.20.0,<0.21` 与 solver/lock transitive diff | GRANTED rev2；0.21.0 的 unsatisfiable 证据已记录，最终 lock 仍需通过 |
 | A3 | 指定 OCI runtime/profile、image digest、SBOM 和攻击测试矩阵 | 阻塞：本机无可用 daemon/runtime/image evidence |
 | A4 | 专用 project、MAM/ZDR、API key source、model snapshot、egress/license dataset、token/spend budget | 阻塞：不进行 live 调用 |
 

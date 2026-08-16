@@ -23,12 +23,19 @@
 | approval basis | 用户明确要求全面实施包含 A1 的计划；不是历史批准继承 |
 | effective time | 2026-08-16，随本 task 的 `/goal` 请求生效；审计记录于 2026-08-16T01:32:55Z |
 | exact object | 新增 `packages/agent` / import name `ditto_agent`；依赖方向 `apps -> agent -> application`；添加 `.importlinter` contracts：agent-capability isolation、application-no-agent、capabilities-no-agent、platform-no-agent、agent-no-apps 及 apps 非 registry 物理 adapter 隔离 |
-| dependency range | `openai-agents>=0.21.0,<0.22`；候选/首个 lock 目标 `0.21.0`；wheel SHA-256 `06cec842ed681ce51fbbf466891d194eb25771511067f927892b8689d75516ca` |
-| canonical scope | `{"agent_package":"packages/agent","architecture":"apps>agent>application","dependency":"openai-agents>=0.21.0,<0.22","forbidden":"capabilities,analysis,apps,platform-reverse","version":1}` |
-| scope SHA-256 | `2cc2f9c9316f1c0f5f9e93abe8c0548bee1beee125fbc190576a63b5d767ed81` |
+| dependency range | A1 rev2：`openai-agents>=0.20.0,<0.21`；候选/首个 lock 目标 `0.20.0`；wheel SHA-256 `aaff662b802fa90762ad539e131b9ea387e12e3664b87bc75157ad1b3fc88850` |
+| canonical scope | `{"agent_package":"packages/agent","architecture":"apps>agent>application","dependency":"openai-agents>=0.20.0,<0.21","forbidden":"capabilities,analysis,apps,platform-reverse","version":2}` |
+| scope SHA-256 | `5b8a604f22ed885a960cfe0650fc175e80c10545eb0917ebeff2f6bf2869524b` |
 | limits | 不启用 MCP/Web/File/Search/Shell/Hosted Code Interpreter/remote connector；不创建 platform LLM gateway；不读取 API key；不发网络请求；只由 Pixi 解析/锁定 |
 | required verification | 新 lock 逐平台解析、license/transitive diff、package import tests、import-linter malicious fixture、`arch-check`、`check` |
-| revocation/renewal | dependency 跨出 `<0.22`、候选 wheel/hash 变化、出现不兼容 license/Python/platform、增加新生产依赖或改变依赖方向时自动失效，需新批准 |
+| revocation/renewal | dependency 跨出 `>=0.20.0,<0.21`、候选 wheel/hash 变化、出现不兼容 license/Python/platform、增加新生产依赖或改变依赖方向时自动失效，需新批准 |
+
+### A1 revision log
+
+| Revision | 时间 | 结果 | 证据 |
+|---:|---|---|---|
+| 1 | 2026-08-16T01:32:55Z | SUPERSEDED | `openai-agents>=0.21.0,<0.22`；scope `2cc2f9c9…`；Task 4 `pixi lock` 证明 `openai>=3 -> httpx2 -> idna>=3.18` 与三平台 `idna==3.13` 不可解 |
+| 2 | 2026-08-16T01:44:29Z | GRANTED | 同一用户明确 R5 实施授权内收窄为可解的 `>=0.20.0,<0.21`；0.20.0 wheel API/metadata/hash 已复核；scope `5b8a604f…` |
 
 ## A2 — SQLite schema、备份/恢复与 retention metadata
 
