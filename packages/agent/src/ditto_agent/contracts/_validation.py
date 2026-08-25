@@ -77,6 +77,21 @@ def normalized_unique_tuple(
     return tuple(sorted(normalized)) if sort else normalized
 
 
+def normalized_bool_mapping(
+    values: Mapping[str, bool], *, field: str
+) -> Mapping[str, bool]:
+    """Normalize unique names and freeze a deterministic boolean mapping."""
+    normalized: dict[str, bool] = {}
+    for name, passed in values.items():
+        normalized_name = normalized_text(name, field=f"{field} name")
+        if not isinstance(cast(object, passed), bool):
+            raise TypeError(f"{field} values must be bool")
+        if normalized_name in normalized:
+            raise ValueError(f"{field} names must be unique")
+        normalized[normalized_name] = passed
+    return MappingProxyType(dict(sorted(normalized.items())))
+
+
 def freeze_json(  # noqa: C901, PLR0911, PLR0912 - closed recursive type dispatch.
     value: object, *, field: str = "value"
 ) -> object:

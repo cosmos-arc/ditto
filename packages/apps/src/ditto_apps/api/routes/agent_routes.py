@@ -6,14 +6,13 @@ import asyncio
 from collections.abc import Callable
 from typing import Annotated, Never
 
-import orjson
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_agent.contracts.runtime import ModelProfile, RetentionClass
+from ditto_agent.contracts.runtime import ModelProfile, RetentionClass, RunStatus
+from ditto_agent.presentation import AgentContextPresentation
 from ditto_agent.runtime.service import (
-    AgentApprovalDecision,
     AgentApprovalDecisionCommand,
-    AgentEventView,
+    AgentApprovalStatus,
     AgentInvalidRequest,
     AgentRequestConflict,
     AgentResourceNotFound,
@@ -22,44 +21,80 @@ from ditto_agent.runtime.service import (
     AgentRuntimeError,
     AgentRuntimePort,
     AgentRuntimeUnavailable,
-    AgentRunView,
     AgentSessionCreateCommand,
-    AgentSessionView,
     ApprovalDecisionKind,
 )
 from ditto_application.agent_campaign_runtime import (
     CampaignApproveCommand,
     CampaignCancelCommand,
     CampaignCreateCommand,
-    CampaignEventView,
     CampaignInvalidRequest,
     CampaignRequestConflict,
     CampaignResourceNotFound,
     CampaignRuntimeError,
     CampaignRuntimePort,
     CampaignRuntimeUnavailable,
-    CampaignView,
+    CampaignStatus,
+    CampaignValidationCommand,
 )
-from fastapi import APIRouter, Header, Response
+from ditto_application.exceptions import AppQueryError
+from ditto_application.queries.decision_opinion import (
+    DecisionOpinionIdentity,
+    DecisionOpinionQueryPort,
+)
+from ditto_application.queries.evidence_contracts import EvidenceTemporalContext
+from fastapi import APIRouter, Header, Query, Response
 
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.mutation_idempotency import IdempotencyKeyHeader
+from ditto_apps.api.routes.agent_presenters import (
+    approval_detail_response as _approval_detail_response,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    approval_response as _approval_response,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    campaign_response as _campaign_response,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    campaign_validation_response as _campaign_validation_response,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    capability_response as _capability_response,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    decision_opinion_response as _decision_opinion_response,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    encode_agent_sse,
+    encode_campaign_sse,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    run_response as _run_response,
+)
+from ditto_apps.api.routes.agent_presenters import (
+    session_response as _session_response,
+)
 from ditto_apps.models.agent import (
     AgentApprovalDecisionRequest,
     AgentApprovalDecisionResponse,
+    AgentApprovalResponse,
     AgentCampaignApproveRequest,
-    AgentCampaignBudget,
     AgentCampaignCancelRequest,
     AgentCampaignCreateRequest,
     AgentCampaignResponse,
-    AgentCampaignSandboxLimits,
+    AgentCampaignValidationRequest,
+    AgentCampaignValidationResponse,
+    AgentCapabilityResponse,
+    AgentDecisionOpinionQueryParams,
+    AgentDecisionOpinionResponse,
     AgentRunCancelRequest,
     AgentRunCreateRequest,
     AgentRunResponse,
     AgentSessionCreateRequest,
     AgentSessionResponse,
 )
-from ditto_apps.models.common import APIResponse
+from ditto_apps.models.common import APIResponse, PaginationResponse
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 LastEventIdHeader = Annotated[int | None, Header(alias="Last-Event-ID", ge=0)]
@@ -117,155 +152,84 @@ def _raise_campaign_error(exc: CampaignRuntimeError) -> Never:
     ) from exc
 
 
-def _session_response(session: AgentSessionView) -> AgentSessionResponse:
-    return AgentSessionResponse(
-        session_id=session.session_id,
-        created_at=session.created_at,
-        retention_class=session.retention_class,
-    )
+@router.get(
+    "/capabilities",
+    response_model=APIResponse[AgentCapabilityResponse],
+)
+@inject
+async def get_agent_capabilities(
+    runtime: Annotated[AgentRuntimePort, FromComponent()],
+) -> APIResponse[AgentCapabilityResponse]:
+    """Read Agent availability without exposing provider configuration secrets."""
+    try:
+        capability = await _run_blocking(runtime.get_capabilities)
+    except AgentRuntimeError as exc:
+        _raise_runtime_error(exc)
+    return APIResponse(data=_capability_response(capability))
 
 
-def _run_response(run: AgentRunView) -> AgentRunResponse:
-    return AgentRunResponse(
-        run_id=run.run_id,
-        session_id=run.session_id,
-        status=run.status,
-        objective_hash=run.objective_hash,
-        authority_hash=run.authority_hash,
-        max_model_tokens=run.max_model_tokens,
-        max_model_spend_usd=run.max_model_spend_usd,
-        model_profile=run.model_profile,
-        manifest_hash=run.manifest_hash,
-        created_at=run.created_at,
-        started_at=run.started_at,
-        finished_at=run.finished_at,
-        revision=run.revision,
-    )
-
-
-def _approval_response(
-    decision: AgentApprovalDecision,
-) -> AgentApprovalDecisionResponse:
-    return AgentApprovalDecisionResponse(
-        approval_id=decision.approval_id,
-        run_id=decision.run_id,
-        action_hash=decision.action_hash,
-        status=decision.status.value,
-        operator_id=decision.operator_id,
-        reason=decision.reason,
-        decided_at=decision.decided_at,
-    )
-
-
-def _campaign_response(campaign: CampaignView) -> AgentCampaignResponse:
-    sandbox = campaign.budget.sandbox_resource_limits
-    return AgentCampaignResponse(
-        campaign_id=campaign.campaign_id,
-        status=campaign.status,
-        manifest_hash=campaign.manifest_hash,
-        authorization_hash=campaign.authorization_hash,
-        authorized_by=campaign.authorized_by,
-        authorization_expires_at=campaign.authorization_expires_at,
-        search_axis=campaign.search_axis,
-        source_snapshot_id=campaign.source_snapshot_id,
-        allowed_tools=campaign.allowed_tools,
-        budget=AgentCampaignBudget(
-            candidate_limit=campaign.budget.candidate_limit,
-            fold_run_limit=campaign.budget.fold_run_limit,
-            generation_limit=campaign.budget.generation_limit,
-            concurrent_sandbox_limit=campaign.budget.concurrent_sandbox_limit,
-            wall_time_limit_seconds=campaign.budget.wall_time_limit_seconds,
-            temporary_storage_limit_bytes=(
-                campaign.budget.temporary_storage_limit_bytes
+@router.get(
+    "/decision-opinions",
+    response_model=APIResponse[AgentDecisionOpinionResponse],
+)
+@inject
+async def get_agent_decision_opinion(
+    query: Annotated[DecisionOpinionQueryPort, FromComponent()],
+    request_identity: Annotated[AgentDecisionOpinionQueryParams, Query()],
+) -> APIResponse[AgentDecisionOpinionResponse]:
+    """Read one shadow opinion only through its exact V3 and PIT identity."""
+    try:
+        identity = DecisionOpinionIdentity(
+            strategy_id=request_identity.strategy_id,
+            strategy_version=request_identity.strategy_version,
+            trade_date=request_identity.trade_date,
+            account_id=request_identity.account_id,
+            sleeve_id=request_identity.sleeve_id,
+            v3_artifact_id=request_identity.v3_artifact_id,
+            context=EvidenceTemporalContext(
+                decision_time=request_identity.decision_time,
+                knowledge_cutoff=request_identity.knowledge_cutoff,
+                publication_cutoff=request_identity.publication_cutoff,
+                source_snapshot_id=request_identity.source_snapshot_id,
             ),
-            model_spend_limit_usd_micros=(campaign.budget.model_spend_limit_usd_micros),
-            sandbox_resource_limits=AgentCampaignSandboxLimits(
-                cpu_count=sandbox.cpu_count,
-                memory_bytes=sandbox.memory_bytes,
-                process_limit=sandbox.process_limit,
-                temporary_storage_bytes=sandbox.temporary_storage_bytes,
-                wall_time_seconds=sandbox.wall_time_seconds,
-                output_bytes=sandbox.output_bytes,
-            ),
+        )
+        opinion = await _run_blocking(query.get_opinion, identity)
+    except AppQueryError as exc:
+        raise APIError(
+            "DecisionOpinion identity is invalid",
+            status_code=422,
+            error_code="DECISION_OPINION_IDENTITY_INVALID",
+        ) from exc
+    return APIResponse(data=_decision_opinion_response(opinion))
+
+
+@router.get(
+    "/sessions",
+    response_model=APIResponse[list[AgentSessionResponse]],
+)
+@inject
+async def list_agent_sessions(
+    runtime: Annotated[AgentRuntimePort, FromComponent()],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> APIResponse[list[AgentSessionResponse]]:
+    """Recover durable Agent sessions without caller-held identities."""
+    try:
+        page = await _run_blocking(
+            runtime.list_sessions,
+            limit=limit,
+            offset=offset,
+        )
+    except AgentRuntimeError as exc:
+        _raise_runtime_error(exc)
+    return APIResponse(
+        data=[_session_response(item) for item in page.items],
+        pagination=PaginationResponse(
+            total=page.total,
+            limit=page.limit,
+            offset=page.offset,
         ),
-        best_primary_metric_value=campaign.best_primary_metric_value,
-        no_improvement_generations=campaign.no_improvement_generations,
-        statistical_trial_count=campaign.statistical_trial_count,
-        operational_attempt_count=campaign.operational_attempt_count,
-        revision=campaign.revision,
     )
-
-
-def encode_agent_sse(events: tuple[AgentEventView, ...]) -> bytes:
-    """Serialize an ordered persisted replay without creating business events."""
-    chunks: list[bytes] = []
-    previous_event_id = 0
-    for event in events:
-        if event.event_id <= previous_event_id:
-            raise ValueError("Agent SSE events must have strictly increasing IDs")
-        previous_event_id = event.event_id
-        data = orjson.dumps(
-            {
-                "schema_version": event.schema_version,
-                "event_id": event.event_id,
-                "run_id": event.run_id,
-                "run_sequence": event.run_sequence,
-                "event_type": event.event_type,
-                "payload_hash": event.payload_hash,
-                "occurred_at": event.occurred_at,
-                "prev_hash": event.prev_hash,
-                "event_hash": event.event_hash,
-            },
-            option=orjson.OPT_SORT_KEYS | orjson.OPT_UTC_Z,
-        )
-        chunks.append(
-            b"".join(
-                (
-                    f"id: {event.event_id}\n".encode(),
-                    f"event: {event.event_type}\n".encode(),
-                    b"data: ",
-                    data,
-                    b"\n\n",
-                )
-            )
-        )
-    return b"".join(chunks)
-
-
-def encode_campaign_sse(events: tuple[CampaignEventView, ...]) -> bytes:
-    """Serialize ordered persisted Campaign events without executing work."""
-    chunks: list[bytes] = []
-    previous_event_id = 0
-    for event in events:
-        if event.event_id <= previous_event_id:
-            raise ValueError("Campaign SSE events must have strictly increasing IDs")
-        previous_event_id = event.event_id
-        data = orjson.dumps(
-            {
-                "schema_version": event.schema_version,
-                "event_id": event.event_id,
-                "durable_event_id": event.durable_event_id,
-                "campaign_id": event.campaign_id,
-                "event_type": event.event_type,
-                "previous_status": event.previous_status,
-                "status": event.status,
-                "payload_hash": event.payload_hash,
-                "occurred_at": event.occurred_at,
-            },
-            option=orjson.OPT_SORT_KEYS | orjson.OPT_UTC_Z,
-        )
-        chunks.append(
-            b"".join(
-                (
-                    f"id: {event.event_id}\n".encode(),
-                    f"event: {event.event_type}\n".encode(),
-                    b"data: ",
-                    data,
-                    b"\n\n",
-                )
-            )
-        )
-    return b"".join(chunks)
 
 
 @router.post(
@@ -316,11 +280,56 @@ async def create_agent_run(
                 max_model_spend_usd=request.max_model_spend_usd,
                 model_profile=ModelProfile(request.model_profile),
                 idempotency_key=idempotency_key,
+                context=(
+                    AgentContextPresentation(
+                        context_type=request.context.context_type,
+                        context_id=request.context.context_id,
+                    )
+                    if request.context is not None
+                    else None
+                ),
             ),
         )
     except AgentRuntimeError as exc:
         _raise_runtime_error(exc)
     return APIResponse(data=_run_response(run))
+
+
+@router.get(
+    "/runs",
+    response_model=APIResponse[list[AgentRunResponse]],
+)
+@inject
+async def list_agent_runs(
+    runtime: Annotated[AgentRuntimePort, FromComponent()],
+    status: Annotated[RunStatus | None, Query()] = None,
+    session_id: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
+    context_type: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
+    context_id: Annotated[str | None, Query(min_length=1, max_length=1024)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> APIResponse[list[AgentRunResponse]]:
+    """Recover durable Agent runs with bounded equality filters."""
+    try:
+        page = await _run_blocking(
+            runtime.list_runs,
+            status=status,
+            session_id=session_id,
+            context_type=context_type,
+            context_id=context_id,
+            limit=limit,
+            offset=offset,
+        )
+    except AgentRuntimeError as exc:
+        _raise_runtime_error(exc)
+    return APIResponse(
+        data=[_run_response(item) for item in page.items],
+        pagination=PaginationResponse(
+            total=page.total,
+            limit=page.limit,
+            offset=page.offset,
+        ),
+    )
 
 
 @router.get(
@@ -392,6 +401,56 @@ async def cancel_agent_run(
     return APIResponse(data=_run_response(run))
 
 
+@router.get(
+    "/approvals",
+    response_model=APIResponse[list[AgentApprovalResponse]],
+)
+@inject
+async def list_agent_approvals(
+    runtime: Annotated[AgentRuntimePort, FromComponent()],
+    status: Annotated[AgentApprovalStatus | None, Query()] = None,
+    run_id: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> APIResponse[list[AgentApprovalResponse]]:
+    """List exact approval subjects including pending and expired states."""
+    try:
+        page = await _run_blocking(
+            runtime.list_approvals,
+            status=status,
+            run_id=run_id,
+            limit=limit,
+            offset=offset,
+        )
+    except AgentRuntimeError as exc:
+        _raise_runtime_error(exc)
+    return APIResponse(
+        data=[_approval_detail_response(item) for item in page.items],
+        pagination=PaginationResponse(
+            total=page.total,
+            limit=page.limit,
+            offset=page.offset,
+        ),
+    )
+
+
+@router.get(
+    "/approvals/{approval_id}",
+    response_model=APIResponse[AgentApprovalResponse],
+)
+@inject
+async def get_agent_approval(
+    approval_id: str,
+    runtime: Annotated[AgentRuntimePort, FromComponent()],
+) -> APIResponse[AgentApprovalResponse]:
+    """Read one exact action payload, hash, expiry, and decision state."""
+    try:
+        approval = await _run_blocking(runtime.get_approval, approval_id)
+    except AgentRuntimeError as exc:
+        _raise_runtime_error(exc)
+    return APIResponse(data=_approval_detail_response(approval))
+
+
 @router.post(
     "/approvals/{approval_id}/decision",
     response_model=APIResponse[AgentApprovalDecisionResponse],
@@ -449,6 +508,67 @@ async def create_agent_campaign(
             )
         )
     return APIResponse(data=_campaign_response(campaign))
+
+
+@router.post(
+    "/campaigns/validation",
+    response_model=APIResponse[AgentCampaignValidationResponse],
+)
+@inject
+async def validate_agent_campaign(
+    request: AgentCampaignValidationRequest,
+    runtime: Annotated[CampaignRuntimePort, FromComponent()],
+) -> APIResponse[AgentCampaignValidationResponse]:
+    """Validate one structured wizard step without creating durable state."""
+    try:
+        validation = await _run_blocking(
+            runtime.validate_campaign,
+            CampaignValidationCommand(
+                step=request.step,
+                document=request.model_dump(mode="python", exclude={"step"}),
+            ),
+        )
+    except (ValueError, CampaignRuntimeError) as exc:
+        if isinstance(exc, CampaignRuntimeError):
+            _raise_campaign_error(exc)
+        _raise_campaign_error(
+            CampaignInvalidRequest(
+                "Campaign validation request is invalid",
+                reason_code="campaign_manifest_invalid",
+            )
+        )
+    return APIResponse(data=_campaign_validation_response(validation))
+
+
+@router.get(
+    "/campaigns",
+    response_model=APIResponse[list[AgentCampaignResponse]],
+)
+@inject
+async def list_agent_campaigns(
+    runtime: Annotated[CampaignRuntimePort, FromComponent()],
+    status: Annotated[CampaignStatus | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> APIResponse[list[AgentCampaignResponse]]:
+    """Recover durable Campaign projections without caller-held identities."""
+    try:
+        page = await _run_blocking(
+            runtime.list_campaigns,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
+    except CampaignRuntimeError as exc:
+        _raise_campaign_error(exc)
+    return APIResponse(
+        data=[_campaign_response(item) for item in page.items],
+        pagination=PaginationResponse(
+            total=page.total,
+            limit=page.limit,
+            offset=page.offset,
+        ),
+    )
 
 
 @router.post(

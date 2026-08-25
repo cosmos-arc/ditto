@@ -25,6 +25,15 @@ from ditto_agent.observability import (
     AgentObservability,
     AgentToolTelemetry,
 )
+from ditto_agent.presentation import (
+    AgentContextPresentation,
+    AgentGuardrailPresentation,
+    AgentPresentationError,
+    AgentPresentationSink,
+    AgentRunPresentationUpdate,
+    AgentToolPresentation,
+    AgentUsagePresentation,
+)
 from ditto_agent.runtime.budgets import BudgetExceeded, BudgetLedger, BudgetSnapshot
 from ditto_agent.runtime.egress_policy import EvidenceEgressPolicyError
 from ditto_agent.runtime.episode import (
@@ -76,6 +85,7 @@ class AgentOrchestrationRequest:
     instructions: str
     allowed_tools: tuple[str, ...]
     max_output_tokens: int
+    presentation_context: AgentContextPresentation | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,6 +214,7 @@ class GovernedAgentOrchestrator:
         clock: RuntimeClock,
         approval_suspender: ApprovalSuspender | None = None,
         observability: AgentObservability | None = None,
+        presentation_sink: AgentPresentationSink | None = None,
     ) -> None:
         self._model = model
         self._tool_executor = tool_executor
@@ -212,6 +223,95 @@ class GovernedAgentOrchestrator:
         self._approval_suspender = approval_suspender
         self._observability = observability or AgentObservability(
             monotonic=clock.monotonic
+        )
+        self._presentation_sink = presentation_sink
+
+    @staticmethod
+    def _output_summary(answer: GroundedAnswer | None) -> str | None:
+        if answer is None:
+            return None
+        if answer.claims:
+            summary = "; ".join(claim.claim for claim in answer.claims)
+        else:
+            summary = f"Refused: {answer.refusal_reason}"
+        maximum = 8192
+        return summary if len(summary) <= maximum else f"{summary[:8189].rstrip()}..."
+
+    def _presentation_update(
+        self,
+        *,
+        request: AgentOrchestrationRequest,
+        outcome: AgentOrchestrationOutcome,
+    ) -> AgentRunPresentationUpdate:
+        calls, results = self._tool_records()
+        by_call_id = {result.call_id: result for result in results}
+        tool_records = tuple(
+            AgentToolPresentation(
+                call_id=call.call_id,
+                tool_name=call.tool_name,
+                arguments_hash=call.arguments_hash,
+                result_hash=by_call_id[call.call_id].result_hash,
+                evidence_refs=by_call_id[call.call_id].evidence_refs,
+                artifact_refs=by_call_id[call.call_id].artifact_refs,
+            )
+            for call in calls
+        )
+        evidence_refs = tuple(
+            sorted(
+                {reference for result in results for reference in result.evidence_refs}
+            )
+        )
+        artifact_refs = tuple(
+            sorted(
+                {reference for result in results for reference in result.artifact_refs}
+            )
+        )
+        guardrail_codes = {
+            "authority_mismatch",
+            "temporal_context_mismatch",
+            "tool_schema_mismatch",
+            "tool_arguments_invalid",
+            "tool_not_allowed",
+            "duplicate_tool_call_id",
+            "trusted_context_override",
+            "evidence_temporal_context_invalid",
+            "evidence_egress_not_cloud_allowed",
+            "evidence_license_not_approved",
+            "evidence_batch_empty",
+            "evidence_identity_duplicate",
+            "evidence_integrity_invalid",
+            "evidence_temporal_context_mismatch",
+        }
+        if outcome.status is RunStatus.COMPLETED:
+            guardrail = AgentGuardrailPresentation(status="passed", reason_code=None)
+        elif outcome.failure_code in guardrail_codes:
+            guardrail = AgentGuardrailPresentation(
+                status="blocked",
+                reason_code=outcome.failure_code,
+            )
+        else:
+            guardrail = AgentGuardrailPresentation(status="unknown", reason_code=None)
+        return AgentRunPresentationUpdate(
+            run_id=request.run.run_id,
+            objective=request.run.objective,
+            context=request.presentation_context,
+            status=outcome.status,
+            output_summary=self._output_summary(outcome.answer),
+            tool_records=tool_records,
+            evidence_refs=evidence_refs,
+            artifact_refs=artifact_refs,
+            guardrail=guardrail,
+            usage=AgentUsagePresentation(
+                model_attempts=outcome.budget.model_attempts,
+                model_turns=outcome.budget.model_turns,
+                tool_calls=outcome.budget.tool_calls,
+                retries=outcome.budget.retries,
+                total_tokens=outcome.budget.total_tokens,
+                model_spend_usd=outcome.budget.model_spend_usd,
+                exhausted_reason=outcome.budget.exhausted_reason,
+            ),
+            failure_code=outcome.failure_code,
+            updated_at=self._clock.now(),
         )
 
     def _validate_request(self, request: AgentOrchestrationRequest) -> None:
@@ -336,6 +436,13 @@ class GovernedAgentOrchestrator:
             budget=_budget_telemetry(outcome.budget),
             failure_code=failure_code,
         )
+        if self._presentation_sink is not None:
+            try:
+                self._presentation_sink.publish(
+                    self._presentation_update(request=request, outcome=outcome)
+                )
+            except AgentPresentationError:
+                pass
         return outcome
 
     def _failed(

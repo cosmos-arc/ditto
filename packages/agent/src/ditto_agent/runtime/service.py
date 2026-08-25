@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -9,6 +10,12 @@ from enum import StrEnum
 from typing import Protocol
 
 from ditto_agent.contracts.runtime import ModelProfile, RetentionClass, RunStatus
+from ditto_agent.presentation import (
+    AgentContextPresentation,
+    AgentGuardrailPresentation,
+    AgentToolPresentation,
+    AgentUsagePresentation,
+)
 
 
 class AgentRuntimeError(RuntimeError):
@@ -52,12 +59,49 @@ class ApprovalDecisionStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class AgentRuntimeState(StrEnum):
+    """Stable non-sensitive runtime availability shown to operators."""
+
+    AVAILABLE = "available"
+    DEGRADED = "degraded"
+    DISABLED = "disabled"
+
+
+class AgentApprovalStatus(StrEnum):
+    """Operator-facing approval state including computed expiry."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+
+class AgentProjectionState(StrEnum):
+    """Whether a readable run projection is complete or explicitly partial."""
+
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+
+
 @dataclass(frozen=True, slots=True)
 class AgentSessionCreateCommand:
     """Create one local Agent session under a durable request identity."""
 
     retention_class: RetentionClass
     idempotency_key: str
+
+
+@dataclass(frozen=True, slots=True)
+class AgentCapabilityView:
+    """Read-only feature and provider availability without credentials."""
+
+    enabled: bool
+    runtime_state: AgentRuntimeState
+    provider: str | None
+    available_profiles: tuple[ModelProfile, ...]
+    default_profile: ModelProfile | None
+    degradation_reason: str | None
+    checked_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +115,7 @@ class AgentRunCreateCommand:
     max_model_spend_usd: Decimal
     model_profile: ModelProfile
     idempotency_key: str
+    context: AgentContextPresentation | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,8 +147,18 @@ class AgentSessionView:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentSessionListView:
+    """Stable newest-first session page."""
+
+    items: tuple[AgentSessionView, ...]
+    total: int
+    limit: int
+    offset: int
+
+
+@dataclass(frozen=True, slots=True)
 class AgentRunView:
-    """Non-sensitive run projection; the raw objective is never returned."""
+    """Authoritative run state enriched by a sanitized presentation projection."""
 
     run_id: str
     session_id: str
@@ -118,6 +173,30 @@ class AgentRunView:
     started_at: datetime | None
     finished_at: datetime | None
     revision: int
+    objective: str | None = None
+    context: AgentContextPresentation | None = None
+    output_summary: str | None = None
+    tool_records: tuple[AgentToolPresentation, ...] = ()
+    evidence_refs: tuple[str, ...] = ()
+    artifact_refs: tuple[str, ...] = ()
+    guardrail: AgentGuardrailPresentation | None = None
+    usage: AgentUsagePresentation | None = None
+    failure_code: str | None = None
+    event_cursor: int = 0
+    projection_state: AgentProjectionState = AgentProjectionState.PARTIAL
+    projection_reason: str | None = "agent_presentation_unconfigured"
+    projection_version: int | None = None
+    projection_updated_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AgentRunListView:
+    """Stable newest-first run page."""
+
+    items: tuple[AgentRunView, ...]
+    total: int
+    limit: int
+    offset: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,8 +227,72 @@ class AgentApprovalDecision:
     decided_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class AgentApprovalView:
+    """Exact immutable approval subject and its current public state."""
+
+    approval_id: str
+    run_id: str
+    action_type: str
+    target_identity: str
+    action_payload: Mapping[str, object]
+    action_hash: str
+    status: AgentApprovalStatus
+    requested_at: datetime
+    expires_at: datetime
+    operator_id: str | None
+    reason: str | None
+    decided_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class AgentApprovalListView:
+    """Stable newest-first approval page."""
+
+    items: tuple[AgentApprovalView, ...]
+    total: int
+    limit: int
+    offset: int
+
+
 class AgentRuntimePort(Protocol):
     """Shared Agent use-case surface; transports never access storage directly."""
+
+    def get_capabilities(self) -> AgentCapabilityView:
+        """Return non-sensitive runtime/provider availability in every state."""
+        ...
+
+    def list_sessions(self, *, limit: int, offset: int) -> AgentSessionListView:
+        """List durable sessions newest first."""
+        ...
+
+    def list_runs(
+        self,
+        *,
+        status: RunStatus | None,
+        session_id: str | None,
+        context_type: str | None,
+        context_id: str | None,
+        limit: int,
+        offset: int,
+    ) -> AgentRunListView:
+        """List durable runs with bounded equality filters."""
+        ...
+
+    def get_approval(self, approval_id: str) -> AgentApprovalView:
+        """Return one exact approval subject and decision state."""
+        ...
+
+    def list_approvals(
+        self,
+        *,
+        status: AgentApprovalStatus | None,
+        run_id: str | None,
+        limit: int,
+        offset: int,
+    ) -> AgentApprovalListView:
+        """List approvals with pending/expired/decided filters."""
+        ...
 
     def create_session(self, command: AgentSessionCreateCommand) -> AgentSessionView:
         """Create or exactly replay one session request."""
@@ -187,17 +330,25 @@ class AgentRuntimePort(Protocol):
 __all__ = [
     "AgentApprovalDecision",
     "AgentApprovalDecisionCommand",
+    "AgentApprovalListView",
+    "AgentApprovalStatus",
+    "AgentApprovalView",
+    "AgentCapabilityView",
     "AgentEventView",
     "AgentInvalidRequest",
+    "AgentProjectionState",
     "AgentRequestConflict",
     "AgentResourceNotFound",
     "AgentRunCancelCommand",
     "AgentRunCreateCommand",
+    "AgentRunListView",
     "AgentRunView",
     "AgentRuntimeError",
     "AgentRuntimePort",
+    "AgentRuntimeState",
     "AgentRuntimeUnavailable",
     "AgentSessionCreateCommand",
+    "AgentSessionListView",
     "AgentSessionView",
     "ApprovalDecisionKind",
     "ApprovalDecisionStatus",

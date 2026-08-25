@@ -1,0 +1,29 @@
+FROM python@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8
+
+ENV LANG=C \
+    LC_ALL=C \
+    PYTHONHASHSEED=0 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONNOUSERSITE=1 \
+    PYTHONUNBUFFERED=1 \
+    DITTO_SANDBOX_RUNTIME_MANIFEST=/opt/ditto/runtime-manifest.json
+
+COPY requirements.lock /opt/ditto/requirements.lock
+RUN python -m pip install \
+      --disable-pip-version-check \
+      --no-cache-dir \
+      --no-compile \
+      --only-binary=:all: \
+      --require-hashes \
+      --requirement /opt/ditto/requirements.lock \
+    && rm -rf /root/.cache /tmp/*
+
+COPY runtime-manifest.json /opt/ditto/runtime-manifest.json
+COPY candidate_runner.py /opt/ditto/bin/candidate-runner
+RUN chmod 0444 /opt/ditto/requirements.lock /opt/ditto/runtime-manifest.json \
+    && chmod 0555 /opt/ditto/bin/candidate-runner \
+    && chown -R 65532:65532 /opt/ditto
+
+USER 65532:65532
+WORKDIR /tmp
+ENTRYPOINT ["/opt/ditto/bin/candidate-runner"]

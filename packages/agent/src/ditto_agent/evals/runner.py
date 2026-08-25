@@ -40,7 +40,9 @@ from ditto_agent.evals.r5_4 import (
 )
 from ditto_agent.evals.release import (
     RELEASE_SUITE_COUNTS,
+    EvalCostBasis,
     ReleaseEvalReport,
+    ReleaseEvalRunIdentity,
     build_release_eval_report,
 )
 from ditto_agent.evals.report import (
@@ -107,6 +109,16 @@ class EvalProvider(Protocol):
 
     def observe(self, case: EvalCase) -> EvalObservation:
         """Return the observation associated with one case."""
+        ...
+
+
+class LiveEvalProvider(Protocol):
+    """Async Apps-wired provider for one approved formal eval scenario."""
+
+    provider_id: str
+
+    async def observe(self, case: EvalCase) -> EvalObservation:
+        """Execute one live scenario and return only host-authenticated facts."""
         ...
 
 
@@ -325,9 +337,24 @@ class LocalEvalRunner:
         seed: int,
         cases: Mapping[str, tuple[EvalCase, ...]],
         profile: str,
+        run_identity: ReleaseEvalRunIdentity | None = None,
     ) -> ReleaseEvalReport:
         """Run each frozen suite once and produce the aggregate 120-case gate."""
-        self._preflight_release_cases(cases=cases, seed=seed)
+        self.preflight_release_cases(cases=cases, seed=seed)
+        identity = run_identity or ReleaseEvalRunIdentity.fixture(
+            provider_id=self._provider.provider_id,
+            profile=profile,
+        )
+        if identity.provider_id != self._provider.provider_id:
+            raise EvalRunnerError(
+                "Release eval provider differs from the run identity",
+                reason_code="eval_release_provider_identity_mismatch",
+            )
+        if identity.profile != profile:
+            raise EvalRunnerError(
+                "Release eval profile differs from the run identity",
+                reason_code="eval_release_profile_identity_mismatch",
+            )
         reports: dict[str, EvalReport] = {}
         observations: dict[str, tuple[EvalObservation, ...]] = {}
         for suite in sorted(RELEASE_SUITE_COUNTS):
@@ -339,15 +366,14 @@ class LocalEvalRunner:
             reports[suite] = suite_report
             observations[suite] = suite_observations
         return build_release_eval_report(
-            provider_id=self._provider.provider_id,
-            profile=profile,
+            run_identity=identity,
             seed=seed,
             reports=reports,
             cases=cases,
             observations=observations,
         )
 
-    def _preflight_release_cases(
+    def preflight_release_cases(
         self,
         *,
         cases: Mapping[str, tuple[EvalCase, ...]],
@@ -483,11 +509,146 @@ class LocalEvalRunner:
             )
 
 
+class _RecordedEvalProvider:
+    """Replay already-authenticated live observations without another side effect."""
+
+    def __init__(
+        self,
+        *,
+        provider_id: str,
+        observations: Mapping[tuple[str, str], EvalObservation],
+    ) -> None:
+        self.provider_id = provider_id
+        self._observations = dict(observations)
+
+    def observe(self, case: EvalCase) -> EvalObservation:
+        try:
+            return self._observations[(case.suite, case.case_id)]
+        except KeyError as exc:
+            raise EvalRunnerError(
+                "Recorded live observation is missing",
+                reason_code="eval_live_observation_missing",
+                details={"suite": case.suite, "case_id": case.case_id},
+            ) from exc
+
+
+def _advance_live_budget(
+    *,
+    run_identity: ReleaseEvalRunIdentity,
+    observation: EvalObservation,
+    suite: str,
+    case_id: str,
+    cumulative_spend: Decimal,
+    cumulative_tokens: int,
+) -> tuple[Decimal, int]:
+    if run_identity.cost_basis is EvalCostBasis.USAGE_CAP:
+        if observation.model_spend_usd != 0:
+            raise EvalRunnerError(
+                "Usage-capped eval must not claim unverified currency spend",
+                reason_code="eval_live_unverified_spend",
+                details={"suite": suite, "case_id": case_id},
+            )
+        cumulative_tokens += (
+            observation.model_input_tokens + observation.model_output_tokens
+        )
+        if cumulative_tokens > run_identity.max_total_tokens:
+            raise EvalRunnerError(
+                "Live eval exceeded its total token budget",
+                reason_code="eval_live_total_tokens_exceeded",
+                details={"suite": suite, "case_id": case_id},
+            )
+        return cumulative_spend, cumulative_tokens
+    expected_spend = run_identity.model_spend_usd(
+        input_tokens=observation.model_input_tokens,
+        output_tokens=observation.model_output_tokens,
+    )
+    if observation.model_spend_usd != expected_spend:
+        raise EvalRunnerError(
+            "Live eval cost differs from frozen token pricing",
+            reason_code="eval_live_cost_mismatch",
+            details={"suite": suite, "case_id": case_id},
+        )
+    cumulative_spend += expected_spend
+    if cumulative_spend > run_identity.max_total_spend_usd:
+        raise EvalRunnerError(
+            "Live eval exceeded its frozen total spend budget",
+            reason_code="eval_live_total_spend_exceeded",
+            details={"suite": suite, "case_id": case_id},
+        )
+    return cumulative_spend, cumulative_tokens
+
+
+async def run_live_release(
+    *,
+    provider: LiveEvalProvider,
+    run_identity: ReleaseEvalRunIdentity,
+    seed: int,
+    cases: Mapping[str, tuple[EvalCase, ...]],
+) -> ReleaseEvalReport:
+    """Preflight all cases, collect live facts once, then grade without I/O."""
+    if run_identity.cost_basis not in {
+        EvalCostBasis.MEASURED,
+        EvalCostBasis.USAGE_CAP,
+    }:
+        raise EvalRunnerError(
+            "Live release eval requires a measured or token budget",
+            reason_code="eval_live_cost_basis_invalid",
+        )
+    if provider.provider_id != run_identity.provider_id:
+        raise EvalRunnerError(
+            "Live provider differs from the frozen run identity",
+            reason_code="eval_release_provider_identity_mismatch",
+        )
+    preflight = LocalEvalRunner(provider=FakeEvalProvider())
+    preflight.preflight_release_cases(cases=cases, seed=seed)
+    observations: dict[tuple[str, str], EvalObservation] = {}
+    cumulative_spend = Decimal(0)
+    cumulative_tokens = 0
+    for suite in sorted(RELEASE_SUITE_COUNTS):
+        for case in sorted(cases[suite], key=lambda item: item.case_id):
+            observation = await provider.observe(case)
+            if not isinstance(cast(object, observation), EvalObservation) or not (
+                observation.verify_observation_hash()
+            ):
+                raise EvalRunnerError(
+                    "Live eval provider returned an invalid observation",
+                    reason_code="eval_observation_hash_invalid",
+                    details={"suite": suite, "case_id": case.case_id},
+                )
+            if observation.model_requests <= 0 or (
+                observation.model_input_tokens + observation.model_output_tokens <= 0
+            ):
+                raise EvalRunnerError(
+                    "Live eval observation lacks model usage",
+                    reason_code="eval_live_usage_missing",
+                    details={"suite": suite, "case_id": case.case_id},
+                )
+            cumulative_spend, cumulative_tokens = _advance_live_budget(
+                run_identity=run_identity,
+                observation=observation,
+                suite=suite,
+                case_id=case.case_id,
+                cumulative_spend=cumulative_spend,
+                cumulative_tokens=cumulative_tokens,
+            )
+            observations[(suite, case.case_id)] = observation
+    recorded = _RecordedEvalProvider(
+        provider_id=provider.provider_id,
+        observations=observations,
+    )
+    return LocalEvalRunner(provider=recorded).run_release(
+        seed=seed,
+        cases=cases,
+        profile=run_identity.profile,
+        run_identity=run_identity,
+    )
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run offline governed Agent evals")
     parser.add_argument("--suite", required=True)
     parser.add_argument("--seed", type=int)
-    parser.add_argument("--provider", choices=("fake", "openai"), default="fake")
+    parser.add_argument("--provider", choices=("fake", "glm", "openai"), default="fake")
     parser.add_argument("--profile", choices=("balanced", "quality"))
     parser.add_argument("--cases", type=Path)
     parser.add_argument("--output", type=Path)
@@ -519,7 +680,7 @@ def _write_output(payload: bytes, output: Path | None) -> None:
     output.write_bytes(payload)
 
 
-def _live_not_run_payload(*, profile: str) -> bytes:
+def _live_not_run_payload(*, provider: str, profile: str) -> bytes:
     """Record the A4 boundary without reading credentials or calling a provider."""
     return canonical_bytes(
         {
@@ -527,7 +688,7 @@ def _live_not_run_payload(*, profile: str) -> bytes:
             "status": "not_run",
             "approval_gate": "A4",
             "reason_code": "a4_approval_required",
-            "provider": "openai",
+            "provider": provider,
             "profile": profile,
             "release_gate_passed": False,
             "prohibited_actions_observed": {
@@ -547,13 +708,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     provider = str(arguments.provider)
     profile = None if arguments.profile is None else str(arguments.profile)
     output = None if arguments.output is None else Path(arguments.output)
-    if provider == "openai":
+    if provider != "fake":
         if suite != "all" or profile is None:
             raise EvalRunnerError(
-                "OpenAI comparison requires suite all and an explicit profile",
+                "Live comparison requires suite all and an explicit profile",
                 reason_code="eval_live_request_invalid",
             )
-        _write_output(_live_not_run_payload(profile=profile), output)
+        _write_output(_live_not_run_payload(provider=provider, profile=profile), output)
         return 5
     if profile is not None:
         raise EvalRunnerError(
@@ -598,8 +759,10 @@ __all__ = [
     "EvalProvider",
     "EvalRunnerError",
     "FakeEvalProvider",
+    "LiveEvalProvider",
     "LocalEvalRunner",
     "ReleaseEvalReport",
     "bundled_eval_cases",
     "main",
+    "run_live_release",
 ]

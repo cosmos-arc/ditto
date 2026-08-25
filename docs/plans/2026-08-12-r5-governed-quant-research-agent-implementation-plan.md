@@ -1,8 +1,8 @@
 # R5 治理型量化研究 Agent 详细实施计划
 
 **日期：** 2026-08-12
-**状态：** 进行中
-**恢复点：** Wave 6 / Task 38 的 A3/A4-independent release checkpoint 已完成；Task 25/37/38 等待 A3 物理 sandbox 与 A4 live-model acceptance
+**状态：** 已完成（38/38 Tasks；R5.5 release preflight PASS）
+**完成证据：** Task 25/A3 OrbStack 物理 sandbox、120-case Fake、GLM 5.3 Coding Plan balanced/quality 各 120-case 在线验收、运营演练与 release preflight 全部 PASS。Coding Plan 只用于用户批准的 Codex 研发验收；生产启用仍须替换 GLM 标准 API key，不影响本实施计划完成状态。
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -560,13 +560,13 @@ pixi run -e dev check
 
 **依赖：** Task 24 / Approval A3
 **风险：** 高风险，执行不可信代码/运行依赖
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `ditto_apps.registry.agent.oci_sandbox`、固定 Containerfile/image manifest/SBOM、fake adapter。
 - **RED/观察证据：** 网络、socket、Docker socket、host/repo mount、secret、root、write rootfs、fork bomb、OOM、timeout、oversize output 攻击先证明被 harness 捕获。
-- **实施：** macOS Docker Desktop VM profile；Linux rootless OCI + 优先 gVisor；无网、non-root、read-only、tmpfs、cap-drop、no-new-privileges、seccomp、resource limits、digest pin。
+- **实施：** 单用户本地运行采用 OrbStack 2.2.1 VM profile，不引入 Kubernetes；无网、non-root、read-only、tmpfs、cap-drop、no-new-privileges、default-deny seccomp、resource limits、digest pin。Linux/gVisor 留作未来不同 runtime 的独立验收，不能继承本次证据。
 - **重构边界：** 普通 CI 使用 fake；live sandbox acceptance 显式标记；容器内无 package install。
-- **验收：** 10 类攻击全部失败且留下 `SandboxExecutionManifest`；sandbox 不可访问 Docker daemon。
+- **验收：** 11 类攻击全部符合预期且留下 `SandboxExecutionManifest`；fresh-container、并发、`fit→score` 与零残留容器通过；sandbox 不可访问 Docker daemon。
 - **提交边界：** adapter、image、attack harness 和 evidence 独立提交。
 - **恢复入口：** 第一项未被阻断的攻击。
 
@@ -806,20 +806,20 @@ pixi run -e dev check
 
 **依赖：** Tasks 16、20、31、34—36；live 对照依赖 Approval A4
 **风险：** 发布/模型费用/数据外发
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** 完整 eval dataset、benchmark runner、`docs/evidence/r5/release/eval-report.*`。
 - **RED/观察证据：** 先冻结 case/version/hash 和 grader，再运行 baseline；不删除困难 case。
-- **实施：** 跑 30 grounded、20 author、30 campaign/PIT/holdout、20 permission、10 sandbox、10 shadow；balanced/quality 分开报告；计算 P50/P95/cost。
+- **实施：** 跑 30 grounded、20 author、30 campaign/PIT/holdout、20 permission、10 sandbox、10 shadow；balanced/quality 分开报告；计算 P50/P95 和 request/token usage。单用户 GLM 部署只在代码内强制 timeout/request/token 上限，真实费用由 BigModel 控制台记录与告警，不维护价格表、汇率或美元预算。
 - **重构边界：** Fake 安全硬门与 live 质量报告分开；模型升级不继承旧结果。
-- **验收：** 达到设计 §13 全部硬门；普通 read/复杂任务满足延迟和成本；零安全/PIT 回退。
+- **验收：** 达到设计 §13 质量与安全硬门；普通 read/复杂任务满足延迟和 usage cap；控制台费用经过人工复核；零安全/PIT 回退。
 - **提交边界：** 冻结 dataset/grader 后提交，再单独提交结果和经 TDD 的修复。
 - **恢复入口：** 最严重 failure family 或预算暂停点。
 
 ```bash
 pixi run -e dev python -m ditto_agent.evals.runner --suite all --provider fake --output docs/evidence/r5/release/eval-report-fake.json
-pixi run -e dev python -m ditto_agent.evals.runner --suite all --provider openai --profile balanced --output docs/evidence/r5/release/eval-report-balanced.json
-pixi run -e dev python -m ditto_agent.evals.runner --suite all --provider openai --profile quality --output docs/evidence/r5/release/eval-report-quality.json
+pixi run -e dev python -m ditto_apps.scripts.r5_release_eval --profile balanced --approval-a4 --scope "$DITTO_R5_A4_SCOPE" --prompt-tool-manifest-hash "$DITTO_R5_PROMPT_TOOL_MANIFEST_HASH" --output docs/evidence/r5/release/eval-report-balanced.json
+pixi run -e dev python -m ditto_apps.scripts.r5_release_eval --profile quality --approval-a4 --scope "$DITTO_R5_A4_SCOPE" --prompt-tool-manifest-hash "$DITTO_R5_PROMPT_TOOL_MANIFEST_HASH" --output docs/evidence/r5/release/eval-report-quality.json
 pixi run -e dev pytest -m pit
 pixi run -e dev pytest -m sandbox_live
 ```
@@ -828,7 +828,7 @@ pixi run -e dev pytest -m sandbox_live
 
 **依赖：** Task 37
 **风险：** 发布
-**状态：** [ ]
+**状态：** [x]
 
 - **目标文件或边界：** `docs/evidence/r5/release/**`、runbook、安全说明、OpenAPI/CLI 文档、路线图状态。
 - **RED/观察证据：** release preflight 应先对缺失的 gate/evidence/approval/backup/restore/SLO 返回 fail closed。
@@ -852,8 +852,8 @@ git status --short
 |---|---|---|---|
 | A1 | Task 4 前 | 新 `ditto_agent` 包边界、`.importlinter` 规则、精确 `openai-agents` 生产版本范围 | `docs/evidence/r5/preflight/approvals.md`，GRANTED rev2 |
 | A2 | Tasks 7、22 前 | Agent SQLite v1、Research SQLite migration、备份/恢复和 retention schema | 同上，scoped GRANTED；最终 DDL hash 待追加 |
-| A3 | Task 25 前 | OCI/gVisor runtime、固定 image digest/SBOM、新运行依赖和安全 profile | 同上，PENDING |
-| A4 | 任何 live model 调用前 | 专用 OpenAI project、MAM/ZDR、凭证、预算、license/egress class 和允许数据集 | 同上，PENDING |
+| A3 | Task 25 前 | OCI runtime、固定 image digest/SBOM、新运行依赖和安全 profile | 同上，GRANTED/PASSED；仅 OrbStack 2.2.1 arm64 exact scope，不含 Kubernetes/gVisor/Linux |
+| A4 | 任何正式 live model 调用前 | provider 数据控制、凭证、总 token 上限、license/egress class 和允许数据集 | 同上，rev4 批准 Coding Plan 合成在线验收；balanced/quality 各 120/120 PASS。生产部署仍须替换标准 API key |
 
 历史 2026-08-04 对 `openai-agents` 的原则性批准不能替代 A1 的当前版本/API/transitive 证据。Langfuse 不作为生产必需依赖；如后续新增，同样按新生产依赖审批。
 
@@ -867,7 +867,7 @@ git status --short
 | 3 / R5.2 | Author compile 达标，正式 mutation 全部 HITL+idempotent，无 publish/trading |
 | 4 / R5.3 | Campaign 授权/预算、沙箱、PIT、holdout、ledger、memory 和恢复硬门全过 |
 | 5 / R5.4 | DecisionOpinion shadow-only，开关前后核心交易输出完全一致 |
-| 6 / R5.5 | 120 eval、SLO、成本、retention、备份恢复、runbook、CI 和 review 全过 |
+| 6 / R5.5 | 120 eval、SLO、usage cap、控制台费用复核、retention、备份恢复、runbook、CI 和 review 全过 |
 
 每个生产 Python Wave 至少运行：
 
@@ -898,19 +898,18 @@ git diff --check
 - required abstention：100%。
 - Author compile/validate：≥90%。
 - Episode tool/event replay：100%。
-- Read P95 ≤30 秒且 ≤0.25 美元；复杂任务 P95 ≤60 秒且 ≤0.75 美元。
+- Read P95 ≤30 秒；复杂任务 P95 ≤60 秒；正式 GLM eval 不超过 A4 固定的总 request/token 上限，实际费用由 BigModel 控制台复核和告警。
 - flags 默认关闭；Agent 任意依赖不可用不影响核心 Ditto。
 - 多 Agent 不在本计划实施范围；只有设计文档 §13.4 门槛达到后另立 ADR。
 
-## 恢复状态
+## 完成状态
 
 - **已完成：** Wave 0 / Tasks 1—3。`b5dbb921` 冻结 application/analysis/apps 当前合同；`92cf88ea` 冻结 SDK、模型、数据控制与 OCI 技术证据；`394ca7df` 记录 A1—A4 exact scope。Wave 1 / Task 4 由 `406f8d4e` 建立第 13 个包、`openai-agents==0.20.0` 三平台 lock 和 43 条 import-linter 机器合同；Task 5 由 `e65445bd` 落地冻结 runtime/PIT/evidence/approval 合同、canonical codec、状态机及篡改测试；Task 6 由 `ee1941ae` 落地 shared `AgentModelPort`、scripted Fake、零网络 OpenAI Agents adapter、A4 fail-closed apps registry 和 usage/interruption/continuation 映射；Task 7 由 `be530cb5` 落地 Agent SQLite v1、typed reader/writer、幂等、lease/fence、append-only audit chain、备份恢复及 apps lifecycle；Task 8 由 `a9740d23` 落地 server-only temporal factory、全字段 cache identity、默认 deny-all license/egress gate 和 tamper/context-bound model evidence codec；Task 9 由 `ff15f7fa` 落地 versioned Episode manifest、严格 codec、terminal run/event binding、immutable SQLite seal、100 次稳定性证明和无 live model/无副作用 replay，`8f91dda1` 冻结最终 A2 Agent DDL/hash artifact；Task 10 由 `b31d000c` 落地 versioned local eval case、deterministic/rule-based grader、不可覆盖安全结论的 optional critic、byte-stable report 和 Fake runner，完成 Wave 1 Exit Gate。Wave 2 / Task 11 由 `df9abcd8` 落地 research/decision evidence typed read facades、严格 identity/snapshot/PIT fail-closed、JSON-only immutable payload、deterministic hash 和 provider DI；Task 12 由 `c3642d0e` 落地七个 read-only function tools、host-only temporal injection、精确可收窄 allowlist、sealed `EvidenceEnvelope`、逐 claim grounding/refusal，并以 application pure Protocol 切断 Agent 到 capability 的传递依赖；Task 13 由 `4610e15d` 落地 deterministic 单 Agent host loop、turn/token/cost/time/retry 预算、authority/context/schema/tool guardrails、provider call ID 对账、结构化拒答、失败后完整工具事件链和 terminal Episode；Task 14 由 `8cdd7df0` 落地 session/run/approval HTTP DTO 与薄 route、durable idempotency、revision-fenced cancel、原子 cancel event、persisted-only SSE/Last-Event-ID replay、OpenAPI/maturity registration，以及默认 disabled fail-closed runtime；Task 15 由 `30f1e062` 落地复用 `AgentRuntimePort` 的 `run/show/events/cancel/approve/reject` CLI、稳定 JSON/human 输出与 typed exit codes、revision-fenced cancel、exact action-hash approval，以及只读持久事件的 cursor/follow 恢复；Task 16 由 `c0b07ab5` 落地固定 seed 的 30 例 grounded v2 数据集、不可覆盖的质量/性能阈值、实际 provider observation grading、Fake 主机工具链 E2E、PIT/provider failure/replay 覆盖及 baseline/final/live-status 审计证据，完成 Wave 2 Exit Gate；A4 pending 的 live model 独立报告保持 `not_run`。Wave 3 / Task 17 由 `ac6098c3` 落地 legacy/V2 兼容的 side-effect-free authoring preview facade、Ditto NodeRegistry/ExpressionCompiler 诊断、exact-base canonical validate/diff、四个 sealed no-approval Agent tools、provider DI 与代码/解释夹带及 payload 篡改拦截；Task 18 由 `36fcf49b` 落地本地 continuation 严格 codec、hash-bound action/authority/context/budget 复核、append-only decision/audit、整批审批、单恢复 lease、宿主超时、并发一次恢复、restart retry、API decision 恢复和未装配时 fail-closed；Task 19 由 `fea51582` 落地 consumer-owned application authoring command/receipt 合同、保存草案和提交 review 两个 HITL-only 工具、物理写入前审批重验证、operator/run/episode/audit identity、真实 SQLite 并发幂等，以及禁止 Agent 到 capability/store 的机器边界；Task 20 由 `4ff2477a` 落地固定 seed 的 20 例 author 与 20 例 permission v3 数据集、90% compile/validate 与 100% approval-bypass 硬门、精确 preview/write allowlist、prompt injection/参数夹带/unknown node/审批重放/并发/provider failure/篡改覆盖，以及 RED/final report identity 审计证据，完成 Wave 3 Exit Gate。Wave 4 / Task 21 由 `aa2a8f56` 落地 Campaign/Hypothesis/Candidate/ExperimentPlan/EvaluationResult、SearchLedger、生成代码与 sandbox manifest、PIT 研究记忆四个 Analysis 叶合同，复用既有 identity/content hash/budget/trial family，并在构造时阻断预算扩权、多搜索轴、lineage/family counter 重置、retry 重计、未来记忆、holdout/模型自评入库和未审批 scope promotion；Task 22 由 `672722c8` 在同一 Research SQLite 中落地原子 v1→v2 migration、10 个 campaign/search/code/sandbox/memory 表、typed ports/adapters、PIT reader、不可变/append-only/cross-table guard、原子备份恢复与完整性验证，并由 `da8d4cc6` 冻结最终 A2 Research DDL/catalog artifact；Task 23 由 `c835e5b1` 落地 immutable manifest/authorization、有限候选/代际/fold/时间预算、statistical-trial 与 attempt 分离、lease-loss pause、retry/fork 恢复、两代无改善停止、过期授权下幂等取消、复用既有 experiment scheduler/lease 的 adapter、consumer-owned campaign command port、Agent proposal tool 与 fail-closed apps provider wiring；Task 24 由 `7e313b42` 落地固定 `fit`/`score` 代码合同、canonical AST identity、consumer-owned raw sandbox port、PIT/snapshot/seed/image/input/state attestation、JSON/Arrow/NumPy `allow_pickle=False` 严格解码、确定性双评分、输出 schema/row/identity/size 校验和 host-only trusted evaluator，在正式 metrics/backtest 前阻断非法签名、mutable state、金融/执行输出、未来数据、伪造 attestation、shape bomb 与不确定输出；Task 26 由 `65a6e5a2` 落地 exact-snapshot PIT row reader/data feed、动态 purge/embargo 交易日窗口、decision/knowledge/publication/execution eligibility 全链传播、future/late-revision sentinel、完整 cache/artifact identity、每 candidate/fold fresh sandbox 和可信 evaluator cutoff handoff；Task 27 由 `b3930dc2` 落地独立审批、exact-action/integrity/time binding、复用既有原子 claim 权威、restart/concurrent 单次消费、预注册布尔 threshold、签名 aggregate/evidence hash 的 Agent-safe 返回面，并阻断日期/逐期值/numeric metric 泄露、CampaignAuthorization 替代、签名错绑及 holdout feedback/memory 回流；Task 28 由 `5985ebae` 落地 canonical AST/变量 alpha-normalization、同协议 output correlation、lineage/grid fail-closed、content-addressed 新颖性凭证、唯一 candidate×protocol 统计试验、retry attempt 分离、fork family 防重置、既有 DSR/PBO bridge，以及 Campaign 试验绑定、非新颖候选禁改善/禁成为父代和凭证回放漂移拦截。
 - **已完成补充：** Wave 4 / Task 29 由 `c9d1372c` 落地 local/family/global 的 backward `known_at` 查询、结构化 evidence refs、host-validated local 写入、独立证据与 exact HITL promotion、append-only revoke、content-addressed receipt、Agent memory tool、真实 SQLite 跨 Campaign/PIT 集成，以及默认 disabled/fail-closed DI；holdout、模型自评、future outcome、越 scope 检索、未审批提升、审批漂移和篡改 evidence 均被拒绝。Task 30 由 `4a88ba00` 落地 create/approve/show/events/cancel Campaign API 与 CLI、严格 immutable manifest/budget DTO、server-issued exact approval、durable idempotency、persisted-only SSE resume、租约恢复、预算暂停与崩溃后单次完成；默认运行时保持 disabled/fail-closed，禁止运行中 patch 或隐式扩预算。Task 31 由 `86615048` 落地 schema v4 的 30 例 Campaign/PIT/holdout 与 10 例 sandbox Fake 数据集、100% approval/budget/integrity/replay/forbidden-action/holdout/PIT/sandbox hard metrics、最小样本与精确 allowlist/assertion fail-closed、10 次 byte-stable replay、permission 100% 回归门及报告身份审计；生产语义以 209 项聚焦测试和 PIT future-sentinel 交叉验证，A3/A4 未授权的物理 sandbox/live-model 分别保持独立 `not_run`，Fake 证据不冒充 live acceptance。Wave 5 / Task 32 由 `82d74e53` 落地 content-addressed `DecisionOpinion`、ready/review 的零工具单轮解释、blocked 的确定性本地解释、纯 application V3 evidence contract、post-V3 shadow process 和独立 writer port；宿主复核 V3 hash/provenance/time/opinion identity，缺失、篡改、冲突或模型失败均拒答且零写入，合同不暴露 weights/risk status/action/order，未装配 Apps 或 live model，A4 继续 fail-closed。Task 33 由 `720356ff` 落地独立 `agent-shadow/decision-opinion.sqlite`、认证 schema、不可变 opinion 与 append-only event、content replay/tamper 复核和 Apps-owned 显式 lifecycle；恶意 opinion、shadow 写失败与篡改均零下游影响，静态扫描证明 portfolio/risk/execution 无 consumer 且工具面无 publish/order/broker/trade，开关 shadow 后 V3、建议权重、risk gate、orders 与 downstream hash 逐字节一致。Task 34 由 `31e6dfaf` 落地 PIT-bound outcome observation/linker、不可变 feedback/event、认证 v1→v2 shadow migration、adoption/accuracy/calibration 与固定 memory non-promotion；10 例 schema v5 shadow eval 对 V3 grounding、只读隔离、future/same-day/publication/snapshot/holdout、feedback immutability、memory non-promotion、downstream isolation 建立 100% 硬门和 byte-stable Fake 证据，future sentinel 不进入历史 prompt 且 V3、权重、risk、orders 与 downstream hash 保持不变。Wave 6 / Task 35 由 `a2661041` 落地 exporter-neutral 的 Agent run/model/tool/approval/cost/guardrail telemetry、字段闭集与 secret 预导出哈希脱敏、低基数 cost/token/latency 指标、orchestrator 注入和 Apps-owned 既有 OTel bridge；observer state 不持有 objective/response/参数原文，sink/exporter 故障不穿透业务，默认 provider 保持 no-op，Langfuse 未成为运行依赖。
 - **已完成补充（Wave 6）：** Task 36 由 `40988a29` 落地固定且默认关闭的五个 Agent feature flags、provider/DB/sandbox/exporter 故障隔离、30 天 typed raw-continuation retention plan、content-addressed dry-run、exact hash 与外部 approval 双栅栏、单事务精确删除和 append-only audit receipt；session/run/content 三层 legal hold、audit session、正式 run/event/approval/Episode 工件均长期保留，公开 plan 构造还会拒绝伪造 hash、非 30 天 cutoff、乱序/重复/过新候选。真实 cleanup 未执行。
-- **进行中：** Wave 4 / Task 25 的离线检查点由 `d4b2fea4` 落地 approval/evidence-bound OCI profile、shell-free command、injected runner/verifier、默认 disabled/A3 fail-closed、digest/dependency/limits 绑定、严格 JSON/base64 output envelope、失败 attestation，以及十类攻击的 Fake 分类；模块明确不含 subprocess、daemon、Containerfile、真实 image/SBOM/seccomp artifact 或 live acceptance，因此 Task 25 仍为 `[ ]`。Task 26 的 Fake/PIT 路径已独立完成，不改变该 live 阻塞。Wave 6 / Task 37 的 A3/A4-independent 检查点由 `f53626d1` 落地 exact six-suite/120-case preflight、冻结 dataset/grader/observation identity、逐 observation hash、可重算 P50/P95/max cost、Fake 全套硬门和 evidence 字节锁；Fake 120/120 PASS，balanced/quality 均以 exit 5、`approval_gate=A4`、`release_gate_passed=false` 留存独立 `not_run`，物理 `sandbox_live` 为 0 collected/exit 5，未读取凭证、未调用 live endpoint、未外发数据或产生模型费用。因此 Task 37 仍为 `[ ]`，Fake 结果不冒充 live SLO/质量或物理 sandbox acceptance。
-- **进行中补充（Task 38）：** `8014abc7` 落地 fail-closed、content-addressed release preflight，精确验证冻结 Fake dataset/grader/observation/report identity、六项运营演练、OpenAPI/CLI/安全与路线图一致性，以及 A3/A4 `not_run` 合同；`0cefa234` 独立提交 runbook、安全边界、演练记录、preflight 与路线图状态。当前三项 deterministic checks PASS，`sandbox_live`、balanced 与 quality 三项分别因 A3/A4 BLOCKED，报告 hash 为 `599b4e8a1fc891bcc923a8efa2d50ef739a18c2306c9d341a71f160c02d00dc0`、exit 5；这不是 release PASS，因此 Task 38 仍为 `[ ]`。
-- **下一步：** 无剩余可安全执行的 A3/A4-independent 实现。A3 必须先批准并提供精确 runtime/profile、image digest、SBOM、dependency lock、seccomp policy 与 acceptance target，之后才能回填 Task 25 物理 runner 并运行 `sandbox_live`；A4 必须先批准专用 project、MAM/ZDR、凭证边界、允许数据/egress、profiles 与预算，之后才能运行 Task 37 balanced/quality live 对照。两项 evidence 全部通过后，重跑 release preflight 至 exit 0/PASS，才能关闭 Task 25、37、38 与 R5.5。
-- **未解决风险：** A3 因无可用 daemon/runtime/image digest/SBOM 保持 pending；A4 因无专用 OpenAI project、MAM/ZDR、允许数据集和预算保持 pending；A2 的 Agent v1 与 Research v2 final artifacts 均已冻结，所有真实用户数据库 mutation 仍未授权。
-- **最新命令与结果：** Task 37 首轮 RED 为 `--suite all`/OpenAI profile 不受支持；复审 RED 进一步捕获末套损坏前已产生 provider 调用、公开 aggregate 可接受伪造 grader/performance、缺完整 observation manifest，以及 checked-in evidence 过期。最小修正后 `packages/agent/tests/unit/evals` 62 passed，Fake 正式命令 exit 0，balanced/quality 正式命令均 exit 5/A4 `not_run`；`pixi run -e dev pytest -m pit` 为 31 passed / 1 个环境样本 skip，`pixi run -e dev pytest -m sandbox_live` 为 0 collected / exit 5，均已如实记录。最终 `pixi run -e dev check` 为 lint/fmt/production type 通过、12,823 passed / 1 个既有 xfail、43 kept / 0 broken、architecture smells 通过、Harness validation 与 16 项 Harness tests 通过；`git diff --check` 通过。高风险 review 对 §13 hard gates、PIT/safety、A3/A4 隔离、dataset/grader/observation/report identity 和 SLO/cost 重算无剩余代码 finding；live acceptance 仍是明确 blocker。
-- **Task 38 命令与结果：** 初始 RED 为 preflight 模块缺失；复审 RED 为 4 failed / 7 passed，证明完全重算的 case identity、运营结果、A3 reason 和禁止动作字段集伪造会被旧实现接受，收紧冻结 identity/exercise/not-run 合同后为 11 passed。六项演练实际结果依次为 backup/restore 2 passed、crash resume 3 passed、retention dry-run 2 passed、provider outage 1 passed / 3 deselected、sandbox outage 1 passed / 3 deselected、feature rollback 5 passed，均只用 tmp/Fake/injected failure。release preflight exit 5 且与 checked-in JSON 逐字节一致。首次完整 `pixi run -e dev ci` 在 13,788 tests 后仅暴露旧 SSE DI 与 route-set 两项预期，修正并聚焦 2 passed；第二次完整 CI exit 0，为 13,790 passed / 73 skipped / 11 xfailed / 11 xpassed、coverage 92.90%、43 kept / 0 broken、Harness 16 passed。最终 review 还捕获 834 行 smell 门并拆出 125 行冻结合同；修正后的 `pixi run -e dev check` exit 0，为 12,834 passed / 1 个既有 xfail、43 kept / 0 broken、smells/Harness 全过；`fmt-check`、`lint`、`type --tests`、`arch-check`、`harness-check` 与 `git diff --check` 均通过。高风险 review 无剩余代码 finding；唯一阻塞为外部 A3/A4 live acceptance。
-- **外部等待或 approval：** A1 已授权 Task 4；A2 scoped authorization 已授权临时 schema 实现/测试。A3 阻塞 Task 25 的物理 runner、Containerfile/image/SBOM/seccomp artifact 与 live acceptance，A4 阻塞任何 live model 调用；Fake provider 与不依赖真实 OCI 的 PIT 工作可继续。
+- **Task 25 / A3 已完成：** 在既有离线 OCI 合同上新增 Apps-owned、shell-free 的 OrbStack process runner，逐次核对 exact daemon profile，使用固定 `linux/arm64` image、SBOM、dependency lock 与 default-deny seccomp；容器无网络、host mount/socket/env，non-root/read-only/cap-drop/no-new-privileges，并受 CPU/memory/PID/tmpfs/wall/output 限制。物理 suite 的网络、socket、Docker socket、host mount、secret、root、write-rootfs、fork bomb、OOM、timeout、oversize-output 11/11 符合预期，fresh-container、两容器并发、`fit→score` 与零残留容器通过；每次执行 attestation 可重算，preflight 还绑定全部 image artifacts。rev2 固定 image digest 为 `1dfc536c998095f86ddf4e3922f9d52fb9e561e0a733499482cbbc5a45ab1d85`，A3 report hash 为 `65cfdc7f854b374c08e8b358617fa77374b903b1e579101d4c39f5caa4f0765f`。Kubernetes 未引入；该证据不覆盖 gVisor/Linux rootless。
+- **Task 37 已完成：** schema-v2 runner 冻结 provider/profile/model/revision/reasoning、dataset/grader/prompt/tool、A4 scope、逐 observation identity、model-output hash、usage basis 与每 profile 500,000-token cap；凭证读取前完成全量 scope/manifest 预检，运行中校验 host/model tool-call 一致性并在 token 超限时 fail closed。A4 rev4 按用户确认的验收口径批准 Coding Plan 合成在线评测：balanced=`high` 与 quality=`max` 均使用 `glm-5.3`，各 120/120 PASS。balanced 使用 242,462 tokens，read/complex P95 为 20.058/22.729 秒；quality 使用 250,644 tokens，read/complex P95 为 22.877/21.935 秒；全部质量、安全、PIT、usage 和延迟硬门通过。
+- **Task 38 已完成：** content-addressed release preflight 精确验证 Fake report、六项运营演练、OpenAPI/CLI/安全/路线图、A3 live sandbox 及两份 authenticated GLM live reports；最终结果为 exit 0、六项全 PASS、无 blocker/failure。最终高风险 diff review 修复了 live report 可被整体重哈希替换批准 A4 scope、以及 OCI runner 在父进程退出但后代持有输出 pipe 时突破 wall timeout 两项问题，复审无未解决 finding。最新 `check` 为 12,910 passed / 1 known xfailed，43/43 import contracts、architecture smell 与 Harness 全绿；PIT 专项 31 passed / 1 fixture-data skip；最新 `ci` 为 13,870 passed / 73 environment skips / 11 known xfailed / 11 xpassed、coverage 92.77%，43/43 import contracts、architecture smell 与 Harness 全绿；`git diff --check` PASS。
+- **在线验收与生产边界：** Coding Plan `/api/v1` Responses 只用于获批的 Codex 研发验收，`production_mode=false`，不持久化 secret/raw output，也不具备真实数据、发布、交易、订单或 broker 能力。生产运行已经有独立 GLM `formal_api` `/api/paas/v4` Chat Completions composition，必须在部署前替换标准 API key 并复核 provider 数据控制/model identity；OpenAI adapter 与 GPT 模型也仍可显式选择。生产 credential cutover、G4/G5、认证/RBAC、多租户和自动交易都不属于本实施计划完成声明。
+- **历史 RED/checkpoint：** Task 37 曾从不支持 live provider/profile、末套损坏前调用 provider、可伪造 aggregate、缺 observation manifest、工具选择/拒答及 provider latency outlier 等 RED 逐项收紧；Task 38 曾从缺 preflight 和可重哈希伪造 identity/exercise/sandbox 状态的 RED 收紧。早期 Fake/`not_run`/A4-blocked 报告均被上述最终 authenticated 证据取代，不作为当前状态。
+- **剩余风险而非未完成项：** Coding Plan 不能成为 standalone/生产 credential；模型滚动更新、provider/model/profile/prompt/tool/dataset 变化都要求重跑相关 eval。A3 只在记录的 OrbStack exact scope 内有效；真实用户 DB mutation、真实 retention delete、外部 Beta 和生产启用仍须各自授权。所有 Agent flags 默认关闭，Agent 依赖失败不影响 Ditto 核心。

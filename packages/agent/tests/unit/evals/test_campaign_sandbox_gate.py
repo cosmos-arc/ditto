@@ -256,15 +256,18 @@ def test_r5_3_evidence_identity_matches_the_canonical_report(
     }
 
 
-def test_pending_live_evidence_is_explicit_and_cannot_impersonate_fake_gates() -> None:
+def test_physical_sandbox_pass_and_pending_model_gate_remain_distinct() -> None:
     sandbox = orjson.loads((EVIDENCE / "sandbox-live-status.json").read_bytes())
     model = orjson.loads((EVIDENCE / "live-model-comparison-status.json").read_bytes())
 
-    assert sandbox["status"] == "not_run"
-    assert sandbox["approval_gate"] == "A3"
-    assert sandbox["exit_code"] == 5
-    assert sandbox["fake_report_treated_as_live"] is False
-    assert sandbox["physical_acceptance_claimed"] is False
+    assert sandbox["schema_id"] == "r5-sandbox-live-acceptance"
+    assert sandbox["status"] == "passed"
+    assert sandbox["release_gate_passed"] is True
+    assert sandbox["attack_case_count"] == 11
+    assert len(sandbox["attack_results"]) == 11
+    assert all(result["passed"] is True for result in sandbox["attack_results"])
+    assert sandbox["containers_remaining"] == []
+    assert sandbox["approval_id"].startswith("A3-")
     assert model["status"] == "not_run"
     assert model["approval_gate"] == "A4"
     assert model["prohibited_actions_observed"] == {

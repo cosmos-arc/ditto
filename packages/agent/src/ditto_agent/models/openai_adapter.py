@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass, field
-from typing import Protocol, cast
+from typing import Literal, Protocol, cast
 
 import orjson
 from agents import (
@@ -44,6 +44,12 @@ from ditto_agent.models.port import (
 )
 
 _PROVIDER_ID = "openai_agents"
+type ReasoningEffort = (
+    Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] | None
+)
+_REASONING_EFFORTS = frozenset(
+    {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
+)
 
 
 class _FunctionToolCall(Protocol):
@@ -62,28 +68,51 @@ class OpenAIInvocation:
     request: ModelRequest
     model_id: str
     api_key: str = field(repr=False)
-    project_id: str
+    project_id: str | None
+    base_url: str | None = None
+    provider_id: str = _PROVIDER_ID
     store: bool = False
     tracing_disabled: bool = True
     trace_include_sensitive_data: bool = False
     use_responses: bool = True
+    reasoning_effort: ReasoningEffort = None
     continuation: ModelContinuation | None = None
     decisions: tuple[ApprovalDecision, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate injected secrets and immutable privacy controls."""
-        for field_name in ("model_id", "api_key", "project_id"):
+        for field_name in ("model_id", "api_key", "provider_id"):
             object.__setattr__(
                 self,
                 field_name,
                 normalized_text(getattr(self, field_name), field=field_name),
             )
+        for field_name in ("project_id", "base_url"):
+            value = getattr(self, field_name)
+            if value is not None:
+                object.__setattr__(
+                    self,
+                    field_name,
+                    normalized_text(value, field=field_name),
+                )
         if self.store:
             raise ValueError("OpenAI Responses store must remain false")
         if not self.tracing_disabled or self.trace_include_sensitive_data:
             raise ValueError("OpenAI hosted sensitive tracing must remain disabled")
-        if not self.use_responses:
-            raise ValueError("OpenAI adapter requires the Responses API")
+        if type(self.use_responses) is not bool:
+            raise ValueError("OpenAI-compatible API mode must be boolean")
+        if self.reasoning_effort is not None:
+            normalized_effort = normalized_text(
+                self.reasoning_effort,
+                field="reasoning_effort",
+            )
+            if normalized_effort not in _REASONING_EFFORTS:
+                raise ValueError("reasoning_effort is unsupported")
+            object.__setattr__(
+                self,
+                "reasoning_effort",
+                cast(ReasoningEffort, normalized_effort),
+            )
 
 
 class OpenAIEngine(Protocol):
@@ -209,14 +238,21 @@ class AgentsSDKEngine:
         self, invocation: OpenAIInvocation
     ) -> tuple[Agent[object], RunConfig, OpenAIProvider]:
         settings = ModelSettings(
-            store=False,
+            store=False if invocation.use_responses else None,
             max_tokens=invocation.request.max_output_tokens,
+            tool_choice=invocation.request.required_tool_name,
             parallel_tool_calls=False,
+            reasoning=(
+                {"effort": invocation.reasoning_effort}
+                if invocation.reasoning_effort is not None
+                else None
+            ),
         )
         provider = OpenAIProvider(
             api_key=invocation.api_key,
             project=invocation.project_id,
-            use_responses=True,
+            base_url=invocation.base_url,
+            use_responses=invocation.use_responses,
             strict_feature_validation=True,
         )
         agent = Agent[object](
@@ -237,6 +273,8 @@ class AgentsSDKEngine:
     @staticmethod
     def _result(
         result: RunResult | RunResultStreaming,
+        *,
+        provider_id: str = _PROVIDER_ID,
     ) -> ModelResult:
         tool_calls: list[ModelToolCall] = []
         for item in result.new_items:
@@ -247,7 +285,7 @@ class AgentsSDKEngine:
         interruptions = tuple(_interruption(item) for item in result.interruptions)
         continuation = (
             ModelContinuation(
-                provider=_PROVIDER_ID,
+                provider=provider_id,
                 payload=result.to_state().to_json(
                     strict_context=True,
                     include_tracing_api_key=False,
@@ -289,7 +327,7 @@ class AgentsSDKEngine:
             )
         except AgentsException as exc:
             raise ModelProviderError("OpenAI Agents SDK run failed") from exc
-        return self._result(result)
+        return self._result(result, provider_id=invocation.provider_id)
 
     async def stream(
         self, invocation: OpenAIInvocation
@@ -317,7 +355,7 @@ class AgentsSDKEngine:
             raise ModelProviderError("OpenAI Agents SDK stream failed") from exc
         yield ModelStreamEvent(
             kind=ModelStreamEventKind.COMPLETED,
-            result=self._result(streamed),
+            result=self._result(streamed, provider_id=invocation.provider_id),
         )
 
     @staticmethod
@@ -365,27 +403,43 @@ class AgentsSDKEngine:
             )
         except AgentsException as exc:
             raise ModelProviderError("OpenAI Agents SDK resume failed") from exc
-        return self._result(result)
+        return self._result(result, provider_id=invocation.provider_id)
 
 
-class OpenAIAgentsModel:
-    """Provider-neutral adapter enforcing Ditto's OpenAI data boundary."""
+class OpenAICompatibleAgentsModel:
+    """Internal OpenAI-compatible adapter with provider-specific identity."""
+
+    _provider_name = "OpenAI"
 
     def __init__(
         self,
         *,
         model_id: str,
         api_key: str,
-        project_id: str,
         engine: OpenAIEngine | None = None,
+        base_url: str | None = None,
+        provider_id: str = _PROVIDER_ID,
+        use_responses: bool = True,
+        reasoning_effort: ReasoningEffort = None,
     ) -> None:
         self._model_id = normalized_text(model_id, field="model_id")
         self._api_key = normalized_text(api_key, field="api_key")
-        self._project_id = normalized_text(project_id, field="project_id")
+        self._project_id: str | None = None
+        self._base_url = (
+            normalized_text(base_url, field="base_url")
+            if base_url is not None
+            else None
+        )
+        self._provider_id = normalized_text(provider_id, field="provider_id")
+        if type(use_responses) is not bool:
+            raise ValueError("OpenAI-compatible API mode must be boolean")
+        self._use_responses = use_responses
+        if reasoning_effort is not None and reasoning_effort not in _REASONING_EFFORTS:
+            raise ValueError("reasoning_effort is unsupported")
+        self._reasoning_effort: ReasoningEffort = reasoning_effort
         self._engine = engine or AgentsSDKEngine()
 
-    @staticmethod
-    def _validate_tools(request: ModelRequest) -> None:
+    def _validate_tools(self, request: ModelRequest) -> None:
         disabled = tuple(
             tool.kind.value
             for tool in request.tools
@@ -394,7 +448,7 @@ class OpenAIAgentsModel:
         if disabled:
             names = ", ".join(disabled)
             raise UnsupportedModelCapabilityError(
-                f"disabled OpenAI hosted tool capabilities requested: {names}"
+                f"disabled {self._provider_name} hosted tools requested: {names}"
             )
 
     def _invocation(
@@ -410,6 +464,10 @@ class OpenAIAgentsModel:
             model_id=self._model_id,
             api_key=self._api_key,
             project_id=self._project_id,
+            base_url=self._base_url,
+            provider_id=self._provider_id,
+            use_responses=self._use_responses,
+            reasoning_effort=self._reasoning_effort,
             continuation=continuation,
             decisions=decisions,
         )
@@ -424,8 +482,8 @@ class OpenAIAgentsModel:
 
     async def resume(self, request: ResumeModelRequest) -> ModelResult:
         """Resume only continuation state owned by this provider."""
-        if request.continuation.provider != _PROVIDER_ID:
-            raise ValueError("continuation provider must be openai_agents")
+        if request.continuation.provider != self._provider_id:
+            raise ValueError(f"continuation provider must be {self._provider_id}")
         invocation = self._invocation(
             request.request,
             continuation=request.continuation,
@@ -434,10 +492,34 @@ class OpenAIAgentsModel:
         return await self._engine.resume(invocation)
 
 
+class OpenAIAgentsModel(OpenAICompatibleAgentsModel):
+    """OpenAI adapter preserving the required project-isolation contract."""
+
+    def __init__(
+        self,
+        *,
+        model_id: str,
+        api_key: str,
+        project_id: str,
+        engine: OpenAIEngine | None = None,
+        reasoning_effort: ReasoningEffort = None,
+    ) -> None:
+        if cast(object, project_id) is None:
+            raise ValueError("project_id is required for the OpenAI provider")
+        super().__init__(
+            model_id=model_id,
+            api_key=api_key,
+            engine=engine,
+            reasoning_effort=reasoning_effort,
+        )
+        self._project_id = normalized_text(project_id, field="project_id")
+
+
 __all__ = [
     "AgentsSDKEngine",
     "ModelToolInvoker",
     "OpenAIAgentsModel",
     "OpenAIEngine",
     "OpenAIInvocation",
+    "ReasoningEffort",
 ]

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Callable, Mapping
 from datetime import datetime
+from types import MappingProxyType
 from typing import Never, Protocol, cast
 
 from ditto_agent.storage.sqlite.errors import (
@@ -28,17 +29,23 @@ from ditto_application.agent_campaign_runtime import (
     CampaignCancelCommand,
     CampaignCreateCommand,
     CampaignEventView,
+    CampaignGuardrailView,
     CampaignInvalidRequest,
+    CampaignListView,
     CampaignRequestConflict,
     CampaignResourceNotFound,
     CampaignRuntimePort,
     CampaignRuntimeUnavailable,
     CampaignSandboxBudgetView,
     CampaignStatus,
+    CampaignUsageView,
+    CampaignValidationCommand,
+    CampaignValidationView,
     CampaignView,
 )
 from ditto_application.commands.campaign_manifest import (
     build_research_campaign_manifest,
+    validate_research_campaign_manifest_step,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.mutation_idempotency import canonical_request_hash
@@ -54,6 +61,20 @@ from ditto_application.processes.experiments.autonomous_campaign import (
 _CREATE_SCOPE = "agent.campaign.create"
 _APPROVE_SCOPE = "agent.campaign.approve"
 _CANCEL_SCOPE = "agent.campaign.cancel"
+_MAX_PAGE_SIZE = 100
+
+
+def _page_bounds(limit: int, offset: int) -> None:
+    if type(limit) is not int or limit < 1 or limit > _MAX_PAGE_SIZE:
+        raise CampaignInvalidRequest(
+            "Campaign page limit is invalid",
+            reason_code="campaign_pagination_invalid",
+        )
+    if type(offset) is not int or offset < 0:
+        raise CampaignInvalidRequest(
+            "Campaign page offset is invalid",
+            reason_code="campaign_pagination_invalid",
+        )
 
 
 class _IdempotencyReader(Protocol):
@@ -128,6 +149,42 @@ def _integer(value: object, field: str) -> int:
     return value
 
 
+def _string(value: object, field: str) -> str:
+    if type(value) is not str or not value or value != value.strip():
+        raise CampaignRuntimeUnavailable(f"campaign_{field}_projection_invalid")
+    return value
+
+
+def _validate_campaign(command: CampaignValidationCommand) -> CampaignValidationView:
+    if type(command) is not CampaignValidationCommand:
+        raise CampaignInvalidRequest(
+            "Campaign validation command is invalid",
+            reason_code="campaign_manifest_invalid",
+        )
+    try:
+        manifest = validate_research_campaign_manifest_step(
+            command.step,
+            command.document,
+        )
+    except (AppCommandError, AnalysisError, ValueError) as exc:
+        raise CampaignInvalidRequest(
+            str(exc),
+            reason_code="campaign_manifest_invalid",
+        ) from exc
+    if manifest is None:
+        return CampaignValidationView(
+            step=command.step,
+            canonical_manifest=None,
+            manifest_hash=None,
+        )
+    canonical = decode_campaign_detail(manifest.canonical_payload.json_bytes)
+    return CampaignValidationView(
+        step=command.step,
+        canonical_manifest=MappingProxyType(dict(canonical)),
+        manifest_hash=str(manifest.manifest_hash),
+    )
+
+
 class DisabledCampaignRuntime(CampaignRuntimePort):
     """Fail-closed surface used until Campaign execution is explicitly enabled."""
 
@@ -139,6 +196,13 @@ class DisabledCampaignRuntime(CampaignRuntimePort):
         """Reject Campaign creation while disabled."""
         self._unavailable()
 
+    def validate_campaign(
+        self,
+        command: CampaignValidationCommand,
+    ) -> CampaignValidationView:
+        """Validate immutable inputs independently of runtime availability."""
+        return _validate_campaign(command)
+
     def approve_campaign(self, command: CampaignApproveCommand) -> CampaignView:
         """Reject Campaign approval while disabled."""
         self._unavailable()
@@ -146,6 +210,17 @@ class DisabledCampaignRuntime(CampaignRuntimePort):
     def get_campaign(self, campaign_id: str) -> CampaignView:
         """Reject Campaign reads while disabled."""
         self._unavailable()
+
+    def list_campaigns(
+        self,
+        *,
+        status: CampaignStatus | None,
+        limit: int,
+        offset: int,
+    ) -> CampaignListView:
+        """Return a stable empty history when no Campaign store is configured."""
+        _page_bounds(limit, offset)
+        return CampaignListView(items=(), total=0, limit=limit, offset=offset)
 
     def list_campaign_events(
         self,
@@ -258,6 +333,13 @@ class PersistedCampaignRuntime(CampaignRuntimePort):
                 "Campaign create command is invalid",
                 reason_code="campaign_request_invalid",
             ) from exc
+
+    def validate_campaign(
+        self,
+        command: CampaignValidationCommand,
+    ) -> CampaignValidationView:
+        """Validate immutable inputs without reserving or writing durable state."""
+        return _validate_campaign(command)
 
     def _approval_material(
         self,
@@ -425,10 +507,11 @@ class PersistedCampaignRuntime(CampaignRuntimePort):
                 budget.get("sandbox_resource_limits"),
                 "sandbox_resource_limits",
             )
+            events = self._reader.list_campaign_events(identity)
             authorization = next(
                 (
                     decode_campaign_detail(event.detail_payload)
-                    for event in self._reader.list_campaign_events(identity)
+                    for event in events
                     if event.event_type == "campaign_authorized"
                 ),
                 None,
@@ -449,6 +532,12 @@ class PersistedCampaignRuntime(CampaignRuntimePort):
                     "campaign_allowed_tools_projection_invalid"
                 )
             expires = None if proof is None else proof.get("expires_at")
+            last_event = None if not events else events[-1]
+            exhausted_reason = (
+                "campaign_budget_exhausted"
+                if state.status.value == "paused_budget"
+                else None
+            )
             return CampaignView(
                 campaign_id=campaign_id,
                 status=CampaignStatus(state.status.value),
@@ -516,6 +605,34 @@ class PersistedCampaignRuntime(CampaignRuntimePort):
                 statistical_trial_count=state.statistical_trial_count,
                 operational_attempt_count=state.operational_attempt_count,
                 revision=state.revision,
+                canonical_manifest=MappingProxyType(dict(root)),
+                objective=_string(root.get("objective"), "objective"),
+                output_summary=None,
+                tool_records=(),
+                evidence_refs=(),
+                artifact_refs=(),
+                guardrail=CampaignGuardrailView(
+                    status="unknown",
+                    reason_code="campaign_guardrail_projection_unavailable",
+                ),
+                usage=CampaignUsageView(
+                    statistical_trial_count=state.statistical_trial_count,
+                    operational_attempt_count=state.operational_attempt_count,
+                    no_improvement_generations=state.no_improvement_generations,
+                    model_spend_usd_micros=None,
+                    exhausted_reason=exhausted_reason,
+                ),
+                event_cursor=(1 if last_event is None else last_event.ordinal + 1),
+                projection_state="partial",
+                projection_reason="campaign_result_projection_unavailable",
+                projection_version=(
+                    1 if last_event is None else last_event.ordinal + 1
+                ),
+                projection_updated_at=(
+                    datetime_from_epoch_us(record.created_at_epoch_us)
+                    if last_event is None
+                    else datetime_from_epoch_us(last_event.occurred_at_epoch_us)
+                ),
             )
         except CampaignResourceNotFound:
             raise
@@ -532,6 +649,36 @@ class PersistedCampaignRuntime(CampaignRuntimePort):
             ) from exc
         except (KeyError, TypeError, ValueError) as exc:
             raise CampaignRuntimeUnavailable("campaign_projection_invalid") from exc
+
+    def list_campaigns(
+        self,
+        *,
+        status: CampaignStatus | None,
+        limit: int,
+        offset: int,
+    ) -> CampaignListView:
+        """Recover durable Campaign projections without caller-held IDs."""
+        _page_bounds(limit, offset)
+        try:
+            records = self._reader.list_campaigns()
+        except AnalysisError as exc:
+            raise CampaignRuntimeUnavailable(
+                str(exc.details.get("reason_code", "campaign_persistence_failed"))
+            ) from exc
+        projected = tuple(
+            self.get_campaign(str(record.campaign_id)) for record in records
+        )
+        filtered = tuple(
+            campaign
+            for campaign in projected
+            if status is None or campaign.status is status
+        )
+        return CampaignListView(
+            items=filtered[offset : offset + limit],
+            total=len(filtered),
+            limit=limit,
+            offset=offset,
+        )
 
     def list_campaign_events(
         self,

@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Callable
 
 import pytest
 from ditto_agent.models.fake import ScriptedAgentModel, ScriptedFailure, ScriptedOutcome
+from ditto_agent.models.glm_adapter import GLMAgentsModel, GLMEndpointKind
 from ditto_agent.models.openai_adapter import OpenAIAgentsModel, OpenAIInvocation
 from ditto_agent.models.port import (
     AgentModelPort,
@@ -70,9 +71,12 @@ def _completed_result() -> ModelResult:
 
 
 class _ContractOpenAIEngine:
+    def __init__(self, provider_id: str) -> None:
+        self._provider_id = provider_id
+
     async def run(self, invocation: OpenAIInvocation) -> ModelResult:
         del invocation
-        return _interrupted_result(provider="openai_agents")
+        return _interrupted_result(provider=self._provider_id)
 
     async def stream(
         self, invocation: OpenAIInvocation
@@ -90,7 +94,7 @@ class _ContractOpenAIEngine:
 
     async def resume(self, invocation: OpenAIInvocation) -> ModelResult:
         assert invocation.continuation is not None
-        assert invocation.continuation.provider == "openai_agents"
+        assert invocation.continuation.provider == self._provider_id
         return _completed_result()
 
 
@@ -122,15 +126,22 @@ def _contract_provider(kind: str) -> AgentModelPort:
                 ScriptedOutcome(result=_completed_result()),
             )
         )
+    if kind == "glm-adapter":
+        return GLMAgentsModel(
+            model_id="stub-model",
+            api_key="stub-key",
+            endpoint_kind=GLMEndpointKind.CODING_PLAN_RESPONSES,
+            engine=_ContractOpenAIEngine("glm_agents"),
+        )
     return OpenAIAgentsModel(
         model_id="stub-model",
         api_key="stub-key",
         project_id="stub-project",
-        engine=_ContractOpenAIEngine(),
+        engine=_ContractOpenAIEngine("openai_agents"),
     )
 
 
-@pytest.mark.parametrize("provider_kind", ["fake", "openai-adapter"])
+@pytest.mark.parametrize("provider_kind", ["fake", "openai-adapter", "glm-adapter"])
 @pytest.mark.asyncio
 async def test_providers_satisfy_shared_run_stream_and_resume_contract(
     provider_kind: str,

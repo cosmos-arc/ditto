@@ -156,6 +156,31 @@ class SQLiteCampaignReader:
             created_at_epoch_us=row["created_at_epoch_us"],
         )
 
+    def list_campaigns(self) -> tuple[CampaignManifestRecord, ...]:
+        """Return every immutable Campaign newest first."""
+        try:
+            rows = self._database.get_connection().execute(
+                """
+                SELECT campaign_id FROM research_campaign
+                ORDER BY created_at_epoch_us DESC, campaign_id DESC
+                """
+            )
+        except sqlite3.Error as exc:
+            raise ExperimentPersistenceError(
+                "campaign list read failed",
+                details={"reason_code": "campaign_read_failed"},
+            ) from exc
+        campaigns: list[CampaignManifestRecord] = []
+        for row in rows:
+            campaign = self.get_campaign(ExperimentId(row["campaign_id"]))
+            if campaign is None:
+                raise ExperimentPersistenceError(
+                    "listed campaign is not readable",
+                    details={"reason_code": "campaign_read_failed"},
+                )
+            campaigns.append(campaign)
+        return tuple(campaigns)
+
     def list_campaign_events(
         self, campaign_id: ExperimentId
     ) -> tuple[CampaignEventRecord, ...]:

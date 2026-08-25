@@ -95,6 +95,7 @@ class OciSandboxRuntime(StrEnum):
     """Approved host isolation profile, never inferred from the local daemon."""
 
     DOCKER_DESKTOP_VM = "docker_desktop_vm"
+    ORBSTACK_VM = "orbstack_vm"
     ROOTLESS_DOCKER = "rootless_docker"
     GVISOR_RUNSC = "gvisor_runsc"
 
@@ -400,28 +401,32 @@ def _command_argv(
     *,
     phase: str,
 ) -> tuple[str, ...]:
-    argv = [
-        "docker",
-        "run",
-        "--rm",
-        "--interactive",
-        "--pull=never",
-        "--network=none",
-        "--ipc=none",
-        f"--user={_SANDBOX_UID}:{_SANDBOX_UID}",
-        "--read-only",
-        f"--tmpfs=/tmp:rw,noexec,nosuid,nodev,size={limits.temporary_storage_bytes}",
-        "--cap-drop=ALL",
-        "--security-opt=no-new-privileges=true",
-        f"--security-opt=seccomp={profile.seccomp_profile_path}",
-        f"--pids-limit={limits.process_limit}",
-        f"--memory={limits.memory_bytes}",
-        f"--memory-swap={limits.memory_bytes}",
-        f"--cpus={limits.cpu_count}",
-        "--ulimit=nofile=64:64",
-        "--stop-timeout=1",
-        "--entrypoint=/opt/ditto/bin/candidate-runner",
-    ]
+    argv = ["docker"]
+    if profile.runtime is OciSandboxRuntime.ORBSTACK_VM:
+        argv.append("--context=orbstack")
+    argv.extend(
+        [
+            "run",
+            "--rm",
+            "--interactive",
+            "--pull=never",
+            "--network=none",
+            "--ipc=none",
+            f"--user={_SANDBOX_UID}:{_SANDBOX_UID}",
+            "--read-only",
+            f"--tmpfs=/tmp:rw,noexec,nosuid,nodev,size={limits.temporary_storage_bytes}",
+            "--cap-drop=ALL",
+            "--security-opt=no-new-privileges=true",
+            f"--security-opt=seccomp={profile.seccomp_profile_path}",
+            f"--pids-limit={limits.process_limit}",
+            f"--memory={limits.memory_bytes}",
+            f"--memory-swap={limits.memory_bytes}",
+            f"--cpus={limits.cpu_count}",
+            "--ulimit=nofile=64:64",
+            "--stop-timeout=1",
+            "--entrypoint=/opt/ditto/bin/candidate-runner",
+        ]
+    )
     if profile.runtime is OciSandboxRuntime.GVISOR_RUNSC:
         argv.append("--runtime=runsc")
     argv.extend(

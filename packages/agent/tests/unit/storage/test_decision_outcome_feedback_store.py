@@ -79,6 +79,36 @@ def _opinion() -> DecisionOpinionRecord:
     )
 
 
+def _opinion_version(*, summary: str, generated_at: datetime) -> DecisionOpinionRecord:
+    base = _opinion()
+    identity = {
+        "schema_version": base.schema_version,
+        "status": base.status,
+        "v3_artifact_id": base.v3_artifact_id,
+        "v3_evidence_hash": base.v3_evidence_hash,
+        "v3_readiness": base.v3_readiness,
+        "summary": summary,
+        "dissent": base.dissent,
+        "uncertainty": base.uncertainty,
+        "evidence_refs": base.evidence_refs,
+        "blocking_reasons": base.blocking_reasons,
+        "reason_code": base.reason_code,
+        "model_profile": base.model_profile,
+        "prompt_hash": base.prompt_hash,
+        "provider_id": base.provider_id,
+        "generated_at": generated_at,
+    }
+    digest = canonical_sha256(identity)
+    return replace(
+        base,
+        opinion_id=f"decision-opinion-{digest}",
+        shadow_outcome_id=f"decision-shadow-{digest}",
+        summary=summary,
+        generated_at=generated_at,
+        opinion_hash=digest,
+    )
+
+
 def _feedback(*, calibration: int = 9_000) -> DecisionOutcomeFeedback:
     opinion = _opinion()
     observation = DecisionOutcomeObservation.create(
@@ -135,13 +165,17 @@ def test_shadow_v1_migrates_forward_without_changing_historical_opinion(
     migrated = DecisionOpinionShadowDatabase(tmp_path)
     migrated.initialize()
 
-    assert migrated.get_connection().execute("PRAGMA user_version").fetchone()[0] == 2
+    assert (
+        migrated.get_connection().execute("PRAGMA user_version").fetchone()[0]
+        == schema.USER_VERSION
+    )
     assert (
         DecisionOpinionShadowReader(migrated).get_opinion(_opinion().opinion_id)
         == before
     )
     assert "shadow_outcome_feedback" in migrated.catalog_names()
     assert "shadow_outcome_feedback_events" in migrated.catalog_names()
+    assert "shadow_decision_opinions_artifact_generated" in migrated.catalog_names()
 
 
 @pytest.mark.parametrize("state", ["drift", "future"])
@@ -154,7 +188,7 @@ def test_shadow_migration_fails_closed_without_partial_v2_state(
     if state == "drift":
         connection.execute("DROP TRIGGER shadow_decision_events_no_delete")
     else:
-        connection.execute("PRAGMA user_version=3")
+        connection.execute(f"PRAGMA user_version={schema.USER_VERSION + 1}")
     connection.commit()
     database.close_all()
 
@@ -164,7 +198,7 @@ def test_shadow_migration_fails_closed_without_partial_v2_state(
 
     with sqlite3.connect(candidate.path) as raw:
         assert raw.execute("PRAGMA user_version").fetchone()[0] == (
-            1 if state == "drift" else 3
+            1 if state == "drift" else schema.USER_VERSION + 1
         )
         assert (
             raw.execute(
@@ -173,6 +207,28 @@ def test_shadow_migration_fails_closed_without_partial_v2_state(
             ).fetchone()[0]
             == 0
         )
+
+
+def test_latest_opinion_lookup_is_exact_and_newest_first(tmp_path: Path) -> None:
+    database = DecisionOpinionShadowDatabase(tmp_path)
+    database.initialize()
+    writer = DecisionOpinionShadowWriter(database)
+    older = _opinion_version(
+        summary="Older shadow opinion.",
+        generated_at=datetime(2026, 8, 16, 8, 1, tzinfo=UTC),
+    )
+    newer = _opinion_version(
+        summary="Newest shadow opinion.",
+        generated_at=datetime(2026, 8, 16, 8, 2, tzinfo=UTC),
+    )
+    try:
+        writer.append_opinion(older)
+        writer.append_opinion(newer)
+        reader = DecisionOpinionShadowReader(database)
+        assert reader.get_latest_by_v3_artifact_id(older.v3_artifact_id) == newer
+        assert reader.get_latest_by_v3_artifact_id("daily-decision-v3:missing") is None
+    finally:
+        database.close_all()
 
 
 def test_feedback_and_event_append_atomically_and_exact_replay_is_idempotent(

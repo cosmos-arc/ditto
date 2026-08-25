@@ -69,6 +69,35 @@ class AgentStoreReader:
             retention_class=RetentionClass(str(row["retention_class"])),
         )
 
+    def list_sessions(self) -> tuple[AgentSession, ...]:
+        """Return every session newest first with an identity tie-breaker."""
+        try:
+            rows = (
+                self._database.get_connection()
+                .execute(
+                    """
+                    SELECT session_id FROM agent_sessions
+                    ORDER BY created_at_us DESC, session_id DESC
+                    """
+                )
+                .fetchall()
+            )
+        except sqlite3.Error as exc:
+            raise AgentPersistenceError(
+                "Agent session list read failed",
+                reason_code="agent_read_failed",
+            ) from exc
+        sessions: list[AgentSession] = []
+        for row in rows:
+            session = self.get_session(str(row["session_id"]))
+            if session is None:
+                raise AgentPersistenceError(
+                    "Listed Agent session is not readable",
+                    reason_code="agent_read_failed",
+                )
+            sessions.append(session)
+        return tuple(sessions)
+
     def get_run(self, run_id: str) -> StoredAgentRun | None:
         """Return one non-sensitive run projection when present."""
         row = self._one("SELECT * FROM agent_runs WHERE run_id=?", (run_id,))
@@ -95,6 +124,35 @@ class AgentStoreReader:
             ),
             revision=int(row["revision"]),
         )
+
+    def list_runs(self) -> tuple[StoredAgentRun, ...]:
+        """Return every run newest first with an identity tie-breaker."""
+        try:
+            rows = (
+                self._database.get_connection()
+                .execute(
+                    """
+                    SELECT run_id FROM agent_runs
+                    ORDER BY created_at_us DESC, run_id DESC
+                    """
+                )
+                .fetchall()
+            )
+        except sqlite3.Error as exc:
+            raise AgentPersistenceError(
+                "Agent run list read failed",
+                reason_code="agent_read_failed",
+            ) from exc
+        runs: list[StoredAgentRun] = []
+        for row in rows:
+            run = self.get_run(str(row["run_id"]))
+            if run is None:
+                raise AgentPersistenceError(
+                    "Listed Agent run is not readable",
+                    reason_code="agent_read_failed",
+                )
+            runs.append(run)
+        return tuple(runs)
 
     def list_run_events(self, run_id: str) -> tuple[StoredRunEvent, ...]:
         """Return immutable events in exact per-run sequence order."""
@@ -173,6 +231,35 @@ class AgentStoreReader:
                     ORDER BY requested_at_us, request_id
                     """,
                     (run_id,),
+                )
+                .fetchall()
+            )
+        except sqlite3.Error as exc:
+            raise AgentPersistenceError(
+                "Agent approval list read failed",
+                reason_code="agent_read_failed",
+            ) from exc
+        approvals: list[StoredApproval] = []
+        for row in rows:
+            approval = self.get_approval(str(row["request_id"]))
+            if approval is None:
+                raise AgentPersistenceError(
+                    "Listed Agent approval is not readable",
+                    reason_code="agent_read_failed",
+                )
+            approvals.append(approval)
+        return tuple(approvals)
+
+    def list_approvals(self) -> tuple[StoredApproval, ...]:
+        """Return every approval newest first with an identity tie-breaker."""
+        try:
+            rows = (
+                self._database.get_connection()
+                .execute(
+                    """
+                    SELECT request_id FROM agent_approvals
+                    ORDER BY requested_at_us DESC, request_id DESC
+                    """
                 )
                 .fetchall()
             )

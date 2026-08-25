@@ -70,6 +70,7 @@ class CatalogSourceFallbackPolicyLifecycleCommand:
     """Operator request to transition one source fallback policy state."""
 
     policy_id: str
+    expected_authority_hash: str
     actor: str
     notes: str | None = None
 
@@ -261,6 +262,16 @@ class _TransitionCatalogSourceFallbackPolicyHandler:
                 command=self._command,
                 policy_id=command.policy_id,
                 status=current.status,
+            )
+
+        app_policy = to_catalog_source_fallback_policy(current)
+        if command.expected_authority_hash != app_policy.authority_hash:
+            raise AppCommandError(
+                f"Source fallback policy authority hash mismatch: {command.policy_id}",
+                command=self._command,
+                policy_id=command.policy_id,
+                expected_authority_hash=command.expected_authority_hash,
+                authority_hash=app_policy.authority_hash,
             )
 
         transitioned_at = self._now()

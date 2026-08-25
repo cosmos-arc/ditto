@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -34,6 +35,11 @@ from ditto_agent.models.port import (
     ResumeModelRequest,
 )
 from ditto_agent.observability import AgentObservability, InMemoryAgentTelemetrySink
+from ditto_agent.presentation import (
+    AgentContextPresentation,
+    AgentPresentationError,
+    AgentRunPresentationUpdate,
+)
 from ditto_agent.runtime.budgets import BudgetLedger, BudgetLimits, ModelPricing
 from ditto_agent.runtime.egress_policy import EvidenceEgressPolicy
 from ditto_agent.runtime.guardrails import GuardedEvidenceToolExecutor
@@ -170,6 +176,23 @@ class _FailingSink:
         raise RuntimeError("metric exporter unavailable")
 
 
+class _PresentationSink:
+    def __init__(self) -> None:
+        self.updates: list[AgentRunPresentationUpdate] = []
+
+    def publish(self, update: AgentRunPresentationUpdate) -> None:
+        self.updates.append(update)
+
+
+class _FailingPresentationSink:
+    def publish(self, update: AgentRunPresentationUpdate) -> None:
+        del update
+        raise AgentPresentationError(
+            "projection unavailable",
+            reason_code="agent_presentation_write_failed",
+        )
+
+
 def _context() -> TemporalToolContext:
     return TemporalToolContext.from_host(
         TemporalContextInput(
@@ -296,6 +319,55 @@ async def test_orchestrator_completes_only_grounded_claims_and_full_episode() ->
     assert outcome.events[-1].event_type == "run_completed"
     assert model.requests[0].max_turns == budget.limits.max_turns
     assert model.requests[0].tools == executor.specs
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_publishes_sanitized_terminal_projection() -> None:
+    clock, budget, executor, request = _runtime()
+    sink = _PresentationSink()
+    context = AgentContextPresentation(
+        context_type="experiment",
+        context_id="experiment-001",
+    )
+
+    outcome = await GovernedAgentOrchestrator(
+        model=_InvokingModel(executor),
+        tool_executor=executor,
+        budget=budget,
+        clock=clock,
+        presentation_sink=sink,
+    ).execute(replace(request, presentation_context=context))
+
+    assert outcome.status is RunStatus.COMPLETED
+    assert len(sink.updates) == 1
+    update = sink.updates[0]
+    assert update.run_id == request.run.run_id
+    assert update.objective == request.run.objective
+    assert update.context == context
+    assert update.status is RunStatus.COMPLETED
+    assert update.output_summary == "The experiment completed with IR 0.73."
+    assert update.tool_records[0].call_id == "call-001"
+    assert update.evidence_refs == ("evidence-experiment-001",)
+    assert update.artifact_refs == ("experiment:001:sha256:" + "a" * 64,)
+    assert update.guardrail.status == "passed"
+    assert update.usage.tool_calls == 1
+    assert "metric" not in repr(update.tool_records).lower()
+
+
+@pytest.mark.asyncio
+async def test_presentation_sink_failure_cannot_change_outcome() -> None:
+    clock, budget, executor, request = _runtime()
+
+    outcome = await GovernedAgentOrchestrator(
+        model=_InvokingModel(executor),
+        tool_executor=executor,
+        budget=budget,
+        clock=clock,
+        presentation_sink=_FailingPresentationSink(),
+    ).execute(request)
+
+    assert outcome.status is RunStatus.COMPLETED
+    assert outcome.answer is not None
 
 
 @pytest.mark.asyncio

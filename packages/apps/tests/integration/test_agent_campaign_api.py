@@ -119,6 +119,47 @@ def _manifest_document(
     }
 
 
+def _assert_initial_campaign_projection(
+    data: dict[str, object], objective: object
+) -> None:
+    assert data["objective"] == objective
+    assert data["event_cursor"] == 1
+    assert data["projection_version"] == 1
+    assert data["projection_state"] == "partial"
+    assert data["projection_reason"] == "campaign_result_projection_unavailable"
+    assert data["tool_records"] == []
+    assert data["evidence_refs"] == []
+    assert data["artifact_refs"] == []
+
+
+def _validation_requests(document: dict[str, object]) -> tuple[dict[str, object], ...]:
+    return (
+        {
+            "step": "hypothesis",
+            "campaign_id": document["campaign_id"],
+            "objective": document["objective"],
+            "primary_metric_id": document["primary_metric_id"],
+            "hypothesis": document["hypothesis"],
+        },
+        {
+            "step": "experiment_plan",
+            "search_axis": document["search_axis"],
+            "baseline_candidate": document["baseline_candidate"],
+            "experiment_plan": document["experiment_plan"],
+        },
+        {
+            "step": "governance",
+            "budget": document["budget"],
+            "search_space_hash": document["search_space_hash"],
+            "lineage_root": document["lineage_root"],
+            "stopping_rule": document["stopping_rule"],
+            "allowed_tools": document["allowed_tools"],
+            "prohibited_actions": document["prohibited_actions"],
+        },
+        {"step": "manifest", "manifest": document},
+    )
+
+
 class _Scheduler(CampaignTrialSchedulerPort):
     def __init__(self) -> None:
         self.cancel_calls = 0
@@ -249,6 +290,73 @@ def _http_app(runtime: CampaignRuntimePort) -> tuple[FastAPI, AsyncContainer]:
 
 
 @pytest.mark.asyncio
+async def test_campaign_validation_is_stepwise_canonical_and_has_no_write_side_effect(
+    tmp_path: Path,
+) -> None:
+    runtime, _coordinator, _scheduler, agent_bundle, _research_database = _runtime(
+        tmp_path
+    )
+    app, container = _http_app(runtime)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            document = _manifest_document()
+            responses = [
+                await client.post(
+                    "/api/v1/agent/campaigns/validation",
+                    json=request,
+                )
+                for request in _validation_requests(document)
+            ]
+
+            assert [response.status_code for response in responses] == [
+                200,
+                200,
+                200,
+                200,
+            ]
+            assert [response.json()["data"]["step"] for response in responses] == [
+                "hypothesis",
+                "experiment_plan",
+                "governance",
+                "manifest",
+            ]
+            assert all(response.json()["data"]["valid"] for response in responses)
+            assert all(
+                response.json()["data"]["canonical_manifest"] is None
+                for response in responses[:3]
+            )
+            final = responses[-1].json()["data"]
+            assert final["canonical_manifest"]["schema_id"] == (
+                "r5-research-campaign-manifest"
+            )
+            assert len(final["manifest_hash"]) == 64
+
+            history = await client.get("/api/v1/agent/campaigns")
+            assert history.status_code == 200
+            assert history.json()["data"] == []
+            assert history.json()["pagination"]["total"] == 0
+
+            invalid = _validation_requests(document)[2] | {
+                "allowed_tools": [
+                    "campaign_propose_candidate",
+                    "campaign_propose_candidate",
+                ]
+            }
+            rejected = await client.post(
+                "/api/v1/agent/campaigns/validation",
+                json=invalid,
+            )
+            assert rejected.status_code == 422
+            assert rejected.json()["error_code"] == "CAMPAIGN_MANIFEST_INVALID"
+    finally:
+        await container.close()
+        agent_bundle.close()
+
+
+@pytest.mark.asyncio
 async def test_campaign_lifecycle_is_idempotent_and_sse_resumes_from_store(
     tmp_path: Path,
 ) -> None:
@@ -281,9 +389,18 @@ async def test_campaign_lifecycle_is_idempotent_and_sse_resumes_from_store(
             assert created.status_code == replay.status_code == 201
             assert created.json() == replay.json()
             assert created.json()["data"]["status"] == "draft"
+            _assert_initial_campaign_projection(
+                created.json()["data"], document["objective"]
+            )
             assert drift.status_code == 409
 
             draft = created.json()["data"]
+            assert draft["canonical_manifest"]["campaign_id"] == document["campaign_id"]
+            assert draft["canonical_manifest"]["objective"] == document["objective"]
+            assert (
+                draft["canonical_manifest"]["schema_id"]
+                == "r5-research-campaign-manifest"
+            )
             approved = await client.post(
                 "/api/v1/agent/campaigns/campaign-api/approve",
                 json={
@@ -300,6 +417,9 @@ async def test_campaign_lifecycle_is_idempotent_and_sse_resumes_from_store(
             assert authority["authorization_hash"] is not None
             assert authority["budget"]["candidate_limit"] == 8
             assert authority["budget"]["fold_run_limit"] == 16
+            assert authority["event_cursor"] == 2
+            assert authority["projection_version"] == 2
+            assert authority["projection_updated_at"] is not None
 
             resumed = await client.get(
                 "/api/v1/agent/campaigns/campaign-api/events",

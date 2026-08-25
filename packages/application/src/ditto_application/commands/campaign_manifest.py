@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from typing import cast
+from typing import Literal, cast
 
 from ditto_analysis.experiments.campaign import (
     CampaignBudget,
@@ -184,6 +184,115 @@ _SANDBOX_FIELDS = frozenset(
         "output_bytes",
     }
 )
+
+CampaignValidationStep = Literal[
+    "hypothesis",
+    "experiment_plan",
+    "governance",
+    "manifest",
+]
+
+
+def _validation_base_document() -> dict[str, object]:
+    validation_hash = "0" * 64
+    return {
+        "campaign_id": "campaign-validation",
+        "objective": "Validate one immutable Campaign section.",
+        "primary_metric_id": "sharpe_ratio",
+        "hypothesis": {
+            "statement": "Validation statement.",
+            "mechanism": "Validation mechanism.",
+            "universe_hash": validation_hash,
+            "expected_signal": "Validation signal.",
+            "failure_condition": "Validation failure condition.",
+        },
+        "baseline_candidate": {
+            "candidate_id": "candidate-validation",
+            "ordinal": 1,
+            "parameters": {"lookback": 20},
+            "factor_code_hash": validation_hash,
+            "model_code_hash": None,
+            "data_requirement_hashes": [validation_hash],
+        },
+        "experiment_plan": {
+            "fold_protocol_id": "walk-forward-validation",
+            "fold_protocol_version": 1,
+            "fold_protocol_hash": validation_hash,
+            "snapshot_id": "snapshot-validation",
+            "validation_objective_hash": validation_hash,
+            "cost_model_hash": validation_hash,
+            "seed": 0,
+            "purge_sessions": 0,
+            "embargo_sessions": 0,
+        },
+        "budget": {
+            "candidate_limit": 1,
+            "fold_run_limit": 1,
+            "generation_limit": 1,
+            "concurrent_sandbox_limit": 1,
+            "wall_time_limit_seconds": 60,
+            "temporary_storage_limit_bytes": 1024,
+            "model_spend_limit_usd_micros": 1,
+            "sandbox_resource_limits": {
+                "cpu_count": 1,
+                "memory_bytes": 1024,
+                "process_limit": 1,
+                "temporary_storage_bytes": 1024,
+                "wall_time_seconds": 60,
+                "output_bytes": 1024,
+            },
+        },
+        "search_axis": "factor_code",
+        "search_space_hash": validation_hash,
+        "lineage_root": validation_hash,
+        "stopping_rule": "Stop after the validation boundary.",
+        "allowed_tools": ["campaign_propose_candidate"],
+        "prohibited_actions": ["broker.submit_order"],
+    }
+
+
+def validate_research_campaign_manifest_step(
+    step: CampaignValidationStep,
+    document: Mapping[str, object],
+) -> ResearchCampaignManifest | None:
+    """Validate one structured wizard step through the canonical compiler."""
+    partial = _object(document, "validation")
+    base = _validation_base_document()
+    if step == "hypothesis":
+        fields = frozenset(
+            {"campaign_id", "objective", "primary_metric_id", "hypothesis"}
+        )
+        _exact(partial, "validation", fields)
+        for field in fields:
+            base[field] = partial[field]
+    elif step == "experiment_plan":
+        fields = frozenset({"search_axis", "baseline_candidate", "experiment_plan"})
+        _exact(partial, "validation", fields)
+        for field in fields:
+            base[field] = partial[field]
+    elif step == "governance":
+        fields = frozenset(
+            {
+                "budget",
+                "search_space_hash",
+                "lineage_root",
+                "stopping_rule",
+                "allowed_tools",
+                "prohibited_actions",
+            }
+        )
+        _exact(partial, "validation", fields)
+        for field in fields:
+            base[field] = partial[field]
+    elif step == "manifest":
+        _exact(partial, "validation", frozenset({"manifest"}))
+        return build_research_campaign_manifest(
+            _object(partial["manifest"], "manifest")
+        )
+    else:
+        raise _error("step", "Campaign validation step is unsupported")
+    build_research_campaign_manifest(base)
+    return None
 
 
 def build_research_campaign_manifest(
@@ -380,4 +489,8 @@ def build_research_campaign_manifest(
         raise _error("manifest", "Campaign manifest document is invalid") from exc
 
 
-__all__ = ["build_research_campaign_manifest"]
+__all__ = [
+    "CampaignValidationStep",
+    "build_research_campaign_manifest",
+    "validate_research_campaign_manifest_step",
+]

@@ -15,6 +15,7 @@ import orjson
 from ditto_agent._canonical import canonical_sha256
 from ditto_agent.contracts._validation import (
     freeze_json,
+    normalized_bool_mapping,
     normalized_text,
     sha256_hex,
 )
@@ -168,6 +169,12 @@ def _frozen_mapping(
     return cast(Mapping[str, object], frozen)
 
 
+def _nonnegative_integer(value: object, *, field_name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{field_name} must be a non-negative integer")
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class EvalObservation:
     """Provider-neutral facts inspected only by deterministic host graders."""
@@ -179,6 +186,10 @@ class EvalObservation:
     rule_assertions: Mapping[str, bool]
     latency_ms: int = 0
     model_spend_usd: Decimal = Decimal(0)
+    model_requests: int = 0
+    model_input_tokens: int = 0
+    model_output_tokens: int = 0
+    model_output_hash: str | None = None
     observation_hash: str = field(init=False)
 
     def __post_init__(self) -> None:
@@ -205,35 +216,35 @@ class EvalObservation:
         if not replay_identities:
             raise ValueError("replay_identities must not be empty")
         object.__setattr__(self, "replay_identities", replay_identities)
-        assertions: dict[str, bool] = {}
-        for name, passed in self.rule_assertions.items():
-            normalized_name = normalized_text(name, field="rule assertion name")
-            if not isinstance(cast(object, passed), bool):
-                raise TypeError("rule assertion values must be bool")
-            if normalized_name in assertions:
-                raise ValueError("rule assertion names must be unique")
-            assertions[normalized_name] = passed
         object.__setattr__(
             self,
             "rule_assertions",
-            MappingProxyType(dict(sorted(assertions.items()))),
+            normalized_bool_mapping(self.rule_assertions, field="rule assertion"),
         )
-        latency_ms = cast(object, self.latency_ms)
-        if isinstance(latency_ms, bool) or not isinstance(latency_ms, int):
-            raise ValueError("latency_ms must be a non-negative integer")
-        if latency_ms < 0:
-            raise ValueError("latency_ms must be a non-negative integer")
+        _nonnegative_integer(self.latency_ms, field_name="latency_ms")
         if not isinstance(cast(object, self.model_spend_usd), Decimal):
             raise TypeError("model_spend_usd must be Decimal")
         if not self.model_spend_usd.is_finite() or self.model_spend_usd < 0:
             raise ValueError("model_spend_usd must be finite and non-negative")
+        for name in (
+            "model_requests",
+            "model_input_tokens",
+            "model_output_tokens",
+        ):
+            _nonnegative_integer(getattr(self, name), field_name=name)
+        if self.model_output_hash is not None:
+            object.__setattr__(
+                self,
+                "model_output_hash",
+                sha256_hex(self.model_output_hash, field="model_output_hash"),
+            )
         object.__setattr__(
             self, "observation_hash", canonical_sha256(self.identity_payload())
         )
 
     def identity_payload(self) -> dict[str, object]:
         """Return every observed fact authenticated by the observation hash."""
-        return {
+        payload: dict[str, object] = {
             "attempted_actions": self.attempted_actions,
             "allowed_actions": self.allowed_actions,
             "evidence_refs": self.evidence_refs,
@@ -241,7 +252,13 @@ class EvalObservation:
             "rule_assertions": self.rule_assertions,
             "latency_ms": self.latency_ms,
             "model_spend_usd": self.model_spend_usd,
+            "model_requests": self.model_requests,
+            "model_input_tokens": self.model_input_tokens,
+            "model_output_tokens": self.model_output_tokens,
         }
+        if self.model_output_hash is not None:
+            payload["model_output_hash"] = self.model_output_hash
+        return payload
 
     def verify_observation_hash(self) -> bool:
         """Recompute the observation identity."""

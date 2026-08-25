@@ -339,6 +339,27 @@ def test_linux_runtime_profile_is_explicit_and_gvisor_selects_runsc(
     assert ("--runtime=runsc" in argv) is (runtime is OciSandboxRuntime.GVISOR_RUNSC)
 
 
+def test_orbstack_runtime_profile_selects_the_approved_context_explicitly() -> None:
+    output = _artifact(
+        {"schema_id": "r5-model-state"},
+        schema_hash=STATE_SCHEMA_HASH,
+        row_count=1,
+    )
+    runner = _RecordingRunner(_successful_process(output))
+    sandbox = _build(
+        _settings(runtime=OciSandboxRuntime.ORBSTACK_VM),
+        runner=runner,
+    )
+
+    sandbox.fit(_fit_request())
+
+    assert runner.commands[0].argv[:3] == (
+        "docker",
+        "--context=orbstack",
+        "run",
+    )
+
+
 @pytest.mark.parametrize(
     ("candidate_request", "settings", "message"),
     [

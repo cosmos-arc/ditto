@@ -24,6 +24,8 @@ where = ["src"]
 "ditto_agent.storage.sqlite" = [
     "decision_opinion_schema_v1.sql",
     "decision_opinion_schema_v2.sql",
+    "decision_opinion_schema_v3.sql",
+    "presentation_schema_v1.sql",
     "schema_v1.sql",
 ]
 "ditto_agent.evals" = [

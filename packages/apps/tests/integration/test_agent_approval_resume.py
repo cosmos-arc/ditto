@@ -44,7 +44,10 @@ from ditto_agent.storage.sqlite.records import ApprovalStatus
 from ditto_apps.api.routes.agent_routes import decide_agent_approval
 from ditto_apps.models.agent import AgentApprovalDecisionRequest
 from ditto_apps.registry.agent.database_provider import build_agent_database
-from ditto_apps.registry.agent.runtime import PersistedAgentRuntime
+from ditto_apps.registry.agent.runtime import (
+    PersistedAgentRuntime,
+    PersistedAgentRuntimeOptions,
+)
 
 NOW = datetime(2026, 8, 16, 8, tzinfo=UTC)
 HASH_A = "a" * 64
@@ -259,7 +262,9 @@ async def test_api_decision_resumes_persisted_interruption_after_restart(
         writer=bundle.writer,
         manifest=manifest,
         clock=_Clock(),
-        approval_runtime=restarted_approval_runtime,
+        options=PersistedAgentRuntimeOptions(
+            approval_runtime=restarted_approval_runtime
+        ),
     )
 
     response = await _decide_agent_approval(

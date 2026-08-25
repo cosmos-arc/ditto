@@ -96,6 +96,7 @@ class ModelRequest:
     max_turns: int
     max_output_tokens: int
     tools: tuple[ModelToolSpec, ...]
+    required_tool_name: str | None = None
 
     def __post_init__(self) -> None:
         """Validate bounded inputs and unique tool identities."""
@@ -120,6 +121,14 @@ class ModelRequest:
         tool_names = tuple(tool.name for tool in self.tools)
         if len(set(tool_names)) != len(tool_names):
             raise ValueError("tools must have unique names")
+        if self.required_tool_name is not None:
+            required_tool_name = normalized_text(
+                self.required_tool_name,
+                field="required_tool_name",
+            )
+            if required_tool_name not in tool_names:
+                raise ValueError("required_tool_name must identify a request tool")
+            object.__setattr__(self, "required_tool_name", required_tool_name)
 
 
 @dataclass(frozen=True, slots=True)

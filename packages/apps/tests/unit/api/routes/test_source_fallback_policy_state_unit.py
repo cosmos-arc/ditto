@@ -261,6 +261,8 @@ class TestCatalogSourceFallbackPolicyStateRoutes:
         assert response.data.status == "draft"
         assert response.data.created_at == "2026-06-10T09:00:00+00:00"
         assert response.data.recommended_actions == ["review_source_failover"]
+        assert response.data.authority_hash == _policy().authority_hash
+        assert response.data.authority_payload["action"] == "approval"
 
     async def test_lists_source_fallback_policy_state(self) -> None:
         facade = MagicMock()
@@ -320,6 +322,7 @@ class TestCatalogSourceFallbackPolicyStateRoutes:
             policy=_policy(status="approved"),
         )
         request = CatalogSourceFallbackPolicyLifecycleRequest(
+            authority_hash="a" * 64,
             actor="lead-reviewer",
             notes="approved for controlled fallback activation",
         )
@@ -333,6 +336,7 @@ class TestCatalogSourceFallbackPolicyStateRoutes:
         handler.handle.assert_called_once_with(
             CatalogSourceFallbackPolicyLifecycleCommand(
                 policy_id="fallback-policy-001",
+                expected_authority_hash="a" * 64,
                 actor="lead-reviewer",
                 notes="approved for controlled fallback activation",
             )
@@ -346,6 +350,7 @@ class TestCatalogSourceFallbackPolicyStateRoutes:
             policy=_policy(status="active"),
         )
         request = CatalogSourceFallbackPolicyLifecycleRequest(
+            authority_hash="a" * 64,
             actor="ops-runner",
             notes="activate policy resource only",
         )
@@ -359,6 +364,7 @@ class TestCatalogSourceFallbackPolicyStateRoutes:
         handler.handle.assert_called_once_with(
             CatalogSourceFallbackPolicyLifecycleCommand(
                 policy_id="fallback-policy-001",
+                expected_authority_hash="a" * 64,
                 actor="ops-runner",
                 notes="activate policy resource only",
             )
@@ -371,6 +377,7 @@ class TestCatalogSourceFallbackPolicyStateRoutes:
             policy=_policy(status="retired"),
         )
         request = CatalogSourceFallbackPolicyLifecycleRequest(
+            authority_hash="a" * 64,
             actor="ops-runner",
             notes="retire policy after review",
         )
@@ -384,6 +391,7 @@ class TestCatalogSourceFallbackPolicyStateRoutes:
         handler.handle.assert_called_once_with(
             CatalogSourceFallbackPolicyLifecycleCommand(
                 policy_id="fallback-policy-001",
+                expected_authority_hash="a" * 64,
                 actor="ops-runner",
                 notes="retire policy after review",
             )

@@ -7,7 +7,6 @@ import hashlib
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
@@ -16,42 +15,20 @@ import orjson
 from ditto_agent._canonical import canonical_bytes, canonical_sha256
 from ditto_agent.contracts._validation import normalized_text, sha256_hex
 
-from ditto_apps.scripts._r5_agent_release_contract import (
-    CHECK_ORDER as _CHECK_ORDER,
+from ditto_apps.scripts import _r5_agent_release_contract as _release_contract
+from ditto_apps.scripts._r5_agent_release_eval_validation import (
+    approved_live_identity_valid as _approved_live_identity_valid,
 )
-from ditto_apps.scripts._r5_agent_release_contract import (
-    EXPECTED_AGENT_PATHS as _EXPECTED_AGENT_PATHS,
+from ditto_apps.scripts._r5_agent_release_eval_validation import (
+    live_usage_identity_valid as _live_usage_identity_valid,
 )
-from ditto_apps.scripts._r5_agent_release_contract import (
-    EXPECTED_CASE_COUNT as _EXPECTED_CASE_COUNT,
+from ditto_apps.scripts._r5_agent_release_eval_validation import (
+    performance_valid as _performance_valid,
 )
-from ditto_apps.scripts._r5_agent_release_contract import (
-    EXPECTED_CLI_TOKENS as _EXPECTED_CLI_TOKENS,
+from ditto_apps.scripts._r5_agent_release_eval_validation import (
+    run_identity_and_spend_valid as _run_identity_and_spend_valid,
 )
-from ditto_apps.scripts._r5_agent_release_contract import (
-    EXPECTED_COUNTS as _EXPECTED_COUNTS,
-)
-from ditto_apps.scripts._r5_agent_release_contract import (
-    EXPECTED_EXERCISES as _EXPECTED_EXERCISES,
-)
-from ditto_apps.scripts._r5_agent_release_contract import (
-    EXPECTED_PROHIBITED_ACTIONS as _EXPECTED_PROHIBITED_ACTIONS,
-)
-from ditto_apps.scripts._r5_agent_release_contract import (
-    EXPECTED_THRESHOLDS as _EXPECTED_THRESHOLDS,
-)
-from ditto_apps.scripts._r5_agent_release_contract import (
-    FAKE_PROVIDER_ID as _FAKE_PROVIDER_ID,
-)
-from ditto_apps.scripts._r5_agent_release_contract import (
-    FAKE_SEED as _FAKE_SEED,
-)
-from ditto_apps.scripts._r5_agent_release_contract import (
-    FROZEN_FAKE_IDENTITIES as _FROZEN_FAKE_IDENTITIES,
-)
-from ditto_apps.scripts._r5_agent_release_contract import (
-    FROZEN_OPERATION_EVIDENCE_HASH as _FROZEN_OPERATION_EVIDENCE_HASH,
-)
+from ditto_apps.scripts.r5_sandbox_live_acceptance import validate_live_report
 
 
 class ReleaseCheckStatus(StrEnum):
@@ -127,7 +104,7 @@ class ReleasePreflightReport:
         """Derive the fail-closed release result and its content hash."""
         if self.schema_version != 1:
             raise ValueError("release preflight schema_version is unsupported")
-        if tuple(item.name for item in self.checks) != _CHECK_ORDER:
+        if tuple(item.name for item in self.checks) != _release_contract.CHECK_ORDER:
             raise ValueError("release preflight requires the exact ordered checks")
         blockers = tuple(
             sorted(
@@ -203,15 +180,11 @@ def _file_hash(path: Path) -> str | None:
 
 
 def _object_list(value: object) -> list[object] | None:
-    if not isinstance(value, list):
-        return None
-    return cast(list[object], value)
+    return cast(list[object], value) if isinstance(value, list) else None
 
 
 def _string_mapping(value: object) -> Mapping[str, object] | None:
-    if not isinstance(value, Mapping):
-        return None
-    return cast(Mapping[str, object], value)
+    return cast(Mapping[str, object], value) if isinstance(value, Mapping) else None
 
 
 def _read_mapping(path: Path) -> Mapping[str, object]:
@@ -249,7 +222,7 @@ def _indexed_suite_reports(
     payload: Mapping[str, object],
 ) -> Mapping[str, Mapping[str, object]] | None:
     reports = _object_list(payload.get("suite_reports"))
-    if reports is None or len(reports) != len(_EXPECTED_COUNTS):
+    if reports is None or len(reports) != len(_release_contract.EXPECTED_COUNTS):
         return None
     by_suite: dict[str, Mapping[str, object]] = {}
     for raw_report in reports:
@@ -260,7 +233,7 @@ def _indexed_suite_reports(
         if not isinstance(suite, str) or suite in by_suite:
             return None
         by_suite[suite] = report
-    if set(by_suite) != set(_EXPECTED_COUNTS):
+    if set(by_suite) != set(_release_contract.EXPECTED_COUNTS):
         return None
     return by_suite
 
@@ -302,7 +275,9 @@ def _result_identity(
 
 def _metric_thresholds_valid(suite: str, report: Mapping[str, object]) -> bool:
     summaries = _object_list(report.get("metric_summaries"))
-    if summaries is None or len(summaries) != len(_EXPECTED_THRESHOLDS[suite]):
+    if summaries is None or len(summaries) != len(
+        _release_contract.EXPECTED_THRESHOLDS[suite]
+    ):
         return False
     thresholds: dict[object, object] = {}
     for raw_summary in summaries:
@@ -310,23 +285,27 @@ def _metric_thresholds_valid(suite: str, report: Mapping[str, object]) -> bool:
         if item is None or item.get("passed") is not True:
             return False
         thresholds[item.get("metric")] = item.get("threshold_basis_points")
-    return thresholds == _EXPECTED_THRESHOLDS[suite]
+    return thresholds == _release_contract.EXPECTED_THRESHOLDS[suite]
 
 
-def _suite_evidence(payload: Mapping[str, object]) -> _SuiteEvidence | None:
+def _suite_evidence(
+    payload: Mapping[str, object],
+    *,
+    provider_id: str,
+) -> _SuiteEvidence | None:
     by_suite = _indexed_suite_reports(payload)
     if by_suite is None:
         return None
     dataset_identities: dict[str, tuple[tuple[str, str, str], ...]] = {}
     observation_identities: list[tuple[str, str, str]] = []
-    for suite in sorted(_EXPECTED_COUNTS):
+    for suite in sorted(_release_contract.EXPECTED_COUNTS):
         report = by_suite[suite]
-        expected_count = _EXPECTED_COUNTS[suite]
+        expected_count = _release_contract.EXPECTED_COUNTS[suite]
         results = _object_list(report.get("results"))
         if (
             report.get("schema_version") != 1
-            or report.get("provider_id") != _FAKE_PROVIDER_ID
-            or report.get("seed") != _FAKE_SEED
+            or report.get("provider_id") != provider_id
+            or report.get("seed") != _release_contract.FAKE_SEED
             or report.get("minimum_case_count") != expected_count
             or report.get("case_count") != expected_count
             or report.get("passed") is not True
@@ -371,7 +350,7 @@ def _dataset_manifest_valid(
     manifest = _object_list(payload.get("dataset_manifest"))
     if (
         manifest is None
-        or len(manifest) != len(_EXPECTED_COUNTS)
+        or len(manifest) != len(_release_contract.EXPECTED_COUNTS)
         or payload.get("dataset_manifest_hash") != canonical_sha256(manifest)
     ):
         return False
@@ -408,7 +387,7 @@ def _observation_manifest_valid(
     suite_evidence: _SuiteEvidence,
 ) -> bool:
     manifest = _object_list(payload.get("observation_manifest"))
-    if manifest is None or len(manifest) != _EXPECTED_CASE_COUNT:
+    if manifest is None or len(manifest) != _release_contract.EXPECTED_CASE_COUNT:
         return False
     if payload.get("observation_manifest_hash") != canonical_sha256(manifest):
         return False
@@ -436,73 +415,6 @@ def _observation_manifest_valid(
     return tuple(identities) == suite_evidence.observation_identities
 
 
-def _cohort_performance_valid(
-    item: Mapping[str, object],
-    *,
-    suites: tuple[str, ...],
-    count: int,
-    latency_limit: int,
-    spend_limit: Decimal,
-) -> bool:
-    raw_suites = _object_list(item.get("suites"))
-    if raw_suites is None or not all(isinstance(suite, str) for suite in raw_suites):
-        return False
-    try:
-        p95 = int(cast(int, item.get("latency_p95_ms")))
-        maximum = Decimal(cast(str, item.get("max_spend_usd")))
-        observed_limit = Decimal(cast(str, item.get("spend_limit_usd")))
-    except (InvalidOperation, TypeError, ValueError):
-        return False
-    return (
-        tuple(cast(str, suite) for suite in raw_suites) == suites
-        and item.get("case_count") == count
-        and item.get("latency_limit_ms") == latency_limit
-        and observed_limit == spend_limit
-        and p95 <= latency_limit
-        and maximum <= spend_limit
-        and item.get("passed") is True
-    )
-
-
-def _performance_valid(payload: Mapping[str, object]) -> bool:
-    performance = _object_list(payload.get("performance"))
-    if performance is None:
-        return False
-    cohorts: dict[str, Mapping[str, object]] = {}
-    for raw_item in performance:
-        item = _string_mapping(raw_item)
-        if item is None or not isinstance(item.get("cohort"), str):
-            return False
-        cohorts[cast(str, item["cohort"])] = item
-    expected = {
-        "read": (("grounded",), 30, 30_000, Decimal("0.25")),
-        "complex": (
-            ("author", "permission", "sandbox", "shadow"),
-            60,
-            60_000,
-            Decimal("0.75"),
-        ),
-    }
-    if set(cohorts) != set(expected):
-        return False
-    if not all(
-        _cohort_performance_valid(
-            cohorts[cohort],
-            suites=suites,
-            count=count,
-            latency_limit=latency_limit,
-            spend_limit=spend_limit,
-        )
-        for cohort, (suites, count, latency_limit, spend_limit) in expected.items()
-    ):
-        return False
-    return payload.get("campaign_budget") == {
-        "case_count": 30,
-        "policy": "campaign_authorization_budget",
-        "suite": "campaign",
-    }
-
-
 def _fake_eval_check(path: Path) -> ReleaseCheck:
     name = "fake_eval"
     if not path.is_file():
@@ -514,26 +426,35 @@ def _fake_eval_check(path: Path) -> ReleaseCheck:
     if not _report_hash_valid(payload):
         return _failed(name, "fake_eval_report_hash_invalid", path)
     if (
-        payload.get("schema_version") != 1
+        payload.get("schema_version") != _release_contract.FAKE_REPORT_SCHEMA_VERSION
         or payload.get("suite") != "all"
         or payload.get("profile") != "fake"
-        or payload.get("provider_id") != _FAKE_PROVIDER_ID
-        or payload.get("seed") != _FAKE_SEED
-        or payload.get("case_count") != _EXPECTED_CASE_COUNT
-        or payload.get("suite_case_counts") != _EXPECTED_COUNTS
+        or payload.get("provider_id") != _release_contract.FAKE_PROVIDER_ID
+        or payload.get("seed") != _release_contract.FAKE_SEED
+        or payload.get("case_count") != _release_contract.EXPECTED_CASE_COUNT
+        or payload.get("suite_case_counts") != _release_contract.EXPECTED_COUNTS
         or payload.get("passed") is not True
     ):
         return _failed(name, "fake_eval_gate_failed", path)
-    suite_evidence = _suite_evidence(payload)
+    suite_evidence = _suite_evidence(
+        payload,
+        provider_id=_release_contract.FAKE_PROVIDER_ID,
+    )
     manifests_valid = suite_evidence is not None and all(
         (
             _dataset_manifest_valid(payload, suite_evidence),
             _observation_manifest_valid(payload, suite_evidence),
             _performance_valid(payload),
+            _run_identity_and_spend_valid(
+                payload,
+                provider_id=_release_contract.FAKE_PROVIDER_ID,
+                frozen_identity_hash=_release_contract.FROZEN_FAKE_RUN_IDENTITY_HASH,
+            ),
         )
     )
     frozen_identity_mismatch = any(
-        payload.get(field) != value for field, value in _FROZEN_FAKE_IDENTITIES.items()
+        payload.get(field) != value
+        for field, value in _release_contract.FROZEN_FAKE_IDENTITIES.items()
     )
     if not manifests_valid or frozen_identity_mismatch:
         reason_code = (
@@ -568,7 +489,7 @@ def _operational_check(path: Path) -> ReleaseCheck:
         or payload.get("schema_version") != 1
         or payload.get("real_data_touched") is not False
         or exercises is None
-        or len(exercises) != len(_EXPECTED_EXERCISES)
+        or len(exercises) != len(_release_contract.EXPECTED_EXERCISES)
     ):
         return _failed(name, "operational_evidence_invalid", path)
     by_name: dict[str, Mapping[str, object]] = {}
@@ -578,7 +499,7 @@ def _operational_check(path: Path) -> ReleaseCheck:
             return _failed(name, "operational_exercise_failed", path)
         by_name[cast(str, item["name"])] = item
     if (
-        set(by_name) != _EXPECTED_EXERCISES
+        set(by_name) != _release_contract.EXPECTED_EXERCISES
         or any(
             item.get("status") != "passed"
             or not isinstance(item.get("command"), str)
@@ -586,7 +507,7 @@ def _operational_check(path: Path) -> ReleaseCheck:
             or not isinstance(item.get("safety_boundary"), str)
             for item in by_name.values()
         )
-        or supplied_hash != _FROZEN_OPERATION_EVIDENCE_HASH
+        or supplied_hash != _release_contract.FROZEN_OPERATION_EVIDENCE_HASH
     ):
         return _failed(name, "operational_exercise_failed", path)
     return ReleaseCheck(
@@ -614,11 +535,13 @@ def _interface_check(repo_root: Path) -> ReleaseCheck:
         roadmap = roadmap_path.read_text(encoding="utf-8")
     except (OSError, ValueError, orjson.JSONDecodeError):
         return _failed(name, "interface_evidence_invalid", openapi_path)
-    if api_paths is None or not _EXPECTED_AGENT_PATHS.issubset(set(api_paths)):
+    if api_paths is None or not _release_contract.EXPECTED_AGENT_PATHS.issubset(
+        set(api_paths)
+    ):
         return _failed(name, "agent_openapi_incomplete", openapi_path)
-    if any(token not in runbook for token in _EXPECTED_CLI_TOKENS):
+    if any(token not in runbook for token in _release_contract.EXPECTED_CLI_TOKENS):
         return _failed(name, "agent_cli_documentation_incomplete", runbook_path)
-    if "A3" not in security or "A4" not in security or "R5.5 BLOCKED" not in roadmap:
+    if "A3" not in security or "A4" not in security or "R5.5 COMPLETE" not in roadmap:
         return _failed(name, "release_document_status_inconsistent", roadmap_path)
     evidence_hash = canonical_sha256(
         {path.relative_to(repo_root).as_posix(): _file_hash(path) for path in paths}
@@ -646,7 +569,9 @@ def _approval_status_check(
     except (OSError, ValueError, orjson.JSONDecodeError):
         return _failed(name, f"{name}_evidence_invalid", path)
     prohibited = _string_mapping(payload.get("prohibited_actions_observed"))
-    expected_prohibited = _EXPECTED_PROHIBITED_ACTIONS[(gate, provider, profile)]
+    expected_prohibited = _release_contract.EXPECTED_PROHIBITED_ACTIONS[
+        (gate, provider, profile)
+    ]
     expected_reason = f"{gate.lower()}_approval_required"
     if (
         set(payload)
@@ -681,6 +606,136 @@ def _approval_status_check(
     )
 
 
+def _live_eval_check(
+    path: Path,
+    *,
+    name: str,
+    profile: str,
+    repo_root: Path,
+) -> ReleaseCheck:
+    if not path.is_file():
+        return _failed(name, f"{name}_evidence_missing", path)
+    try:
+        payload = _read_mapping(path)
+    except (OSError, ValueError, orjson.JSONDecodeError):
+        return _failed(name, f"{name}_evidence_invalid", path)
+    if payload.get("status") == "not_run":
+        return _approval_status_check(
+            path,
+            name=name,
+            gate="A4",
+            provider="glm",
+            profile=profile,
+        )
+    reason_code: str | None = None
+    if not _report_hash_valid(payload):
+        reason_code = f"{name}_report_hash_invalid"
+    elif (
+        payload.get("schema_version") != _release_contract.FAKE_REPORT_SCHEMA_VERSION
+        or payload.get("suite") != "all"
+        or payload.get("profile") != profile
+        or payload.get("provider_id") != _release_contract.GLM_RELEASE_PROVIDER_ID
+        or payload.get("seed") != _release_contract.FAKE_SEED
+        or payload.get("case_count") != _release_contract.EXPECTED_CASE_COUNT
+        or payload.get("suite_case_counts") != _release_contract.EXPECTED_COUNTS
+        or payload.get("passed") is not True
+    ):
+        reason_code = f"{name}_gate_failed"
+    else:
+        suite_evidence = _suite_evidence(
+            payload,
+            provider_id=_release_contract.GLM_RELEASE_PROVIDER_ID,
+        )
+        manifests_valid = suite_evidence is not None and all(
+            (
+                _dataset_manifest_valid(payload, suite_evidence),
+                _observation_manifest_valid(payload, suite_evidence),
+                _performance_valid(payload),
+                _live_usage_identity_valid(
+                    payload,
+                    provider_id=_release_contract.GLM_RELEASE_PROVIDER_ID,
+                    profile=profile,
+                ),
+                _approved_live_identity_valid(payload, repo_root=repo_root),
+            )
+        )
+        frozen_input_mismatch = any(
+            payload.get(field) != _release_contract.FROZEN_FAKE_IDENTITIES[field]
+            for field in ("dataset_manifest_hash", "grader_manifest_hash")
+        )
+        if not manifests_valid or frozen_input_mismatch:
+            reason_code = f"{name}_manifest_invalid"
+    if reason_code is not None:
+        return _failed(name, reason_code, path)
+    return ReleaseCheck(
+        name=name,
+        status=ReleaseCheckStatus.PASSED,
+        reason_code=f"{name}_passed",
+        evidence_hash=cast(str, _file_hash(path)),
+    )
+
+
+def _sandbox_artifacts_match(*, repo_root: Path, report: Mapping[str, object]) -> bool:
+    image_root = repo_root / "deploy/agent-sandbox"
+    manifest_path = image_root / "image-manifest.json"
+    try:
+        manifest = _read_mapping(manifest_path)
+    except (OSError, ValueError, orjson.JSONDecodeError):
+        return False
+    artifacts = _string_mapping(manifest.get("artifacts"))
+    if (
+        artifacts is None
+        or frozenset(artifacts) != _release_contract.SANDBOX_ARTIFACT_NAMES
+    ):
+        return False
+    artifact_hashes = {
+        name: _file_hash(image_root / name)
+        for name in _release_contract.SANDBOX_ARTIFACT_NAMES
+    }
+    return (
+        report.get("image_manifest_hash") == _file_hash(manifest_path)
+        and report.get("image_repository") == manifest.get("image_repository")
+        and report.get("image_digest") == manifest.get("image_digest")
+        and report.get("sbom_hash") == manifest.get("sbom_hash")
+        and report.get("sbom_hash") == _file_hash(image_root / "sbom.spdx.json")
+        and report.get("dependency_lock_hash") == artifacts.get("requirements.lock")
+        and report.get("seccomp_profile_hash") == artifacts.get("seccomp.json")
+        and artifact_hashes == dict(artifacts)
+    )
+
+
+def _sandbox_live_check(path: Path, *, repo_root: Path) -> ReleaseCheck:
+    name = "sandbox_live"
+    if not path.is_file():
+        return _failed(name, "sandbox_live_evidence_missing", path)
+    try:
+        payload = _read_mapping(path)
+    except (OSError, ValueError, orjson.JSONDecodeError):
+        return _failed(name, "sandbox_live_evidence_invalid", path)
+    if payload.get("status") == "not_run":
+        return _approval_status_check(
+            path,
+            name=name,
+            gate="A3",
+            provider="oci",
+            profile="hardened",
+        )
+    try:
+        evidence_valid = validate_live_report(payload)
+    except (TypeError, ValueError):
+        evidence_valid = False
+    if not evidence_valid:
+        return _failed(name, "sandbox_live_evidence_invalid", path)
+    if not _sandbox_artifacts_match(repo_root=repo_root, report=payload):
+        return _failed(name, "sandbox_live_artifact_mismatch", path)
+    return ReleaseCheck(
+        name=name,
+        status=ReleaseCheckStatus.PASSED,
+        reason_code="sandbox_live_passed",
+        evidence_hash=cast(str, _file_hash(path)),
+    )
+
+
 def build_release_preflight(repo_root: Path) -> ReleasePreflightReport:
     """Validate repository evidence without calling providers, sandboxes, or data."""
     root = repo_root.resolve(strict=True)
@@ -690,26 +745,21 @@ def build_release_preflight(repo_root: Path) -> ReleasePreflightReport:
             _fake_eval_check(evidence / "eval-report-fake.json"),
             _operational_check(evidence / "release-exercises.json"),
             _interface_check(root),
-            _approval_status_check(
+            _sandbox_live_check(
                 evidence / "sandbox-live-status.json",
-                name="sandbox_live",
-                gate="A3",
-                provider="oci",
-                profile="hardened",
+                repo_root=root,
             ),
-            _approval_status_check(
+            _live_eval_check(
                 evidence / "eval-report-balanced.json",
                 name="balanced_live_eval",
-                gate="A4",
-                provider="openai",
                 profile="balanced",
+                repo_root=root,
             ),
-            _approval_status_check(
+            _live_eval_check(
                 evidence / "eval-report-quality.json",
                 name="quality_live_eval",
-                gate="A4",
-                provider="openai",
                 profile="quality",
+                repo_root=root,
             ),
         )
     )

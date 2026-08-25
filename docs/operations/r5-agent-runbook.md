@@ -1,8 +1,8 @@
 # R5 governed Agent operations runbook
 
-Status: R5.5 release is BLOCKED. Deterministic/Fake acceptance is complete; Approval A3 blocks physical OCI sandbox acceptance and Approval A4 blocks balanced/quality live-model comparison.
+Status: R5.5 implementation and online acceptance are COMPLETE. Deterministic/Fake acceptance, OrbStack A3 physical OCI acceptance, GLM 5.3 Coding Plan balanced/quality 120-case runs, and release preflight all pass. Coding Plan is acceptance-only; a deployed product must use a standard API credential.
 
-This runbook is for the local internal operator. It does not authorize production data writes, real retention deletion, a container daemon, model egress, publishing, trading, orders, or broker access.
+This runbook is for the local internal operator. The recorded A3 authorizes only its exact OrbStack/image/security scope; this document does not authorize a different daemon/profile. It does not authorize production data writes, real retention deletion, formal model egress, publishing, trading, orders, or broker access.
 
 ## Release preflight
 
@@ -14,9 +14,76 @@ pixi run -e dev python -m ditto_apps.scripts.r5_agent_release_preflight \
   --output docs/evidence/r5/release/release-preflight.json
 ```
 
-Exit codes are closed: `0` means every R5.5 check passed, `1` means evidence is missing/invalid or a gate failed, and `5` means only explicitly named approvals remain blocked. The current expected result is exit `5`, `release_status=blocked`, `blockers=[A3,A4]`. Never translate exit `5` into PASS.
+Exit codes are closed: `0` means every R5.5 check passed, `1` means evidence is missing/invalid or a gate failed, and `5` means only explicitly named approvals remain blocked. The current expected result is exit `0`, `release_status=passed`, with empty `blockers`/`failures` and all six checks passed. Never translate exit `1` or `5` into PASS.
 
 The command is read-only except for the requested report path. It does not read an API key, invoke a model, start a daemon, execute a sandbox, open a user database, or run cleanup.
+
+## OrbStack physical sandbox acceptance
+
+OrbStack must already be running on the approved `orbstack` context. The command below performs the marked physical suite and writes content-addressed A3 evidence:
+
+```bash
+pixi run -e dev python -m ditto_apps.scripts.r5_sandbox_live_acceptance \
+  --repo-root "$PWD" \
+  --output docs/evidence/r5/release/sandbox-live-status.json
+```
+
+The runner requires the exact approved daemon inventory and immutable image digest, uses `--pull=never`, and leaves no container behind. A passing report contains 11 attack results, fresh-container, concurrent-container and `fit→score` checks. Preflight then recomputes every execution attestation and compares the report with `deploy/agent-sandbox/image-manifest.json`, SBOM, dependency lock, seccomp profile and all image-source hashes. Any runtime or artifact drift requires a new build, new evidence and renewed A3 approval; never weaken the expected profile to make a drift pass.
+
+## Validation-only GLM smoke
+
+This lane validates Apps composition, the fixed GLM Responses endpoint, one function-tool round trip, host-result grounding, usage, and latency. It sends only `synthetic-no-user-data-v1`; it is not a production or release acceptance lane. It may be invoked only from an approved Codex developer task: the provider's [Codex guide](https://docs.bigmodel.cn/cn/coding-plan/tool/codex) assigns `/api/v1` to Codex Responses, while its [FAQ](https://docs.bigmodel.cn/cn/coding-plan/faq) requires standalone/self-built application integrations to use the standard API.
+
+```bash
+DITTO_AGENT_GLM_VALIDATION_API_KEY="$(security find-generic-password \
+  -s codex-zai-api-key -a chevy -w)" \
+pixi run -e dev python -m ditto_apps.scripts.r5_glm_validation \
+  --model glm-5.3 \
+  --approval-a4 \
+  --output docs/evidence/r5/release/glm-validation-smoke.json
+```
+
+The command must report `status=passed`, exactly 2 provider requests, at most 4096 total tokens, and all five checks true. It deliberately reports `cost_evaluated=false`, `production_eligible=false`, and `release_gate_passed=false`. Omitting `--approval-a4` returns exit 5 before reading the credential. Coding Plan credentials are rejected whenever Apps composition is in production mode. Do not use this command as a standalone Ditto validation service; repeatable tests outside Codex and every deployed environment require a standard `formal_api` credential. The two credential kinds are code-bound to different protocols: validation uses `/api/v1` Responses; GLM production uses `https://open.bigmodel.cn/api/paas/v4` Chat Completions. Never override a base URL to make one credential impersonate the other.
+
+## GLM online release evaluation
+
+The Apps composition is intentionally sized for one local operator. One schema-v2 scope JSON carries the provider, content hashes for the approval record, provider data controls, runnable 120-case manifest and license/egress manifest, model ID/revision label, and one positive `max_total_tokens`. The operator separately supplies the prompt/tool manifest hash. These values and the selected profile/reasoning are part of the report identity.
+
+The accepted provider is GLM Coding Plan at `https://open.bigmodel.cn/api/v1` using Responses, restricted to the user-approved Codex developer task. Balanced applies `high` reasoning and quality applies `max`; both use `glm-5.3` and the operator-attested label `glm-5.3-coding-plan-2026-08-17`. The label binds the reviewed run configuration and does not claim an immutable provider-returned snapshot. OpenAI remains available through the separate runtime adapter when deliberately selected, but it is not part of this GLM acceptance run. Production GLM continues to use the distinct `formal_api` composition at `https://open.bigmodel.cn/api/paas/v4` and must not inherit the Coding Plan credential.
+
+The Apps-owned scenario provider is runnable. For each of the frozen 120 cases it sends only the synthetic case identity, suite/family, objective and host status, exposes the case's closed function-tool allowlist, executes at most one synthetic host tool, reconciles the model and host call IDs/arguments, retains only cited evidence, derives model-dependent assertions from the output, and stores only an output hash. Expected actions are not inserted into model input. Existing replay/PIT/authorization assertions remain deterministic host-owned system evidence rather than being delegated to model self-grading. The provider has no publish, trade, order, broker, network-data or real-user-data capability.
+
+Before credential access, the runner preflights all six suites, compares their actual canonical manifest hash with the A4 runnable-dataset hash, and requires the supplied prompt/tool manifest hash to equal the runnable provider's exact prompt/tool template. It rejects a missing revision label or a rolling model ID used as its own label. Before the first case it requires the provider to bind the complete run identity and echo that A4 revision label; during the run it authenticates request/input/output token usage and stops on the first cumulative token-cap overrun. A grounded case has a 60-second hard observation timeout and every other case 120 seconds so isolated provider outliers are measured; the release SLO remains read P95 ≤30 seconds and complex P95 ≤60 seconds. Each case is limited to two provider requests, three turns, one tool and 1024 output tokens. `DITTO_AGENT_GLM_VALIDATION_API_KEY` is the only Coding Plan credential input and is never serialized.
+
+For this single-user deployment, code does not calculate provider prices, exchange rates or USD budgets. Use the token cap for runaway protection, the existing per-call timeout/request limits for operational safety, and BigModel's console for actual spend and billing alerts. A zero value in shared dollar report fields means cost was not evaluated. It must never be presented as zero-cost evidence.
+
+The frozen runnable dataset manifest is `6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114`. Derive the current prompt/tool manifest from code instead of typing or inventing it:
+
+```bash
+DITTO_R5_PROMPT_TOOL_MANIFEST_HASH="$(pixi run -e dev python -c \
+  'from ditto_apps.registry.agent.release_eval_provider import formal_prompt_tool_manifest_hash; print(formal_prompt_tool_manifest_hash())')"
+export DITTO_R5_PROMPT_TOOL_MANIFEST_HASH
+```
+
+The accepted value is `6f0829b47d9ed24e54c4f0427f1829613327b220f8e95fb4e35e6c48e64d6c93`; a mismatch fails before key access. The reviewed scope is [glm-coding-plan-a4-scope.json](../evidence/r5/preflight/glm-coding-plan-a4-scope.json), backed by [glm-coding-plan-a4-materials.json](../evidence/r5/preflight/glm-coding-plan-a4-materials.json). It fixes `glm-5.3`, the 120-case dataset, provider controls, license/egress manifest, revision label and a 500,000-token cap per profile. Do not fabricate placeholder hashes to obtain a green report.
+
+For a deliberate rerun of the accepted scope, inject `DITTO_AGENT_GLM_VALIDATION_API_KEY` through the local secret mechanism and run both profiles through the Apps-owned entry point. Do not rerun merely to refresh a timestamp; model/profile/prompt/tool/dataset changes require a new approval identity.
+
+```bash
+pixi run -e dev python -m ditto_apps.scripts.r5_release_eval \
+  --profile balanced --approval-a4 \
+  --scope "$DITTO_R5_A4_SCOPE" \
+  --prompt-tool-manifest-hash "$DITTO_R5_PROMPT_TOOL_MANIFEST_HASH" \
+  --output docs/evidence/r5/release/eval-report-balanced.json
+
+pixi run -e dev python -m ditto_apps.scripts.r5_release_eval \
+  --profile quality --approval-a4 \
+  --scope "$DITTO_R5_A4_SCOPE" \
+  --prompt-tool-manifest-hash "$DITTO_R5_PROMPT_TOOL_MANIFEST_HASH" \
+  --output docs/evidence/r5/release/eval-report-quality.json
+```
+
+Do not place the API key on the command line or commit a secret. Missing credentials return `formal_eval_credential_missing`; scope, dataset, prompt/tool, provider identity, model-revision or token drift returns its own failed report. The checked-in balanced and quality reports are both authenticated 120/120 PASS, and the subsequent preflight exits `0`; Task 37/38 are complete.
 
 ## Feature flags and rollback
 
@@ -101,8 +168,8 @@ The checked-in OpenAPI contract exposes only the governed session, run, persiste
 4. For provider or exporter outage, keep model calls disabled. Core Ditto requires no Agent recovery action.
 5. For sandbox outage, pause Campaign execution. Never run generated code on the host.
 6. Resume only from durable idempotency/lease/approval state and the same manifest/context hashes.
-7. Rerun focused exercises, Fake eval, PIT, physical sandbox acceptance when A3 exists, live comparisons when A4 exists, then the release preflight and full CI.
+7. Rerun focused exercises, Fake eval, PIT, the exact A3 physical sandbox acceptance, live comparisons when A4 exists, then the release preflight and full CI.
 
 ## Approval completion
 
-A3 must name the exact runtime/profile, immutable image digest, SBOM, dependency lock, seccomp policy, and acceptance target. A4 must name the dedicated OpenAI project, MAM/ZDR posture, credentials boundary, allowed dataset/egress class, profiles, and budget. Evidence created before those grants cannot satisfy them.
+A3 is complete for the exact OrbStack 2.2.1/aarch64 scope recorded in `docs/evidence/r5/preflight/approvals.md`; no Kubernetes is required. A4 rev4 accepts the exact Coding Plan synthetic online-eval scope and both 120-case reports for R5 completion. Actual currency spend is reviewed in the BigModel console. This approval does not authorize Coding Plan in standalone/production execution: deployment must replace the credential with a GLM standard API key and reassess any changed provider/model/config identity before enabling flags.

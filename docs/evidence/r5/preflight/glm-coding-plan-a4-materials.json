@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "approval_record": {
+    "approval_revision": 4,
+    "approver": "requesting_workspace_user",
+    "decision": "accepted_for_r5_online_release_evaluation",
+    "effective_date": "2026-08-17",
+    "user_statement": "如果plan的key已经验证ok的话我们就认为在线验收完成了，只要在线验收的内容使用plan的key都通过了就行",
+    "execution_context": "codex_supported_developer_task",
+    "model_id": "glm-5.3",
+    "model_snapshot": "glm-5.3-coding-plan-2026-08-17",
+    "profiles": {
+      "balanced": "high",
+      "quality": "max"
+    },
+    "case_count_per_profile": 120,
+    "max_total_tokens_per_profile": 500000,
+    "production_eligible": false,
+    "production_replacement": "glm_standard_api"
+  },
+  "provider_data_controls": {
+    "provider": "glm",
+    "credential_kind": "glm_coding_plan_validation",
+    "credential_environment": "DITTO_AGENT_GLM_VALIDATION_API_KEY",
+    "endpoint": "https://open.bigmodel.cn/api/v1",
+    "protocol": "responses",
+    "production_mode": false,
+    "store": false,
+    "hosted_tracing": false,
+    "hosted_tools": false,
+    "raw_model_output_persisted": false,
+    "secret_persisted": false,
+    "official_codex_guide": "https://docs.bigmodel.cn/cn/coding-plan/tool/codex",
+    "official_usage_notes": "https://docs.bigmodel.cn/cn/coding-plan/usage-notes"
+  },
+  "license_egress_manifest": {
+    "dataset_class": "synthetic_no_user_data",
+    "runnable_dataset_manifest_hash": "6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114",
+    "allowed_case_fields": [
+      "case_id",
+      "suite",
+      "family",
+      "objective",
+      "required_evidence",
+      "host_status",
+      "preloaded_evidence_refs"
+    ],
+    "allowed_host_result_fields": [
+      "case_id",
+      "status",
+      "evidence_refs",
+      "fact_token"
+    ],
+    "prohibited_data": [
+      "real_market_data",
+      "real_portfolio_data",
+      "real_user_data",
+      "real_research_evidence",
+      "broker_data",
+      "secrets"
+    ],
+    "model_callable_side_effects": false
+  }
+}

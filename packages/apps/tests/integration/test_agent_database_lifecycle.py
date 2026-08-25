@@ -10,6 +10,10 @@ from ditto_agent.storage.sqlite.episode_store import (
     AgentEpisodeWriter,
 )
 from ditto_agent.storage.sqlite.errors import AgentDatabaseClosedError
+from ditto_agent.storage.sqlite.presentation_store import (
+    AgentPresentationReader,
+    AgentPresentationWriter,
+)
 from ditto_apps.registry.agent.database_provider import build_agent_database
 
 
@@ -28,7 +32,12 @@ def test_apps_owns_agent_database_lifecycle_without_exposing_pool(
     assert bundle.reader.get_session(session.session_id) == session
     assert isinstance(bundle.episode_reader, AgentEpisodeReader)
     assert isinstance(bundle.episode_writer, AgentEpisodeWriter)
+    assert isinstance(bundle.presentation_reader, AgentPresentationReader)
+    assert isinstance(bundle.presentation_writer, AgentPresentationWriter)
     assert bundle.database.path == tmp_path / "agent" / "agent.sqlite"
+    assert bundle.presentation_database.path == (
+        tmp_path / "agent" / "agent-presentation.sqlite3"
+    )
     assert not hasattr(bundle, "pool")
 
     bundle.close()

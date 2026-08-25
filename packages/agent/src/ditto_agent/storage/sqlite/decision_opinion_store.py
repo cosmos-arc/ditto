@@ -117,7 +117,7 @@ class DecisionOpinionShadowDatabase:
             raise
 
     def initialize(self) -> None:
-        """Create or authenticate exactly the isolated shadow schema v1."""
+        """Create or authenticate the isolated shadow schema and migrations."""
         with _INITIALIZE_LOCK:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             connection = self.get_connection()
@@ -506,6 +506,37 @@ def _decode_record(payload: bytes) -> DecisionOpinionRecord:
     )
 
 
+def _record_from_row(row: sqlite3.Row) -> DecisionOpinionRecord:
+    payload = row["payload_json"]
+    if not isinstance(payload, bytes):
+        raise TypeError("DecisionOpinion payload storage type is invalid")
+    record = _decode_record(payload)
+    _validate_record(record)
+    durable = (
+        str(row["opinion_id"]),
+        str(row["shadow_outcome_id"]),
+        str(row["status"]),
+        str(row["v3_artifact_id"]),
+        str(row["v3_evidence_hash"]),
+        str(row["v3_readiness"]),
+        str(row["opinion_hash"]),
+        int(row["generated_at_us"]),
+    )
+    expected = (
+        record.opinion_id,
+        record.shadow_outcome_id,
+        record.status,
+        record.v3_artifact_id,
+        record.v3_evidence_hash,
+        record.v3_readiness,
+        record.opinion_hash,
+        epoch_us(record.generated_at, field="opinion generated_at"),
+    )
+    if durable != expected:
+        raise ValueError("DecisionOpinion columns drifted from payload")
+    return record
+
+
 class DecisionOpinionShadowReader:
     """Read and re-authenticate only independent shadow records and events."""
 
@@ -531,34 +562,46 @@ class DecisionOpinionShadowReader:
             )
             if row is None:
                 return None
-            payload = row["payload_json"]
-            if not isinstance(payload, bytes):
-                raise TypeError("DecisionOpinion payload storage type is invalid")
-            record = _decode_record(payload)
-            _validate_record(record)
-            durable = (
-                str(row["opinion_id"]),
-                str(row["shadow_outcome_id"]),
-                str(row["status"]),
-                str(row["v3_artifact_id"]),
-                str(row["v3_evidence_hash"]),
-                str(row["v3_readiness"]),
-                str(row["opinion_hash"]),
-                int(row["generated_at_us"]),
+            return _record_from_row(row)
+        except AgentPersistenceError:
+            raise
+        except (orjson.JSONDecodeError, TypeError, ValueError) as exc:
+            raise _integrity(
+                "DecisionOpinion shadow payload cannot be authenticated",
+                "decision_opinion_payload_invalid",
+            ) from exc
+        except sqlite3.Error as exc:
+            raise AgentPersistenceError(
+                "DecisionOpinion shadow read failed",
+                reason_code="decision_opinion_read_failed",
+            ) from exc
+
+    def get_latest_by_v3_artifact_id(
+        self, v3_artifact_id: str
+    ) -> DecisionOpinionRecord | None:
+        """Return the newest authenticated opinion for one exact V3 artifact."""
+        if not _is_canonical_text(v3_artifact_id):
+            raise ValueError("v3_artifact_id must be non-empty canonical text")
+        try:
+            row = (
+                self._database.get_connection()
+                .execute(
+                    """
+                SELECT opinion_id, shadow_outcome_id, status, v3_artifact_id,
+                       v3_evidence_hash, v3_readiness, opinion_hash,
+                       generated_at_us, payload_json
+                FROM shadow_decision_opinions
+                WHERE v3_artifact_id=?
+                ORDER BY generated_at_us DESC, opinion_id DESC
+                LIMIT 1
+                """,
+                    (v3_artifact_id,),
+                )
+                .fetchone()
             )
-            expected = (
-                record.opinion_id,
-                record.shadow_outcome_id,
-                record.status,
-                record.v3_artifact_id,
-                record.v3_evidence_hash,
-                record.v3_readiness,
-                record.opinion_hash,
-                epoch_us(record.generated_at, field="opinion generated_at"),
-            )
-            if durable != expected:
-                raise ValueError("DecisionOpinion columns drifted from payload")
-            return record
+            if row is None:
+                return None
+            return _record_from_row(row)
         except AgentPersistenceError:
             raise
         except (orjson.JSONDecodeError, TypeError, ValueError) as exc:

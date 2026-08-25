@@ -73,6 +73,7 @@ class CatalogRemediationApprovalDecisionCommand:
     """Operator decision for a pending remediation approval request."""
 
     approval_id: str
+    expected_authority_hash: str
     decision: CatalogRemediationApprovalDecision
     decided_by: str
     notes: str | None = None
@@ -83,6 +84,7 @@ class CatalogRemediationApprovalExecutionCommand:
     """Operator request to execute one approved remediation action."""
 
     approval_id: str
+    expected_authority_hash: str
     executed_by: str
     notes: str | None = None
 
@@ -230,6 +232,24 @@ class ExecuteCatalogRemediationApprovalHandler:
                 command="execute_catalog_remediation_approval",
                 approval_id=command.approval_id,
             )
+        if current.status == "completed":
+            app_approval = _verify_approval_authority_hash(
+                current,
+                expected_authority_hash=command.expected_authority_hash,
+                command="execute_catalog_remediation_approval",
+            )
+            return CatalogRemediationExecutionResult(
+                approval=app_approval,
+                execution=CatalogRemediationActionExecution(
+                    approval_id=current.approval_id,
+                    action=current.action,
+                    executed_by=command.executed_by,
+                    executed_at=self._now(),
+                    result_payload={"idempotent_replay": True},
+                    status="skipped",
+                    notes="remediation execution already completed",
+                ),
+            )
         if current.status != "approved":
             raise AppCommandError(
                 f"Remediation approval is not approved: {command.approval_id}",
@@ -237,6 +257,12 @@ class ExecuteCatalogRemediationApprovalHandler:
                 approval_id=command.approval_id,
                 status=current.status,
             )
+        app_approval = _verify_approval_authority(
+            current,
+            expected_authority_hash=command.expected_authority_hash,
+            now=self._now(),
+            command="execute_catalog_remediation_approval",
+        )
         executor = self._executor_registry.get(current.action)
         if executor is None:
             raise AppCommandError(
@@ -247,7 +273,6 @@ class ExecuteCatalogRemediationApprovalHandler:
             )
 
         executed_at = self._now()
-        app_approval = to_catalog_remediation_approval(current)
         try:
             execution = executor.execute(
                 app_approval,
@@ -529,6 +554,14 @@ class DecideCatalogRemediationApprovalHandler:
                 command="decide_catalog_remediation_approval",
                 approval_id=command.approval_id,
             )
+        if current.status == command.decision:
+            return CatalogRemediationApprovalResult(
+                approval=_verify_approval_authority_hash(
+                    current,
+                    expected_authority_hash=command.expected_authority_hash,
+                    command="decide_catalog_remediation_approval",
+                )
+            )
         if current.status != "requested":
             raise AppCommandError(
                 f"Remediation approval is not pending approval: {command.approval_id}",
@@ -538,6 +571,12 @@ class DecideCatalogRemediationApprovalHandler:
             )
 
         decided_at = self._now()
+        _verify_approval_authority(
+            current,
+            expected_authority_hash=command.expected_authority_hash,
+            now=decided_at,
+            command="decide_catalog_remediation_approval",
+        )
         approval = replace(
             current,
             status=command.decision,
@@ -566,6 +605,46 @@ def _utcnow() -> datetime:
 
 def _new_approval_id() -> str:
     return f"remediation-approval-{uuid4().hex}"
+
+
+def _verify_approval_authority(
+    approval: DataCatalogRemediationApproval,
+    *,
+    expected_authority_hash: str,
+    now: datetime,
+    command: str,
+) -> CatalogRemediationApproval:
+    app_approval = _verify_approval_authority_hash(
+        approval,
+        expected_authority_hash=expected_authority_hash,
+        command=command,
+    )
+    if now >= app_approval.expires_at:
+        raise AppCommandError(
+            f"Remediation approval has expired: {approval.approval_id}",
+            command=command,
+            approval_id=approval.approval_id,
+            expires_at=app_approval.expires_at.isoformat(),
+        )
+    return app_approval
+
+
+def _verify_approval_authority_hash(
+    approval: DataCatalogRemediationApproval,
+    *,
+    expected_authority_hash: str,
+    command: str,
+) -> CatalogRemediationApproval:
+    app_approval = to_catalog_remediation_approval(approval)
+    if expected_authority_hash != app_approval.authority_hash:
+        raise AppCommandError(
+            f"Remediation approval authority hash mismatch: {approval.approval_id}",
+            command=command,
+            approval_id=approval.approval_id,
+            expected_authority_hash=expected_authority_hash,
+            authority_hash=app_approval.authority_hash,
+        )
+    return app_approval
 
 
 def _ensure_source_coverage_repair_not_blocked(

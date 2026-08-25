@@ -10,6 +10,7 @@ pixi test 命令包装脚本
 - pixi run test --cov        # 带覆盖率报告
 - pixi run test --cov-xml    # 覆盖率 XML（CI 用）
 - pixi run test --snapshot   # 支持 inline-snapshot（串行）
+- pixi run -e dev pytest -m sandbox_live  # 物理容器安全验收（显式运行）
 """
 
 import subprocess
@@ -66,16 +67,21 @@ def build_pytest_command() -> list[str]:
         # 集成测试：串行（排除 snapshot）
         cmd.extend(["-m", "integration and not snapshot", "-n", "0"])
     elif has_fast:
-        # 快速测试：跳过 slow/integration/snapshot
+        # 快速测试：跳过 slow/integration/snapshot 和物理容器验收
         cmd.extend(
-            ["-m", "not slow and not integration and not snapshot", "--no-cov", "-q"]
+            [
+                "-m",
+                "not slow and not integration and not snapshot and not sandbox_live",
+                "--no-cov",
+                "-q",
+            ]
         )
     elif has_unit:
         # 单元测试：并行（排除 snapshot）
         cmd.extend(["-m", "unit and not snapshot", "-n", "auto"])
     else:
-        # 默认：并行运行非 snapshot 测试
-        cmd.extend(["-m", "not snapshot", "-n", "auto"])
+        # 默认：并行运行非 snapshot 测试，物理容器验收必须显式串行运行
+        cmd.extend(["-m", "not snapshot and not sandbox_live", "-n", "auto"])
 
     # 添加路径参数
     if paths:

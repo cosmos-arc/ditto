@@ -185,6 +185,10 @@ class CatalogSourceFallbackPolicyStateResponse(BaseModel):
     decided_by: str | None = Field(default=None, description="decision actor")
     decided_at: str | None = Field(default=None, description="decision time")
     decision_notes: str | None = Field(default=None, description="decision notes")
+    authority_payload: dict[str, object] = Field(
+        description="exact next lifecycle action and policy scope"
+    )
+    authority_hash: str = Field(description="canonical hash of authority_payload")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -192,6 +196,7 @@ class CatalogSourceFallbackPolicyStateResponse(BaseModel):
 class CatalogSourceFallbackPolicyLifecycleRequest(BaseModel):
     """Request a source fallback policy lifecycle transition."""
 
+    authority_hash: str = Field(description="exact next lifecycle action hash")
     actor: str = Field(description="operator/backend actor performing transition")
     notes: str | None = Field(default=None, description="transition notes")
 

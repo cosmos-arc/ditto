@@ -226,6 +226,21 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
             "root's responsibility — concrete imports are intentional."
         ),
     ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments.generated_code",
+                "ditto_analysis.experiments.models",
+            }
+        ),
+        owner="apps Approval A3 physical acceptance entrypoint",
+        reason=(
+            "The explicit operator-run A3 entrypoint constructs Analysis-owned "
+            "generated-code fixtures and binds them to the registry OCI adapter; "
+            "ordinary API, CLI, and job modules remain behind Application facades."
+        ),
+    ),
 )
 
 APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
@@ -265,6 +280,29 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             "resource-limit, manifest, and content-hash contracts to an "
             "Application-owned sandbox port; no ordinary Apps module may import these "
             "capability types."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/oci_sandbox_runner.py",
+        allowed_modules=frozenset({"ditto_analysis.experiments.models"}),
+        owner="apps generated-candidate OCI process runner",
+        reason=(
+            "The shell-free physical runner verifies Analysis-owned content hashes "
+            "at the final Docker invocation boundary next to the approved adapter."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/agent/r5_sandbox_live_report.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments.generated_code",
+                "ditto_analysis.experiments.models",
+            }
+        ),
+        owner="apps Approval A3 evidence verifier",
+        reason=(
+            "The registry verifier reconstructs Analysis-owned manifests and "
+            "content hashes to authenticate physical OCI acceptance evidence."
         ),
     ),
     CompositionImportAllowance(

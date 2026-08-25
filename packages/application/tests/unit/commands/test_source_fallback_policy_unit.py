@@ -24,6 +24,9 @@ from ditto_application.source_fallback_policy_state import (
 from ditto_application.source_fallback_policy_state import (
     CatalogSourceFallbackPolicyEvent as AppCatalogSourceFallbackPolicyEvent,
 )
+from ditto_application.source_fallback_policy_state import (
+    to_catalog_source_fallback_policy,
+)
 from ditto_data.catalog.fallback_policy import (
     CatalogSourceFallbackPolicy as DataCatalogSourceFallbackPolicy,
 )
@@ -182,6 +185,9 @@ class TestDraftCatalogSourceFallbackPolicyHandler:
                 notes="persist dry-run fallback decision",
             )
         ]
+        assert len(result.policy.authority_hash) == 64
+        assert result.policy.authority_payload["action"] == "approval"
+        assert result.policy.authority_payload["selected_source"] == "fred"
 
 
 class TestCatalogSourceFallbackPolicyLifecycleHandlers:
@@ -198,6 +204,9 @@ class TestCatalogSourceFallbackPolicyLifecycleHandlers:
         result = handler.handle(
             CatalogSourceFallbackPolicyLifecycleCommand(
                 policy_id="fallback-policy-001",
+                expected_authority_hash=to_catalog_source_fallback_policy(
+                    store.policies["fallback-policy-001"]
+                ).authority_hash,
                 actor="lead-reviewer",
                 notes="approved for controlled fallback activation",
             )
@@ -246,6 +255,9 @@ class TestCatalogSourceFallbackPolicyLifecycleHandlers:
         result = handler.handle(
             CatalogSourceFallbackPolicyLifecycleCommand(
                 policy_id="fallback-policy-001",
+                expected_authority_hash=to_catalog_source_fallback_policy(
+                    store.policies["fallback-policy-001"]
+                ).authority_hash,
                 actor="ops-runner",
                 notes="activate policy resource only",
             )
@@ -285,6 +297,9 @@ class TestCatalogSourceFallbackPolicyLifecycleHandlers:
         result = handler.handle(
             CatalogSourceFallbackPolicyLifecycleCommand(
                 policy_id="fallback-policy-001",
+                expected_authority_hash=to_catalog_source_fallback_policy(
+                    store.policies["fallback-policy-001"]
+                ).authority_hash,
                 actor="ops-runner",
                 notes="retire policy after review",
             )
@@ -323,7 +338,30 @@ class TestCatalogSourceFallbackPolicyLifecycleHandlers:
             handler.handle(
                 CatalogSourceFallbackPolicyLifecycleCommand(
                     policy_id="fallback-policy-001",
+                    expected_authority_hash=to_catalog_source_fallback_policy(
+                        store.policies["fallback-policy-001"]
+                    ).authority_hash,
                     actor="ops-runner",
+                )
+            )
+
+        assert store.policies == {"fallback-policy-001": _data_policy()}
+        assert store.events == []
+
+    def test_rejects_lifecycle_transition_for_a_different_exact_hash(self) -> None:
+        store = _PolicyStore({"fallback-policy-001": _data_policy()})
+        handler = ApproveCatalogSourceFallbackPolicyHandler(
+            policy_reader=store,
+            policy_writer=store,
+            now=lambda: datetime(2026, 6, 10, 9, 5, tzinfo=UTC),
+        )
+
+        with pytest.raises(AppCommandError, match="authority hash mismatch"):
+            handler.handle(
+                CatalogSourceFallbackPolicyLifecycleCommand(
+                    policy_id="fallback-policy-001",
+                    expected_authority_hash="0" * 64,
+                    actor="lead-reviewer",
                 )
             )
 

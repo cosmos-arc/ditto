@@ -8,8 +8,8 @@
   "case_count": 20,
   "minimum_case_count": 20,
   "report_identity": {
-    "report_hash": "4b7740374dc413dc1c22d5aeceffbee2c55b7556cc81d484939c3105e3184a3f",
-    "input_hash": "b0e08850da4941dbf07b034053e1f6c25b1f6a3bc3da537cc8788ac7edab6817",
+    "report_hash": "e659e0bb8dd1904e6387ba368fb864008267a083a5687f7c4528c2fed66893d0",
+    "input_hash": "3f30297ee5bf552746633693e28faa9cd251cbd457210f2d9679e401b4c81c70",
     "grader_manifest_hash": "2a4017276106c18654ed2bf4f9d902eefd6fbacd171998b5c17445df08802f74"
   },
   "metrics": {

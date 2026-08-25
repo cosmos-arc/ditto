@@ -9,6 +9,10 @@ from ditto_agent.tools.campaign import CampaignProposalTool
 from ditto_agent.tools.memory import ResearchMemoryTool
 from ditto_application.agent_campaign_contracts import AutonomousCampaignCommandPort
 from ditto_application.agent_campaign_runtime import CampaignRuntimePort
+from ditto_application.queries.decision_opinion import (
+    DecisionOpinionQueryPort,
+    UnavailableDecisionOpinionQuery,
+)
 from ditto_application.queries.research_memory import ResearchMemoryQueryFacade
 from ditto_application.research_memory_approval_contracts import (
     DisabledResearchMemoryApprovalVerifier,
@@ -53,6 +57,11 @@ class AgentRuntimeProvider(Provider):
     def campaign_runtime(self) -> CampaignRuntimePort:
         """Keep Campaign public mutations unavailable until explicitly enabled."""
         return DisabledCampaignRuntime()
+
+    @provide
+    def decision_opinion_query(self) -> DecisionOpinionQueryPort:
+        """Report explicit shadow unavailability until a store is composed."""
+        return UnavailableDecisionOpinionQuery()
 
     @provide
     def research_memory_approval_verifier(self) -> ResearchMemoryApprovalVerifier:

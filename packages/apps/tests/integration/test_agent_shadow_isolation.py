@@ -371,6 +371,7 @@ def test_shadow_store_has_independent_database_and_event_namespace(
         "shadow_decision_events_no_delete",
         "shadow_decision_events_no_update",
         "shadow_decision_opinions",
+        "shadow_decision_opinions_artifact_generated",
         "shadow_decision_opinions_no_delete",
         "shadow_decision_opinions_no_update",
         "shadow_outcome_feedback",

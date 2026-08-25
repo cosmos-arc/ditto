@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Protocol, cast
+from typing import Literal, Protocol, cast
 
 import orjson
 
@@ -154,6 +154,38 @@ class CampaignCreateCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class CampaignValidationCommand:
+    """Validate one structured Campaign wizard step without persistence."""
+
+    step: Literal["hypothesis", "experiment_plan", "governance", "manifest"]
+    document: Mapping[str, object]
+
+    def __post_init__(self) -> None:
+        """Deep-freeze the step document before validation."""
+        if self.step not in {
+            "hypothesis",
+            "experiment_plan",
+            "governance",
+            "manifest",
+        }:
+            raise ValueError("Campaign validation step is unsupported")
+        frozen = _freeze_json(self.document)
+        if not isinstance(frozen, Mapping):
+            raise ValueError("Campaign validation document must be an object")
+        object.__setattr__(self, "document", cast("Mapping[str, object]", frozen))
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignValidationView:
+    """Successful validation receipt with final canonical authority when complete."""
+
+    step: Literal["hypothesis", "experiment_plan", "governance", "manifest"]
+    canonical_manifest: Mapping[str, object] | None
+    manifest_hash: str | None
+    valid: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class CampaignApproveCommand:
     """Approve one exact persisted manifest until an explicit expiry."""
 
@@ -252,6 +284,37 @@ class CampaignBudgetView:
 
 
 @dataclass(frozen=True, slots=True)
+class CampaignToolRecordView:
+    """Redacted Campaign tool activity safe for presentation."""
+
+    call_id: str
+    tool_name: str
+    arguments_hash: str
+    result_hash: str
+    evidence_refs: tuple[str, ...]
+    artifact_refs: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignGuardrailView:
+    """Stable Campaign guardrail outcome without internal payloads."""
+
+    status: Literal["passed", "blocked", "unknown"]
+    reason_code: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignUsageView:
+    """Durable Campaign work counters and bounded spend visibility."""
+
+    statistical_trial_count: int
+    operational_attempt_count: int
+    no_improvement_generations: int
+    model_spend_usd_micros: int | None
+    exhausted_reason: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class CampaignView:
     """Non-sensitive Campaign projection reconstructed from persisted facts."""
 
@@ -270,6 +333,29 @@ class CampaignView:
     statistical_trial_count: int
     operational_attempt_count: int
     revision: int
+    canonical_manifest: Mapping[str, object]
+    objective: str | None = None
+    output_summary: str | None = None
+    tool_records: tuple[CampaignToolRecordView, ...] = ()
+    evidence_refs: tuple[str, ...] = ()
+    artifact_refs: tuple[str, ...] = ()
+    guardrail: CampaignGuardrailView | None = None
+    usage: CampaignUsageView | None = None
+    event_cursor: int = 0
+    projection_state: Literal["complete", "partial"] = "partial"
+    projection_reason: str | None = "campaign_result_projection_unavailable"
+    projection_version: int | None = None
+    projection_updated_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignListView:
+    """Stable newest-first Campaign page."""
+
+    items: tuple[CampaignView, ...]
+    total: int
+    limit: int
+    offset: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,12 +380,29 @@ class CampaignRuntimePort(Protocol):
         """Create or recover one immutable draft."""
         ...
 
+    def validate_campaign(
+        self,
+        command: CampaignValidationCommand,
+    ) -> CampaignValidationView:
+        """Validate a wizard step without creating durable state."""
+        ...
+
     def approve_campaign(self, command: CampaignApproveCommand) -> CampaignView:
         """Approve or exactly replay one manifest-bound finite authority."""
         ...
 
     def get_campaign(self, campaign_id: str) -> CampaignView:
         """Return one persisted Campaign projection."""
+        ...
+
+    def list_campaigns(
+        self,
+        *,
+        status: CampaignStatus | None,
+        limit: int,
+        offset: int,
+    ) -> CampaignListView:
+        """List durable Campaigns with an optional status filter."""
         ...
 
     def list_campaign_events(
@@ -322,7 +425,9 @@ __all__ = [
     "CampaignCancelCommand",
     "CampaignCreateCommand",
     "CampaignEventView",
+    "CampaignGuardrailView",
     "CampaignInvalidRequest",
+    "CampaignListView",
     "CampaignRequestConflict",
     "CampaignResourceNotFound",
     "CampaignRuntimeError",
@@ -330,5 +435,9 @@ __all__ = [
     "CampaignRuntimeUnavailable",
     "CampaignSandboxBudgetView",
     "CampaignStatus",
+    "CampaignToolRecordView",
+    "CampaignUsageView",
+    "CampaignValidationCommand",
+    "CampaignValidationView",
     "CampaignView",
 ]

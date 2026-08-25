@@ -63,6 +63,7 @@ def _view(
         statistical_trial_count=0,
         operational_attempt_count=0,
         revision=1 if authorized else 0,
+        canonical_manifest={"campaign_id": "campaign-cli"},
     )
 
 

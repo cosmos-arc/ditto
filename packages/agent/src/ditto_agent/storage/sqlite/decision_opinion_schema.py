@@ -1,4 +1,4 @@
-"""Authenticated SQLite v1 schema for the isolated DecisionOpinion store."""
+"""Authenticated SQLite schema for the isolated DecisionOpinion store."""
 
 from __future__ import annotations
 
@@ -10,21 +10,26 @@ from importlib.resources import files
 from ditto_agent.storage.sqlite.errors import AgentSchemaError
 
 APPLICATION_ID = 1_146_373_976
-USER_VERSION = 2
-DDL_SHA256 = "2a978e04405d0418d50e3cc88b301c1c3329281af282521b538ccfed22e6b33d"
-SCHEMA_FINGERPRINT = "8a018fb51b4fa5ec2ff0412e34b0dc2e53092f2317f58e928acee76227d20f1a"
-SCHEMA_ROW_COUNT = 13
+USER_VERSION = 3
+DDL_SHA256 = "ec0a130f5c283b53fb7313ebafaa8006cbdff24cb3342722f796eb285b265a4b"
+SCHEMA_FINGERPRINT = "310a76fa46b6df405e7a49bb706b2d9ef0314e576008b6c12dfa2c6dc7a97ad9"
+SCHEMA_ROW_COUNT = 14
 
 _DDL_SHA256_BY_VERSION = {
     1: "e5d393b3e9329cd9c991449dc7cad705ee03289308213026978872ea7b0feb64",
-    2: DDL_SHA256,
+    2: "2a978e04405d0418d50e3cc88b301c1c3329281af282521b538ccfed22e6b33d",
+    3: DDL_SHA256,
 }
 _SCHEMA_BY_VERSION = {
     1: (
         6,
         "cbe03af9d41a50577b203f7da79e4a4f4391096d8f7b015ea97a561b0ffe8603",
     ),
-    2: (SCHEMA_ROW_COUNT, SCHEMA_FINGERPRINT),
+    2: (
+        13,
+        "8a018fb51b4fa5ec2ff0412e34b0dc2e53092f2317f58e928acee76227d20f1a",
+    ),
+    3: (SCHEMA_ROW_COUNT, SCHEMA_FINGERPRINT),
 }
 
 _MARKER_COUNT = 2

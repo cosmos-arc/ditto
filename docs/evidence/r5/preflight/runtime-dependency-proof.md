@@ -1,16 +1,17 @@
 # R5 Runtime 与依赖技术证据
 
-**核对日期：** 2026-08-16
+**核对日期：** 2026-08-17
 **代码基线：** `b5dbb921`
-**性质：** preflight 与 Task 4 Pixi lock 证据；没有拉取镜像、创建 OpenAI project 或发起模型请求
+**性质：** Task 4 Pixi lock、A3 OrbStack 物理 sandbox、A4 Coding Plan 在线验收与生产 credential 边界证据；未创建 OpenAI project
 
 ## 结论
 
 - 建议生产依赖范围为 `openai-agents>=0.20.0,<0.21`，由 Pixi lock 固定实际 wheel；本轮核对的候选 wheel 是 `openai-agents==0.20.0`。0.21.0 已被实际 Pixi solver 证据排除。
 - adapter 能用当前 Python API 实现 typed run/stream/resume、function-tool approval 和本地 continuation state；普通测试必须使用 scripted fake 或注入的 runner/model stub，不访问网络。
 - 每个 Responses 调用必须显式设置 `ModelSettings(store=False)`；SDK hosted tracing 禁用，Ditto 在 model/tool 边界写既有 OpenTelemetry spans。
-- 当前官方 profile 映射仍可用：balanced=`gpt-5.6-terra`/medium，quality=`gpt-5.6-sol`/high。真实调用仍被 Approval A4、专用 project、MAM/ZDR、egress/license 和预算 gate 阻塞。
-- macOS 主机只具备 Docker CLI，当前 context 是 `orbstack` 且 daemon/socket 不存在；没有 `runsc`。因此这里只能冻结 OCI contract，不能形成 live sandbox acceptance。
+- OpenAI adapter 与 GPT profile 仍保留为显式可选路径，不被 GLM 配置覆盖；使用时必须提供相应 OpenAI credential/scope 并重跑 provider-specific eval。本轮实际在线验收固定 GLM `glm-5.3`：balanced=`high`、quality=`max`。
+- A3 已在 OrbStack 2.2.1 的 `orbstack` context 上完成物理 acceptance：固定 arm64 image/SBOM/lock/seccomp，通过 11 类攻击、fresh-container、并发和 `fit→score`。Kubernetes 未使用；`runsc` 不可用，因此结论不外推为 gVisor 或 Linux rootless acceptance。
+- GLM endpoint 已按 credential kind 硬分流：Coding Plan 在线验收使用 `/api/v1` Responses；生产 GLM 使用 `/api/paas/v4` Chat Completions。Coding Plan balanced/quality 各 120-case 已通过并关闭 R5 在线验收；标准 API 尚未调用，生产启用前必须替换 key 并复核 provider 数据控制与实际 model identity。
 
 ## 上游事实源
 
@@ -118,23 +119,23 @@ R5 不使用 SDK 的 OpenAI-hosted trace 作为审计事实源。`ditto_agent` �
 
 | 环境/能力 | 所需安全语义 | 本机观察 | Gate |
 |---|---|---|---|
-| macOS Docker Desktop VM | Linux VM 隔离；仅显式 bind mount 可见 host；无 Docker socket/repo/secret mount | 主机是 Darwin 25.5.0 arm64；CLI 29.4.0，但当前 context=`orbstack`，不是已验证 Docker Desktop profile | 未通过 |
-| daemon/runtime inventory | 可读取 SecurityOptions/Runtimes/DefaultRuntime | socket `/Users/chevy/.orbstack/run/docker.sock` 不存在，`docker info`/server version 无法连接 | 未通过 |
+| macOS OrbStack VM | Linux VM 隔离；不挂载 host/repo/secret/Docker socket | OrbStack 2.2.1；Docker server 29.4.0；aarch64；kernel `7.0.14-orbstack-00380-ga7e0a2dc9535` | A3 已通过 |
+| daemon/runtime inventory | 每次运行前核对 context、server、OS、arch、kernel、cgroup、security options、runtimes | context=`orbstack`；cgroupfs；seccomp/cgroupns；runc 1.5.1；profile 漂移即拒绝 | A3 已通过 |
 | Docker rootless | daemon/containers 在 user namespace 中以 non-root 运行 | macOS 本机不构成 Linux rootless acceptance；需单独 Linux runner | 未验证 |
 | Docker Desktop ECI | user namespace/Sysbox 强隔离；Business-only；启用时 runtime 选择语义不同 | 无 Desktop/ECI 状态证据 | 未验证，不可宣称 |
-| gVisor `runsc` | 截获 guest syscall、减少 host kernel surface；仍需外部 network/resource policy | `runsc` 不在 PATH，daemon runtimes 不可读 | 未验证 |
-| network | `--network none`，无代理/host gateway；DNS/connect 测试失败 | 无 daemon，不能运行攻击测试 | 待 Task 25 |
-| filesystem/process | non-root、read-only rootfs、tmpfs、cap-drop ALL、no-new-privileges、seccomp、PID/CPU/memory/disk/wall limits | 无 daemon，不能验证 flags/escape probes | 待 Task 25 |
-| image provenance | immutable digest、SBOM、批准依赖，无动态下载 | image/digest/SBOM 尚未选定 | Approval A3 阻塞 |
+| gVisor `runsc` | 截获 guest syscall、减少 host kernel surface；仍需外部 network/resource policy | `runsc` 不在 PATH，也不在批准 runtimes 中 | 不在本次 A3 scope |
+| network | `--network none`，无代理/host gateway；socket/connect 均被阻断 | physical network/socket probes PASS；自定义 seccomp 不允许 socket syscalls | A3 已通过 |
+| filesystem/process | non-root、read-only rootfs、tmpfs、cap-drop ALL、no-new-privileges、seccomp、PID/CPU/memory/disk/wall/output limits | root/host mount/secret/rootfs/fork/OOM/timeout/oversize probes 全部符合预期；uid/gid 65532 | A3 已通过 |
+| image provenance | immutable digest、SBOM、批准依赖，无动态下载 | image digest `1dfc536c…`；SBOM `13383b2b…`；lock `3baecd03…`；seccomp `82bce6de…` | A3 已通过 |
 
-macOS 与 Linux 不共享一份“已验证”结论：macOS acceptance 必须证明 VM profile 和无 host mount/socket；Linux acceptance 必须证明 rootless daemon，并优先验证 gVisor runtime。gVisor 减少内核攻击面，但不替代 `--network none`、resource limits、read-only filesystem、serialization/schema limits 或 fresh-container isolation。
+macOS 与 Linux 不共享一份“已验证”结论：本次证据仅覆盖上述 OrbStack VM profile。若以后引入 Linux runner，必须重新证明 rootless daemon，并优先验证 gVisor；Kubernetes 对单用户本地部署没有必要。gVisor 即使可用也不替代 `--network none`、resource limits、read-only filesystem、serialization/schema limits 或 fresh-container isolation。
 
 ## 后续批准与恢复入口
 
 | Gate | 精确对象 | 当前状态 |
 |---|---|---|
 | A1 | `openai-agents>=0.20.0,<0.21` 与 solver/lock transitive diff | GRANTED rev2；0.21.0 的 unsatisfiable 证据已记录，0.20.0 三平台 lock 已通过 |
-| A3 | 指定 OCI runtime/profile、image digest、SBOM 和攻击测试矩阵 | 阻塞：本机无可用 daemon/runtime/image evidence |
-| A4 | 专用 project、MAM/ZDR、API key source、model snapshot、egress/license dataset、token/spend budget | 阻塞：不进行 live 调用 |
+| A3 | 指定 OCI runtime/profile、image digest、SBOM 和攻击测试矩阵 | GRANTED/PASSED：OrbStack 2.2.1 arm64；11/11 attacks + fresh/concurrency/fit-score |
+| A4 | Coding Plan credential、冻结合成 dataset、provider controls、license/egress、model revision、每 profile token cap | R5 ONLINE ACCEPTED：balanced/quality 各 120/120 PASS；不授权生产 credential |
 
-下一恢复入口是 Task 5 的纯合同、canonical codec 与状态机；Fake provider、contracts 和不依赖 live OCI 的 deterministic 工作可以在相应审批范围内继续。
+R5 实施计划已无未完成 Gate。生产 cutover 时替换为 GLM 标准 API credential，复核 provider 数据控制、license/egress、实际 model identity 与部署配置；任何 provider/model/profile/prompt/tool/dataset 变化都重跑相关 eval。A3 profile 任一漂移也必须重新验收。

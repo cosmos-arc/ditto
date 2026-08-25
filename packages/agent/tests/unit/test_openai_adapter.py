@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import replace
 
 import pytest
 from agents.tool_context import ToolContext
@@ -139,6 +140,35 @@ async def test_openai_adapter_forces_private_responses_and_local_tracing() -> No
     assert invocation.model_id == "gpt-5.6-terra-2026-08-01"
     assert invocation.request.tools[0].kind is ModelToolKind.FUNCTION
     assert "test-key" not in repr(invocation)
+
+
+@pytest.mark.asyncio
+async def test_openai_adapter_requires_a_tool_when_the_host_contract_says_so() -> None:
+    engine = RecordingEngine()
+    provider = OpenAIAgentsModel(
+        model_id="gpt-5.6-terra-2026-08-01",
+        api_key="test-key",
+        project_id="project-r5",
+        engine=engine,
+    )
+
+    tool_name = _request().tools[0].name
+    await provider.run(replace(_request(), required_tool_name=tool_name))
+
+    _agent, run_config, _sdk_provider = AgentsSDKEngine()._sdk_inputs(
+        engine.invocations[0]
+    )
+    assert run_config.model_settings is not None
+    assert run_config.model_settings.tool_choice == tool_name
+
+
+def test_openai_adapter_requires_project_identity() -> None:
+    with pytest.raises(ValueError, match="project_id"):
+        OpenAIAgentsModel(
+            model_id="gpt-5.6-terra-2026-08-01",
+            api_key="test-key",
+            project_id=None,
+        )
 
 
 @pytest.mark.parametrize(

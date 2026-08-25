@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 from types import MappingProxyType
 from typing import cast
 
@@ -15,7 +17,9 @@ from ditto_agent.contracts._validation import (
     normalized_text,
     sha256_hex,
 )
+from ditto_agent.evals._statistics import nearest_decimal, nearest_rank
 from ditto_agent.evals.cases import EvalCase, EvalObservation
+from ditto_agent.evals.manifest import release_dataset_manifest
 from ditto_agent.evals.report import EvalReport
 
 RELEASE_SUITE_COUNTS: Mapping[str, int] = MappingProxyType(
@@ -31,6 +35,7 @@ RELEASE_SUITE_COUNTS: Mapping[str, int] = MappingProxyType(
 _READ_SUITES = ("grounded",)
 _COMPLEX_SUITES = ("author", "permission", "sandbox", "shadow")
 _RELEASE_CASE_COUNT = sum(RELEASE_SUITE_COUNTS.values())
+_RELEASE_SCHEMA_VERSION = 2
 _SCHEMA_BY_SUITE = MappingProxyType(
     {
         "author": 3,
@@ -43,23 +48,198 @@ _SCHEMA_BY_SUITE = MappingProxyType(
 )
 
 
-def _nearest_rank(values: tuple[int, ...], percentile: int) -> int:
-    if not values:
-        return 0
-    ordered = tuple(sorted(values))
-    rank = (percentile * len(ordered) + 99) // 100
-    return ordered[rank - 1]
+class EvalCostBasis(StrEnum):
+    """Authority used to derive per-case model spend."""
+
+    FIXTURE = "fixture"
+    MEASURED = "token_usage"
+    USAGE_CAP = "usage_cap"
 
 
-def _nearest_decimal(
-    values: tuple[Decimal, ...],
-    percentile: int,
-) -> Decimal:
-    if not values:
-        return Decimal(0)
-    ordered = tuple(sorted(values))
-    rank = (percentile * len(ordered) + 99) // 100
-    return ordered[rank - 1]
+@dataclass(frozen=True, slots=True)
+class ReleaseEvalRunIdentity:
+    """Immutable model, prompt/tool, approval, pricing, and budget identity."""
+
+    provider_id: str
+    profile: str
+    model_id: str
+    model_snapshot: str
+    reasoning_effort: str
+    prompt_tool_manifest_hash: str
+    a4_scope_hash: str
+    pricing_manifest_hash: str
+    pricing_as_of: str
+    input_price_per_million_usd: Decimal
+    output_price_per_million_usd: Decimal
+    max_total_spend_usd: Decimal
+    max_total_tokens: int
+    cost_basis: EvalCostBasis
+    identity_hash: str = field(init=False)
+
+    def _validate_token_budget(self) -> None:
+        value = cast(object, self.max_total_tokens)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError("max_total_tokens must be a non-negative integer")
+        if self.cost_basis is EvalCostBasis.USAGE_CAP:
+            if self.max_total_tokens == 0:
+                raise ValueError("usage cap requires a positive max_total_tokens")
+        elif self.max_total_tokens != 0:
+            raise ValueError("max_total_tokens is only valid for a usage cap")
+
+    def __post_init__(self) -> None:
+        """Normalize every release-sensitive field and derive its identity."""
+        for name in (
+            "provider_id",
+            "profile",
+            "model_id",
+            "model_snapshot",
+            "reasoning_effort",
+        ):
+            object.__setattr__(
+                self,
+                name,
+                normalized_text(getattr(self, name), field=f"eval run {name}"),
+            )
+        for name in (
+            "prompt_tool_manifest_hash",
+            "a4_scope_hash",
+            "pricing_manifest_hash",
+        ):
+            object.__setattr__(
+                self,
+                name,
+                sha256_hex(getattr(self, name), field=f"eval run {name}"),
+            )
+        try:
+            parsed_pricing_date = date.fromisoformat(self.pricing_as_of)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("pricing_as_of must be an ISO calendar date") from exc
+        if parsed_pricing_date.isoformat() != self.pricing_as_of:
+            raise ValueError("pricing_as_of must be a canonical ISO calendar date")
+        if not isinstance(cast(object, self.cost_basis), EvalCostBasis):
+            raise TypeError("cost_basis must be an EvalCostBasis")
+        for name in (
+            "input_price_per_million_usd",
+            "output_price_per_million_usd",
+            "max_total_spend_usd",
+        ):
+            value = getattr(self, name)
+            if not isinstance(value, Decimal):
+                raise TypeError(f"{name} must be Decimal")
+            nonnegative_decimal(value, field=name)
+        if (
+            self.cost_basis is EvalCostBasis.MEASURED
+            and self.input_price_per_million_usd == 0
+            and self.output_price_per_million_usd == 0
+        ):
+            raise ValueError("token-usage pricing requires a non-zero token price")
+        self._validate_token_budget()
+        object.__setattr__(
+            self, "identity_hash", canonical_sha256(self.identity_payload())
+        )
+
+    @classmethod
+    def fixture(
+        cls,
+        *,
+        provider_id: str,
+        profile: str,
+        max_total_spend_usd: Decimal = Decimal("1"),
+    ) -> ReleaseEvalRunIdentity:
+        """Create an explicit non-live identity for authenticated fixture costs."""
+        return cls(
+            provider_id=provider_id,
+            profile=profile,
+            model_id="fixture-observation",
+            model_snapshot="fixture-observation-v1",
+            reasoning_effort="none",
+            prompt_tool_manifest_hash=canonical_sha256(
+                {"kind": "fixture", "version": 1, "surface": "release-eval"}
+            ),
+            a4_scope_hash=canonical_sha256(
+                {"approval": "not-applicable", "network_egress": False}
+            ),
+            pricing_manifest_hash=canonical_sha256(
+                {"cost_basis": EvalCostBasis.FIXTURE, "version": 1}
+            ),
+            pricing_as_of="1970-01-01",
+            input_price_per_million_usd=Decimal(0),
+            output_price_per_million_usd=Decimal(0),
+            max_total_spend_usd=max_total_spend_usd,
+            max_total_tokens=0,
+            cost_basis=EvalCostBasis.FIXTURE,
+        )
+
+    def model_spend_usd(self, *, input_tokens: int, output_tokens: int) -> Decimal:
+        """Return conservative uncached-input token spend under frozen prices."""
+        for name, value in (
+            ("input_tokens", input_tokens),
+            ("output_tokens", output_tokens),
+        ):
+            raw_value = cast(object, value)
+            if (
+                isinstance(raw_value, bool)
+                or not isinstance(raw_value, int)
+                or raw_value < 0
+            ):
+                raise ValueError(f"{name} must be a non-negative integer")
+        return (
+            Decimal(input_tokens) * self.input_price_per_million_usd
+            + Decimal(output_tokens) * self.output_price_per_million_usd
+        ) / Decimal(1_000_000)
+
+    def validate_observations(
+        self,
+        observations: tuple[EvalObservation, ...],
+    ) -> None:
+        """Reject unauthenticated live usage, price drift, or token-cap overrun."""
+        if self.cost_basis is EvalCostBasis.FIXTURE:
+            return
+        total_tokens = 0
+        for observation in observations:
+            model_tokens = (
+                observation.model_input_tokens + observation.model_output_tokens
+            )
+            if observation.model_requests <= 0 or model_tokens <= 0:
+                raise ValueError("live release observation lacks model usage")
+            if observation.model_output_hash is None:
+                raise ValueError("live release observation lacks model output hash")
+            total_tokens += model_tokens
+            if self.cost_basis is EvalCostBasis.MEASURED and (
+                observation.model_spend_usd
+                != self.model_spend_usd(
+                    input_tokens=observation.model_input_tokens,
+                    output_tokens=observation.model_output_tokens,
+                )
+            ):
+                raise ValueError("release observation cost differs from frozen pricing")
+        if self.cost_basis is EvalCostBasis.USAGE_CAP and (
+            total_tokens > self.max_total_tokens
+        ):
+            raise ValueError("release eval exceeds authenticated token cap")
+
+    def identity_payload(self) -> dict[str, object]:
+        """Return every field that invalidates inherited release evidence."""
+        return {
+            "provider_id": self.provider_id,
+            "profile": self.profile,
+            "model_id": self.model_id,
+            "model_snapshot": self.model_snapshot,
+            "reasoning_effort": self.reasoning_effort,
+            "prompt_tool_manifest_hash": self.prompt_tool_manifest_hash,
+            "a4_scope_hash": self.a4_scope_hash,
+            "pricing_manifest_hash": self.pricing_manifest_hash,
+            "pricing_as_of": self.pricing_as_of,
+            "input_price_per_million_usd": self.input_price_per_million_usd,
+            "output_price_per_million_usd": self.output_price_per_million_usd,
+            "max_total_spend_usd": self.max_total_spend_usd,
+            "max_total_tokens": self.max_total_tokens,
+            "cost_basis": self.cost_basis,
+        }
+
+    def verify_identity_hash(self) -> bool:
+        """Recompute the complete run identity."""
+        return self.identity_hash == canonical_sha256(self.identity_payload())
 
 
 def _validated_reports(
@@ -178,20 +358,18 @@ def _validated_performance(
     return ordered
 
 
-def _manifest_text_tuple(value: object, *, field_name: str) -> tuple[str, ...]:
+def _text_tuple(value: object, *, field: str) -> tuple[str, ...]:
     if not isinstance(value, tuple):
-        raise ValueError(f"release eval {field_name} must be a tuple")
+        raise ValueError(f"release eval {field} must be a tuple")
     raw_values = cast(tuple[object, ...], value)
-    return tuple(
-        normalized_text(cast(str, item), field=field_name) for item in raw_values
-    )
+    return tuple(normalized_text(cast(str, item), field=field) for item in raw_values)
 
 
 def _observation_from_payload(payload: object) -> EvalObservation:
     if not isinstance(payload, Mapping):
         raise ValueError("release eval observation payload is invalid")
     values = cast(Mapping[str, object], payload)
-    if set(values) != {
+    expected = {
         "attempted_actions",
         "allowed_actions",
         "evidence_refs",
@@ -199,27 +377,31 @@ def _observation_from_payload(payload: object) -> EvalObservation:
         "rule_assertions",
         "latency_ms",
         "model_spend_usd",
-    }:
+        "model_requests",
+        "model_input_tokens",
+        "model_output_tokens",
+    }
+    if set(values) not in (expected, expected | {"model_output_hash"}):
         raise ValueError("release eval observation payload fields are invalid")
     assertions = values["rule_assertions"]
     if not isinstance(assertions, Mapping):
         raise ValueError("release eval observation rule assertions are invalid")
     return EvalObservation(
-        attempted_actions=_manifest_text_tuple(
-            values["attempted_actions"], field_name="attempted action"
+        attempted_actions=_text_tuple(
+            values["attempted_actions"], field="attempted action"
         ),
-        allowed_actions=_manifest_text_tuple(
-            values["allowed_actions"], field_name="allowed action"
-        ),
-        evidence_refs=_manifest_text_tuple(
-            values["evidence_refs"], field_name="evidence ref"
-        ),
-        replay_identities=_manifest_text_tuple(
-            values["replay_identities"], field_name="replay identity"
+        allowed_actions=_text_tuple(values["allowed_actions"], field="allowed action"),
+        evidence_refs=_text_tuple(values["evidence_refs"], field="evidence ref"),
+        replay_identities=_text_tuple(
+            values["replay_identities"], field="replay identity"
         ),
         rule_assertions=cast(Mapping[str, bool], assertions),
         latency_ms=cast(int, values["latency_ms"]),
         model_spend_usd=cast(Decimal, values["model_spend_usd"]),
+        model_requests=cast(int, values["model_requests"]),
+        model_input_tokens=cast(int, values["model_input_tokens"]),
+        model_output_tokens=cast(int, values["model_output_tokens"]),
+        model_output_hash=cast(str | None, values.get("model_output_hash")),
     )
 
 
@@ -375,10 +557,10 @@ class EvalCohortPerformance:
             cohort=cohort,
             suites=suites,
             case_count=len(observations),
-            latency_p50_ms=_nearest_rank(latencies, 50),
-            latency_p95_ms=_nearest_rank(latencies, 95),
-            spend_p50_usd=_nearest_decimal(spends, 50),
-            spend_p95_usd=_nearest_decimal(spends, 95),
+            latency_p50_ms=nearest_rank(latencies, 50),
+            latency_p95_ms=nearest_rank(latencies, 95),
+            spend_p50_usd=nearest_decimal(spends, 50),
+            spend_p95_usd=nearest_decimal(spends, 95),
             max_spend_usd=max(spends, default=Decimal(0)),
             latency_limit_ms=latency_limit_ms,
             spend_limit_usd=spend_limit_usd,
@@ -405,37 +587,31 @@ class EvalCohortPerformance:
 class ReleaseEvalReport:
     """Frozen 120-case dataset/grader identity and all release hard gates."""
 
-    provider_id: str
-    profile: str
+    run_identity: ReleaseEvalRunIdentity
     seed: int
     dataset_manifest: tuple[Mapping[str, object], ...]
     observation_manifest: tuple[Mapping[str, object], ...]
     grader_manifest_hash: str
     suite_reports: tuple[EvalReport, ...]
     performance: tuple[EvalCohortPerformance, ...]
-    schema_version: int = 1
+    schema_version: int = _RELEASE_SCHEMA_VERSION
     suite: str = field(init=False, default="all")
     case_count: int = field(init=False)
     suite_case_counts: Mapping[str, int] = field(init=False)
     dataset_manifest_hash: str = field(init=False)
     observation_manifest_hash: str = field(init=False)
+    total_model_spend_usd: Decimal = field(init=False)
     passed: bool = field(init=False)
     report_hash: str = field(init=False)
 
     def __post_init__(self) -> None:
         """Require the closed suite set and authenticate every aggregate field."""
-        if self.schema_version != 1:
+        if self.schema_version != _RELEASE_SCHEMA_VERSION:
             raise ValueError("release eval schema_version is not supported")
-        object.__setattr__(
-            self,
-            "provider_id",
-            normalized_text(self.provider_id, field="provider_id"),
-        )
-        object.__setattr__(
-            self,
-            "profile",
-            normalized_text(self.profile, field="eval profile"),
-        )
+        if not isinstance(
+            cast(object, self.run_identity), ReleaseEvalRunIdentity
+        ) or not (self.run_identity.verify_identity_hash()):
+            raise ValueError("release eval run identity is invalid")
         if isinstance(self.seed, bool) or self.seed < 0:
             raise ValueError("release eval seed must be non-negative")
         supplied_grader_hash = sha256_hex(
@@ -465,38 +641,40 @@ class ReleaseEvalReport:
             reports=reports_by_suite,
         )
         object.__setattr__(self, "dataset_manifest", manifest)
-        object.__setattr__(
-            self,
-            "dataset_manifest_hash",
-            canonical_sha256(manifest),
-        )
+        object.__setattr__(self, "dataset_manifest_hash", canonical_sha256(manifest))
         observation_manifest, observations = _validated_observation_manifest(
             self.observation_manifest,
             reports=reports_by_suite,
         )
         object.__setattr__(self, "observation_manifest", observation_manifest)
         object.__setattr__(
-            self,
-            "observation_manifest_hash",
-            canonical_sha256(observation_manifest),
+            self, "observation_manifest_hash", canonical_sha256(observation_manifest)
         )
         performance = _validated_performance(
             self.performance,
             observations=observations,
         )
         object.__setattr__(self, "performance", performance)
+        all_observations = tuple(
+            item for suite in sorted(observations) for item in observations[suite]
+        )
+        self.run_identity.validate_observations(all_observations)
+        total_spend = sum(
+            (item.model_spend_usd for item in all_observations),
+            start=Decimal(0),
+        )
+        object.__setattr__(self, "total_model_spend_usd", total_spend)
         object.__setattr__(
             self,
             "passed",
             dict(counts) == dict(RELEASE_SUITE_COUNTS)
             and self.case_count == _RELEASE_CASE_COUNT
             and all(item.passed for item in reports)
-            and all(item.passed for item in performance),
+            and all(item.passed for item in performance)
+            and total_spend <= self.run_identity.max_total_spend_usd,
         )
         object.__setattr__(
-            self,
-            "report_hash",
-            canonical_sha256(self.identity_payload()),
+            self, "report_hash", canonical_sha256(self.identity_payload())
         )
 
     @property
@@ -508,6 +686,16 @@ class ReleaseEvalReport:
             "policy": "campaign_authorization_budget",
         }
 
+    @property
+    def provider_id(self) -> str:
+        """Return the provider identity frozen by the run manifest."""
+        return self.run_identity.provider_id
+
+    @property
+    def profile(self) -> str:
+        """Return the model profile frozen by the run manifest."""
+        return self.run_identity.profile
+
     def identity_payload(self) -> dict[str, object]:
         """Return the complete authenticated release report."""
         return {
@@ -515,6 +703,10 @@ class ReleaseEvalReport:
             "suite": self.suite,
             "provider_id": self.provider_id,
             "profile": self.profile,
+            "run_identity": {
+                **self.run_identity.identity_payload(),
+                "identity_hash": self.run_identity.identity_hash,
+            },
             "seed": self.seed,
             "dataset_manifest": self.dataset_manifest,
             "dataset_manifest_hash": self.dataset_manifest_hash,
@@ -528,6 +720,7 @@ class ReleaseEvalReport:
                 for item in self.suite_reports
             ),
             "performance": tuple(item.identity_payload() for item in self.performance),
+            "total_model_spend_usd": self.total_model_spend_usd,
             "campaign_budget": self.campaign_budget,
             "passed": self.passed,
         }
@@ -547,8 +740,7 @@ class ReleaseEvalReport:
 
 def build_release_eval_report(
     *,
-    provider_id: str,
-    profile: str,
+    run_identity: ReleaseEvalRunIdentity,
     seed: int,
     reports: Mapping[str, EvalReport],
     cases: Mapping[str, tuple[EvalCase, ...]],
@@ -565,21 +757,7 @@ def build_release_eval_report(
     for suite in suite_ids:
         if len(cases[suite]) != len(observations[suite]):
             raise ValueError("release eval case and observation counts differ")
-    dataset_manifest = tuple(
-        {
-            "suite": suite,
-            "cases": tuple(
-                {
-                    "case_id": case.case_id,
-                    "schema_version": case.schema_version,
-                    "input_hash": case.input_hash,
-                    "case_hash": case.case_hash,
-                }
-                for case in sorted(cases[suite], key=lambda item: item.case_id)
-            ),
-        }
-        for suite in sorted(suite_ids)
-    )
+    dataset_manifest = release_dataset_manifest(cases)
     grader_manifest = tuple(
         (suite, reports[suite].grader_manifest_hash) for suite in sorted(suite_ids)
     )
@@ -598,8 +776,7 @@ def build_release_eval_report(
         )
     )
     return ReleaseEvalReport(
-        provider_id=provider_id,
-        profile=profile,
+        run_identity=run_identity,
         seed=seed,
         dataset_manifest=dataset_manifest,
         observation_manifest=observation_manifest,
@@ -612,6 +789,8 @@ def build_release_eval_report(
 __all__ = [
     "RELEASE_SUITE_COUNTS",
     "EvalCohortPerformance",
+    "EvalCostBasis",
     "ReleaseEvalReport",
+    "ReleaseEvalRunIdentity",
     "build_release_eval_report",
 ]

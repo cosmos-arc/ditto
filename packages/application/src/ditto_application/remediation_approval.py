@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from ditto_data.catalog.remediation import (
@@ -12,6 +12,8 @@ from ditto_data.catalog.remediation import (
 from ditto_data.catalog.remediation import (
     CatalogRemediationApprovalEvent as DataCatalogRemediationApprovalEvent,
 )
+
+from ditto_application.mutation_idempotency import canonical_request_hash
 
 __all__ = [
     "CatalogRemediationActionExecution",
@@ -75,6 +77,25 @@ class CatalogRemediationApproval:
     decided_by: str | None = None
     decided_at: datetime | None = None
     decision_notes: str | None = None
+
+    @property
+    def authority_hash(self) -> str:
+        """Bind the exact immutable remediation action presented to an operator."""
+        return canonical_request_hash(
+            {
+                "item_id": self.item_id,
+                "action": self.action,
+                "intent_type": self.intent_type,
+                "method": self.method,
+                "path": self.path,
+                "request_payload": self.request_payload,
+            }
+        )
+
+    @property
+    def expires_at(self) -> datetime:
+        """Return the deterministic approval deadline without schema migration."""
+        return self.requested_at + timedelta(minutes=30)
 
 
 @dataclass(frozen=True, slots=True)

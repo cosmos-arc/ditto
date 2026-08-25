@@ -225,6 +225,49 @@ async def test_default_http_runtime_returns_structured_unavailable() -> None:
         await container.close()
 
 
+@pytest.mark.asyncio
+async def test_run_create_accepts_lossless_decimal_json_from_public_http_client(
+    tmp_path: Path,
+) -> None:
+    runtime, bundle = _runtime(tmp_path)
+    app, container = _http_app(runtime)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            session_response = await client.post(
+                "/api/v1/agent/sessions",
+                headers={"Idempotency-Key": "http-session-create"},
+                json={"retention_class": "audit"},
+            )
+            session_id = session_response.json()["data"]["session_id"]
+            run_response = await client.post(
+                "/api/v1/agent/runs",
+                headers={"Idempotency-Key": "http-run-create"},
+                json={
+                    "session_id": session_id,
+                    "objective": "Verify the public JSON request contract.",
+                    "authority_hash": _HASH,
+                    "max_model_tokens": 4096,
+                    "max_model_spend_usd": "3.00",
+                    "model_profile": "balanced",
+                    "context": None,
+                },
+            )
+
+        assert session_response.status_code == 201
+        assert run_response.status_code == 201
+        assert Decimal(run_response.json()["data"]["max_model_spend_usd"]) == Decimal(
+            "3.00"
+        )
+        assert runtime.get_run(
+            run_response.json()["data"]["run_id"]
+        ).max_model_spend_usd == Decimal("3.00")
+    finally:
+        await container.close()
+        bundle.close()
+
+
 def test_same_idempotency_key_replays_exact_result_and_conflicts_on_body_drift(
     tmp_path: Path,
 ) -> None:

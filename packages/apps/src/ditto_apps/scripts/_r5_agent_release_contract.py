@@ -9,22 +9,43 @@ EXPECTED_COUNTS = {
     "shadow": 10,
 }
 EXPECTED_CASE_COUNT = sum(EXPECTED_COUNTS.values())
+FAKE_REPORT_SCHEMA_VERSION = 2
 FAKE_PROVIDER_ID = "fake-eval-provider-v1"
+GLM_RELEASE_PROVIDER_ID = "glm-coding-plan-responses-v1"
+FROZEN_GLM_A4_SCOPE_HASH = (
+    "0a3244486e365a275f3e99d6a5bbcef84d567b947c2b01db810b1709377cb219"
+)
+FROZEN_GLM_PROMPT_TOOL_MANIFEST_HASH = (
+    "6f0829b47d9ed24e54c4f0427f1829613327b220f8e95fb4e35e6c48e64d6c93"
+)
 FAKE_SEED = 20260816
 FROZEN_FAKE_IDENTITIES = {
     "dataset_manifest_hash": (
-        "87016e42f2ef612d773fe8aefdb07be0a17238e070c1e462072fc5f8b18150c0"
+        "6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114"
     ),
     "grader_manifest_hash": (
         "ce6856a7d764bfbe7b6bf344efe653382bddf2901d19473eba955c9ff544d37d"
     ),
     "observation_manifest_hash": (
-        "95521832580a63f21f6412041603a382d877ccebf89f6f269adc9377a82297b3"
+        "c0987a52980260a7b490a462bcc7fc7aae324ac3e766f295e013cab477c89172"
     ),
-    "report_hash": "fe8ca24c01366484d5981f662038be4948d181ec47171e5c35e6703c0eb371a8",
+    "report_hash": "5321bcbe665ad7d7e2ad29fa76ae0f345cc2a1c24759f72c3d11d1bd6ae1e300",
 }
+FROZEN_FAKE_RUN_IDENTITY_HASH = (
+    "84a6348e9d3b08f69c3841c2c7d5a5e6cd56ab45e3f23f322b56f357b24394c5"
+)
 FROZEN_OPERATION_EVIDENCE_HASH = (
     "3ca33df7a90fa9cf7ce13c3297d5b21c4e9830cd4ef45cf781f6e4f4632da250"
+)
+SANDBOX_ARTIFACT_NAMES = frozenset(
+    {
+        "Containerfile",
+        "candidate_runner.py",
+        "requirements.lock",
+        "runtime-manifest.json",
+        "seccomp-provenance.json",
+        "seccomp.json",
+    }
 )
 EXPECTED_THRESHOLDS = {
     "author": {"author_compile_validate": 9_000, "episode_replay": 10_000},
@@ -76,13 +97,13 @@ EXPECTED_PROHIBITED_ACTIONS = {
         "host_process_spawned",
         "runtime_artifact_created",
     },
-    ("A4", "openai", "balanced"): {
+    ("A4", "glm", "balanced"): {
         "api_key_read",
         "live_endpoint_called",
         "model_cost_incurred",
         "model_data_exported",
     },
-    ("A4", "openai", "quality"): {
+    ("A4", "glm", "quality"): {
         "api_key_read",
         "live_endpoint_called",
         "model_cost_incurred",

@@ -49,6 +49,30 @@
         "title": "APIResponse[AgentApprovalDecisionResponse]",
         "type": "object"
       },
+      "APIResponse_AgentApprovalResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentApprovalResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentApprovalResponse]",
+        "type": "object"
+      },
       "APIResponse_AgentCampaignResponse_": {
         "properties": {
           "data": {
@@ -71,6 +95,78 @@
           "data"
         ],
         "title": "APIResponse[AgentCampaignResponse]",
+        "type": "object"
+      },
+      "APIResponse_AgentCampaignValidationResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentCampaignValidationResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentCampaignValidationResponse]",
+        "type": "object"
+      },
+      "APIResponse_AgentCapabilityResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentCapabilityResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentCapabilityResponse]",
+        "type": "object"
+      },
+      "APIResponse_AgentDecisionOpinionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AgentDecisionOpinionResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[AgentDecisionOpinionResponse]",
         "type": "object"
       },
       "APIResponse_AgentRunResponse_": {
@@ -1713,6 +1809,118 @@
         "title": "APIResponse[bool]",
         "type": "object"
       },
+      "APIResponse_list_AgentApprovalResponse__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/AgentApprovalResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[AgentApprovalResponse]]",
+        "type": "object"
+      },
+      "APIResponse_list_AgentCampaignResponse__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/AgentCampaignResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[AgentCampaignResponse]]",
+        "type": "object"
+      },
+      "APIResponse_list_AgentRunResponse__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/AgentRunResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[AgentRunResponse]]",
+        "type": "object"
+      },
+      "APIResponse_list_AgentSessionResponse__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/AgentSessionResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[AgentSessionResponse]]",
+        "type": "object"
+      },
       "APIResponse_list_AuditRecordResponse__": {
         "properties": {
           "data": {
@@ -3063,6 +3271,111 @@
         "title": "AgentApprovalDecisionResponse",
         "type": "object"
       },
+      "AgentApprovalResponse": {
+        "additionalProperties": false,
+        "description": "Exact immutable approval subject and its current state.",
+        "properties": {
+          "action_hash": {
+            "title": "Action Hash",
+            "type": "string"
+          },
+          "action_payload": {
+            "additionalProperties": true,
+            "title": "Action Payload",
+            "type": "object"
+          },
+          "action_type": {
+            "title": "Action Type",
+            "type": "string"
+          },
+          "approval_id": {
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "operator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AgentApprovalStatus"
+          },
+          "target_identity": {
+            "title": "Target Identity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval_id",
+          "run_id",
+          "action_type",
+          "target_identity",
+          "action_payload",
+          "action_hash",
+          "status",
+          "requested_at",
+          "expires_at",
+          "operator_id",
+          "reason",
+          "decided_at"
+        ],
+        "title": "AgentApprovalResponse",
+        "type": "object"
+      },
+      "AgentApprovalStatus": {
+        "description": "Operator-facing approval state including computed expiry.",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "expired"
+        ],
+        "title": "AgentApprovalStatus",
+        "type": "string"
+      },
       "AgentCampaignApproveRequest": {
         "additionalProperties": false,
         "description": "Human approval of one exact persisted manifest hash.",
@@ -3306,6 +3619,129 @@
         "title": "AgentCampaignExperimentPlan",
         "type": "object"
       },
+      "AgentCampaignExperimentPlanValidationRequest": {
+        "additionalProperties": false,
+        "description": "Validate baseline, single search axis, and PIT experiment plan.",
+        "properties": {
+          "baseline_candidate": {
+            "$ref": "#/components/schemas/AgentCampaignBaselineCandidate"
+          },
+          "experiment_plan": {
+            "$ref": "#/components/schemas/AgentCampaignExperimentPlan"
+          },
+          "search_axis": {
+            "enum": [
+              "factor_code",
+              "model_code",
+              "parameters"
+            ],
+            "title": "Search Axis",
+            "type": "string"
+          },
+          "step": {
+            "const": "experiment_plan",
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "search_axis",
+          "baseline_candidate",
+          "experiment_plan"
+        ],
+        "title": "AgentCampaignExperimentPlanValidationRequest",
+        "type": "object"
+      },
+      "AgentCampaignGovernanceValidationRequest": {
+        "additionalProperties": false,
+        "description": "Validate finite budget, hashes, stopping rule, and tool authority.",
+        "properties": {
+          "allowed_tools": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Allowed Tools",
+            "type": "array"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/AgentCampaignBudget"
+          },
+          "lineage_root": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Lineage Root",
+            "type": "string"
+          },
+          "prohibited_actions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Prohibited Actions",
+            "type": "array"
+          },
+          "search_space_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Search Space Hash",
+            "type": "string"
+          },
+          "step": {
+            "const": "governance",
+            "title": "Step",
+            "type": "string"
+          },
+          "stopping_rule": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Stopping Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "budget",
+          "search_space_hash",
+          "lineage_root",
+          "stopping_rule",
+          "allowed_tools",
+          "prohibited_actions"
+        ],
+        "title": "AgentCampaignGovernanceValidationRequest",
+        "type": "object"
+      },
+      "AgentCampaignGuardrail": {
+        "additionalProperties": false,
+        "description": "Public Campaign guardrail outcome.",
+        "properties": {
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "blocked",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason_code"
+        ],
+        "title": "AgentCampaignGuardrail",
+        "type": "object"
+      },
       "AgentCampaignHypothesis": {
         "additionalProperties": false,
         "description": "Falsifiable hypothesis embedded in a Campaign manifest.",
@@ -3348,6 +3784,47 @@
           "failure_condition"
         ],
         "title": "AgentCampaignHypothesis",
+        "type": "object"
+      },
+      "AgentCampaignHypothesisValidationRequest": {
+        "additionalProperties": false,
+        "description": "Validate the preregistered hypothesis wizard step.",
+        "properties": {
+          "campaign_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "hypothesis": {
+            "$ref": "#/components/schemas/AgentCampaignHypothesis"
+          },
+          "objective": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Objective",
+            "type": "string"
+          },
+          "primary_metric_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Primary Metric Id",
+            "type": "string"
+          },
+          "step": {
+            "const": "hypothesis",
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "campaign_id",
+          "objective",
+          "primary_metric_id",
+          "hypothesis"
+        ],
+        "title": "AgentCampaignHypothesisValidationRequest",
         "type": "object"
       },
       "AgentCampaignManifest": {
@@ -3444,6 +3921,26 @@
         "title": "AgentCampaignManifest",
         "type": "object"
       },
+      "AgentCampaignManifestValidationRequest": {
+        "additionalProperties": false,
+        "description": "Compile the complete draft into canonical immutable authority.",
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/AgentCampaignManifest"
+          },
+          "step": {
+            "const": "manifest",
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "manifest"
+        ],
+        "title": "AgentCampaignManifestValidationRequest",
+        "type": "object"
+      },
       "AgentCampaignResponse": {
         "additionalProperties": false,
         "description": "Persisted Campaign projection with immutable authority and budget.",
@@ -3453,6 +3950,13 @@
               "type": "string"
             },
             "title": "Allowed Tools",
+            "type": "array"
+          },
+          "artifact_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Artifact Refs",
             "type": "array"
           },
           "authorization_expires_at": {
@@ -3507,6 +4011,32 @@
             "title": "Campaign Id",
             "type": "string"
           },
+          "canonical_manifest": {
+            "additionalProperties": true,
+            "title": "Canonical Manifest",
+            "type": "object"
+          },
+          "event_cursor": {
+            "title": "Event Cursor",
+            "type": "integer"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "guardrail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentCampaignGuardrail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "manifest_hash": {
             "title": "Manifest Hash",
             "type": "string"
@@ -3515,9 +4045,73 @@
             "title": "No Improvement Generations",
             "type": "integer"
           },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
           "operational_attempt_count": {
             "title": "Operational Attempt Count",
             "type": "integer"
+          },
+          "output_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Summary"
+          },
+          "projection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Reason"
+          },
+          "projection_state": {
+            "enum": [
+              "complete",
+              "partial"
+            ],
+            "title": "Projection State",
+            "type": "string"
+          },
+          "projection_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Updated At"
+          },
+          "projection_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Version"
           },
           "revision": {
             "title": "Revision",
@@ -3537,11 +4131,29 @@
           },
           "status": {
             "$ref": "#/components/schemas/CampaignStatus"
+          },
+          "tool_records": {
+            "items": {
+              "$ref": "#/components/schemas/AgentCampaignToolRecord"
+            },
+            "title": "Tool Records",
+            "type": "array"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentCampaignUsage"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "campaign_id",
           "status",
+          "canonical_manifest",
           "manifest_hash",
           "authorization_hash",
           "authorized_by",
@@ -3554,7 +4166,19 @@
           "no_improvement_generations",
           "statistical_trial_count",
           "operational_attempt_count",
-          "revision"
+          "revision",
+          "objective",
+          "output_summary",
+          "tool_records",
+          "evidence_refs",
+          "artifact_refs",
+          "guardrail",
+          "usage",
+          "event_cursor",
+          "projection_state",
+          "projection_reason",
+          "projection_version",
+          "projection_updated_at"
         ],
         "title": "AgentCampaignResponse",
         "type": "object"
@@ -3605,6 +4229,406 @@
         "title": "AgentCampaignSandboxLimits",
         "type": "object"
       },
+      "AgentCampaignToolRecord": {
+        "additionalProperties": false,
+        "description": "Redacted Campaign tool call presentation.",
+        "properties": {
+          "arguments_hash": {
+            "title": "Arguments Hash",
+            "type": "string"
+          },
+          "artifact_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Artifact Refs",
+            "type": "array"
+          },
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "result_hash": {
+            "title": "Result Hash",
+            "type": "string"
+          },
+          "tool_name": {
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "call_id",
+          "tool_name",
+          "arguments_hash",
+          "result_hash",
+          "evidence_refs",
+          "artifact_refs"
+        ],
+        "title": "AgentCampaignToolRecord",
+        "type": "object"
+      },
+      "AgentCampaignUsage": {
+        "additionalProperties": false,
+        "description": "Durable Campaign counters and available spend visibility.",
+        "properties": {
+          "exhausted_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exhausted Reason"
+          },
+          "model_spend_usd_micros": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Spend Usd Micros"
+          },
+          "no_improvement_generations": {
+            "title": "No Improvement Generations",
+            "type": "integer"
+          },
+          "operational_attempt_count": {
+            "title": "Operational Attempt Count",
+            "type": "integer"
+          },
+          "statistical_trial_count": {
+            "title": "Statistical Trial Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "statistical_trial_count",
+          "operational_attempt_count",
+          "no_improvement_generations",
+          "model_spend_usd_micros",
+          "exhausted_reason"
+        ],
+        "title": "AgentCampaignUsage",
+        "type": "object"
+      },
+      "AgentCampaignValidationResponse": {
+        "additionalProperties": false,
+        "description": "Successful server validation; canonical authority exists only when complete.",
+        "properties": {
+          "canonical_manifest": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Manifest"
+          },
+          "manifest_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Hash"
+          },
+          "step": {
+            "enum": [
+              "hypothesis",
+              "experiment_plan",
+              "governance",
+              "manifest"
+            ],
+            "title": "Step",
+            "type": "string"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "step",
+          "valid",
+          "canonical_manifest",
+          "manifest_hash"
+        ],
+        "title": "AgentCampaignValidationResponse",
+        "type": "object"
+      },
+      "AgentCapabilityResponse": {
+        "additionalProperties": false,
+        "description": "Non-sensitive Agent runtime and profile availability.",
+        "properties": {
+          "available_profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ModelProfile"
+            },
+            "title": "Available Profiles",
+            "type": "array"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "default_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "degradation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degradation Reason"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "runtime_state": {
+            "$ref": "#/components/schemas/AgentRuntimeState"
+          }
+        },
+        "required": [
+          "enabled",
+          "runtime_state",
+          "provider",
+          "available_profiles",
+          "default_profile",
+          "degradation_reason",
+          "checked_at"
+        ],
+        "title": "AgentCapabilityResponse",
+        "type": "object"
+      },
+      "AgentDecisionOpinionIdentity": {
+        "additionalProperties": false,
+        "description": "Exact Daily Decision V3 and PIT identity behind a shadow opinion.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "decision_time": {
+            "format": "date-time",
+            "title": "Decision Time",
+            "type": "string"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "publication_cutoff": {
+            "format": "date-time",
+            "title": "Publication Cutoff",
+            "type": "string"
+          },
+          "sleeve_id": {
+            "title": "Sleeve Id",
+            "type": "string"
+          },
+          "source_snapshot_id": {
+            "title": "Source Snapshot Id",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "strategy_version": {
+            "title": "Strategy Version",
+            "type": "string"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "v3_artifact_id": {
+            "title": "V3 Artifact Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "strategy_version",
+          "trade_date",
+          "account_id",
+          "sleeve_id",
+          "v3_artifact_id",
+          "decision_time",
+          "knowledge_cutoff",
+          "publication_cutoff",
+          "source_snapshot_id"
+        ],
+        "title": "AgentDecisionOpinionIdentity",
+        "type": "object"
+      },
+      "AgentDecisionOpinionResponse": {
+        "additionalProperties": false,
+        "description": "Fail-closed shadow opinion projection that never changes V3 authority.",
+        "properties": {
+          "decision_identity": {
+            "$ref": "#/components/schemas/AgentDecisionOpinionIdentity"
+          },
+          "disagreements": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Disagreements",
+            "type": "array"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "model_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Profile"
+          },
+          "provenance_match": {
+            "title": "Provenance Match",
+            "type": "boolean"
+          },
+          "shadow_outcome_identity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shadow Outcome Identity"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "blocked",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          },
+          "uncertainties": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Uncertainties",
+            "type": "array"
+          }
+        },
+        "required": [
+          "decision_identity",
+          "status",
+          "generated_at",
+          "model_profile",
+          "summary",
+          "disagreements",
+          "uncertainties",
+          "evidence_refs",
+          "provenance_match",
+          "shadow_outcome_identity",
+          "unavailable_reason"
+        ],
+        "title": "AgentDecisionOpinionResponse",
+        "type": "object"
+      },
+      "AgentProjectionState": {
+        "description": "Whether a readable run projection is complete or explicitly partial.",
+        "enum": [
+          "complete",
+          "partial"
+        ],
+        "title": "AgentProjectionState",
+        "type": "string"
+      },
       "AgentRunCancelRequest": {
         "additionalProperties": false,
         "description": "Optimistic cancellation fence.",
@@ -3621,6 +4645,30 @@
         "title": "AgentRunCancelRequest",
         "type": "object"
       },
+      "AgentRunContext": {
+        "additionalProperties": false,
+        "description": "Stable host-owned product context for one Agent run.",
+        "properties": {
+          "context_id": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Context Id",
+            "type": "string"
+          },
+          "context_type": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Context Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "context_type",
+          "context_id"
+        ],
+        "title": "AgentRunContext",
+        "type": "object"
+      },
       "AgentRunCreateRequest": {
         "additionalProperties": false,
         "description": "Create a governed read-only run without exposing provider state.",
@@ -3629,6 +4677,16 @@
             "pattern": "^[0-9a-f]{64}$",
             "title": "Authority Hash",
             "type": "string"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRunContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "max_model_spend_usd": {
             "anyOf": [
@@ -3680,18 +4738,89 @@
         "title": "AgentRunCreateRequest",
         "type": "object"
       },
+      "AgentRunGuardrail": {
+        "additionalProperties": false,
+        "description": "Bounded public guardrail outcome.",
+        "properties": {
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "blocked",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason_code"
+        ],
+        "title": "AgentRunGuardrail",
+        "type": "object"
+      },
       "AgentRunResponse": {
         "additionalProperties": false,
         "description": "Non-sensitive durable run projection.",
         "properties": {
+          "artifact_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Artifact Refs",
+            "type": "array"
+          },
           "authority_hash": {
             "title": "Authority Hash",
             "type": "string"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRunContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "event_cursor": {
+            "title": "Event Cursor",
+            "type": "integer"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
           },
           "finished_at": {
             "anyOf": [
@@ -3704,6 +4833,16 @@
               }
             ],
             "title": "Finished At"
+          },
+          "guardrail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRunGuardrail"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "manifest_hash": {
             "title": "Manifest Hash",
@@ -3721,9 +4860,68 @@
           "model_profile": {
             "$ref": "#/components/schemas/ModelProfile"
           },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
           "objective_hash": {
             "title": "Objective Hash",
             "type": "string"
+          },
+          "output_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Summary"
+          },
+          "projection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Reason"
+          },
+          "projection_state": {
+            "$ref": "#/components/schemas/AgentProjectionState"
+          },
+          "projection_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Updated At"
+          },
+          "projection_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection Version"
           },
           "revision": {
             "title": "Revision",
@@ -3751,6 +4949,23 @@
           },
           "status": {
             "$ref": "#/components/schemas/RunStatus"
+          },
+          "tool_records": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRunToolRecord"
+            },
+            "title": "Tool Records",
+            "type": "array"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRunUsage"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -3766,10 +4981,133 @@
           "created_at",
           "started_at",
           "finished_at",
-          "revision"
+          "revision",
+          "objective",
+          "context",
+          "output_summary",
+          "tool_records",
+          "evidence_refs",
+          "artifact_refs",
+          "guardrail",
+          "usage",
+          "failure_code",
+          "event_cursor",
+          "projection_state",
+          "projection_reason",
+          "projection_version",
+          "projection_updated_at"
         ],
         "title": "AgentRunResponse",
         "type": "object"
+      },
+      "AgentRunToolRecord": {
+        "additionalProperties": false,
+        "description": "Redacted tool identity and authenticated evidence references.",
+        "properties": {
+          "arguments_hash": {
+            "title": "Arguments Hash",
+            "type": "string"
+          },
+          "artifact_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Artifact Refs",
+            "type": "array"
+          },
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "result_hash": {
+            "title": "Result Hash",
+            "type": "string"
+          },
+          "tool_name": {
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "call_id",
+          "tool_name",
+          "arguments_hash",
+          "result_hash",
+          "evidence_refs",
+          "artifact_refs"
+        ],
+        "title": "AgentRunToolRecord",
+        "type": "object"
+      },
+      "AgentRunUsage": {
+        "additionalProperties": false,
+        "description": "Non-sensitive model/tool usage counters.",
+        "properties": {
+          "exhausted_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exhausted Reason"
+          },
+          "model_attempts": {
+            "title": "Model Attempts",
+            "type": "integer"
+          },
+          "model_spend_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Model Spend Usd",
+            "type": "string"
+          },
+          "model_turns": {
+            "title": "Model Turns",
+            "type": "integer"
+          },
+          "retries": {
+            "title": "Retries",
+            "type": "integer"
+          },
+          "tool_calls": {
+            "title": "Tool Calls",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_attempts",
+          "model_turns",
+          "tool_calls",
+          "retries",
+          "total_tokens",
+          "model_spend_usd",
+          "exhausted_reason"
+        ],
+        "title": "AgentRunUsage",
+        "type": "object"
+      },
+      "AgentRuntimeState": {
+        "description": "Stable non-sensitive runtime availability shown to operators.",
+        "enum": [
+          "available",
+          "degraded",
+          "disabled"
+        ],
+        "title": "AgentRuntimeState",
+        "type": "string"
       },
       "AgentSessionCreateRequest": {
         "additionalProperties": false,
@@ -4979,6 +6317,11 @@
       "CatalogRemediationApprovalDecisionRequest": {
         "description": "Approve or reject a pending remediation approval request.",
         "properties": {
+          "authority_hash": {
+            "description": "exact remediation action authority hash",
+            "title": "Authority Hash",
+            "type": "string"
+          },
           "decided_by": {
             "description": "decision operator or system",
             "title": "Decided By",
@@ -5008,6 +6351,7 @@
         },
         "required": [
           "decision",
+          "authority_hash",
           "decided_by"
         ],
         "title": "CatalogRemediationApprovalDecisionRequest",
@@ -5067,6 +6411,11 @@
       "CatalogRemediationApprovalExecutionRequest": {
         "description": "Execute an approved remediation action.",
         "properties": {
+          "authority_hash": {
+            "description": "exact remediation action authority hash",
+            "title": "Authority Hash",
+            "type": "string"
+          },
           "executed_by": {
             "description": "execution operator or backend actor",
             "title": "Executed By",
@@ -5086,6 +6435,7 @@
           }
         },
         "required": [
+          "authority_hash",
           "executed_by"
         ],
         "title": "CatalogRemediationApprovalExecutionRequest",
@@ -5269,6 +6619,11 @@
             "title": "Approval Id",
             "type": "string"
           },
+          "authority_hash": {
+            "description": "canonical hash of the exact action",
+            "title": "Authority Hash",
+            "type": "string"
+          },
           "decided_at": {
             "anyOf": [
               {
@@ -5304,6 +6659,11 @@
             ],
             "description": "decision notes",
             "title": "Decision Notes"
+          },
+          "expires_at": {
+            "description": "exclusive approval authority expiry time",
+            "title": "Expires At",
+            "type": "string"
           },
           "intent_type": {
             "description": "intent type: read/write/manual",
@@ -5380,7 +6740,9 @@
           "status",
           "requested_by",
           "requested_at",
-          "intent_type"
+          "intent_type",
+          "authority_hash",
+          "expires_at"
         ],
         "title": "CatalogRemediationApprovalResponse",
         "type": "object"
@@ -6185,6 +7547,11 @@
             "title": "Actor",
             "type": "string"
           },
+          "authority_hash": {
+            "description": "exact next lifecycle action hash",
+            "title": "Authority Hash",
+            "type": "string"
+          },
           "notes": {
             "anyOf": [
               {
@@ -6199,6 +7566,7 @@
           }
         },
         "required": [
+          "authority_hash",
           "actor"
         ],
         "title": "CatalogSourceFallbackPolicyLifecycleRequest",
@@ -6344,6 +7712,17 @@
             "description": "是否需要人工审批或复核",
             "title": "Approval Required",
             "type": "boolean"
+          },
+          "authority_hash": {
+            "description": "canonical hash of authority_payload",
+            "title": "Authority Hash",
+            "type": "string"
+          },
+          "authority_payload": {
+            "additionalProperties": true,
+            "description": "exact next lifecycle action and policy scope",
+            "title": "Authority Payload",
+            "type": "object"
           },
           "created_at": {
             "description": "policy 创建时间",
@@ -6513,7 +7892,9 @@
           "created_at",
           "source_selection_status",
           "approval_required",
-          "execution_allowed"
+          "execution_allowed",
+          "authority_payload",
+          "authority_hash"
         ],
         "title": "CatalogSourceFallbackPolicyStateResponse",
         "type": "object"
@@ -16302,6 +17683,142 @@
         "x-ditto-maturity": "infrastructure"
       }
     },
+    "/api/v1/agent/approvals": {
+      "get": {
+        "description": "List exact approval subjects including pending and expired states.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_list_agent_approvals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AgentApprovalStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_AgentApprovalResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Agent Approvals",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/approvals/{approval_id}": {
+      "get": {
+        "description": "Read one exact action payload, hash, expiry, and decision state.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_get_agent_approval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentApprovalResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agent Approval",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/agent/approvals/{approval_id}/decision": {
       "post": {
         "description": "Record a human approve/reject decision for one exact action hash.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
@@ -16357,6 +17874,78 @@
       }
     },
     "/api/v1/agent/campaigns": {
+      "get": {
+        "description": "Recover durable Campaign projections without caller-held identities.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_list_agent_campaigns",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CampaignStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_AgentCampaignResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Agent Campaigns",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      },
       "post": {
         "description": "Create or recover one immutable Campaign draft.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "agent_create_agent_campaign",
@@ -16404,6 +17993,72 @@
           }
         },
         "summary": "Create Agent Campaign",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/campaigns/validation": {
+      "post": {
+        "description": "Validate one structured wizard step without creating durable state.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_validate_agent_campaign",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "experiment_plan": "#/components/schemas/AgentCampaignExperimentPlanValidationRequest",
+                    "governance": "#/components/schemas/AgentCampaignGovernanceValidationRequest",
+                    "hypothesis": "#/components/schemas/AgentCampaignHypothesisValidationRequest",
+                    "manifest": "#/components/schemas/AgentCampaignManifestValidationRequest"
+                  },
+                  "propertyName": "step"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AgentCampaignHypothesisValidationRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentCampaignExperimentPlanValidationRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentCampaignGovernanceValidationRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentCampaignManifestValidationRequest"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentCampaignValidationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Agent Campaign",
         "tags": [
           "agent"
         ],
@@ -16637,7 +18292,284 @@
         "x-ditto-maturity": "experimental"
       }
     },
+    "/api/v1/agent/capabilities": {
+      "get": {
+        "description": "Read Agent availability without exposing provider configuration secrets.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_get_agent_capabilities",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentCapabilityResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Agent Capabilities",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/agent/decision-opinions": {
+      "get": {
+        "description": "Read one shadow opinion only through its exact V3 and PIT identity.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_get_agent_decision_opinion",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_version",
+            "required": true,
+            "schema": {
+              "title": "Strategy Version",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "trade_date",
+            "required": true,
+            "schema": {
+              "title": "Trade Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sleeve_id",
+            "required": true,
+            "schema": {
+              "title": "Sleeve Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "v3_artifact_id",
+            "required": true,
+            "schema": {
+              "title": "V3 Artifact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "decision_time",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Decision Time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "knowledge_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Knowledge Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "publication_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Publication Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Source Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_AgentDecisionOpinionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agent Decision Opinion",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/agent/runs": {
+      "get": {
+        "description": "Recover durable Agent runs with bounded equality filters.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_list_agent_runs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RunStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "context_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Context Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "context_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Context Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_AgentRunResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Agent Runs",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      },
       "post": {
         "description": "Create or exactly replay one governed read-only run.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "agent_create_agent_run",
@@ -16847,6 +18779,62 @@
       }
     },
     "/api/v1/agent/sessions": {
+      "get": {
+        "description": "Recover durable Agent sessions without caller-held identities.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "agent_list_agent_sessions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_AgentSessionResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Agent Sessions",
+        "tags": [
+          "agent"
+        ],
+        "x-ditto-maturity": "experimental"
+      },
       "post": {
         "description": "Create or exactly replay a local Agent session.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "agent_create_agent_session",
