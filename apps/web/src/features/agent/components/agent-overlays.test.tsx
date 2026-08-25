@@ -148,8 +148,7 @@ const approval: AgentApprovalView = {
 	decidedAt: null,
 };
 
-async function fillHypothesisStep(): Promise<void> {
-	const user = userEvent.setup();
+function fillHypothesisStep(): void {
 	const values: ReadonlyArray<readonly [string, string]> = [
 		["Campaign identity", "campaign-1"],
 		["Objective", "Test one falsifiable signal."],
@@ -160,15 +159,7 @@ async function fillHypothesisStep(): Promise<void> {
 		["Failure condition", "Sharpe does not improve."],
 		["Universe hash", "a".repeat(64)],
 	];
-	for (const [label, value] of values) {
-		await user.type(
-			screen.getByRole(
-				label === "Objective" || label.includes("statement") || label === "Mechanism" ? "textbox" : "textbox",
-				{ name: label },
-			),
-			value,
-		);
-	}
+	fillFields(values);
 }
 
 function fillFields(values: ReadonlyArray<readonly [string, string]>): void {
@@ -350,7 +341,7 @@ describe("Agent governed overlays", () => {
 
 	it("does not advance a Campaign step until backend validation succeeds", async () => {
 		render(<AgentCampaignDraftSheet open onOpenChange={vi.fn()} onCreated={vi.fn()} />);
-		await fillHypothesisStep();
+		fillHypothesisStep();
 		fireEvent.click(screen.getByRole("button", { name: "下一步" }));
 
 		await waitFor(() => expect(mocks.validate).toHaveBeenCalledTimes(1));
@@ -364,7 +355,7 @@ describe("Agent governed overlays", () => {
 	it("keeps a Campaign step open and shows a fail-closed backend validation error", async () => {
 		mocks.validate.mockRejectedValueOnce("invalid governed input");
 		render(<AgentCampaignDraftSheet open onOpenChange={vi.fn()} onCreated={vi.fn()} />);
-		await fillHypothesisStep();
+		fillHypothesisStep();
 		fireEvent.click(screen.getByRole("button", { name: "下一步" }));
 
 		expect(await screen.findByRole("alert")).toHaveTextContent("Campaign 后端校验失败");
@@ -375,7 +366,7 @@ describe("Agent governed overlays", () => {
 		const onCreated = vi.fn();
 		const onOpenChange = vi.fn();
 		render(<AgentCampaignDraftSheet open onOpenChange={onOpenChange} onCreated={onCreated} />);
-		await fillHypothesisStep();
+		fillHypothesisStep();
 		fireEvent.click(screen.getByRole("button", { name: "下一步" }));
 		await screen.findByText("步骤 2/4", { exact: false });
 
