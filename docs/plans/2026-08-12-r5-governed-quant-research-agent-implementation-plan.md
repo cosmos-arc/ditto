@@ -1,8 +1,10 @@
 # R5 治理型量化研究 Agent 详细实施计划
 
 **日期：** 2026-08-12
-**状态：** 未开始
-**恢复点：** Wave 0 / Task 1，先核对当前 R4/R3/application 叶级合同
+**状态：** `codex/r5-governed-agent@a971a253` 已完成 38/38 Tasks 与 R5.5 release
+preflight；当前 `main` 中的任务正文保留为实施前施工快照，合并前以该分支内同名
+文档及 `docs/evidence/r5/**` 为完成事实源。
+**恢复点：** 对完成分支做合并前审查，并将通过的实现与 evidence 集成到 `main`
 **设计事实源：** [R5 治理型量化研究 Agent 设计](2026-08-12-r5-governed-quant-research-agent-design.md)
 
 ## 目标
@@ -904,8 +906,17 @@ git diff --check
 
 ## 恢复状态
 
-- **已完成：** 设计与实施计划文档已接受；代码任务尚未开始。
-- **下一步：** Task 1，冻结 R3/R4/application 真实消费面。
-- **未解决风险：** A1—A4 均待实施时以精确对象收集批准；OpenAI SDK/API 与 OCI runtime 需重新核验当前版本。
-- **最新命令与结果：** 尚无代码实施验证，不得继承本次文档落地检查作为 Wave 证据。
-- **外部等待或 approval：** 无；到对应 Task 前再暂停。
+- **当前状态补充（2026-08-25）：** 实现已在
+  `codex/r5-governed-agent@a971a253` 完成 38/38 Tasks、正式 eval、物理 sandbox、
+  运营演练和 release preflight。此处以下的实施前恢复记录仅用于历史追溯；下一动作
+  是合并前审查、主线集成与前端产品化，不是从 Task 1 重新施工。
+- **下一步：** 对 `a971a253` 做高风险合并审查，处理与当前 `main` 的差异后运行
+  architecture、PIT、CI 和 release preflight；随后按统一产品路线图接入前端。
+- **未解决风险：** 生产 credential cutover、真实 retention delete、外部 Beta 和生产
+  启用仍不在完成声明内；模型/provider/profile 变化需要重跑相应 eval。
+- **最新命令与结果：** 完成分支记录的最新 `check` 为 12,910 passed / 1 known
+  xfailed；PIT 专项 31 passed / 1 fixture-data skip；`ci` 为 13,870 passed / 73
+  environment skips / 11 known xfailed / 11 xpassed，coverage 92.77%，43/43 import
+  contracts。上述是分支 evidence，合并后的当前 diff 必须重新验证。
+- **外部等待或 approval：** 合并审查本身无需新增权限；生产模型凭证、真实数据写入
+  或扩大 Agent 动作边界时再单独批准。
