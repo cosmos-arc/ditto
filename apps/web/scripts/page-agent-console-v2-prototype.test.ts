@@ -29,9 +29,10 @@ describe("page-agent-console-v2 prototype", () => {
 			"待审批",
 			"已阻断",
 			"产物",
-			"新建计划",
-			"计划 / 运行列表",
-			"活动流",
+			"新建 Campaign",
+			"新建 Run",
+			"恢复队列",
+			"Evidence Spine",
 			"发现",
 			"运行检查器",
 			"审批面板",
@@ -245,12 +246,12 @@ describe("page-agent-console-v2 prototype", () => {
 		);
 
 		expect(document.querySelectorAll("#states-gallery .gallery-card")).toHaveLength(
-			39,
+			54,
 		);
 		expect(document.querySelectorAll("#overlays-gallery .gallery-card")).toHaveLength(
-			7,
+			9,
 		);
-		expect(document.querySelectorAll(".overlay-radio")).toHaveLength(7);
+		expect(document.querySelectorAll(".overlay-radio")).toHaveLength(9);
 		expect(document.querySelectorAll("[style]")).toHaveLength(0);
 		expect(new Set(ids).size).toBe(ids.length);
 	});

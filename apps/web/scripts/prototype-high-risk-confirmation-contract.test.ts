@@ -43,7 +43,7 @@ const documentCache = new Map<string, Document>();
 const requiredHighRiskOverlays = [
 	{ file: "page-home.html", overlay: "overlay-order-confirm", kind: "order-submit" },
 	{ file: "page-trading-overview.html", overlay: "overlay-pause-trading", kind: "pause-trading" },
-	{ file: "page-agent-console-v2.html", overlay: "overlay-approval-confirm", kind: "agent-approval" },
+	{ file: "page-agent-console-v2.html", overlay: "overlay-approval-exact-action", kind: "agent-approval" },
 	{ file: "page-backtest-result.html", overlay: "overlay-enable-signal", kind: "signal-enable" },
 	{ file: "page-portfolio.html", overlay: "overlay-confirm-close-all", kind: "order-submit" },
 	{ file: "page-strategy-studio.html", overlay: "overlay-save-strategy", kind: "strategy-publish" },

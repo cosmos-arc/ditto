@@ -14,8 +14,8 @@ export function TradingSessionStrip() {
 	if (!usePrototypeMocks) {
 		return (
 			<div data-info-level="l2" data-info-unit="session-strip" className="flex gap-3 px-4 py-2">
-				<StatusBadge label="V1a 未接 live" variant="idle" size="sm" />
-				<span className="text-sm text-(--color-foreground-secondary)">Session 数据待后端补齐</span>
+				<StatusBadge label="manual / paper" variant="trade" size="sm" />
+				<span className="text-sm text-(--color-foreground-secondary)">决策范围由 URL 显式选择</span>
 			</div>
 		);
 	}

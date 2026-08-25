@@ -57,7 +57,7 @@ describe("AppShell", () => {
 		const { container } = render(<AppShell>content</AppShell>);
 		const shell = container.firstChild as HTMLElement;
 		expect(shell.className).toContain("grid");
-		expect(shell.className).toContain("grid-cols-[var(--width-rail)_1fr]");
+		expect(shell.className).toContain("grid-cols-[var(--width-rail)_minmax(0,1fr)]");
 		expect(shell.className).toContain("grid-rows-[var(--height-header)_1fr]");
 	});
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
+import { AgentContextActions } from "@/features/agent";
 import { StatusBar } from "@/features/shell";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -63,7 +64,15 @@ export function ExperimentDetailPage({ experimentId }: ExperimentDetailPageProps
 								{server.status} · {server.stage} · revision {server.revision}
 							</p>
 						</div>
-						<ExperimentRunControls detail={server} />
+						<div className="flex flex-wrap items-center justify-end gap-2">
+							<AgentContextActions
+								contextType="experiment-revision"
+								contextId={`${experimentId}@${server.revision}`}
+								evidenceObjective="复核当前实验 revision 的候选、门禁、产物与选择证据"
+								authorObjective="提出当前实验的结构化变更草案，并保留 frozen identity"
+							/>
+							<ExperimentRunControls detail={server} />
+						</div>
 					</header>
 					<ContextSection title="Validation and gates">
 						<div className="p-(--density-panel-padding)">

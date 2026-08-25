@@ -45,6 +45,27 @@ describe("apiClient", () => {
 		expect(fetchMock).toHaveBeenCalledWith("/api/v1/trade/daily-decision", expect.objectContaining({ method: "GET" }));
 	});
 
+	it("preserves the response envelope when pagination is part of the consumer contract", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(
+				async () =>
+					new Response(
+						JSON.stringify({
+							data: [{ id: "run-1" }],
+							pagination: { total: 21, limit: 20, offset: 0, has_more: true },
+						}),
+						{ status: 200, headers: { "Content-Type": "application/json" } },
+					),
+			),
+		);
+
+		await expect(apiClient.getResponse<readonly { readonly id: string }[]>("/v1/agent/runs")).resolves.toEqual({
+			data: [{ id: "run-1" }],
+			pagination: { total: 21, limit: 20, offset: 0, has_more: true },
+		});
+	});
+
 	it("maps backend error responses to ApiError metadata", async () => {
 		const fetchMock = vi.fn<typeof fetch>(
 			async () =>

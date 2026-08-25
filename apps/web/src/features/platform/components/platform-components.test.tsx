@@ -49,11 +49,12 @@ describe("Platform route page contract handoffs", () => {
 		await expect(screen.findByText("System Alerts")).resolves.toBeInTheDocument();
 	});
 
-	it("covers PlatformAgentsPage route composition", async () => {
+	it("covers the governed PlatformAgentsPage route composition", async () => {
 		render(<PlatformAgentsPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("因子池优化扫描")).resolves.toBeInTheDocument();
-		await expect(screen.findAllByText(/动量因子 IC 连续 3 周下降/)).resolves.not.toHaveLength(0);
+		expect(screen.getByRole("heading", { name: "Agent Console" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Runs" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "新建 Run" })).toBeDisabled();
 	});
 
 	it("covers PlatformSettingsPage route composition", () => {

@@ -208,6 +208,16 @@ describe("DataProductWorkbench", () => {
 		expect(screen.getByRole("button", { name: "预览 revoke" })).toBeInTheDocument();
 	});
 
+	it("opens Operations inside the existing data product workbench", async () => {
+		const user = userEvent.setup();
+		const { container } = render(<DataProductWorkbench />, { wrapper: createWrapper() });
+
+		await user.click(await screen.findByRole("tab", { name: "运营治理" }));
+
+		expect(container.querySelector('[data-slot="data-product-operations"]')).toBeInTheDocument();
+		expect(screen.getByTestId("panel-subtitle")).toHaveTextContent("calendar");
+	});
+
 	it("renders an instructional empty state instead of hardcoded products", async () => {
 		server.use(http.get("/api/v1/data-products", () => HttpResponse.json({ data: [] })));
 

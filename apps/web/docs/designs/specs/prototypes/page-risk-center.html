@@ -10,7 +10,7 @@
   - risk-incidents (Incidents) [covered]
 
   Overlays: 3
-  - overlay-stress-config (Sheet: Stress Test Config) [covered]
+  - overlay-stress-detail (Drawer: Stress Test Evidence) [covered]
   - overlay-breach-detail (Drawer: Breach Detail) [covered]
   - overlay-rule-editor (Modal: Rule Editor) [covered]
 
@@ -777,8 +777,8 @@
     /* ══════════════════════════════════════════════
      * Overlay Activation Rules (prototype-toggles.css)
      * ══════════════════════════════════════════════ */
-    :root:has(#overlay-stress-config:checked)
-      [data-overlay="overlay-stress-config"] { display: flex; }
+    :root:has(#overlay-stress-detail:checked)
+      [data-overlay="overlay-stress-detail"] { display: flex; }
     :root:has(#overlay-breach-detail:checked)
       [data-overlay="overlay-breach-detail"] { display: flex; }
     :root:has(#overlay-rule-editor:checked)
@@ -2008,7 +2008,7 @@
           <span class="section-title">压力测试</span>
           <span class="section-subtitle">选择场景并运行</span>
           <div class="flex-1"></div>
-          <label for="overlay-stress-config" class="btn-cta-sm cursor-pointer">运行压力测试</label>
+          <label for="overlay-stress-detail" class="btn-cta-sm cursor-pointer">查看压力证据</label>
         </div>
 
         <!-- Stress Test Full Table -->
@@ -2292,70 +2292,70 @@
   <!-- ═══ Overlay Containers ═══ -->
   <div class="overlays">
 
-    <!-- Overlay A: Stress Test Config (Sheet 居中) -->
-    <div class="overlay-backdrop" data-overlay="overlay-stress-config">
-      <label class="overlay-dismiss" for="overlay-stress-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation data-high-risk-kind="risk-simulation">
+    <!-- Overlay A: Daily Decision V3 stress evidence (read-only drawer) -->
+    <div class="overlay-backdrop" data-overlay="overlay-stress-detail">
+      <label class="overlay-dismiss" for="overlay-stress-detail" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-label="压力测试证据" aria-modal="true">
         <div class="overlay-header">
-          <span class="overlay-title">压力测试配置</span>
-          <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
+          <span class="overlay-title">压力测试证据 · Daily Decision V3</span>
+          <label for="overlay-stress-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <div class="risk-confirmation-grid">
             <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
-              <div class="risk-confirmation-title">影响范围</div>
-              <p class="risk-confirmation-copy">运行压力测试会生成新的风险快照，不会改变实盘订单或风险阈值。</p>
+              <div class="risk-confirmation-title">只读边界</div>
+              <p class="risk-confirmation-copy">本面板只呈现后端已生成的场景损失，不发起计算，也不改变订单或风险阈值。</p>
             </div>
             <div class="risk-confirmation-block" data-before-after>
-              <div class="risk-confirmation-title">测试前后</div>
-              <p class="risk-confirmation-copy">当前场景为标准风控，测试后新增一条压力测试记录并刷新 Breaches 面板。</p>
+              <div class="risk-confirmation-title">可用性</div>
+              <p class="risk-confirmation-copy">3 个场景可用，1 个场景因 source_snapshot_missing 明确不可用。</p>
             </div>
             <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
               <div class="risk-confirmation-title">对象清单</div>
-              <p class="risk-confirmation-copy">组合、场景、VaR、最大回撤和行业集中度使用当前风险快照。</p>
+              <p class="risk-confirmation-copy">组合、catalog version、scenario loss 与 unavailable reason 均来自同一 V3 artifact。</p>
             </div>
             <div class="risk-confirmation-block" data-audit-record>
-              <div class="risk-confirmation-title">审计记录</div>
-              <p class="risk-confirmation-copy">记录测试参数、操作者、运行时间和结果摘要。</p>
+              <div class="risk-confirmation-title">PIT provenance</div>
+              <p class="risk-confirmation-copy">decision 09:30 · knowledge 09:25 · publication 09:20 · snapshot ds-119。</p>
             </div>
             <div class="risk-confirmation-block" data-recovery-path>
-              <div class="risk-confirmation-title">恢复路径</div>
-              <p class="risk-confirmation-copy">测试记录可归档，规则和交易状态不受影响。</p>
+              <div class="risk-confirmation-title">Shadow 边界</div>
+              <p class="risk-confirmation-copy">Agent opinion 单独加载；不可用时不改变 readiness、weights、risk 或 execution。</p>
             </div>
           </div>
-          <h2>场景选择</h2>
+          <h2>场景证据</h2>
           <div class="flex-col-gap">
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario" checked> 标准风控（当前）
+              <input type="radio" name="stress-scenario" checked disabled> 沪深 300 -10% · loss -4.82%
             </label>
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario"> 极端下跌 -15%（预设）
+              <input type="radio" name="stress-scenario" disabled> 利率 +100bp · loss -1.31%
             </label>
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario"> 利率上行 +100bp（预设）
+              <input type="radio" name="stress-scenario" disabled> 流动性冲击 · loss -3.07%
             </label>
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario"> 流动性危机（预设）
+              <input type="radio" name="stress-scenario" disabled> 北向流出 · unavailable
             </label>
           </div>
 
-          <h2>参数配置</h2>
+          <h2>固定身份</h2>
           <div class="overlay-field">
-            <span class="overlay-field-label">当前场景</span>
-            <span class="overlay-field-value">标准风控</span>
+            <span class="overlay-field-label">Catalog</span>
+            <span class="overlay-field-value">stress-cn-v4</span>
           </div>
           <div class="overlay-field">
-            <span class="overlay-field-label">持续时间</span>
-            <span class="overlay-field-value">1 个交易日</span>
+            <span class="overlay-field-label">Artifact</span>
+            <span class="overlay-field-value">ddv3-20260818-0930</span>
           </div>
           <div class="overlay-field">
-            <span class="overlay-field-label">标的范围</span>
-            <span class="overlay-field-value">全部持仓</span>
+            <span class="overlay-field-label">Account / sleeve</span>
+            <span class="overlay-field-value">paper-main / core</span>
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>取消</label>
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-primary cursor-pointer" data-confirm-control>确认运行</label>
+            <label for="overlay-stress-detail" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>关闭</label>
+            <label for="overlay-stress-detail" class="overlay-btn overlay-btn-primary cursor-pointer" data-confirm-control>查看来源快照</label>
           </div>
         </div>
       </div>
@@ -2672,7 +2672,7 @@
           <div class="state-empty-icon">🧪</div>
           <div class="state-empty-title">暂无压力测试记录</div>
           <div class="state-empty-desc">点击运行压力测试，模拟极端市场场景对组合的冲击</div>
-          <label for="overlay-stress-config" class="state-empty-cta cursor-pointer">运行测试</label>
+          <label for="overlay-stress-detail" class="state-empty-cta cursor-pointer">查看不可用原因</label>
         </div>
       </div>
       </div>
@@ -2782,6 +2782,21 @@
           </div>
         </div>
 
+        <div class="gallery-group" data-component="daily-decision-v3-risk-state">
+          <div class="gallery-group__label">Daily Decision V3 · 风险证据</div>
+          <div class="gallery-cards">
+            <div class="gallery-card"><div class="gallery-card__label">Ready</div><div class="gallery-card__preview state-variant-content" data-state="ready"><span class="status-pill">READY · ES / VaR / factor / stress 已对齐</span></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Review required</div><div class="gallery-card__preview state-variant-content" data-state="review-required"><div class="state-stale"><div class="state-stale-title">尾部风险需复核</div><div class="state-stale-desc">ES99 触发审阅阈值。</div></div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Blocked</div><div class="gallery-card__preview state-variant-content" data-state="blocked"><div class="state-error"><div class="state-error-title">风险决策阻断</div><div class="state-error-desc">页面 fail closed。</div></div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Partial</div><div class="gallery-card__preview state-variant-content" data-state="partial"><span class="status-pill">风险证据部分可用 · reason 已列出</span></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Tail risk unavailable</div><div class="gallery-card__preview state-variant-content" data-state="tail-risk-unavailable"><div class="state-error-title">tail_risk unavailable</div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Factor risk unavailable</div><div class="gallery-card__preview state-variant-content" data-state="factor-risk-unavailable"><div class="state-error-title">factor_risk unavailable</div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Stress unavailable</div><div class="gallery-card__preview state-variant-content" data-state="stress-scenario-unavailable"><div class="state-error-title">scenario source snapshot missing</div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Reconciliation mismatch</div><div class="gallery-card__preview state-variant-content" data-state="reconciliation-mismatch"><div class="state-error"><div class="state-error-title">对账不一致</div><div class="state-error-desc">alert key rec-9a82。</div></div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Provenance missing</div><div class="gallery-card__preview state-variant-content" data-state="provenance-missing"><div class="state-error-title">PIT provenance 不完整</div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Shadow opinion unavailable</div><div class="gallery-card__preview state-variant-content" data-state="shadow-opinion-unavailable"><span class="status-pill">shadow-only unavailable · V3 保持有效</span></div></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -2791,7 +2806,7 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card" data-overlay-ref="overlay-stress-config">
+    <div class="gallery-card" data-overlay-ref="overlay-stress-detail">
       <div class="gallery-card__label">压力测试配置 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
         <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation data-high-risk-kind="risk-simulation">
@@ -2976,7 +2991,7 @@
     </section>
 
   <!-- ═══ Overlay Trigger Checkboxes ═══ -->
-  <input type="checkbox" id="overlay-stress-config" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-stress-detail" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-breach-detail" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-rule-editor" class="overlay-radio sr-only">
 </body>

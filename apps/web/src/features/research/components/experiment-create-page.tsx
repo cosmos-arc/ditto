@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { AgentContextActions } from "@/features/agent";
 import { Panel, PanelBody, PanelHeader, StatusBar } from "@/features/shell";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -125,6 +126,14 @@ export function ExperimentCreatePage({ onLaunched }: ExperimentCreatePageProps) 
 						data-contract-slot="experiment-actions"
 						className="sticky bottom-(--height-status-bar) flex flex-wrap justify-end gap-2 border-t border-(--color-border-subtle) bg-(--color-surface-1) py-3"
 					>
+						{currentIdentity && (
+							<AgentContextActions
+								contextType="experiment-planning-draft"
+								contextId={currentIdentity}
+								evidenceObjective="复核当前实验 planning draft 的 frozen identity、预算与门禁"
+								authorObjective="提出当前实验 planning draft 的结构化变更草案"
+							/>
+						)}
 						<button
 							type="button"
 							onClick={runPreflight}

@@ -217,6 +217,7 @@
      * Trading Variant: compact context + banner + main
      * ══════════════════════════════════════════════ */
     .shell-analytical.trading-variant {
+      --shell-analysis-band-height: var(--shell-trading-analysis-band-height);
       height: calc(100dvh - 1.5rem);
       min-height: calc(100dvh - 1.5rem);
       overflow: hidden;
@@ -224,12 +225,14 @@
         var(--shell-header-height)
         auto
         auto
-        minmax(0, 1fr);
+        minmax(0, 1fr)
+        var(--shell-analysis-band-height);
       grid-template-areas:
         "rail header   header"
         "rail context  context"
         "rail banner   banner"
-        "rail main     activity";
+        "rail main     activity"
+        "rail analysis activity";
     }
 
     .shell-analytical.trading-variant .trading-context-bar { grid-area: context; }
@@ -248,6 +251,28 @@
       /* Trading context: tighter gap for analytical density — shared default is var(--space-16) */
       gap: var(--space-10);
       padding: var(--space-8) var(--space-12);
+    }
+
+    .shell-analytical.trading-variant .analysis-band {
+      padding: 0 var(--density-gutter) var(--density-gutter);
+    }
+
+    .decision-briefing-summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--space-12);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    .decision-briefing-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
     }
 
     /* ── Trading Context Bar — session, margin, risk, connectivity, queue ── */
@@ -2090,7 +2115,7 @@
     </header>
 
     <!-- ═══ Trading Context Bar: session + margin + connectivity + risk + queue ═══ -->
-    <div class="trading-context-bar" role="region" aria-label="交易上下文：会话、保证金、连接、风险与执行队列" data-contract-slot="trading-context-bar">
+    <div class="trading-context-bar shell-strip" role="region" aria-label="交易上下文：会话、保证金、连接、风险与执行队列" data-contract-slot="trading-context-bar">
       <div class="trading-context-item scope-phase">
         <span class="phase-dot motion-state-only"></span>
         连续竞价
@@ -2200,7 +2225,7 @@
     </div>
 
     <!-- ═══ Main Content — Tab Panels ═══ -->
-    <div class="main-content" id="main-content" aria-live="polite" role="main">
+    <div class="main-content shell-main" id="main-content" aria-live="polite" role="main">
       <div class="tab-group" data-tab-group="trading">
 
       <!-- Tab Panel 1: 交易模式（默认） -->
@@ -2673,8 +2698,21 @@
       </div><!-- /tab-group -->
     </div>
 
+    <div class="analysis-band shell-analysis" role="complementary" aria-label="Decision Briefing" data-contract-slot="analysis">
+      <div class="panel" data-contract-slot="decision-briefing">
+        <div class="panel-header">
+          <span class="panel-title">Decision Briefing</span>
+          <span class="status-badge warning">SHADOW ONLY</span>
+        </div>
+        <div class="panel-body decision-briefing-summary">
+          <span>Agent shadow opinion 独立于 Daily Decision V3；不可用时不改变 readiness、actions 或执行状态。</span>
+          <span class="decision-briefing-meta">provenance: exact PIT identity · status: unavailable</span>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ Activity Stack (300px right side) ═══ -->
-    <div class="activity-stack" role="complementary" aria-label="活动面板" data-contract-slot="sidebar" data-secondary-context>
+    <div class="activity-stack shell-activity" role="complementary" aria-label="活动面板" data-contract-slot="sidebar" data-secondary-context>
       <div class="context-rail">
 
         <!-- Section 1: 风控监控 -->
@@ -3610,6 +3648,18 @@
           </div>
         </div>
 
+        <div class="gallery-group" data-component="daily-decision-v3-state">
+          <div class="gallery-group__label">Daily Decision V3 · Readiness</div>
+          <div class="gallery-cards">
+            <div class="gallery-card"><div class="gallery-card__label">Ready</div><div class="gallery-card__preview state-variant-content" data-state="ready"><span class="status-pill">READY · 8 actions sized</span></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Review required</div><div class="gallery-card__preview state-variant-content" data-state="review-required"><div class="state-stale"><div class="state-stale-title">REVIEW_REQUIRED</div><div class="state-stale-desc">2 risk flags 需人工复核。</div></div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Blocked</div><div class="gallery-card__preview state-variant-content" data-state="blocked"><div class="state-error"><div class="state-error-title">BLOCKED</div><div class="state-error-desc">动作保持只读且不可提交。</div></div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Partial</div><div class="gallery-card__preview state-variant-content" data-state="partial"><div class="state-stale"><div class="state-stale-title">部分风险证据可用</div><div class="state-stale-desc">明确列出缺失模块和原因。</div></div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Unavailable</div><div class="gallery-card__preview state-variant-content" data-state="unavailable"><div class="state-error"><div class="state-error-title">V3 unavailable</div><div class="state-error-desc">不会降级到 V2 或 mock。</div></div></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Market closed</div><div class="gallery-card__preview state-variant-content" data-state="market-closed"><span class="status-pill">暂停 · 休市 · 保留最近固定决策</span></div></div>
+            <div class="gallery-card"><div class="gallery-card__label">Shadow opinion unavailable</div><div class="gallery-card__preview state-variant-content" data-state="shadow-opinion-unavailable"><div class="state-stale"><div class="state-stale-title">Decision Briefing unavailable</div><div class="state-stale-desc">V3 readiness 与 actions 不受影响。</div></div></div></div>
+          </div>
+        </div>
       </div>
     </section>
 

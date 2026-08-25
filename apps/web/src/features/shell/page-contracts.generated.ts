@@ -32,11 +32,11 @@ export const PROTOTYPE_SOURCES = [
 
 export const SHELL_SLOT_MAP: Record<ShellFamily, string[]> = {
   "radar": ["strip", "main", "right-rail", "tab-band", "context-bar", "scope-strip", "bottom-tab-band"],
-  "studio": ["header", "tabs", "source", "main", "inspector", "adoption", "graph", "actions", "modes"],
+  "studio": ["shell", "header", "tabs", "source", "main", "inspector", "adoption", "graph", "actions", "modes"],
   "catalog": ["toolbar", "main", "detail", "header"],
   "object-hub": ["meta", "tabs", "main", "bottom"],
   "command-center": ["pulse", "main", "sidebar"],
-  "analytical": ["strip", "main", "activity", "analysis"],
+  "analytical": ["strip", "main", "activity", "analysis", "shell"],
   "ops-console": ["health", "main", "detail"],
 };
 
@@ -206,25 +206,28 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     shellFamily: "studio",
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-agent-console-v2.html",
-    requiredSlots: ["header", "tabs", "source", "main", "inspector"],
-    requiredStates: ["loading", "empty", "error", "stale", "no-agents", "agent-running", "partial", "blocked", "waiting-approval", "guardrail-blocked", "quality-run"],
+    requiredSlots: ["shell", "header", "tabs", "source", "main", "inspector"],
+    requiredStates: ["loading", "empty", "error", "stale", "disabled", "degraded", "running", "partial", "blocked", "waiting-approval", "approval-expired", "guardrail-blocked", "cancelled", "failed", "completed", "reconnecting"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
-      "featureModule": "src/features/platform",
+      "featureModule": "src/features/agent",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
       "visualAuditStatus": "verified",
       "reactTestRefs": [
+        "src/features/agent/components/agent-console-page.test.tsx",
+        "src/features/agent/components/agent-overlays.test.tsx",
         "src/features/platform/components/platform-components.test.tsx"
       ],
       "reactComponentRefs": [
+        "AgentConsolePage",
         "PlatformAgentsPage"
       ]
     },
     overlays: [
       {
-        "id": "agent-console.plan-create",
+        "id": "agent-console.run-create",
         "kind": "sheet",
         "blocking": false,
         "requiredInDefaultFlow": true,
@@ -232,8 +235,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "#overlay-plan-create",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "prototypeSelector": "#overlay-run-create",
+        "reactComponent": "AgentRunCreateSheet",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -241,24 +244,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
         ]
       },
       {
-        "id": "agent-console.run-rerun",
-        "kind": "sheet",
-        "blocking": false,
-        "requiredInDefaultFlow": true,
-        "trigger": {
-          "slot": "main",
-          "action": "open-overlay"
-        },
-        "prototypeSelector": "#overlay-run-rerun",
-        "reactComponent": "PrototypeOnlyOverlay",
-        "closeBehavior": [
-          "escape",
-          "outside-click",
-          "primary-action"
-        ]
-      },
-      {
-        "id": "agent-console.approval-confirm",
+        "id": "agent-console.run-cancel",
         "kind": "modal",
         "blocking": true,
         "requiredInDefaultFlow": true,
@@ -266,8 +252,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "#overlay-approval-confirm",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "prototypeSelector": "#overlay-run-cancel",
+        "reactComponent": "AgentRunCancelDialog",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -275,7 +261,24 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
         ]
       },
       {
-        "id": "agent-console.tool-trace",
+        "id": "agent-console.approval-exact-action",
+        "kind": "modal",
+        "blocking": true,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "main",
+          "action": "open-overlay"
+        },
+        "prototypeSelector": "#overlay-approval-exact-action",
+        "reactComponent": "AgentApprovalExactActionDialog",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "agent-console.evidence-detail",
         "kind": "drawer",
         "blocking": false,
         "requiredInDefaultFlow": true,
@@ -283,8 +286,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "#overlay-tool-trace-detail",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "prototypeSelector": "#overlay-evidence-detail",
+        "reactComponent": "AgentEvidenceDetailDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -301,7 +304,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-artifact"
         },
         "prototypeSelector": "#overlay-artifact-preview",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "AgentArtifactPreviewDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -318,7 +321,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-guardrail"
         },
         "prototypeSelector": "#overlay-guardrail-detail",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "AgentGuardrailDetailDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -326,16 +329,50 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
         ]
       },
       {
-        "id": "agent-console.quality-run-create",
+        "id": "agent-console.campaign-draft",
         "kind": "sheet",
         "blocking": false,
         "requiredInDefaultFlow": true,
         "trigger": {
           "slot": "main",
-          "action": "create-quality-run"
+          "action": "create-campaign"
         },
-        "prototypeSelector": "#overlay-quality-run-create",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "prototypeSelector": "#overlay-campaign-draft",
+        "reactComponent": "AgentCampaignDraftSheet",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "agent-console.campaign-approval",
+        "kind": "modal",
+        "blocking": true,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "main",
+          "action": "approve-campaign"
+        },
+        "prototypeSelector": "#overlay-campaign-approval",
+        "reactComponent": "AgentCampaignApprovalDialog",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "agent-console.campaign-cancel",
+        "kind": "modal",
+        "blocking": true,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "main",
+          "action": "cancel-campaign"
+        },
+        "prototypeSelector": "#overlay-campaign-cancel",
+        "reactComponent": "AgentCampaignCancelDialog",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -344,6 +381,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       }
     ],
     a11yRoles: {
+      "shell": "region",
       "header": "banner",
       "tabs": "tablist",
       "source": "complementary",
@@ -351,9 +389,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "inspector": "complementary",
     },
     responsiveBehavior: {
+      "shell": "reflow",
       "header": "collapsed",
       "tabs": "reflow",
       "source": "collapsed",
+      "main": "reflow",
       "inspector": "overlay",
     },
   },
@@ -1839,7 +1879,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-platform.html",
     requiredSlots: ["health", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "pipeline-running"],
+    requiredStates: ["loading", "empty", "error", "stale", "pipeline-running", "source-degraded", "fallback-active", "promotion-blocked", "approval-expired", "remediation-empty"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -1867,7 +1907,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-pipeline-rerun",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "PlatformPipelineRerunSheet",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -1884,7 +1924,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-alert-handle",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "PlatformAlertHandleSheet",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -1901,7 +1941,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-task-detail",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "PlatformTaskDetailDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -1926,7 +1966,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-portfolio.html",
     requiredSlots: ["strip", "main", "activity", "analysis"],
-    requiredStates: ["loading", "empty", "error", "stale", "no-positions"],
+    requiredStates: ["loading", "empty", "error", "stale", "ready", "review-required", "blocked", "partial", "solver-failed", "reconciliation-mismatch", "no-positions"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -1953,7 +1993,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-position-detail",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "PortfolioPositionDetailDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -1970,7 +2010,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-trade-detail",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "PortfolioTradeDetailDialog",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -1987,7 +2027,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-confirm-close-all",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "PortfolioCloseAllConfirmDialog",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -2251,7 +2291,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-risk-center.html",
     requiredSlots: ["strip", "main", "activity", "analysis"],
-    requiredStates: ["loading", "empty", "error", "stale", "breach-active"],
+    requiredStates: ["loading", "empty", "error", "stale", "ready", "review-required", "blocked", "partial", "tail-risk-unavailable", "factor-risk-unavailable", "stress-scenario-unavailable", "reconciliation-mismatch", "provenance-missing", "breach-active", "shadow-opinion-unavailable"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -2269,7 +2309,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     },
     overlays: [
       {
-        "id": "risk-center.stress-config",
+        "id": "risk-center.stress-detail",
         "kind": "drawer",
         "blocking": false,
         "requiredInDefaultFlow": true,
@@ -2277,8 +2317,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "#overlay-stress-config",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "prototypeSelector": "#overlay-stress-detail",
+        "reactComponent": "RiskStressDetailDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -2734,8 +2774,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     shellFamily: "analytical",
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-trading-overview.html",
-    requiredSlots: ["strip", "main", "activity", "analysis"],
-    requiredStates: ["loading", "empty", "error", "stale", "market-closed"],
+    requiredSlots: ["shell", "strip", "main", "activity", "analysis"],
+    requiredStates: ["loading", "empty", "error", "stale", "ready", "review-required", "blocked", "partial", "unavailable", "market-closed", "shadow-opinion-unavailable"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -2761,7 +2801,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-pause-trading",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "PauseTradingConfirmDialog",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -2778,7 +2818,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-position-detail",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "TradingPositionDetailDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -2795,7 +2835,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-risk-alert-detail",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "TradingRiskAlertDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -2812,7 +2852,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "action": "open-overlay"
         },
         "prototypeSelector": "#overlay-limit-status",
-        "reactComponent": "PrototypeOnlyOverlay",
+        "reactComponent": "TradingLimitStatusDrawer",
         "closeBehavior": [
           "escape",
           "outside-click",
@@ -2821,6 +2861,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       }
     ],
     a11yRoles: {
+      "shell": "region",
       "strip": "banner",
       "main": "main",
       "activity": "complementary",

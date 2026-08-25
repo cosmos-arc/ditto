@@ -1,9 +1,9 @@
 {
   "id": "portfolio",
-  "version": 1,
-  "status": "draft",
+  "version": 2,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-18",
   "route": "/trading/portfolio",
   "pagePattern": "analytical-overview",
   "shellFamily": "analytical",
@@ -21,6 +21,13 @@
     "reactComponentRefs": [
       "PortfolioPage"
     ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/trade/daily-decision/v3"
+    ],
+    "writePaths": [],
+    "mockFallback": false
   },
   "viewports": [
     {
@@ -81,6 +88,12 @@
       "stale"
     ],
     "pageSpecific": [
+      "ready",
+      "review-required",
+      "blocked",
+      "partial",
+      "solver-failed",
+      "reconciliation-mismatch",
       "no-positions"
     ]
   },
@@ -132,7 +145,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-position-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "PortfolioPositionDetailDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -149,7 +162,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-trade-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "PortfolioTradeDetailDialog",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -166,7 +179,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-confirm-close-all",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "PortfolioCloseAllConfirmDialog",
       "closeBehavior": [
         "escape",
         "outside-click",

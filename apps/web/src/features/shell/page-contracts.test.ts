@@ -63,6 +63,28 @@ type LandingWithComponentRefs = {
 	reactTestRefs?: string[];
 };
 
+type R1R5Contract = {
+	liveData?: {
+		readPaths?: string[];
+		writePaths?: string[];
+		mockFallback?: boolean;
+	};
+	overlays: Array<{ reactComponent: string }>;
+	security?: {
+		browserCredentialInputs?: string[];
+		browserPersistence?: string[];
+		forbiddenClientFields?: string[];
+		providerConfiguration?: string;
+	};
+	states: {
+		pageSpecific: string[];
+		universal: string[];
+	};
+};
+
+const readR1R5Contract = (id: string): R1R5Contract =>
+	JSON.parse(readFileSync(resolve(process.cwd(), `docs/contracts/pages/${id}.contract.json`), "utf-8")) as R1R5Contract;
+
 describe("Generated page contracts", () => {
 	it("exports the generated contract dictionaries", () => {
 		expect(PAGE_PATTERNS.length).toBeGreaterThan(0);
@@ -156,6 +178,105 @@ describe("Generated page contracts", () => {
 					`${contract.route} reactTestRefs do not cover ${componentRef}`,
 				).toBe(true);
 			}
+		}
+	});
+});
+
+describe("R1-R5 live page contracts", () => {
+	const requiredStates = {
+		"agent-console": [
+			"disabled",
+			"degraded",
+			"running",
+			"partial",
+			"blocked",
+			"waiting-approval",
+			"approval-expired",
+			"guardrail-blocked",
+			"cancelled",
+			"failed",
+			"completed",
+			"reconnecting",
+		],
+		platform: [
+			"pipeline-running",
+			"source-degraded",
+			"fallback-active",
+			"promotion-blocked",
+			"approval-expired",
+			"remediation-empty",
+		],
+		portfolio: [
+			"ready",
+			"review-required",
+			"blocked",
+			"partial",
+			"solver-failed",
+			"reconciliation-mismatch",
+			"no-positions",
+		],
+		"risk-center": [
+			"ready",
+			"review-required",
+			"blocked",
+			"partial",
+			"tail-risk-unavailable",
+			"factor-risk-unavailable",
+			"stress-scenario-unavailable",
+			"reconciliation-mismatch",
+			"provenance-missing",
+			"shadow-opinion-unavailable",
+		],
+		"trading-overview": [
+			"ready",
+			"review-required",
+			"blocked",
+			"partial",
+			"unavailable",
+			"market-closed",
+			"shadow-opinion-unavailable",
+		],
+	} as const;
+
+	it("freezes the required operational state matrix", () => {
+		for (const [id, states] of Object.entries(requiredStates)) {
+			const contract = readR1R5Contract(id);
+			expect(contract.states.pageSpecific, id).toEqual(expect.arrayContaining([...states]));
+		}
+	});
+
+	it("maps every in-scope overlay to a concrete React component", () => {
+		for (const id of Object.keys(requiredStates)) {
+			const contract = readR1R5Contract(id);
+			expect(contract.overlays, id).not.toContainEqual(
+				expect.objectContaining({ reactComponent: "PrototypeOnlyOverlay" }),
+			);
+		}
+	});
+
+	it("declares live Agent and Daily Decision V3 API boundaries without mock fallback", () => {
+		const agent = readR1R5Contract("agent-console");
+		expect(agent.liveData).toMatchObject({
+			mockFallback: false,
+			readPaths: expect.arrayContaining([
+				"/api/v1/agent/capabilities",
+				"/api/v1/agent/runs",
+				"/api/v1/agent/approvals",
+				"/api/v1/agent/campaigns",
+			]),
+		});
+		expect(agent.security).toMatchObject({
+			browserCredentialInputs: [],
+			browserPersistence: [],
+			providerConfiguration: "server-only",
+			forbiddenClientFields: expect.arrayContaining(["api_key", "authorization", "base_url", "model_id"]),
+		});
+
+		for (const id of ["trading-overview", "portfolio", "risk-center"]) {
+			expect(readR1R5Contract(id).liveData).toMatchObject({
+				mockFallback: false,
+				readPaths: expect.arrayContaining(["/api/v1/trade/daily-decision/v3"]),
+			});
 		}
 	});
 });

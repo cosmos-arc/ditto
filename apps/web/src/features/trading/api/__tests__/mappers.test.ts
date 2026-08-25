@@ -5,12 +5,14 @@ import {
 	mapDailyDecisionToSignalsQueue,
 	mapDailyDecisionToSignalsResponse,
 	mapDailyDecisionV2ToLegacy,
+	mapDailyDecisionV3,
 	mapPositionsResponse,
 	mapReadinessStatus,
 } from "../mappers";
 
 type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
 type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
+type DailyDecisionV3Response = components["schemas"]["DailyDecisionV3Response"];
 
 const report: DailyDecisionReportResponse = {
 	strategy_id: "seed_etf_industry_rotation",
@@ -85,7 +87,138 @@ const report: DailyDecisionReportResponse = {
 	},
 };
 
+const v3Report: DailyDecisionV3Response = {
+	v2: {
+		identity: {
+			strategy_id: "strategy-r4",
+			strategy_version: "7",
+			signal_date: "2026-08-18",
+			intended_trade_date: "2026-08-19",
+			account_id: "paper-r4",
+		},
+		readiness: { status: "ready", reason_codes: [], details: [] },
+		data: {
+			required_datasets: [],
+			snapshot_ids: { bars: "snapshot-bars-r4" },
+			dataset_states: [],
+			freshness: "ready",
+			dq_state: "passed",
+		},
+		run_package: {
+			outcome: "completed",
+			checksum_valid: true,
+			no_rebalance: false,
+			factor_evidence: {},
+			risk_evidence: [],
+		},
+		account_positions: {
+			as_of: "2026-08-18T07:00:00Z",
+			baseline_id: "baseline-r4",
+			cash_available: 250_000,
+			total_value: 1_000_000,
+			exposure: 750_000,
+			positions: [],
+		},
+		actions: [
+			{
+				intent_id: "intent-r4",
+				instrument_id: 510300,
+				direction: "buy",
+				target_weight: 0.35,
+				current_weight: 0.25,
+				delta_weight: 0.1,
+				suggested_quantity: 1000,
+				filled_quantity: 0,
+				remaining_quantity: 1000,
+				risk_flags: [],
+				intent_status: "pending",
+				sizing_readiness: "ready",
+			},
+		],
+		execution_review: { effective_fills: [], exceptions: [], unresolved_conflicts: [] },
+	},
+	readiness: "ready",
+	blocking_reasons: [],
+	portfolio_construction: {
+		status: "completed",
+		solver: "clarabel",
+		solver_version: "0.10",
+		mode: "risk_budget",
+		solver_status: "optimal",
+		duration_ms: 18.5,
+		policy_digest: "sha256:policy-r4",
+		failure_code: null,
+	},
+	tail_risk: {
+		historical_es99: 0.041,
+		historical_var99: 0.031,
+		parametric_var99: 0.029,
+		monte_carlo_var99: 0.033,
+		monte_carlo_seed: 42,
+	},
+	factor_risk: {
+		availability: "available",
+		total_risk: 0.12,
+		marginal_contributions: { market: 0.08 },
+		percentage_contributions: { market: 0.67 },
+		euler_residual: 0.0001,
+	},
+	stress_tests: {
+		catalog_version: "stress-v3",
+		losses: { liquidity_crunch: 0.08 },
+		unavailable_scenarios: [],
+	},
+	reconciliation: { status: "matched", differences: [], alert_idempotency_key: null },
+	provenance: {
+		decision_time: "2026-08-18T07:00:00Z",
+		knowledge_cutoff: "2026-08-18T06:55:00Z",
+		publication_cutoff: "2026-08-18T06:50:00Z",
+		source_snapshot_ids: ["snapshot-bars-r4"],
+		generated_at: "2026-08-18T07:01:00Z",
+	},
+};
+
 describe("trading api mappers", () => {
+	it("maps the V3 decision surface into a component-safe view model", () => {
+		const mapped = mapDailyDecisionV3(v3Report);
+
+		expect(mapped.identity).toEqual({
+			strategyId: "strategy-r4",
+			strategyVersion: "7",
+			signalDate: "2026-08-18",
+			tradeDate: "2026-08-19",
+			accountId: "paper-r4",
+			sleeveId: null,
+		});
+		expect(mapped.readiness).toMatchObject({ status: "ready", reportedStatus: "ready", blockingReasons: [] });
+		expect(mapped.portfolioConstruction).toMatchObject({ solver: "clarabel", status: "completed" });
+		expect(mapped.provenance).toMatchObject({ complete: true, sourceSnapshotIds: ["snapshot-bars-r4"] });
+		expect(mapped.completeness).toEqual({ status: "complete", issues: [] });
+	});
+
+	it("fails closed when required PIT provenance is missing", () => {
+		const mapped = mapDailyDecisionV3({
+			...v3Report,
+			provenance: { ...v3Report.provenance, publication_cutoff: null, source_snapshot_ids: [] },
+		});
+
+		expect(mapped.readiness.status).toBe("blocked");
+		expect(mapped.readiness.blockingReasons).toContain("PIT_PROVENANCE_INCOMPLETE");
+		expect(mapped.provenance).toMatchObject({ complete: false });
+		expect(mapped.completeness.status).toBe("blocked");
+	});
+
+	it.each(["review", "blocked"] as const)("preserves the backend %s readiness decision", (status) => {
+		const mapped = mapDailyDecisionV3({
+			...v3Report,
+			readiness: status,
+			blocking_reasons: status === "blocked" ? ["RISK_LIMIT_BREACH"] : ["MANUAL_REVIEW_REQUIRED"],
+		});
+
+		expect(mapped.readiness.reportedStatus).toBe(status);
+		expect(mapped.readiness.status).toBe(status);
+	});
+
 	it("maps readiness ready/review/blocked/failed states to cockpit copy", () => {
 		expect(mapReadinessStatus("ready").label).toBe("可执行");
 		expect(mapReadinessStatus("review").label).toBe("需复核");

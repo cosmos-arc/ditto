@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { useDailyDecisionV2, useOrdersSummary, useRiskSummary, useSignalsQueue } from "../hooks";
+import { useDailyDecisionV3, useOrdersSummary, useRiskSummary, useSignalsQueue } from "../hooks";
 
 function PrototypeRiskAlertsBlock() {
 	const { data: risk, isLoading: riskLoading, refetch: riskRefetch } = useRiskSummary();
@@ -50,9 +50,11 @@ function PrototypeRiskAlertsBlock() {
 }
 
 function LiveRiskAlertsBlock() {
-	const { data, isLoading, isError, refetch } = useDailyDecisionV2();
-	const riskEvidence = data?.run_package.risk_evidence ?? [];
-	const readinessReasons = data?.readiness.reason_codes ?? [];
+	const { data, isLoading, isError, refetch } = useDailyDecisionV3();
+	const riskEvidence = data
+		? [...new Set([...data.completeness.issues, ...data.actions.flatMap((action) => action.riskFlags)])]
+		: [];
+	const readinessReasons = data?.readiness.blockingReasons ?? [];
 
 	return (
 		<ContextSection title="风控 & 预警" data-info-level="l1" data-info-unit="risk-alerts">

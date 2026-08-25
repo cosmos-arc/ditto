@@ -316,6 +316,7 @@
 	--height-status-bar: var(--shell-status-bar-height);
 	--width-activity: var(--shell-analytical-activity-width);
 	--height-analysis-band: var(--shell-analytical-band-height);
+	--height-trading-analysis-band: var(--shell-trading-analysis-band-height);
 	--width-radar-right-rail: var(--shell-radar-right-rail-width);
 	--width-catalog-detail: var(--shell-catalog-detail-width);
 	--width-ops-detail: var(--shell-ops-detail-width);

@@ -14,8 +14,8 @@ export function EquityPnlBlock() {
 		<ContextSection title="权益 & 盈亏" data-info-level="l1" data-info-unit="equity-pnl">
 			{!usePrototypeMocks && (
 				<div className="flex flex-col gap-2 py-2">
-					<StatusBadge label="V1a 未接 live" variant="idle" size="sm" />
-					<span className="text-sm text-(--color-foreground-secondary)">Equity 曲线待后端补齐</span>
+					<StatusBadge label="权益曲线不可用" variant="idle" size="sm" />
+					<span className="text-sm text-(--color-foreground-secondary)">当前公开合同未提供权益时序</span>
 				</div>
 			)}
 			{isLoading && <LoadingSkeleton variant="chart" />}

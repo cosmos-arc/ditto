@@ -33,14 +33,14 @@ function resolveTitle(matches: readonly { routeId?: string }[], router: RouterWi
 }
 
 interface ShellHeaderProps {
-	readonly onOpenCopilot?: () => void;
+	readonly onOpenAgent?: () => void;
 }
 
 /**
  * ShellHeader -- 68px global top bar.
  * Shows: dynamic page title (from route static data), spacer, action controls.
  */
-export function ShellHeader({ onOpenCopilot }: ShellHeaderProps) {
+export function ShellHeader({ onOpenAgent }: ShellHeaderProps) {
 	const matches = useMatches();
 	const router = useRouter() as unknown as RouterWithStaticTitles;
 	const title = resolveTitle(matches, router);
@@ -58,7 +58,7 @@ export function ShellHeader({ onOpenCopilot }: ShellHeaderProps) {
 			{/* Spacer pushes actions to the right */}
 			<div className="flex-1" />
 
-			<HeaderUtilityBar onOpenCopilot={onOpenCopilot} />
+			<HeaderUtilityBar onOpenAgent={onOpenAgent} />
 		</header>
 	);
 }

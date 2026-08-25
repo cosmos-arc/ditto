@@ -231,16 +231,6 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		hasStatusBar: true,
 	},
 	{
-		route: "/ai/copilot",
-		pagePattern: "studio-builder",
-		shellFamily: "studio",
-		prototypeSource: "prototype-backed",
-		prototypeRef: "docs/designs/specs/prototypes/page-ai-copilot.html",
-		requiredSlots: ["source", "main", "inspector"],
-		requiredStates: [...UNIVERSAL_STATES, "no-session", "chatting"],
-		hasStatusBar: true,
-	},
-	{
 		route: "/platform/agents",
 		pagePattern: "studio-builder",
 		shellFamily: "studio",

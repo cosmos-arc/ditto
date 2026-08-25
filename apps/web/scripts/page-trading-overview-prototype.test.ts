@@ -126,6 +126,9 @@ describe("page-trading-overview prototype", () => {
 							);
 
 							return {
+								analysisHeight: Math.round(
+									document.querySelector<HTMLElement>(".analysis-band")?.getBoundingClientRect().height ?? 0,
+								),
 								bannerHeight: Math.round(banner?.getBoundingClientRect().height ?? 0),
 								contextBarHeight: Math.round(contextRect?.height ?? 0),
 								contextItemCount: contextItems.length,
@@ -157,14 +160,20 @@ describe("page-trading-overview prototype", () => {
 						});
 
 						expect(metrics.visibleTopStripSlots, `${viewport.width}: top strip slots`).toBe(1);
-						expect(metrics.gridRowCount, `${viewport.width}: grid rows`).toBeLessThanOrEqual(4);
+						expect(metrics.gridRowCount, `${viewport.width}: grid rows`).toBeLessThanOrEqual(5);
 						expect(metrics.overflowX, `${viewport.width}: overflow-x`).not.toBe("hidden");
 						expect(metrics.overflowY, `${viewport.width}: overflow-y`).not.toBe("hidden");
 						expect(metrics.visibleContextItems, `${viewport.width}: visible context items`).toBe(
 							metrics.contextItemCount,
 						);
 						expect(metrics.stripHeightRatio, `${viewport.width}: context bar rows`).toBeLessThanOrEqual(3);
-						expect(metrics.mainHeight, `${viewport.width}: main vs banner`).toBeGreaterThan(
+						expect(metrics.mainHeight, `${viewport.width}: main remains dominant`).toBeGreaterThan(
+							metrics.bannerHeight,
+						);
+						expect(
+							metrics.mainHeight + metrics.analysisHeight,
+							`${viewport.width}: governed workspace vs banner`,
+						).toBeGreaterThan(
 							metrics.bannerHeight * 2,
 						);
 						expect(metrics.positionsHeight, `${viewport.width}: positions vs equity`).toBeGreaterThan(

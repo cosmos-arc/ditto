@@ -13,9 +13,11 @@ import type {
 	SignalStatus,
 } from "@/types";
 import type { components } from "@/types/generated/api";
+import type { DailyDecisionReadiness, DailyDecisionV3ViewModel } from "../types/daily-decision-v3";
 
 type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
 type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
+type DailyDecisionV3Response = components["schemas"]["DailyDecisionV3Response"];
 type DailyDecisionActionResponse = Omit<components["schemas"]["DailyDecisionActionResponse"], "intent_status"> & {
 	readonly intent_status?: string | null;
 };
@@ -65,6 +67,144 @@ const INTENT_STATUS_TO_SIGNAL_STATUS: Record<string, SignalStatus> = {
 	cancelled: "ignored",
 	expired: "ignored",
 };
+
+function nullableString(value: string | null | undefined): string | null {
+	return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function nullableNumber(value: number | null | undefined): number | null {
+	return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function unique(values: readonly string[]): string[] {
+	return [...new Set(values)];
+}
+
+export function mapDailyDecisionV3(report: DailyDecisionV3Response): DailyDecisionV3ViewModel {
+	const provenance = report.provenance;
+	const sourceSnapshotIds = provenance.source_snapshot_ids.filter((value) => value.length > 0);
+	const provenanceComplete = Boolean(
+		provenance.decision_time &&
+			provenance.knowledge_cutoff &&
+			provenance.publication_cutoff &&
+			provenance.generated_at &&
+			sourceSnapshotIds.length > 0,
+	);
+	const hardIssues: string[] = [];
+	const partialIssues: string[] = [];
+	if (!provenanceComplete) hardIssues.push("PIT_PROVENANCE_INCOMPLETE");
+	if ([report.tail_risk.historical_es99, report.tail_risk.historical_var99].every((value) => value == null)) {
+		hardIssues.push("TAIL_RISK_UNAVAILABLE");
+	}
+	if (["failed", "blocked", "unavailable"].includes(report.portfolio_construction.status.toLowerCase())) {
+		hardIssues.push(report.portfolio_construction.failure_code ?? "PORTFOLIO_CONSTRUCTION_FAILED");
+	}
+	if (!["matched", "reconciled", "ok"].includes(report.reconciliation.status.toLowerCase())) {
+		hardIssues.push("RECONCILIATION_MISMATCH");
+	}
+	if (report.factor_risk.availability !== "available") {
+		partialIssues.push(`FACTOR_RISK_${report.factor_risk.availability.toUpperCase()}`);
+	}
+	const unavailableScenarios = report.stress_tests.unavailable_scenarios ?? [];
+	if (unavailableScenarios.length > 0) partialIssues.push("STRESS_SCENARIOS_UNAVAILABLE");
+
+	const reportedStatus: DailyDecisionReadiness = report.readiness;
+	const status: DailyDecisionReadiness = hardIssues.length > 0 ? "blocked" : reportedStatus;
+	const blockingReasons = unique([...report.blocking_reasons, ...hardIssues]);
+	const issues = unique([...hardIssues, ...partialIssues]);
+	const identity = report.v2.identity;
+	const account = report.v2.account_positions;
+
+	return {
+		identity: {
+			strategyId: identity.strategy_id,
+			strategyVersion: nullableString(identity.strategy_version),
+			signalDate: nullableString(identity.signal_date),
+			tradeDate: nullableString(identity.intended_trade_date) ?? nullableString(identity.signal_date),
+			accountId: nullableString(identity.account_id),
+			sleeveId: nullableString(identity.sleeve_id),
+		},
+		readiness: { status, reportedStatus, blockingReasons },
+		data: {
+			freshness: nullableString(report.v2.data.freshness),
+			qualityState: nullableString(report.v2.data.dq_state),
+			snapshotIds: report.v2.data.snapshot_ids,
+		},
+		account: {
+			asOf: nullableString(account.as_of),
+			baselineId: nullableString(account.baseline_id),
+			cashAvailable: nullableNumber(account.cash_available),
+			totalValue: nullableNumber(account.total_value),
+			exposure: nullableNumber(account.exposure),
+			positions: account.positions.map((position) => ({
+				instrumentId: position.instrument_id,
+				quantity: position.quantity,
+				availableQuantity: nullableNumber(position.available_quantity),
+				marketValue: nullableNumber(position.market_value),
+			})),
+		},
+		actions: report.v2.actions.map((action) => ({
+			intentId: action.intent_id,
+			instrumentId: action.instrument_id,
+			direction: nullableString(action.direction),
+			currentWeight: nullableNumber(action.current_weight),
+			targetWeight: action.target_weight,
+			deltaWeight: nullableNumber(action.delta_weight),
+			suggestedQuantity: nullableNumber(action.suggested_quantity),
+			filledQuantity: nullableNumber(action.filled_quantity),
+			remainingQuantity: nullableNumber(action.remaining_quantity),
+			sizingReadiness: nullableString(action.sizing_readiness),
+			executionStatus: nullableString(action.intent_status),
+			riskFlags: action.risk_flags,
+		})),
+		portfolioConstruction: {
+			status: report.portfolio_construction.status,
+			solver: nullableString(report.portfolio_construction.solver),
+			solverVersion: nullableString(report.portfolio_construction.solver_version),
+			mode: nullableString(report.portfolio_construction.mode),
+			solverStatus: nullableString(report.portfolio_construction.solver_status),
+			durationMs: nullableNumber(report.portfolio_construction.duration_ms),
+			policyDigest: nullableString(report.portfolio_construction.policy_digest),
+			failureCode: nullableString(report.portfolio_construction.failure_code),
+		},
+		tailRisk: {
+			historicalEs99: nullableNumber(report.tail_risk.historical_es99),
+			historicalVar99: nullableNumber(report.tail_risk.historical_var99),
+			parametricVar99: nullableNumber(report.tail_risk.parametric_var99),
+			monteCarloVar99: nullableNumber(report.tail_risk.monte_carlo_var99),
+			monteCarloSeed: nullableNumber(report.tail_risk.monte_carlo_seed),
+		},
+		factorRisk: {
+			availability: report.factor_risk.availability,
+			totalRisk: nullableNumber(report.factor_risk.total_risk),
+			marginalContributions: report.factor_risk.marginal_contributions,
+			percentageContributions: report.factor_risk.percentage_contributions,
+			eulerResidual: nullableNumber(report.factor_risk.euler_residual),
+		},
+		stressTests: {
+			catalogVersion: report.stress_tests.catalog_version,
+			losses: report.stress_tests.losses,
+			unavailableScenarios,
+		},
+		reconciliation: {
+			status: report.reconciliation.status,
+			differences: report.reconciliation.differences,
+			alertIdempotencyKey: nullableString(report.reconciliation.alert_idempotency_key),
+		},
+		provenance: {
+			decisionTime: nullableString(provenance.decision_time),
+			knowledgeCutoff: nullableString(provenance.knowledge_cutoff),
+			publicationCutoff: nullableString(provenance.publication_cutoff),
+			sourceSnapshotIds,
+			generatedAt: nullableString(provenance.generated_at),
+			complete: provenanceComplete,
+		},
+		completeness: {
+			status: hardIssues.length > 0 ? "blocked" : partialIssues.length > 0 ? "partial" : "complete",
+			issues,
+		},
+	};
+}
 
 function parseV2Intent(
 	action: DailyDecisionActionResponse,
@@ -325,7 +465,7 @@ export function mapDailyDecisionToSignalDetail(
 				status: "warn",
 				message: `后端目标权重证据 ${(intent.target_weight * 100).toFixed(1)}%，未返回检查结论`,
 			},
-			{ name: "流动性检查", status: "warn", message: "V1a 后端暂未提供流动性端点，需人工确认" },
+			{ name: "流动性检查", status: "warn", message: "当前决策合同未提供逐项流动性结论，需人工确认" },
 			deviationRiskCheck(deviation),
 		],
 		actions: [

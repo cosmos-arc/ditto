@@ -26,6 +26,376 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agent Approvals
+         * @description List exact approval subjects including pending and expired states.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_list_agent_approvals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/approvals/{approval_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Approval
+         * @description Read one exact action payload, hash, expiry, and decision state.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_get_agent_approval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/approvals/{approval_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Agent Approval
+         * @description Record a human approve/reject decision for one exact action hash.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_decide_agent_approval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agent Campaigns
+         * @description Recover durable Campaign projections without caller-held identities.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_list_agent_campaigns"];
+        put?: never;
+        /**
+         * Create Agent Campaign
+         * @description Create or recover one immutable Campaign draft.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_create_agent_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/campaigns/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Agent Campaign
+         * @description Validate one structured wizard step without creating durable state.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_validate_agent_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/campaigns/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Campaign
+         * @description Read one persisted Campaign projection.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_get_agent_campaign"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/campaigns/{campaign_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Agent Campaign
+         * @description Approve one exact immutable manifest and finite budget.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_approve_agent_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/campaigns/{campaign_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Agent Campaign
+         * @description Cancel or recover cancellation under exact immutable authority.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_cancel_agent_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/campaigns/{campaign_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Campaign Events
+         * @description Replay persisted Campaign events after Last-Event-ID.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_get_agent_campaign_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Capabilities
+         * @description Read Agent availability without exposing provider configuration secrets.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_get_agent_capabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/decision-opinions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Decision Opinion
+         * @description Read one shadow opinion only through its exact V3 and PIT identity.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_get_agent_decision_opinion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agent Runs
+         * @description Recover durable Agent runs with bounded equality filters.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_list_agent_runs"];
+        put?: never;
+        /**
+         * Create Agent Run
+         * @description Create or exactly replay one governed read-only run.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_create_agent_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Run
+         * @description Read one non-sensitive persisted run projection.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_get_agent_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Agent Run
+         * @description Cancel one queued/running run under an optimistic revision fence.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_cancel_agent_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/runs/{run_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Run Events
+         * @description Replay persisted run events after Last-Event-ID without executing tools.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_get_agent_run_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agent Sessions
+         * @description Recover durable Agent sessions without caller-held identities.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["agent_list_agent_sessions"];
+        put?: never;
+        /**
+         * Create Agent Session
+         * @description Create or exactly replay a local Agent session.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_create_agent_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/backtests/lineage/events": {
         parameters: {
             query?: never;
@@ -2530,6 +2900,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trade/daily-decision/v3": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Decision V3
+         * @description Return V2 plus fail-closed portfolio, risk, and reconciliation evidence.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["trade_get_daily_decision_v3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trade/deviation": {
         parameters: {
             query?: never;
@@ -2917,6 +3309,62 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[AgentApprovalDecisionResponse] */
+        APIResponse_AgentApprovalDecisionResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentApprovalDecisionResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AgentApprovalResponse] */
+        APIResponse_AgentApprovalResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentApprovalResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AgentCampaignResponse] */
+        APIResponse_AgentCampaignResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentCampaignResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AgentCampaignValidationResponse] */
+        APIResponse_AgentCampaignValidationResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentCampaignValidationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AgentCapabilityResponse] */
+        APIResponse_AgentCapabilityResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentCapabilityResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AgentDecisionOpinionResponse] */
+        APIResponse_AgentDecisionOpinionResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentDecisionOpinionResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AgentRunResponse] */
+        APIResponse_AgentRunResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentRunResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AgentSessionResponse] */
+        APIResponse_AgentSessionResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AgentSessionResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[BacktestReportResponse] */
         APIResponse_BacktestReportResponse_: {
             /** @description 响应数据 */
@@ -3068,6 +3516,13 @@ export interface components {
         APIResponse_DailyDecisionV2Response_: {
             /** @description 响应数据 */
             data: components["schemas"]["DailyDecisionV2Response"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[DailyDecisionV3Response] */
+        APIResponse_DailyDecisionV3Response_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["DailyDecisionV3Response"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3372,6 +3827,46 @@ export interface components {
              * @description 响应数据
              */
             data: boolean;
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[AgentApprovalResponse]] */
+        APIResponse_list_AgentApprovalResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["AgentApprovalResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[AgentCampaignResponse]] */
+        APIResponse_list_AgentCampaignResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["AgentCampaignResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[AgentRunResponse]] */
+        APIResponse_list_AgentRunResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["AgentRunResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[AgentSessionResponse]] */
+        APIResponse_list_AgentSessionResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["AgentSessionResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3858,6 +4353,730 @@ export interface components {
          */
         Adjustment: "none" | "qfq" | "hfq";
         /**
+         * AgentApprovalDecisionRequest
+         * @description Human decision over one exact immutable action hash.
+         */
+        AgentApprovalDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approve" | "reject";
+            /** Expected Action Hash */
+            expected_action_hash: string;
+            /** Operator Id */
+            operator_id: string;
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * AgentApprovalDecisionResponse
+         * @description Durable terminal approval receipt.
+         */
+        AgentApprovalDecisionResponse: {
+            /** Action Hash */
+            action_hash: string;
+            /** Approval Id */
+            approval_id: string;
+            /**
+             * Decided At
+             * Format: date-time
+             */
+            decided_at: string;
+            /** Operator Id */
+            operator_id: string;
+            /** Reason */
+            reason: string | null;
+            /** Run Id */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "approved" | "rejected";
+        };
+        /**
+         * AgentApprovalResponse
+         * @description Exact immutable approval subject and its current state.
+         */
+        AgentApprovalResponse: {
+            /** Action Hash */
+            action_hash: string;
+            /** Action Payload */
+            action_payload: {
+                [key: string]: unknown;
+            };
+            /** Action Type */
+            action_type: string;
+            /** Approval Id */
+            approval_id: string;
+            /** Decided At */
+            decided_at: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Operator Id */
+            operator_id: string | null;
+            /** Reason */
+            reason: string | null;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /** Run Id */
+            run_id: string;
+            status: components["schemas"]["AgentApprovalStatus"];
+            /** Target Identity */
+            target_identity: string;
+        };
+        /**
+         * AgentApprovalStatus
+         * @description Operator-facing approval state including computed expiry.
+         * @enum {string}
+         */
+        AgentApprovalStatus: "pending" | "approved" | "rejected" | "expired";
+        /**
+         * AgentCampaignApproveRequest
+         * @description Human approval of one exact persisted manifest hash.
+         */
+        AgentCampaignApproveRequest: {
+            /** Expected Manifest Hash */
+            expected_manifest_hash: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Operator Id */
+            operator_id: string;
+        };
+        /**
+         * AgentCampaignBaselineCandidate
+         * @description Exact immutable baseline and its one authorized search axis.
+         */
+        AgentCampaignBaselineCandidate: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Data Requirement Hashes */
+            data_requirement_hashes: string[];
+            /** Factor Code Hash */
+            factor_code_hash?: string | null;
+            /** Model Code Hash */
+            model_code_hash?: string | null;
+            /** Ordinal */
+            ordinal: number;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * AgentCampaignBudget
+         * @description Finite Campaign-wide budget that cannot be patched after creation.
+         */
+        AgentCampaignBudget: {
+            /** Candidate Limit */
+            candidate_limit: number;
+            /** Concurrent Sandbox Limit */
+            concurrent_sandbox_limit: number;
+            /** Fold Run Limit */
+            fold_run_limit: number;
+            /** Generation Limit */
+            generation_limit: number;
+            /** Model Spend Limit Usd Micros */
+            model_spend_limit_usd_micros: number;
+            sandbox_resource_limits: components["schemas"]["AgentCampaignSandboxLimits"];
+            /** Temporary Storage Limit Bytes */
+            temporary_storage_limit_bytes: number;
+            /** Wall Time Limit Seconds */
+            wall_time_limit_seconds: number;
+        };
+        /**
+         * AgentCampaignCancelRequest
+         * @description Cancellation bound to the immutable Campaign authorization.
+         */
+        AgentCampaignCancelRequest: {
+            /** Expected Authorization Hash */
+            expected_authorization_hash: string;
+        };
+        /**
+         * AgentCampaignCreateRequest
+         * @description Create one durable immutable Campaign draft.
+         */
+        AgentCampaignCreateRequest: {
+            manifest: components["schemas"]["AgentCampaignManifest"];
+        };
+        /**
+         * AgentCampaignExperimentPlan
+         * @description PIT-sensitive fold/snapshot/cost inputs frozen before approval.
+         */
+        AgentCampaignExperimentPlan: {
+            /** Cost Model Hash */
+            cost_model_hash: string;
+            /** Embargo Sessions */
+            embargo_sessions: number;
+            /** Fold Protocol Hash */
+            fold_protocol_hash: string;
+            /** Fold Protocol Id */
+            fold_protocol_id: string;
+            /** Fold Protocol Version */
+            fold_protocol_version: number;
+            /** Purge Sessions */
+            purge_sessions: number;
+            /** Seed */
+            seed: number;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Validation Objective Hash */
+            validation_objective_hash: string;
+        };
+        /**
+         * AgentCampaignExperimentPlanValidationRequest
+         * @description Validate baseline, single search axis, and PIT experiment plan.
+         */
+        AgentCampaignExperimentPlanValidationRequest: {
+            baseline_candidate: components["schemas"]["AgentCampaignBaselineCandidate"];
+            experiment_plan: components["schemas"]["AgentCampaignExperimentPlan"];
+            /**
+             * Search Axis
+             * @enum {string}
+             */
+            search_axis: "factor_code" | "model_code" | "parameters";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            step: "experiment_plan";
+        };
+        /**
+         * AgentCampaignGovernanceValidationRequest
+         * @description Validate finite budget, hashes, stopping rule, and tool authority.
+         */
+        AgentCampaignGovernanceValidationRequest: {
+            /** Allowed Tools */
+            allowed_tools: string[];
+            budget: components["schemas"]["AgentCampaignBudget"];
+            /** Lineage Root */
+            lineage_root: string;
+            /** Prohibited Actions */
+            prohibited_actions: string[];
+            /** Search Space Hash */
+            search_space_hash: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            step: "governance";
+            /** Stopping Rule */
+            stopping_rule: string;
+        };
+        /**
+         * AgentCampaignGuardrail
+         * @description Public Campaign guardrail outcome.
+         */
+        AgentCampaignGuardrail: {
+            /** Reason Code */
+            reason_code: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "passed" | "blocked" | "unknown";
+        };
+        /**
+         * AgentCampaignHypothesis
+         * @description Falsifiable hypothesis embedded in a Campaign manifest.
+         */
+        AgentCampaignHypothesis: {
+            /** Expected Signal */
+            expected_signal: string;
+            /** Failure Condition */
+            failure_condition: string;
+            /** Mechanism */
+            mechanism: string;
+            /** Statement */
+            statement: string;
+            /** Universe Hash */
+            universe_hash: string;
+        };
+        /**
+         * AgentCampaignHypothesisValidationRequest
+         * @description Validate the preregistered hypothesis wizard step.
+         */
+        AgentCampaignHypothesisValidationRequest: {
+            /** Campaign Id */
+            campaign_id: string;
+            hypothesis: components["schemas"]["AgentCampaignHypothesis"];
+            /** Objective */
+            objective: string;
+            /** Primary Metric Id */
+            primary_metric_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            step: "hypothesis";
+        };
+        /**
+         * AgentCampaignManifest
+         * @description Versioned public document compiled into ResearchCampaignManifest.
+         */
+        AgentCampaignManifest: {
+            /** Allowed Tools */
+            allowed_tools: string[];
+            baseline_candidate: components["schemas"]["AgentCampaignBaselineCandidate"];
+            budget: components["schemas"]["AgentCampaignBudget"];
+            /** Campaign Id */
+            campaign_id: string;
+            experiment_plan: components["schemas"]["AgentCampaignExperimentPlan"];
+            hypothesis: components["schemas"]["AgentCampaignHypothesis"];
+            /** Lineage Root */
+            lineage_root: string;
+            /** Objective */
+            objective: string;
+            /** Primary Metric Id */
+            primary_metric_id: string;
+            /** Prohibited Actions */
+            prohibited_actions: string[];
+            /**
+             * Search Axis
+             * @enum {string}
+             */
+            search_axis: "factor_code" | "model_code" | "parameters";
+            /** Search Space Hash */
+            search_space_hash: string;
+            /** Stopping Rule */
+            stopping_rule: string;
+        };
+        /**
+         * AgentCampaignManifestValidationRequest
+         * @description Compile the complete draft into canonical immutable authority.
+         */
+        AgentCampaignManifestValidationRequest: {
+            manifest: components["schemas"]["AgentCampaignManifest"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            step: "manifest";
+        };
+        /**
+         * AgentCampaignResponse
+         * @description Persisted Campaign projection with immutable authority and budget.
+         */
+        AgentCampaignResponse: {
+            /** Allowed Tools */
+            allowed_tools: string[];
+            /** Artifact Refs */
+            artifact_refs: string[];
+            /** Authorization Expires At */
+            authorization_expires_at: string | null;
+            /** Authorization Hash */
+            authorization_hash: string | null;
+            /** Authorized By */
+            authorized_by: string | null;
+            /** Best Primary Metric Value */
+            best_primary_metric_value: number | null;
+            budget: components["schemas"]["AgentCampaignBudget"];
+            /** Campaign Id */
+            campaign_id: string;
+            /** Canonical Manifest */
+            canonical_manifest: {
+                [key: string]: unknown;
+            };
+            /** Event Cursor */
+            event_cursor: number;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            guardrail: components["schemas"]["AgentCampaignGuardrail"] | null;
+            /** Manifest Hash */
+            manifest_hash: string;
+            /** No Improvement Generations */
+            no_improvement_generations: number;
+            /** Objective */
+            objective: string | null;
+            /** Operational Attempt Count */
+            operational_attempt_count: number;
+            /** Output Summary */
+            output_summary: string | null;
+            /** Projection Reason */
+            projection_reason: string | null;
+            /**
+             * Projection State
+             * @enum {string}
+             */
+            projection_state: "complete" | "partial";
+            /** Projection Updated At */
+            projection_updated_at: string | null;
+            /** Projection Version */
+            projection_version: number | null;
+            /** Revision */
+            revision: number;
+            /** Search Axis */
+            search_axis: string;
+            /** Source Snapshot Id */
+            source_snapshot_id: string;
+            /** Statistical Trial Count */
+            statistical_trial_count: number;
+            status: components["schemas"]["CampaignStatus"];
+            /** Tool Records */
+            tool_records: components["schemas"]["AgentCampaignToolRecord"][];
+            usage: components["schemas"]["AgentCampaignUsage"] | null;
+        };
+        /**
+         * AgentCampaignSandboxLimits
+         * @description Per-execution resource ceilings displayed with Campaign authority.
+         */
+        AgentCampaignSandboxLimits: {
+            /** Cpu Count */
+            cpu_count: number;
+            /** Memory Bytes */
+            memory_bytes: number;
+            /** Output Bytes */
+            output_bytes: number;
+            /** Process Limit */
+            process_limit: number;
+            /** Temporary Storage Bytes */
+            temporary_storage_bytes: number;
+            /** Wall Time Seconds */
+            wall_time_seconds: number;
+        };
+        /**
+         * AgentCampaignToolRecord
+         * @description Redacted Campaign tool call presentation.
+         */
+        AgentCampaignToolRecord: {
+            /** Arguments Hash */
+            arguments_hash: string;
+            /** Artifact Refs */
+            artifact_refs: string[];
+            /** Call Id */
+            call_id: string;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Result Hash */
+            result_hash: string;
+            /** Tool Name */
+            tool_name: string;
+        };
+        /**
+         * AgentCampaignUsage
+         * @description Durable Campaign counters and available spend visibility.
+         */
+        AgentCampaignUsage: {
+            /** Exhausted Reason */
+            exhausted_reason: string | null;
+            /** Model Spend Usd Micros */
+            model_spend_usd_micros: number | null;
+            /** No Improvement Generations */
+            no_improvement_generations: number;
+            /** Operational Attempt Count */
+            operational_attempt_count: number;
+            /** Statistical Trial Count */
+            statistical_trial_count: number;
+        };
+        /**
+         * AgentCampaignValidationResponse
+         * @description Successful server validation; canonical authority exists only when complete.
+         */
+        AgentCampaignValidationResponse: {
+            /** Canonical Manifest */
+            canonical_manifest: {
+                [key: string]: unknown;
+            } | null;
+            /** Manifest Hash */
+            manifest_hash: string | null;
+            /**
+             * Step
+             * @enum {string}
+             */
+            step: "hypothesis" | "experiment_plan" | "governance" | "manifest";
+            /** Valid */
+            valid: boolean;
+        };
+        /**
+         * AgentCapabilityResponse
+         * @description Non-sensitive Agent runtime and profile availability.
+         */
+        AgentCapabilityResponse: {
+            /** Available Profiles */
+            available_profiles: components["schemas"]["ModelProfile"][];
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            default_profile: components["schemas"]["ModelProfile"] | null;
+            /** Degradation Reason */
+            degradation_reason: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Provider */
+            provider: string | null;
+            runtime_state: components["schemas"]["AgentRuntimeState"];
+        };
+        /**
+         * AgentDecisionOpinionIdentity
+         * @description Exact Daily Decision V3 and PIT identity behind a shadow opinion.
+         */
+        AgentDecisionOpinionIdentity: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Decision Time
+             * Format: date-time
+             */
+            decision_time: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Sleeve Id */
+            sleeve_id: string;
+            /** Source Snapshot Id */
+            source_snapshot_id: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Strategy Version */
+            strategy_version: string;
+            /** Trade Date */
+            trade_date: string;
+            /** V3 Artifact Id */
+            v3_artifact_id: string;
+        };
+        /**
+         * AgentDecisionOpinionResponse
+         * @description Fail-closed shadow opinion projection that never changes V3 authority.
+         */
+        AgentDecisionOpinionResponse: {
+            decision_identity: components["schemas"]["AgentDecisionOpinionIdentity"];
+            /** Disagreements */
+            disagreements: string[];
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Generated At */
+            generated_at: string | null;
+            /** Model Profile */
+            model_profile: string | null;
+            /** Provenance Match */
+            provenance_match: boolean;
+            /** Shadow Outcome Identity */
+            shadow_outcome_identity: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "blocked" | "unavailable";
+            /** Summary */
+            summary: string | null;
+            /** Unavailable Reason */
+            unavailable_reason: string | null;
+            /** Uncertainties */
+            uncertainties: string[];
+        };
+        /**
+         * AgentProjectionState
+         * @description Whether a readable run projection is complete or explicitly partial.
+         * @enum {string}
+         */
+        AgentProjectionState: "complete" | "partial";
+        /**
+         * AgentRunCancelRequest
+         * @description Optimistic cancellation fence.
+         */
+        AgentRunCancelRequest: {
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /**
+         * AgentRunContext
+         * @description Stable host-owned product context for one Agent run.
+         */
+        AgentRunContext: {
+            /** Context Id */
+            context_id: string;
+            /** Context Type */
+            context_type: string;
+        };
+        /**
+         * AgentRunCreateRequest
+         * @description Create a governed read-only run without exposing provider state.
+         */
+        AgentRunCreateRequest: {
+            /** Authority Hash */
+            authority_hash: string;
+            context?: components["schemas"]["AgentRunContext"] | null;
+            /**
+             * Max Model Spend Usd
+             * @default 1
+             */
+            max_model_spend_usd: number | string;
+            /**
+             * Max Model Tokens
+             * @default 4096
+             */
+            max_model_tokens: number;
+            /**
+             * Model Profile
+             * @default balanced
+             * @enum {string}
+             */
+            model_profile: "balanced" | "quality";
+            /** Objective */
+            objective: string;
+            /** Session Id */
+            session_id: string;
+        };
+        /**
+         * AgentRunGuardrail
+         * @description Bounded public guardrail outcome.
+         */
+        AgentRunGuardrail: {
+            /** Reason Code */
+            reason_code: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "passed" | "blocked" | "unknown";
+        };
+        /**
+         * AgentRunResponse
+         * @description Non-sensitive durable run projection.
+         */
+        AgentRunResponse: {
+            /** Artifact Refs */
+            artifact_refs: string[];
+            /** Authority Hash */
+            authority_hash: string;
+            context: components["schemas"]["AgentRunContext"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Event Cursor */
+            event_cursor: number;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Failure Code */
+            failure_code: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            guardrail: components["schemas"]["AgentRunGuardrail"] | null;
+            /** Manifest Hash */
+            manifest_hash: string;
+            /** Max Model Spend Usd */
+            max_model_spend_usd: string;
+            /** Max Model Tokens */
+            max_model_tokens: number;
+            model_profile: components["schemas"]["ModelProfile"];
+            /** Objective */
+            objective: string | null;
+            /** Objective Hash */
+            objective_hash: string;
+            /** Output Summary */
+            output_summary: string | null;
+            /** Projection Reason */
+            projection_reason: string | null;
+            projection_state: components["schemas"]["AgentProjectionState"];
+            /** Projection Updated At */
+            projection_updated_at: string | null;
+            /** Projection Version */
+            projection_version: number | null;
+            /** Revision */
+            revision: number;
+            /** Run Id */
+            run_id: string;
+            /** Session Id */
+            session_id: string;
+            /** Started At */
+            started_at: string | null;
+            status: components["schemas"]["RunStatus"];
+            /** Tool Records */
+            tool_records: components["schemas"]["AgentRunToolRecord"][];
+            usage: components["schemas"]["AgentRunUsage"] | null;
+        };
+        /**
+         * AgentRunToolRecord
+         * @description Redacted tool identity and authenticated evidence references.
+         */
+        AgentRunToolRecord: {
+            /** Arguments Hash */
+            arguments_hash: string;
+            /** Artifact Refs */
+            artifact_refs: string[];
+            /** Call Id */
+            call_id: string;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Result Hash */
+            result_hash: string;
+            /** Tool Name */
+            tool_name: string;
+        };
+        /**
+         * AgentRunUsage
+         * @description Non-sensitive model/tool usage counters.
+         */
+        AgentRunUsage: {
+            /** Exhausted Reason */
+            exhausted_reason: string | null;
+            /** Model Attempts */
+            model_attempts: number;
+            /** Model Spend Usd */
+            model_spend_usd: string;
+            /** Model Turns */
+            model_turns: number;
+            /** Retries */
+            retries: number;
+            /** Tool Calls */
+            tool_calls: number;
+            /** Total Tokens */
+            total_tokens: number;
+        };
+        /**
+         * AgentRuntimeState
+         * @description Stable non-sensitive runtime availability shown to operators.
+         * @enum {string}
+         */
+        AgentRuntimeState: "available" | "degraded" | "disabled";
+        /**
+         * AgentSessionCreateRequest
+         * @description Create one short-lived local Agent session.
+         */
+        AgentSessionCreateRequest: {
+            /**
+             * Retention Class
+             * @default standard
+             * @enum {string}
+             */
+            retention_class: "ephemeral" | "standard" | "audit";
+        };
+        /**
+         * AgentSessionResponse
+         * @description Created session identity and retention contract.
+         */
+        AgentSessionResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            retention_class: components["schemas"]["RetentionClass"];
+            /** Session Id */
+            session_id: string;
+        };
+        /**
          * AggregatedTradeStatsResponse
          * @description 汇总交易统计.
          */
@@ -4276,6 +5495,12 @@ export interface components {
             run_id: string;
         };
         /**
+         * CampaignStatus
+         * @description Stable public projection of the host-owned Campaign state machine.
+         * @enum {string}
+         */
+        CampaignStatus: "draft" | "authorized" | "running" | "paused" | "paused_budget" | "cancel_requested" | "cancelled" | "completed" | "completed_with_failures" | "failed";
+        /**
          * CancelRunResponse
          * @description 取消运行响应.
          */
@@ -4548,6 +5773,11 @@ export interface components {
          */
         CatalogRemediationApprovalDecisionRequest: {
             /**
+             * Authority Hash
+             * @description exact remediation action authority hash
+             */
+            authority_hash: string;
+            /**
              * Decided By
              * @description decision operator or system
              */
@@ -4605,6 +5835,11 @@ export interface components {
          * @description Execute an approved remediation action.
          */
         CatalogRemediationApprovalExecutionRequest: {
+            /**
+             * Authority Hash
+             * @description exact remediation action authority hash
+             */
+            authority_hash: string;
             /**
              * Executed By
              * @description execution operator or backend actor
@@ -4733,6 +5968,11 @@ export interface components {
              */
             approval_id: string;
             /**
+             * Authority Hash
+             * @description canonical hash of the exact action
+             */
+            authority_hash: string;
+            /**
              * Decided At
              * @description decision time
              */
@@ -4747,6 +5987,11 @@ export interface components {
              * @description decision notes
              */
             decision_notes?: string | null;
+            /**
+             * Expires At
+             * @description exclusive approval authority expiry time
+             */
+            expires_at: string;
             /**
              * Intent Type
              * @description intent type: read/write/manual
@@ -5310,6 +6555,11 @@ export interface components {
              */
             actor: string;
             /**
+             * Authority Hash
+             * @description exact next lifecycle action hash
+             */
+            authority_hash: string;
+            /**
              * Notes
              * @description transition notes
              */
@@ -5416,6 +6666,18 @@ export interface components {
              * @description 是否需要人工审批或复核
              */
             approval_required: boolean;
+            /**
+             * Authority Hash
+             * @description canonical hash of authority_payload
+             */
+            authority_hash: string;
+            /**
+             * Authority Payload
+             * @description exact next lifecycle action and policy scope
+             */
+            authority_payload: {
+                [key: string]: unknown;
+            };
             /**
              * Created At
              * @description policy 创建时间
@@ -6607,6 +7869,129 @@ export interface components {
             identity: components["schemas"]["DailyDecisionIdentityResponse"];
             readiness: components["schemas"]["DailyDecisionV2ReadinessResponse"];
             run_package: components["schemas"]["DailyDecisionRunPackageResponse"];
+        };
+        /**
+         * DailyDecisionV3FactorRiskResponse
+         * @description Factor-risk availability and Euler contribution evidence.
+         */
+        DailyDecisionV3FactorRiskResponse: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "partial" | "unavailable";
+            /** Euler Residual */
+            euler_residual: number | null;
+            /** Marginal Contributions */
+            marginal_contributions: {
+                [key: string]: number;
+            };
+            /** Percentage Contributions */
+            percentage_contributions: {
+                [key: string]: number;
+            };
+            /** Total Risk */
+            total_risk: number | null;
+        };
+        /**
+         * DailyDecisionV3PortfolioConstructionResponse
+         * @description Portfolio construction outcome and solver evidence.
+         */
+        DailyDecisionV3PortfolioConstructionResponse: {
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Failure Code */
+            failure_code?: string | null;
+            /** Mode */
+            mode?: string | null;
+            /** Policy Digest */
+            policy_digest?: string | null;
+            /** Solver */
+            solver?: string | null;
+            /** Solver Status */
+            solver_status?: string | null;
+            /** Solver Version */
+            solver_version?: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * DailyDecisionV3ProvenanceResponse
+         * @description Temporal cutoffs, source revisions, and report generation time.
+         */
+        DailyDecisionV3ProvenanceResponse: {
+            /** Decision Time */
+            decision_time: string | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Knowledge Cutoff */
+            knowledge_cutoff: string | null;
+            /** Publication Cutoff */
+            publication_cutoff: string | null;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+        };
+        /**
+         * DailyDecisionV3ReconciliationResponse
+         * @description Three-layer reconciliation status without automatic repair controls.
+         */
+        DailyDecisionV3ReconciliationResponse: {
+            /** Alert Idempotency Key */
+            alert_idempotency_key: string | null;
+            /** Differences */
+            differences: string[];
+            /** Status */
+            status: string;
+        };
+        /**
+         * DailyDecisionV3Response
+         * @description V2 cockpit plus the complete typed R4 risk decision surface.
+         */
+        DailyDecisionV3Response: {
+            /** Blocking Reasons */
+            blocking_reasons: string[];
+            factor_risk: components["schemas"]["DailyDecisionV3FactorRiskResponse"];
+            portfolio_construction: components["schemas"]["DailyDecisionV3PortfolioConstructionResponse"];
+            provenance: components["schemas"]["DailyDecisionV3ProvenanceResponse"];
+            /**
+             * Readiness
+             * @enum {string}
+             */
+            readiness: "ready" | "blocked" | "review";
+            reconciliation: components["schemas"]["DailyDecisionV3ReconciliationResponse"];
+            stress_tests: components["schemas"]["DailyDecisionV3StressResponse"];
+            tail_risk: components["schemas"]["DailyDecisionV3TailRiskResponse"];
+            v2: components["schemas"]["DailyDecisionV2Response"];
+        };
+        /**
+         * DailyDecisionV3StressResponse
+         * @description Versioned stress catalog result payload.
+         */
+        DailyDecisionV3StressResponse: {
+            /** Catalog Version */
+            catalog_version: string;
+            /** Losses */
+            losses: {
+                [key: string]: number;
+            };
+            /** Unavailable Scenarios */
+            unavailable_scenarios?: string[];
+        };
+        /**
+         * DailyDecisionV3TailRiskResponse
+         * @description Positive-loss Historical ES99 headline and VaR diagnostics.
+         */
+        DailyDecisionV3TailRiskResponse: {
+            /** Historical Es99 */
+            historical_es99: number | null;
+            /** Historical Var99 */
+            historical_var99: number | null;
+            /** Monte Carlo Seed */
+            monte_carlo_seed: number | null;
+            /** Monte Carlo Var99 */
+            monte_carlo_var99: number | null;
+            /** Parametric Var99 */
+            parametric_var99: number | null;
         };
         /**
          * DataLineageAssetResponse
@@ -9128,6 +10513,12 @@ export interface components {
             instrument_id: number;
         };
         /**
+         * ModelProfile
+         * @description Approved model-quality profiles; concrete model IDs stay in manifests.
+         * @enum {string}
+         */
+        ModelProfile: "balanced" | "quality";
+        /**
          * NavPointResponse
          * @description NAV 序列数据点.
          */
@@ -9938,6 +11329,12 @@ export interface components {
             status: string;
         };
         /**
+         * RetentionClass
+         * @description Local retention policy class for a short-lived Agent session.
+         * @enum {string}
+         */
+        RetentionClass: "ephemeral" | "standard" | "audit";
+        /**
          * RetryRunResponse
          * @description 重试运行响应.
          */
@@ -10088,6 +11485,12 @@ export interface components {
              */
             total_days: number;
         };
+        /**
+         * RunStatus
+         * @description Host-controlled lifecycle states for one Agent run.
+         * @enum {string}
+         */
+        RunStatus: "queued" | "running" | "waiting_approval" | "paused" | "completed" | "failed" | "cancelled";
         /**
          * SignalDeviationItem
          * @description 信号-成交偏差项.
@@ -10689,6 +12092,642 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    agent_list_agent_approvals: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["AgentApprovalStatus"] | null;
+                run_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_AgentApprovalResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_get_agent_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentApprovalResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_decide_agent_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentApprovalDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentApprovalDecisionResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_list_agent_campaigns: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["CampaignStatus"] | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_AgentCampaignResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_create_agent_campaign: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentCampaignCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentCampaignResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_validate_agent_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentCampaignHypothesisValidationRequest"] | components["schemas"]["AgentCampaignExperimentPlanValidationRequest"] | components["schemas"]["AgentCampaignGovernanceValidationRequest"] | components["schemas"]["AgentCampaignManifestValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentCampaignValidationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_get_agent_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentCampaignResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_approve_agent_campaign: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentCampaignApproveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentCampaignResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_cancel_agent_campaign: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentCampaignCancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentCampaignResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_get_agent_campaign_events: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Last-Event-ID"?: number | null;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_get_agent_capabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentCapabilityResponse_"];
+                };
+            };
+        };
+    };
+    agent_get_agent_decision_opinion: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                strategy_version: string;
+                trade_date: string;
+                account_id: string;
+                sleeve_id: string;
+                v3_artifact_id: string;
+                decision_time: string;
+                knowledge_cutoff: string;
+                publication_cutoff: string;
+                source_snapshot_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentDecisionOpinionResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_list_agent_runs: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["RunStatus"] | null;
+                session_id?: string | null;
+                context_type?: string | null;
+                context_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_AgentRunResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_create_agent_run: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentRunCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_get_agent_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_cancel_agent_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentRunCancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_get_agent_run_events: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Last-Event-ID"?: number | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_list_agent_sessions: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_AgentSessionResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_create_agent_session: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSessionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentSessionResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -14450,6 +16489,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_DailyDecisionV2Response_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trade_get_daily_decision_v3: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 交易/信号日期 */
+                trade_date?: string | null;
+                /** @description 账户 ID */
+                account_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DailyDecisionV3Response_"];
                 };
             };
             /** @description Validation Error */

@@ -87,13 +87,13 @@
         "visualAuditStatus": "verified"
       }
     },
-    {
-      "id": "platform",
+  {
+    "id": "platform",
       "file": "page-platform.html",
       "status": "reviewed",
       "score": 9.6,
       "styleAnchor": "platform",
-      "rounds": 7,
+    "rounds": 8,
       "roundsV3": 2,
       "jsModules": {
         "ticker": 5,
@@ -101,12 +101,12 @@
         "tabs": 1,
         "total": 9
       },
-      "note": "2026-04-26 R4: rail dedup (task summary grid + quota warning focus), env badge glow removed, health strip brand-accent simplified, token hardcode cleanup (font-weight/size/radius/gap), LIVE→实时, MEM→内存, Tab2 管道与任务→任务执行, Pipeline→管道, health-trend.warn color, panel-count-down CSS",
+    "note": "2026-08-18 R1–R5: 增加数据产品运营治理状态，覆盖 source degraded、fallback active、promotion blocked、approval expired 与 remediation empty。",
       "createdAt": "2026-03-29",
       "stateCoverage": {
         "tabs": 4,
         "overlays": 3,
-        "stateVariants": 5,
+      "stateVariants": 11,
         "coveragePercent": 100
       },
       "blueprintId": 16,
@@ -260,13 +260,13 @@
         "visualAuditStatus": "verified"
       }
     },
-    {
-      "id": "trading-overview",
+  {
+    "id": "trading-overview",
       "file": "page-trading-overview.html",
       "status": "reviewed",
       "score": 9.5,
       "styleAnchor": "platform",
-      "rounds": 4,
+    "rounds": 5,
       "roundsV2": 1,
       "roundsV3": 1,
       "roundsV6": 1,
@@ -282,11 +282,12 @@
         "tabs": 1,
         "total": 14
       },
-      "createdAt": "2026-04-01",
+    "createdAt": "2026-04-01",
+    "note": "2026-08-18 R4: 冻结 Daily Decision V3 readiness、action/risk flag、partial/unavailable 与 shadow-only opinion 状态。",
       "stateCoverage": {
         "tabs": 2,
         "overlays": 4,
-        "stateVariants": 8,
+      "stateVariants": 15,
         "coveragePercent": 100
       },
       "blueprintId": 9,
@@ -457,13 +458,13 @@
         "visualAuditStatus": "verified"
       }
     },
-    {
-      "id": "risk-center",
+  {
+    "id": "risk-center",
       "file": "page-risk-center.html",
       "status": "reviewed",
       "score": 9.7,
       "styleAnchor": "platform",
-      "rounds": 1,
+    "rounds": 2,
       "roundsV2": 1,
       "roundsV3": 1,
       "roundsV6": 2,
@@ -483,10 +484,10 @@
       "stateCoverage": {
         "tabs": 3,
         "overlays": 3,
-        "stateVariants": 5,
+      "stateVariants": 15,
         "coveragePercent": 100
       },
-      "note": "round-4: shell grid adds gauges/status rows, right-rail contract slot restored, status bar moved into shell flow, summary panel fills viewport, screenshot ticker/counter animation removed",
+    "note": "2026-08-18 R4: 压力测试改为只读 V3 证据抽屉，补齐 ES/VaR、factor/Euler、stress、reconciliation、PIT provenance 和 shadow-only 降级状态。",
       "blueprintId": 13,
       "shellFamily": "analytical",
       "landing": {
@@ -697,26 +698,26 @@
       },
       "archiveNote": "2026-05-12: removed from the prototype release surface; page-agent-console-v2.html is the canonical /platform/agents prototype."
     },
-    {
-      "id": "agent-console-v2",
+  {
+    "id": "agent-console-v2",
       "file": "page-agent-console-v2.html",
       "status": "reviewed",
       "score": 9.4,
       "styleAnchor": "platform",
-      "rounds": 1,
+    "rounds": 2,
       "createdAt": "2026-05-02",
-      "note": "2026-05-12: canonical /platform/agents prototype; legacy page-agent-console.html was removed from the release surface.",
+    "note": "2026-08-18 R5: Governed Research 三栏工作台，以 Evidence Spine 串联 objective、tool、evidence、guardrail、approval 与 artifact；覆盖恢复、降级和全部终态。",
       "stateCoverage": {
-        "tabs": 0,
-        "overlays": 7,
-        "stateVariants": 39,
+      "tabs": 3,
+      "overlays": 9,
+      "stateVariants": 54,
         "coveragePercent": 100
       },
       "blueprintId": 15,
       "shellFamily": "studio",
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/platform",
+        "featureModule": "src/features/agent",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
         "visualAuditStatus": "verified"
@@ -929,12 +930,12 @@
         "coveragePercent": 100
       }
     },
-    {
-      "id": "portfolio",
+  {
+    "id": "portfolio",
       "file": "page-portfolio.html",
       "status": "reviewed",
       "score": 9.7,
-      "rounds": 3,
+    "rounds": 4,
       "createdAt": "2026-04-21",
       "shellFamily": "analytical",
       "blueprintId": 12,
@@ -945,10 +946,10 @@
       "stateCoverage": {
         "tabs": 3,
         "overlays": 3,
-        "stateVariants": 15,
+      "stateVariants": 22,
         "coveragePercent": 100
       },
-      "note": "2026-04-26 R3: gates pass, shell-body display:contents, right-rail slot, CSS-only drawer/modal triggers, PnL curve, concentration heat strip, interaction targets >=24px",
+    "note": "2026-08-18 R4: 增加 current/target/delta、solver/policy、total exposure/cash baseline、reconciliation 与失败关闭状态。",
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/trading",

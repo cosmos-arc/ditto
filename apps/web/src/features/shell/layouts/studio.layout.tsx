@@ -14,7 +14,7 @@ interface StudioLayoutProps {
 }
 
 /**
- * StudioLayout — /research/strategy-studio, /ai/*.
+ * StudioLayout — /research/strategy-studio and /platform/agents.
  * Grid: optional modes bar (full width) + sources + main + inspector + optional logs.
  * When `modes` is provided, an additional row is inserted above the content columns.
  */

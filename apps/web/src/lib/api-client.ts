@@ -9,7 +9,7 @@ type ApiPagination = {
 
 export type ApiResponse<T> = {
 	readonly data: T;
-	readonly pagination?: ApiPagination;
+	readonly pagination?: ApiPagination | null;
 };
 
 type RequestOptions = {
@@ -18,6 +18,7 @@ type RequestOptions = {
 	readonly rawBody?: string;
 	readonly headers?: Record<string, string>;
 	readonly signal?: AbortSignal;
+	readonly unwrap?: boolean;
 };
 
 class ApiError extends Error {
@@ -129,7 +130,7 @@ function toApiError(response: Response, payload: unknown): ApiError {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-	const { method = "GET", body, rawBody, headers = {}, signal } = options;
+	const { method = "GET", body, rawBody, headers = {}, signal, unwrap = true } = options;
 	if (body !== undefined && rawBody !== undefined) throw new Error("request cannot include both body and rawBody");
 
 	const response = await fetch(buildApiUrl(path), {
@@ -147,11 +148,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 		throw toApiError(response, payload);
 	}
 
-	return unwrapApiResponse<T>(payload);
+	return unwrap ? unwrapApiResponse<T>(payload) : (payload as T);
 }
 
 export const apiClient = {
 	get: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "GET" }),
+	getResponse: <T>(path: string, options?: RequestOptions) =>
+		request<ApiResponse<T>>(path, { ...options, method: "GET", unwrap: false }),
 
 	post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
 		request<T>(path, { ...options, method: "POST", body }),

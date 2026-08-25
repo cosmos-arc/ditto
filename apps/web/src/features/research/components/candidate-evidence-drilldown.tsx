@@ -1,3 +1,4 @@
+import { AgentContextActions } from "@/features/agent";
 import { ApiError } from "@/lib/api-client";
 import type { CandidateEvidenceResourceKind } from "../api/candidate-evidence";
 import { useCandidateEvidence } from "../hooks";
@@ -62,7 +63,14 @@ function Resource({
 export function CandidateEvidenceDrilldown({ experimentId, candidateId }: CandidateEvidenceDrilldownProps) {
 	return (
 		<div className="flex flex-col">
-			<h3 className="text-sm font-semibold">Candidate evidence · {candidateId}</h3>
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<h3 className="text-sm font-semibold">Candidate evidence · {candidateId}</h3>
+				<AgentContextActions
+					contextType="experiment-candidate"
+					contextId={`${experimentId}:${candidateId}`}
+					evidenceObjective="复核候选的选择、排除、因子贡献与 provenance"
+				/>
+			</div>
 			<Resource experimentId={experimentId} candidateId={candidateId} kind="selections" />
 			<Resource experimentId={experimentId} candidateId={candidateId} kind="exclusions" />
 			<Resource experimentId={experimentId} candidateId={candidateId} kind="factor-contributions" />

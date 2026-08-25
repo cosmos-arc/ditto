@@ -1,5 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { AgentContextActions } from "@/features/agent";
 import { ObjectHubLayout } from "@/features/shell";
 import type { FactorDiagnosticsScope } from "../api/factor-diagnostics";
 import { FactorDiagnosticsView } from "./factor-diagnostics-view";
@@ -48,11 +49,24 @@ export function FactorPage({ initialScope = null }: FactorPageProps) {
 	return (
 		<ObjectHubLayout
 			meta={
-				<div data-info-level="l1" data-info-unit="factor-meta" className="flex flex-col gap-1 px-4 py-3">
-					<span className="text-lg font-semibold">{factorId || "因子诊断"}</span>
-					<span className="text-xs text-(--color-foreground-tertiary)">
-						完整 scope 与 artifact identity 必须由服务端验证
-					</span>
+				<div
+					data-info-level="l1"
+					data-info-unit="factor-meta"
+					className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+				>
+					<div className="flex flex-col gap-1">
+						<span className="text-lg font-semibold">{factorId || "因子诊断"}</span>
+						<span className="text-xs text-(--color-foreground-tertiary)">
+							完整 scope 与 artifact identity 必须由服务端验证
+						</span>
+					</div>
+					{scope && (
+						<AgentContextActions
+							contextType="factor-diagnostics"
+							contextId={`${factorId}:${scope.snapshotId}:${scope.startDate}:${scope.endDate}:${scope.registryHash}`}
+							evidenceObjective="复核当前不可变因子诊断的证据、时间边界与异常"
+						/>
+					)}
 				</div>
 			}
 			tabs={
