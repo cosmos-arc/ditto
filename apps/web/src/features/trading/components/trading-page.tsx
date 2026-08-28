@@ -4,8 +4,9 @@ import { AnalyticalLayout, StatusBar } from "@/features/shell";
 import { resolveTradingExecutionScope, type TradingExecutionScope } from "../api/execution-scope";
 import { mapReadinessStatus } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { useDailyDecisionV2 } from "../hooks";
-import { DailyDecisionWorkspace } from "./daily-decision-workspace";
+import { useDailyDecisionV3 } from "../hooks";
+import { DailyDecisionV3Workspace } from "./daily-decision-v3-workspace";
+import { DecisionBriefing } from "./decision-briefing";
 import { EquityPnlBlock } from "./equity-pnl-block";
 import { PositionsSummary } from "./positions-summary";
 import { RiskAlertsBlock } from "./risk-alerts-block";
@@ -109,16 +110,15 @@ export function TradingPage() {
 		isLoading,
 		isError,
 		refetch,
-	} = useDailyDecisionV2(undefined, undefined, {
+	} = useDailyDecisionV3(undefined, {
 		enabled: liveMode,
 	});
 	const readinessStatus = stringField(dailyDecision?.readiness.status, "blocked");
 	const readiness = mapReadinessStatus(
 		readinessStatus === "ready" || readinessStatus === "review" ? readinessStatus : "blocked",
 	);
-	const reasons = stringList(dailyDecision?.readiness.reason_codes);
-	const tradeDate = stringField(dailyDecision?.identity.intended_trade_date, "日期待确认");
-	const outcome = stringField(dailyDecision?.run_package.outcome, "missing");
+	const reasons = stringList(dailyDecision?.readiness.blockingReasons);
+	const tradeDate = stringField(dailyDecision?.identity.tradeDate, "日期待确认");
 	const decisionBannerProps = !liveMode
 		? DECISION_BANNER_PROPS
 		: isLoading
@@ -155,8 +155,8 @@ export function TradingPage() {
 										value: readinessStatus === "blocked" ? "关闭" : `${dailyDecision.actions.length} 条`,
 									},
 									{
-										label: "Package",
-										value: outcome,
+										label: "Risk Evidence",
+										value: dailyDecision.completeness.status,
 									},
 									{
 										label: "Evidence",
@@ -174,7 +174,7 @@ export function TradingPage() {
 	return (
 		<>
 			<AnalyticalLayout
-				className="pb-(--height-status-bar)"
+				className="pb-(--height-status-bar) [--height-analysis-band:var(--height-trading-analysis-band)]"
 				strip={<TradingSessionStrip />}
 				banner={
 					<div className="p-(--density-panel-padding) pb-0" data-info-level="l1" data-info-unit="decision-banner">
@@ -184,14 +184,21 @@ export function TradingPage() {
 				main={
 					<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding) md:h-full md:overflow-y-auto">
 						{liveMode && <ExecutionScopeForm scope={executionScope} />}
-						{liveMode && dailyDecision && <DailyDecisionWorkspace report={dailyDecision} />}
-						<EquityPnlBlock />
+						{liveMode && dailyDecision && <DailyDecisionV3Workspace decision={dailyDecision} />}
+						{!liveMode && <EquityPnlBlock />}
 						<PositionsSummary />
 						<RiskAlertsBlock />
 						<TradingOverviewOrdersPanel />
 					</div>
 				}
 				activity={<TradingOverviewSignalsPanel />}
+				analysis={
+					liveMode && dailyDecision ? (
+						<div className="h-full overflow-y-auto p-(--density-panel-padding) pt-0">
+							<DecisionBriefing decision={dailyDecision} />
+						</div>
+					) : undefined
+				}
 			/>
 			<StatusBar />
 		</>

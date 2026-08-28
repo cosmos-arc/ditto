@@ -7,6 +7,7 @@ const WORKBENCH_VIEWS = [
 	{ id: "quality", label: "质量" },
 	{ id: "runs", label: "运行与修复" },
 	{ id: "evidence", label: "证据与许可" },
+	{ id: "operations", label: "运营治理" },
 ] as const;
 
 export type WorkbenchView = (typeof WORKBENCH_VIEWS)[number]["id"];

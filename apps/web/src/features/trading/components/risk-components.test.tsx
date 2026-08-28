@@ -111,12 +111,13 @@ describe("RiskScopeStrip", () => {
 });
 
 describe("RiskPage", () => {
-	it("live 模式显示 Risk prototype only 空态", async () => {
+	it("live 模式显示 Daily Decision V3 风险中心", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
-		render(<RiskPage />, { wrapper: createWrapper() });
+		const { container } = render(<RiskPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("prototype only")).resolves.toBeInTheDocument();
-		expect(screen.getByText("V1a 未接 live，数据待后端补齐")).toBeInTheDocument();
+		await expect(screen.findByText("Historical ES99")).resolves.toBeInTheDocument();
+		expect(container.querySelector("[data-slot='risk-decision-center']")).toBeInTheDocument();
+		expect(screen.queryByText("prototype only")).not.toBeInTheDocument();
 	});
 
 	it("渲染风控中心布局", async () => {

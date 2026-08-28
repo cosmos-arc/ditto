@@ -65,6 +65,7 @@ export const VISUAL_AUDIT_PAGES = [
     prototypeTargets: {
       'rail': ".shell-rail",
       'header': ".agent-header",
+      'shell': ".agent-shell",
       'tabs': ".agent-tabs",
       'source': ".list-panel",
       'main': ".main-panel",
@@ -72,9 +73,9 @@ export const VISUAL_AUDIT_PAGES = [
       'status': ".status-bar",
     },
     reactTargets: {
-      'shell': "#root > div",
+      'shell': "[data-slot='shell']",
       'rail': "nav[aria-label='主导航']",
-      'header': "[data-slot='header']",
+      'header': "[data-slot='agent-header']",
       'tabs': "[data-slot='tabs']",
       'source': "[data-slot='source']",
       'main': "[data-slot='main']",
@@ -693,6 +694,7 @@ export const VISUAL_AUDIT_PAGES = [
     prototypeTargets: {
       'rail': ".shell-rail",
       'header': ".shell-header",
+      'shell': ".shell-analytical.trading-variant",
       'strip': ".shell-strip",
       'main': ".shell-main",
       'activity': ".shell-activity",

@@ -121,10 +121,10 @@ describe("v3 Interaction Framework Compliance", () => {
 			complianceTestTimeoutMs,
 		);
 
-		it("AI page has at least one L1 unit", async () => {
-			const { AiPage } = await import("@/features/ai/components/ai-page");
+		it("Agent Console has at least one L1 unit", async () => {
+			const { AgentConsolePage } = await import("@/features/agent");
 			const wrapper = createWrapper();
-			render(<AiPage />, { wrapper });
+			render(<AgentConsolePage />, { wrapper });
 			await waitFor(() => {
 				const l1Units = document.querySelectorAll("[data-info-level='l1']");
 				expect(l1Units.length).toBeGreaterThanOrEqual(1);

@@ -1,11 +1,10 @@
-import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { AnalyticalLayout, Panel, PanelBody, PanelHeader, StatusBar } from "@/features/shell";
-import { mapDailyDecisionV2ToLegacy } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
-import { useComparisonAttribution, useDailyDecisionV2 } from "../hooks";
+import { useComparisonAttribution, useDailyDecisionV3 } from "../hooks";
 import { FillLedgerList } from "./fill-ledger-list";
+import { PortfolioConstructionEvidence } from "./portfolio-construction-evidence";
 import { PositionsSummary } from "./positions-summary";
 import { SignalToOrderPipelineStrip } from "./signal-to-order-pipeline-strip";
 
@@ -67,7 +66,7 @@ export function PortfolioPage({ comparisonRunId }: PortfolioPageProps = {}) {
 		isLoading,
 		isError,
 		refetch,
-	} = useDailyDecisionV2(undefined, mapDailyDecisionV2ToLegacy, {
+	} = useDailyDecisionV3(undefined, {
 		enabled: liveMode,
 	});
 
@@ -80,7 +79,7 @@ export function PortfolioPage({ comparisonRunId }: PortfolioPageProps = {}) {
 						<div className="flex flex-col">
 							<div className="flex h-full items-center justify-between border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-4 py-2">
 								<p className="text-sm font-medium text-(--color-foreground)">组合总览</p>
-								<span className="font-data text-xs text-(--color-foreground-tertiary)">experimental live</span>
+								<span className="font-data text-xs text-(--color-foreground-tertiary)">Daily Decision V3</span>
 							</div>
 							<SignalToOrderPipelineStrip />
 						</div>
@@ -98,25 +97,13 @@ export function PortfolioPage({ comparisonRunId }: PortfolioPageProps = {}) {
 									</Button>
 								</div>
 							)}
-							<Panel>
-								<PanelHeader title="P&L" />
-								<PanelBody className="p-3">
-									{isLoading && <LoadingSkeleton variant="metric" />}
-									<div className="grid grid-cols-2 gap-3">
-										<Metric
-											label="净盈亏"
-											value={dailyDecision?.pnl ? `¥${dailyDecision.pnl.net_pnl.toLocaleString()}` : "—"}
-											trend={dailyDecision?.pnl && dailyDecision.pnl.net_pnl >= 0 ? "up" : "down"}
-											variant="equity"
-										/>
-										<Metric
-											label="累计手续费"
-											value={dailyDecision?.pnl ? `¥${dailyDecision.pnl.total_fees.toLocaleString()}` : "—"}
-											variant="standard"
-										/>
-									</div>
-								</PanelBody>
-							</Panel>
+							{isLoading && <LoadingSkeleton variant="panel" rows={5} />}
+							{!isLoading && !isError && !dailyDecision && (
+								<div role="status" className="rounded-(--radius-sm) border border-(--color-border-subtle) p-4 text-sm">
+									暂无组合构建决策
+								</div>
+							)}
+							{dailyDecision && <PortfolioConstructionEvidence decision={dailyDecision} />}
 							<PositionsSummary />
 						</div>
 					}

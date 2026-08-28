@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchDailyDecision, fetchDailyDecisionV2 } from "../daily-decision";
+import { fetchDailyDecision, fetchDailyDecisionV2, fetchDailyDecisionV3 } from "../daily-decision";
 import { DEFAULT_STRATEGY_ID, tradingKeys } from "../query-keys";
 
 afterEach(() => {
@@ -80,6 +80,54 @@ describe("fetchDailyDecisionV2", () => {
 		} finally {
 			window.history.replaceState(null, "", originalUrl);
 		}
+	});
+});
+
+describe("fetchDailyDecisionV3", () => {
+	it("isolates V3 decisions by strategy, trade date, and account", () => {
+		expect(tradingKeys.dailyDecisionV3("strategy-r4", "2026-08-18", "paper-r4")).toEqual([
+			"trading",
+			"daily-decision",
+			"v3",
+			"strategy-r4",
+			"2026-08-18",
+			"paper-r4",
+		]);
+	});
+
+	it("requests and unwraps the live V3 contract without falling back to V2", async () => {
+		const fetchMock = vi.fn<typeof fetch>(
+			async () =>
+				new Response(
+					JSON.stringify({
+						data: {
+							v2: { identity: { strategy_id: "strategy-r4", account_id: "paper-r4" } },
+							readiness: "review",
+							blocking_reasons: ["RISK_REVIEW_REQUIRED"],
+							portfolio_construction: { status: "completed" },
+							tail_risk: {},
+							factor_risk: { availability: "unavailable" },
+							stress_tests: { catalog_version: "stress-v1", losses: {} },
+							reconciliation: { status: "matched", differences: [], alert_idempotency_key: null },
+							provenance: {},
+						},
+					}),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		const report = await fetchDailyDecisionV3({
+			strategyId: "strategy-r4",
+			accountId: "paper-r4",
+			tradeDate: "2026-08-18",
+		});
+
+		expect(report.readiness).toBe("review");
+		expect(fetchMock).toHaveBeenCalledWith(
+			"/api/v1/trade/daily-decision/v3?strategy_id=strategy-r4&trade_date=2026-08-18&account_id=paper-r4",
+			expect.objectContaining({ method: "GET" }),
+		);
 	});
 });
 

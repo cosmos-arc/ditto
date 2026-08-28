@@ -67,7 +67,7 @@ describe("ShellHeader", () => {
 		render(<ShellHeader />);
 
 		expect(screen.getByRole("button", { name: "打开全局命令" })).toHaveAttribute("data-shell-utility", "command");
-		expect(screen.getByRole("button", { name: "打开 Copilot" })).toHaveAttribute("data-shell-utility", "copilot");
+		expect(screen.getByRole("button", { name: "打开 Agent 工作入口" })).toHaveAttribute("data-shell-utility", "agent");
 		expect(screen.getByRole("button", { name: "通知" })).toHaveAttribute("data-shell-utility", "notifications");
 		expect(screen.getByRole("button", { name: "帮助" })).toHaveAttribute("data-shell-utility", "help");
 		expect(screen.getByRole("button", { name: "账户与视图偏好" })).toHaveAttribute("data-shell-utility", "account");

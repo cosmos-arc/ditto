@@ -190,13 +190,18 @@ describe("prototype expert efficiency", () => {
 		expect(interactionsJs).toContain("当前原型面向桌面工作台");
 	});
 
-	it("keeps Agent Console V2 top-level navigation to four primary tabs plus overflow", () => {
+	it("keeps Agent Console V2 navigation to the three governed task views", () => {
 		const document = loadDocument("page-agent-console-v2.html");
 		const primaryTabs = document.querySelectorAll(".agent-tabs .tab:not(.tab-overflow)");
 		const overflow = document.querySelector(".agent-tabs .tab-overflow[aria-haspopup='menu']");
 
-		expect(primaryTabs.length).toBeLessThanOrEqual(4);
-		expect(overflow?.getAttribute("aria-label")).toContain("更多控制台视图");
+		expect(primaryTabs).toHaveLength(3);
+		expect(Array.from(primaryTabs).map((tab) => tab.textContent?.trim())).toEqual([
+			"Runs 21",
+			"Campaigns 8",
+			"Approvals 12",
+		]);
+		expect(overflow).toBeNull();
 	});
 
 	it("keeps active prototype cards and lists free of thick directional side stripes", () => {

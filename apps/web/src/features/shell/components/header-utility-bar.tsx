@@ -4,7 +4,7 @@ import { ViewPreferencesMenu } from "./view-preferences-menu";
 
 interface HeaderUtilityBarProps {
 	readonly onOpenCommand?: () => void;
-	readonly onOpenCopilot?: () => void;
+	readonly onOpenAgent?: () => void;
 }
 
 function UtilityIconButton({
@@ -16,7 +16,7 @@ function UtilityIconButton({
 	readonly "aria-label": string;
 	readonly children: ReactNode;
 	readonly onClick?: () => void;
-	readonly utility: "copilot" | "notifications" | "help";
+	readonly utility: "agent" | "notifications" | "help";
 }) {
 	return (
 		<button
@@ -31,11 +31,11 @@ function UtilityIconButton({
 	);
 }
 
-export function HeaderUtilityBar({ onOpenCommand, onOpenCopilot }: HeaderUtilityBarProps) {
+export function HeaderUtilityBar({ onOpenAgent, onOpenCommand }: HeaderUtilityBarProps) {
 	return (
 		<div className="flex items-center gap-[var(--spacing-2)]" data-slot="header-utility-bar">
 			<GlobalCommandButton onOpenCommand={onOpenCommand} />
-			<UtilityIconButton aria-label="打开 Copilot" utility="copilot" onClick={onOpenCopilot}>
+			<UtilityIconButton aria-label="打开 Agent 工作入口" utility="agent" onClick={onOpenAgent}>
 				<svg width={16} height={16} viewBox="0 0 20 20" fill="none" aria-hidden="true">
 					<path
 						d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"

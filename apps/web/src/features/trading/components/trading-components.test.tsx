@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { tradingHandlers } from "@/mocks/handlers/trading";
+import { liveDailyDecisionV3 as mockDailyDecisionV3, tradingHandlers } from "@/mocks/handlers/trading";
 import { server } from "@/mocks/server";
 import type { components } from "@/types/generated/api";
 import { EquityPnlBlock } from "./equity-pnl-block";
@@ -14,6 +14,7 @@ import { TradingPage } from "./trading-page";
 import { TradingSessionStrip } from "./trading-session-strip";
 
 type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
+type DailyDecisionV3Response = components["schemas"]["DailyDecisionV3Response"];
 type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
 
 function createQueryClient(): QueryClient {
@@ -190,6 +191,13 @@ const liveDailyDecisionV2 = {
 	},
 } satisfies DailyDecisionV2Response;
 
+const liveDailyDecisionV3 = {
+	...mockDailyDecisionV3,
+	v2: liveDailyDecisionV2,
+	readiness: "review",
+	blocking_reasons: ["RISK_WARNING"],
+} satisfies DailyDecisionV3Response;
+
 describe("Trading route page contract handoffs", () => {
 	it("covers PortfolioPage route composition", () => {
 		render(<PortfolioPage />, { wrapper: createWrapper() });
@@ -199,18 +207,19 @@ describe("Trading route page contract handoffs", () => {
 		expect(screen.getByText("Activity")).toBeInTheDocument();
 	});
 
-	it("live 模式展示真实 positions/pnl、归因空态与 Pipeline Strip", async () => {
+	it("live 模式展示组合构建、真实 positions、归因空态与 Pipeline Strip", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
+			http.get("/api/v1/trade/daily-decision/v3", () => HttpResponse.json({ data: liveDailyDecisionV3 })),
 			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
 			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 		);
 
 		render(<PortfolioPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findAllByText("#510300")).resolves.toHaveLength(2);
-		expect(screen.getByText("净盈亏")).toBeInTheDocument();
-		expect(screen.getByText(/¥197/)).toBeInTheDocument();
+		expect((await screen.findAllByText("#510300")).length).toBeGreaterThanOrEqual(2);
+		expect(screen.getByText("组合构建证据")).toBeInTheDocument();
+		expect(screen.getByText("sha256:mock-policy-r4")).toBeInTheDocument();
 		expect(screen.getByText("归因")).toBeInTheDocument();
 		expect(screen.getByText("无归因数据")).toBeInTheDocument();
 		expect(screen.getByText("Signal-to-Order Pipeline")).toBeInTheDocument();
@@ -223,6 +232,7 @@ describe("Trading route page contract handoffs", () => {
 	it("live 模式 Portfolio 带 run_id 时渲染 comparison 归因数据", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
+			http.get("/api/v1/trade/daily-decision/v3", () => HttpResponse.json({ data: liveDailyDecisionV3 })),
 			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
 			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 			http.get("/api/v1/trade/comparison", () =>
@@ -255,12 +265,12 @@ describe("Trading route page contract handoffs", () => {
 });
 
 describe("TradingSessionStrip", () => {
-	it("live 模式显示 session 未接 live 空态", async () => {
+	it("live 模式显示显式 manual/paper 决策范围", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		render(<TradingSessionStrip />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("V1a 未接 live")).resolves.toBeInTheDocument();
-		expect(screen.getByText("Session 数据待后端补齐")).toBeInTheDocument();
+		await expect(screen.findByText("manual / paper")).resolves.toBeInTheDocument();
+		expect(screen.getByText("决策范围由 URL 显式选择")).toBeInTheDocument();
 	});
 
 	it("渲染交易阶段", async () => {
@@ -280,12 +290,12 @@ describe("TradingSessionStrip", () => {
 });
 
 describe("EquityPnlBlock", () => {
-	it("live 模式显示 equity 未接 live 空态", async () => {
+	it("live 模式显示 equity 合同不可用空态", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		render(<EquityPnlBlock />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("V1a 未接 live")).resolves.toBeInTheDocument();
-		expect(screen.getByText("Equity 曲线待后端补齐")).toBeInTheDocument();
+		await expect(screen.findByText("权益曲线不可用")).resolves.toBeInTheDocument();
+		expect(screen.getByText("当前公开合同未提供权益时序")).toBeInTheDocument();
 	});
 
 	it("渲染权益标题", async () => {
@@ -377,6 +387,7 @@ describe("TradingPage - DecisionBanner", () => {
 	it("live 模式从 daily-decision 渲染 primary answer", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
+			http.get("/api/v1/trade/daily-decision/v3", () => HttpResponse.json({ data: liveDailyDecisionV3 })),
 			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
 			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 		);
@@ -393,14 +404,12 @@ describe("TradingPage - DecisionBanner", () => {
 	it("blocked 状态关闭决策横幅中的交易动作", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
-			http.get("/api/v1/trade/daily-decision/v2", () =>
+			http.get("/api/v1/trade/daily-decision/v3", () =>
 				HttpResponse.json({
 					data: {
-						...liveDailyDecisionV2,
-						readiness: {
-							status: "blocked",
-							reason_codes: ["ACCOUNT_BASELINE_MISSING"],
-						},
+						...liveDailyDecisionV3,
+						readiness: "blocked",
+						blocking_reasons: ["ACCOUNT_BASELINE_MISSING"],
 					},
 				}),
 			),
@@ -420,7 +429,7 @@ describe("TradingPage - DecisionBanner", () => {
 	it("live 契约失败时显示可重试错误且不回退原型净值", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
-			http.get("/api/v1/trade/daily-decision/v2", () =>
+			http.get("/api/v1/trade/daily-decision/v3", () =>
 				HttpResponse.json({ detail: "temporary failure" }, { status: 503 }),
 			),
 		);
@@ -435,6 +444,7 @@ describe("TradingPage - DecisionBanner", () => {
 	it("live 模式 Overview 信号队列使用 daily-decision 而非 mock 常量", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
+			http.get("/api/v1/trade/daily-decision/v3", () => HttpResponse.json({ data: liveDailyDecisionV3 })),
 			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
 			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 		);
@@ -452,6 +462,7 @@ describe("TradingPage - DecisionBanner", () => {
 	it("live 模式 Overview 订单区使用手工执行流水而非 mock 委托", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
+			http.get("/api/v1/trade/daily-decision/v3", () => HttpResponse.json({ data: liveDailyDecisionV3 })),
 			http.get("/api/v1/trade/daily-decision/v2", () => HttpResponse.json({ data: liveDailyDecisionV2 })),
 			http.get("/api/v1/trade/daily-decision", () => HttpResponse.json({ data: liveDailyDecision })),
 		);

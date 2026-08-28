@@ -10,6 +10,15 @@ export const tradingKeys = {
 			tradeDate ?? "latest",
 			accountId ?? "account-unselected",
 		] as const,
+	dailyDecisionV3: (strategyId = DEFAULT_STRATEGY_ID, tradeDate?: string, accountId?: string) =>
+		[
+			...tradingKeys.all,
+			"daily-decision",
+			"v3",
+			strategyId,
+			tradeDate ?? "latest",
+			accountId ?? "account-unselected",
+		] as const,
 	signals: (strategyId = DEFAULT_STRATEGY_ID, signalDate?: string) =>
 		[...tradingKeys.all, "signals", strategyId, signalDate ?? "latest"] as const,
 	intents: (strategyId = DEFAULT_STRATEGY_ID, status?: string) =>

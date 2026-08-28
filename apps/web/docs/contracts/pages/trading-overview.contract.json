@@ -1,9 +1,9 @@
 {
   "id": "trading-overview",
-  "version": 1,
-  "status": "draft",
+  "version": 2,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-18",
   "route": "/trading",
   "pagePattern": "analytical-overview",
   "shellFamily": "analytical",
@@ -21,6 +21,17 @@
       "TradingPage"
     ]
   },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/trade/daily-decision/v3",
+      "/api/v1/agent/decision-opinions"
+    ],
+    "writePaths": [],
+    "mockFallback": false,
+    "shadowOnlyPaths": [
+      "/api/v1/agent/decision-opinions"
+    ]
+  },
   "viewports": [
     {
       "width": 1536,
@@ -34,6 +45,13 @@
     }
   ],
   "slots": [
+    {
+      "name": "shell",
+      "required": true,
+      "prototypeSelector": ".shell-analytical.trading-variant",
+      "reactSelector": "#root > div",
+      "a11yRole": "region"
+    },
     {
       "name": "strip",
       "required": true,
@@ -80,7 +98,13 @@
       "stale"
     ],
     "pageSpecific": [
-      "market-closed"
+      "ready",
+      "review-required",
+      "blocked",
+      "partial",
+      "unavailable",
+      "market-closed",
+      "shadow-opinion-unavailable"
     ]
   },
   "flags": {
@@ -131,7 +155,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-pause-trading",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "PauseTradingConfirmDialog",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -148,7 +172,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-position-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "TradingPositionDetailDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -165,7 +189,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-risk-alert-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "TradingRiskAlertDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -182,7 +206,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-limit-status",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "TradingLimitStatusDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",

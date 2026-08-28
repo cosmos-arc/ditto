@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { CopilotSidecar } from "@/features/copilot";
+import { AgentLauncherSidecar } from "@/features/agent";
 import { useActiveDomain } from "../hooks/use-active-domain";
 import { useAtmosphere } from "../hooks/use-atmosphere";
 import { ShellHeader } from "./header";
@@ -13,7 +13,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
 	const activeDomain = useActiveDomain();
-	const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+	const [isAgentLauncherOpen, setIsAgentLauncherOpen] = useState(false);
 	useAtmosphere();
 
 	useEffect(() => {
@@ -24,7 +24,7 @@ export function AppShell({ children }: AppShellProps) {
 		<div
 			className={
 				"relative grid h-screen w-screen overflow-hidden " +
-				"grid-cols-[var(--width-rail)_1fr] " +
+				"grid-cols-[var(--width-rail)_minmax(0,1fr)] " +
 				"grid-rows-[var(--height-header)_1fr]"
 			}
 		>
@@ -32,10 +32,10 @@ export function AppShell({ children }: AppShellProps) {
 				<Rail />
 			</div>
 			<div className="col-start-2">
-				<ShellHeader onOpenCopilot={() => setIsCopilotOpen(true)} />
+				<ShellHeader onOpenAgent={() => setIsAgentLauncherOpen(true)} />
 			</div>
 			<div className="relative col-start-2 row-start-2 min-h-0 overflow-hidden">{children}</div>
-			<CopilotSidecar open={isCopilotOpen} onOpenChange={setIsCopilotOpen} />
+			<AgentLauncherSidecar open={isAgentLauncherOpen} onOpenChange={setIsAgentLauncherOpen} />
 			<NoiseLayer />
 		</div>
 	);

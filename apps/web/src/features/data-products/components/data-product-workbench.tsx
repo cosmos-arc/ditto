@@ -12,6 +12,7 @@ import {
 import { DataProductCatalog } from "./data-product-catalog";
 import { DataProductCoverage } from "./data-product-coverage";
 import { DataProductEvidence } from "./data-product-evidence";
+import { DataProductOperations } from "./data-product-operations";
 import { DataProductOverview as DataProductOverviewView } from "./data-product-overview";
 import { DataProductQuality } from "./data-product-quality";
 import { DataProductRuns } from "./data-product-runs";
@@ -83,6 +84,7 @@ export function DataProductWorkbench() {
 					isError={evidenceQuery.isError || licenseQuery.isError}
 				/>
 			);
+		if (view === "operations") return <DataProductOperations datasetId={activeId} />;
 		return (
 			<DataProductOverviewView
 				product={activeProduct}

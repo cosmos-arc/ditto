@@ -13,6 +13,7 @@ import {
 
 type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
 type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
+type DailyDecisionV3Response = components["schemas"]["DailyDecisionV3Response"];
 type TradeIntentResponse = components["schemas"]["TradeIntentResponse"];
 type FillAdjustmentResponse = components["schemas"]["FillAdjustmentResponse"];
 type FillResponse = components["schemas"]["FillResponse"];
@@ -204,6 +205,53 @@ export const liveDailyDecisionV2: DailyDecisionV2Response = {
 	},
 };
 
+export const liveDailyDecisionV3: DailyDecisionV3Response = {
+	v2: liveDailyDecisionV2,
+	readiness: "review",
+	blocking_reasons: [],
+	portfolio_construction: {
+		status: "completed",
+		solver: "clarabel",
+		solver_version: "0.10",
+		mode: "risk_budget",
+		solver_status: "optimal",
+		duration_ms: 18.5,
+		policy_digest: "sha256:mock-policy-r4",
+		failure_code: null,
+	},
+	tail_risk: {
+		historical_es99: 0.041,
+		historical_var99: 0.031,
+		parametric_var99: 0.029,
+		monte_carlo_var99: 0.033,
+		monte_carlo_seed: 42,
+	},
+	factor_risk: {
+		availability: "available",
+		total_risk: 0.12,
+		marginal_contributions: { market: 0.08, size: 0.04 },
+		percentage_contributions: { market: 0.67, size: 0.33 },
+		euler_residual: 0.0001,
+	},
+	stress_tests: {
+		catalog_version: "stress-v3",
+		losses: { liquidity_crunch: 0.08, rate_shock: 0.03 },
+		unavailable_scenarios: [],
+	},
+	reconciliation: {
+		status: "matched",
+		differences: [],
+		alert_idempotency_key: null,
+	},
+	provenance: {
+		decision_time: "2026-07-02T07:00:00Z",
+		knowledge_cutoff: "2026-07-02T06:55:00Z",
+		publication_cutoff: "2026-07-02T06:50:00Z",
+		source_snapshot_ids: ["sha256:etf-daily-20260702"],
+		generated_at: "2026-07-02T07:01:00Z",
+	},
+};
+
 function isRecordFillRequest(value: unknown): value is RecordFillRequest {
 	if (typeof value !== "object" || value === null) return false;
 	const candidate = value as Partial<RecordFillRequest>;
@@ -259,6 +307,10 @@ function correctionConflict(fillId: string) {
 }
 
 export const tradingHandlers: RequestHandler[] = [
+	http.get("/api/v1/trade/daily-decision/v3", () => {
+		return HttpResponse.json({ data: liveDailyDecisionV3 });
+	}),
+
 	http.get("/api/v1/trade/daily-decision/v2", () => {
 		return HttpResponse.json({ data: liveDailyDecisionV2 });
 	}),

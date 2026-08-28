@@ -1,9 +1,9 @@
 {
   "id": "platform",
-  "version": 1,
-  "status": "draft",
+  "version": 2,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-18",
   "route": "/platform",
   "pagePattern": "queue-ops-console",
   "shellFamily": "ops-console",
@@ -22,6 +22,30 @@
     "reactComponentRefs": [
       "PlatformPage"
     ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/ingestion/catalog/remediation/backlog",
+      "/api/v1/ingestion/catalog/remediation/items/{item_id}",
+      "/api/v1/ingestion/catalog/remediation/approvals",
+      "/api/v1/ingestion/catalog/source-health",
+      "/api/v1/ingestion/catalog/source-health/summary",
+      "/api/v1/ingestion/catalog/source-fallback/summary",
+      "/api/v1/ingestion/catalog/source-fallback/policies",
+      "/api/v1/ingestion/catalog/promotion/readiness",
+      "/api/v1/ingestion/catalog/promotion/history"
+    ],
+    "writePaths": [
+      "/api/v1/ingestion/catalog/remediation/approvals",
+      "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/decision",
+      "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/execute",
+      "/api/v1/ingestion/catalog/source-fallback/policies",
+      "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/approval",
+      "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/activation",
+      "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/retirement",
+      "/api/v1/ingestion/catalog/promotion/revoke"
+    ],
+    "mockFallback": false
   },
   "viewports": [
     {
@@ -72,7 +96,12 @@
       "stale"
     ],
     "pageSpecific": [
-      "pipeline-running"
+      "pipeline-running",
+      "source-degraded",
+      "fallback-active",
+      "promotion-blocked",
+      "approval-expired",
+      "remediation-empty"
     ]
   },
   "flags": {
@@ -118,7 +147,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-pipeline-rerun",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "PlatformPipelineRerunSheet",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -135,7 +164,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-alert-handle",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "PlatformAlertHandleSheet",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -152,7 +181,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-task-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "PlatformTaskDetailDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",

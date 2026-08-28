@@ -1,6 +1,7 @@
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { AgentContextActions } from "@/features/agent";
 import { StatusBar, StudioLayout } from "@/features/shell";
 import { ApiError } from "@/lib/api-client";
 import type { NodeDescriptorView, SpecValidation } from "@/types/strategy";
@@ -151,7 +152,17 @@ export function StrategyPage() {
 				main={
 					<div className="flex flex-col gap-(--section-gap)">
 						<div data-info-level="l1" data-info-unit="strategy-header">
-							<StrategyHeader id={strategyId} />
+							<div className="flex flex-wrap items-center justify-between gap-2">
+								<StrategyHeader id={strategyId} />
+								{data && (
+									<AgentContextActions
+										contextType="strategy-version"
+										contextId={`${strategyId}@${data.version}`}
+										evidenceObjective="复核当前策略版本的证据、风险与不确定性"
+										authorObjective="提出当前策略版本的结构化字段变更草案，并附验证与证据"
+									/>
+								)}
+							</div>
 						</div>
 						<div data-info-level="l1" data-info-unit="strategy-editor">
 							{workingSpec ? (

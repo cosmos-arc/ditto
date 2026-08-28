@@ -1,9 +1,9 @@
 {
   "id": "risk-center",
-  "version": 1,
-  "status": "draft",
+  "version": 2,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-18",
   "route": "/trading/risk",
   "pagePattern": "analytical-overview",
   "shellFamily": "analytical",
@@ -20,6 +20,17 @@
     ],
     "reactComponentRefs": [
       "RiskPage"
+    ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/trade/daily-decision/v3",
+      "/api/v1/agent/decision-opinions"
+    ],
+    "writePaths": [],
+    "mockFallback": false,
+    "shadowOnlyPaths": [
+      "/api/v1/agent/decision-opinions"
     ]
   },
   "viewports": [
@@ -81,12 +92,22 @@
       "stale"
     ],
     "pageSpecific": [
-      "breach-active"
+      "ready",
+      "review-required",
+      "blocked",
+      "partial",
+      "tail-risk-unavailable",
+      "factor-risk-unavailable",
+      "stress-scenario-unavailable",
+      "reconciliation-mismatch",
+      "provenance-missing",
+      "breach-active",
+      "shadow-opinion-unavailable"
     ]
   },
   "overlays": [
     {
-      "id": "risk-center.stress-config",
+      "id": "risk-center.stress-detail",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
@@ -94,8 +115,8 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "#overlay-stress-config",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "prototypeSelector": "#overlay-stress-detail",
+      "reactComponent": "RiskStressDetailDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",

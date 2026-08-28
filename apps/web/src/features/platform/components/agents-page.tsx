@@ -1,24 +1,13 @@
-import { OpsConsoleLayout, StatusBar } from "@/features/shell";
-import { AgentFindingsList } from "./agent-findings-list";
-import { AgentInspectorPanel } from "./agent-inspector-panel";
+import { AgentConsolePage, type AgentConsoleSearch } from "@/features/agent";
 
-export function PlatformAgentsPage() {
-	return (
-		<>
-			<OpsConsoleLayout
-				className="pb-(--height-status-bar)"
-				main={
-					<div className="flex items-center justify-center p-(--density-panel-padding)">
-						<AgentInspectorPanel planId="plan-001" />
-					</div>
-				}
-				detail={
-					<div className="h-full overflow-y-auto">
-						<AgentFindingsList />
-					</div>
-				}
-			/>
-			<StatusBar />
-		</>
-	);
+export function PlatformAgentsPage({
+	initialSearch,
+	onSearchChange,
+	search,
+}: {
+	readonly initialSearch?: AgentConsoleSearch;
+	readonly onSearchChange?: (search: AgentConsoleSearch) => void;
+	readonly search?: AgentConsoleSearch;
+} = {}) {
+	return <AgentConsolePage initialSearch={initialSearch} search={search} onSearchChange={onSearchChange} />;
 }

@@ -1509,6 +1509,18 @@
           <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">归因计算失败</div><div class="state-error-desc">无法完成归因分析</div><button class="state-error-retry">重试</button></div></div></div>
         </div>
       </div>
+      <div class="gallery-group" data-component="daily-decision-v3-portfolio-state">
+        <div class="gallery-group__label">Daily Decision V3 · 组合构建</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">Ready</div><div class="gallery-card__preview state-variant-content" data-state="ready"><span class="status-pill">READY · current 82% · target 88% · cash 12%</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Review required</div><div class="gallery-card__preview state-variant-content" data-state="review-required"><div class="stale-banner"><span class="stale-dot-indicator"></span><span>2 个 delta 超过人工复核阈值</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Blocked</div><div class="gallery-card__preview state-variant-content" data-state="blocked"><div class="state-error"><div class="state-error-title">组合决策阻断</div><div class="state-error-desc">不生成可执行提交动作。</div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Partial</div><div class="gallery-card__preview state-variant-content" data-state="partial"><span class="status-pill">REVIEW · actions 可用 · factor evidence 缺失</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Solver failed</div><div class="gallery-card__preview state-variant-content" data-state="solver-failed"><div class="state-error"><div class="state-error-title">Solver failed</div><div class="state-error-desc">failure code infeasible_constraints。</div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Reconciliation mismatch</div><div class="gallery-card__preview state-variant-content" data-state="reconciliation-mismatch"><div class="state-error-title">current weights 与 ledger 不一致</div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">No positions</div><div class="gallery-card__preview state-variant-content" data-state="no-positions"><div class="state-empty"><div class="state-empty-title">当前无持仓</div><div class="state-empty-desc">仍展示 target 与 cash baseline。</div></div></div></div>
+        </div>
+      </div>
     </div>
   </section>
 

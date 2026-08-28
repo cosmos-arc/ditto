@@ -2,6 +2,7 @@ export { useComparisonAttribution } from "./use-comparison-attribution";
 export { useCorrectFill } from "./use-correct-fill";
 export { useDailyDecision } from "./use-daily-decision";
 export { useDailyDecisionV2 } from "./use-daily-decision-v2";
+export { useDailyDecisionV3 } from "./use-daily-decision-v3";
 export { useEquity } from "./use-equity";
 export { useFillLedger } from "./use-fill-ledger";
 export { useOrderDetail } from "./use-order-detail";
