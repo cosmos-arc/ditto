@@ -5,17 +5,25 @@ from typing import cast
 import pytest
 from ditto_agent.tools.campaign import CampaignProposalTool
 from ditto_agent.tools.memory import ResearchMemoryTool
+from ditto_analysis.experiments.campaign_persistence import CampaignReaderProtocol
 from ditto_application.agent_campaign_contracts import AutonomousCampaignCommandPort
 from ditto_application.agent_campaign_runtime import (
     CampaignCreateCommand,
     CampaignRuntimeUnavailable,
 )
 from ditto_application.exceptions import AppCommandError
+from ditto_application.processes.experiments.autonomous_campaign import (
+    AutonomousCampaignCoordinator,
+)
 from ditto_application.queries.research_memory import ResearchMemoryQueryFacade
 from ditto_application.research_memory_approval_contracts import (
     ResearchMemoryApprovalCheck,
 )
-from ditto_apps.registry.agent.provider import AgentRuntimeProvider
+from ditto_apps.registry.agent.provider import (
+    AgentRuntimeProvider,
+    AgentRuntimeResources,
+)
+from ditto_apps.registry.agent.settings import AgentFeatureSettings
 
 
 class _Commands:
@@ -55,7 +63,12 @@ def test_default_memory_promotion_approval_fails_closed() -> None:
 
 
 def test_default_campaign_runtime_fails_closed() -> None:
-    runtime = AgentRuntimeProvider().campaign_runtime()
+    runtime = AgentRuntimeProvider().campaign_runtime(
+        AgentFeatureSettings(),
+        AgentRuntimeResources(None, None, None),
+        cast(AutonomousCampaignCoordinator, object()),
+        cast(CampaignReaderProtocol, object()),
+    )
 
     with pytest.raises(CampaignRuntimeUnavailable) as exc_info:
         runtime.create_campaign(

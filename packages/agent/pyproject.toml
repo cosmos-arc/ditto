@@ -29,6 +29,10 @@ where = ["src"]
     "schema_v1.sql",
 ]
 "ditto_agent.evals" = [
+    "datasets/author/*.json",
+    "datasets/campaign/*.json",
     "datasets/grounded/*.json",
+    "datasets/permission/*.json",
+    "datasets/sandbox/*.json",
     "datasets/shadow/*.json",
 ]

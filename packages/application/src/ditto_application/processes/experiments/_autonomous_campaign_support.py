@@ -473,11 +473,27 @@ class AutonomousCampaignSupport:
         )
 
     def _fold_run_count(self, campaign_id: ExperimentId) -> int:
-        return sum(
-            cast("int", detail["fold_run_count"])
-            for event in self._reader.list_campaign_events(campaign_id)
-            if event.event_type == "candidate_dispatched"
-            for detail in (decode_campaign_detail(event.detail_payload),)
+        reservations: dict[str, int] = {}
+        dispatches: dict[str, int] = {}
+        for event in self._reader.list_campaign_events(campaign_id):
+            if event.event_type not in {
+                "candidate_fold_reserved",
+                "candidate_dispatched",
+            }:
+                continue
+            detail = decode_campaign_detail(event.detail_payload)
+            candidate_id = cast("str", detail["candidate_id"])
+            count = cast("int", detail["fold_run_count"])
+            target = (
+                reservations
+                if event.event_type == "candidate_fold_reserved"
+                else dispatches
+            )
+            target[candidate_id] = count
+        return sum(reservations.values()) + sum(
+            count
+            for candidate_id, count in dispatches.items()
+            if candidate_id not in reservations
         )
 
     def _candidate_fold_count(
@@ -485,13 +501,20 @@ class AutonomousCampaignSupport:
         campaign_id: ExperimentId,
         candidate_id: CandidateId,
     ) -> int:
+        dispatched = 0
         for event in self._reader.list_campaign_events(campaign_id):
-            if event.event_type != "candidate_dispatched":
+            if event.event_type not in {
+                "candidate_fold_reserved",
+                "candidate_dispatched",
+            }:
                 continue
             detail = decode_campaign_detail(event.detail_payload)
             if detail.get("candidate_id") == str(candidate_id):
-                return cast("int", detail["fold_run_count"])
-        return 0
+                count = cast("int", detail["fold_run_count"])
+                if event.event_type == "candidate_fold_reserved":
+                    return count
+                dispatched = count
+        return dispatched
 
     @staticmethod
     def _receipt(

@@ -36,6 +36,7 @@ def _knowledge(
     *,
     status: KnowledgeStatus = KnowledgeStatus.ACTIVE,
     known_at: datetime = KNOWN_AT,
+    snapshot_id: str = "snapshot-query",
 ) -> KnowledgeItem:
     return KnowledgeItem(
         knowledge_id=knowledge_id,
@@ -45,7 +46,7 @@ def _knowledge(
         scope_ref=None,
         evidence_refs=(_hash("a"),),
         outcome_known_at=known_at,
-        snapshot_id=SnapshotId("snapshot-origin"),
+        snapshot_id=SnapshotId(snapshot_id),
         source=KnowledgeSource.HOST_VALIDATION,
         source_hash=_hash("b"),
         status=status,
@@ -57,15 +58,25 @@ def _knowledge(
 class _Reader:
     def __init__(self, items: tuple[KnowledgeItem, ...]) -> None:
         self.items = items
-        self.calls: list[tuple[ExperimentId, str | None, datetime]] = []
+        self.calls: list[tuple[ExperimentId, str | None, datetime, datetime, str]] = []
 
     def list_knowledge_visible_for_scope(
         self,
         campaign_id: ExperimentId,
         strategy_family_ref: str | None,
         knowledge_cutoff: datetime,
+        publication_cutoff: datetime,
+        source_snapshot_id: str,
     ) -> tuple[KnowledgeItem, ...]:
-        self.calls.append((campaign_id, strategy_family_ref, knowledge_cutoff))
+        self.calls.append(
+            (
+                campaign_id,
+                strategy_family_ref,
+                knowledge_cutoff,
+                publication_cutoff,
+                source_snapshot_id,
+            )
+        )
         return self.items
 
 
@@ -103,6 +114,8 @@ def test_query_uses_exact_host_scope_and_returns_only_active_visible_items() -> 
             ExperimentId("campaign-current"),
             "strategy-family-1",
             _context().knowledge_cutoff,
+            _context().publication_cutoff,
+            _context().source_snapshot_id,
         )
     ]
     assert result.verify_integrity()
@@ -122,6 +135,40 @@ def test_query_rejects_reader_that_returns_future_memory() -> None:
         )
 
     assert exc_info.value.details["reason"] == "research_memory_future_leak"
+
+
+def test_query_rejects_memory_published_after_publication_cutoff() -> None:
+    reader = _Reader(
+        (_knowledge("late-publication", known_at=KNOWN_AT + timedelta(minutes=30)),)
+    )
+    facade = ResearchMemoryQueryFacade(reader=reader)
+
+    with pytest.raises(AppQueryError) as exc_info:
+        facade.list_visible(
+            scope=ResearchMemoryScope(
+                campaign_id="campaign-current",
+                strategy_family_ref=None,
+            ),
+            context=_context(),
+        )
+
+    assert exc_info.value.details["reason"] == "research_memory_publication_leak"
+
+
+def test_query_rejects_memory_from_another_source_snapshot() -> None:
+    reader = _Reader((_knowledge("wrong-snapshot", snapshot_id="snapshot-origin"),))
+    facade = ResearchMemoryQueryFacade(reader=reader)
+
+    with pytest.raises(AppQueryError) as exc_info:
+        facade.list_visible(
+            scope=ResearchMemoryScope(
+                campaign_id="campaign-current",
+                strategy_family_ref=None,
+            ),
+            context=_context(),
+        )
+
+    assert exc_info.value.details["reason"] == "research_memory_snapshot_mismatch"
 
 
 def test_application_provider_wires_research_memory_query() -> None:

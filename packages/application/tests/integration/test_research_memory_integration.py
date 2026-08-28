@@ -162,6 +162,8 @@ def test_memory_promotion_and_revocation_are_durable_and_pit_safe(
         consumer_campaign.campaign_id,
         "family-current",
         NOW + timedelta(seconds=30),
+        NOW + timedelta(seconds=30),
+        "snapshot-memory",
     )
     assert tuple(item.knowledge_id for item in cross_campaign) == ("knowledge-family",)
 

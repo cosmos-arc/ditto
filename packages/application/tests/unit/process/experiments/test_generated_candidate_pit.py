@@ -439,6 +439,7 @@ class _Trusted(TrustedCandidateEvaluationPort):
             candidate_id=request.candidate_id,
             candidate_hash=request.candidate_hash,
             validation_protocol_hash=request.validation_protocol_hash,
+            evaluation_input_hash=request.evaluation_input_hash,
             metrics_artifact_hash=ContentHash("a" * 64),
             constraints_passed=True,
             significance_evidence_hash=ContentHash("b" * 64),

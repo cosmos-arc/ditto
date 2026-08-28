@@ -250,6 +250,16 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
 
 APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/provider.py",
+        allowed_modules=frozenset({"ditto_analysis.experiments.campaign_persistence"}),
+        owner="apps governed Agent provider",
+        reason=(
+            "The Agent composition provider binds the Analysis-owned durable "
+            "Campaign reader to the Apps-owned transport runtime; feature and "
+            "command consumers remain behind Application contracts."
+        ),
+    ),
+    CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/registry/agent/campaign_runtime.py",
         allowed_modules=frozenset(
             {

@@ -182,6 +182,24 @@ class AgentDatabase:
                 "agent_schema_invalid_marker_combination",
             )
 
+    @staticmethod
+    def _verify_integrity(connection: sqlite3.Connection) -> None:
+        integrity = tuple(
+            row[0] for row in connection.execute("PRAGMA integrity_check").fetchall()
+        )
+        foreign_key_violations = connection.execute(
+            "PRAGMA foreign_key_check"
+        ).fetchall()
+        if integrity != ("ok",) or foreign_key_violations:
+            raise AgentPersistenceError(
+                "Agent database integrity verification failed",
+                reason_code="agent_database_integrity_failed",
+                details={
+                    "integrity_check_ok": integrity == ("ok",),
+                    "foreign_key_violation_count": len(foreign_key_violations),
+                },
+            )
+
     def backup_to(self, destination: Path) -> Path:
         """Create one non-overwriting SQLite backup after schema verification."""
         if not isinstance(cast(object, destination), Path):
@@ -193,16 +211,22 @@ class AgentDatabase:
         destination.parent.mkdir(parents=True, exist_ok=True)
         source = self.get_connection()
         self._verify_current_schema(source)
+        self._verify_integrity(source)
         try:
             with sqlite3.connect(destination) as target:
                 source.backup(target)
+            with sqlite3.connect(destination) as verified:
+                self._verify_current_schema(verified)
+                self._verify_integrity(verified)
+        except AgentPersistenceError:
+            destination.unlink(missing_ok=True)
+            raise
         except sqlite3.Error as exc:
+            destination.unlink(missing_ok=True)
             raise AgentPersistenceError(
                 "Agent database backup failed",
                 reason_code="agent_database_backup_failed",
             ) from exc
-        with sqlite3.connect(destination) as verified:
-            self._verify_current_schema(verified)
         return destination
 
     def close_all(self) -> None:

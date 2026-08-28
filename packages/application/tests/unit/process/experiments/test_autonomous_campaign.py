@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from threading import Barrier, Event, Lock
 from types import SimpleNamespace
 from typing import cast
 
 import pytest
+from ditto_analysis.errors import AnalysisError
 from ditto_analysis.experiments.campaign import (
     CampaignBudget,
     EvaluationResult,
@@ -200,6 +203,10 @@ class _Scheduler:
             lease_until_epoch_us=now_epoch_us + 60_000_000,
         )
 
+    def required_fold_run_count(self, campaign_id: ExperimentId) -> int:
+        assert campaign_id == ExperimentId("campaign-autonomous")
+        return self.fold_run_count
+
     def schedule_trial(self, request, *, now_epoch_us: int) -> CampaignScheduledTrial:
         self.schedule_calls += 1
         return CampaignScheduledTrial(
@@ -214,6 +221,39 @@ class _Scheduler:
     def cancel_campaign(self, campaign_id: ExperimentId, *, now_epoch_us: int) -> None:
         self.cancel_calls += 1
         self._lease(campaign_id, now_epoch_us)
+
+
+class _FailingCancelScheduler(_Scheduler):
+    def cancel_campaign(self, campaign_id: ExperimentId, *, now_epoch_us: int) -> None:
+        self.cancel_calls += 1
+        raise AppProcessError(
+            "campaign cancel transport failed",
+            details={"code": "CAMPAIGN_CANCEL_FAILED", "reason": "cancel_failed"},
+        )
+
+
+class _ConcurrentScheduler(_Scheduler):
+    def __init__(self) -> None:
+        super().__init__(fold_run_count=2)
+        self._barrier = Barrier(2)
+        self.first_arrived = Event()
+        self._lock = Lock()
+        self.required_calls = 0
+
+    def required_fold_run_count(self, campaign_id: ExperimentId) -> int:
+        assert campaign_id == ExperimentId("campaign-autonomous")
+        with self._lock:
+            self.required_calls += 1
+        self.first_arrived.set()
+        self._barrier.wait(timeout=5)
+        return self.fold_run_count
+
+    def schedule_trial(self, request, *, now_epoch_us: int) -> CampaignScheduledTrial:
+        with self._lock:
+            uses_reservation_protocol = self.required_calls > 0
+        if not uses_reservation_protocol:
+            self._barrier.wait(timeout=5)
+        return super().schedule_trial(request, now_epoch_us=now_epoch_us)
 
 
 class _ExistingExperimentStore:
@@ -364,6 +404,7 @@ def _evaluation(
             validation_protocol_hash=(
                 manifest.experiment_plan.validation_protocol_hash
             ),
+            evaluation_input_hash=_hash("9"),
             metrics_artifact_hash=ContentHash(f"{candidate.candidate.ordinal:064x}"),
             constraints_passed=True,
             significance_evidence_hash=_hash("7"),
@@ -567,6 +608,54 @@ def test_candidate_budget_exhaustion_pauses_without_expanding_authority(
         CampaignCoordinatorStatus.PAUSED_BUDGET
     )
     assert scheduler.schedule_calls == 1
+
+
+def test_concurrent_candidates_cannot_reserve_fold_work_beyond_budget(
+    tmp_path: Path,
+) -> None:
+    scheduler = _ConcurrentScheduler()
+    first, reader = _coordinator(tmp_path, scheduler)
+    manifest = _manifest(candidate_limit=3, fold_run_limit=2)
+    first.authorize(
+        manifest,
+        _authorization(manifest),
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+    second, _ = _coordinator(tmp_path, scheduler)
+
+    def _propose(coordinator, lookback: int):
+        try:
+            return coordinator.propose_candidate(
+                _proposal(lookback=lookback),
+                occurred_at=NOW + timedelta(seconds=2),
+            )
+        except (AnalysisError, AppProcessError) as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first_future = pool.submit(_propose, first, 10)
+        assert scheduler.first_arrived.wait(timeout=5)
+        second_future = pool.submit(_propose, second, 11)
+        outcomes = (
+            first_future.result(),
+            second_future.result(),
+        )
+
+    assert scheduler.schedule_calls == 1
+    reservations = [
+        decode_campaign_detail(event.detail_payload)
+        for event in reader.list_campaign_events(manifest.campaign_id)
+        if event.event_type == "candidate_fold_reserved"
+    ]
+    assert sum(cast("int", item["fold_run_count"]) for item in reservations) == 2
+    assert any(
+        isinstance(outcome, AppProcessError)
+        and outcome.details.get("reason") == "campaign_fold_budget_exhausted"
+        for outcome in outcomes
+    )
+    assert first.get_state(manifest.campaign_id).status is (
+        CampaignCoordinatorStatus.PAUSED_BUDGET
+    )
 
 
 def test_two_completed_generations_without_improvement_stop_campaign(
@@ -959,6 +1048,58 @@ def test_cancel_is_idempotent_and_reconstructs_after_restart(tmp_path: Path) -> 
             occurred_at=NOW + timedelta(seconds=5),
         )
     assert terminal.value.details["reason"] == "campaign_terminal"
+
+
+def test_cancel_transport_failure_closes_campaign_to_new_work(tmp_path: Path) -> None:
+    scheduler = _FailingCancelScheduler()
+    coordinator, reader = _coordinator(tmp_path, scheduler)
+    manifest = _manifest()
+    coordinator.authorize(
+        manifest,
+        _authorization(manifest),
+        occurred_at=NOW + timedelta(seconds=1),
+    )
+    receipt = coordinator.propose_candidate(
+        _proposal(), occurred_at=NOW + timedelta(seconds=2)
+    )
+    candidate = next(
+        item.candidate
+        for item in reader.list_candidates(manifest.campaign_id)
+        if str(item.candidate.candidate.candidate_id) == receipt.candidate_id
+    )
+
+    with pytest.raises(AppProcessError) as cancel_failure:
+        coordinator.cancel(
+            manifest.campaign_id,
+            authorization_hash="3" * 64,
+            occurred_at=NOW + timedelta(seconds=3),
+        )
+
+    assert cancel_failure.value.details["reason"] == "cancel_failed"
+    assert coordinator.get_state(manifest.campaign_id).status is (
+        CampaignCoordinatorStatus.CANCEL_REQUESTED
+    )
+    blocked_actions = (
+        lambda: coordinator.propose_candidate(
+            _proposal(lookback=11), occurred_at=NOW + timedelta(seconds=4)
+        ),
+        lambda: coordinator.retry_candidate(
+            manifest.campaign_id,
+            CandidateId(receipt.candidate_id),
+            authorization_hash="3" * 64,
+            retry_id="retry-after-cancel",
+            occurred_at=NOW + timedelta(seconds=4),
+        ),
+        lambda: coordinator.record_evaluation(
+            manifest.campaign_id,
+            _evaluation(candidate, manifest, 1.0),
+            occurred_at=NOW + timedelta(seconds=4),
+        ),
+    )
+    for action in blocked_actions:
+        with pytest.raises(AppProcessError) as blocked:
+            action()
+        assert blocked.value.details["reason"] == "campaign_cancel_pending"
 
 
 def test_scheduler_port_remains_structural() -> None:

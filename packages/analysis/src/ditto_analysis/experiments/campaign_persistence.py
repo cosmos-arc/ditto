@@ -343,6 +343,8 @@ class CampaignReaderProtocol(Protocol):
         campaign_id: ExperimentId,
         strategy_family_ref: str | None,
         knowledge_cutoff: datetime,
+        publication_cutoff: datetime,
+        source_snapshot_id: str,
     ) -> tuple[KnowledgeItem, ...]: ...
 
     def list_knowledge_status_events(
@@ -356,6 +358,15 @@ class CampaignWriterProtocol(Protocol):
     def add_campaign(self, record: CampaignManifestRecord) -> None: ...
 
     def append_campaign_event(self, record: CampaignEventRecord) -> None: ...
+
+    def reserve_campaign_fold_budget(
+        self,
+        record: CampaignEventRecord,
+        *,
+        fold_run_limit: int,
+    ) -> bool:
+        """Atomically append a fold reservation when Campaign budget remains."""
+        ...
 
     def add_candidate(self, record: CandidateLineageRecord) -> None: ...
 

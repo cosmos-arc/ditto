@@ -331,6 +331,10 @@ class CampaignScheduledTrial:
 class CampaignTrialSchedulerPort(Protocol):
     """Host scheduler/lease boundary reused by autonomous Campaigns."""
 
+    def required_fold_run_count(self, campaign_id: ExperimentId) -> int:
+        """Read the frozen per-candidate fold requirement without side effects."""
+        ...
+
     def schedule_trial(
         self,
         request: CampaignTrialScheduleRequest,

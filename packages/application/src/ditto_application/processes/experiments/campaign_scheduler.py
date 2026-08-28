@@ -68,6 +68,10 @@ class ExistingExperimentCampaignScheduler(CampaignTrialSchedulerPort):
         self._owner_token = owner_token
         self._lease_duration_us = lease_duration_us
 
+    def required_fold_run_count(self, campaign_id: ExperimentId) -> int:
+        """Read the immutable fold matrix before the Campaign reserves budget."""
+        return self._fold_run_count(campaign_id)
+
     def schedule_trial(
         self,
         request: CampaignTrialScheduleRequest,

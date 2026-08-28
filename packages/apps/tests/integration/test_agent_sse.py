@@ -35,7 +35,10 @@ from ditto_apps.registry.agent.database_provider import (
     AgentDatabaseBundle,
     build_agent_database,
 )
-from ditto_apps.registry.agent.provider import AgentRuntimeProvider
+from ditto_apps.registry.agent.provider import (
+    AgentRuntimeProvider,
+    AgentRuntimeResources,
+)
 from ditto_apps.registry.agent.runtime import PersistedAgentRuntime
 from ditto_apps.registry.agent.settings import AgentFeatureSettings
 from fastapi import FastAPI
@@ -207,7 +210,10 @@ async def test_http_sse_honors_last_event_id_and_remains_read_only(
 @pytest.mark.asyncio
 async def test_default_http_runtime_returns_structured_unavailable() -> None:
     provider = AgentRuntimeProvider()
-    runtime = provider.runtime(AgentFeatureSettings.from_environment({}))
+    runtime = provider.runtime(
+        AgentFeatureSettings.from_environment({}),
+        AgentRuntimeResources(None, None, None),
+    )
     app, container = _http_app(runtime)
     try:
         async with AsyncClient(

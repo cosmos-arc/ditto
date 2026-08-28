@@ -134,6 +134,49 @@ class AgentPresentationDatabase:
                 "agent_presentation_schema_drift",
             )
 
+    @staticmethod
+    def _verify_integrity(connection: sqlite3.Connection) -> None:
+        integrity = tuple(
+            row[0] for row in connection.execute("PRAGMA integrity_check").fetchall()
+        )
+        foreign_key_violations = connection.execute(
+            "PRAGMA foreign_key_check"
+        ).fetchall()
+        if integrity != ("ok",) or foreign_key_violations:
+            raise _error(
+                "Agent presentation database integrity failed",
+                "agent_presentation_integrity_failed",
+            )
+
+    def backup_to(self, destination: Path) -> Path:
+        """Create one verified, non-overwriting online projection backup."""
+        if not isinstance(cast(object, destination), Path):
+            raise TypeError("destination must be pathlib.Path")
+        if destination == self._path:
+            raise ValueError("backup destination must differ from the live database")
+        if destination.exists():
+            raise FileExistsError(destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source = self.connection
+        self._verify_schema(source)
+        self._verify_integrity(source)
+        try:
+            with sqlite3.connect(destination) as target:
+                source.backup(target)
+            with sqlite3.connect(destination) as verified:
+                self._verify_schema(verified)
+                self._verify_integrity(verified)
+        except AgentPresentationError:
+            destination.unlink(missing_ok=True)
+            raise
+        except sqlite3.Error as exc:
+            destination.unlink(missing_ok=True)
+            raise _error(
+                "Agent presentation database backup failed",
+                "agent_presentation_backup_failed",
+            ) from exc
+        return destination
+
     def close(self) -> None:
         """Permanently close every owned presentation connection."""
         with self._state_lock:

@@ -122,7 +122,23 @@ def test_campaign_create_reads_manifest_and_calls_shared_runtime(
     assert isinstance(command, CampaignCreateCommand)
     assert command.manifest_document["campaign_id"] == "campaign-cli"
     assert command.idempotency_key == "campaign-create-cli"
-    assert orjson.loads(result.stdout)["manifest_hash"] == HASH_A
+    payload = orjson.loads(result.stdout)
+    assert payload["manifest_hash"] == HASH_A
+    assert {
+        "canonical_manifest",
+        "objective",
+        "output_summary",
+        "tool_records",
+        "evidence_refs",
+        "artifact_refs",
+        "guardrail",
+        "usage",
+        "event_cursor",
+        "projection_state",
+        "projection_reason",
+        "projection_version",
+        "projection_updated_at",
+    }.issubset(payload)
     container.get.assert_called_once_with(CampaignRuntimePort)
     container.close.assert_called_once_with()
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,6 +40,21 @@ class AgentDatabaseBundle:
         self.database.close_all()
         self.presentation_database.close_all()
 
+    def backup_to(self, destination_root: Path) -> tuple[Path, Path]:
+        """Back up authoritative and readable Agent stores as one recovery unit."""
+        if destination_root.exists():
+            raise FileExistsError(destination_root)
+        destination_root.mkdir(parents=True)
+        primary = destination_root / "agent.sqlite"
+        presentation = destination_root / "agent-presentation.sqlite3"
+        try:
+            self.database.backup_to(primary)
+            self.presentation_database.backup_to(presentation)
+        except BaseException:
+            shutil.rmtree(destination_root)
+            raise
+        return primary, presentation
+
 
 def build_agent_database(data_root: Path) -> AgentDatabaseBundle:
     """Initialize and compose the sole Agent SQLite lifecycle boundary."""
@@ -69,4 +85,33 @@ def build_agent_database(data_root: Path) -> AgentDatabaseBundle:
     )
 
 
-__all__ = ["AgentDatabaseBundle", "build_agent_database"]
+def restore_agent_database(
+    backup_root: Path,
+    destination_root: Path,
+) -> AgentDatabaseBundle:
+    """Restore and authenticate both Agent stores into one new data root."""
+    if destination_root.exists():
+        raise FileExistsError(destination_root)
+    primary = backup_root / "agent.sqlite"
+    presentation = backup_root / "agent-presentation.sqlite3"
+    if not primary.is_file() or not presentation.is_file():
+        raise FileNotFoundError("Agent backup unit is incomplete")
+    destination_agent = destination_root / "agent"
+    destination_agent.mkdir(parents=True)
+    try:
+        shutil.copy2(primary, destination_agent / "agent.sqlite")
+        shutil.copy2(
+            presentation,
+            destination_agent / "agent-presentation.sqlite3",
+        )
+        return build_agent_database(destination_root)
+    except BaseException:
+        shutil.rmtree(destination_root)
+        raise
+
+
+__all__ = [
+    "AgentDatabaseBundle",
+    "build_agent_database",
+    "restore_agent_database",
+]

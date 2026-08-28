@@ -6,10 +6,8 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import cast
 
-from ditto_analysis.experiments.campaign import (
-    ResearchCampaignManifest,
-    ResearchCandidateSpec,
-)
+from ditto_analysis.errors import ExperimentPersistenceError
+from ditto_analysis.experiments.campaign import ResearchCandidateSpec
 from ditto_analysis.experiments.campaign_persistence import (
     CampaignEventRecord,
     CampaignReaderProtocol,
@@ -49,6 +47,7 @@ from ditto_application.processes.experiments._autonomous_campaign_contracts impo
     campaign_event_id,
     candidate_novelty_event_detail,
     decode_campaign_detail,
+    encode_campaign_detail,
     evaluation_identity_matches,
     require_content_hash,
     require_novel_parent,
@@ -83,60 +82,6 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
         self._reader = reader
         self._writer = writer
         self._scheduler = scheduler
-
-    def authorize(
-        self,
-        manifest: ResearchCampaignManifest,
-        proof: CampaignAuthorizationProof,
-        *,
-        occurred_at: datetime,
-    ) -> CampaignCoordinatorState:
-        """Compatibility entry point that creates and approves one exact manifest."""
-        return super().authorize(manifest, proof, occurred_at=occurred_at)
-
-    def create(
-        self,
-        manifest: ResearchCampaignManifest,
-        *,
-        occurred_at: datetime,
-    ) -> CampaignCoordinatorState:
-        """Persist or exactly replay an immutable Campaign draft."""
-        return super().create(manifest, occurred_at=occurred_at)
-
-    def approve(
-        self,
-        campaign_id: ExperimentId,
-        proof: CampaignAuthorizationProof,
-        *,
-        expected_manifest_hash: str,
-        occurred_at: datetime,
-    ) -> CampaignCoordinatorState:
-        """Approve a persisted draft without allowing manifest or budget patches."""
-        return super().approve(
-            campaign_id,
-            proof,
-            expected_manifest_hash=expected_manifest_hash,
-            occurred_at=occurred_at,
-        )
-
-    @staticmethod
-    def _validate_manifest(manifest: ResearchCampaignManifest) -> None:
-        AutonomousCampaignAuthorization._validate_manifest(manifest)
-
-    @staticmethod
-    def _validate_authorization(
-        *,
-        manifest_hash: str,
-        expected: tuple[object, ...],
-        proof: CampaignAuthorizationProof,
-        occurred_at: datetime,
-    ) -> None:
-        AutonomousCampaignAuthorization._validate_authorization(
-            manifest_hash=manifest_hash,
-            expected=expected,
-            proof=proof,
-            occurred_at=occurred_at,
-        )
 
     def propose_candidate(
         self,
@@ -173,17 +118,27 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
 
     def _require_proposable(self, campaign_id: ExperimentId) -> None:
         state = self.get_state(campaign_id)
-        if state.status.value in TERMINAL_CAMPAIGN_STATUSES:
-            raise campaign_error(
-                "campaign is terminal",
-                code="CAMPAIGN_TERMINAL",
-                reason="campaign_terminal",
-            )
+        self._require_accepting_work(state)
         if state.status is CampaignCoordinatorStatus.PAUSED_BUDGET:
             raise campaign_error(
                 "campaign budget is exhausted",
                 code="CAMPAIGN_BUDGET_EXHAUSTED",
                 reason="campaign_candidate_budget_exhausted",
+            )
+
+    @staticmethod
+    def _require_accepting_work(state: CampaignCoordinatorState) -> None:
+        if state.status is CampaignCoordinatorStatus.CANCEL_REQUESTED:
+            raise campaign_error(
+                "campaign cancellation is pending",
+                code="CAMPAIGN_CANCEL_PENDING",
+                reason="campaign_cancel_pending",
+            )
+        if state.status.value in TERMINAL_CAMPAIGN_STATUSES:
+            raise campaign_error(
+                "campaign is terminal",
+                code="CAMPAIGN_TERMINAL",
+                reason="campaign_terminal",
             )
 
     def _prepare_candidate(
@@ -339,10 +294,18 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
                 self._attempt(trial, ordinal=1, retry_id="initial", parent=None),
                 created_at_epoch_us=created_epoch,
             )
+        current_status = self.get_state(campaign_id).status
+        dispatch_status = (
+            current_status
+            if current_status is CampaignCoordinatorStatus.PAUSED_BUDGET
+            or current_status is CampaignCoordinatorStatus.CANCEL_REQUESTED
+            or current_status.value in TERMINAL_CAMPAIGN_STATUSES
+            else CampaignCoordinatorStatus.RUNNING
+        )
         event = self._append_event(
             campaign_id,
             event_type="candidate_dispatched",
-            status=CampaignCoordinatorStatus.RUNNING,
+            status=dispatch_status,
             detail={
                 "candidate_id": str(candidate_id),
                 "candidate_hash": str(candidate.candidate_hash),
@@ -390,16 +353,27 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
         fold_run_limit: int,
         occurred_at: datetime,
     ) -> int:
-        remaining = fold_run_limit - self._fold_run_count(campaign_id)
-        if remaining <= 0:
-            self._pause_fold_budget(campaign_id, candidate, occurred_at)
+        required = self._scheduler.required_fold_run_count(campaign_id)
+        if type(required) is not int or required <= 0:
+            raise campaign_error(
+                "campaign scheduler returned an invalid fold requirement",
+                code="CAMPAIGN_SCHEDULER_INVALID",
+                reason="campaign_scheduler_response_invalid",
+            )
+        self._reserve_fold_budget(
+            campaign_id,
+            candidate,
+            fold_run_count=required,
+            fold_run_limit=fold_run_limit,
+            occurred_at=occurred_at,
+        )
         try:
             scheduled = self._scheduler.schedule_trial(
                 CampaignTrialScheduleRequest(
                     campaign_id=campaign_id,
                     candidate=candidate,
                     trial=trial,
-                    fold_run_budget_remaining=remaining,
+                    fold_run_budget_remaining=required,
                 ),
                 now_epoch_us=campaign_epoch_us(occurred_at),
             )
@@ -412,9 +386,59 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
             if exc.details.get("reason") == "campaign_lease_lost":
                 self._pause_for_lost_lease(campaign_id, candidate, occurred_at)
             raise
-        if scheduled.fold_run_count > remaining:
-            self._pause_fold_budget(campaign_id, candidate, occurred_at)
+        if scheduled.fold_run_count != required:
+            raise campaign_error(
+                "campaign scheduler changed the reserved fold requirement",
+                code="CAMPAIGN_SCHEDULER_INVALID",
+                reason="campaign_scheduler_response_invalid",
+            )
         return scheduled.fold_run_count
+
+    def _reserve_fold_budget(
+        self,
+        campaign_id: ExperimentId,
+        candidate: ResearchCandidateSpec,
+        *,
+        fold_run_count: int,
+        fold_run_limit: int,
+        occurred_at: datetime,
+    ) -> None:
+        candidate_id = candidate.candidate.candidate_id
+        event_id = campaign_event_id(
+            "candidate-fold-reserved",
+            {"campaign_id": str(campaign_id), "candidate_id": str(candidate_id)},
+        )
+        existing = self._find_event(campaign_id, event_id)
+        if existing is not None:
+            detail = decode_campaign_detail(existing.detail_payload)
+            if detail.get("fold_run_count") != fold_run_count:
+                raise campaign_error(
+                    "campaign fold requirement changed after reservation",
+                    code="CAMPAIGN_SCHEDULER_INVALID",
+                    reason="campaign_scheduler_response_invalid",
+                )
+            return
+        events = self._reader.list_campaign_events(campaign_id)
+        record = CampaignEventRecord(
+            event_id=event_id,
+            campaign_id=campaign_id,
+            ordinal=len(events),
+            event_type="candidate_fold_reserved",
+            previous_status=None if not events else events[-1].status,
+            status=CampaignCoordinatorStatus.RUNNING.value,
+            detail_payload=encode_campaign_detail(
+                {
+                    "candidate_id": str(candidate_id),
+                    "fold_run_count": fold_run_count,
+                }
+            ),
+            occurred_at_epoch_us=campaign_epoch_us(occurred_at),
+        )
+        if not self._writer.reserve_campaign_fold_budget(
+            record,
+            fold_run_limit=fold_run_limit,
+        ):
+            self._pause_fold_budget(campaign_id, candidate, occurred_at)
 
     def _pause_fold_budget(
         self,
@@ -422,12 +446,21 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
         candidate: ResearchCandidateSpec,
         occurred_at: datetime,
     ) -> None:
-        self._pause_budget(
-            campaign_id,
-            reason="campaign_fold_budget_exhausted",
-            occurred_at=occurred_at,
-            identity={"candidate_id": str(candidate.candidate.candidate_id)},
-        )
+        last_error: ExperimentPersistenceError | None = None
+        for _ in range(3):
+            try:
+                self._pause_budget(
+                    campaign_id,
+                    reason="campaign_fold_budget_exhausted",
+                    occurred_at=occurred_at,
+                    identity={"candidate_id": str(candidate.candidate.candidate_id)},
+                )
+                break
+            except ExperimentPersistenceError as exc:
+                last_error = exc
+        else:
+            if last_error is not None:
+                raise last_error
         raise campaign_error(
             "campaign fold budget is exhausted",
             code="CAMPAIGN_BUDGET_EXHAUSTED",
@@ -474,12 +507,7 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
                 reason="campaign_authority_mismatch",
             )
         retry_identity = require_text(retry_id, "retry_id")
-        if self.get_state(campaign_id).status.value in TERMINAL_CAMPAIGN_STATUSES:
-            raise campaign_error(
-                "campaign is terminal",
-                code="CAMPAIGN_TERMINAL",
-                reason="campaign_terminal",
-            )
+        self._require_accepting_work(self.get_state(campaign_id))
         ledger = self._reader.get_search_ledger(campaign_id)
         if ledger is None:
             raise campaign_error(
@@ -577,12 +605,7 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
         """Record trusted evaluation evidence and apply the host stopping rule."""
         now = require_utc(occurred_at, "occurred_at")
         _, view, _ = self._authorized(campaign_id, now)
-        if self.get_state(campaign_id).status.value in TERMINAL_CAMPAIGN_STATUSES:
-            raise campaign_error(
-                "campaign is terminal",
-                code="CAMPAIGN_TERMINAL",
-                reason="campaign_terminal",
-            )
+        self._require_accepting_work(self.get_state(campaign_id))
         if type(observation) is not CampaignEvaluationObservation:
             raise campaign_error(
                 "observation must be CampaignEvaluationObservation",
@@ -611,6 +634,7 @@ class AutonomousCampaignCoordinator(AutonomousCampaignAuthorization):
             )
         event_identity = {
             "candidate_id": str(observation.result.candidate_id),
+            "evaluation_input_hash": str(observation.result.evaluation_input_hash),
             "metrics_artifact_hash": str(observation.result.metrics_artifact_hash),
         }
         event_id = campaign_event_id(

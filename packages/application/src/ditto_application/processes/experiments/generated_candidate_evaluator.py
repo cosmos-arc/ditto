@@ -25,6 +25,7 @@ from ditto_analysis.experiments.generated_code import (
     validate_research_code_contract,
 )
 from ditto_analysis.experiments.models import CandidateId, ContentHash, SnapshotId
+from ditto_analysis.experiments.persistence import canonical_payload
 
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments.candidate_sandbox_port import (
@@ -154,6 +155,43 @@ class TrustedCandidateEvaluationRequest:
             raise _error("trusted_evaluation_score_keys_invalid")
         object.__setattr__(self, "scores", typed_rows)
         object.__setattr__(self, "score_keys", typed_keys)
+
+    @property
+    def evaluation_input_hash(self) -> ContentHash:
+        """Bind every trusted evaluation input, including PIT row provenance."""
+        return canonical_payload(
+            {
+                "candidate_id": str(self.candidate_id),
+                "candidate_hash": str(self.candidate_hash),
+                "validation_protocol_hash": str(self.validation_protocol_hash),
+                "snapshot_id": str(self.snapshot_id),
+                "decision_time_epoch_us": self.decision_time_epoch_us,
+                "knowledge_cutoff_epoch_us": self.knowledge_cutoff_epoch_us,
+                "publication_cutoff_epoch_us": self.publication_cutoff_epoch_us,
+                "code_artifact_hash": str(self.code_artifact_hash),
+                "score_artifact_hash": str(self.score_artifact_hash),
+                "scores": [
+                    {
+                        "entity_id": row.entity_id,
+                        "event_time_epoch_us": row.event_time_epoch_us,
+                        "score": row.score,
+                    }
+                    for row in self.scores
+                ],
+                "score_keys": [
+                    {
+                        "entity_id": key.entity_id,
+                        "event_time_epoch_us": key.event_time_epoch_us,
+                        "known_at_epoch_us": key.known_at_epoch_us,
+                        "publication_time_epoch_us": key.publication_time_epoch_us,
+                        "execution_eligible_at_epoch_us": (
+                            key.execution_eligible_at_epoch_us
+                        ),
+                    }
+                    for key in self.score_keys
+                ],
+            }
+        ).content_hash
 
 
 class TrustedCandidateEvaluationPort(Protocol):
@@ -558,5 +596,7 @@ class GeneratedCandidateEvaluator:
             or result.candidate_id != request.candidate_id
             or result.candidate_hash != request.candidate_hash
             or result.validation_protocol_hash != request.validation_protocol_hash
+            or result.evaluation_input_hash != request.evaluation_input_hash
+            or request.score_artifact_hash not in result.evidence_refs
         ):
             raise _error("trusted_evaluation_identity_mismatch")

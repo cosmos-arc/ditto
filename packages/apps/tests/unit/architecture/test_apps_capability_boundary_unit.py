@@ -70,6 +70,9 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
     assert all(allowance.owner for allowance in allowances)
     assert all(allowance.reason for allowance in allowances)
     assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/agent/provider.py"
+    ] == frozenset({"ditto_analysis.experiments.campaign_persistence"})
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
         "packages/apps/src/ditto_apps/registry/agent/campaign_runtime.py"
     ] == frozenset(
         {

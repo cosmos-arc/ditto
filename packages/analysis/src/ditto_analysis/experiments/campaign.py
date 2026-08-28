@@ -421,6 +421,7 @@ class EvaluationResult:
     candidate_id: CandidateId
     candidate_hash: ContentHash
     validation_protocol_hash: ContentHash
+    evaluation_input_hash: ContentHash
     metrics_artifact_hash: ContentHash
     constraints_passed: bool
     significance_evidence_hash: ContentHash
@@ -437,6 +438,7 @@ class EvaluationResult:
                 ContentHash,
                 "validation_protocol_hash",
             ),
+            (self.evaluation_input_hash, ContentHash, "evaluation_input_hash"),
             (self.metrics_artifact_hash, ContentHash, "metrics_artifact_hash"),
             (
                 self.significance_evidence_hash,

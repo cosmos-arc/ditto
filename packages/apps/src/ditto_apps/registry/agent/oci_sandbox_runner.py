@@ -356,7 +356,7 @@ class DockerCliOciCommandRunner:
             self._host_argv("info", "--format", "{{json .}}"),
             stdin=b"",
             environment=self._environment,
-            timeout_seconds=5,
+            timeout_seconds=15,
             stdout_limit=_PROBE_OUTPUT_LIMIT,
             stderr_limit=64 * 1024,
         )

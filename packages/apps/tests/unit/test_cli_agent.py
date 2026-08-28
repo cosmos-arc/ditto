@@ -167,7 +167,24 @@ def test_show_supports_stable_human_and_json_output(
     assert human.exit_code == 0, human.output
     assert human.stdout == "run_id=run-1 status=running revision=1\n"
     assert structured.exit_code == 0, structured.output
-    assert orjson.loads(structured.stdout)["objective_hash"] == _HASH_A
+    payload = orjson.loads(structured.stdout)
+    assert payload["objective_hash"] == _HASH_A
+    assert {
+        "objective",
+        "context",
+        "output_summary",
+        "tool_records",
+        "evidence_refs",
+        "artifact_refs",
+        "guardrail",
+        "usage",
+        "failure_code",
+        "event_cursor",
+        "projection_state",
+        "projection_reason",
+        "projection_version",
+        "projection_updated_at",
+    }.issubset(payload)
 
 
 def test_disabled_and_missing_runtime_fail_with_stable_exit_codes(

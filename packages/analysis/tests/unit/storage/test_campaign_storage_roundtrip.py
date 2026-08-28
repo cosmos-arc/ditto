@@ -402,6 +402,8 @@ def test_scope_read_includes_only_own_local_matching_family_and_global(
         current.campaign_id,
         "family-current",
         KNOWN_AT,
+        KNOWN_AT,
+        "snapshot-scope",
     )
 
     assert tuple(value.knowledge_id for value in visible) == (

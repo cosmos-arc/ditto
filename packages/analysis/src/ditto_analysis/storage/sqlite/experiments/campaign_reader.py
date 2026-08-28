@@ -487,9 +487,19 @@ class SQLiteCampaignReader:
         campaign_id: ExperimentId,
         strategy_family_ref: str | None,
         knowledge_cutoff: datetime,
+        publication_cutoff: datetime,
+        source_snapshot_id: str,
     ) -> tuple[KnowledgeItem, ...]:
         """Return local, matching-family, and global PIT projections only."""
-        cutoff = require_utc_datetime(knowledge_cutoff, "knowledge_cutoff")
+        knowledge = require_utc_datetime(knowledge_cutoff, "knowledge_cutoff")
+        publication = require_utc_datetime(publication_cutoff, "publication_cutoff")
+        if (
+            type(source_snapshot_id) is not str
+            or not source_snapshot_id
+            or source_snapshot_id != source_snapshot_id.strip()
+        ):
+            raise ValueError("source_snapshot_id must be a non-empty canonical string")
+        cutoff = min(knowledge, publication)
         rows = self._database.get_connection().execute(
             """
             SELECT knowledge.*,
@@ -505,6 +515,7 @@ class SQLiteCampaignReader:
                    ) AS visible_status
             FROM research_knowledge knowledge
             WHERE knowledge.outcome_known_at_epoch_us<=?
+              AND knowledge.snapshot_id=?
               AND (
                     (knowledge.scope='campaign-local' AND knowledge.campaign_id=?)
                  OR (knowledge.scope='strategy-family' AND ? IS NOT NULL
@@ -516,6 +527,7 @@ class SQLiteCampaignReader:
             (
                 epoch_us(cutoff),
                 epoch_us(cutoff),
+                source_snapshot_id,
                 str(campaign_id),
                 strategy_family_ref,
                 strategy_family_ref,

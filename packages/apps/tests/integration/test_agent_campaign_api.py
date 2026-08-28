@@ -175,6 +175,9 @@ class _Scheduler(CampaignTrialSchedulerPort):
             lease_until_epoch_us=now_epoch_us + 60_000_000,
         )
 
+    def required_fold_run_count(self, campaign_id: ExperimentId) -> int:
+        return 2
+
     def schedule_trial(
         self,
         request: CampaignTrialScheduleRequest,

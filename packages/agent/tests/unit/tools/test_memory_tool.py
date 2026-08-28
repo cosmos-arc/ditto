@@ -64,10 +64,14 @@ class _Reader:
         campaign_id: ExperimentId,
         strategy_family_ref: str | None,
         knowledge_cutoff: datetime,
+        publication_cutoff: datetime,
+        source_snapshot_id: str,
     ) -> tuple[KnowledgeItem, ...]:
         assert campaign_id == ExperimentId("campaign-current")
         assert strategy_family_ref == "family-current"
         assert knowledge_cutoff == KNOWN_AT
+        assert publication_cutoff == KNOWN_AT
+        assert source_snapshot_id == "snapshot-origin"
         return (_knowledge(),)
 
 
@@ -106,8 +110,8 @@ def _context() -> TemporalToolContext:
         TemporalContextInput(
             decision_time=KNOWN_AT + timedelta(hours=1),
             knowledge_cutoff=KNOWN_AT,
-            publication_cutoff=KNOWN_AT - timedelta(hours=1),
-            source_snapshot_id="snapshot-current",
+            publication_cutoff=KNOWN_AT,
+            source_snapshot_id="snapshot-origin",
             execution_eligible_at="not_applicable",
             allowed_universe=("510300.SH",),
             license_class="internal_research",

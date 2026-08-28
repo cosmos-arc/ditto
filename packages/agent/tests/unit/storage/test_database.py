@@ -9,6 +9,7 @@ from ditto_agent.storage.sqlite import schema
 from ditto_agent.storage.sqlite.database import AgentDatabase
 from ditto_agent.storage.sqlite.errors import (
     AgentDatabaseClosedError,
+    AgentPersistenceError,
     AgentSchemaError,
 )
 
@@ -110,3 +111,40 @@ def test_agent_database_transaction_rolls_back_and_close_is_permanent(
     database.close_all()
     with pytest.raises(AgentDatabaseClosedError):
         database.get_connection()
+
+
+def test_agent_database_backup_rejects_foreign_key_orphans_and_cleans_target(
+    tmp_path: Path,
+) -> None:
+    database = AgentDatabase(tmp_path / "source")
+    database.initialize()
+    connection = database.get_connection()
+    connection.execute("PRAGMA foreign_keys=OFF")
+    connection.execute(
+        "INSERT INTO agent_runs(run_id, session_id, status, objective_hash, "
+        "authority_hash, max_model_tokens, max_model_spend_usd, model_profile, "
+        "manifest_hash, created_at_us, revision) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            "run-orphan",
+            "session-missing",
+            "queued",
+            "a" * 64,
+            "b" * 64,
+            1,
+            "0",
+            "balanced",
+            "c" * 64,
+            1,
+            0,
+        ),
+    )
+    connection.commit()
+    connection.execute("PRAGMA foreign_keys=ON")
+    destination = tmp_path / "backup" / "agent.sqlite"
+
+    with pytest.raises(AgentPersistenceError) as exc_info:
+        database.backup_to(destination)
+
+    assert exc_info.value.reason_code == "agent_database_integrity_failed"
+    assert not destination.exists()

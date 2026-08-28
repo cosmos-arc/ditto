@@ -254,6 +254,7 @@ class _TrustedEvaluator(TrustedCandidateEvaluationPort):
             candidate_id=request.candidate_id,
             candidate_hash=request.candidate_hash,
             validation_protocol_hash=request.validation_protocol_hash,
+            evaluation_input_hash=request.evaluation_input_hash,
             metrics_artifact_hash=ContentHash("b" * 64),
             constraints_passed=True,
             significance_evidence_hash=ContentHash("c" * 64),
@@ -298,6 +299,7 @@ def test_trusted_evaluator_owns_metrics_after_exact_deterministic_score() -> Non
     assert sandbox.score_requests[0] == sandbox.score_requests[1]
     assert len(trusted.requests) == 1
     trusted_request = trusted.requests[0]
+    assert result.evaluation_input_hash == trusted_request.evaluation_input_hash
     assert [row.entity_id for row in trusted_request.scores] == [
         "510300.SH",
         "510500.SH",
@@ -436,6 +438,22 @@ def test_trusted_result_cannot_drift_candidate_or_validation_identity() -> None:
         ) -> EvaluationResult:
             result = super().evaluate(request)
             return replace(result, candidate_id=CandidateId("candidate-forged"))
+
+    with pytest.raises(AppProcessError) as exc_info:
+        GeneratedCandidateEvaluator(
+            sandbox=_FakeSandbox(), trusted=_DriftedTrusted()
+        ).evaluate(_request())
+
+    assert _reason(exc_info) == "trusted_evaluation_identity_mismatch"
+
+
+def test_trusted_result_cannot_drift_complete_evaluation_input_identity() -> None:
+    class _DriftedTrusted(_TrustedEvaluator):
+        def evaluate(
+            self, request: TrustedCandidateEvaluationRequest
+        ) -> EvaluationResult:
+            result = super().evaluate(request)
+            return replace(result, evaluation_input_hash=ContentHash("f" * 64))
 
     with pytest.raises(AppProcessError) as exc_info:
         GeneratedCandidateEvaluator(

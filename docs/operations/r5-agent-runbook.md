@@ -101,11 +101,11 @@ Rollback is to set all five false and restart the local Apps process. With the m
 
 These commands use test-owned temporary directories, Fake providers, and injected failures. They do not use the real data root.
 
-Backup and restore (Agent SQLite plus migrated Research v2 identity and R3 governance/holdout artifacts):
+Backup and restore (both Agent SQLite stores plus migrated Research v2 identity and R3 governance/holdout artifacts):
 
 ```bash
 pixi run -e dev pytest \
-  packages/agent/tests/unit/storage/test_database.py::test_agent_database_initializes_reopens_and_restores_exact_schema \
+  packages/apps/tests/integration/test_agent_database_lifecycle.py::test_agent_bundle_backup_and_restore_preserve_readable_projection \
   packages/apps/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet \
   -q --no-cov -n 0
 ```

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Sequence
+from dataclasses import replace
+from typing import cast
 
 from ditto_analysis.errors import (
     AnalysisError,
@@ -63,6 +65,55 @@ def _json_sequence(values: Sequence[object]) -> str:
         [str(value) for value in values],
         ensure_ascii=False,
         separators=(",", ":"),
+    )
+
+
+def _fold_reservation_detail(record: CampaignEventRecord) -> tuple[str, int]:
+    if record.event_type != "candidate_fold_reserved":
+        raise _integrity(
+            "fold reservation event type is invalid",
+            "invalid_fold_reservation_event",
+        )
+    decoded = cast("object", json.loads(record.detail_payload))
+    detail = cast("dict[str, object]", decoded) if isinstance(decoded, dict) else {}
+    candidate_id = detail.get("candidate_id")
+    count = detail.get("fold_run_count")
+    if type(candidate_id) is not str or type(count) is not int or count <= 0:
+        raise _integrity(
+            "fold reservation detail is invalid",
+            "invalid_fold_reservation_event",
+        )
+    return candidate_id, count
+
+
+def _fold_accounted_usage(rows: Sequence[sqlite3.Row]) -> int:
+    reservations: dict[str, int] = {}
+    dispatches: dict[str, int] = {}
+    for row in rows:
+        decoded = cast("object", json.loads(cast("str", row["detail_json"])))
+        if not isinstance(decoded, dict):
+            raise _integrity(
+                "persisted fold accounting is invalid",
+                "invalid_fold_reservation_event",
+            )
+        persisted_detail = cast("dict[str, object]", decoded)
+        candidate_id = persisted_detail.get("candidate_id")
+        count = persisted_detail.get("fold_run_count")
+        if type(candidate_id) is not str or type(count) is not int or count <= 0:
+            raise _integrity(
+                "persisted fold accounting is invalid",
+                "invalid_fold_reservation_event",
+            )
+        target = (
+            reservations
+            if row["event_type"] == "candidate_fold_reserved"
+            else dispatches
+        )
+        target[candidate_id] = count
+    return sum(reservations.values()) + sum(
+        count
+        for candidate_id, count in dispatches.items()
+        if candidate_id not in reservations
     )
 
 
@@ -206,6 +257,92 @@ class SQLiteCampaignWriter:
             values=values,
             conflict_reason="campaign_event_immutable_conflict",
         )
+
+    def reserve_campaign_fold_budget(
+        self,
+        record: CampaignEventRecord,
+        *,
+        fold_run_limit: int,
+    ) -> bool:
+        """Atomically reserve fold runs on the append-only Campaign stream."""
+        if type(fold_run_limit) is not int or fold_run_limit <= 0:
+            raise _integrity("fold run limit is invalid", "invalid_fold_run_limit")
+        _, requested = _fold_reservation_detail(record)
+        connection = self._database.get_connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute(
+                """
+                SELECT campaign_id, event_type, status, detail_json,
+                       occurred_at_epoch_us
+                FROM research_campaign_event WHERE event_id=?
+                """,
+                (record.event_id,),
+            ).fetchone()
+            semantic_values = (
+                str(record.campaign_id),
+                record.event_type,
+                record.status,
+                record.detail_payload.decode("utf-8"),
+                record.occurred_at_epoch_us,
+            )
+            if existing is not None:
+                if tuple(existing) != semantic_values:
+                    raise _conflict("campaign_event_immutable_conflict")
+                connection.commit()
+                return True
+
+            rows = connection.execute(
+                """
+                SELECT event_type, detail_json FROM research_campaign_event
+                WHERE campaign_id=? AND event_type IN
+                      ('candidate_fold_reserved', 'candidate_dispatched')
+                """,
+                (str(record.campaign_id),),
+            ).fetchall()
+            used = _fold_accounted_usage(rows)
+            if used + requested > fold_run_limit:
+                connection.commit()
+                return False
+
+            predecessor = connection.execute(
+                """
+                SELECT ordinal, status FROM research_campaign_event
+                WHERE campaign_id=? ORDER BY ordinal DESC LIMIT 1
+                """,
+                (str(record.campaign_id),),
+            ).fetchone()
+            persisted = replace(
+                record,
+                ordinal=0 if predecessor is None else predecessor["ordinal"] + 1,
+                previous_status=None if predecessor is None else predecessor["status"],
+            )
+            connection.execute(
+                """
+                INSERT INTO research_campaign_event(
+                    event_id, campaign_id, ordinal, event_type, previous_status,
+                    status, detail_json, occurred_at_epoch_us
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    persisted.event_id,
+                    str(persisted.campaign_id),
+                    persisted.ordinal,
+                    persisted.event_type,
+                    persisted.previous_status,
+                    persisted.status,
+                    persisted.detail_payload.decode("utf-8"),
+                    persisted.occurred_at_epoch_us,
+                ),
+            )
+            connection.commit()
+            return True
+        except AnalysisError:
+            connection.rollback()
+            raise
+        except sqlite3.Error as exc:
+            connection.rollback()
+            raise _persistence("fold reservation", exc) from exc
 
     def add_candidate(self, record: CandidateLineageRecord) -> None:
         """Insert an immutable candidate while retaining parent/generation lineage."""

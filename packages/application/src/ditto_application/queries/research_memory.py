@@ -46,6 +46,8 @@ class ResearchMemoryReader(Protocol):
         campaign_id: ExperimentId,
         strategy_family_ref: str | None,
         knowledge_cutoff: datetime,
+        publication_cutoff: datetime,
+        source_snapshot_id: str,
     ) -> tuple[KnowledgeItem, ...]:
         """Return PIT-projected items inside the supplied scope."""
         ...
@@ -109,6 +111,8 @@ class ResearchMemoryQueryFacade:
             ExperimentId(scope.campaign_id),
             scope.strategy_family_ref,
             context.knowledge_cutoff,
+            context.publication_cutoff,
+            context.source_snapshot_id,
         )
         if len(items) > _MAX_VISIBLE_MEMORY_ITEMS:
             raise _error("research_memory_result_too_large")
@@ -119,6 +123,10 @@ class ResearchMemoryQueryFacade:
                 item.require_visible_at(context.knowledge_cutoff)
             except ExperimentSpecError as exc:
                 raise _error("research_memory_future_leak") from exc
+            if item.outcome_known_at > context.publication_cutoff:
+                raise _error("research_memory_publication_leak")
+            if str(item.snapshot_id) != context.source_snapshot_id:
+                raise _error("research_memory_snapshot_mismatch")
         visible = tuple(
             sorted(
                 (item for item in items if item.status is KnowledgeStatus.ACTIVE),
