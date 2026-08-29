@@ -12,7 +12,7 @@ def test_application_does_not_import_entry_packages() -> None:
     import ditto_application  # noqa: F401
 
     new_modules = set(sys.modules) - before
-    forbidden_prefixes = ("ditto_apps",)
+    forbidden_prefixes = ("ditto_agent", "ditto_apps")
     forbidden = {
         m
         for m in new_modules

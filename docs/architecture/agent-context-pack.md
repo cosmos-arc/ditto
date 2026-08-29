@@ -2,7 +2,7 @@
 
 ## Fast Architecture Model
 
-`apps -> application -> {data, features, strategy, portfolio, risk, execution, backtest, analysis} -> kernel`.
+Agent 路径为 `apps -> agent -> application -> {data, features, strategy, portfolio, risk, execution, backtest, analysis} -> kernel`；非 Agent 入口仍可由 `apps -> application` 直接调用。
 `platform` is horizontal technical foundation.
 
 Data, features, strategy, portfolio, risk, execution, backtest are **peer capability planes**.
@@ -14,6 +14,7 @@ Analysis is research-only, not imported by production packages.
 | Need | Place |
 |---|---|
 | HTTP/CLI/job DTO | `apps` |
+| Governed model runtime, tools, approval, Agent store, replay/eval | `agent` |
 | Use case orchestration | `application.processes`, `application.commands`, `application.queries` |
 | Data source/storage/quality/catalog | `data` |
 | Expression/factor/evaluation/materialization | `features` |
@@ -48,7 +49,7 @@ When changing imports, run `pixi run -e dev arch-check`.
 ## Tracing
 
 `@traced` lives in `kernel.tracing`. Default is no-op. Install handler via `install_trace_handler()`.
-Composition root (`apps.registry`) wires OTel bridge at startup.
+Composition root (`apps.registry`) wires OTel bridge and physical Agent adapters at startup.
 
 ## T0 Acceptance Gate
 

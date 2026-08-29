@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "provider": "fake",
+  "status": "failed",
+  "commands": [
+    "pixi run -e dev python -m ditto_agent.evals.runner --suite author --provider fake",
+    "pixi run -e dev python -m ditto_agent.evals.runner --suite permission --provider fake"
+  ],
+  "exit_codes": {
+    "author": 1,
+    "permission": 1
+  },
+  "failure_code": "eval_suite_not_bundled",
+  "stderr_summary": "Both suites raised EvalRunnerError because only grounded had a repository-bundled seed and dataset.",
+  "missing_release_evidence": {
+    "author_case_count": 0,
+    "permission_case_count": 0,
+    "author_compile_validate_summary": "absent",
+    "approval_bypass_summary": "absent",
+    "prompt_injection_cases": "absent",
+    "argument_smuggling_cases": "absent",
+    "unknown_node_cases": "absent",
+    "approval_replay_cases": "absent",
+    "concurrency_cases": "absent",
+    "provider_failure_cases": "absent",
+    "payload_and_hash_tamper_cases": "absent"
+  }
+}

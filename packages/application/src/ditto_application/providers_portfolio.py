@@ -23,6 +23,7 @@ from ditto_application.queries.daily_decision_v3 import (
     DailyDecisionV3QueryFacade,
     NullDailyDecisionV3ProjectionReader,
 )
+from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
 from ditto_application.queries.signal import SignalQueryFacade
@@ -130,3 +131,11 @@ class AppPortfolioQueryProvider(Provider):
             v2_facade=v2_facade,
             projection_reader=projection_reader,
         )
+
+    @provide
+    def decision_evidence_query_facade(
+        self,
+        daily_decision_v3: DailyDecisionV3QueryFacade,
+    ) -> DecisionEvidenceQueryFacade:
+        """Wrap DailyDecision V3 in an exact, PIT-bound read contract."""
+        return DecisionEvidenceQueryFacade(daily_decision_v3=daily_decision_v3)

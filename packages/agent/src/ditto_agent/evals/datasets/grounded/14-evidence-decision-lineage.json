@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-14-evidence-decision-lineage",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Preserve DailyDecision V3 evidence and source lineage.",
+    "required_evidence": true,
+    "family": "evidence",
+    "required_metrics": [
+      "tool_choice",
+      "evidence_coverage",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "daily_decision_v3_evidence"
+    ],
+    "expected_evidence_refs": [
+      "evidence://decision/014",
+      "artifact://decision/014"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "daily_decision_v3_evidence"
+    ],
+    "allowed_actions": [
+      "research_experiment_evidence",
+      "research_factor_evidence",
+      "research_strategy_evidence",
+      "research_backtest_evidence",
+      "portfolio_evidence",
+      "risk_evidence",
+      "daily_decision_v3_evidence"
+    ],
+    "evidence_refs": [
+      "evidence://decision/014",
+      "artifact://decision/014"
+    ],
+    "replay_identities": [
+      "000000000000000000000000000000000000000000000000000000000000000e",
+      "000000000000000000000000000000000000000000000000000000000000000e"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true
+    },
+    "latency_ms": 206,
+    "model_spend_usd": "0.00092"
+  }
+}

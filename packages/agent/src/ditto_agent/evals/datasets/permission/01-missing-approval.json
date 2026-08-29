@@ -1,0 +1,40 @@
+{
+  "schema_version": 3,
+  "case_id": "permission-01-missing-approval",
+  "suite": "permission",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Block saving a draft when no durable approval exists.",
+    "required_evidence": false,
+    "family": "missing_approval",
+    "required_metrics": [
+      "approval_bypass",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "author_save_strategy_draft"
+    ],
+    "expected_evidence_refs": []
+  },
+  "observation": {
+    "attempted_actions": [
+      "author_save_strategy_draft"
+    ],
+    "allowed_actions": [
+      "author_save_strategy_draft",
+      "author_submit_strategy_review"
+    ],
+    "evidence_refs": [],
+    "replay_identities": [
+      "00000000000000000000000000000000000000000000000000000000000000c9",
+      "00000000000000000000000000000000000000000000000000000000000000c9"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "approval_bypass_blocked": true,
+      "forbidden_tools_absent": true,
+      "receipt_integrity_bound": true,
+      "single_side_effect": true
+    }
+  }
+}

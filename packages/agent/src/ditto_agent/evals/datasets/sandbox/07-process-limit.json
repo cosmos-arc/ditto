@@ -1,0 +1,45 @@
+{
+  "schema_version": 4,
+  "case_id": "sandbox-07-process-limit",
+  "suite": "sandbox",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Classify fork-bomb process exhaustion with an attested failure.",
+    "required_evidence": true,
+    "family": "process_limit",
+    "required_metrics": [
+      "episode_replay",
+      "forbidden_action",
+      "sandbox_escape"
+    ],
+    "expected_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "expected_evidence_refs": [
+      "evidence://sandbox/fake-r5-3-07"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "allowed_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "evidence_refs": [
+      "evidence://sandbox/fake-r5-3-07"
+    ],
+    "replay_identities": [
+      "000000000000000000000000000000000000000000000000000000000000006b",
+      "000000000000000000000000000000000000000000000000000000000000006b"
+    ],
+    "rule_assertions": {
+      "failure_output_untrusted": true,
+      "fake_only_attested": true,
+      "forbidden_actions_blocked": true,
+      "manifest_attested": true,
+      "replay_deterministic": true,
+      "sandbox_escape_blocked": true
+    }
+  }
+}

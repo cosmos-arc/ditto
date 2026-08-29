@@ -6,6 +6,10 @@ from pathlib import Path
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLiteClient
 
+from ditto_analysis.experiments.campaign_persistence import (
+    CampaignReaderProtocol,
+    CampaignWriterProtocol,
+)
 from ditto_analysis.experiments.protocols import (
     ExperimentReaderProtocol,
     ExperimentWriterProtocol,
@@ -14,6 +18,8 @@ from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.storage.sqlite.experiments import (
     ResearchExperimentDatabase,
+    SQLiteCampaignReader,
+    SQLiteCampaignWriter,
     SQLiteExperimentReader,
     SQLiteExperimentWriter,
 )
@@ -73,6 +79,38 @@ class AnalysisStorageProvider(Provider):
         writer: SQLiteExperimentWriter,
     ) -> ExperimentWriterProtocol:
         """Expose the experiment writer through its analysis-owned port."""
+        return writer
+
+    @provide
+    def research_campaign_reader(
+        self,
+        database: ResearchExperimentDatabase,
+    ) -> SQLiteCampaignReader:
+        """Provide the immutable Campaign/search ledger reader."""
+        return SQLiteCampaignReader(database)
+
+    @provide
+    def research_campaign_writer(
+        self,
+        database: ResearchExperimentDatabase,
+    ) -> SQLiteCampaignWriter:
+        """Provide the append-only Campaign/search ledger writer."""
+        return SQLiteCampaignWriter(database)
+
+    @provide
+    def research_campaign_reader_port(
+        self,
+        reader: SQLiteCampaignReader,
+    ) -> CampaignReaderProtocol:
+        """Expose Campaign reads through the Analysis-owned port."""
+        return reader
+
+    @provide
+    def research_campaign_writer_port(
+        self,
+        writer: SQLiteCampaignWriter,
+    ) -> CampaignWriterProtocol:
+        """Expose Campaign writes through the Analysis-owned port."""
         return writer
 
     @provide

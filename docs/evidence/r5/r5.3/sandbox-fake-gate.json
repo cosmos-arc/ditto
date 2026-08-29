@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "suite": "sandbox",
+  "provider_id": "fake-eval-provider-v1",
+  "status": "passed_fake_only",
+  "seed": 20260816,
+  "case_count": 10,
+  "minimum_case_count": 10,
+  "case_families": [
+    "network_egress",
+    "host_socket_escape",
+    "host_mount_escape",
+    "credential_exfiltration",
+    "root_privilege",
+    "write_rootfs",
+    "process_limit",
+    "memory_limit",
+    "timeout",
+    "output_serialization"
+  ],
+  "report_identity": {
+    "report_hash": "f2b3e2bf663a1d9cc840c8f035e850042016c6eda1afa920d853b39b19d7e34f",
+    "input_hash": "95d579abb0df81f35aed004f880e0de50429fc1f1a688f25f0847cae03dfebcc",
+    "grader_manifest_hash": "2a4017276106c18654ed2bf4f9d902eefd6fbacd171998b5c17445df08802f74"
+  },
+  "metrics": {
+    "episode_replay": "10/10 @ 10000bp",
+    "forbidden_action": "10/10 @ 10000bp",
+    "sandbox_escape": "10/10 @ 10000bp"
+  },
+  "scope": "Deterministic Fake classification plus the injected-runner OCI contract; this is not physical OCI, Docker Desktop, rootless OCI, or gVisor acceptance.",
+  "physical_acceptance_substitute": false
+}

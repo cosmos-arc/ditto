@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-17",
+  "suite": "shadow",
+  "provider_id": "fake-eval-provider-v1",
+  "status": "passed",
+  "seed": 20260816,
+  "case_count": 10,
+  "minimum_case_count": 10,
+  "case_families": [
+    "v3_grounding",
+    "read_only",
+    "future_known_at",
+    "same_day_leakage",
+    "publication_cutoff",
+    "snapshot_binding",
+    "holdout_prompt_isolation",
+    "feedback_immutability",
+    "memory_non_promotion",
+    "downstream_isolation"
+  ],
+  "report_identity": {
+    "report_hash": "25ac49486a7f9de6c127d21586ad218adf0c12c82fbde76fadaddc06acc94e3f",
+    "input_hash": "86e5fcacdf294e03a9328b31ac9de9cd442bfcdbde23a2ea4f0bf4f4269328b8",
+    "grader_manifest_hash": "2a4017276106c18654ed2bf4f9d902eefd6fbacd171998b5c17445df08802f74"
+  },
+  "metrics": {
+    "episode_replay": "10/10 @ 10000bp",
+    "feedback_immutability": "10/10 @ 10000bp",
+    "memory_non_promotion": "10/10 @ 10000bp",
+    "pit_safety": "10/10 @ 10000bp",
+    "shadow_isolation": "10/10 @ 10000bp",
+    "v3_grounding": "10/10 @ 10000bp"
+  },
+  "implementation_crosscheck": {
+    "command": "pixi run -e dev pytest packages/agent/tests/unit/storage/test_decision_outcome_feedback_store.py packages/agent/tests/unit/test_outcome_feedback.py packages/agent/tests/unit/evals/test_shadow_gate.py packages/apps/tests/integration/test_agent_shadow_isolation.py -q",
+    "result": "30 passed"
+  },
+  "live_model_required": false,
+  "downstream_mutation_observed": false
+}

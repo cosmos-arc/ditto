@@ -342,8 +342,7 @@ R3 只提供为回测和选股语义服务的确定性基础分配方式，例�
 
 ## 11. R5：治理型量化研究 Agent
 
-**状态：实现分支已完成（`a971a253`），尚未合并到 `main`；当前任务是合并审查与
-前端产品化，不是重新执行 38-task 计划。**
+**实施状态（2026-08-17）：R5.5 COMPLETE。** R5.0—R5.5 的实现、确定性/Fake 门、A3 OrbStack 物理 sandbox、GLM 5.3 Coding Plan balanced/quality 各 120-case 在线验收与 release preflight 均已通过。该结论关闭 R5 实施计划，但不把 Coding Plan 凭证授权为 standalone/生产凭证；部署前仍须替换 GLM 标准 API key 并按部署环境重新核对 provider 数据控制。所有 Agent flags 仍默认关闭，不声明 G4/G5、自动交易或 broker 能力。当前 evidence 见 [R5 implementation plan](../plans/2026-08-12-r5-governed-quant-research-agent-implementation-plan.md) 和 [R5 Agent runbook](../operations/r5-agent-runbook.md)。
 
 ### 目标
 
@@ -409,10 +408,9 @@ Conversations、Files、Vector Stores 和 Background mode。多 Agent 只做离�
 
 ### 运营要求
 
-- balanced profile 为 `gpt-5.6-terra`/medium，quality profile 为
-  `gpt-5.6-sol`/high；任何变更重跑相关 eval。
-- 使用专用 OpenAI project、MAM 或 ZDR、`store=false` 和显式 license/egress policy。
-- 普通 read P95 不超过 30 秒/0.25 美元；复杂任务不超过 60 秒/0.75 美元。
+- 本轮在线验收固定 `glm-5.3`：balanced=`high`、quality=`max`；OpenAI adapter 与 GPT 模型仍可由操作者显式选择，任何 provider/model/profile/prompt/tool 变更都重跑相关 eval。
+- Coding Plan 只用于获批的 Codex 研发验收，`store=false`、无 hosted tracing/tools 且仅发送合成数据；standalone/生产运行必须使用 GLM 标准 API key 或另行批准的 OpenAI project/credential。
+- 普通 read P95 不超过 30 秒，复杂任务 P95 不超过 60 秒；每个 profile 受一个 500,000 total-token cap 约束，实际费用由 provider 控制台核对。
 - 研究 Campaign 默认最多 6 代、128 个唯一候选、384 fold、并发 2、4 小时、
   20 GiB 临时空间和 8 美元模型预算。
 - Agent 不直接连接券商；R5 始终保持人工决策与非自动交易边界。
@@ -620,7 +618,7 @@ R1 已按以下顺序完成：
   → G1 evidence
 ```
 
-R1/G1、R2、R3/G2 和 R4/G3 已在 `main` 完成。R5 治理型量化研究 Agent 已在
-`codex/r5-governed-agent@a971a253` 完成 38/38 tasks、正式 eval、物理 sandbox 与
-release preflight；下一入口是合并前审查、主线集成和前端产品化。分钟级改造继续
+R1/G1、R2、R3/G2、R4/G3 和 R5 实施计划均已完成。R5 的 A3 物理 sandbox、
+GLM Coding Plan 双 profile 在线验收和 release preflight 已形成可审计 PASS 证据；
+生产启用仍要求替换标准 API credential，且所有 Agent flags 默认关闭。分钟级改造继续
 留在 R6，且必须等统一产品路线图的个人 Beta Gate 通过后再立项。

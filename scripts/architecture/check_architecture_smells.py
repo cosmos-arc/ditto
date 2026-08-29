@@ -226,6 +226,21 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
             "root's responsibility — concrete imports are intentional."
         ),
     ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments.generated_code",
+                "ditto_analysis.experiments.models",
+            }
+        ),
+        owner="apps Approval A3 physical acceptance entrypoint",
+        reason=(
+            "The explicit operator-run A3 entrypoint constructs Analysis-owned "
+            "generated-code fixtures and binds them to the registry OCI adapter; "
+            "ordinary API, CLI, and job modules remain behind Application facades."
+        ),
+    ),
 )
 
 APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
@@ -234,6 +249,72 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
 }
 
 APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/provider.py",
+        allowed_modules=frozenset({"ditto_analysis.experiments.campaign_persistence"}),
+        owner="apps governed Agent provider",
+        reason=(
+            "The Agent composition provider binds the Analysis-owned durable "
+            "Campaign reader to the Apps-owned transport runtime; feature and "
+            "command consumers remain behind Application contracts."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/campaign_runtime.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.errors",
+                "ditto_analysis.experiments.campaign_persistence",
+                "ditto_analysis.experiments.models",
+            }
+        ),
+        owner="apps governed Campaign runtime adapter",
+        reason=(
+            "The physical composition adapter projects Analysis-owned persisted "
+            "Campaign facts through an Application-owned public runtime and joins "
+            "them to Agent-owned durable idempotency records."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/oci_sandbox.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments.generated_code",
+                "ditto_analysis.experiments.models",
+                "ditto_analysis.experiments.persistence",
+            }
+        ),
+        owner="apps generated-candidate OCI sandbox adapter",
+        reason=(
+            "The physical composition adapter binds the Analysis-owned generated-code, "
+            "resource-limit, manifest, and content-hash contracts to an "
+            "Application-owned sandbox port; no ordinary Apps module may import these "
+            "capability types."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/agent/oci_sandbox_runner.py",
+        allowed_modules=frozenset({"ditto_analysis.experiments.models"}),
+        owner="apps generated-candidate OCI process runner",
+        reason=(
+            "The shell-free physical runner verifies Analysis-owned content hashes "
+            "at the final Docker invocation boundary next to the approved adapter."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/registry/agent/r5_sandbox_live_report.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.experiments.generated_code",
+                "ditto_analysis.experiments.models",
+            }
+        ),
+        owner="apps Approval A3 evidence verifier",
+        reason=(
+            "The registry verifier reconstructs Analysis-owned manifests and "
+            "content hashes to authenticate physical OCI acceptance evidence."
+        ),
+    ),
     CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/registry/container.py",
         allowed_modules=frozenset(
@@ -535,6 +616,52 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
         reason=(
             "The process composition root wires approved experiment persistence "
             "ports into the application research planning boundary."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/providers_research_memory.py"
+        ),
+        owner="R5 research-memory DI provider",
+        reason=(
+            "The dedicated composition boundary wires Analysis-owned Campaign "
+            "persistence ports into PIT read and governed mutation facades."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/commands/campaign_manifest.py"
+        ),
+        owner="application governed Campaign manifest command boundary",
+        reason=(
+            "The strict command builder compiles an explicit public document into "
+            "Analysis-owned immutable Campaign values without storage or execution I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=("packages/application/src/ditto_application/commands/research_memory.py"),
+        owner="R5 governed research-memory command boundary",
+        reason=(
+            "The command boundary validates Analysis-owned immutable memory facts "
+            "before append-only writes; Agent consumers use pure leaf contracts."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=("packages/application/src/ditto_application/queries/research_memory.py"),
+        owner="R5 PIT research-memory query boundary",
+        reason=(
+            "The query boundary projects Analysis-owned PIT facts into a pure, "
+            "content-addressed Application read model."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/research_memory_contracts.py"
+        ),
+        owner="R5 research-memory mutation contracts",
+        reason=(
+            "Human-approved promote and revoke commands retain the Analysis-owned "
+            "scope and content-hash value types at the governed write boundary."
         ),
     ),
     ProductionAnalysisWiringAllowance(
@@ -1204,6 +1331,102 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "immutable ArtifactRecord, LeaseFence, and ArtifactPublicationSpec value "
             "contracts; storage access remains behind the injected indexed service "
             "and reader ports and the adapter performs no direct storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_contracts.py"
+        ),
+        owner="application governed Campaign contract boundary",
+        reason=(
+            "The immutable Campaign contracts bind analysis-owned campaign, metric, "
+            "lease, and statistical-trial values into the finite authorization and "
+            "scheduler ports consumed by the host coordinator; they perform no I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_authorization.py"
+        ),
+        owner="application governed Campaign authorization lifecycle",
+        reason=(
+            "The private lifecycle boundary freezes Analysis-owned Campaign drafts "
+            "and binds exact human authority before coordinator execution; all "
+            "persistence remains behind injected protocols."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_support.py"
+        ),
+        owner="application governed Campaign persistence boundary",
+        reason=(
+            "The private support boundary reconstructs and validates exact "
+            "analysis-owned campaign, lineage, ledger, and lease facts through "
+            "injected reader and writer protocols; it owns no storage implementation."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "autonomous_campaign.py"
+        ),
+        owner="application governed Campaign coordinator",
+        reason=(
+            "The host-owned coordinator applies immutable authorization, finite "
+            "budgets, stopping, cancellation, and crash recovery over analysis-owned "
+            "campaign facts through narrow injected ports."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "campaign_scheduler.py"
+        ),
+        owner="application governed Campaign scheduler adapter",
+        reason=(
+            "The adapter maps Campaign trial and retry requests onto the existing "
+            "analysis-owned R3 fold matrix and lease fence through the established "
+            "application scheduler-store protocol."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "candidate_sandbox_port.py"
+        ),
+        owner="application generated-candidate sandbox contract boundary",
+        reason=(
+            "The consumer-owned port binds raw sandbox I/O and attestations to "
+            "analysis-owned research-code, snapshot, and resource-limit values; "
+            "it performs no sandbox or storage I/O."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "generated_candidate_evaluator.py"
+        ),
+        owner="application trusted generated-candidate evaluator",
+        reason=(
+            "The host-owned evaluator validates untrusted code and score artifacts "
+            "before handing typed scores to the existing numerical authority; it "
+            "consumes analysis-owned campaign identities without storage access."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path=(
+            "packages/application/src/ditto_application/processes/experiments/"
+            "generated_candidate_pit.py"
+        ),
+        owner="application generated-candidate PIT evaluation boundary",
+        reason=(
+            "The host-owned feed materializes one exact analysis-owned fold and "
+            "snapshot behind an injected row-reader port, then supplies frozen "
+            "PIT windows to a fresh sandbox without owning storage I/O."
         ),
     ),
 )
@@ -2248,6 +2471,7 @@ _IMPORT_TO_PKG: dict[str, str] = {
     "ditto_backtest": "backtest",
     "ditto_analysis": "analysis",
     "ditto_application": "application",
+    "ditto_agent": "agent",
     "ditto_apps": "apps",
 }
 
@@ -2255,6 +2479,7 @@ _PKG_TO_DEP = {v: f"ditto-{v}" for v in _IMPORT_TO_PKG.values()}
 _PKG_TO_IMPORT = {v: k for k, v in _IMPORT_TO_PKG.items()}
 
 _EXTERNAL_IMPORT_TO_DEP: dict[str, str] = {
+    "agents": "openai-agents",
     "cachebox": "cachebox",
     "click": "click",
     "cvxpy": "cvxpy",

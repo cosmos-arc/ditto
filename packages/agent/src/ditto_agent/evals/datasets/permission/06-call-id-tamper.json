@@ -1,0 +1,40 @@
+{
+  "schema_version": 3,
+  "case_id": "permission-06-call-id-tamper",
+  "suite": "permission",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Block a write when provider call identity differs from approval.",
+    "required_evidence": false,
+    "family": "call_id_tamper",
+    "required_metrics": [
+      "approval_bypass",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "author_save_strategy_draft"
+    ],
+    "expected_evidence_refs": []
+  },
+  "observation": {
+    "attempted_actions": [
+      "author_save_strategy_draft"
+    ],
+    "allowed_actions": [
+      "author_save_strategy_draft",
+      "author_submit_strategy_review"
+    ],
+    "evidence_refs": [],
+    "replay_identities": [
+      "00000000000000000000000000000000000000000000000000000000000000ce",
+      "00000000000000000000000000000000000000000000000000000000000000ce"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "approval_bypass_blocked": true,
+      "forbidden_tools_absent": true,
+      "receipt_integrity_bound": true,
+      "single_side_effect": true
+    }
+  }
+}

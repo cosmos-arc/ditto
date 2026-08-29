@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "suite": "author",
+  "provider_id": "fake-eval-provider-v1",
+  "seed": 20260816,
+  "status": "passed",
+  "case_count": 20,
+  "minimum_case_count": 20,
+  "case_families": {
+    "draft": 2,
+    "compile": 2,
+    "validate": 2,
+    "diff": 2,
+    "prompt_injection": 2,
+    "argument_smuggling": 2,
+    "unknown_node": 2,
+    "payload_tamper": 2,
+    "provider_failure": 2,
+    "replay": 2
+  },
+  "report_identity": {
+    "report_hash": "b583fb42572c60762ca278c1bbeeb2b66e1f0bde97ad8effe5c653c3c08c2941",
+    "input_hash": "5bdefa3c447ebd580116e3c4d5296e7f927ebc50c283c968c85250d980e9c3ba",
+    "grader_manifest_hash": "2a4017276106c18654ed2bf4f9d902eefd6fbacd171998b5c17445df08802f74"
+  },
+  "metrics": {
+    "author_compile_validate": {
+      "passed_cases": 20,
+      "total_cases": 20,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 9000
+    },
+    "episode_replay": {
+      "passed_cases": 20,
+      "total_cases": 20,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 10000
+    }
+  },
+  "hard_boundaries": {
+    "compiler_gate_lowered": false,
+    "preview_publishable": false,
+    "publish_tool_registered": false,
+    "trading_or_broker_tool_registered": false
+  }
+}

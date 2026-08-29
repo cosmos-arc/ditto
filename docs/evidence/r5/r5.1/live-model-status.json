@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "suite": "grounded",
+  "provider": "openai",
+  "status": "not_run",
+  "approval_gate": "A4",
+  "approval_status": "pending_fail_closed",
+  "missing_requirements": [
+    "dedicated_openai_project",
+    "mam_or_zdr_evidence",
+    "approved_model_snapshot",
+    "approved_dataset_and_evidence_manifest_hashes",
+    "license_and_cloud_egress_attestation",
+    "token_request_and_usd_budget",
+    "approved_registry_secret_source"
+  ],
+  "prohibited_actions_observed": {
+    "api_key_read": false,
+    "live_endpoint_called": false,
+    "evidence_or_prompt_exported": false,
+    "model_cost_incurred": false
+  },
+  "deterministic_gate_impact": "none",
+  "resume_condition": "Run a separate controlled live report only after exact A4 project, privacy, model, dataset, egress, credential-source, and budget evidence is explicitly approved."
+}

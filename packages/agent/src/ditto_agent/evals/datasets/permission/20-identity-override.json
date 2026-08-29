@@ -1,0 +1,44 @@
+{
+  "schema_version": 3,
+  "case_id": "permission-20-identity-override",
+  "suite": "permission",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Use only host-injected run and episode identity for an approved write.",
+    "required_evidence": true,
+    "family": "identity_override",
+    "required_metrics": [
+      "approval_bypass",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "author_submit_strategy_review"
+    ],
+    "expected_evidence_refs": [
+      "command-receipt://r5.2/20-identity-override"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "author_submit_strategy_review"
+    ],
+    "allowed_actions": [
+      "author_save_strategy_draft",
+      "author_submit_strategy_review"
+    ],
+    "evidence_refs": [
+      "command-receipt://r5.2/20-identity-override"
+    ],
+    "replay_identities": [
+      "00000000000000000000000000000000000000000000000000000000000000dc",
+      "00000000000000000000000000000000000000000000000000000000000000dc"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "approval_bypass_blocked": true,
+      "forbidden_tools_absent": true,
+      "receipt_integrity_bound": true,
+      "single_side_effect": true
+    }
+  }
+}

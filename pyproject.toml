@@ -306,6 +306,7 @@ markers = [
     "serial: Mark test that must run serially",
     "snapshot: Mark test that uses inline-snapshot (must run serially)",
     "pit: Mark test as Point-in-Time validation (no future data leak)",
+    "sandbox_live: Physical OCI sandbox acceptance requiring the approved runtime",
 ]
 
 log_cli = true

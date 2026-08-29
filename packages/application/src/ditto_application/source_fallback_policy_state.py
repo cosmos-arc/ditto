@@ -13,6 +13,8 @@ from ditto_data.catalog.fallback_policy import (
     CatalogSourceFallbackPolicyEvent as DataCatalogSourceFallbackPolicyEvent,
 )
 
+from ditto_application.mutation_idempotency import canonical_request_hash
+
 __all__ = [
     "CatalogSourceFallbackPolicy",
     "CatalogSourceFallbackPolicyEvent",
@@ -62,6 +64,36 @@ class CatalogSourceFallbackPolicy:
     decided_by: str | None = None
     decided_at: datetime | None = None
     decision_notes: str | None = None
+
+    @property
+    def authority_payload(self) -> dict[str, object]:
+        """Return the exact next lifecycle action shown before submission."""
+        next_action = {
+            "draft": "approval",
+            "approved": "activation",
+            "active": "retirement",
+            "retired": "none",
+        }[self.status]
+        return {
+            "action": next_action,
+            "policy_id": self.policy_id,
+            "dataset_id": self.dataset_id,
+            "namespace": self.namespace,
+            "trade_date": self.trade_date,
+            "default_source": self.default_source,
+            "selected_source": self.selected_source,
+            "recommended_source": self.recommended_source,
+            "status": self.status,
+            "reason_codes": list(self.reason_codes),
+            "source_selection_status": self.source_selection_status,
+            "approval_required": self.approval_required,
+            "execution_allowed": self.execution_allowed,
+        }
+
+    @property
+    def authority_hash(self) -> str:
+        """Bind the exact lifecycle action and immutable policy scope."""
+        return canonical_request_hash(self.authority_payload)
 
 
 @dataclass(frozen=True, slots=True)

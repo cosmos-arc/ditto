@@ -13,6 +13,7 @@ def test_data_does_not_import_forbidden_packages() -> None:
 
     new_modules = set(sys.modules) - before
     forbidden_prefixes = (
+        "ditto_agent",
         "ditto_strategy",
         "ditto_portfolio",
         "ditto_risk",

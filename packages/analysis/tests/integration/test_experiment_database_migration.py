@@ -18,9 +18,9 @@ from typing import Any
 import pytest
 
 APP_ID = 1_146_376_755
-USER_VERSION = 1
+USER_VERSION = 2
 DDL_SHA256 = "697d10854fb12e324ddcff349bad55b9b442425b244cb5f1852d7192cfb7a8fd"
-SCHEMA_FINGERPRINT = "b4e0c52b7ef2f844987ecd65cc96ece5c5f75a3d19dc15e380c4ffdf10adc39a"
+SCHEMA_FINGERPRINT = "7b4a6d03f4ba879ca54fd47220b7d28728bcb58c87cdca3cdfe27a5466cd51e0"
 
 
 def _api() -> SimpleNamespace:
@@ -145,10 +145,10 @@ def test_fresh_and_repeat_initialize_create_exact_approved_schema(
     assert before == after
     app_id, version, objects, _rows = after
     assert (app_id, version) == (APP_ID, USER_VERSION)
-    assert len(objects) == 50
-    assert sum(row[0] == "table" for row in objects) == 9
-    assert sum(row[0] == "index" for row in objects) == 14
-    assert sum(row[0] == "trigger" for row in objects) == 27
+    assert len(objects) == 95
+    assert sum(row[0] == "table" for row in objects) == 19
+    assert sum(row[0] == "index" for row in objects) == 22
+    assert sum(row[0] == "trigger" for row in objects) == 54
     with database.connection() as connection:
         assert api.schema_fingerprint(api.schema_rows(connection)) == SCHEMA_FINGERPRINT
         assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"

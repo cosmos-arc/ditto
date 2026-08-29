@@ -1,0 +1,43 @@
+{
+  "schema_id": "r5-release-eval-baseline-red",
+  "schema_version": 1,
+  "observed_at": "2026-08-17T12:00:00+08:00",
+  "result": "red",
+  "red_runs": [
+    {
+      "command": "pixi run -e dev pytest packages/agent/tests/unit/evals/test_release_gate.py -q --no-cov -n 0",
+      "exit_code": 1,
+      "failures": [
+        "suite all was not a bundled eval suite",
+        "openai provider and profile were rejected by argparse instead of producing A4 not_run evidence"
+      ]
+    },
+    {
+      "command": "pixi run -e dev pytest packages/agent/tests/unit/evals/test_release_gate.py -q --no-cov -n 0",
+      "exit_code": 1,
+      "failures": [
+        "aggregate report omitted a recomputable observation manifest",
+        "a malformed final suite allowed earlier provider calls before rejection",
+        "an extra suite was rejected only after all 120 provider calls",
+        "the public aggregate constructor accepted a forged grader manifest hash",
+        "the public aggregate constructor did not bind performance to authenticated observations"
+      ]
+    },
+    {
+      "command": "pixi run -e dev pytest packages/agent/tests/unit/evals/test_release_gate.py::test_checked_in_fake_release_evidence_matches_current_runner -q --no-cov -n 0",
+      "exit_code": 1,
+      "failures": [
+        "checked-in Fake evidence differed from the current authenticated report bytes"
+      ]
+    }
+  ],
+  "frozen_distribution": {
+    "grounded": 30,
+    "author": 20,
+    "campaign": 30,
+    "permission": 20,
+    "sandbox": 10,
+    "shadow": 10,
+    "total": 120
+  }
+}

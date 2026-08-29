@@ -271,6 +271,11 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         "packages/application/src/ditto_application/providers_portfolio.py",
         "packages/application/src/ditto_application/providers_process.py",
         "packages/application/src/ditto_application/providers_strategy.py",
+        "packages/application/src/ditto_application/providers_research_memory.py",
+        "packages/application/src/ditto_application/commands/campaign_manifest.py",
+        "packages/application/src/ditto_application/commands/research_memory.py",
+        "packages/application/src/ditto_application/queries/research_memory.py",
+        "packages/application/src/ditto_application/research_memory_contracts.py",
         (
             "packages/application/src/ditto_application/processes/experiments/"
             "_executor_probe.py"
@@ -475,6 +480,38 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         (
             "packages/application/src/ditto_application/processes/experiments/"
             "_fold_selection_trace_artifacts.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_contracts.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_authorization.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "_autonomous_campaign_support.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "autonomous_campaign.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "campaign_scheduler.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "candidate_sandbox_port.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "generated_candidate_evaluator.py"
+        ),
+        (
+            "packages/application/src/ditto_application/processes/experiments/"
+            "generated_candidate_pit.py"
         ),
     } == {allowance.path for allowance in allowances}
     assert not any(hasattr(allowance, "match") for allowance in allowances)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ditto_apps.api.routes import (
+    agent_routes,
     backtest,
     capital,
     commodity,
@@ -26,6 +27,7 @@ from ditto_apps.api.routes import (
 )
 
 __all__ = [
+    "agent_routes",
     "backtest",
     "capital",
     "commodity",

@@ -16,6 +16,7 @@ from ditto_execution.di import get_execution_providers
 from ditto_features.di import get_features_providers
 from ditto_strategy.di import get_strategy_providers
 
+from .agent.provider import AgentRuntimeProvider
 from .infra import R2LiveGateEvidenceProvider, get_infra_providers
 from .infra.risk_persistence import RiskPersistenceProvider
 
@@ -32,6 +33,7 @@ def _get_base_providers() -> tuple[Provider, ...]:
         *get_analysis_providers(),  # Analysis 存储层
         *get_execution_providers(),  # Execution 存储层
         *get_app_providers(),  # App 层
+        AgentRuntimeProvider(),  # R5 Agent 默认关闭并结构化 fail closed
         RiskPersistenceProvider(),  # 显式覆盖 V3 fail-closed reader
         R2LiveGateEvidenceProvider(),  # 显式实盘证据覆盖 fail-closed 默认值
     )

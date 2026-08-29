@@ -52,6 +52,14 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
                 "ditto_features.compile_cache",
             }
         ),
+        "packages/apps/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py": (
+            frozenset(
+                {
+                    "ditto_analysis.experiments.generated_code",
+                    "ditto_analysis.experiments.models",
+                }
+            )
+        ),
     }
 
 
@@ -61,6 +69,38 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
     assert allowances
     assert all(allowance.owner for allowance in allowances)
     assert all(allowance.reason for allowance in allowances)
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/agent/provider.py"
+    ] == frozenset({"ditto_analysis.experiments.campaign_persistence"})
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/agent/campaign_runtime.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.errors",
+            "ditto_analysis.experiments.campaign_persistence",
+            "ditto_analysis.experiments.models",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/agent/oci_sandbox.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.experiments.generated_code",
+            "ditto_analysis.experiments.models",
+            "ditto_analysis.experiments.persistence",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/agent/oci_sandbox_runner.py"
+    ] == frozenset({"ditto_analysis.experiments.models"})
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/agent/r5_sandbox_live_report.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.experiments.generated_code",
+            "ditto_analysis.experiments.models",
+        }
+    )
     assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
         "packages/apps/src/ditto_apps/registry/contexts/query.py"
     ] == frozenset(

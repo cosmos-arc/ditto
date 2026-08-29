@@ -1381,6 +1381,8 @@ class TestCatalogRemediationApprovalRoutes:
         assert response.data.approval_id == "approval-001"
         assert response.data.status == "requested"
         assert response.data.request_payload["dataset_id"] == "stock_daily"
+        assert response.data.authority_hash == approval.authority_hash
+        assert response.data.expires_at == "2026-06-09T10:30:00+00:00"
 
     async def test_decides_remediation_approval_without_executing_remediation(
         self,
@@ -1408,6 +1410,7 @@ class TestCatalogRemediationApprovalRoutes:
             )
         )
         request = CatalogRemediationApprovalDecisionRequest(
+            authority_hash="a" * 64,
             decision="approved",
             decided_by="lead-reviewer",
             notes="approved for manual evidence write",
@@ -1422,6 +1425,7 @@ class TestCatalogRemediationApprovalRoutes:
         handler.handle.assert_called_once_with(
             CatalogRemediationApprovalDecisionCommand(
                 approval_id="approval-001",
+                expected_authority_hash="a" * 64,
                 decision="approved",
                 decided_by="lead-reviewer",
                 notes="approved for manual evidence write",
@@ -1470,6 +1474,7 @@ class TestCatalogRemediationApprovalRoutes:
             execution=execution,
         )
         request = CatalogRemediationApprovalExecutionRequest(
+            authority_hash="a" * 64,
             executed_by="ops-runner",
             notes="execute approved evidence write",
         )
@@ -1483,6 +1488,7 @@ class TestCatalogRemediationApprovalRoutes:
         handler.handle.assert_called_once_with(
             CatalogRemediationApprovalExecutionCommand(
                 approval_id="approval-001",
+                expected_authority_hash="a" * 64,
                 executed_by="ops-runner",
                 notes="execute approved evidence write",
             )

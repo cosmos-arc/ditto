@@ -39,7 +39,9 @@ Ditto 当前的大分层已经成立，质量门禁也较强。主要不足不�
 
 ```text
                     apps
-                     |
+                   /    \
+              agent     |
+                   \    |
               application
                      |
    ┌──────────────── capability planes ────────────────┐
@@ -50,8 +52,8 @@ Ditto 当前的大分层已经成立，质量门禁也较强。主要不足不�
                          kernel
 
 platform 是横向技术基础设施，只在包契约允许的范围内被导入。
-analysis 当前实现 research dataset control-plane；product analysis namespaces
-保持 reserved/future 状态，生产域包禁止依赖。
+analysis 当前实现 research dataset control-plane 与 experiment/holdout/trial
+ledger 研究域；生产域包禁止依赖。
 ```
 
 ### 3.1 各平面定位
@@ -67,13 +69,14 @@ analysis 当前实现 research dataset control-plane；product analysis namespac
 | `risk` | 风险管理平面 | 盘前/盘后风控、约束、暴露度、回撤 | 策略决策、回测运行、数据存储 |
 | `execution` | 交易执行平面 | 订单、成交、券商网关、费用、审计 | 回测运行、数据源适配、HTTP/CLI |
 | `backtest` | 回测引擎平面 | 回测 runtime、step chain、绩效统计 | 数据源适配、HTTP/CLI、真实券商 |
-| `analysis` | 研究分析平面 | research dataset control-plane；product analysis namespaces 保留给未来规划 | 被生产包导入、外部 I/O |
+| `analysis` | 研究分析平面 | research dataset control-plane、experiment/holdout/trial ledger 与独立研究存储 | 被生产包导入、承担调度、被 Agent 直连 |
 | `application` | 用例编排与组合平面 | commands/queries/processes、对象装配、跨平面用例 | 核心领域规则、物理 I/O 细节、传输协议 |
+| `agent` | 治理型模型运行平面 | 状态机、工具调度、审批、模型 port、Agent store、Episode/replay/eval | 直接访问 capability/analysis、决定金融事实、配置物理外部依赖 |
 | `apps` | 传输适配平面 | FastAPI、CLI、Prefect job、请求响应模型、DI composition root | 业务计算、数据读写实现、引擎内部逻辑 |
 
 ### 3.2 垂直调用与水平平面
 
-`data`、`features`、`strategy`、`portfolio`、`risk`、`execution`、`backtest` 是并列能力包。`application` 负责编排它们，`apps` 负责暴露它们。不要把某个能力包理解成天然高于另一个。
+`data`、`features`、`strategy`、`portfolio`、`risk`、`execution`、`backtest` 是并列能力包。`application` 负责编排它们，`agent` 只消费 application，`apps` 负责暴露和装配。不要把某个能力包理解成天然高于另一个。
 
 判断规则：
 
@@ -184,7 +187,7 @@ contracts/models
 `analysis` 是纯研究平面。
 
 - `research` 负责研究数据集语义，不成为 Data catalog 的替代品。
-- `experiments` 当前只是 reserved/future namespace，不是现有 runtime API。
+- `experiments` 拥有 experiment/holdout/trial ledger/replay 研究领域和独立持久化合同；调度仍在 application。
 - 生产域包禁止依赖 analysis；application 仅 research query/facade/DI wiring 可使用 analysis；apps 仅 research jobs/api/registry composition 入口可使用 analysis。
 - 研究存储使用独立 SQLite。
 
@@ -201,7 +204,7 @@ risk       -> kernel, portfolio
 execution  -> kernel, portfolio, platform
 backtest   -> data, strategy, portfolio, risk, execution, kernel
 
-application 编排能力包，apps 暴露 application。
+application 编排能力包；agent 只消费 application 叶级合同；apps 暴露 agent/application 并负责装配。
 ```
 
 硬性约束：
@@ -242,7 +245,24 @@ application 编排能力包，apps 暴露 application。
 - 如果只是创建对象图，放 `builders`。
 - 如果只是注册对象，放 `providers`。
 
-### 4.7 Apps
+### 4.7 Agent
+
+`agent` 是受治理的语义与搜索运行平面，不是新的量化引擎或 capability gateway。
+
+允许：
+
+- Agent-owned runtime/contracts/tools/model port、Agent SQLite、Episode/replay 和 eval。
+- 通过 application query/command/process 叶级合同读取证据或提出受控动作。
+- 使用 platform 的业务无关 OTel/SQLite/clock/serialization 技术原语。
+
+禁止：
+
+- 直接导入 data/features/strategy/portfolio/risk/execution/backtest/analysis 或 apps。
+- 注册 publish、weights、orders、broker 或任意 storage/SQL/filesystem/network 工具。
+- 让模型提供受信 temporal context、计算可信金融指标或决定状态/审批/预算。
+- 在 platform 建 LLM gateway，或用 re-export/延迟导入/`TYPE_CHECKING` 隐藏依赖。
+
+### 4.8 Apps
 
 `apps` 是传输适配和 DI composition root，不是业务层。
 
@@ -251,7 +271,7 @@ application 编排能力包，apps 暴露 application。
 - HTTP request/response DTO。
 - CLI 参数解析。
 - Prefect task/job 入口。
-- 调用 application facade 或 application command。
+- 调用 agent runtime 或 application facade/command。
 - 把领域错误映射成 HTTP/CLI/job 响应。
 
 禁止：

@@ -108,6 +108,7 @@ class CatalogRemediationApprovalDecisionRequest(BaseModel):
     decision: Literal["approved", "rejected"] = Field(
         description="approved or rejected"
     )
+    authority_hash: str = Field(description="exact remediation action authority hash")
     decided_by: str = Field(description="decision operator or system")
     notes: str | None = Field(default=None, description="decision notes")
 
@@ -117,6 +118,7 @@ class CatalogRemediationApprovalDecisionRequest(BaseModel):
 class CatalogRemediationApprovalExecutionRequest(BaseModel):
     """Execute an approved remediation action."""
 
+    authority_hash: str = Field(description="exact remediation action authority hash")
     executed_by: str = Field(description="execution operator or backend actor")
     notes: str | None = Field(default=None, description="execution notes")
 
@@ -139,6 +141,8 @@ class CatalogRemediationApprovalResponse(BaseModel):
         default_factory=dict,
         description="target backend request payload snapshot",
     )
+    authority_hash: str = Field(description="canonical hash of the exact action")
+    expires_at: str = Field(description="exclusive approval authority expiry time")
     notes: str | None = Field(default=None, description="approval request notes")
     decided_by: str | None = Field(default=None, description="decision actor")
     decided_at: str | None = Field(default=None, description="decision time")

@@ -177,6 +177,8 @@ def to_catalog_remediation_approval_response(
         method=item.method,
         path=item.path,
         request_payload=item.request_payload,
+        authority_hash=item.authority_hash,
+        expires_at=item.expires_at.isoformat(),
         notes=item.notes,
         decided_by=item.decided_by,
         decided_at=item.decided_at.isoformat() if item.decided_at is not None else None,
@@ -337,6 +339,7 @@ async def decide_catalog_remediation_approval(
         handler.handle,
         CatalogRemediationApprovalDecisionCommand(
             approval_id=approval_id,
+            expected_authority_hash=request.authority_hash,
             decision=request.decision,
             decided_by=request.decided_by,
             notes=request.notes,
@@ -360,6 +363,7 @@ async def execute_catalog_remediation_approval(
         handler.handle,
         CatalogRemediationApprovalExecutionCommand(
             approval_id=approval_id,
+            expected_authority_hash=request.authority_hash,
             executed_by=request.executed_by,
             notes=request.notes,
         ),

@@ -1,4 +1,4 @@
-"""Approved Research Schema v1 resource and deterministic inspection helpers."""
+"""Approved Research Schema v2 resources and deterministic inspection helpers."""
 
 from __future__ import annotations
 
@@ -10,13 +10,37 @@ from importlib.resources import files
 from ditto_analysis.errors import ExperimentSchemaError
 
 APPLICATION_ID = 1_146_376_755
-USER_VERSION = 1
-DDL_SHA256 = "697d10854fb12e324ddcff349bad55b9b442425b244cb5f1852d7192cfb7a8fd"
-SCHEMA_FINGERPRINT = "b4e0c52b7ef2f844987ecd65cc96ece5c5f75a3d19dc15e380c4ffdf10adc39a"
-SCHEMA_ROW_COUNT = 50
+V1_USER_VERSION = 1
+USER_VERSION = 2
+V1_DDL_SHA256 = "697d10854fb12e324ddcff349bad55b9b442425b244cb5f1852d7192cfb7a8fd"
+DDL_SHA256 = V1_DDL_SHA256
+MIGRATION_DDL_SHA256 = (
+    "34916eab0f426dc6a2c0401a76f8abc2b610e0e4c8a2c5fffb81919b7c7f0b78"
+)
+V1_SCHEMA_FINGERPRINT = (
+    "b4e0c52b7ef2f844987ecd65cc96ece5c5f75a3d19dc15e380c4ffdf10adc39a"
+)
+V1_SCHEMA_ROW_COUNT = 50
+SCHEMA_FINGERPRINT = "7b4a6d03f4ba879ca54fd47220b7d28728bcb58c87cdca3cdfe27a5466cd51e0"
+SCHEMA_ROW_COUNT = 95
+V2_TABLE_NAMES = frozenset(
+    {
+        "research_campaign",
+        "research_campaign_event",
+        "research_candidate_lineage",
+        "research_code_artifact",
+        "research_feedback",
+        "research_knowledge",
+        "research_knowledge_status_event",
+        "research_operational_attempt",
+        "research_statistical_trial",
+        "sandbox_execution_manifest",
+    }
+)
 _MARKER_COUNT = 2
 
 _APPLICATION_MARKER = f"PRAGMA application_id = {APPLICATION_ID};"
+_V1_VERSION_MARKER = f"PRAGMA user_version = {V1_USER_VERSION};"
 _VERSION_MARKER = f"PRAGMA user_version = {USER_VERSION};"
 
 
@@ -29,15 +53,34 @@ def _schema_error(
     )
 
 
-def load_schema_sql() -> str:
-    """Read and checksum the package-local immutable schema resource."""
+def load_v1_schema_sql() -> str:
+    """Read and checksum the immutable R3 schema used as the migration base."""
     payload = files(__package__).joinpath("schema_v1.sql").read_bytes()
     digest = hashlib.sha256(payload).hexdigest()
-    if digest != DDL_SHA256:
+    if digest != V1_DDL_SHA256:
         raise _schema_error(
-            "packaged research schema checksum does not match the approved artifact",
+            "packaged research v1 schema checksum does not match the approved artifact",
             "research_schema_resource_hash_mismatch",
-            expected_hash=DDL_SHA256,
+            expected_hash=V1_DDL_SHA256,
+            actual_hash=digest,
+        )
+    return payload.decode("utf-8")
+
+
+def load_schema_sql() -> str:
+    """Return the v1 base resource retained for compatibility and fresh setup."""
+    return load_v1_schema_sql()
+
+
+def load_migration_sql() -> str:
+    """Read and checksum the sole approved forward migration resource."""
+    payload = files(__package__).joinpath("migration_v1_to_v2.sql").read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    if digest != MIGRATION_DDL_SHA256:
+        raise _schema_error(
+            "packaged research migration checksum does not match the approved artifact",
+            "research_schema_resource_hash_mismatch",
+            expected_hash=MIGRATION_DDL_SHA256,
             actual_hash=digest,
         )
     return payload.decode("utf-8")
@@ -68,13 +111,24 @@ def schema_body_statements(sql: str) -> tuple[str, ...]:
     if (
         len(statements) < _MARKER_COUNT
         or not statements[-2].endswith(_APPLICATION_MARKER)
-        or statements[-1] != _VERSION_MARKER
+        or statements[-1] != _V1_VERSION_MARKER
     ):
         raise _schema_error(
             "approved schema markers are absent or not last",
             "research_schema_marker_order_invalid",
         )
     return statements[:-2]
+
+
+def migration_body_statements(sql: str) -> tuple[str, ...]:
+    """Return migration DDL while proving the v2 version marker is last."""
+    statements = iter_schema_statements(sql)
+    if not statements or statements[-1] != _VERSION_MARKER:
+        raise _schema_error(
+            "approved research migration version marker is absent or not last",
+            "research_schema_marker_order_invalid",
+        )
+    return statements[:-1]
 
 
 def schema_rows(connection: sqlite3.Connection) -> tuple[tuple[object, ...], ...]:

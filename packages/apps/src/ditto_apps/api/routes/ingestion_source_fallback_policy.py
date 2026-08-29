@@ -71,6 +71,8 @@ def to_catalog_source_fallback_policy_state_response(
         decided_by=item.decided_by,
         decided_at=item.decided_at.isoformat() if item.decided_at is not None else None,
         decision_notes=item.decision_notes,
+        authority_payload=item.authority_payload,
+        authority_hash=item.authority_hash,
     )
 
 
@@ -201,6 +203,7 @@ async def approve_catalog_source_fallback_policy(
         handler.handle,
         CatalogSourceFallbackPolicyLifecycleCommand(
             policy_id=policy_id,
+            expected_authority_hash=request.authority_hash,
             actor=request.actor,
             notes=request.notes,
         ),
@@ -225,6 +228,7 @@ async def activate_catalog_source_fallback_policy(
         handler.handle,
         CatalogSourceFallbackPolicyLifecycleCommand(
             policy_id=policy_id,
+            expected_authority_hash=request.authority_hash,
             actor=request.actor,
             notes=request.notes,
         ),
@@ -249,6 +253,7 @@ async def retire_catalog_source_fallback_policy(
         handler.handle,
         CatalogSourceFallbackPolicyLifecycleCommand(
             policy_id=policy_id,
+            expected_authority_hash=request.authority_hash,
             actor=request.actor,
             notes=request.notes,
         ),

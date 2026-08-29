@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "suite": "grounded",
+  "provider_id": "fake-eval-provider-v1",
+  "seed": 20260816,
+  "status": "passed",
+  "case_count": 30,
+  "minimum_case_count": 30,
+  "case_families": {
+    "tool_choice": 5,
+    "factual": 5,
+    "evidence": 4,
+    "conflict": 4,
+    "missing": 4,
+    "pit": 3,
+    "provider_failure": 3,
+    "replay": 2
+  },
+  "report_identity": {
+    "report_hash": "29a780e57b7f8304faeb679dfcbd17169ff9674eaadee8a71023cde16ffc6061",
+    "input_hash": "1b7b7e012f28386c13bef198dfe5e7a3ccf60cde2ce591205034813c41effa74",
+    "grader_manifest_hash": "e54d98eb9786c1e355220b6dd11c8c9645480511c9edeaf50ab0b47bc02fae3b"
+  },
+  "metrics": {
+    "tool_choice": {
+      "passed_cases": 26,
+      "total_cases": 26,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 9500
+    },
+    "evidence_coverage": {
+      "passed_cases": 21,
+      "total_cases": 21,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 9500
+    },
+    "factual_correctness": {
+      "passed_cases": 11,
+      "total_cases": 11,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 9000
+    },
+    "required_abstention": {
+      "passed_cases": 12,
+      "total_cases": 12,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 10000
+    },
+    "pit_safety": {
+      "passed_cases": 3,
+      "total_cases": 3,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 10000
+    },
+    "provider_degradation": {
+      "passed_cases": 4,
+      "total_cases": 4,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 10000
+    },
+    "episode_replay": {
+      "passed_cases": 30,
+      "total_cases": 30,
+      "observed_basis_points": 10000,
+      "threshold_basis_points": 10000
+    }
+  },
+  "performance": {
+    "read_p95_ms": 341,
+    "latency_limit_ms": 30000,
+    "max_model_spend_usd": "0.0014",
+    "spend_limit_usd": "0.25",
+    "status": "passed"
+  },
+  "verification": [
+    {
+      "command": "pixi run -e dev pytest packages/apps/tests/e2e/test_agent_evidence_copilot.py -v",
+      "result": "2 passed"
+    },
+    {
+      "command": "pixi run -e dev python -m ditto_agent.evals.runner --suite grounded --provider fake",
+      "result": "exit 0; report passed"
+    },
+    {
+      "command": "pixi run -e dev pytest -m pit",
+      "result": "21 passed, 1 skipped because the existing optional TDX sample is absent"
+    },
+    {
+      "command": "pixi run -e dev check",
+      "result": "lint/fmt/type passed; 12469 passed, 1 existing xfail; 43 architecture contracts kept; architecture smells passed; Harness validation and 16 Harness tests passed"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ]
+}

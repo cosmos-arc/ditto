@@ -57,6 +57,8 @@ class CreateStrategyCommand:
     spec_json: dict[str, object]
     tags: tuple[str, ...] = ()
     idempotency: MutationIdempotency | None = None
+    actor: str = _COMMAND_ACTOR
+    reason: str = "create strategy draft"
 
 
 @dataclass(frozen=True)
@@ -69,6 +71,8 @@ class UpdateStrategyCommand:
     version: int | None = None
     tags: tuple[str, ...] = ()
     idempotency: MutationIdempotency | None = None
+    actor: str = _COMMAND_ACTOR
+    reason: str = "update strategy draft"
 
 
 @dataclass(frozen=True)
@@ -254,11 +258,11 @@ class CreateStrategyHandler:
                 strategy_id=command.strategy_id,
                 version=1,
                 decision=StrategyDecision.AUDIT_CREATE_DRAFT,
-                actor=_COMMAND_ACTOR,
+                actor=command.actor,
                 reason=mutation_receipt_reason(
                     command.idempotency,
                     response=_spec_info_receipt(result),
-                    human_reason="create strategy draft",
+                    human_reason=command.reason,
                 ),
                 decided_at=now,
             )
@@ -366,11 +370,11 @@ class UpdateStrategyHandler:
                 strategy_id=command.strategy_id,
                 version=new_version,
                 decision=StrategyDecision.AUDIT_UPDATE_DRAFT,
-                actor=_COMMAND_ACTOR,
+                actor=command.actor,
                 reason=mutation_receipt_reason(
                     command.idempotency,
                     response=_spec_info_receipt(result),
-                    human_reason="update strategy draft",
+                    human_reason=command.reason,
                 ),
                 decided_at=now,
             )

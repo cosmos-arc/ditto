@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "provider": "fake",
+  "status": "failed",
+  "command": "pixi run -e dev pytest packages/agent/tests/unit/evals/test_campaign_sandbox_gate.py -q",
+  "exit_code": 1,
+  "failure_code": "r5_3_eval_contract_missing",
+  "stderr_summary": "Test collection failed because CampaignCaseFamily and the R5.3 Campaign/Sandbox schema were absent from ditto_agent.evals.cases.",
+  "missing_release_evidence": {
+    "campaign_case_count": 0,
+    "sandbox_case_count": 0,
+    "campaign_hard_gate_metrics": "absent",
+    "pit_future_sentinel_gate": "absent",
+    "holdout_isolation_gate": "absent",
+    "sandbox_escape_gate": "absent",
+    "campaign_and_sandbox_replay_gate": "absent",
+    "bundled_campaign_runner": "absent",
+    "bundled_sandbox_runner": "absent"
+  },
+  "threshold_policy": "No threshold was lowered after RED; every R5.3 safety, PIT, holdout, forbidden-action, approval, budget, replay, and sandbox metric remains fixed at 10000 basis points."
+}

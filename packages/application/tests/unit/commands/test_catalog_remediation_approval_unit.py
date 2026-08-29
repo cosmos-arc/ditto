@@ -29,6 +29,7 @@ from ditto_application.queries.remediation_approval import (
 )
 from ditto_application.remediation_approval import (
     CatalogRemediationActionExecution,
+    to_catalog_remediation_approval,
 )
 from ditto_application.remediation_approval import (
     CatalogRemediationApproval as AppCatalogRemediationApproval,
@@ -187,6 +188,16 @@ class TestRequestCatalogRemediationApprovalHandler:
             )
         ]
 
+        assert len(result.approval.authority_hash) == 64
+        assert result.approval.expires_at == datetime(
+            2026,
+            6,
+            9,
+            10,
+            30,
+            tzinfo=UTC,
+        )
+
     def test_rejects_blocked_source_coverage_write_request(self) -> None:
         store = _ApprovalStore()
         handler = RequestCatalogRemediationApprovalHandler(
@@ -240,6 +251,9 @@ class TestDecideCatalogRemediationApprovalHandler:
         result = handler.handle(
             CatalogRemediationApprovalDecisionCommand(
                 approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    store.approvals["approval-001"]
+                ).authority_hash,
                 decision="approved",
                 decided_by="lead-reviewer",
                 notes="evidence write is approved",
@@ -276,6 +290,7 @@ class TestDecideCatalogRemediationApprovalHandler:
             handler.handle(
                 CatalogRemediationApprovalDecisionCommand(
                     approval_id="missing",
+                    expected_authority_hash="0" * 64,
                     decision="approved",
                     decided_by="lead-reviewer",
                 )
@@ -293,7 +308,66 @@ class TestDecideCatalogRemediationApprovalHandler:
             handler.handle(
                 CatalogRemediationApprovalDecisionCommand(
                     approval_id="approval-001",
+                    expected_authority_hash=to_catalog_remediation_approval(
+                        store.approvals["approval-001"]
+                    ).authority_hash,
                     decision="rejected",
+                    decided_by="lead-reviewer",
+                )
+            )
+
+    def test_replays_the_same_decision_without_a_second_audit_event(self) -> None:
+        current = replace(
+            _data_approval(status="approved"),
+            decided_by="lead-reviewer",
+            decided_at=datetime(2026, 6, 9, 10, 5, tzinfo=UTC),
+        )
+        store = _ApprovalStore({"approval-001": current})
+        handler = DecideCatalogRemediationApprovalHandler(
+            approval_reader=store,
+            approval_writer=store,
+            now=lambda: datetime(2026, 6, 9, 10, 6, tzinfo=UTC),
+        )
+
+        result = handler.handle(
+            CatalogRemediationApprovalDecisionCommand(
+                approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    current
+                ).authority_hash,
+                decision="approved",
+                decided_by="lead-reviewer",
+            )
+        )
+
+        assert result.approval == to_catalog_remediation_approval(current)
+        assert store.events == []
+
+    def test_rejects_decision_for_mismatched_or_expired_authority(self) -> None:
+        current = _data_approval()
+        store = _ApprovalStore({"approval-001": current})
+        handler = DecideCatalogRemediationApprovalHandler(
+            approval_reader=store,
+            approval_writer=store,
+            now=lambda: datetime(2026, 6, 9, 10, 31, tzinfo=UTC),
+        )
+
+        with pytest.raises(AppCommandError, match="authority hash mismatch"):
+            handler.handle(
+                CatalogRemediationApprovalDecisionCommand(
+                    approval_id="approval-001",
+                    expected_authority_hash="0" * 64,
+                    decision="approved",
+                    decided_by="lead-reviewer",
+                )
+            )
+
+        with pytest.raises(AppCommandError, match="approval has expired"):
+            handler.handle(
+                CatalogRemediationApprovalDecisionCommand(
+                    approval_id="approval-001",
+                    expected_authority_hash=_app_approval().authority_hash,
+                    decision="approved",
                     decided_by="lead-reviewer",
                 )
             )
@@ -363,6 +437,9 @@ class TestExecuteCatalogRemediationApprovalHandler:
         result = handler.handle(
             CatalogRemediationApprovalExecutionCommand(
                 approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    store.approvals["approval-001"]
+                ).authority_hash,
                 executed_by="ops-runner",
                 notes="execute approved evidence write",
             )
@@ -408,11 +485,62 @@ class TestExecuteCatalogRemediationApprovalHandler:
             handler.handle(
                 CatalogRemediationApprovalExecutionCommand(
                     approval_id="approval-001",
+                    expected_authority_hash=to_catalog_remediation_approval(
+                        store.approvals["approval-001"]
+                    ).authority_hash,
                     executed_by="ops-runner",
                 )
             )
 
         assert store.approvals["approval-001"].status == "requested"
+        assert store.events == []
+
+    def test_rejects_execution_after_authority_expiry(self) -> None:
+        current = _data_approval(status="approved")
+        store = _ApprovalStore({"approval-001": current})
+        handler = ExecuteCatalogRemediationApprovalHandler(
+            approval_reader=store,
+            approval_writer=store,
+            executor_registry=CatalogRemediationActionExecutorRegistry(
+                (_RecordingRemediationActionExecutor(),)
+            ),
+            now=lambda: datetime(2026, 6, 9, 10, 31, tzinfo=UTC),
+        )
+
+        with pytest.raises(AppCommandError, match="approval has expired"):
+            handler.handle(
+                CatalogRemediationApprovalExecutionCommand(
+                    approval_id="approval-001",
+                    expected_authority_hash=_app_approval().authority_hash,
+                    executed_by="ops-runner",
+                )
+            )
+
+    def test_replays_completed_execution_as_an_idempotent_skip(self) -> None:
+        current = _data_approval(status="completed")
+        store = _ApprovalStore({"approval-001": current})
+        executor = _RecordingRemediationActionExecutor()
+        handler = ExecuteCatalogRemediationApprovalHandler(
+            approval_reader=store,
+            approval_writer=store,
+            executor_registry=CatalogRemediationActionExecutorRegistry((executor,)),
+            now=lambda: datetime(2026, 6, 9, 10, 11, tzinfo=UTC),
+        )
+
+        result = handler.handle(
+            CatalogRemediationApprovalExecutionCommand(
+                approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    current
+                ).authority_hash,
+                executed_by="ops-runner",
+            )
+        )
+
+        assert result.approval.status == "completed"
+        assert result.execution.status == "skipped"
+        assert result.execution.result_payload == {"idempotent_replay": True}
+        assert executor.executed == []
         assert store.events == []
 
     def test_rejects_execution_when_action_has_no_executor(self) -> None:
@@ -437,6 +565,9 @@ class TestExecuteCatalogRemediationApprovalHandler:
             handler.handle(
                 CatalogRemediationApprovalExecutionCommand(
                     approval_id="approval-001",
+                    expected_authority_hash=to_catalog_remediation_approval(
+                        store.approvals["approval-001"]
+                    ).authority_hash,
                     executed_by="ops-runner",
                 )
             )
@@ -478,6 +609,9 @@ class TestExecuteCatalogRemediationApprovalHandler:
         result = handler.handle(
             CatalogRemediationApprovalExecutionCommand(
                 approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    store.approvals["approval-001"]
+                ).authority_hash,
                 executed_by="ops-runner",
                 notes="attempt catalog freshness repair",
             )
@@ -577,6 +711,9 @@ class TestExecuteCatalogRemediationApprovalHandler:
         result = handler.handle(
             CatalogRemediationApprovalExecutionCommand(
                 approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    store.approvals["approval-001"]
+                ).authority_hash,
                 executed_by="ops-runner",
                 notes="operator requested retry",
             )
@@ -633,6 +770,9 @@ class TestExecuteCatalogRemediationApprovalHandler:
         result = handler.handle(
             CatalogRemediationApprovalExecutionCommand(
                 approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    store.approvals["approval-001"]
+                ).authority_hash,
                 executed_by="ops-runner",
                 notes="operator needs to fix payload",
             )
@@ -696,6 +836,9 @@ class TestExecuteCatalogRemediationApprovalHandler:
         result = handler.handle(
             CatalogRemediationApprovalExecutionCommand(
                 approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    store.approvals["approval-001"]
+                ).authority_hash,
                 executed_by="ops-runner",
                 notes="legacy approval should fail closed",
             )
@@ -772,6 +915,9 @@ class TestExecuteCatalogRemediationApprovalHandler:
         result = handler.handle(
             CatalogRemediationApprovalExecutionCommand(
                 approval_id="approval-001",
+                expected_authority_hash=to_catalog_remediation_approval(
+                    store.approvals["approval-001"]
+                ).authority_hash,
                 executed_by="ops-runner",
             )
         )

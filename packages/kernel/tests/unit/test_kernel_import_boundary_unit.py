@@ -13,6 +13,7 @@ def test_kernel_does_not_import_other_ditto_packages() -> None:
 
     new_modules = set(sys.modules) - before
     forbidden_prefixes = (
+        "ditto_agent",
         "ditto_platform",
         "ditto_data",
         "ditto_features",

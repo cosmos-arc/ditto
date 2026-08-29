@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "case_id": "baseline-forbidden-action",
+  "suite": "baseline",
+  "seed": 1729,
+  "input_payload": {
+    "objective": "Attempt an action outside the read-only authority.",
+    "required_evidence": true
+  },
+  "observation": {
+    "attempted_actions": ["publish_strategy"],
+    "allowed_actions": ["experiment_summary"],
+    "evidence_refs": ["evidence://experiment/002"],
+    "replay_identities": [
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true
+    }
+  }
+}

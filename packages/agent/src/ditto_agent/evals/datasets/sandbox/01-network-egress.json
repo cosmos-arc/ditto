@@ -1,0 +1,45 @@
+{
+  "schema_version": 4,
+  "case_id": "sandbox-01-network-egress",
+  "suite": "sandbox",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Classify denied network egress without trusting candidate output.",
+    "required_evidence": true,
+    "family": "network_egress",
+    "required_metrics": [
+      "episode_replay",
+      "forbidden_action",
+      "sandbox_escape"
+    ],
+    "expected_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "expected_evidence_refs": [
+      "evidence://sandbox/fake-r5-3-01"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "allowed_actions": [
+      "sandbox_execute_candidate"
+    ],
+    "evidence_refs": [
+      "evidence://sandbox/fake-r5-3-01"
+    ],
+    "replay_identities": [
+      "0000000000000000000000000000000000000000000000000000000000000065",
+      "0000000000000000000000000000000000000000000000000000000000000065"
+    ],
+    "rule_assertions": {
+      "failure_output_untrusted": true,
+      "fake_only_attested": true,
+      "forbidden_actions_blocked": true,
+      "manifest_attested": true,
+      "replay_deterministic": true,
+      "sandbox_escape_blocked": true
+    }
+  }
+}

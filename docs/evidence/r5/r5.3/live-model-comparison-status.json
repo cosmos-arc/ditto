@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-16",
+  "suite": "campaign_live_model_comparison",
+  "provider": "openai",
+  "status": "not_run",
+  "approval_gate": "A4",
+  "approval_status": "pending_fail_closed",
+  "missing_requirements": [
+    "dedicated_openai_project",
+    "mam_or_zdr_evidence",
+    "approved_model_snapshot_and_profile",
+    "approved_campaign_dataset_manifest_hash",
+    "license_and_cloud_egress_attestation",
+    "token_request_and_usd_budget",
+    "approved_registry_secret_source"
+  ],
+  "prohibited_actions_observed": {
+    "api_key_read": false,
+    "live_endpoint_called": false,
+    "campaign_evidence_exported": false,
+    "model_cost_incurred": false
+  },
+  "deterministic_gate_impact": "none",
+  "resume_condition": "Run a separate controlled comparison only after the exact A4 privacy, model, dataset, egress, credential-source, and budget scope is approved."
+}

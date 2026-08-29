@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-17",
+  "provider": "fake",
+  "status": "failed",
+  "command": "pixi run -e dev pytest packages/agent/tests/unit/test_outcome_feedback.py packages/agent/tests/unit/evals/test_shadow_gate.py -q",
+  "exit_code": 1,
+  "failure_code": "r5_4_feedback_and_eval_contract_missing",
+  "stderr_summary": "Test collection failed because ditto_agent.outcome_feedback and the schema-v5 shadow eval contracts were absent.",
+  "missing_release_evidence": {
+    "outcome_known_at_linker": "absent",
+    "same_day_return_sentinel": "absent",
+    "holdout_prompt_isolation": "absent",
+    "shadow_case_count": 0,
+    "shadow_hard_gate_metrics": "absent",
+    "shadow_replay_gate": "absent"
+  },
+  "threshold_policy": "No threshold was lowered after RED; every R5.4 V3, isolation, PIT, feedback, memory, and replay metric remains fixed at 10000 basis points."
+}

@@ -293,10 +293,10 @@ class _ProtocolAdapterProvider(Provider):
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
-    def test_get_app_providers_returns_seven_providers(self) -> None:
-        """get_app_providers() 应返回 7 个 Provider 实例."""
+    def test_get_app_providers_returns_eight_providers(self) -> None:
+        """get_app_providers() 应返回 8 个 Provider 实例."""
         providers = get_app_providers()
-        assert len(providers) == 7
+        assert len(providers) == 8
         names = [type(p).__name__ for p in providers]
         assert "AppCommandProvider" in names
         assert "AppMarketQueryProvider" in names
@@ -305,6 +305,7 @@ class TestAppProviderStructure:
         assert "AppProcessProvider" in names
         assert "AppBuilderFactory" in names
         assert "AppResearchExecutionProvider" in names
+        assert "AppResearchMemoryProvider" in names
 
     def test_app_market_query_provider_methods(self) -> None:
         """AppMarketQueryProvider 应包含市场数据查询的 provide 方法."""

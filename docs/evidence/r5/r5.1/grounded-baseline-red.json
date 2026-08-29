@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "suite": "grounded",
+  "provider": "fake",
+  "captured_on": "2026-08-16",
+  "command": "pixi run -e dev python -m ditto_agent.evals.runner --suite grounded --provider fake",
+  "exit_code": 2,
+  "passed": false,
+  "case_count": 0,
+  "required_case_count": 30,
+  "failure_codes": [
+    "grounded_suite_not_bundled",
+    "seed_and_cases_required",
+    "grounded_metric_gate_missing"
+  ],
+  "stderr_summary": "runner.py required --seed and --cases; no fixed grounded dataset or threshold summary existed"
+}

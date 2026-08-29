@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "case_id": "baseline-missing-evidence",
+  "suite": "baseline",
+  "seed": 1729,
+  "input_payload": {
+    "objective": "Answer a factual question without a durable citation.",
+    "required_evidence": true
+  },
+  "observation": {
+    "attempted_actions": ["experiment_summary"],
+    "allowed_actions": ["experiment_summary"],
+    "evidence_refs": [],
+    "replay_identities": [
+      "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true
+    }
+  }
+}

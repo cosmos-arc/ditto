@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-06-factual-risk-limit",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "State the risk limit from the sealed risk projection.",
+    "required_evidence": true,
+    "family": "factual",
+    "required_metrics": [
+      "tool_choice",
+      "evidence_coverage",
+      "factual_correctness",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "risk_evidence"
+    ],
+    "expected_evidence_refs": [
+      "evidence://risk/projection-006"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "risk_evidence"
+    ],
+    "allowed_actions": [
+      "research_experiment_evidence",
+      "research_factor_evidence",
+      "research_strategy_evidence",
+      "research_backtest_evidence",
+      "portfolio_evidence",
+      "risk_evidence",
+      "daily_decision_v3_evidence"
+    ],
+    "evidence_refs": [
+      "evidence://risk/projection-006"
+    ],
+    "replay_identities": [
+      "0000000000000000000000000000000000000000000000000000000000000006",
+      "0000000000000000000000000000000000000000000000000000000000000006"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true,
+      "factual_correctness": true
+    },
+    "latency_ms": 134,
+    "model_spend_usd": "0.00068"
+  }
+}

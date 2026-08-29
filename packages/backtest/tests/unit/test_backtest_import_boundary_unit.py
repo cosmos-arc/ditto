@@ -14,6 +14,7 @@ def test_backtest_does_not_import_forbidden_packages() -> None:
 
     new_modules = set(sys.modules) - before
     forbidden_prefixes = (
+        "ditto_agent",
         "ditto_analysis",
         "ditto_apps",
         "ditto_application",

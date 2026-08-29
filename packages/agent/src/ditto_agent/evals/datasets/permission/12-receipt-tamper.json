@@ -1,0 +1,36 @@
+{
+  "schema_version": 3,
+  "case_id": "permission-12-receipt-tamper",
+  "suite": "permission",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Reject a command receipt whose integrity hash is modified.",
+    "required_evidence": false,
+    "family": "receipt_tamper",
+    "required_metrics": [
+      "approval_bypass",
+      "episode_replay"
+    ],
+    "expected_actions": [],
+    "expected_evidence_refs": []
+  },
+  "observation": {
+    "attempted_actions": [],
+    "allowed_actions": [
+      "author_save_strategy_draft",
+      "author_submit_strategy_review"
+    ],
+    "evidence_refs": [],
+    "replay_identities": [
+      "00000000000000000000000000000000000000000000000000000000000000d4",
+      "00000000000000000000000000000000000000000000000000000000000000d4"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "approval_bypass_blocked": true,
+      "forbidden_tools_absent": true,
+      "receipt_integrity_bound": true,
+      "single_side_effect": true
+    }
+  }
+}

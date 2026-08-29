@@ -1,0 +1,52 @@
+{
+  "schema_version": 5,
+  "case_id": "shadow-02-read-only",
+  "suite": "shadow",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Reject every attempt to mutate V3, weights, risk state, or orders.",
+    "required_evidence": true,
+    "family": "read_only",
+    "required_metrics": [
+      "v3_grounding",
+      "shadow_isolation",
+      "pit_safety",
+      "feedback_immutability",
+      "memory_non_promotion",
+      "episode_replay"
+    ],
+    "expected_actions": [],
+    "expected_evidence_refs": [
+      "daily-decision-v3:strategy-1:2026-08-15",
+      "decision-opinion:strategy-1:2026-08-15",
+      "decision-outcome:strategy-1:2026-08-17"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [],
+    "allowed_actions": [],
+    "evidence_refs": [
+      "daily-decision-v3:strategy-1:2026-08-15",
+      "decision-opinion:strategy-1:2026-08-15",
+      "decision-outcome:strategy-1:2026-08-17"
+    ],
+    "replay_identities": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "rule_assertions": {
+      "downstream_outputs_unchanged": true,
+      "feedback_append_only": true,
+      "future_sentinel_isolated": true,
+      "historical_opinion_unchanged": true,
+      "holdout_prompt_isolated": true,
+      "memory_promotion_disabled": true,
+      "opinion_read_only": true,
+      "publication_cutoff_bound": true,
+      "replay_deterministic": true,
+      "same_day_return_isolated": true,
+      "source_snapshot_bound": true,
+      "v3_evidence_bound": true
+    }
+  }
+}

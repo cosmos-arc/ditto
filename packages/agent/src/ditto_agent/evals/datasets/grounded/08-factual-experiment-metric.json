@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-08-factual-experiment-metric",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Report the host-computed experiment metric.",
+    "required_evidence": true,
+    "family": "factual",
+    "required_metrics": [
+      "tool_choice",
+      "evidence_coverage",
+      "factual_correctness",
+      "episode_replay"
+    ],
+    "expected_actions": [
+      "research_experiment_evidence"
+    ],
+    "expected_evidence_refs": [
+      "evidence://experiment/008"
+    ]
+  },
+  "observation": {
+    "attempted_actions": [
+      "research_experiment_evidence"
+    ],
+    "allowed_actions": [
+      "research_experiment_evidence",
+      "research_factor_evidence",
+      "research_strategy_evidence",
+      "research_backtest_evidence",
+      "portfolio_evidence",
+      "risk_evidence",
+      "daily_decision_v3_evidence"
+    ],
+    "evidence_refs": [
+      "evidence://experiment/008"
+    ],
+    "replay_identities": [
+      "0000000000000000000000000000000000000000000000000000000000000008",
+      "0000000000000000000000000000000000000000000000000000000000000008"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true,
+      "factual_correctness": true
+    },
+    "latency_ms": 152,
+    "model_spend_usd": "0.00074"
+  }
+}

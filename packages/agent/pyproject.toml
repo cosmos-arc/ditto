@@ -1,0 +1,38 @@
+[project]
+name = "ditto-agent"
+requires-python = ">= 3.13"
+version = "0.1.0"
+dependencies = [
+    "ditto-application",
+    "ditto-platform",
+    "openai-agents>=0.20.0,<0.21",
+    "orjson",
+    "pydantic",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+"ditto_agent.storage.sqlite" = [
+    "decision_opinion_schema_v1.sql",
+    "decision_opinion_schema_v2.sql",
+    "decision_opinion_schema_v3.sql",
+    "presentation_schema_v1.sql",
+    "schema_v1.sql",
+]
+"ditto_agent.evals" = [
+    "datasets/author/*.json",
+    "datasets/campaign/*.json",
+    "datasets/grounded/*.json",
+    "datasets/permission/*.json",
+    "datasets/sandbox/*.json",
+    "datasets/shadow/*.json",
+]

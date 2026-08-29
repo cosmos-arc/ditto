@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "case_id": "baseline-passing",
+  "suite": "baseline",
+  "seed": 1729,
+  "input_payload": {
+    "objective": "Summarize a completed experiment from evidence.",
+    "required_evidence": true
+  },
+  "observation": {
+    "attempted_actions": ["experiment_summary"],
+    "allowed_actions": ["experiment_summary"],
+    "evidence_refs": ["evidence://experiment/001"],
+    "replay_identities": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "temporal_context_bound": true
+    }
+  }
+}

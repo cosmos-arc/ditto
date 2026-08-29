@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-08-17",
+  "status": "failed",
+  "command": "pixi run -e dev pytest packages/agent/tests/unit/test_observability.py packages/agent/tests/unit/test_orchestrator.py packages/apps/tests/integration/test_agent_otel_wiring.py -q",
+  "exit_code": 1,
+  "failure_code": "r5_5_agent_observability_contract_missing",
+  "stderr_summary": "Test collection failed because ditto_agent.observability and the Apps-owned Agent OTel bridge were absent.",
+  "missing_release_evidence": {
+    "redaction_before_export": "absent",
+    "run_model_tool_approval_cost_spans": "absent",
+    "cost_latency_metrics": "absent",
+    "exporter_failure_isolation": "absent",
+    "default_disabled_exporter": "absent"
+  }
+}

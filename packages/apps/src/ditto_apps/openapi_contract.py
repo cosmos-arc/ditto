@@ -15,6 +15,7 @@ from ditto_apps.api.app_metadata import (
 )
 from ditto_apps.api.maturity import OPENAPI_TAGS, build_maturity_openapi_schema
 from ditto_apps.api.routes import (
+    agent_routes,
     backtest,
     capital,
     commodity,
@@ -39,6 +40,7 @@ from ditto_apps.api.routes import (
 from ditto_apps.api.routes.debug import debug_router
 
 _V1_ROUTERS = (
+    agent_routes.router,
     backtest.router,
     capital.router,
     commodity.router,
