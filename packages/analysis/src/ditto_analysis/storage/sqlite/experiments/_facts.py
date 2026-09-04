@@ -34,7 +34,9 @@ from ditto_analysis.experiments.persistence import (
     validate_artifact_relative_path,
 )
 from ditto_analysis.storage.sqlite.experiments._lease import SQLiteSchedulerLeaseMixin
-from ditto_analysis.storage.sqlite.experiments.reader import SQLiteExperimentReader
+from ditto_analysis.storage.sqlite.experiments._writer_reader_port import (
+    SQLiteExperimentWriterReaderState,
+)
 
 #: Artifact kinds produced after the scheduler lease has released; their
 #: integrity is anchored by content-addressed hashes, not in-flight lease state.
@@ -74,10 +76,12 @@ def _conflict(message: str, reason_code: str) -> ExperimentConflictError:
     return ExperimentConflictError(message, details={"reason_code": reason_code})
 
 
-class SQLiteExperimentFactsMixin(SQLiteSchedulerLeaseMixin):
+class SQLiteExperimentFactsMixin(
+    SQLiteSchedulerLeaseMixin,
+    SQLiteExperimentWriterReaderState,
+):
     """Persist immutable artifacts and gate evaluations."""
 
-    _reader: SQLiteExperimentReader
     _insert_event: Callable[..., None]
 
     @property

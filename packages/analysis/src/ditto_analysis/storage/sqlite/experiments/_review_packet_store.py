@@ -17,19 +17,20 @@ from ditto_analysis.research._indexed_artifacts import (
     ArtifactIndexWriter,
     IndexedArtifactIO,
 )
+from ditto_analysis.storage.sqlite.experiments._writer_reader_port import (
+    SQLiteExperimentWriterReaderState,
+)
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
 )
-from ditto_analysis.storage.sqlite.experiments.reader import SQLiteExperimentReader
 
 __all__ = ["SQLiteExperimentReviewPacketMixin"]
 
 
-class SQLiteExperimentReviewPacketMixin:
+class SQLiteExperimentReviewPacketMixin(SQLiteExperimentWriterReaderState):
     """Publish and pin content-addressed review packets for durable governance."""
 
     _database: ResearchExperimentDatabase
-    _reader: SQLiteExperimentReader
 
     def publish_review_packet(
         self,

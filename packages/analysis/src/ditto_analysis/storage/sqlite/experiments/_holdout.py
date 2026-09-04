@@ -10,7 +10,7 @@ import sqlite3
 from collections import Counter
 from collections.abc import Mapping
 from datetime import date, datetime
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from ditto_analysis.errors import (
     AnalysisError,
@@ -70,14 +70,12 @@ from ditto_analysis.storage.sqlite.experiments._holdout_preflight import (
 from ditto_analysis.storage.sqlite.experiments._holdout_replay import (
     validate_holdout_replay_history,
 )
+from ditto_analysis.storage.sqlite.experiments._writer_reader_port import (
+    SQLiteExperimentWriterReaderState,
+)
 from ditto_analysis.storage.sqlite.experiments.database import (
     ResearchExperimentDatabase,
 )
-
-if TYPE_CHECKING:
-    from ditto_analysis.storage.sqlite.experiments.reader import (
-        SQLiteExperimentReader,
-    )
 
 
 def _conflict(
@@ -248,11 +246,10 @@ def _resolved_holdout_rows(
     return selected_row, unselected
 
 
-class SQLiteHoldoutClaimMixin:
+class SQLiteHoldoutClaimMixin(SQLiteExperimentWriterReaderState):
     """Claim the sealed holdout and advance its aggregate in one transaction."""
 
     _database: ResearchExperimentDatabase
-    _reader: SQLiteExperimentReader
 
     @classmethod
     def _validate_lease(
