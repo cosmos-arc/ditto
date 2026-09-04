@@ -337,9 +337,8 @@ class SelectionInstrumentInput:
             "listing_days",
             _optional_non_negative_int(self.listing_days, field_name="listing_days"),
         )
-        if self.limit_state is not None and not isinstance(
-            self.limit_state, SelectionLimitState
-        ):
+        limit_state: object = object.__getattribute__(self, "limit_state")
+        if limit_state is not None and not isinstance(limit_state, SelectionLimitState):
             raise _error(
                 "selection limit_state must be SelectionLimitState or None",
                 reason="invalid_selection_limit_state",
@@ -423,7 +422,8 @@ class SelectionInputBundle:
                 "selection requires source_snapshot_ids",
                 reason="missing_selection_lineage",
             )
-        if not isinstance(self.spec, StockSelectionSpec | EtfSelectionSpec):
+        spec: object = object.__getattribute__(self, "spec")
+        if not isinstance(spec, StockSelectionSpec | EtfSelectionSpec):
             raise _error(
                 "selection spec must be StockSelectionSpec or EtfSelectionSpec",
                 reason="invalid_selection_spec",
@@ -546,7 +546,8 @@ class SelectionExclusion:
     def __post_init__(self) -> None:
         """Validate stable exclusion evidence."""
         _positive_int(self.instrument_id, field_name="instrument_id")
-        if not isinstance(self.reason_code, SelectionExclusionReason):
+        reason_code: object = object.__getattribute__(self, "reason_code")
+        if not isinstance(reason_code, SelectionExclusionReason):
             raise _error(
                 "selection exclusion reason_code must be SelectionExclusionReason",
                 reason="invalid_selection_exclusion_reason",
@@ -594,12 +595,14 @@ class SelectionRun:
                     reason="invalid_selection_hash",
                     field_name=field_name,
                 )
-        if not isinstance(self.asset_kind, SelectionAssetKind):
+        asset_kind: object = object.__getattribute__(self, "asset_kind")
+        if not isinstance(asset_kind, SelectionAssetKind):
             raise _error(
                 "selection asset_kind must be SelectionAssetKind",
                 reason="invalid_selection_asset_kind",
             )
-        if not isinstance(self.status, SelectionRunStatus):
+        status: object = object.__getattribute__(self, "status")
+        if not isinstance(status, SelectionRunStatus):
             raise _error(
                 "selection status must be SelectionRunStatus",
                 reason="invalid_selection_run_status",

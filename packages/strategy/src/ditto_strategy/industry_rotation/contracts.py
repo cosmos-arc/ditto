@@ -397,10 +397,11 @@ class IndustryRotationSnapshot:
 
     def __post_init__(self) -> None:
         """Reject malformed output ordering and detached replay identity."""
+        input_hash: object = object.__getattribute__(self, "input_hash")
         if (
-            not isinstance(self.input_hash, str)
-            or len(self.input_hash) != _SHA256_HEX_LENGTH
-            or any(char not in "0123456789abcdef" for char in self.input_hash)
+            not isinstance(input_hash, str)
+            or len(input_hash) != _SHA256_HEX_LENGTH
+            or any(char not in "0123456789abcdef" for char in input_hash)
         ):
             raise _error(
                 "industry rotation input_hash must be lowercase SHA-256",
@@ -440,7 +441,8 @@ class IndustryRotationSnapshot:
                 field_name,
                 _normalized_text(getattr(self, field_name), field_name=field_name),
             )
-        if not isinstance(self.status, IndustryRotationStatus):
+        status: object = object.__getattribute__(self, "status")
+        if not isinstance(status, IndustryRotationStatus):
             raise _error(
                 "industry rotation status must be IndustryRotationStatus",
                 reason="invalid_industry_rotation_status",
