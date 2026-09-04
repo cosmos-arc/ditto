@@ -6,13 +6,16 @@ import hashlib
 from dataclasses import replace
 from datetime import date, timedelta
 from io import BytesIO
+from typing import cast
 
 import orjson
 import polars as pl
 import pytest
+from ditto_application.builders import research_validation_authority_source as source
 from ditto_application.builders.research_validation_authority_source import (
     IndexedSnapshotValidationAuthoritySource,
 )
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments.execution_bundle import (
     ContentAddressedResearchInput,
 )
@@ -334,3 +337,464 @@ def test_source_derives_protocol_and_membership_hash_from_exact_snapshot() -> No
     assert facts.protocol.instrument_eligibility[0].warmup_sessions == 2
     assert facts.protocol.planning_decision_date == planning_date
     assert facts.dataset_bindings == request.declared_requirements
+
+
+def _reason(error: AppProcessError) -> str:
+    return cast("str", error.details["reason"])
+
+
+def _snapshot_request(
+    request: ResearchValidationAuthorityRequest,
+    *,
+    runtime: RuntimeValidationEvidence | None = None,
+    requirements: tuple[ResearchDatasetRequirement, ...] | None = None,
+) -> source.SnapshotValidationAuthorityRequest:
+    selected_runtime = request.runtime_validation if runtime is None else runtime
+    assert type(selected_runtime) is RuntimeValidationEvidence
+    return source.SnapshotValidationAuthorityRequest(
+        snapshot_identity=request.snapshot_identity,
+        runtime_validation=selected_runtime,
+        declared_requirements=(
+            request.declared_requirements if requirements is None else requirements
+        ),
+        planning_decision_date=request.declared_protocol.planning_decision_date,
+    )
+
+
+def _runtime_evidence(
+    lane: str = "etf_rotation",
+    required_datasets: tuple[str, ...] = ("etf_daily",),
+    *,
+    isolated: bool = True,
+) -> RuntimeValidationEvidence:
+    return RuntimeValidationEvidence(
+        lane,
+        "csi_etf_broad",
+        required_datasets,
+        2,
+        True,
+        2 if isolated else None,
+        5 if isolated else None,
+        1 if isolated else None,
+    )
+
+
+def _requirements(
+    dataset_id: str = "etf_daily",
+    source_id: str = SOURCE_ID,
+    *,
+    certified: bool = True,
+) -> tuple[ResearchDatasetRequirement, ...]:
+    return (
+        ResearchDatasetRequirement(
+            dataset_id,
+            (source_id,),
+            True,
+            date(2025, 1, 1) if certified else None,
+        ),
+    )
+
+
+def _install_manifest(
+    artifacts: _Artifacts,
+    request: ResearchValidationAuthorityRequest,
+    manifest: dict[str, object],
+) -> ResearchValidationAuthorityRequest:
+    payload = orjson.dumps(manifest, option=orjson.OPT_SORT_KEYS)
+    artifacts.payloads[SNAPSHOT_ID] = payload
+    return replace(
+        request,
+        snapshot_identity=ExperimentSnapshotIdentity(
+            SNAPSHOT_ID,
+            hashlib.sha256(payload).hexdigest(),
+        ),
+    )
+
+
+def _replace_manifest_frame(
+    artifacts: _Artifacts,
+    request: ResearchValidationAuthorityRequest,
+    *,
+    input_id: str,
+    frame: pl.DataFrame,
+) -> ResearchValidationAuthorityRequest:
+    payload = _parquet(frame)
+    artifacts.payloads[input_id] = payload
+    manifest = cast("dict[str, object]", orjson.loads(artifacts.payloads[SNAPSHOT_ID]))
+    inputs = cast("list[dict[str, object]]", manifest["inputs"])
+    target = next(item for item in inputs if item["input_id"] == input_id)
+    target["content_hash"] = hashlib.sha256(payload).hexdigest()
+    target["schema_hash"] = research_frame_schema_hash(frame)
+    return _install_manifest(artifacts, request, manifest)
+
+
+def _instrument_context() -> source._InstrumentEvidenceContext:
+    january = CalendarMonth(2025, 1)
+    february = CalendarMonth(2025, 2)
+    january_sessions = (date(2025, 1, 2), date(2025, 1, 3))
+    february_sessions = (date(2025, 2, 3), date(2025, 2, 4))
+    sessions = january_sessions + february_sessions
+    return source._InstrumentEvidenceContext(
+        membership={1: dict.fromkeys(sessions, True)},
+        bar_keys={(session, 1) for session in sessions},
+        listing_dates={1: january_sessions[0]},
+        sessions=sessions,
+        months=(january, february),
+        session_months={
+            january: january_sessions,
+            february: february_sessions,
+        },
+        required_start=january_sessions[0],
+        warmup_sessions=0,
+    )
+
+
+@pytest.mark.unit
+def test_exact_date_accepts_only_canonical_iso_dates() -> None:
+    assert source._exact_date("2025-01-02", field="observed") == date(2025, 1, 2)
+
+    for invalid in ("not-a-date", "20250102", 20250102):
+        with pytest.raises(AppProcessError) as exc_info:
+            source._exact_date(invalid, field="observed")
+
+        assert _reason(exc_info.value) == "invalid_snapshot_authority_date"
+        assert exc_info.value.details["field"] == "observed"
+
+
+@pytest.mark.unit
+def test_month_compression_preserves_empty_and_disjoint_intervals() -> None:
+    january = CalendarMonth(2025, 1)
+    march = CalendarMonth(2025, 3)
+
+    assert source._compress_months(()) == ()
+    assert source._compress_months((january, march)) == (
+        PitUniverseMembershipInterval(january, january),
+        PitUniverseMembershipInterval(march, march),
+    )
+
+
+@pytest.mark.unit
+def test_snapshot_resolution_rejects_runtime_without_registered_isolation() -> None:
+    artifacts, request = _fixture()
+    runtime = _runtime_evidence(isolated=False)
+
+    with pytest.raises(AppProcessError) as exc_info:
+        IndexedSnapshotValidationAuthoritySource(artifacts).resolve_snapshot(
+            _snapshot_request(request, runtime=runtime)
+        )
+
+    assert _reason(exc_info.value) == "snapshot_authority_runtime_invalid"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("runtime", "requirements", "expected_reason"),
+    [
+        (
+            _runtime_evidence("unsupported_lane"),
+            _requirements(),
+            "snapshot_authority_lane_unsupported",
+        ),
+        (
+            _runtime_evidence(required_datasets=("etf_daily", "trade_cal")),
+            _requirements(),
+            "snapshot_authority_dataset_binding_mismatch",
+        ),
+        (
+            _runtime_evidence("stock_selection"),
+            _requirements(),
+            "snapshot_authority_primary_dataset_missing",
+        ),
+        (
+            _runtime_evidence(),
+            _requirements(certified=False),
+            "snapshot_authority_primary_dataset_uncertified",
+        ),
+    ],
+)
+def test_primary_binding_fails_closed_on_unsupported_or_uncertified_inputs(
+    runtime: RuntimeValidationEvidence,
+    requirements: tuple[ResearchDatasetRequirement, ...],
+    expected_reason: str,
+) -> None:
+    _, request = _fixture()
+    measured = _snapshot_request(
+        request,
+        runtime=runtime,
+        requirements=requirements,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._primary_binding(measured, runtime)
+
+    assert _reason(exc_info.value) == expected_reason
+
+
+@pytest.mark.unit
+def test_calendar_rejects_non_boolean_status_and_empty_evidence() -> None:
+    non_boolean = pl.DataFrame(
+        {"trade_date": [date(2025, 1, 1)], "is_open": [1]},
+        schema={"trade_date": pl.Date, "is_open": pl.Int64},
+    )
+    empty = pl.DataFrame(schema={"trade_date": pl.Date, "is_open": pl.Boolean})
+
+    with pytest.raises(AppProcessError) as status_error:
+        source._calendar_facts(non_boolean)
+    with pytest.raises(AppProcessError) as empty_error:
+        source._calendar_facts(empty)
+
+    assert _reason(status_error.value) == "snapshot_authority_calendar_status_invalid"
+    assert _reason(empty_error.value) == "snapshot_authority_calendar_invalid"
+
+
+@pytest.mark.unit
+def test_calendar_requires_complete_month_boundaries() -> None:
+    days = tuple(date(2025, 1, 2) + timedelta(days=index) for index in range(30))
+    frame = pl.DataFrame(
+        {"trade_date": days, "is_open": (True,) * len(days)},
+        schema={"trade_date": pl.Date, "is_open": pl.Boolean},
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._calendar_facts(frame)
+
+    assert _reason(exc_info.value) == "snapshot_authority_calendar_partial_month"
+
+
+@pytest.mark.unit
+def test_calendar_requires_open_sessions_in_every_observed_month() -> None:
+    days = tuple(date(2025, 1, 1) + timedelta(days=index) for index in range(90))
+    frame = pl.DataFrame(
+        {
+            "trade_date": days,
+            "is_open": tuple(item.month != 2 for item in days),
+        },
+        schema={"trade_date": pl.Date, "is_open": pl.Boolean},
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._calendar_facts(frame)
+
+    assert _reason(exc_info.value) == "snapshot_authority_calendar_month_missing"
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_membership_rejects_future_known_at_sentinel() -> None:
+    frame = pl.DataFrame(
+        {
+            "trade_date": [date(2025, 1, 2)],
+            "instrument_id": [1],
+            "is_member": [True],
+            "known_at": [date(2025, 1, 3)],
+        },
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "is_member": pl.Boolean,
+            "known_at": pl.Date,
+        },
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._membership_by_instrument(frame)
+
+    assert _reason(exc_info.value) == "snapshot_authority_membership_row_invalid"
+
+
+@pytest.mark.unit
+def test_membership_rejects_duplicate_and_empty_evidence() -> None:
+    duplicate = pl.DataFrame(
+        {
+            "trade_date": [date(2025, 1, 2), date(2025, 1, 2)],
+            "instrument_id": [1, 1],
+            "is_member": [True, False],
+            "known_at": [date(2025, 1, 2), date(2025, 1, 2)],
+        },
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "is_member": pl.Boolean,
+            "known_at": pl.Date,
+        },
+    )
+    empty = pl.DataFrame(
+        schema={
+            "trade_date": pl.Date,
+            "instrument_id": pl.Int64,
+            "is_member": pl.Boolean,
+            "known_at": pl.Date,
+        }
+    )
+
+    with pytest.raises(AppProcessError) as duplicate_error:
+        source._membership_by_instrument(duplicate)
+    with pytest.raises(AppProcessError) as empty_error:
+        source._membership_by_instrument(empty)
+
+    assert _reason(duplicate_error.value) == "snapshot_authority_membership_duplicate"
+    assert _reason(empty_error.value) == "snapshot_authority_membership_empty"
+
+
+@pytest.mark.unit
+def test_bar_keys_reject_invalid_and_duplicate_rows() -> None:
+    invalid = pl.DataFrame(
+        {"trade_date": [date(2025, 1, 2)], "instrument_id": [0]},
+        schema={"trade_date": pl.Date, "instrument_id": pl.Int64},
+    )
+    duplicate = pl.DataFrame(
+        {
+            "trade_date": [date(2025, 1, 2), date(2025, 1, 2)],
+            "instrument_id": [1, 1],
+        },
+        schema={"trade_date": pl.Date, "instrument_id": pl.Int64},
+    )
+
+    with pytest.raises(AppProcessError) as invalid_error:
+        source._bar_keys(invalid)
+    with pytest.raises(AppProcessError) as duplicate_error:
+        source._bar_keys(duplicate)
+
+    assert _reason(invalid_error.value) == "snapshot_authority_bar_row_invalid"
+    assert _reason(duplicate_error.value) == "snapshot_authority_bar_duplicate"
+
+
+@pytest.mark.unit
+def test_listing_dates_reject_invalid_identity_and_conflicting_dates() -> None:
+    invalid = pl.DataFrame(
+        {"instrument_id": [0], "ipo_date": [date(2025, 1, 2)]},
+        schema={"instrument_id": pl.Int64, "ipo_date": pl.Date},
+    )
+    conflicting = pl.DataFrame(
+        {
+            "instrument_id": [1, 1],
+            "ipo_date": [date(2025, 1, 2), date(2025, 1, 3)],
+        },
+        schema={"instrument_id": pl.Int64, "ipo_date": pl.Date},
+    )
+
+    with pytest.raises(AppProcessError) as invalid_error:
+        source._listing_dates(invalid)
+    with pytest.raises(AppProcessError) as conflict_error:
+        source._listing_dates(conflicting)
+
+    assert _reason(invalid_error.value) == "snapshot_authority_rule_row_invalid"
+    assert _reason(conflict_error.value) == "snapshot_authority_listing_date_ambiguous"
+
+
+@pytest.mark.unit
+def test_instrument_evidence_requires_rules_for_every_member() -> None:
+    context = replace(_instrument_context(), listing_dates={})
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._instrument_evidence(context)
+
+    assert _reason(exc_info.value) == "snapshot_authority_instrument_rules_missing"
+
+
+@pytest.mark.unit
+def test_instrument_evidence_requires_an_active_month() -> None:
+    context = _instrument_context()
+    inactive = replace(
+        context,
+        membership={1: dict.fromkeys(context.sessions, False)},
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._instrument_evidence(inactive)
+
+    assert _reason(exc_info.value) == "snapshot_authority_no_eligible_instruments"
+
+
+@pytest.mark.unit
+def test_instrument_evidence_excludes_partial_listing_month() -> None:
+    context = _instrument_context()
+    january = context.months[0]
+    january_sessions = context.session_months[january]
+    partial_listing = replace(
+        context,
+        sessions=january_sessions,
+        months=(january,),
+        session_months={january: january_sessions},
+        membership={1: dict.fromkeys(january_sessions, True)},
+        bar_keys={(session, 1) for session in january_sessions},
+        listing_dates={1: january_sessions[1]},
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._instrument_evidence(partial_listing)
+
+    assert _reason(exc_info.value) == "snapshot_authority_no_eligible_instruments"
+
+
+@pytest.mark.unit
+def test_instrument_evidence_requires_bars_for_active_members() -> None:
+    context = _instrument_context()
+    incomplete_bars = replace(
+        context,
+        bar_keys=set(context.bar_keys) - {(context.sessions[-1], 1)},
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._instrument_evidence(incomplete_bars)
+
+    assert _reason(exc_info.value) == "snapshot_authority_member_bar_missing"
+    assert exc_info.value.details["instrument_id"] == 1
+
+
+@pytest.mark.unit
+def test_instrument_evidence_fails_when_warmup_consumes_every_session() -> None:
+    context = _instrument_context()
+
+    with pytest.raises(AppProcessError) as exc_info:
+        source._instrument_evidence(
+            replace(context, warmup_sessions=len(context.sessions))
+        )
+
+    assert _reason(exc_info.value) == "snapshot_authority_no_eligible_instruments"
+
+
+@pytest.mark.unit
+def test_public_resolution_rejects_missing_runtime_evidence() -> None:
+    artifacts, request = _fixture()
+
+    with pytest.raises(AppProcessError) as exc_info:
+        IndexedSnapshotValidationAuthoritySource(artifacts).resolve(
+            replace(request, runtime_validation=None)
+        )
+
+    assert _reason(exc_info.value) == "snapshot_authority_runtime_invalid"
+
+
+@pytest.mark.unit
+def test_snapshot_resolution_requires_declared_source_binding() -> None:
+    artifacts, request = _fixture()
+    requirements = _requirements(source_id="different-source")
+
+    with pytest.raises(AppProcessError) as exc_info:
+        IndexedSnapshotValidationAuthoritySource(artifacts).resolve_snapshot(
+            _snapshot_request(request, requirements=requirements)
+        )
+
+    assert _reason(exc_info.value) == "snapshot_authority_source_binding_missing"
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_snapshot_resolution_rejects_membership_source_drift() -> None:
+    artifacts, request = _fixture()
+    membership = pl.read_parquet(BytesIO(artifacts.payloads["membership-live"]))
+    membership = membership.with_columns(
+        pl.lit("future-source").alias("source_snapshot_id")
+    )
+    request = _replace_manifest_frame(
+        artifacts,
+        request,
+        input_id="membership-live",
+        frame=membership,
+    )
+
+    with pytest.raises(AppProcessError) as exc_info:
+        IndexedSnapshotValidationAuthoritySource(artifacts).resolve(request)
+
+    assert _reason(exc_info.value) == "snapshot_authority_membership_source_mismatch"
