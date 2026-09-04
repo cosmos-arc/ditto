@@ -147,12 +147,53 @@ def _normalize_order_type(raw: str | None) -> OrderType:
 # ---------------------------------------------------------------------------
 
 
+def _legacy_parameter_constraints(
+    template: str,
+    declared: tuple[ParamConstraint, ...],
+) -> tuple[ParamConstraint, ...]:
+    if declared:
+        return declared
+    if template == "etf_rotation":
+        return get_etf_rotation_param_constraints()
+    if template == "etf_trend_swing":
+        return get_etf_trend_swing_param_constraints()
+    if template == "stock_selection":
+        return get_stock_selection_param_constraints()
+    if template == "stock_sector_rotation":
+        return get_sector_rotation_param_constraints()
+    return ()
+
+
+def _normalize_legacy_parameter_numbers(
+    params: dict[str, object],
+    *,
+    template: str,
+    constraints: tuple[ParamConstraint, ...],
+) -> dict[str, object]:
+    """Restore declared float values after a JavaScript JSON round trip."""
+    normalized = dict(params)
+    for constraint in _legacy_parameter_constraints(template, constraints):
+        value = normalized.get(constraint.name)
+        if constraint.dtype == "float" and type(value) is int:
+            normalized[constraint.name] = read_float(
+                value,
+                field_name=f"params.{constraint.name}",
+            )
+    return normalized
+
+
 def deserialize_persisted_legacy_strategy_spec(
     record: StrategySpecRecord,
 ) -> StrategySpec:
-    """Losslessly decode the persisted legacy shape without template injection."""
+    """Decode the legacy shape without injecting fields or defaults."""
     payload = as_object_dict(record.spec_json, field_name="spec_json")
     template = read_required_str(payload, "template")
+    param_constraints = deserialize_param_constraints(payload)
+    params = _normalize_legacy_parameter_numbers(
+        as_object_dict(payload.get("params"), field_name="params"),
+        template=template,
+        constraints=param_constraints,
+    )
     required_datasets = as_str_tuple(
         payload.get("required_datasets"),
         field_name="required_datasets",
@@ -173,8 +214,8 @@ def deserialize_persisted_legacy_strategy_spec(
         execution=deserialize_execution(payload.get("execution")),
         constraints=deserialize_constraints(payload),
         benchmark=read_optional_str(payload.get("benchmark")),
-        params=as_object_dict(payload.get("params"), field_name="params"),
-        param_constraints=deserialize_param_constraints(payload),
+        params=params,
+        param_constraints=param_constraints,
         tags=as_str_tuple(payload.get("tags"), field_name="tags") or record.tags,
         signal_expressions=as_str_tuple(
             payload.get("signal_expressions"),
